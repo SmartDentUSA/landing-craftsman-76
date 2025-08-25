@@ -25,6 +25,7 @@ const CloudflareSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadCurrentConfig();
@@ -124,6 +125,40 @@ const CloudflareSettings = () => {
     } catch (error) {
       console.error('Erro ao configurar secrets no Supabase:', error);
       throw error;
+    }
+  };
+
+  const handleUpdateSupabaseSecrets = async () => {
+    if (!config.accountId.trim() || !config.apiToken.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha o Account ID e API Token antes de atualizar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    
+    try {
+      await configureSupabaseSecrets();
+
+      toast({
+        title: "Secrets atualizados!",
+        description: "Configuração forçada no Supabase realizada com sucesso.",
+      });
+
+      setConnectionStatus('success');
+    } catch (error) {
+      console.error('Erro ao atualizar secrets no Supabase:', error);
+      toast({
+        title: "Erro na atualização",
+        description: "Houve um problema ao atualizar os secrets no Supabase.",
+        variant: "destructive"
+      });
+      setConnectionStatus('error');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -304,6 +339,17 @@ const CloudflareSettings = () => {
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />
                     Abrir Supabase Secrets
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleUpdateSupabaseSecrets}
+                    disabled={isUpdating || !config.accountId || !config.apiToken}
+                    className="text-amber-700 dark:text-amber-300 border-amber-300"
+                  >
+                    <Settings className="h-3 w-3 mr-1" />
+                    {isUpdating ? 'Atualizando...' : 'Atualizar - Configuração no Supabase'}
                   </Button>
                 </div>
               </div>
