@@ -67,6 +67,7 @@ interface EmailData {
 }
 
 interface LandingPageData {
+  name: string;
   status: 'draft' | 'approved';
   seo_title: string;
   seo_description: string;
@@ -123,6 +124,7 @@ const Editor = () => {
   const { id } = useParams();
   
   const [data, setData] = useState<LandingPageData>({
+    name: 'Smart Dent Campanha Q1',
     status: 'draft',
     seo_title: 'Smart Dent - Sistema de Gestão Odontológica',
     seo_description: 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.',
@@ -346,7 +348,7 @@ const Editor = () => {
                 Voltar
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">Editor de Landing Page</h1>
+                <h1 className="text-xl font-semibold">{data.name}</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant={data.status === 'approved' ? "default" : "secondary"}>
                     {data.status === 'approved' ? 'Aprovado' : 'Rascunho'}
@@ -416,6 +418,15 @@ const Editor = () => {
                         SEO e Meta Tags
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="landingName">Nome da Landing Page</Label>
+                          <Input
+                            id="landingName"
+                            value={data.name}
+                            onChange={(e) => setData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Nome para identificação no sistema"
+                          />
+                        </div>
                         <div>
                           <Label htmlFor="seoTitle">Título da Página (SEO)</Label>
                           <Input
