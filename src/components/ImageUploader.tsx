@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Link, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ImageUploaderProps {
   value: string;
@@ -38,20 +39,23 @@ export const ImageUploader = ({
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: formData,
+      const { data, error } = await supabase.functions.invoke('upload-image', {
+        body: formData
       });
 
-      if (!response.ok) {
-        throw new Error('Erro no upload');
+      if (error) {
+        console.error('Erro na edge function:', error);
+        throw new Error(error.message || 'Erro na comunicação com o servidor');
       }
 
-      const data = await response.json();
+      if (!data?.url) {
+        throw new Error('URL da imagem não retornada pelo servidor');
+      }
+
       return data.url;
     } catch (error) {
       console.error('Erro no upload:', error);
-      throw new Error('Falha ao fazer upload da imagem');
+      throw new Error(error instanceof Error ? error.message : 'Falha ao fazer upload da imagem');
     }
   };
 

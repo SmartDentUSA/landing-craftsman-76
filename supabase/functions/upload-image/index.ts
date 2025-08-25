@@ -19,21 +19,37 @@ serve(async (req) => {
       })
     }
 
-    const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')
-    const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')
+    const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')?.trim()
+    const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')?.trim()
 
     console.log('Checking Cloudflare credentials...')
     console.log('Account ID present:', !!CLOUDFLARE_ACCOUNT_ID)
     console.log('API Token present:', !!CLOUDFLARE_API_TOKEN)
+    console.log('Account ID length:', CLOUDFLARE_ACCOUNT_ID?.length || 0)
+    console.log('API Token length:', CLOUDFLARE_API_TOKEN?.length || 0)
 
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
       console.error('Missing Cloudflare credentials')
       return new Response(
         JSON.stringify({ 
-          error: 'Cloudflare credentials not configured. Please set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Supabase Edge Function Secrets.' 
+          error: 'Credenciais do Cloudflare não configuradas. Configure CLOUDFLARE_ACCOUNT_ID e CLOUDFLARE_API_TOKEN nas configurações.' 
         }),
         { 
           status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Validate Account ID format (should be 32 characters)
+    if (CLOUDFLARE_ACCOUNT_ID.length !== 32) {
+      console.error('Invalid Account ID format:', CLOUDFLARE_ACCOUNT_ID)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Account ID do Cloudflare inválido. Deve ter 32 caracteres.' 
+        }),
+        { 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
@@ -77,7 +93,12 @@ serve(async (req) => {
     // Upload to Cloudflare Images
     const uploadFormData = new FormData()
     uploadFormData.append('file', file)
+    
     console.log('Uploading to Cloudflare Images...')
+    console.log('Using Account ID:', CLOUDFLARE_ACCOUNT_ID)
+    console.log('File name:', file.name)
+    console.log('File size:', file.size)
+    
     const cloudflareResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v1`,
       {
@@ -91,14 +112,41 @@ serve(async (req) => {
 
     const cloudflareData = await cloudflareResponse.json()
     console.log('Cloudflare response status:', cloudflareResponse.status)
-    console.log('Cloudflare response data:', cloudflareData)
+    console.log('Cloudflare response data:', JSON.stringify(cloudflareData, null, 2))
 
     if (!cloudflareResponse.ok) {
-      console.error('Cloudflare error:', cloudflareData)
+      console.error('Cloudflare API error:', cloudflareData)
+      
+      let errorMessage = 'Erro no upload para o Cloudflare'
+      if (cloudflareData.errors && cloudflareData.errors.length > 0) {
+        const error = cloudflareData.errors[0]
+        if (error.code === 7003) {
+          errorMessage = 'Account ID inválido. Verifique suas credenciais do Cloudflare.'
+        } else if (error.code === 7000) {
+          errorMessage = 'Rota não encontrada. Verifique se o Cloudflare Images está habilitado.'
+        } else {
+          errorMessage = error.message || errorMessage
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to upload to Cloudflare', 
-          details: cloudflareData.errors?.[0]?.message || 'Unknown error'
+          error: errorMessage,
+          details: cloudflareData 
+        }),
+        { 
+          status: cloudflareResponse.status, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    if (!cloudflareData.success || !cloudflareData.result) {
+      console.error('Invalid Cloudflare response structure:', cloudflareData)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Resposta inválida do Cloudflare',
+          details: cloudflareData 
         }),
         { 
           status: 500, 
@@ -107,14 +155,34 @@ serve(async (req) => {
       )
     }
 
-    // Return the image URL
-    const imageUrl = cloudflareData.result.variants[0] || cloudflareData.result.url
+    // Get the best available URL
+    let imageUrl = cloudflareData.result.variants?.[0]
+    if (!imageUrl && cloudflareData.result.id) {
+      // Fallback to direct image URL if variants not available
+      imageUrl = `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_ID}/${cloudflareData.result.id}/public`
+    }
+    
+    if (!imageUrl) {
+      console.error('No image URL found in response:', cloudflareData)
+      return new Response(
+        JSON.stringify({ 
+          error: 'URL da imagem não encontrada na resposta',
+          details: cloudflareData 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
 
+    console.log('Upload successful! Image URL:', imageUrl)
+    
     return new Response(
       JSON.stringify({ 
         url: imageUrl,
         id: cloudflareData.result.id,
-        filename: cloudflareData.result.filename
+        filename: cloudflareData.result.filename || file.name
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

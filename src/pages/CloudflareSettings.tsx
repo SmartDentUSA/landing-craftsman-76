@@ -86,11 +86,19 @@ const CloudflareSettings = () => {
 
   const configureSupabaseSecrets = async () => {
     try {
+      // Limpar e validar credenciais
+      const cleanAccountId = config.accountId.trim();
+      const cleanApiToken = config.apiToken.trim();
+
+      if (cleanAccountId.length !== 32) {
+        throw new Error('Account ID deve ter exatamente 32 caracteres');
+      }
+
       // Configurar CLOUDFLARE_ACCOUNT_ID
       const { error: accountError } = await supabase.functions.invoke('update-secret', {
         body: {
           secretName: 'CLOUDFLARE_ACCOUNT_ID',
-          secretValue: config.accountId
+          secretValue: cleanAccountId
         }
       });
 
@@ -103,7 +111,7 @@ const CloudflareSettings = () => {
       const { error: tokenError } = await supabase.functions.invoke('update-secret', {
         body: {
           secretName: 'CLOUDFLARE_API_TOKEN',
-          secretValue: config.apiToken
+          secretValue: cleanApiToken
         }
       });
 
