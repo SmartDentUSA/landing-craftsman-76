@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import useLandingPages from "@/hooks/useLandingPages";
+import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
 import { generateHTML, generateEmailHTML } from "@/lib/template-engine";
 
@@ -209,7 +209,11 @@ const SOCIAL_PLATFORMS = [
 const beforePreview = (data: LandingPageData): LandingPageData => {
   // TODO: Implementar resolução automática de URLs Cloudflare
   // Substituir ACCOUNT_HASH_PLACEHOLDER pela hash real
-  const resolveImageSrc = (image: ImageData): ImageData => {
+  const resolveImageSrc = (image: ImageData | undefined): ImageData => {
+    if (!image || !image.mode) {
+      return createImageData('', '');
+    }
+    
     if (image.mode === 'cloudflare' && image.cf_id) {
       const accountHash = localStorage.getItem('cloudflareAccountHash') || 'ACCOUNT_HASH_PLACEHOLDER';
       return {
@@ -488,9 +492,28 @@ const Editor = () => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
-        // Se há dados estruturados, usar direto
+        // Se há dados estruturados, usar direto mas garantir campos obrigatórios
         if (landingPage.data && typeof landingPage.data === 'object') {
-          setData({ ...landingPage.data, template: landingPage.template });
+          const loadedData = { ...landingPage.data, template: landingPage.template };
+          
+          // Garantir que todos os campos ImageData existem
+          if (!loadedData.logo_url || typeof loadedData.logo_url === 'string') {
+            loadedData.logo_url = createImageData(typeof loadedData.logo_url === 'string' ? loadedData.logo_url : '', loadedData.logo_alt || '');
+          }
+          if (!loadedData.seo?.og_image) {
+            loadedData.seo = { ...loadedData.seo, og_image: createImageData() };
+          }
+          if (!loadedData.seo?.twitter_image) {
+            loadedData.seo = { ...loadedData.seo, twitter_image: createImageData() };
+          }
+          if (!loadedData.email?.logo_src) {
+            loadedData.email = { ...loadedData.email, logo_src: createImageData() };
+          }
+          if (!loadedData.email?.imagem_src) {
+            loadedData.email = { ...loadedData.email, imagem_src: createImageData() };
+          }
+          
+          setData(loadedData);
         } else {
           // Migrar dados antigos para novo formato se necessário
           const migratedData = { ...landingPage.data || {} };
