@@ -114,6 +114,7 @@ const SOCIAL_PLATFORMS = [
   { value: 'twitter', label: 'Twitter/X', icon: Twitter },
   { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
   { value: 'website', label: 'Website', icon: Globe },
+  { value: 'email', label: 'E-mail', icon: Mail },
 ];
 
 const Editor = () => {
