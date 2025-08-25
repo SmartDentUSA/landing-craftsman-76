@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +11,7 @@ import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { landingPages } = useLandingPages();
+  const { landingPages, deleteLandingPage } = useLandingPages();
 
   const handleCreateNew = () => {
     navigate('/editor');
@@ -46,6 +46,16 @@ const Dashboard = () => {
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const handleDelete = (landingPage: LandingPage) => {
+    if (confirm(`Tem certeza que deseja excluir "${landingPage.name}"? Esta ação não pode ser desfeita.`)) {
+      deleteLandingPage(landingPage.id);
+      toast({
+        title: "Landing page excluída",
+        description: `"${landingPage.name}" foi removida com sucesso.`,
+      });
     }
   };
 
@@ -163,6 +173,15 @@ const Dashboard = () => {
                       Editar
                     </Button>
                     
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(landingPage)}
+                      className="border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
                     {landingPage.status === 'approved' && (
                       <Button
                         variant="default"
