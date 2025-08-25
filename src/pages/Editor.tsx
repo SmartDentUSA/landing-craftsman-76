@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy, Instagram, Facebook, Youtube, Twitter, Linkedin, Globe } from "lucide-react";
+import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy, Instagram, Facebook, Youtube, Twitter, Linkedin, Globe, Mail } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -1685,11 +1685,12 @@ const Editor = () => {
 
           {/* Preview Section */}
           <div className="space-y-6">
+            {/* Landing Page Preview */}
             <Card className="shadow-large">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Eye className="h-5 w-5" />
-                  Preview em Tempo Real
+                  Preview da Landing Page
                 </CardTitle>
                 <CardDescription>
                   Visualize como sua landing page ficará
@@ -1742,7 +1743,7 @@ const Editor = () => {
                 {/* Code Section */}
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium">Código HTML Gerado</h4>
+                    <h4 className="text-sm font-medium">Código HTML da Landing Page</h4>
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
@@ -1764,6 +1765,96 @@ const Editor = () => {
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     {generatedHTML.split('\n').length} linhas • {Math.round(generatedHTML.length / 1024)} KB
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email Marketing Preview */}
+            <Card className="shadow-large">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Preview do E-mail Marketing
+                </CardTitle>
+                <CardDescription>
+                  Visualize como seu e-mail ficará
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  <iframe
+                    srcDoc={generatedEmailHTML}
+                    className="w-full h-[600px] border-0"
+                    title="Preview do E-mail Marketing"
+                    sandbox="allow-scripts"
+                  />
+                </div>
+                
+                {/* Quick Action Buttons for Email */}
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => {
+                      const blob = new Blob([generatedEmailHTML], { type: 'text/html' });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank');
+                    }}
+                    className="flex-1"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Abrir E-mail em Nova Aba
+                  </Button>
+                  {data.status === 'approved' && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedEmailHTML);
+                        toast({
+                          title: "Código copiado!",
+                          description: "O código HTML do e-mail foi copiado para a área de transferência.",
+                        });
+                      }}
+                      className="flex-1 gradient-primary"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar Código do E-mail
+                    </Button>
+                  )}
+                </div>
+
+                {/* Email Code Section */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium">Código HTML do E-mail</h4>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedEmailHTML);
+                          toast({
+                            title: "Código copiado!",
+                            description: "O código HTML do e-mail foi copiado para a área de transferência.",
+                          });
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Textarea
+                      value={generatedEmailHTML}
+                      readOnly
+                      className="font-mono text-xs min-h-[200px] resize-none border-0 bg-muted/30"
+                      placeholder="O código HTML do e-mail aparecerá aqui após preencher os campos..."
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {generatedEmailHTML.split('\n').length} linhas • {Math.round(generatedEmailHTML.length / 1024)} KB
                   </p>
                 </div>
               </CardContent>
