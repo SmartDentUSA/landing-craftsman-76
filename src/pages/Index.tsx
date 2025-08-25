@@ -108,7 +108,7 @@ const Index = () => {
             <Button 
               size="lg" 
               onClick={() => navigate('/editor')}
-              className="gradient-primary shadow-primary"
+              className="gradient-primary shadow-primary text-white"
             >
               <Plus className="h-5 w-5 mr-2" />
               Criar Primeira Landing
@@ -117,6 +117,7 @@ const Index = () => {
               size="lg" 
               variant="outline"
               onClick={() => navigate('/dashboard')}
+              className="border-muted-foreground/30 text-muted-foreground hover:bg-muted"
             >
               <FileText className="h-5 w-5 mr-2" />
               Ver Projetos Existentes
