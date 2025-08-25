@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy, Instagram, Facebook, Youtube, Twitter, Linkedin, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -45,8 +46,8 @@ interface LandingPageData {
     badge_text: string;
     title: string;
     subtitle: string;
-    cta_primary: { label: string; href: string };
-    cta_secondary: { label: string; href: string };
+    cta_primary: { label: string; href: string; visible?: boolean };
+    cta_secondary: { label: string; href: string; visible?: boolean };
     images: Array<{ src: string; alt: string; scale: number }>;
   };
   solutions_title: string;
@@ -483,7 +484,20 @@ const Editor = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>CTA Primário</Label>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Label>CTA Primário</Label>
+                              <Switch
+                                checked={data.banner.cta_primary?.visible !== false}
+                                onCheckedChange={(checked) => setData(prev => ({ 
+                                  ...prev, 
+                                  banner: { 
+                                    ...prev.banner, 
+                                    cta_primary: { ...prev.banner.cta_primary, visible: checked }
+                                  }
+                                }))}
+                              />
+                              <span className="text-sm text-muted-foreground">Visível</span>
+                            </div>
                             <Input
                               placeholder="Texto do botão"
                               value={data.banner.cta_primary?.label || ''}
@@ -510,7 +524,20 @@ const Editor = () => {
                           </div>
                           
                           <div>
-                            <Label>CTA Secundário</Label>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Label>CTA Secundário</Label>
+                              <Switch
+                                checked={data.banner.cta_secondary?.visible !== false}
+                                onCheckedChange={(checked) => setData(prev => ({ 
+                                  ...prev, 
+                                  banner: { 
+                                    ...prev.banner, 
+                                    cta_secondary: { ...prev.banner.cta_secondary, visible: checked }
+                                  }
+                                }))}
+                              />
+                              <span className="text-sm text-muted-foreground">Visível</span>
+                            </div>
                             <Input
                               placeholder="Texto do botão"
                               value={data.banner.cta_secondary?.label || ''}

@@ -152,10 +152,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <h1>{{banner.title}}</h1>
                 <p>{{banner.subtitle}}</p>
                 {{#banner.cta_primary}}
-                <a href="{{banner.cta_primary.href}}" class="button button-primary">{{banner.cta_primary.label}}</a>
+                {{#visible}}
+                <a href="{{href}}" class="button button-primary">{{label}}</a>
+                {{/visible}}
                 {{/banner.cta_primary}}
                 {{#banner.cta_secondary}}
-                <a href="{{banner.cta_secondary.href}}" class="button button-secondary">{{banner.cta_secondary.label}}</a>
+                {{#visible}}
+                <a href="{{href}}" class="button button-secondary">{{label}}</a>
+                {{/visible}}
                 {{/banner.cta_secondary}}
             </div>
             <div class="banner-images">
@@ -309,8 +313,8 @@ export const SAMPLE_DATA = {
     "badge_text": "Smart Dent 16 anos de inovação",
     "title": "Odontologia Digital: simples, eficiente e lucrativa",
     "subtitle": "A Smart Dent é uma referência em odontologia digital no Brasil, combinando tecnologia avançada, automação eficiente e qualidade.",
-    "cta_primary": { "label": "Falar com comercial", "href": "https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es" },
-    "cta_secondary": { "label": "Loja online", "href": "https://loja.smartdent.com.br/" },
+    "cta_primary": { "label": "Falar com comercial", "href": "https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es", "visible": true },
+    "cta_secondary": { "label": "Loja online", "href": "https://loja.smartdent.com.br/", "visible": true },
     "images": [
       { "src": "https://via.placeholder.com/200x300?text=Imagem1", "alt": "Pessoa sorrindo" },
       { "src": "https://via.placeholder.com/200x300?text=Imagem2", "alt": "Pessoa escrevendo no caderno" },
