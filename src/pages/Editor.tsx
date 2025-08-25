@@ -592,7 +592,7 @@ const Editor = () => {
   };
 
   const handleViewCode = () => {
-    navigate('/code-view', { state: { data, landingName: data.name } });
+    navigate('/code-view', { state: { data, landingName: data.name, editorId: id } });
   };
 
   const handleCopyCode = () => {

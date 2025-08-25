@@ -15,7 +15,7 @@ const CodeView = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get data from route state or use default data
-  const { data, landingName = "Landing Page", html } = location.state || {};
+  const { data, landingName = "Landing Page", html, editorId } = location.state || {};
   
   const [generatedHTML, setGeneratedHTML] = useState(() => {
     // If HTML is passed directly, use it
@@ -100,7 +100,7 @@ const CodeView = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate(editorId ? `/editor/${editorId}` : '/')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
