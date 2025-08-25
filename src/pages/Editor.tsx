@@ -630,6 +630,442 @@ const Editor = () => {
                         </div>
                       </AccordionContent>
                     </AccordionItem>
+
+                    {/* Advisory Section */}
+                    <AccordionItem value="advisory">
+                      <AccordionTrigger className="text-lg font-semibold">
+                        Consultoria / Atendimento
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="advisoryTitle">Título da Seção</Label>
+                          <Input
+                            id="advisoryTitle"
+                            value={data.advisory.title}
+                            onChange={(e) => setData(prev => ({ 
+                              ...prev, 
+                              advisory: { ...prev.advisory, title: e.target.value }
+                            }))}
+                            placeholder="Consultoria especializada para você..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="advisoryParagraph">Descrição</Label>
+                          <Textarea
+                            id="advisoryParagraph"
+                            value={data.advisory.paragraph}
+                            onChange={(e) => setData(prev => ({ 
+                              ...prev, 
+                              advisory: { ...prev.advisory, paragraph: e.target.value }
+                            }))}
+                            placeholder="Nossa consultoria especializada ajuda..."
+                            className="min-h-[80px]"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Texto do CTA</Label>
+                            <Input
+                              placeholder="Falar com consultor"
+                              value={data.advisory.cta?.label || ''}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                advisory: { 
+                                  ...prev.advisory, 
+                                  cta: { ...prev.advisory.cta, label: e.target.value }
+                                }
+                              }))}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label>URL do CTA</Label>
+                            <Input
+                              placeholder="https://wa.me/..."
+                              value={data.advisory.cta?.href || ''}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                advisory: { 
+                                  ...prev.advisory, 
+                                  cta: { ...prev.advisory.cta, href: e.target.value }
+                                }
+                              }))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>URL da Imagem</Label>
+                            <Input
+                              placeholder="https://exemplo.com/imagem.jpg"
+                              value={data.advisory.image.src}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                advisory: { 
+                                  ...prev.advisory, 
+                                  image: { ...prev.advisory.image, src: e.target.value }
+                                }
+                              }))}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label>Texto Alternativo</Label>
+                            <Input
+                              placeholder="Homem sorrindo com fone de ouvido"
+                              value={data.advisory.image.alt}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                advisory: { 
+                                  ...prev.advisory, 
+                                  image: { ...prev.advisory.image, alt: e.target.value }
+                                }
+                              }))}
+                            />
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* CTA Final Section */}
+                    <AccordionItem value="cta_final">
+                      <AccordionTrigger className="text-lg font-semibold">
+                        CTA Final
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="ctaFinalTitle">Título</Label>
+                          <Textarea
+                            id="ctaFinalTitle"
+                            value={data.cta_final.title}
+                            onChange={(e) => setData(prev => ({ 
+                              ...prev, 
+                              cta_final: { ...prev.cta_final, title: e.target.value }
+                            }))}
+                            placeholder="Mais que tecnologia e materiais..."
+                            className="min-h-[80px]"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="ctaFinalParagraph">Subtítulo</Label>
+                          <Input
+                            id="ctaFinalParagraph"
+                            value={data.cta_final.paragraph}
+                            onChange={(e) => setData(prev => ({ 
+                              ...prev, 
+                              cta_final: { ...prev.cta_final, paragraph: e.target.value }
+                            }))}
+                            placeholder="Acesse nosso portfólio de produtos"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Botão Primário</Label>
+                            <Input
+                              placeholder="Texto do botão"
+                              value={data.cta_final.primary?.label || ''}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                cta_final: { 
+                                  ...prev.cta_final, 
+                                  primary: { ...prev.cta_final.primary, label: e.target.value }
+                                }
+                              }))}
+                              className="mb-2"
+                            />
+                            <Input
+                              placeholder="URL do botão"
+                              value={data.cta_final.primary?.href || ''}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                cta_final: { 
+                                  ...prev.cta_final, 
+                                  primary: { ...prev.cta_final.primary, href: e.target.value }
+                                }
+                              }))}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label>Botão Secundário</Label>
+                            <Input
+                              placeholder="Texto do botão"
+                              value={data.cta_final.secondary?.label || ''}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                cta_final: { 
+                                  ...prev.cta_final, 
+                                  secondary: { ...prev.cta_final.secondary, label: e.target.value }
+                                }
+                              }))}
+                              className="mb-2"
+                            />
+                            <Input
+                              placeholder="URL do botão"
+                              value={data.cta_final.secondary?.href || ''}
+                              onChange={(e) => setData(prev => ({ 
+                                ...prev, 
+                                cta_final: { 
+                                  ...prev.cta_final, 
+                                  secondary: { ...prev.cta_final.secondary, href: e.target.value }
+                                }
+                              }))}
+                            />
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Footer Section */}
+                    <AccordionItem value="footer">
+                      <AccordionTrigger className="text-lg font-semibold">
+                        Rodapé
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="footerLinksTitle">Título dos Links Úteis</Label>
+                          <Input
+                            id="footerLinksTitle"
+                            value={data.footer_links_title}
+                            onChange={(e) => setData(prev => ({ ...prev, footer_links_title: e.target.value }))}
+                            placeholder="Links Úteis"
+                          />
+                        </div>
+
+                        {/* Locations */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Endereços / Localizações</Label>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setData(prev => ({
+                                ...prev,
+                                footer: {
+                                  ...prev.footer,
+                                  locations: [...prev.footer.locations, { title: '', address: '' }]
+                                }
+                              }))}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {data.footer.locations.map((location, index) => (
+                              <Card key={index} className="p-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Localização {index + 1}</span>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      onClick={() => setData(prev => ({
+                                        ...prev,
+                                        footer: {
+                                          ...prev.footer,
+                                          locations: prev.footer.locations.filter((_, i) => i !== index)
+                                        }
+                                      }))}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <Input
+                                    placeholder="Nome da unidade"
+                                    value={location.title}
+                                    onChange={(e) => {
+                                      const newLocations = [...data.footer.locations];
+                                      newLocations[index].title = e.target.value;
+                                      setData(prev => ({ 
+                                        ...prev, 
+                                        footer: { ...prev.footer, locations: newLocations }
+                                      }));
+                                    }}
+                                  />
+                                  <Textarea
+                                    placeholder="Endereço completo"
+                                    value={location.address}
+                                    onChange={(e) => {
+                                      const newLocations = [...data.footer.locations];
+                                      newLocations[index].address = e.target.value;
+                                      setData(prev => ({ 
+                                        ...prev, 
+                                        footer: { ...prev.footer, locations: newLocations }
+                                      }));
+                                    }}
+                                    className="min-h-[60px]"
+                                  />
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Footer Links */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Links Úteis</Label>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setData(prev => ({
+                                ...prev,
+                                footer: {
+                                  ...prev.footer,
+                                  links: [...prev.footer.links, { label: '', href: '' }]
+                                }
+                              }))}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {data.footer.links.map((link, index) => (
+                              <div key={index} className="flex gap-2">
+                                <Input
+                                  placeholder="Nome do link"
+                                  value={link.label}
+                                  onChange={(e) => {
+                                    const newLinks = [...data.footer.links];
+                                    newLinks[index].label = e.target.value;
+                                    setData(prev => ({ 
+                                      ...prev, 
+                                      footer: { ...prev.footer, links: newLinks }
+                                    }));
+                                  }}
+                                />
+                                <Input
+                                  placeholder="URL do link"
+                                  value={link.href}
+                                  onChange={(e) => {
+                                    const newLinks = [...data.footer.links];
+                                    newLinks[index].href = e.target.value;
+                                    setData(prev => ({ 
+                                      ...prev, 
+                                      footer: { ...prev.footer, links: newLinks }
+                                    }));
+                                  }}
+                                />
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => setData(prev => ({
+                                    ...prev,
+                                    footer: {
+                                      ...prev.footer,
+                                      links: prev.footer.links.filter((_, i) => i !== index)
+                                    }
+                                  }))}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Social Media */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Redes Sociais</Label>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setData(prev => ({
+                                ...prev,
+                                footer: {
+                                  ...prev.footer,
+                                  social: [...prev.footer.social, { platform: '', href: '', icon_src: '', icon_alt: '' }]
+                                }
+                              }))}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {data.footer.social.map((social, index) => (
+                              <Card key={index} className="p-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Rede Social {index + 1}</span>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      onClick={() => setData(prev => ({
+                                        ...prev,
+                                        footer: {
+                                          ...prev.footer,
+                                          social: prev.footer.social.filter((_, i) => i !== index)
+                                        }
+                                      }))}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                      placeholder="Plataforma (Instagram, Facebook...)"
+                                      value={social.platform}
+                                      onChange={(e) => {
+                                        const newSocial = [...data.footer.social];
+                                        newSocial[index].platform = e.target.value;
+                                        setData(prev => ({ 
+                                          ...prev, 
+                                          footer: { ...prev.footer, social: newSocial }
+                                        }));
+                                      }}
+                                    />
+                                    <Input
+                                      placeholder="URL da rede social"
+                                      value={social.href}
+                                      onChange={(e) => {
+                                        const newSocial = [...data.footer.social];
+                                        newSocial[index].href = e.target.value;
+                                        setData(prev => ({ 
+                                          ...prev, 
+                                          footer: { ...prev.footer, social: newSocial }
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                      placeholder="URL do ícone"
+                                      value={social.icon_src}
+                                      onChange={(e) => {
+                                        const newSocial = [...data.footer.social];
+                                        newSocial[index].icon_src = e.target.value;
+                                        setData(prev => ({ 
+                                          ...prev, 
+                                          footer: { ...prev.footer, social: newSocial }
+                                        }));
+                                      }}
+                                    />
+                                    <Input
+                                      placeholder="Texto alternativo do ícone"
+                                      value={social.icon_alt}
+                                      onChange={(e) => {
+                                        const newSocial = [...data.footer.social];
+                                        newSocial[index].icon_alt = e.target.value;
+                                        setData(prev => ({ 
+                                          ...prev, 
+                                          footer: { ...prev.footer, social: newSocial }
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                   </Accordion>
                 </ScrollArea>
               </CardContent>
