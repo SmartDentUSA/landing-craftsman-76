@@ -15,6 +15,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { generateHTML, generateEmailHTML, SAMPLE_DATA } from "@/lib/template-engine";
+import useLandingPages from "@/hooks/useLandingPages";
 
 interface MenuItem {
   label: string;
@@ -122,6 +123,7 @@ const Editor = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
+  const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
   
   const [data, setData] = useState<LandingPageData>({
     name: 'Smart Dent Campanha Q1',
@@ -251,7 +253,35 @@ const Editor = () => {
     }
   }, [data.email]);
 
+  // Carregar dados da landing page se estiver editando
+  useEffect(() => {
+    if (id) {
+      const landingPage = getLandingPage(id);
+      if (landingPage && landingPage.data) {
+        setData(landingPage.data);
+      }
+    }
+  }, [id, getLandingPage]);
+
   const handleSave = () => {
+    if (id) {
+      // Atualizar landing page existente
+      updateLandingPage(id, {
+        name: data.name,
+        status: data.status,
+        data: data
+      });
+    } else {
+      // Criar nova landing page
+      const newId = addLandingPage({
+        name: data.name,
+        status: data.status,
+        template: 'Smart Dent Base v1',
+        data: data
+      });
+      navigate(`/editor/${newId}`);
+    }
+    
     toast({
       title: "Alterações salvas",
       description: "Suas alterações foram salvas com sucesso.",
@@ -260,6 +290,15 @@ const Editor = () => {
 
   const handleApprove = () => {
     setData(prev => ({ ...prev, status: 'approved' }));
+    
+    if (id) {
+      updateLandingPage(id, {
+        name: data.name,
+        status: 'approved',
+        data: data
+      });
+    }
+    
     toast({
       title: "Landing Page aprovada!",
       description: "Sua landing page foi aprovada e está pronta para uso.",

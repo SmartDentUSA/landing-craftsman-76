@@ -1,7 +1,12 @@
-import Dashboard from "./Dashboard";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  return <Dashboard />;
+  const navigate = useNavigate();
+  
+  // Redirecionar para dashboard
+  navigate('/dashboard');
+  
+  return null;
 };
 
 export default Index;

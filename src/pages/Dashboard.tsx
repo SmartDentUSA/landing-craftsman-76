@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,46 +5,13 @@ import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical } from "lucide-r
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 
-interface LandingPage {
-  id: string;
-  name: string;
-  status: 'draft' | 'approved';
-  lastModified: Date;
-  version: number;
-  template: string;
-}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [landingPages] = useState<LandingPage[]>([
-    {
-      id: '1',
-      name: 'Smart Dent Campanha Q1',
-      status: 'approved',
-      lastModified: new Date('2024-01-15'),
-      version: 3,
-      template: 'Smart Dent Base v1'
-    },
-    {
-      id: '2',
-      name: 'Promoção Implantes Março',
-      status: 'draft',
-      lastModified: new Date('2024-01-14'),
-      version: 1,
-      template: 'Smart Dent Base v1'
-    },
-    {
-      id: '3',
-      name: 'Landing Ortodontia Premium',
-      status: 'approved',
-      lastModified: new Date('2024-01-10'),
-      version: 2,
-      template: 'Smart Dent Base v1'
-    }
-  ]);
+  const { landingPages } = useLandingPages();
 
   const handleCreateNew = () => {
     navigate('/editor');
