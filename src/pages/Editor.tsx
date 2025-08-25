@@ -25,6 +25,7 @@ interface Solution {
   image: {
     src: string;
     alt: string;
+    scale: number;
   };
 }
 
@@ -46,7 +47,7 @@ interface LandingPageData {
     subtitle: string;
     cta_primary: { label: string; href: string };
     cta_secondary: { label: string; href: string };
-    images: Array<{ src: string; alt: string }>;
+    images: Array<{ src: string; alt: string; scale: number }>;
   };
   solutions_title: string;
   solutions: Solution[];
@@ -54,7 +55,7 @@ interface LandingPageData {
     title: string;
     paragraph: string;
     cta: { label: string; href: string };
-    image: { src: string; alt: string };
+    image: { src: string; alt: string; scale: number };
   };
   faq_title: string;
   faq: FAQ[];
@@ -106,23 +107,23 @@ const Editor = () => {
       cta_primary: { label: 'Falar com comercial', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' },
       cta_secondary: { label: 'Loja online', href: 'https://loja.smartdent.com.br/' },
       images: [
-        { src: 'https://via.placeholder.com/200x300?text=Imagem1', alt: 'Pessoa sorrindo' },
-        { src: 'https://via.placeholder.com/200x300?text=Imagem2', alt: 'Pessoa escrevendo no caderno' },
-        { src: 'https://via.placeholder.com/200x300?text=Imagem3', alt: 'Pessoa feliz' }
+        { src: 'https://via.placeholder.com/200x300?text=Imagem1', alt: 'Pessoa sorrindo', scale: 1.0 },
+        { src: 'https://via.placeholder.com/200x300?text=Imagem2', alt: 'Pessoa escrevendo no caderno', scale: 1.0 },
+        { src: 'https://via.placeholder.com/200x300?text=Imagem3', alt: 'Pessoa feliz', scale: 1.0 }
       ]
     },
     solutions_title: 'Soluções completas para todos os fluxos de trabalho',
     solutions: [
-      { text: 'Resinas de alta performance para fluxos digitais precisos, tecnologia em cada detalhe.', image: { src: 'https://via.placeholder.com/800x600?text=Resinas', alt: 'Resinas de alta performance' } },
-      { text: 'Melhores scanners intraorais do mundo para otimizar sua rotina clínica.', image: { src: 'https://via.placeholder.com/800x600?text=Scanner', alt: 'Scanners intraorais' } },
-      { text: 'Impressoras 3D para transformar seu fluxo digital', image: { src: 'https://via.placeholder.com/800x600?text=Impressora', alt: 'Impressoras 3D' } },
-      { text: 'Automação de processos que reduz retrabalho e acelera entregas.', image: { src: 'https://via.placeholder.com/800x600?text=Automacao', alt: 'Automação de processos' } }
+      { text: 'Resinas de alta performance para fluxos digitais precisos, tecnologia em cada detalhe.', image: { src: 'https://via.placeholder.com/800x600?text=Resinas', alt: 'Resinas de alta performance', scale: 1.0 } },
+      { text: 'Melhores scanners intraorais do mundo para otimizar sua rotina clínica.', image: { src: 'https://via.placeholder.com/800x600?text=Scanner', alt: 'Scanners intraorais', scale: 1.0 } },
+      { text: 'Impressoras 3D para transformar seu fluxo digital', image: { src: 'https://via.placeholder.com/800x600?text=Impressora', alt: 'Impressoras 3D', scale: 1.0 } },
+      { text: 'Automação de processos que reduz retrabalho e acelera entregas.', image: { src: 'https://via.placeholder.com/800x600?text=Automacao', alt: 'Automação de processos', scale: 1.0 } }
     ],
     advisory: {
       title: 'Consultoria especializada para você investir de forma consciente e segura',
       paragraph: 'Nossa consultoria especializada ajuda você a implantar soluções digitais com foco em previsibilidade e escala, reduzindo riscos e maximizando o retorno do seu investimento.',
       cta: { label: 'Falar com consultor', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' },
-      image: { src: 'https://via.placeholder.com/600x400?text=Consultoria', alt: 'Homem sorrindo com fone de ouvido' }
+      image: { src: 'https://via.placeholder.com/600x400?text=Consultoria', alt: 'Homem sorrindo com fone de ouvido', scale: 1.0 }
     },
     faq_title: 'Perguntas frequentes',
     faq: [
@@ -234,7 +235,7 @@ const Editor = () => {
   const addSolution = () => {
     setData(prev => ({
       ...prev,
-      solutions: [...prev.solutions, { text: '', image: { src: '', alt: '' } }]
+      solutions: [...prev.solutions, { text: '', image: { src: '', alt: '', scale: 1.0 } }]
     }));
   };
 
@@ -535,6 +536,94 @@ const Editor = () => {
                             />
                           </div>
                         </div>
+
+                        {/* Banner Images */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Imagens do Banner</Label>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setData(prev => ({
+                                ...prev,
+                                banner: {
+                                  ...prev.banner,
+                                  images: [...prev.banner.images, { src: '', alt: '', scale: 1.0 }]
+                                }
+                              }))}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-3">
+                            {data.banner.images.map((image, index) => (
+                              <Card key={index} className="p-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Imagem {index + 1}</span>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      onClick={() => setData(prev => ({
+                                        ...prev,
+                                        banner: {
+                                          ...prev.banner,
+                                          images: prev.banner.images.filter((_, i) => i !== index)
+                                        }
+                                      }))}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <Input
+                                    placeholder="URL da imagem"
+                                    value={image.src}
+                                    onChange={(e) => {
+                                      const newImages = [...data.banner.images];
+                                      newImages[index].src = e.target.value;
+                                      setData(prev => ({ 
+                                        ...prev, 
+                                        banner: { ...prev.banner, images: newImages }
+                                      }));
+                                    }}
+                                  />
+                                  <Input
+                                    placeholder="Texto alternativo"
+                                    value={image.alt}
+                                    onChange={(e) => {
+                                      const newImages = [...data.banner.images];
+                                      newImages[index].alt = e.target.value;
+                                      setData(prev => ({ 
+                                        ...prev, 
+                                        banner: { ...prev.banner, images: newImages }
+                                      }));
+                                    }}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-sm">Tamanho:</Label>
+                                    <input
+                                      type="range"
+                                      min="0.5"
+                                      max="2"
+                                      step="0.1"
+                                      value={image.scale}
+                                      onChange={(e) => {
+                                        const newImages = [...data.banner.images];
+                                        newImages[index].scale = parseFloat(e.target.value);
+                                        setData(prev => ({ 
+                                          ...prev, 
+                                          banner: { ...prev.banner, images: newImages }
+                                        }));
+                                      }}
+                                      className="flex-1"
+                                    />
+                                    <span className="text-sm w-12">{Math.round(image.scale * 100)}%</span>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
                       </AccordionContent>
                     </AccordionItem>
 
@@ -587,6 +676,23 @@ const Editor = () => {
                                     setData(prev => ({ ...prev, solutions: newSolutions }));
                                   }}
                                 />
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-sm">Tamanho:</Label>
+                                  <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2"
+                                    step="0.1"
+                                    value={solution.image.scale}
+                                    onChange={(e) => {
+                                      const newSolutions = [...data.solutions];
+                                      newSolutions[index].image.scale = parseFloat(e.target.value);
+                                      setData(prev => ({ ...prev, solutions: newSolutions }));
+                                    }}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm w-12">{Math.round(solution.image.scale * 100)}%</span>
+                                </div>
                               </div>
                             </Card>
                           ))}
@@ -737,6 +843,26 @@ const Editor = () => {
                               }))}
                             />
                           </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm">Tamanho da Imagem:</Label>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2"
+                            step="0.1"
+                            value={data.advisory.image.scale}
+                            onChange={(e) => setData(prev => ({ 
+                              ...prev, 
+                              advisory: { 
+                                ...prev.advisory, 
+                                image: { ...prev.advisory.image, scale: parseFloat(e.target.value) }
+                              }
+                            }))}
+                            className="flex-1"
+                          />
+                          <span className="text-sm w-12">{Math.round(data.advisory.image.scale * 100)}%</span>
                         </div>
                       </AccordionContent>
                     </AccordionItem>

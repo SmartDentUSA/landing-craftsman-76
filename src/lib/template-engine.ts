@@ -160,7 +160,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
             <div class="banner-images">
                 {{#banner.images}}
-                <img src="{{src}}" alt="{{alt}}">
+                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}});">
                 {{/banner.images}}
             </div>
         </div>
@@ -177,7 +177,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         <p>{{text}}</p>
                     </div>
                     <div class="image-container">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image full-height">
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image full-height" style="transform: scale({{image.scale}});">
                     </div>
                 </div>
                 {{/solutions}}
@@ -196,7 +196,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{/advisory.cta}}
             </div>
             <div class="service-image-container">
-                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image">
+                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" style="transform: scale({{advisory.image.scale}});">
             </div>
         </div>
     </section>
