@@ -592,7 +592,7 @@ const Editor = () => {
   };
 
   const handleViewCode = () => {
-    navigate('/code-view', { state: { html: generatedHTML } });
+    navigate('/code-view', { state: { data, landingName: data.name } });
   };
 
   const handleCopyCode = () => {

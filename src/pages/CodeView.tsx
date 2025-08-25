@@ -14,14 +14,35 @@ const CodeView = () => {
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Get data from route state
-  const { data, landingName = "Landing Page" } = location.state || {};
+  // Get data from route state or use default data
+  const { data, landingName = "Landing Page", html } = location.state || {};
   
   const [generatedHTML, setGeneratedHTML] = useState(() => {
+    // If HTML is passed directly, use it
+    if (html) {
+      return html;
+    }
+    
+    // If data is passed, generate HTML from it
     if (data) {
       return generateHTML(data);
     }
-    return '';
+    
+    // Default example HTML if no data
+    return `<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Dent - Sistema de Gestão Odontológica</title>
+    <meta name="description" content="Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.">
+</head>
+<body>
+    <h1>Smart Dent - Odontologia Digital</h1>
+    <p>Para visualizar o código HTML completo, acesse através do Editor.</p>
+    <a href="/editor">Ir para o Editor</a>
+</body>
+</html>`;
   });
 
   const handleCopyCode = async () => {
