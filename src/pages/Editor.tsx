@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { generateHTML, SAMPLE_DATA } from "@/lib/template-engine";
+import { generateHTML, generateEmailHTML, SAMPLE_DATA } from "@/lib/template-engine";
 
 interface MenuItem {
   label: string;
@@ -33,6 +33,37 @@ interface Solution {
 interface FAQ {
   question: string;
   answer: string;
+}
+
+interface EmailData {
+  assunto_email: string;
+  preheader_texto: string;
+  url_site: string;
+  logo_src: string;
+  logo_alt: string;
+  selo: string;
+  titulo_principal: string;
+  subtitulo: string;
+  cta_href: string;
+  cta_label: string;
+  cta_subcopy: string;
+  bloco1_titulo: string;
+  bloco1_texto: string;
+  bloco2_titulo: string;
+  bloco2_texto: string;
+  beneficio_1: string;
+  beneficio_2: string;
+  beneficio_3: string;
+  imagem_href: string;
+  imagem_src: string;
+  imagem_alt: string;
+  cta2_href: string;
+  cta2_label: string;
+  brand_name: string;
+  endereco_completo: string;
+  link_suporte: string;
+  link_descadastro: string;
+  link_preferencias: string;
 }
 
 interface LandingPageData {
@@ -72,6 +103,7 @@ interface LandingPageData {
     links: Array<{ label: string; href: string }>;
     social: Array<{ platform: string; href: string; icon_src: string; icon_alt: string }>;
   };
+  email: EmailData;
 }
 
 // Opções de redes sociais com ícones fixos
@@ -163,6 +195,36 @@ const Editor = () => {
         { platform: 'YouTube', href: 'https://www.youtube.com/@smartdentcadcam', icon_src: 'https://via.placeholder.com/24x24?text=YT', icon_alt: 'Ícone do YouTube' },
         { platform: 'Facebook', href: 'https://www.facebook.com/smartdentoficial/', icon_src: 'https://via.placeholder.com/24x24?text=FB', icon_alt: 'Ícone do Facebook' }
       ]
+    },
+    email: {
+      assunto_email: 'Smart Dent - Oferta Especial',
+      preheader_texto: 'Descubra as melhores soluções em odontologia digital',
+      url_site: 'https://smartdent.com.br',
+      logo_src: 'https://via.placeholder.com/140x40?text=LOGO',
+      logo_alt: 'Smart Dent Logo',
+      selo: 'NOVIDADE',
+      titulo_principal: 'Transforme sua clínica com tecnologia de ponta',
+      subtitulo: 'Descubra como nossa odontologia digital pode revolucionar seu consultório',
+      cta_href: 'https://wa.me/5516993831794',
+      cta_label: 'Falar com especialista',
+      cta_subcopy: 'Consultoria gratuita e sem compromisso',
+      bloco1_titulo: 'Resinas 3D',
+      bloco1_texto: 'Alta performance para fluxos digitais precisos',
+      bloco2_titulo: 'Scanners Intraorais',
+      bloco2_texto: 'Melhores do mundo para otimizar sua rotina',
+      beneficio_1: 'Redução de até 70% no tempo de trabalho',
+      beneficio_2: 'Maior precisão nos procedimentos',
+      beneficio_3: 'ROI garantido em 6 meses',
+      imagem_href: 'https://smartdent.com.br',
+      imagem_src: 'https://via.placeholder.com/536x300?text=Produtos',
+      imagem_alt: 'Produtos Smart Dent',
+      cta2_href: 'https://loja.smartdent.com.br',
+      cta2_label: 'Ver catálogo completo',
+      brand_name: 'Smart Dent',
+      endereco_completo: 'R. Dr. Procópio de Toledo Malta, 62 — Morada dos Deuses, São Carlos — SP',
+      link_suporte: 'https://wa.me/5516993831794',
+      link_descadastro: 'https://smartdent.com.br/descadastrar',
+      link_preferencias: 'https://smartdent.com.br/preferencias'
     }
   });
 
@@ -175,6 +237,16 @@ const Editor = () => {
       return '<p>Erro ao gerar preview. Verifique os dados do formulário.</p>';
     }
   }, [data]);
+
+  // Generate Email HTML in real-time
+  const generatedEmailHTML = useMemo(() => {
+    try {
+      return generateEmailHTML(data.email);
+    } catch (error) {
+      console.error('Error generating Email HTML:', error);
+      return '<p>Erro ao gerar preview do e-mail. Verifique os dados do formulário.</p>';
+    }
+  }, [data.email]);
 
   const handleSave = () => {
     toast({
@@ -328,8 +400,15 @@ const Editor = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[600px] pr-4">
-                  <Accordion type="multiple" defaultValue={["seo", "header", "banner"]} className="space-y-4">
+                <Tabs defaultValue="landing-page" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="landing-page">Landing Page</TabsTrigger>
+                    <TabsTrigger value="email">E-mail Marketing</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="landing-page" className="mt-4">
+                    <ScrollArea className="h-[600px] pr-4">
+                      <Accordion type="multiple" defaultValue={["seo", "header", "banner"]} className="space-y-4">
                     {/* SEO Section */}
                     <AccordionItem value="seo">
                       <AccordionTrigger className="text-lg font-semibold">
@@ -1241,8 +1320,365 @@ const Editor = () => {
                         </div>
                       </AccordionContent>
                     </AccordionItem>
-                  </Accordion>
-                </ScrollArea>
+                      </Accordion>
+                    </ScrollArea>
+                  </TabsContent>
+                  
+                  <TabsContent value="email" className="mt-4">
+                    <ScrollArea className="h-[600px] pr-4">
+                      <Accordion type="multiple" defaultValue={["email-header", "email-content"]} className="space-y-4">
+                        {/* Email Header */}
+                        <AccordionItem value="email-header">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            Cabeçalho do E-mail
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div>
+                              <Label htmlFor="emailSubject">Assunto do E-mail</Label>
+                              <Input
+                                id="emailSubject"
+                                value={data.email.assunto_email}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, assunto_email: e.target.value } }))}
+                                placeholder="Assunto do e-mail"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailPreheader">Preheader (Texto Breve)</Label>
+                              <Textarea
+                                id="emailPreheader"
+                                value={data.email.preheader_texto}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, preheader_texto: e.target.value } }))}
+                                placeholder="Texto que aparece na lista de e-mails"
+                                className="min-h-[60px]"
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="emailSiteUrl">URL do Site</Label>
+                                <Input
+                                  id="emailSiteUrl"
+                                  value={data.email.url_site}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, url_site: e.target.value } }))}
+                                  placeholder="https://exemplo.com"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="emailLogoSrc">URL da Logo</Label>
+                                <Input
+                                  id="emailLogoSrc"
+                                  value={data.email.logo_src}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, logo_src: e.target.value } }))}
+                                  placeholder="URL da logo"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailLogoAlt">Texto Alternativo da Logo</Label>
+                              <Input
+                                id="emailLogoAlt"
+                                value={data.email.logo_alt}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, logo_alt: e.target.value } }))}
+                                placeholder="Descrição da logo"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* Email Content */}
+                        <AccordionItem value="email-content">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            Conteúdo Principal
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div>
+                              <Label htmlFor="emailSeal">Selo/Badge</Label>
+                              <Input
+                                id="emailSeal"
+                                value={data.email.selo}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, selo: e.target.value } }))}
+                                placeholder="NOVIDADE, OFERTA, etc."
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailMainTitle">Título Principal</Label>
+                              <Input
+                                id="emailMainTitle"
+                                value={data.email.titulo_principal}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, titulo_principal: e.target.value } }))}
+                                placeholder="Título principal do e-mail"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailSubtitle">Subtítulo</Label>
+                              <Textarea
+                                id="emailSubtitle"
+                                value={data.email.subtitulo}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, subtitulo: e.target.value } }))}
+                                placeholder="Descrição complementar"
+                                className="min-h-[80px]"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* CTA Principal */}
+                        <AccordionItem value="email-cta">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            CTA Principal
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="emailCtaLabel">Texto do Botão</Label>
+                                <Input
+                                  id="emailCtaLabel"
+                                  value={data.email.cta_label}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, cta_label: e.target.value } }))}
+                                  placeholder="Texto do botão principal"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="emailCtaHref">Link do Botão</Label>
+                                <Input
+                                  id="emailCtaHref"
+                                  value={data.email.cta_href}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, cta_href: e.target.value } }))}
+                                  placeholder="URL de destino"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailCtaSubcopy">Texto abaixo do botão</Label>
+                              <Input
+                                id="emailCtaSubcopy"
+                                value={data.email.cta_subcopy}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, cta_subcopy: e.target.value } }))}
+                                placeholder="Texto pequeno abaixo do CTA"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* Blocos de Destaque */}
+                        <AccordionItem value="email-highlights">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            Blocos de Destaque
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="emailBlock1Title">Bloco 1 - Título</Label>
+                                <Input
+                                  id="emailBlock1Title"
+                                  value={data.email.bloco1_titulo}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, bloco1_titulo: e.target.value } }))}
+                                  placeholder="Título do primeiro bloco"
+                                />
+                                <Label htmlFor="emailBlock1Text">Bloco 1 - Texto</Label>
+                                <Textarea
+                                  id="emailBlock1Text"
+                                  value={data.email.bloco1_texto}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, bloco1_texto: e.target.value } }))}
+                                  placeholder="Descrição do primeiro bloco"
+                                  className="min-h-[60px]"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="emailBlock2Title">Bloco 2 - Título</Label>
+                                <Input
+                                  id="emailBlock2Title"
+                                  value={data.email.bloco2_titulo}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, bloco2_titulo: e.target.value } }))}
+                                  placeholder="Título do segundo bloco"
+                                />
+                                <Label htmlFor="emailBlock2Text">Bloco 2 - Texto</Label>
+                                <Textarea
+                                  id="emailBlock2Text"
+                                  value={data.email.bloco2_texto}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, bloco2_texto: e.target.value } }))}
+                                  placeholder="Descrição do segundo bloco"
+                                  className="min-h-[60px]"
+                                />
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* Benefícios */}
+                        <AccordionItem value="email-benefits">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            Lista de Benefícios
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div>
+                              <Label htmlFor="emailBenefit1">Benefício 1</Label>
+                              <Input
+                                id="emailBenefit1"
+                                value={data.email.beneficio_1}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, beneficio_1: e.target.value } }))}
+                                placeholder="Primeiro benefício"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailBenefit2">Benefício 2</Label>
+                              <Input
+                                id="emailBenefit2"
+                                value={data.email.beneficio_2}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, beneficio_2: e.target.value } }))}
+                                placeholder="Segundo benefício"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailBenefit3">Benefício 3</Label>
+                              <Input
+                                id="emailBenefit3"
+                                value={data.email.beneficio_3}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, beneficio_3: e.target.value } }))}
+                                placeholder="Terceiro benefício"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* Imagem */}
+                        <AccordionItem value="email-image">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            Imagem Principal
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="emailImageSrc">URL da Imagem</Label>
+                                <Input
+                                  id="emailImageSrc"
+                                  value={data.email.imagem_src}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_src: e.target.value } }))}
+                                  placeholder="URL da imagem"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="emailImageHref">Link da Imagem</Label>
+                                <Input
+                                  id="emailImageHref"
+                                  value={data.email.imagem_href}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_href: e.target.value } }))}
+                                  placeholder="Para onde a imagem leva"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailImageAlt">Texto Alternativo</Label>
+                              <Input
+                                id="emailImageAlt"
+                                value={data.email.imagem_alt}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_alt: e.target.value } }))}
+                                placeholder="Descrição da imagem"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* CTA Secundário */}
+                        <AccordionItem value="email-cta2">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            CTA Secundário
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="emailCta2Label">Texto do Botão</Label>
+                                <Input
+                                  id="emailCta2Label"
+                                  value={data.email.cta2_label}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, cta2_label: e.target.value } }))}
+                                  placeholder="Texto do botão secundário"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="emailCta2Href">Link do Botão</Label>
+                                <Input
+                                  id="emailCta2Href"
+                                  value={data.email.cta2_href}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, cta2_href: e.target.value } }))}
+                                  placeholder="URL de destino"
+                                />
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        
+                        {/* Footer */}
+                        <AccordionItem value="email-footer">
+                          <AccordionTrigger className="text-lg font-semibold">
+                            Rodapé do E-mail
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4">
+                            <div>
+                              <Label htmlFor="emailBrandName">Nome da Marca</Label>
+                              <Input
+                                id="emailBrandName"
+                                value={data.email.brand_name}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, brand_name: e.target.value } }))}
+                                placeholder="Nome da empresa"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="emailAddress">Endereço Completo</Label>
+                              <Textarea
+                                id="emailAddress"
+                                value={data.email.endereco_completo}
+                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, endereco_completo: e.target.value } }))}
+                                placeholder="Endereço completo da empresa"
+                                className="min-h-[60px]"
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <Label htmlFor="emailSupportLink">Link Suporte</Label>
+                                <Input
+                                  id="emailSupportLink"
+                                  value={data.email.link_suporte}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, link_suporte: e.target.value } }))}
+                                  placeholder="Link para suporte"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="emailUnsubscribeLink">Link Descadastro</Label>
+                                <Input
+                                  id="emailUnsubscribeLink"
+                                  value={data.email.link_descadastro}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, link_descadastro: e.target.value } }))}
+                                  placeholder="Link para descadastro"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="emailPreferencesLink">Link Preferências</Label>
+                                <Input
+                                  id="emailPreferencesLink"
+                                  value={data.email.link_preferencias}
+                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, link_preferencias: e.target.value } }))}
+                                  placeholder="Link para preferências"
+                                />
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </ScrollArea>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>

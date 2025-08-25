@@ -281,6 +281,190 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// Template HTML base para e-mail
+const EMAIL_TEMPLATE_HTML = `<!doctype html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title>{{assunto_email}}</title>
+  <!-- Preheader (texto breve que aparece na lista de e-mails) -->
+  <style>
+    .preheader { display:none !important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; overflow:hidden; mso-hide:all; }
+    @media screen and (max-width:600px){
+      .container{ width:100% !important; }
+      .stack{ display:block !important; width:100% !important; max-width:100% !important; }
+      .p-xs{ padding:16px !important; }
+      .center-xs{ text-align:center !important; }
+      .btn{ width:100% !important; }
+    }
+  </style>
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+</head>
+<body style="margin:0; padding:0; background:#f2f4f6;">
+  <div class="preheader">
+    {{preheader_texto}}
+  </div>
+
+  <!-- Wrapper -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f2f4f6;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <!-- Container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="container" style="width:600px; max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden;">
+          
+          <!-- Header / Logo -->
+          <tr>
+            <td align="left" style="padding:20px 24px; border-bottom:1px solid #eef2f7;">
+              <a href="{{url_site}}" target="_blank" style="text-decoration:none;">
+                <img src="{{logo_src}}" width="140" height="" alt="{{logo_alt}}" style="display:block; border:0; outline:none; text-decoration:none;">
+              </a>
+            </td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td align="left" class="p-xs" style="padding:32px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
+              <div style="font-size:12px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#0a84ff;">{{selo}}</div>
+              <h1 style="margin:8px 0 8px; font-size:24px; line-height:1.25; color:#0b1220;">
+                {{titulo_principal}}
+              </h1>
+              <p style="margin:0; font-size:16px; line-height:1.6; color:#3b4556;">
+                {{subtitulo}}
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA principal (botão com VML para Outlook) -->
+          <tr>
+            <td align="left" class="p-xs" style="padding:12px 32px 24px 32px;">
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{cta_href}}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="12%" stroke="f" fillcolor="#0a84ff">
+                <w:anchorlock/>
+                <center style="color:#ffffff; font-family:Arial, sans-serif; font-size:16px; font-weight:bold;">{{cta_label}}</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-- -->
+              <a href="{{cta_href}}" target="_blank"
+                 style="display:inline-block; background:#0a84ff; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:16px; font-weight:bold; text-decoration:none; border-radius:6px; padding:14px 22px;"
+                 class="btn">{{cta_label}}</a>
+              <!--<![endif]-->
+              <div style="height:8px; line-height:8px;">&nbsp;</div>
+              <p style="margin:0; font-size:12px; color:#6b7280; font-family:Arial, Helvetica, sans-serif;">
+                {{cta_subcopy}}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Destaques (2 colunas responsivas) -->
+          <tr>
+            <td align="center" style="padding:8px 16px 8px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td class="stack" valign="top" style="width:50%; max-width:50%; padding:8px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eef2f7; border-radius:10px;">
+                      <tr>
+                        <td style="padding:16px; font-family:Arial, Helvetica, sans-serif;">
+                          <h3 style="margin:0 0 6px; font-size:16px; color:#0b1220;">{{bloco1_titulo}}</h3>
+                          <p style="margin:0; font-size:14px; color:#3b4556; line-height:1.5;">
+                            {{bloco1_texto}}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td class="stack" valign="top" style="width:50%; max-width:50%; padding:8px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eef2f7; border-radius:10px;">
+                      <tr>
+                        <td style="padding:16px; font-family:Arial, Helvetica, sans-serif;">
+                          <h3 style="margin:0 0 6px; font-size:16px; color:#0b1220;">{{bloco2_titulo}}</h3>
+                          <p style="margin:0; font-size:14px; color:#3b4556; line-height:1.5;">
+                            {{bloco2_texto}}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Lista de benefícios -->
+          <tr>
+            <td align="left" class="p-xs" style="padding:8px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
+              <h3 style="margin:0 0 8px; font-size:16px; color:#0b1220;">Por que vale a pena?</h3>
+              <ul style="margin:0; padding-left:18px; color:#3b4556; font-size:14px; line-height:1.6;">
+                <li>{{beneficio_1}}</li>
+                <li>{{beneficio_2}}</li>
+                <li>{{beneficio_3}}</li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- Imagem (opcional) -->
+          <tr>
+            <td align="center" style="padding:8px 32px 16px 32px;">
+              <a href="{{imagem_href}}" target="_blank" style="text-decoration:none;">
+                <img src="{{imagem_src}}" alt="{{imagem_alt}}" width="536" style="width:100%; max-width:536px; height:auto; border:0; display:block;">
+              </a>
+            </td>
+          </tr>
+
+          <!-- CTA secundário -->
+          <tr>
+            <td align="left" class="p-xs" style="padding:0 32px 24px 32px;">
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{cta2_href}}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="12%" stroke="f" fillcolor="#0b1220">
+                <w:anchorlock/>
+                <center style="color:#ffffff; font-family:Arial, sans-serif; font-size:14px; font-weight:bold;">{{cta2_label}}</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-- -->
+              <a href="{{cta2_href}}" target="_blank"
+                 style="display:inline-block; background:#0b1220; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:14px; font-weight:bold; text-decoration:none; border-radius:6px; padding:12px 18px;"
+                 class="btn">{{cta2_label}}</a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr><td style="height:1px; line-height:1px; background:#eef2f7;">&nbsp;</td></tr>
+
+          <!-- Rodapé -->
+          <tr>
+            <td align="left" style="padding:18px 24px 28px 24px; font-family:Arial, Helvetica, sans-serif; color:#6b7280; font-size:12px; line-height:1.6;">
+              <p style="margin:0 0 6px;"><strong>{{brand_name}}</strong></p>
+              <p style="margin:0 0 6px;">{{endereco_completo}}</p>
+              <p style="margin:0 0 10px;">
+                Dúvidas? <a href="{{link_suporte}}" target="_blank" style="color:#0a84ff; text-decoration:none;">Fale com nosso time</a>.
+              </p>
+              <p style="margin:0;">
+                <a href="{{link_descadastro}}" target="_blank" style="color:#6b7280; text-decoration:underline;">Descadastrar</a>
+                &nbsp;&middot;&nbsp;
+                <a href="{{link_preferencias}}" target="_blank" style="color:#6b7280; text-decoration:underline;">Gerenciar preferências</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+        <!-- /Container -->
+      </td>
+    </tr>
+  </table>
+  <!-- /Wrapper -->
+</body>
+</html>`;
+
 export const generateHTML = (data: any): string => {
   // Processa os dados para adicionar os ícones SVG corretos
   const processedData = {
@@ -295,6 +479,10 @@ export const generateHTML = (data: any): string => {
   };
 
   return Mustache.render(TEMPLATE_HTML, processedData);
+};
+
+export const generateEmailHTML = (emailData: any): string => {
+  return Mustache.render(EMAIL_TEMPLATE_HTML, emailData);
 };
 
 // Sample data for testing
