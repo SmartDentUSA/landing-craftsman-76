@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { generateHTML, SAMPLE_DATA } from "@/lib/template-engine";
 
 interface MenuItem {
   label: string;
@@ -20,8 +21,10 @@ interface MenuItem {
 
 interface Solution {
   text: string;
-  imageSrc: string;
-  imageAlt: string;
+  image: {
+    src: string;
+    alt: string;
+  };
 }
 
 interface FAQ {
@@ -31,16 +34,20 @@ interface FAQ {
 
 interface LandingPageData {
   status: 'draft' | 'approved';
-  logoUrl: string;
+  seo_title: string;
+  seo_description: string;
+  logo_url: string;
+  logo_alt: string;
   menu: MenuItem[];
   banner: {
-    badgeText: string;
+    badge_text: string;
     title: string;
     subtitle: string;
-    ctaPrimary: { label: string; href: string };
-    ctaSecondary: { label: string; href: string };
+    cta_primary: { label: string; href: string };
+    cta_secondary: { label: string; href: string };
     images: Array<{ src: string; alt: string }>;
   };
+  solutions_title: string;
   solutions: Solution[];
   advisory: {
     title: string;
@@ -48,88 +55,113 @@ interface LandingPageData {
     cta: { label: string; href: string };
     image: { src: string; alt: string };
   };
+  faq_title: string;
   faq: FAQ[];
-  ctaFinal: {
+  cta_final: {
     title: string;
     paragraph: string;
     primary: { label: string; href: string };
     secondary: { label: string; href: string };
   };
+  footer_links_title: string;
   footer: {
     locations: Array<{ title: string; address: string }>;
     links: Array<{ label: string; href: string }>;
-    social: Array<{ platform: string; href: string; iconAlt: string }>;
+    social: Array<{ platform: string; href: string; icon_src: string; icon_alt: string }>;
   };
 }
 
 const Editor = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { id } = useParams();
   
   const [data, setData] = useState<LandingPageData>({
     status: 'draft',
-    logoUrl: '',
+    seo_title: 'Smart Dent - Sistema de Gestão Odontológica',
+    seo_description: 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.',
+    logo_url: 'https://via.placeholder.com/140x40?text=LOGO',
+    logo_alt: 'Smart Dent Logo',
     menu: [
-      { label: 'Início', href: '#home' },
-      { label: 'Serviços', href: '#services' },
-      { label: 'Sobre', href: '#about' },
-      { label: 'Contato', href: '#contact' }
+      { label: 'Institucional', href: 'https://smartdent.com.br/institucional' },
+      { label: 'Resinas', href: 'https://smartdent.com.br/resinas3d' },
+      { label: 'Scanner intraoral', href: 'https://smartdent.com.br/odontologia-digital-scanners-intraorais' },
+      { label: 'Contato', href: 'https://smartdent.com.br/#institucional' }
     ],
     banner: {
-      badgeText: '16 anos de inovação',
-      title: 'Transforme seu sorriso com tecnologia de ponta',
-      subtitle: 'Especialistas em implantes, ortodontia e estética dental. Agende sua consulta e descubra o que podemos fazer por você.',
-      ctaPrimary: { label: 'Agendar Consulta', href: 'https://wa.me/11999999999' },
-      ctaSecondary: { label: 'Conhecer Serviços', href: '#services' },
-      images: []
+      badge_text: 'Smart Dent 16 anos de inovação',
+      title: 'Odontologia Digital: simples, eficiente e lucrativa',
+      subtitle: 'A Smart Dent é uma referência em odontologia digital no Brasil, combinando tecnologia avançada, automação eficiente e qualidade.',
+      cta_primary: { label: 'Falar com comercial', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' },
+      cta_secondary: { label: 'Loja online', href: 'https://loja.smartdent.com.br/' },
+      images: [
+        { src: 'https://via.placeholder.com/200x300?text=Imagem1', alt: 'Pessoa sorrindo' },
+        { src: 'https://via.placeholder.com/200x300?text=Imagem2', alt: 'Pessoa escrevendo no caderno' },
+        { src: 'https://via.placeholder.com/200x300?text=Imagem3', alt: 'Pessoa feliz' }
+      ]
     },
+    solutions_title: 'Soluções completas para todos os fluxos de trabalho',
     solutions: [
-      { text: 'Implantes Dentários', imageSrc: '', imageAlt: 'Implante dentário' },
-      { text: 'Ortodontia Invisível', imageSrc: '', imageAlt: 'Ortodontia invisível' },
-      { text: 'Harmonização Facial', imageSrc: '', imageAlt: 'Harmonização facial' },
-      { text: 'Clareamento Dental', imageSrc: '', imageAlt: 'Clareamento dental' }
+      { text: 'Resinas de alta performance para fluxos digitais precisos, tecnologia em cada detalhe.', image: { src: 'https://via.placeholder.com/800x600?text=Resinas', alt: 'Resinas de alta performance' } },
+      { text: 'Melhores scanners intraorais do mundo para otimizar sua rotina clínica.', image: { src: 'https://via.placeholder.com/800x600?text=Scanner', alt: 'Scanners intraorais' } },
+      { text: 'Impressoras 3D para transformar seu fluxo digital', image: { src: 'https://via.placeholder.com/800x600?text=Impressora', alt: 'Impressoras 3D' } },
+      { text: 'Automação de processos que reduz retrabalho e acelera entregas.', image: { src: 'https://via.placeholder.com/800x600?text=Automacao', alt: 'Automação de processos' } }
     ],
     advisory: {
-      title: 'Atendimento Personalizado',
-      paragraph: 'Nossa equipe oferece consultoria especializada para cada caso, garantindo o melhor resultado para seu sorriso.',
-      cta: { label: 'Fale com Especialista', href: 'https://wa.me/11999999999' },
-      image: { src: '', alt: 'Atendimento especializado' }
+      title: 'Consultoria especializada para você investir de forma consciente e segura',
+      paragraph: 'Nossa consultoria especializada ajuda você a implantar soluções digitais com foco em previsibilidade e escala, reduzindo riscos e maximizando o retorno do seu investimento.',
+      cta: { label: 'Falar com consultor', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' },
+      image: { src: 'https://via.placeholder.com/600x400?text=Consultoria', alt: 'Homem sorrindo com fone de ouvido' }
     },
+    faq_title: 'Perguntas frequentes',
     faq: [
       {
-        question: 'Quanto tempo dura um tratamento de implante?',
-        answer: 'O tempo varia de acordo com cada caso, mas geralmente entre 4 a 6 meses para osseointegração completa.'
+        question: 'Sobre a Smart Dent',
+        answer: 'Foi da evolução da odontologia digital no Brasil que nasceu a Smart Dent. Em parceria com a USP São Carlos, seguimos impulsionando a odontologia digital e definindo novos padrões de excelência.'
       },
       {
-        question: 'Os tratamentos têm garantia?',
-        answer: 'Sim, oferecemos garantia de até 5 anos para implantes e 2 anos para próteses.'
+        question: 'Qual é o principal objetivo da Smart Dent com seus clientes?',
+        answer: 'Auxiliar dentistas e laboratórios a realizarem uma transformação digital segura e eficiente, adotando soluções integradas para aumentar a produtividade e reduzir custos operacionais.'
       },
       {
-        question: 'Aceita convênio?',
-        answer: 'Trabalhamos com os principais convênios odontológicos e oferecemos condições especiais para pagamento.'
+        question: 'Vocês oferecem suporte e treinamento?',
+        answer: 'Sim. Oferecemos consultoria, implantação assistida e treinamentos práticos para garantir que a equipe utilize todo o potencial das tecnologias.'
       }
     ],
-    ctaFinal: {
-      title: 'Pronto para transformar seu sorriso?',
-      paragraph: 'Agende uma avaliação gratuita e descubra como podemos ajudar você.',
-      primary: { label: 'Agendar Avaliação', href: 'https://wa.me/11999999999' },
-      secondary: { label: 'Ver Casos de Sucesso', href: '#cases' }
+    cta_final: {
+      title: 'Mais que tecnologia e materiais, entregamos um novo modelo de negócio para seu consultório.',
+      paragraph: 'Acesse nosso portfólio de produtos',
+      primary: { label: 'Atendimento digital', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' },
+      secondary: { label: 'Fale com o consultor', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' }
     },
+    footer_links_title: 'Links Úteis',
     footer: {
       locations: [
-        { title: 'Unidade Vila Madalena', address: 'Rua Harmonia, 123 - Vila Madalena, SP' },
-        { title: 'Unidade Moema', address: 'Av. Ibirapuera, 456 - Moema, SP' }
+        { title: 'Smart Dent BR', address: 'R. Dr. Procópio de Toledo Malta, 62 — Morada dos Deuses, São Carlos — SP, 13562-293' },
+        { title: 'Smart Dent USA', address: 'University City Blvd - Charlotte, NC' }
       ],
       links: [
-        { label: 'Política de Privacidade', href: '/privacy' },
-        { label: 'Termos de Uso', href: '/terms' }
+        { label: 'Institucional', href: 'https://smartdent.com.br/institucional' },
+        { label: 'Resinas', href: 'https://smartdent.com.br/resinas3d' },
+        { label: 'Scanner intraoral', href: 'https://smartdent.com.br/odontologia-digital-scanners-intraorais' }
       ],
       social: [
-        { platform: 'Instagram', href: 'https://instagram.com/smartdent', iconAlt: 'Instagram' },
-        { platform: 'Facebook', href: 'https://facebook.com/smartdent', iconAlt: 'Facebook' }
+        { platform: 'Instagram', href: 'https://www.instagram.com/smartdentoficial/', icon_src: 'https://via.placeholder.com/24x24?text=IG', icon_alt: 'Ícone do Instagram' },
+        { platform: 'YouTube', href: 'https://www.youtube.com/@smartdentcadcam', icon_src: 'https://via.placeholder.com/24x24?text=YT', icon_alt: 'Ícone do YouTube' },
+        { platform: 'Facebook', href: 'https://www.facebook.com/smartdentoficial/', icon_src: 'https://via.placeholder.com/24x24?text=FB', icon_alt: 'Ícone do Facebook' }
       ]
     }
   });
+
+  // Generate HTML in real-time
+  const generatedHTML = useMemo(() => {
+    try {
+      return generateHTML(data);
+    } catch (error) {
+      console.error('Error generating HTML:', error);
+      return '<p>Erro ao gerar preview. Verifique os dados do formulário.</p>';
+    }
+  }, [data]);
 
   const handleSave = () => {
     toast({
@@ -147,11 +179,15 @@ const Editor = () => {
   };
 
   const handlePreview = () => {
-    // Open preview in new tab or modal
-    toast({
-      title: "Abrindo preview",
-      description: "O preview da sua landing page será aberto em uma nova aba.",
-    });
+    // Open preview in new tab
+    const blob = new Blob([generatedHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleViewCode = () => {
+    navigate('/code-view', { state: { data, landingName: 'Smart Dent Landing' } });
   };
 
   const addMenuItem = () => {
@@ -171,7 +207,7 @@ const Editor = () => {
   const addSolution = () => {
     setData(prev => ({
       ...prev,
-      solutions: [...prev.solutions, { text: '', imageSrc: '', imageAlt: '' }]
+      solutions: [...prev.solutions, { text: '', image: { src: '', alt: '' } }]
     }));
   };
 
@@ -227,6 +263,12 @@ const Editor = () => {
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
+              {data.status === 'approved' && (
+                <Button variant="outline" onClick={handleViewCode}>
+                  <Code2 className="h-4 w-4 mr-2" />
+                  Ver Código
+                </Button>
+              )}
               {data.status === 'draft' && (
                 <Button onClick={handleApprove} className="gradient-primary shadow-primary">
                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -263,8 +305,8 @@ const Editor = () => {
                           <Label htmlFor="logoUrl">URL da Logo</Label>
                           <Input
                             id="logoUrl"
-                            value={data.logoUrl}
-                            onChange={(e) => setData(prev => ({ ...prev, logoUrl: e.target.value }))}
+                            value={data.logo_url}
+                            onChange={(e) => setData(prev => ({ ...prev, logo_url: e.target.value }))}
                             placeholder="https://exemplo.com/logo.png"
                           />
                         </div>
@@ -317,10 +359,10 @@ const Editor = () => {
                           <Label htmlFor="badgeText">Texto do Badge</Label>
                           <Input
                             id="badgeText"
-                            value={data.banner.badgeText}
+                            value={data.banner.badge_text}
                             onChange={(e) => setData(prev => ({ 
                               ...prev, 
-                              banner: { ...prev.banner, badgeText: e.target.value }
+                              banner: { ...prev.banner, badge_text: e.target.value }
                             }))}
                             placeholder="16 anos de inovação"
                           />
@@ -359,24 +401,24 @@ const Editor = () => {
                             <Label>CTA Primário</Label>
                             <Input
                               placeholder="Texto do botão"
-                              value={data.banner.ctaPrimary.label}
+                              value={data.banner.cta_primary.label}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
                                   ...prev.banner, 
-                                  ctaPrimary: { ...prev.banner.ctaPrimary, label: e.target.value }
+                                  cta_primary: { ...prev.banner.cta_primary, label: e.target.value }
                                 }
                               }))}
                               className="mb-2"
                             />
                             <Input
                               placeholder="URL do botão"
-                              value={data.banner.ctaPrimary.href}
+                              value={data.banner.cta_primary.href}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
                                   ...prev.banner, 
-                                  ctaPrimary: { ...prev.banner.ctaPrimary, href: e.target.value }
+                                  cta_primary: { ...prev.banner.cta_primary, href: e.target.value }
                                 }
                               }))}
                             />
@@ -386,24 +428,24 @@ const Editor = () => {
                             <Label>CTA Secundário</Label>
                             <Input
                               placeholder="Texto do botão"
-                              value={data.banner.ctaSecondary.label}
+                              value={data.banner.cta_secondary.label}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
                                   ...prev.banner, 
-                                  ctaSecondary: { ...prev.banner.ctaSecondary, label: e.target.value }
+                                  cta_secondary: { ...prev.banner.cta_secondary, label: e.target.value }
                                 }
                               }))}
                               className="mb-2"
                             />
                             <Input
                               placeholder="URL do botão"
-                              value={data.banner.ctaSecondary.href}
+                              value={data.banner.cta_secondary.href}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
                                   ...prev.banner, 
-                                  ctaSecondary: { ...prev.banner.ctaSecondary, href: e.target.value }
+                                  cta_secondary: { ...prev.banner.cta_secondary, href: e.target.value }
                                 }
                               }))}
                             />
@@ -445,19 +487,19 @@ const Editor = () => {
                                 />
                                 <Input
                                   placeholder="URL da imagem"
-                                  value={solution.imageSrc}
+                                  value={solution.image.src}
                                   onChange={(e) => {
                                     const newSolutions = [...data.solutions];
-                                    newSolutions[index].imageSrc = e.target.value;
+                                    newSolutions[index].image.src = e.target.value;
                                     setData(prev => ({ ...prev, solutions: newSolutions }));
                                   }}
                                 />
                                 <Input
                                   placeholder="Texto alternativo da imagem"
-                                  value={solution.imageAlt}
+                                  value={solution.image.alt}
                                   onChange={(e) => {
                                     const newSolutions = [...data.solutions];
-                                    newSolutions[index].imageAlt = e.target.value;
+                                    newSolutions[index].image.alt = e.target.value;
                                     setData(prev => ({ ...prev, solutions: newSolutions }));
                                   }}
                                 />
@@ -534,36 +576,36 @@ const Editor = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-lg p-4 bg-muted/20 min-h-[600px]">
-                  <div className="text-center text-muted-foreground">
-                    <div className="mb-4">
-                      <div className="w-16 h-16 bg-primary/20 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                        <Eye className="h-8 w-8 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-lg mb-2">Preview da Landing Page</h3>
-                      <p className="text-sm">
-                        O preview em tempo real será implementado aqui, mostrando exatamente como sua landing page ficará.
-                      </p>
-                    </div>
-                    
-                    {/* Preview content summary */}
-                    <div className="text-left space-y-3 mt-6">
-                      <div className="p-3 bg-card rounded border">
-                        <h4 className="font-medium text-primary">Título:</h4>
-                        <p className="text-sm">{data.banner.title || 'Não definido'}</p>
-                      </div>
-                      
-                      <div className="p-3 bg-card rounded border">
-                        <h4 className="font-medium text-primary">Soluções:</h4>
-                        <p className="text-sm">{data.solutions.length} cards configurados</p>
-                      </div>
-                      
-                      <div className="p-3 bg-card rounded border">
-                        <h4 className="font-medium text-primary">FAQ:</h4>
-                        <p className="text-sm">{data.faq.length} perguntas configuradas</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  <iframe
+                    srcDoc={generatedHTML}
+                    className="w-full h-[600px] border-0"
+                    title="Preview da Landing Page"
+                    sandbox="allow-scripts"
+                  />
+                </div>
+                
+                {/* Quick Action Buttons */}
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={handlePreview}
+                    className="flex-1"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Abrir em Nova Aba
+                  </Button>
+                  {data.status === 'approved' && (
+                    <Button 
+                      size="sm" 
+                      onClick={handleViewCode}
+                      className="flex-1 gradient-primary"
+                    >
+                      <Code2 className="h-4 w-4 mr-2" />
+                      Ver Código HTML
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -62,12 +62,24 @@ const Dashboard = () => {
     });
   };
 
-  const handleCopyCode = (landingPage: LandingPage) => {
+  const handleCopyCode = async (landingPage: LandingPage) => {
     if (landingPage.status === 'approved') {
-      toast({
-        title: "Código copiado!",
-        description: "HTML da landing page copiado para a área de transferência.",
-      });
+      // In a real app, this would fetch the actual HTML from the landing page data
+      const sampleHTML = '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1></body></html>';
+      
+      try {
+        await navigator.clipboard.writeText(sampleHTML);
+        toast({
+          title: "Código copiado!",
+          description: "HTML da landing page copiado para a área de transferência.",
+        });
+      } catch (err) {
+        toast({
+          title: "Erro ao copiar",
+          description: "Não foi possível copiar o código. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
