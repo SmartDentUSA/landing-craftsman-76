@@ -9,7 +9,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-primary">
+      <section className="relative overflow-hidden gradient-primary">{/*changed from bg-gradient-primary*/}
         <div className="container mx-auto px-6 py-20">
           <div className="text-center text-white">
             <h1 className="text-5xl font-bold mb-6">
