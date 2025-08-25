@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink } from "lucide-react";
+import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -190,6 +190,22 @@ const Editor = () => {
     navigate('/code-view', { state: { data, landingName: 'Smart Dent Landing' } });
   };
 
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedHTML);
+      toast({
+        title: "Código copiado!",
+        description: "O código HTML foi copiado para a área de transferência.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o código. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const addMenuItem = () => {
     setData(prev => ({
       ...prev,
@@ -264,10 +280,16 @@ const Editor = () => {
                 Preview
               </Button>
               {data.status === 'approved' && (
-                <Button variant="outline" onClick={handleViewCode}>
-                  <Code2 className="h-4 w-4 mr-2" />
-                  Ver Código
-                </Button>
+                <>
+                  <Button variant="outline" onClick={handleViewCode}>
+                    <Code2 className="h-4 w-4 mr-2" />
+                    Ver Código
+                  </Button>
+                  <Button onClick={handleCopyCode} className="gradient-primary shadow-primary">
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar Código
+                  </Button>
+                </>
               )}
               {data.status === 'draft' && (
                 <Button onClick={handleApprove} className="gradient-primary shadow-primary">
@@ -294,7 +316,54 @@ const Editor = () => {
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[600px] pr-4">
-                  <Accordion type="multiple" defaultValue={["header", "banner"]} className="space-y-4">
+                  <Accordion type="multiple" defaultValue={["seo", "header", "banner"]} className="space-y-4">
+                    {/* SEO Section */}
+                    <AccordionItem value="seo">
+                      <AccordionTrigger className="text-lg font-semibold">
+                        SEO e Meta Tags
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="seoTitle">Título da Página (SEO)</Label>
+                          <Input
+                            id="seoTitle"
+                            value={data.seo_title}
+                            onChange={(e) => setData(prev => ({ ...prev, seo_title: e.target.value }))}
+                            placeholder="Smart Dent - Sistema de Gestão Odontológica"
+                            maxLength={60}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Máximo 60 caracteres. Atual: {data.seo_title.length}/60
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="seoDescription">Meta Descrição</Label>
+                          <Textarea
+                            id="seoDescription"
+                            value={data.seo_description}
+                            onChange={(e) => setData(prev => ({ ...prev, seo_description: e.target.value }))}
+                            placeholder="Descrição que aparecerá nos resultados de busca do Google"
+                            className="min-h-[80px]"
+                            maxLength={160}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Máximo 160 caracteres. Atual: {data.seo_description.length}/160
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="logoAlt">Texto Alternativo da Logo</Label>
+                          <Input
+                            id="logoAlt"
+                            value={data.logo_alt}
+                            onChange={(e) => setData(prev => ({ ...prev, logo_alt: e.target.value }))}
+                            placeholder="Descrição da logo para acessibilidade"
+                          />
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
                     {/* Header Section */}
                     <AccordionItem value="header">
                       <AccordionTrigger className="text-lg font-semibold">
@@ -601,14 +670,25 @@ const Editor = () => {
                     Abrir em Nova Aba
                   </Button>
                   {data.status === 'approved' && (
-                    <Button 
-                      size="sm" 
-                      onClick={handleViewCode}
-                      className="flex-1 gradient-primary"
-                    >
-                      <Code2 className="h-4 w-4 mr-2" />
-                      Ver Código HTML
-                    </Button>
+                    <>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={handleViewCode}
+                        className="flex-1"
+                      >
+                        <Code2 className="h-4 w-4 mr-2" />
+                        Ver Código
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={handleCopyCode}
+                        className="flex-1 gradient-primary"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar Código
+                      </Button>
+                    </>
                   )}
                 </div>
               </CardContent>

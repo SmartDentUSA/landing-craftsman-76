@@ -4,19 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Download, ExternalLink, ArrowLeft, Code2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { generateHTML } from "@/lib/template-engine";
 
-interface CodeViewProps {
-  data?: any;
-  landingName?: string;
-}
-
-const CodeView = ({ data, landingName = "Landing Page" }: CodeViewProps) => {
+const CodeView = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Get data from route state
+  const { data, landingName = "Landing Page" } = location.state || {};
   
   const [generatedHTML, setGeneratedHTML] = useState(() => {
     if (data) {
