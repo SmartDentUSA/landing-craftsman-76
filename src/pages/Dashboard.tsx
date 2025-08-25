@@ -144,7 +144,11 @@ const Dashboard = () => {
                       <span>Template: {landingPage.template}</span>
                       <span>Versão: v{landingPage.version}</span>
                       <span>
-                        Modificado em: {landingPage.lastModified.toLocaleDateString('pt-BR')}
+                        Modificado em: {
+                          landingPage.lastModified instanceof Date 
+                            ? landingPage.lastModified.toLocaleDateString('pt-BR')
+                            : new Date(landingPage.lastModified).toLocaleDateString('pt-BR')
+                        }
                       </span>
                     </div>
                   </div>

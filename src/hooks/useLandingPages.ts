@@ -88,6 +88,20 @@ const useLandingPages = create<LandingPagesStore>()(
     }),
     {
       name: 'landing-pages-storage',
+      partialize: (state) => ({
+        landingPages: state.landingPages.map(lp => ({
+          ...lp,
+          lastModified: lp.lastModified.toISOString()
+        }))
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.landingPages = state.landingPages.map(lp => ({
+            ...lp,
+            lastModified: new Date(lp.lastModified)
+          }));
+        }
+      }
     }
   )
 );
