@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import CodeView from "./pages/CodeView";
+import CloudflareSettings from "./pages/CloudflareSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/editor" element={<Editor />} />
           <Route path="/editor/:id" element={<Editor />} />
           <Route path="/code-view" element={<CodeView />} />
+          <Route path="/cloudflare-settings" element={<CloudflareSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
