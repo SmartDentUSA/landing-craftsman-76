@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy, Instagram, Facebook, Youtube, Twitter, Linkedin, Globe, Mail } from "lucide-react";
+import { ImageUploader } from "@/components/ImageUploader";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -513,15 +514,16 @@ const Editor = () => {
                         Cabeçalho
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="logoUrl">URL da Logo</Label>
-                          <Input
-                            id="logoUrl"
-                            value={data.logo_url}
-                            onChange={(e) => setData(prev => ({ ...prev, logo_url: e.target.value }))}
-                            placeholder="https://exemplo.com/logo.png"
-                          />
-                        </div>
+                         <div>
+                           <Label htmlFor="logoUrl">Logo</Label>
+                           <ImageUploader
+                             value={data.logo_url}
+                             onChange={(url) => setData(prev => ({ ...prev, logo_url: url }))}
+                             altValue={data.logo_alt}
+                             onAltChange={(alt) => setData(prev => ({ ...prev, logo_alt: alt }))}
+                             placeholder="URL da logo"
+                           />
+                         </div>
                         
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -712,71 +714,57 @@ const Editor = () => {
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
-                          <div className="space-y-3">
-                            {data.banner.images.map((image, index) => (
-                              <Card key={index} className="p-3">
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Imagem {index + 1}</span>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      onClick={() => setData(prev => ({
-                                        ...prev,
-                                        banner: {
-                                          ...prev.banner,
-                                          images: prev.banner.images.filter((_, i) => i !== index)
-                                        }
-                                      }))}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                  <Input
-                                    placeholder="URL da imagem"
-                                    value={image.src}
-                                    onChange={(e) => {
-                                      const newImages = [...data.banner.images];
-                                      newImages[index].src = e.target.value;
-                                      setData(prev => ({ 
-                                        ...prev, 
-                                        banner: { ...prev.banner, images: newImages }
-                                      }));
-                                    }}
-                                  />
-                                  <Input
-                                    placeholder="Texto alternativo"
-                                    value={image.alt}
-                                    onChange={(e) => {
-                                      const newImages = [...data.banner.images];
-                                      newImages[index].alt = e.target.value;
-                                      setData(prev => ({ 
-                                        ...prev, 
-                                        banner: { ...prev.banner, images: newImages }
-                                      }));
-                                    }}
-                                  />
-                                  <div className="flex items-center gap-2">
-                                    <Label className="text-sm">Tamanho:</Label>
-                                    <input
-                                      type="range"
-                                      min="0.5"
-                                      max="2"
-                                      step="0.1"
-                                      value={image.scale}
-                                      onChange={(e) => {
-                                        const newImages = [...data.banner.images];
-                                        newImages[index].scale = parseFloat(e.target.value);
-                                        setData(prev => ({ 
-                                          ...prev, 
-                                          banner: { ...prev.banner, images: newImages }
-                                        }));
-                                      }}
-                                      className="flex-1"
-                                    />
-                                    <span className="text-sm w-12">{Math.round(image.scale * 100)}%</span>
-                                  </div>
-                                </div>
+                           <div className="space-y-3">
+                             {data.banner.images.map((image, index) => (
+                               <Card key={index} className="p-3">
+                                 <div className="space-y-2">
+                                   <div className="flex items-center justify-between">
+                                     <span className="text-sm font-medium">Imagem {index + 1}</span>
+                                     <Button 
+                                       size="sm" 
+                                       variant="ghost" 
+                                       onClick={() => setData(prev => ({
+                                         ...prev,
+                                         banner: {
+                                           ...prev.banner,
+                                           images: prev.banner.images.filter((_, i) => i !== index)
+                                         }
+                                       }))}
+                                     >
+                                       <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                   </div>
+                                   <ImageUploader
+                                     value={image.src}
+                                     onChange={(url) => {
+                                       const newImages = [...data.banner.images];
+                                       newImages[index].src = url;
+                                       setData(prev => ({ 
+                                         ...prev, 
+                                         banner: { ...prev.banner, images: newImages }
+                                       }));
+                                     }}
+                                     altValue={image.alt}
+                                     onAltChange={(alt) => {
+                                       const newImages = [...data.banner.images];
+                                       newImages[index].alt = alt;
+                                       setData(prev => ({ 
+                                         ...prev, 
+                                         banner: { ...prev.banner, images: newImages }
+                                       }));
+                                     }}
+                                     scaleValue={image.scale}
+                                     onScaleChange={(scale) => {
+                                       const newImages = [...data.banner.images];
+                                       newImages[index].scale = scale;
+                                       setData(prev => ({ 
+                                         ...prev, 
+                                         banner: { ...prev.banner, images: newImages }
+                                       }));
+                                     }}
+                                     placeholder="URL da imagem do banner"
+                                   />
+                                 </div>
                               </Card>
                             ))}
                           </div>
@@ -815,41 +803,27 @@ const Editor = () => {
                                     setData(prev => ({ ...prev, solutions: newSolutions }));
                                   }}
                                 />
-                                <Input
-                                  placeholder="URL da imagem"
-                                  value={solution.image.src}
-                                  onChange={(e) => {
-                                    const newSolutions = [...data.solutions];
-                                    newSolutions[index].image.src = e.target.value;
-                                    setData(prev => ({ ...prev, solutions: newSolutions }));
-                                  }}
-                                />
-                                <Input
-                                  placeholder="Texto alternativo da imagem"
-                                  value={solution.image.alt}
-                                  onChange={(e) => {
-                                    const newSolutions = [...data.solutions];
-                                    newSolutions[index].image.alt = e.target.value;
-                                    setData(prev => ({ ...prev, solutions: newSolutions }));
-                                  }}
-                                />
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-sm">Tamanho:</Label>
-                                  <input
-                                    type="range"
-                                    min="0.5"
-                                    max="2"
-                                    step="0.1"
-                                    value={solution.image.scale}
-                                    onChange={(e) => {
-                                      const newSolutions = [...data.solutions];
-                                      newSolutions[index].image.scale = parseFloat(e.target.value);
-                                      setData(prev => ({ ...prev, solutions: newSolutions }));
-                                    }}
-                                    className="flex-1"
-                                  />
-                                  <span className="text-sm w-12">{Math.round(solution.image.scale * 100)}%</span>
-                                </div>
+                                 <ImageUploader
+                                   value={solution.image.src}
+                                   onChange={(url) => {
+                                     const newSolutions = [...data.solutions];
+                                     newSolutions[index].image.src = url;
+                                     setData(prev => ({ ...prev, solutions: newSolutions }));
+                                   }}
+                                   altValue={solution.image.alt}
+                                   onAltChange={(alt) => {
+                                     const newSolutions = [...data.solutions];
+                                     newSolutions[index].image.alt = alt;
+                                     setData(prev => ({ ...prev, solutions: newSolutions }));
+                                   }}
+                                   scaleValue={solution.image.scale}
+                                   onScaleChange={(scale) => {
+                                     const newSolutions = [...data.solutions];
+                                     newSolutions[index].image.scale = scale;
+                                     setData(prev => ({ ...prev, solutions: newSolutions }));
+                                   }}
+                                   placeholder="URL da imagem da solução"
+                                 />
                               </div>
                             </Card>
                           ))}
@@ -970,57 +944,36 @@ const Editor = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>URL da Imagem</Label>
-                            <Input
-                              placeholder="https://exemplo.com/imagem.jpg"
-                              value={data.advisory.image.src}
-                              onChange={(e) => setData(prev => ({ 
-                                ...prev, 
-                                advisory: { 
-                                  ...prev.advisory, 
-                                  image: { ...prev.advisory.image, src: e.target.value }
-                                }
-                              }))}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label>Texto Alternativo</Label>
-                            <Input
-                              placeholder="Homem sorrindo com fone de ouvido"
-                              value={data.advisory.image.alt}
-                              onChange={(e) => setData(prev => ({ 
-                                ...prev, 
-                                advisory: { 
-                                  ...prev.advisory, 
-                                  image: { ...prev.advisory.image, alt: e.target.value }
-                                }
-                              }))}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm">Tamanho da Imagem:</Label>
-                          <input
-                            type="range"
-                            min="0.5"
-                            max="2"
-                            step="0.1"
-                            value={data.advisory.image.scale}
-                            onChange={(e) => setData(prev => ({ 
-                              ...prev, 
-                              advisory: { 
-                                ...prev.advisory, 
-                                image: { ...prev.advisory.image, scale: parseFloat(e.target.value) }
-                              }
-                            }))}
-                            className="flex-1"
-                          />
-                          <span className="text-sm w-12">{Math.round(data.advisory.image.scale * 100)}%</span>
-                        </div>
+                         <div>
+                           <Label>Imagem da Consultoria</Label>
+                           <ImageUploader
+                             value={data.advisory.image.src}
+                             onChange={(url) => setData(prev => ({ 
+                               ...prev, 
+                               advisory: { 
+                                 ...prev.advisory, 
+                                 image: { ...prev.advisory.image, src: url }
+                               }
+                             }))}
+                             altValue={data.advisory.image.alt}
+                             onAltChange={(alt) => setData(prev => ({ 
+                               ...prev, 
+                               advisory: { 
+                                 ...prev.advisory, 
+                                 image: { ...prev.advisory.image, alt }
+                               }
+                             }))}
+                             scaleValue={data.advisory.image.scale}
+                             onScaleChange={(scale) => setData(prev => ({ 
+                               ...prev, 
+                               advisory: { 
+                                 ...prev.advisory, 
+                                 image: { ...prev.advisory.image, scale }
+                               }
+                             }))}
+                             placeholder="URL da imagem da consultoria"
+                           />
+                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
@@ -1415,15 +1368,16 @@ const Editor = () => {
                                   placeholder="https://exemplo.com"
                                 />
                               </div>
-                              <div>
-                                <Label htmlFor="emailLogoSrc">URL da Logo</Label>
-                                <Input
-                                  id="emailLogoSrc"
-                                  value={data.email.logo_src}
-                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, logo_src: e.target.value } }))}
-                                  placeholder="URL da logo"
-                                />
-                              </div>
+                               <div>
+                                 <Label htmlFor="emailLogoSrc">Logo do E-mail</Label>
+                                 <ImageUploader
+                                   value={data.email.logo_src}
+                                   onChange={(url) => setData(prev => ({ ...prev, email: { ...prev.email, logo_src: url } }))}
+                                   altValue={data.email.logo_alt}
+                                   onAltChange={(alt) => setData(prev => ({ ...prev, email: { ...prev.email, logo_alt: alt } }))}
+                                   placeholder="URL da logo do e-mail"
+                                 />
+                               </div>
                             </div>
                             
                             <div>
@@ -1606,34 +1560,24 @@ const Editor = () => {
                             Imagem Principal
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label htmlFor="emailImageSrc">URL da Imagem</Label>
-                                <Input
-                                  id="emailImageSrc"
-                                  value={data.email.imagem_src}
-                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_src: e.target.value } }))}
-                                  placeholder="URL da imagem"
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor="emailImageHref">Link da Imagem</Label>
-                                <Input
-                                  id="emailImageHref"
-                                  value={data.email.imagem_href}
-                                  onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_href: e.target.value } }))}
-                                  placeholder="Para onde a imagem leva"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <Label htmlFor="emailImageAlt">Texto Alternativo</Label>
-                              <Input
-                                id="emailImageAlt"
-                                value={data.email.imagem_alt}
-                                onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_alt: e.target.value } }))}
-                                placeholder="Descrição da imagem"
+                             <div>
+                               <Label htmlFor="emailImageSrc">Imagem Principal do E-mail</Label>
+                               <ImageUploader
+                                 value={data.email.imagem_src}
+                                 onChange={(url) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_src: url } }))}
+                                 altValue={data.email.imagem_alt}
+                                 onAltChange={(alt) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_alt: alt } }))}
+                                 placeholder="URL da imagem principal do e-mail"
+                               />
+                             </div>
+                             
+                             <div>
+                               <Label htmlFor="emailImageHref">Link da Imagem</Label>
+                               <Input
+                                 id="emailImageHref"
+                                 value={data.email.imagem_href}
+                                 onChange={(e) => setData(prev => ({ ...prev, email: { ...prev.email, imagem_href: e.target.value } }))}
+                                 placeholder="Para onde a imagem leva"
                               />
                             </div>
                           </AccordionContent>
