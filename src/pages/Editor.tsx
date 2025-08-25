@@ -691,6 +691,34 @@ const Editor = () => {
                     </>
                   )}
                 </div>
+
+                {/* Code Section */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium">Código HTML Gerado</h4>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={handleCopyCode}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Textarea
+                      value={generatedHTML}
+                      readOnly
+                      className="font-mono text-xs min-h-[200px] resize-none border-0 bg-muted/30"
+                      placeholder="O código HTML gerado aparecerá aqui após preencher os campos..."
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {generatedHTML.split('\n').length} linhas • {Math.round(generatedHTML.length / 1024)} KB
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
