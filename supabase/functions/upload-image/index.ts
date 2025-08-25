@@ -22,7 +22,12 @@ serve(async (req) => {
     const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')
     const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')
 
+    console.log('Checking Cloudflare credentials...')
+    console.log('Account ID present:', !!CLOUDFLARE_ACCOUNT_ID)
+    console.log('API Token present:', !!CLOUDFLARE_API_TOKEN)
+
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
+      console.error('Missing Cloudflare credentials')
       return new Response(
         JSON.stringify({ 
           error: 'Cloudflare credentials not configured. Please set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Supabase Edge Function Secrets.' 
@@ -72,7 +77,7 @@ serve(async (req) => {
     // Upload to Cloudflare Images
     const uploadFormData = new FormData()
     uploadFormData.append('file', file)
-    
+    console.log('Uploading to Cloudflare Images...')
     const cloudflareResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v1`,
       {
@@ -85,6 +90,8 @@ serve(async (req) => {
     )
 
     const cloudflareData = await cloudflareResponse.json()
+    console.log('Cloudflare response status:', cloudflareResponse.status)
+    console.log('Cloudflare response data:', cloudflareData)
 
     if (!cloudflareResponse.ok) {
       console.error('Cloudflare error:', cloudflareData)

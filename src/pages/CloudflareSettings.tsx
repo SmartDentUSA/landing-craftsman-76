@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, TestTube, Settings, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, TestTube, Settings, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,13 +59,12 @@ const CloudflareSettings = () => {
     
     try {
       // Salvar localmente para esta sessão
-      // Em produção, você precisaria salvar como secrets no Supabase
       localStorage.setItem('cloudflare_account_id', config.accountId);
       localStorage.setItem('cloudflare_api_token', config.apiToken);
 
       toast({
-        title: "Configurações salvas!",
-        description: "As credenciais foram salvas para esta sessão. Para uso em produção, configure os secrets no Supabase.",
+        title: "Configurações salvas localmente!",
+        description: "IMPORTANTE: Configure os secrets no Supabase para funcionamento completo. Veja as instruções abaixo.",
       });
 
       setConnectionStatus('success');
@@ -217,8 +216,36 @@ const CloudflareSettings = () => {
                   <li>Copie o Account ID exibido na página</li>
                   <li>Vá para "My Profile" → "API Tokens"</li>
                   <li>Crie um novo token com permissão "Cloudflare Images:Edit"</li>
-                  <li>Cole as credenciais nos campos acima</li>
+                  <li>Cole as credenciais nos campos acima e clique em "Salvar"</li>
                 </ol>
+              </div>
+
+              {/* Instruções para configurar secrets no Supabase */}
+              <div className="rounded-lg border p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <h3 className="font-medium text-amber-800 dark:text-amber-200">Configuração no Supabase (Obrigatório)</h3>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                  Para o upload funcionar, você deve configurar os secrets no Supabase:
+                </p>
+                <ol className="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-decimal list-inside">
+                  <li>Acesse o dashboard do Supabase</li>
+                  <li>Vá para Settings → Edge Functions</li>
+                  <li>Adicione o secret <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">CLOUDFLARE_ACCOUNT_ID</code> com seu Account ID</li>
+                  <li>Adicione o secret <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">CLOUDFLARE_API_TOKEN</code> com seu API Token</li>
+                </ol>
+                <div className="mt-3 flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open('https://supabase.com/dashboard/project/pgfgripuanuwwolmtknn/settings/functions', '_blank')}
+                    className="text-amber-700 dark:text-amber-300 border-amber-300"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Abrir Supabase Secrets
+                  </Button>
+                </div>
               </div>
 
               {/* Actions */}
