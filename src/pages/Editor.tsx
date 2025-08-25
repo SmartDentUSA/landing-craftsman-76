@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useLandingPages } from "@/hooks/useLandingPages";
+import useLandingPages from "@/hooks/useLandingPages";
 import { ImageUploader } from "@/components/ImageUploader";
 import { generateHTML, generateEmailHTML } from "@/lib/template-engine";
 
@@ -134,6 +134,7 @@ interface EmailData {
 interface LandingPageData {
   name: string;
   status: 'draft' | 'approved';
+  template: string;
   
   // SEO & Social
   seo: SEOData;
@@ -282,6 +283,7 @@ const Editor = () => {
   const [data, setData] = useState<LandingPageData>({
     name: 'Smart Dent Campanha Q1',
     status: 'draft',
+    template: 'Smart Dent Base v1',
     seo_title: 'Smart Dent - Sistema de Gestão Odontológica',
     seo_description: 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.',
     
@@ -486,12 +488,23 @@ const Editor = () => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
-        // Migrar dados antigos para novo formato se necessário
-        const migratedData = { ...landingPage };
-        if (typeof migratedData.logo_url === 'string') {
-          migratedData.logo_url = createImageData(migratedData.logo_url, migratedData.logo_alt);
+        // Se há dados estruturados, usar direto
+        if (landingPage.data && typeof landingPage.data === 'object') {
+          setData({ ...landingPage.data, template: landingPage.template });
+        } else {
+          // Migrar dados antigos para novo formato se necessário
+          const migratedData = { ...landingPage.data || {} };
+          if (typeof migratedData.logo_url === 'string') {
+            migratedData.logo_url = createImageData(migratedData.logo_url, migratedData.logo_alt || '');
+          }
+          setData({
+            ...data,
+            ...migratedData,
+            name: landingPage.name,
+            status: landingPage.status,
+            template: landingPage.template
+          });
         }
-        setData(migratedData as LandingPageData);
       }
     }
   }, [id, getLandingPage]);
@@ -499,14 +512,21 @@ const Editor = () => {
   const handleSave = () => {
     const processedData = onSave(data);
     
+    const storeData = {
+      name: processedData.name,
+      status: processedData.status,
+      template: processedData.template,
+      data: processedData
+    };
+    
     if (id) {
-      updateLandingPage(id, processedData);
+      updateLandingPage(id, storeData);
       toast({
         title: "Alterações salvas",
         description: "Landing page atualizada com sucesso!",
       });
     } else {
-      const newId = addLandingPage(processedData);
+      const newId = addLandingPage(storeData);
       navigate(`/editor/${newId}`);
       toast({
         title: "Landing page criada",
@@ -519,10 +539,17 @@ const Editor = () => {
     const processedData = onApprove(onSave(data));
     processedData.status = 'approved';
     
+    const storeData = {
+      name: processedData.name,
+      status: processedData.status,
+      template: processedData.template,
+      data: processedData
+    };
+    
     if (id) {
-      updateLandingPage(id, processedData);
+      updateLandingPage(id, storeData);
     } else {
-      const newId = addLandingPage(processedData);
+      const newId = addLandingPage(storeData);
       navigate(`/editor/${newId}`);
     }
     
