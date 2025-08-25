@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy } from "lucide-react";
+import { Save, Eye, CheckCircle, ArrowLeft, Plus, Trash2, Code2, ExternalLink, Copy, Instagram, Facebook, Youtube, Twitter, Linkedin, Globe } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -70,6 +71,16 @@ interface LandingPageData {
     social: Array<{ platform: string; href: string; icon_src: string; icon_alt: string }>;
   };
 }
+
+// Opções de redes sociais com ícones fixos
+const SOCIAL_PLATFORMS = [
+  { value: 'instagram', label: 'Instagram', icon: Instagram },
+  { value: 'facebook', label: 'Facebook', icon: Facebook },
+  { value: 'youtube', label: 'YouTube', icon: Youtube },
+  { value: 'twitter', label: 'Twitter/X', icon: Twitter },
+  { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
+  { value: 'website', label: 'Website', icon: Globe },
+];
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -988,80 +999,91 @@ const Editor = () => {
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            {data.footer.social.map((social, index) => (
-                              <Card key={index} className="p-3">
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Rede Social {index + 1}</span>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      onClick={() => setData(prev => ({
-                                        ...prev,
-                                        footer: {
-                                          ...prev.footer,
-                                          social: prev.footer.social.filter((_, i) => i !== index)
-                                        }
-                                      }))}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                            {data.footer.social.map((social, index) => {
+                              const selectedPlatform = SOCIAL_PLATFORMS.find(p => p.value === social.platform);
+                              const IconComponent = selectedPlatform?.icon || Globe;
+                              
+                              return (
+                                <Card key={index} className="p-3">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <IconComponent size={16} />
+                                        <span className="text-sm font-medium">
+                                          {selectedPlatform?.label || 'Rede Social'} {index + 1}
+                                        </span>
+                                      </div>
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        onClick={() => setData(prev => ({
+                                          ...prev,
+                                          footer: {
+                                            ...prev.footer,
+                                            social: prev.footer.social.filter((_, i) => i !== index)
+                                          }
+                                        }))}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <Label className="text-xs">Plataforma</Label>
+                                        <Select
+                                          value={social.platform}
+                                          onValueChange={(value) => {
+                                            const newSocial = [...data.footer.social];
+                                            const platform = SOCIAL_PLATFORMS.find(p => p.value === value);
+                                            newSocial[index] = {
+                                              ...newSocial[index],
+                                              platform: value,
+                                              icon_src: '', // Será usado o ícone fixo
+                                              icon_alt: `Ícone do ${platform?.label || value}`
+                                            };
+                                            setData(prev => ({ 
+                                              ...prev, 
+                                              footer: { ...prev.footer, social: newSocial }
+                                            }));
+                                          }}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Escolher rede social" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {SOCIAL_PLATFORMS.map((platform) => (
+                                              <SelectItem key={platform.value} value={platform.value}>
+                                                <div className="flex items-center gap-2">
+                                                  <platform.icon size={14} />
+                                                  {platform.label}
+                                                </div>
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-xs">URL</Label>
+                                        <Input
+                                          placeholder="https://..."
+                                          value={social.href}
+                                          onChange={(e) => {
+                                            const newSocial = [...data.footer.social];
+                                            newSocial[index].href = e.target.value;
+                                            setData(prev => ({ 
+                                              ...prev, 
+                                              footer: { ...prev.footer, social: newSocial }
+                                            }));
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                      placeholder="Plataforma (Instagram, Facebook...)"
-                                      value={social.platform}
-                                      onChange={(e) => {
-                                        const newSocial = [...data.footer.social];
-                                        newSocial[index].platform = e.target.value;
-                                        setData(prev => ({ 
-                                          ...prev, 
-                                          footer: { ...prev.footer, social: newSocial }
-                                        }));
-                                      }}
-                                    />
-                                    <Input
-                                      placeholder="URL da rede social"
-                                      value={social.href}
-                                      onChange={(e) => {
-                                        const newSocial = [...data.footer.social];
-                                        newSocial[index].href = e.target.value;
-                                        setData(prev => ({ 
-                                          ...prev, 
-                                          footer: { ...prev.footer, social: newSocial }
-                                        }));
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                      placeholder="URL do ícone"
-                                      value={social.icon_src}
-                                      onChange={(e) => {
-                                        const newSocial = [...data.footer.social];
-                                        newSocial[index].icon_src = e.target.value;
-                                        setData(prev => ({ 
-                                          ...prev, 
-                                          footer: { ...prev.footer, social: newSocial }
-                                        }));
-                                      }}
-                                    />
-                                    <Input
-                                      placeholder="Texto alternativo do ícone"
-                                      value={social.icon_alt}
-                                      onChange={(e) => {
-                                        const newSocial = [...data.footer.social];
-                                        newSocial[index].icon_alt = e.target.value;
-                                        setData(prev => ({ 
-                                          ...prev, 
-                                          footer: { ...prev.footer, social: newSocial }
-                                        }));
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </Card>
-                            ))}
+                                </Card>
+                              );
+                            })}
                           </div>
                         </div>
                       </AccordionContent>

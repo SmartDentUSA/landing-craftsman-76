@@ -1,8 +1,17 @@
-// Template engine for generating HTML from the base template
 import Mustache from 'mustache';
 
-// HTML Base Template with placeholders
-export const HTML_BASE_TEMPLATE = `<!DOCTYPE html>
+// Mapeamento de ícones SVG para redes sociais
+const SOCIAL_ICONS: Record<string, string> = {
+  instagram: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.06 8H12a4 4 0 1 1 4 4z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+  facebook: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
+  youtube: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>',
+  twitter: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></svg>',
+  linkedin: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>',
+  website: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>'
+};
+
+// Template HTML base
+const TEMPLATE_HTML = `<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -110,7 +119,13 @@ export const HTML_BASE_TEMPLATE = `<!DOCTYPE html>
         .footer-links ul { list-style: none; padding: 0; margin: 0; }
         .footer-links li { margin: .5rem 0; }
         .footer-links a { color: #d0d8e0; }
-        .footer-social a { margin-right: .5rem; display: inline-block; }
+        .footer-social a { 
+            margin-right: .5rem; 
+            display: inline-block; 
+            color: #d0d8e0; 
+            transition: color 0.2s; 
+        }
+        .footer-social a:hover { color: #fff; }
         @media (min-width: 768px) {
             .footer-grid { grid-template-columns: repeat(3, 1fr); }
         }
@@ -240,8 +255,8 @@ export const HTML_BASE_TEMPLATE = `<!DOCTYPE html>
             </div>
             <div class="footer-social">
                 {{#footer.social}}
-                <a href="{{href}}">
-                    <img src="{{icon_src}}" alt="{{icon_alt}}">
+                <a href="{{href}}" title="{{platform}}">
+                    {{{iconSvg}}}
                 </a>
                 {{/footer.social}}
             </div>
@@ -262,9 +277,20 @@ export const HTML_BASE_TEMPLATE = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Function to generate HTML from template and data
 export const generateHTML = (data: any): string => {
-  return Mustache.render(HTML_BASE_TEMPLATE, data);
+  // Processa os dados para adicionar os ícones SVG corretos
+  const processedData = {
+    ...data,
+    footer: {
+      ...data.footer,
+      social: data.footer.social.map((social: any) => ({
+        ...social,
+        iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website
+      }))
+    }
+  };
+
+  return Mustache.render(TEMPLATE_HTML, processedData);
 };
 
 // Sample data for testing
@@ -349,9 +375,9 @@ export const SAMPLE_DATA = {
       { "label": "Scanner intraoral", "href": "https://smartdent.com.br/odontologia-digital-scanners-intraorais" }
     ],
     "social": [
-      { "href": "https://www.instagram.com/smartdentoficial/", "icon_src": "https://via.placeholder.com/24x24?text=IG", "icon_alt": "Ícone do Instagram" },
-      { "href": "https://www.youtube.com/@smartdentcadcam", "icon_src": "https://via.placeholder.com/24x24?text=YT", "icon_alt": "Ícone do YouTube" },
-      { "href": "https://www.facebook.com/smartdentoficial/", "icon_src": "https://via.placeholder.com/24x24?text=FB", "icon_alt": "Ícone do Facebook" }
+      { "platform": "instagram", "href": "https://www.instagram.com/smartdentoficial/" },
+      { "platform": "youtube", "href": "https://www.youtube.com/@smartdentcadcam" },
+      { "platform": "facebook", "href": "https://www.facebook.com/smartdentoficial/" }
     ]
   }
 };
