@@ -2,57 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Landing Page Generator Design System - Modern Brazilian Aesthetic */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Base colors with Brazilian-inspired palette */
+    --background: 250 100% 99%;
+    --foreground: 222 15% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 15% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 15% 8%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Brazilian green-blue inspired primary */
+    --primary: 192 95% 35%;
+    --primary-hover: 192 95% 30%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 192 95% 97%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Warm secondary tones */
+    --secondary: 45 100% 96%;
+    --secondary-hover: 45 100% 92%;
+    --secondary-foreground: 222 15% 8%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Sophisticated neutrals */
+    --muted: 220 15% 96%;
+    --muted-hover: 220 15% 92%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 280 65% 96%;
+    --accent-hover: 280 65% 92%;
+    --accent-foreground: 280 65% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Success/Error states */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* UI elements */
+    --border: 220 13% 91%;
+    --input: 220 13% 95%;
+    --input-focus: 192 95% 97%;
+    --ring: 192 95% 35%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Gradients for modern appeal */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(192 95% 45%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(280 65% 50%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(var(--primary-soft)) 0%, hsl(var(--accent)) 100%);
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Shadows for depth */
+    --shadow-soft: 0 1px 3px hsl(222 15% 8% / 0.1), 0 1px 2px hsl(222 15% 8% / 0.06);
+    --shadow-medium: 0 4px 6px hsl(222 15% 8% / 0.07), 0 2px 4px hsl(222 15% 8% / 0.06);
+    --shadow-large: 0 10px 15px hsl(222 15% 8% / 0.1), 0 4px 6px hsl(222 15% 8% / 0.05);
+    --shadow-primary: 0 4px 14px hsl(var(--primary) / 0.25);
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar variables maintained */
+    --sidebar-background: hsl(var(--muted));
+    --sidebar-foreground: hsl(var(--muted-foreground));
+    --sidebar-primary: hsl(var(--primary));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: hsl(var(--accent));
+    --sidebar-accent-foreground: hsl(var(--accent-foreground));
+    --sidebar-border: hsl(var(--border));
+    --sidebar-ring: hsl(var(--ring));
   }
 
   .dark {
@@ -100,6 +125,48 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+  }
+}
+
+@layer components {
+  /* Custom utility classes for the design system */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-soft {
+    background: var(--gradient-soft);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-medium {
+    box-shadow: var(--shadow-medium);
+  }
+  
+  .shadow-large {
+    box-shadow: var(--shadow-large);
+  }
+  
+  .shadow-primary {
+    box-shadow: var(--shadow-primary);
+  }
+  
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .transition-bounce {
+    transition: var(--transition-bounce);
   }
 }
