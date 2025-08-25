@@ -433,6 +433,36 @@ const Editor = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
+        {/* Global Cloudflare Settings Card */}
+        <Card className="shadow-medium mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configurações Globais do Cloudflare
+            </CardTitle>
+            <CardDescription>
+              Configure uma única vez para todas as landing pages (atuais e futuras)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
+              <div>
+                <h3 className="font-medium">Gerenciar Credenciais</h3>
+                <p className="text-sm text-muted-foreground">
+                  Configuração única aplicada a todas as landing pages
+                </p>
+              </div>
+              <Button 
+                onClick={() => navigate('/cloudflare-settings')}
+                className="gradient-primary shadow-primary"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar Cloudflare
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Form Section */}
           <div className="space-y-6">
@@ -444,11 +474,10 @@ const Editor = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="landing-page" className="w-full">
-                   <TabsList className="grid w-full grid-cols-3">
+                 <Tabs defaultValue="landing-page" className="w-full">
+                   <TabsList className="grid w-full grid-cols-2">
                      <TabsTrigger value="landing-page">Landing Page</TabsTrigger>
                      <TabsTrigger value="email">E-mail Marketing</TabsTrigger>
-                     <TabsTrigger value="cloudflare">Cloudflare</TabsTrigger>
                    </TabsList>
                   
                   <TabsContent value="landing-page" className="mt-4">
@@ -1676,84 +1705,6 @@ const Editor = () => {
                      </ScrollArea>
                    </TabsContent>
 
-                   <TabsContent value="cloudflare" className="mt-4">
-                     <ScrollArea className="h-[600px] pr-4">
-                       <div className="space-y-6">
-                         <div className="rounded-lg border p-4 bg-muted/50">
-                           <div className="flex items-center gap-2 mb-2">
-                             <Settings className="h-5 w-5 text-primary" />
-                             <h3 className="font-medium">Configurações do Cloudflare Images</h3>
-                           </div>
-                           <p className="text-sm text-muted-foreground mb-4">
-                             Configure suas credenciais do Cloudflare para habilitar o upload de imagens.
-                           </p>
-                           
-                           <div className="flex gap-3">
-                             <Button 
-                               onClick={() => navigate('/cloudflare-settings')}
-                               className="gradient-primary shadow-primary"
-                             >
-                               <Settings className="h-4 w-4 mr-2" />
-                               Configurar Cloudflare
-                             </Button>
-                             
-                             <Button 
-                               variant="outline"
-                               onClick={async () => {
-                                 try {
-                                   const testFile = new Blob(['test'], { type: 'text/plain' });
-                                   const formData = new FormData();
-                                   formData.append('file', testFile, 'test.txt');
-
-                                   const { data, error } = await supabase.functions.invoke('upload-image', {
-                                     body: formData
-                                   });
-
-                                   if (error) throw error;
-
-                                   toast({
-                                     title: "Teste bem-sucedido!",
-                                     description: "A conexão com o Cloudflare está funcionando.",
-                                   });
-                                 } catch (error) {
-                                   toast({
-                                     title: "Erro no teste",
-                                     description: "Verifique suas configurações do Cloudflare.",
-                                     variant: "destructive"
-                                   });
-                                 }
-                               }}
-                             >
-                               <TestTube className="h-4 w-4 mr-2" />
-                               Testar Conexão
-                             </Button>
-                           </div>
-                         </div>
-
-                         <div className="rounded-lg border p-4">
-                           <h3 className="font-medium mb-3">Como configurar:</h3>
-                           <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                             <li>Acesse o dashboard do Cloudflare (dash.cloudflare.com)</li>
-                             <li>Vá para a seção "Images" no menu lateral</li>
-                             <li>Copie o Account ID exibido na página</li>
-                             <li>Vá para "My Profile" → "API Tokens"</li>
-                             <li>Crie um novo token com permissão "Cloudflare Images:Edit"</li>
-                             <li>Use essas credenciais na página de configurações</li>
-                           </ol>
-                         </div>
-
-                         <div className="rounded-lg border p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                           <div className="flex items-center gap-2 mb-2">
-                             <AlertCircle className="h-4 w-4 text-amber-600" />
-                             <h3 className="font-medium text-amber-800 dark:text-amber-200">Status do Upload</h3>
-                           </div>
-                           <p className="text-sm text-amber-700 dark:text-amber-300">
-                             Atualmente o upload de imagens não está funcionando. Configure suas credenciais do Cloudflare para habilitar esta funcionalidade.
-                           </p>
-                         </div>
-                       </div>
-                     </ScrollArea>
-                   </TabsContent>
                  </Tabs>
               </CardContent>
             </Card>
