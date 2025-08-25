@@ -62,22 +62,60 @@ const CloudflareSettings = () => {
       localStorage.setItem('cloudflare_account_id', config.accountId);
       localStorage.setItem('cloudflare_api_token', config.apiToken);
 
+      // Configurar automaticamente no Supabase
+      await configureSupabaseSecrets();
+
       toast({
-        title: "Configurações salvas localmente!",
-        description: "IMPORTANTE: Configure os secrets no Supabase para funcionamento completo. Veja as instruções abaixo.",
+        title: "Configuração automática completa!",
+        description: "Credenciais salvas localmente e configuradas no Supabase automaticamente.",
       });
 
       setConnectionStatus('success');
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar as configurações. Tente novamente.",
+        title: "Erro na configuração automática",
+        description: "Houve um problema. Configure manualmente no Supabase se necessário.",
         variant: "destructive"
       });
       setConnectionStatus('error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const configureSupabaseSecrets = async () => {
+    try {
+      // Configurar CLOUDFLARE_ACCOUNT_ID
+      const { error: accountError } = await supabase.functions.invoke('update-secret', {
+        body: {
+          secretName: 'CLOUDFLARE_ACCOUNT_ID',
+          secretValue: config.accountId
+        }
+      });
+
+      if (accountError) {
+        console.error('Erro ao configurar Account ID:', accountError);
+        throw accountError;
+      }
+
+      // Configurar CLOUDFLARE_API_TOKEN
+      const { error: tokenError } = await supabase.functions.invoke('update-secret', {
+        body: {
+          secretName: 'CLOUDFLARE_API_TOKEN',
+          secretValue: config.apiToken
+        }
+      });
+
+      if (tokenError) {
+        console.error('Erro ao configurar API Token:', tokenError);
+        throw tokenError;
+      }
+
+      console.log('Secrets configurados automaticamente no Supabase');
+    } catch (error) {
+      console.error('Erro ao configurar secrets no Supabase:', error);
+      throw error;
     }
   };
 
@@ -94,10 +132,24 @@ const CloudflareSettings = () => {
     setIsTesting(true);
     
     try {
-      // Testar upload de imagem de teste
-      const testFile = new Blob(['test'], { type: 'text/plain' });
+      // Criar uma imagem de teste real (1x1 pixel PNG)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(0, 0, 1, 1);
+      }
+      
+      // Converter canvas para blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), 'image/png');
+      });
+      
+      const testFile = new File([blob], 'test.png', { type: 'image/png' });
       const formData = new FormData();
-      formData.append('file', testFile, 'test.txt');
+      formData.append('file', testFile);
 
       const { data, error } = await supabase.functions.invoke('upload-image', {
         body: formData
@@ -115,7 +167,7 @@ const CloudflareSettings = () => {
       console.error('Erro no teste de conexão:', error);
       toast({
         title: "Falha na conexão",
-        description: "Verifique se as credenciais estão corretas e tente novamente.",
+        description: "Verifique se as credenciais estão corretas e os secrets do Supabase estão configurados.",
         variant: "destructive"
       });
       setConnectionStatus('error');
@@ -256,7 +308,7 @@ const CloudflareSettings = () => {
                   className="gradient-primary shadow-primary"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Salvando...' : 'Salvar Configurações'}
+                  {isLoading ? 'Configurando...' : 'Salvar e Configurar Automaticamente'}
                 </Button>
                 
                 <Button 

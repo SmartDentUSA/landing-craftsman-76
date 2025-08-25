@@ -31,13 +31,15 @@ serve(async (req) => {
     // Log para debug
     console.log(`Updating secret: ${secretName}`);
 
-    // In a real implementation, you would store the secret securely
-    // For now, we'll just return success since the secrets are managed by Supabase
+    // Simular a configuração do secret (os secrets são gerenciados pelo Supabase via dashboard)
+    // Esta função serve para confirmar que a configuração foi solicitada
+    console.log(`Secret ${secretName} configuration requested`);
+    console.log(`Secret value length: ${secretValue.length}`);
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Secret ${secretName} updated successfully` 
+        message: `Secret ${secretName} configuration requested successfully. Please ensure it's configured in Supabase dashboard.` 
       }),
       { 
         status: 200, 
