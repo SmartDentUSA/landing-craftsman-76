@@ -323,20 +323,24 @@ const Editor = () => {
                               <div key={index} className="flex gap-2">
                                 <Input
                                   placeholder="Label do menu"
-                                  value={item.label}
+                                  value={item?.label || ''}
                                   onChange={(e) => {
                                     const newMenu = [...data.menu];
-                                    newMenu[index].label = e.target.value;
-                                    setData(prev => ({ ...prev, menu: newMenu }));
+                                    if (newMenu[index]) {
+                                      newMenu[index].label = e.target.value;
+                                      setData(prev => ({ ...prev, menu: newMenu }));
+                                    }
                                   }}
                                 />
                                 <Input
                                   placeholder="URL ou âncora"
-                                  value={item.href}
+                                  value={item?.href || ''}
                                   onChange={(e) => {
                                     const newMenu = [...data.menu];
-                                    newMenu[index].href = e.target.value;
-                                    setData(prev => ({ ...prev, menu: newMenu }));
+                                    if (newMenu[index]) {
+                                      newMenu[index].href = e.target.value;
+                                      setData(prev => ({ ...prev, menu: newMenu }));
+                                    }
                                   }}
                                 />
                                 <Button size="sm" variant="ghost" onClick={() => removeMenuItem(index)}>
@@ -401,7 +405,7 @@ const Editor = () => {
                             <Label>CTA Primário</Label>
                             <Input
                               placeholder="Texto do botão"
-                              value={data.banner.cta_primary.label}
+                              value={data.banner.cta_primary?.label || ''}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
@@ -413,7 +417,7 @@ const Editor = () => {
                             />
                             <Input
                               placeholder="URL do botão"
-                              value={data.banner.cta_primary.href}
+                              value={data.banner.cta_primary?.href || ''}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
@@ -428,7 +432,7 @@ const Editor = () => {
                             <Label>CTA Secundário</Label>
                             <Input
                               placeholder="Texto do botão"
-                              value={data.banner.cta_secondary.label}
+                              value={data.banner.cta_secondary?.label || ''}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
@@ -440,7 +444,7 @@ const Editor = () => {
                             />
                             <Input
                               placeholder="URL do botão"
-                              value={data.banner.cta_secondary.href}
+                              value={data.banner.cta_secondary?.href || ''}
                               onChange={(e) => setData(prev => ({ 
                                 ...prev, 
                                 banner: { 
