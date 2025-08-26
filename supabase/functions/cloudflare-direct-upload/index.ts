@@ -14,7 +14,8 @@ serve(async (req) => {
   try {
     console.log('=== CLOUDFLARE DIRECT UPLOAD DEBUG START ===')
     console.log('Request method:', req.method)
-    console.log('Deno.env variables available:', Object.keys(Deno.env.toObject()).filter(k => k.includes('CLOUDFLARE')))
+    console.log('All env variables:', Object.keys(Deno.env.toObject()))
+    console.log('Cloudflare env variables:', Object.keys(Deno.env.toObject()).filter(k => k.includes('CLOUDFLARE')))
     
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { 
@@ -23,9 +24,12 @@ serve(async (req) => {
       })
     }
 
-    // Get credentials with detailed logging
-    const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')?.trim()
-    const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')?.trim()
+    // Try multiple possible secret names and get credentials with detailed logging
+    const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')?.trim() || 
+                                 Deno.env.get('CLOUDFLARE_API_KEY')?.trim()
+    const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')?.trim() || 
+                                 Deno.env.get('ID_DA_CONTA_CLOUDFLARE')?.trim() ||
+                                 Deno.env.get('CLOUDFLARE_ACCOUNT_HASH')?.trim()
 
     console.log('=== CREDENTIAL CHECK ===')
     console.log('Raw CLOUDFLARE_API_TOKEN exists:', !!Deno.env.get('CLOUDFLARE_API_TOKEN'))
