@@ -339,20 +339,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#visible}}
                 <a href="{{href}}" class="button button-primary">{{label}}</a>
                 {{/visible}}
-                {{^visible}}
-                {{#label}}
-                <a href="{{href}}" class="button button-primary">{{label}}</a>
-                {{/label}}
-                {{/visible}}
                 {{/banner.cta_primary}}
                 {{#banner.cta_secondary}}
                 {{#visible}}
                 <a href="{{href}}" class="button button-secondary">{{label}}</a>
-                {{/visible}}
-                {{^visible}}
-                {{#label}}
-                <a href="{{href}}" class="button button-secondary">{{label}}</a>
-                {{/label}}
                 {{/visible}}
                 {{/banner.cta_secondary}}
             </div>
@@ -430,20 +420,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             {{#visible}}
             <a href="{{href}}" class="button button-primary">{{label}}</a>
             {{/visible}}
-            {{^visible}}
-            {{#label}}
-            <a href="{{href}}" class="button button-primary">{{label}}</a>
-            {{/label}}
-            {{/visible}}
             {{/cta_final.primary}}
             {{#cta_final.secondary}}
             {{#visible}}
             <a href="{{href}}" class="button button-secondary">{{label}}</a>
-            {{/visible}}
-            {{^visible}}
-            {{#label}}
-            <a href="{{href}}" class="button button-secondary">{{label}}</a>
-            {{/label}}
             {{/visible}}
             {{/cta_final.secondary}}
         </div>
