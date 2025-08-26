@@ -76,7 +76,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Seção soluções / controle */
-        .control-section { padding: 4rem 0 5rem 0; }
+        .control-section { padding: 4rem 0 2rem 0; }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
         .control-grid { 
             display: grid; 
