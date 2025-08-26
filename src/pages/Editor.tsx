@@ -284,6 +284,7 @@ const Editor = () => {
   const { id } = useParams();
   const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
   
+  const [previewTab, setPreviewTab] = useState('landing-preview');
   const [data, setData] = useState<LandingPageData>({
     name: 'Smart Dent Campanha Q1',
     status: 'draft',
@@ -592,7 +593,17 @@ const Editor = () => {
   };
 
   const handleViewCode = () => {
-    navigate('/code-view', { state: { data, landingName: data.name, editorId: id } });
+    const isEmailTab = previewTab === 'email-preview';
+    const htmlToPass = isEmailTab ? generatedEmailHTML : generatedHTML;
+    const nameToPass = isEmailTab ? `${data.name} - Email Marketing` : data.name;
+    
+    navigate('/code-view', { 
+      state: { 
+        html: htmlToPass,
+        landingName: nameToPass, 
+        editorId: id 
+      } 
+    });
   };
 
   const handleCopyCode = () => {
@@ -2786,7 +2797,7 @@ const Editor = () => {
             </div>
           </div>
           
-          <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col">
+          <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
             <TabsList className="mx-4 mt-4 grid w-auto grid-cols-2">
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
