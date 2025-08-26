@@ -4,6 +4,7 @@ import { generateHTML as originalGenerateHTML, generateEmailHTML as originalGene
 interface EmbedConfig {
   mode: 'default' | 'selflux';
   namespace: string;
+  accountHash?: string;
 }
 
 // Mapeamento exato baseado no template original
@@ -538,69 +539,94 @@ const generateSelFluxCSS = (namespace: string): string => {
 export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string => {
   const config = embedConfig || { mode: 'default', namespace: 'sd' };
   
-  console.log('🔧 generateSafeHTML called with config:', config);
-  console.log('🔧 Data keys:', Object.keys(data || {}));
+  console.log('🎯 NOVA IMPLEMENTAÇÃO SELFLUX - Pixel Perfect');
+  console.log('🔧 Config:', config);
   
   // Resolver imagens primeiro
-  const processedData = resolveImagesInData(data);
-  console.log('🔧 Images resolved, processed data sample:', {
-    logo_url: processedData?.logo_url,
-    banner_images_count: processedData?.banner?.images?.length
-  });
+  const processedData = resolveImagesInData(data, config.accountHash);
   
-  // Gerar HTML normal
-  let html = originalGenerateHTML(processedData);
-  console.log('🔧 Original HTML generated, length:', html?.length);
+  // Gerar HTML completo original
+  let originalHtml = originalGenerateHTML(processedData);
   
   // Se não for modo SelFlux, retornar HTML normal
   if (config.mode !== 'selflux') {
-    console.log('🔧 Mode is not selflux, returning original HTML');
-    return html;
+    console.log('🔧 Modo não é selflux, retornando HTML original');
+    return originalHtml;
   }
   
-  console.log('🔧 SelFlux mode active, applying transformations...');
+  console.log('🎯 MODO SELFLUX ATIVO - Implementação completa');
   
-  // Aplicar transformações SelFlux
+  // 1. MANTER HTML COMPLETO - renomear classes em TODO o HTML
   const classMap = createClassMap(config.namespace);
-  const scope = `.${config.namespace}-root`;
+  const renamedHtml = renameClassesInHtml(originalHtml, classMap);
+  console.log('✅ 1. Classes renomeadas em TODO o HTML');
   
-  console.log('🔧 Class map sample:', Object.fromEntries(Object.entries(classMap).slice(0, 3)));
-  console.log('🔧 Scope:', scope);
-  
-  // Renomear classes no HTML
-  const renamedHtml = renameClassesInHtml(html, classMap);
-  console.log('🔧 Classes renamed in HTML');
-  
-  // Gerar CSS SelFlux completo baseado no exemplo
+  // 2. GERAR CSS SELFLUX TRANSFORMADO
   const selfluxCSS = generateSelFluxCSS(config.namespace);
+  console.log('✅ 2. CSS SelFlux gerado');
   
-  // Extrair apenas o conteúdo do body do HTML original
-  const bodyMatch = renamedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  const bodyContent = bodyMatch ? bodyMatch[1] : renamedHtml;
+  // 3. SUBSTITUIR CSS ORIGINAL pelo CSS SELFLUX
+  let finalHtml = renamedHtml;
   
-  // Gerar JavaScript adaptado para SelFlux com classe active correta
+  // Encontrar e substituir o <style> original
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/i;
+  const styleMatch = finalHtml.match(styleRegex);
+  
+  if (styleMatch) {
+    // Substituir CSS original pelo CSS SelFlux
+    finalHtml = finalHtml.replace(styleRegex, `<style>\n${selfluxCSS}\n</style>`);
+    console.log('✅ 3. CSS original substituído pelo CSS SelFlux');
+  } else {
+    // Se não encontrar <style>, adicionar no <head>
+    finalHtml = finalHtml.replace(
+      '</head>', 
+      `<style>\n${selfluxCSS}\n</style>\n</head>`
+    );
+    console.log('✅ 3. CSS SelFlux adicionado ao <head>');
+  }
+  
+  // 4. ADICIONAR WRAPPER APENAS NO CONTEÚDO DO BODY
+  const bodyContentRegex = /(<body[^>]*>)([\s\S]*?)(<\/body>)/i;
+  const bodyMatch = finalHtml.match(bodyContentRegex);
+  
+  if (bodyMatch) {
+    const [, bodyOpenTag, bodyContent, bodyCloseTag] = bodyMatch;
+    const wrappedContent = `${bodyOpenTag}<div class="${config.namespace}-root">${bodyContent}</div>${bodyCloseTag}`;
+    finalHtml = finalHtml.replace(bodyContentRegex, wrappedContent);
+    console.log('✅ 4. Wrapper adicionado ao conteúdo do body');
+  }
+  
+  // 5. ADICIONAR JAVASCRIPT COM CLASSES RENOMEADAS
   const selfluxJS = `
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('SelFlux initialized with namespace: ${config.namespace}');
+      
+      // FAQ functionality com classes renomeadas
       const faqQuestions = document.querySelectorAll('.${config.namespace}-faq-question');
       faqQuestions.forEach(question => {
         question.addEventListener('click', () => {
           const faqItem = question.closest('.${config.namespace}-faq-item');
-          faqItem.classList.toggle('${config.namespace}-active');
+          if (faqItem) {
+            faqItem.classList.toggle('${config.namespace}-active');
+          }
         });
       });
+      
+      // Formulário de contato com classes renomeadas
+      const form = document.querySelector('.${config.namespace}-contact-form form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          console.log('Formulário enviado via SelFlux');
+        });
+      }
     });
   `;
-  
-  // Montar HTML final com wrapper, CSS e JavaScript SelFlux
-  const finalHtml = `<div class="${config.namespace}-root">
-<style>${selfluxCSS}</style>
-${bodyContent}
-<script>${selfluxJS}</script>
-</div>`;
-  
-  console.log('🔧 Final HTML generated, length:', finalHtml?.length);
-  console.log('🔧 Final HTML preview:', finalHtml.substring(0, 500));
-  
+    
+  finalHtml = finalHtml.replace('</body>', `<script>${selfluxJS}</script>\n</body>`);
+  console.log('✅ 5. JavaScript adicionado com classes renomeadas');
+
+  console.log('🎯 HTML SELFLUX COMPLETO - Pixel Perfect com HTML original mantido');
   return finalHtml;
 };
 
