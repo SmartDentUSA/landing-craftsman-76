@@ -1,4 +1,16 @@
 import { generateHTML as originalGenerateHTML, generateEmailHTML as originalGenerateEmailHTML } from './template-engine';
+import * as Mustache from 'mustache';
+
+// Mapeamento de ícones SVG para redes sociais
+const SOCIAL_ICONS: Record<string, string> = {
+  instagram: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.06 8H12a4 4 0 1 1 4 4z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+  facebook: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
+  youtube: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>',
+  twitter: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></svg>',
+  linkedin: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>',
+  tiktok: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>',
+  website: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>'
+};
 
 // Configuração para SelFlux-safe build
 interface EmbedConfig {
@@ -535,99 +547,610 @@ const generateSelFluxCSS = (namespace: string): string => {
   `;
 };
 
+// Template SelFlux otimizado baseado no código do usuário
+const OPTIMIZED_SELFLUX_TEMPLATE = `
+<div id="lpcontent">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --text-color: #333;
+            --background-color: #f8f9fa;
+            --white: #fff;
+            --card-bg: #f8f9fa;
+            --yellow: #ffc107;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Cabeçalho com links */
+        .header-menu {
+            display: none;
+            background-color: var(--white);
+            padding: 1rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .header-menu-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-menu a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        .header-menu a:hover {
+            color: var(--primary-color);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo-img {
+            max-height: 40px; 
+            width: auto;
+        }
+
+        @media (min-width: 768px) {
+            .header-menu {
+                display: block;
+            }
+        }
+
+        /* Bloco 1: Banner Principal */
+        .main-banner {
+            background-color: var(--white);
+            padding: 4rem 0 2rem;
+        }
+
+        .banner-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .banner-text {
+            padding: 2rem 0;
+        }
+
+        .banner-text p {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .button-primary {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: 1px solid var(--primary-color);
+        }
+
+        .button-secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            margin-left: 1rem;
+        }
+
+        .banner-images {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .banner-images img {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        @media (min-width: 768px) {
+            .banner-content {
+                flex-direction: row;
+                text-align: left;
+                align-items: center;
+            }
+
+            .banner-text {
+                flex: 1;
+                padding-right: 2rem;
+            }
+
+            .banner-text h1 {
+                font-size: 3.5rem;
+            }
+
+            .banner-images {
+                flex: 1;
+                justify-content: flex-end;
+            }
+        }
+
+        /* Bloco 2: Controle de vendas */
+        .sales-control {
+            background-color: var(--background-color);
+            padding: 4rem 0;
+        }
+
+        .sales-control h2 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            font-weight: 600;
+        }
+
+        .control-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .control-item {
+            background-color: var(--white);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .control-item-text {
+            padding: 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .control-item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-container {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            .control-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .control-item-image.full-height {
+                height: 100%;
+            }
+        }
+
+        .control-item-side {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .control-item-side .image-container {
+            flex: 1;
+            height: auto;
+        }
+        .control-item-side .control-item-text {
+            flex: 1;
+        }
+
+        /* Bloco 3: Atendimento Personalizado */
+        .personalized-service {
+            background-color: #000;
+            color: var(--white);
+            padding: 4rem 0;
+        }
+
+        .service-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .service-text {
+            padding: 2rem 0;
+        }
+
+        .service-text h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .service-text p {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 1.5rem;
+        }
+
+        .service-image {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        @media (min-width: 768px) {
+            .service-content {
+                flex-direction: row;
+                align-items: center;
+                text-align: left;
+            }
+
+            .service-text {
+                flex: 1;
+                padding-right: 2rem;
+            }
+
+            .service-image {
+                flex: 1;
+                height: auto;
+            }
+        }
+        
+        /* Seção de Perguntas Frequentes */
+        .faq-section {
+            padding: 4rem 0;
+            text-align: center;
+        }
+        
+        .faq-section h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+        
+        .faq-item {
+            border-bottom: 1px solid #ccc;
+            text-align: left;
+        }
+        
+        .faq-question {
+            font-weight: 500;
+            padding: 1.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background-color: #f8f9fa;
+        }
+
+        .faq-question::after {
+            content: '+';
+            font-size: 1.5rem;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-question.active::after {
+            transform: rotate(45deg);
+        }
+        
+        .faq-answer {
+            padding: 0 1rem 1.5rem;
+            color: var(--secondary-color);
+            display: none;
+        }
+        
+        /* Seção CTA de Teste Grátis */
+        .cta-section {
+            background-color: var(--background-color);
+            padding: 4rem 0;
+            text-align: center;
+        }
+        
+        .cta-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .cta-content h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .cta-content p {
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+        }
+        
+        /* Rodapé */
+        .footer {
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 4rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .footer-grid {
+            display: grid;
+            gap: 2rem;
+        }
+        
+        .footer-grid h3 {
+            color: var(--white);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .footer-grid ul {
+            list-style: none;
+        }
+        
+        .footer-grid a {
+            color: #ccc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-grid a:hover {
+            color: var(--primary-color);
+        }
+        
+        .footer-social-icons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .footer-social-icons img {
+            width: 24px;
+            height: 24px;
+        }
+        
+        @media (min-width: 768px) {
+            .footer-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+
+    {{#headerMenu.enabled}}
+    <header class="header-menu">
+        <div class="container header-menu-container">
+            {{#logo.image}}
+            <img class="logo-img" src="{{{logo.image}}}" alt="{{logo.alt}}">
+            {{/logo.image}}
+            {{^logo.image}}
+            <div class="logo">{{logo.text}}</div>
+            {{/logo.image}}
+            <nav>
+                {{#headerMenu.links}}
+                <a href="{{{url}}}">{{text}}</a>
+                {{/headerMenu.links}}
+            </nav>
+        </div>
+    </header>
+    {{/headerMenu.enabled}}
+
+    <header class="main-banner">
+        <div class="container banner-content">
+            <div class="banner-text">
+                {{#banner.subtitle}}
+                <p>{{banner.subtitle}}</p>
+                {{/banner.subtitle}}
+                <h1>{{banner.title}}</h1>
+                {{#banner.description}}
+                <p>{{banner.description}}</p>
+                {{/banner.description}}
+                {{#banner.primaryButton}}
+                <a href="{{{banner.primaryButton.url}}}" class="button button-primary">{{banner.primaryButton.text}}</a>
+                {{/banner.primaryButton}}
+                {{#banner.secondaryButton}}
+                <a href="{{{banner.secondaryButton.url}}}" class="button button-secondary">{{banner.secondaryButton.text}}</a>
+                {{/banner.secondaryButton}}
+            </div>
+            <div class="banner-images">
+                {{#banner.images}}
+                <img src="{{{src}}}" alt="{{alt}}">
+                {{/banner.images}}
+            </div>
+        </div>
+    </header>
+
+    <section class="sales-control">
+        <div class="container">
+            <h2>{{solutions.title}}</h2>
+            <div class="control-grid">
+                {{#solutions.items}}
+                <div class="control-item control-item-side">
+                    <div class="control-item-text">
+                        <p>{{description}}</p>
+                    </div>
+                    <div class="image-container">
+                        <img src="{{{image}}}" alt="{{title}}" class="control-item-image full-height">
+                    </div>
+                </div>
+                {{/solutions.items}}
+            </div>
+        </div>
+    </section>
+
+    <section class="personalized-service">
+        <div class="container service-content">
+            <div class="service-text">
+                <h2>{{advisory.title}}</h2>
+                <p>{{advisory.description}}</p>
+                {{#advisory.button}}
+                <a href="{{{advisory.button.url}}}" class="button button-primary">{{advisory.button.text}}</a>
+                {{/advisory.button}}
+            </div>
+            <div class="service-image-container">
+                <img src="{{{advisory.image}}}" alt="{{advisory.imageAlt}}" class="service-image">
+            </div>
+        </div>
+    </section>
+    
+    <section class="faq-section">
+        <div class="container">
+            <h2>{{faq.title}}</h2>
+            <div class="faq-accordion">
+                {{#faq.items}}
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>{{question}}</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>{{answer}}</p>
+                    </div>
+                </div>
+                {{/faq.items}}
+            </div>
+        </div>
+    </section>
+    
+    <section class="cta-section">
+        <div class="container cta-content">
+            <h2>{{cta.title}}</h2>
+            {{#cta.description}}
+            <p>{{cta.description}}</p>
+            {{/cta.description}}
+            {{#cta.primaryButton}}
+            <a href="{{{cta.primaryButton.url}}}" class="button button-primary">{{cta.primaryButton.text}}</a>
+            {{/cta.primaryButton}}
+            {{#cta.secondaryButton}}
+            <a href="{{{cta.secondaryButton.url}}}" class="button button-secondary">{{cta.secondaryButton.text}}</a>
+            {{/cta.secondaryButton}}
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-grid">
+            <div class="footer-info">
+                {{#footer.company}}
+                <h3>{{footer.company.name}}</h3>
+                <p>{{footer.company.address}}</p>
+                {{#footer.company.secondAddress}}
+                <br>
+                <h3>{{footer.company.secondName}}</h3>
+                <p>{{footer.company.secondAddress}}</p>
+                {{/footer.company.secondAddress}}
+                {{/footer.company}}
+            </div>
+            <div class="footer-links">
+                <h3>{{footer.linksTitle}}</h3>
+                <ul>
+                    {{#footer.links}}
+                    <li><a href="{{{url}}}">{{text}}</a></li>
+                    {{/footer.links}}
+                </ul>
+            </div>
+            <div class="footer-social">
+                <h3>{{footer.socialTitle}}</h3>
+                <div class="footer-social-icons">
+                    {{#footer.socialLinks}}
+                    <a href="{{{url}}}">
+                        {{{socialIcons.[platform]}}}
+                    </a>
+                    {{/footer.socialLinks}}
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // FAQ Accordion functionality
+    const faqItems = document.querySelectorAll('.faq-item');
+    faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question');
+        const answer = item.querySelector('.faq-answer');
+        
+        if (question && answer) {
+            question.addEventListener('click', () => {
+                const isOpen = answer.style.display === 'block';
+                
+                // Close all other FAQs
+                faqItems.forEach(otherItem => {
+                    const otherAnswer = otherItem.querySelector('.faq-answer');
+                    const otherQuestion = otherItem.querySelector('.faq-question');
+                    if (otherAnswer && otherQuestion && otherItem !== item) {
+                        otherAnswer.style.display = 'none';
+                        otherQuestion.classList.remove('active');
+                    }
+                });
+                
+                // Toggle current FAQ
+                answer.style.display = isOpen ? 'none' : 'block';
+                question.classList.toggle('active', !isOpen);
+            });
+        }
+    });
+});
+</script>
+`;
+
 // Função principal para gerar HTML safe para SelFlux
 export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string => {
   const config = embedConfig || { mode: 'default', namespace: 'sd' };
   
-  console.log('🎯 NOVA IMPLEMENTAÇÃO SELFLUX - Pixel Perfect');
+  console.log('🎯 IMPLEMENTAÇÃO SELFLUX OTIMIZADA');
   console.log('🔧 Config:', config);
   
   // Resolver imagens primeiro
   const processedData = resolveImagesInData(data, config.accountHash);
   
-  // Gerar HTML completo original
-  let originalHtml = originalGenerateHTML(processedData);
-  
   // Se não for modo SelFlux, retornar HTML normal
   if (config.mode !== 'selflux') {
     console.log('🔧 Modo não é selflux, retornando HTML original');
-    return originalHtml;
+    return originalGenerateHTML(processedData);
   }
   
-  console.log('🎯 MODO SELFLUX ATIVO - Implementação completa');
+  console.log('🎯 MODO SELFLUX ATIVO - Template otimizado');
   
-  // 1. MANTER HTML COMPLETO - renomear classes em TODO o HTML
-  const classMap = createClassMap(config.namespace);
-  const renamedHtml = renameClassesInHtml(originalHtml, classMap);
-  console.log('✅ 1. Classes renomeadas em TODO o HTML');
+  // Usar template otimizado para SelFlux
+  const html = Mustache.render(OPTIMIZED_SELFLUX_TEMPLATE, {
+    ...processedData,
+    socialIcons: SOCIAL_ICONS,
+  });
   
-  // 2. GERAR CSS SELFLUX TRANSFORMADO
-  const selfluxCSS = generateSelFluxCSS(config.namespace);
-  console.log('✅ 2. CSS SelFlux gerado');
-  
-  // 3. SUBSTITUIR CSS ORIGINAL pelo CSS SELFLUX
-  let finalHtml = renamedHtml;
-  
-  // Encontrar e substituir o <style> original
-  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/i;
-  const styleMatch = finalHtml.match(styleRegex);
-  
-  if (styleMatch) {
-    // Substituir CSS original pelo CSS SelFlux
-    finalHtml = finalHtml.replace(styleRegex, `<style>\n${selfluxCSS}\n</style>`);
-    console.log('✅ 3. CSS original substituído pelo CSS SelFlux');
-  } else {
-    // Se não encontrar <style>, adicionar no <head>
-    finalHtml = finalHtml.replace(
-      '</head>', 
-      `<style>\n${selfluxCSS}\n</style>\n</head>`
-    );
-    console.log('✅ 3. CSS SelFlux adicionado ao <head>');
-  }
-  
-  // 4. ADICIONAR WRAPPER APENAS NO CONTEÚDO DO BODY
-  const bodyContentRegex = /(<body[^>]*>)([\s\S]*?)(<\/body>)/i;
-  const bodyMatch = finalHtml.match(bodyContentRegex);
-  
-  if (bodyMatch) {
-    const [, bodyOpenTag, bodyContent, bodyCloseTag] = bodyMatch;
-    const wrappedContent = `${bodyOpenTag}<div class="${config.namespace}-root">${bodyContent}</div>${bodyCloseTag}`;
-    finalHtml = finalHtml.replace(bodyContentRegex, wrappedContent);
-    console.log('✅ 4. Wrapper adicionado ao conteúdo do body');
-  }
-  
-  // 5. ADICIONAR JAVASCRIPT COM CLASSES RENOMEADAS
-  const selfluxJS = `
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('SelFlux initialized with namespace: ${config.namespace}');
-      
-      // FAQ functionality com classes renomeadas
-      const faqQuestions = document.querySelectorAll('.${config.namespace}-faq-question');
-      faqQuestions.forEach(question => {
-        question.addEventListener('click', () => {
-          const faqItem = question.closest('.${config.namespace}-faq-item');
-          if (faqItem) {
-            faqItem.classList.toggle('${config.namespace}-active');
-          }
-        });
-      });
-      
-      // Formulário de contato com classes renomeadas
-      const form = document.querySelector('.${config.namespace}-contact-form form');
-      if (form) {
-        form.addEventListener('submit', function(e) {
-          e.preventDefault();
-          console.log('Formulário enviado via SelFlux');
-        });
-      }
-    });
-  `;
-    
-  finalHtml = finalHtml.replace('</body>', `<script>${selfluxJS}</script>\n</body>`);
-  console.log('✅ 5. JavaScript adicionado com classes renomeadas');
-
-  console.log('🎯 HTML SELFLUX COMPLETO - Pixel Perfect com HTML original mantido');
-  return finalHtml;
+  console.log('✅ HTML SelFlux otimizado gerado com sucesso');
+  return html;
 };
 
 // Função para gerar email HTML safe
