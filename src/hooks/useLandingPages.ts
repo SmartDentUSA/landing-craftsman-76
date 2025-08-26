@@ -9,6 +9,10 @@ export interface LandingPage {
   version: number;
   template: string;
   data?: any;
+  embed?: {
+    mode: 'default' | 'selflux';
+    namespace: string;
+  };
 }
 
 interface LandingPagesStore {
@@ -29,7 +33,11 @@ const useLandingPages = create<LandingPagesStore>()(
           status: 'approved',
           lastModified: new Date('2024-01-15'),
           version: 3,
-          template: 'Smart Dent Base v1'
+          template: 'Smart Dent Base v1',
+          embed: {
+            mode: 'default',
+            namespace: 'sd'
+          }
         },
         {
           id: '2',
@@ -37,7 +45,11 @@ const useLandingPages = create<LandingPagesStore>()(
           status: 'draft',
           lastModified: new Date('2024-01-14'),
           version: 1,
-          template: 'Smart Dent Base v1'
+          template: 'Smart Dent Base v1',
+          embed: {
+            mode: 'default',
+            namespace: 'sd'
+          }
         },
         {
           id: '3',
@@ -45,7 +57,11 @@ const useLandingPages = create<LandingPagesStore>()(
           status: 'approved',
           lastModified: new Date('2024-01-10'),
           version: 2,
-          template: 'Smart Dent Base v1'
+          template: 'Smart Dent Base v1',
+          embed: {
+            mode: 'default',
+            namespace: 'sd'
+          }
         }
       ],
       addLandingPage: (landingPage) => {
@@ -55,6 +71,10 @@ const useLandingPages = create<LandingPagesStore>()(
           id,
           lastModified: new Date(),
           version: 1,
+          embed: landingPage.embed || {
+            mode: 'default',
+            namespace: 'sd'
+          }
         };
         
         set((state) => ({

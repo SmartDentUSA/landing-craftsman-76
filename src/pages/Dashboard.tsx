@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 import { generateHTML } from "@/lib/template-engine";
+import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
 
 
 const Dashboard = () => {
@@ -33,8 +34,20 @@ const Dashboard = () => {
     if (landingPage.status === 'approved') {
       try {
         // Gera o HTML real usando os dados da landing page
-        const htmlCode = landingPage.data ? generateHTML(landingPage.data) : 
-          '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1><p>Dados não encontrados.</p></body></html>';
+        let htmlCode: string;
+        
+        if (landingPage.data) {
+          const embedConfig = getEmbedConfig(landingPage);
+          
+          // Se for modo SelFlux, usar generateSafeHTML
+          if (embedConfig.mode === 'selflux') {
+            htmlCode = generateSafeHTML(landingPage.data, embedConfig);
+          } else {
+            htmlCode = generateHTML(landingPage.data);
+          }
+        } else {
+          htmlCode = '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1><p>Dados não encontrados.</p></body></html>';
+        }
         
         await navigator.clipboard.writeText(htmlCode);
         toast({
