@@ -116,11 +116,21 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         /* Correção para control-item-side */
         .control-item.control-item-side {
-            display: block;
+            display: block !important;
+            flex-direction: unset !important;
         }
-        .control-item.control-item-side .image-container.fixed-horizontal,
+        .control-item.control-item-side .image-container {
+            display: block !important;
+            flex: none !important;
+            height: auto !important;
+        }
+        .control-item.control-item-side .image-container.fixed-horizontal {
+            width: 418.5px !important;
+            height: 279px !important;
+        }
         .control-item.control-item-side .image-container.fixed-vertical {
-            display: block;
+            width: 280px !important;
+            height: 180px !important;
         }
         
         /* Layout de duas colunas para soluções */
