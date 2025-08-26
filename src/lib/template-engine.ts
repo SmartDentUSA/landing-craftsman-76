@@ -113,22 +113,20 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 flex-direction: column;
                 gap: 1rem;
             }
-            .fixed-horizontal {
+            .image-container.fixed-horizontal {
                 width: 300px;
                 height: 90px;
-                aspect-ratio: 10/3;
-                object-fit: cover;
+                overflow: hidden;
             }
-            .fixed-vertical {
+            .image-container.fixed-vertical {
                 width: 280px;
                 height: 180px;
-                aspect-ratio: 14/9;
-                object-fit: cover;
+                overflow: hidden;
             }
-            .control-item .image-container {
+            .control-item-image {
                 width: 100%;
                 height: 100%;
-                overflow: hidden;
+                object-fit: cover;
             }
             .control-item {
                 display: flex;
@@ -247,8 +245,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         <div class="control-item-text">
                             <p>{{text}}</p>
                         </div>
-                        <div class="image-container">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image fixed-horizontal" style="transform: scale({{image.scale}});">
+                        <div class="image-container fixed-horizontal">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}});">
                         </div>
                     </div>
                     {{/isFirst3}}
@@ -261,8 +259,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         <div class="control-item-text">
                             <p>{{text}}</p>
                         </div>
-                        <div class="image-container">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image fixed-vertical" style="transform: scale({{image.scale}});">
+                        <div class="image-container fixed-vertical">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}});">
                         </div>
                     </div>
                     {{/isLast2}}
