@@ -1195,11 +1195,11 @@ const Editor = () => {
                       // Determinar a proporção baseada no índice
                       const getProportionInfo = (idx: number) => {
                         if (idx <= 2) {
-                          // Imagens 1-3 (índices 0-2)
-                          return "200x300px - Proporção vertical de 2:3 (mais altas que largas)";
+                          // Imagens 1-3 (índices 0-2) - Container fixo 220px altura
+                          return "480x720px ou 768x1152px ou 1200x1800px - Proporção vertical 2:3 (mais altas que largas). Use uma das variantes do Cloudflare: 480px, 768px ou 1200px de largura";
                         } else {
-                          // Imagens 4-5 (índices 3-4)
-                          return "300x200px - Proporção de 3:2 (mais horizontais)";
+                          // Imagens 4-5 (índices 3-4) - Container com altura flexível  
+                          return "480x320px ou 768x512px ou 1200x800px - Proporção horizontal 3:2 (mais largas que altas). Use uma das variantes do Cloudflare: 480px, 768px ou 1200px de largura";
                         }
                       };
 
