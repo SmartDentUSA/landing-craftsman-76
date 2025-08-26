@@ -986,7 +986,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             </div>
             <div class="banner-images">
                 {{#banner.images}}
-                <img src="{{{src}}}" alt="{{alt}}">
+                <img src="{{image.src}}" alt="{{image.alt}}">
                 {{/banner.images}}
             </div>
         </div>
@@ -996,16 +996,16 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         <div class="container">
             <h2>{{solutions.title}}</h2>
             <div class="control-grid">
-                {{#solutions.items}}
+                {{#solutions}}
                 <div class="control-item control-item-side">
                     <div class="control-item-text">
-                        <p>{{description}}</p>
+                        <p>{{text}}</p>
                     </div>
                     <div class="image-container">
-                        <img src="{{{image}}}" alt="{{title}}" class="control-item-image full-height">
+                        <img src="{{image.src}}" alt="{{title}}" class="control-item-image full-height">
                     </div>
                 </div>
-                {{/solutions.items}}
+                {{/solutions}}
             </div>
         </div>
     </section>
@@ -1015,12 +1015,12 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             <div class="service-text">
                 <h2>{{advisory.title}}</h2>
                 <p>{{advisory.description}}</p>
-                {{#advisory.button}}
-                <a href="{{{advisory.button.url}}}" class="button button-primary">{{advisory.button.text}}</a>
-                {{/advisory.button}}
+                {{#advisory.cta}}
+                <a href="{{advisory.cta.href}}" class="button button-primary">{{advisory.cta.text}}</a>
+                {{/advisory.cta}}
             </div>
             <div class="service-image-container">
-                <img src="{{{advisory.image}}}" alt="{{advisory.imageAlt}}" class="service-image">
+                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image">
             </div>
         </div>
     </section>
@@ -1029,7 +1029,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         <div class="container">
             <h2>{{faq.title}}</h2>
             <div class="faq-accordion">
-                {{#faq.items}}
+                {{#faq}}
                 <div class="faq-item">
                     <div class="faq-question">
                         <span>{{question}}</span>
@@ -1038,23 +1038,23 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
                         <p>{{answer}}</p>
                     </div>
                 </div>
-                {{/faq.items}}
+                {{/faq}}
             </div>
         </div>
     </section>
     
     <section class="cta-section">
         <div class="container cta-content">
-            <h2>{{cta.title}}</h2>
-            {{#cta.description}}
-            <p>{{cta.description}}</p>
-            {{/cta.description}}
-            {{#cta.primaryButton}}
-            <a href="{{{cta.primaryButton.url}}}" class="button button-primary">{{cta.primaryButton.text}}</a>
-            {{/cta.primaryButton}}
-            {{#cta.secondaryButton}}
-            <a href="{{{cta.secondaryButton.url}}}" class="button button-secondary">{{cta.secondaryButton.text}}</a>
-            {{/cta.secondaryButton}}
+            <h2>{{cta_final.title}}</h2>
+            {{#cta_final.description}}
+            <p>{{cta_final.description}}</p>
+            {{/cta_final.description}}
+            {{#cta_final.primary}}
+            <a href="{{cta_final.primary.href}}" class="button button-primary">{{cta_final.primary.text}}</a>
+            {{/cta_final.primary}}
+            {{#cta_final.secondary}}
+            <a href="{{cta_final.secondary.href}}" class="button button-secondary">{{cta_final.secondary.text}}</a>
+            {{/cta_final.secondary}}
         </div>
     </section>
 
@@ -1082,11 +1082,11 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             <div class="footer-social">
                 <h3>{{footer.socialTitle}}</h3>
                 <div class="footer-social-icons">
-                    {{#footer.socialLinks}}
-                    <a href="{{{url}}}">
-                        {{{socialIcons.[platform]}}}
+                    {{#footer.social}}
+                    <a href="{{href}}">
+                        {{{iconSvg}}}
                     </a>
-                    {{/footer.socialLinks}}
+                    {{/footer.social}}
                 </div>
             </div>
         </div>
