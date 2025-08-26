@@ -227,49 +227,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Consultoria */
-        .personalized-service { 
-            background: linear-gradient(135deg, #1e2a4a 0%, #0f1629 100%); 
-            padding: 3rem 0; 
-            color: white;
-        }
-        .service-content { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 2rem; 
-            align-items: center; 
-        }
-        .service-text h2 {
-            color: white;
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-        .service-text p {
-            color: #d0d8e0;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-        }
-        .button-consulting {
-            background: #0a84ff;
-            color: white;
-            padding: .875rem 1.5rem;
-            border-radius: .5rem;
-            font-weight: 600;
-            display: inline-block;
-            text-decoration: none;
-            transition: background 0.3s ease;
-        }
-        .button-consulting:hover {
-            background: #0066cc;
-        }
+        .personalized-service { background: var(--white); padding: 2.5rem 0; }
+        .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
         .service-image { 
             width: 100%; 
             height: 100%;
             object-fit: cover; 
             display: block;
             transition: transform 0.3s ease;
-            border-radius: 1rem;
         }
         .service-image-container { 
             width: 100%; 
@@ -277,11 +242,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             overflow: hidden; 
             position: relative;
             border-radius: 1rem;
-            box-shadow: 0 20px 40px rgba(0,0,0,.3);
+            box-shadow: 0 8px 16px rgba(0,0,0,.1);
         }
         @media (min-width: 992px) {
-            .service-content { grid-template-columns: 1.2fr .8fr; gap: 3rem; }
-            .service-text h2 { font-size: 2.5rem; }
+            .service-content { grid-template-columns: 1.2fr .8fr; }
         }
 
         /* FAQ */
@@ -394,7 +358,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <h2>{{advisory.title}}</h2>
                 <p>{{advisory.paragraph}}</p>
                 {{#advisory.cta}}
-                <a href="{{advisory.cta.href}}" class="button button-consulting">{{advisory.cta.label}}</a>
+                <a href="{{advisory.cta.href}}" class="button button-primary">{{advisory.cta.label}}</a>
                 {{/advisory.cta}}
             </div>
             <div class="service-image-container">
