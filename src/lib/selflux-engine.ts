@@ -352,7 +352,7 @@ const generateSelFluxCSS = (namespace: string): string => {
 
     /* Seção soluções / controle EXATA do template original */
     .${namespace}-control-section {
-      padding: 2.5rem 0;
+      padding: 2.5rem 0 1.25rem 0;
     }
 
     .${namespace}-control-section h2 {
@@ -395,7 +395,7 @@ const generateSelFluxCSS = (namespace: string): string => {
     /* Consultoria EXATA do template original */
     .${namespace}-personalized-service {
       background: var(--white);
-      padding: 2.5rem 0;
+      padding: 1.25rem 0 2.5rem 0;
     }
 
     .${namespace}-service-content {

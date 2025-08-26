@@ -76,7 +76,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Seção soluções / controle */
-        .control-section { padding: 4rem 0 1rem 0; }
+        .control-section { padding: 4rem 0 0.5rem 0; }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
         .control-grid { 
             display: grid; 
@@ -227,7 +227,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Consultoria */
-        .personalized-service { background: var(--white); padding: 2.5rem 0; }
+        .personalized-service { background: var(--white); padding: 1.25rem 0 2.5rem 0; }
         .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
         
         .service-item {
