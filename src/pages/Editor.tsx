@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { URLInput } from "@/components/ui/url-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -924,7 +925,8 @@ const Editor = () => {
                               setData(prev => ({ ...prev, menu: newMenu }));
                             }}
                           />
-                          <Input
+                          <URLInput
+                            validationKey={`menu-${index}`}
                             placeholder="URL"
                             value={item.href}
                             onChange={(e) => {
@@ -1042,7 +1044,8 @@ const Editor = () => {
                               </div>
                               <div>
                                 <Label>URL</Label>
-                                <Input
+                                <URLInput
+                                  validationKey="banner-cta-primary"
                                   value={data.banner.cta_primary.href}
                                   onChange={(e) => setData(prev => ({
                                     ...prev,
@@ -1092,7 +1095,8 @@ const Editor = () => {
                               </div>
                               <div>
                                 <Label>URL</Label>
-                                <Input
+                                <URLInput
+                                  validationKey="banner-cta-secondary"
                                   value={data.banner.cta_secondary.href}
                                   onChange={(e) => setData(prev => ({
                                     ...prev,
@@ -1477,7 +1481,8 @@ const Editor = () => {
                               </div>
                               <div>
                                 <Label>URL</Label>
-                                <Input
+                                <URLInput
+                                  validationKey="cta-final-primary"
                                   value={data.cta_final.primary.href}
                                   onChange={(e) => setData(prev => ({
                                     ...prev,
@@ -1527,7 +1532,8 @@ const Editor = () => {
                               </div>
                               <div>
                                 <Label>URL</Label>
-                                <Input
+                                <URLInput
+                                  validationKey="cta-final-secondary"
                                   value={data.cta_final.secondary.href}
                                   onChange={(e) => setData(prev => ({
                                     ...prev,
@@ -1638,7 +1644,8 @@ const Editor = () => {
                               }));
                             }}
                           />
-                          <Input
+                          <URLInput
+                            validationKey={`footer-link-${index}`}
                             placeholder="URL"
                             value={link.href}
                             onChange={(e) => {
@@ -1718,7 +1725,8 @@ const Editor = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                          <Input
+                          <URLInput
+                            validationKey={`social-${index}`}
                             placeholder="URL"
                             value={social.href}
                             onChange={(e) => {
@@ -2026,7 +2034,8 @@ const Editor = () => {
                               }}
                               className="w-32"
                             />
-                            <Input
+                            <URLInput
+                              validationKey={`hreflang-${index}`}
                               placeholder="URL"
                               value={hreflang.url}
                               onChange={(e) => {
@@ -2463,7 +2472,8 @@ const Editor = () => {
                                 }));
                               }}
                             />
-                            <Input
+                            <URLInput
+                              validationKey={`breadcrumb-${index}`}
                               placeholder="URL"
                               value={crumb.url}
                               onChange={(e) => {
@@ -2571,7 +2581,8 @@ const Editor = () => {
                                 <SelectItem value="wikipedia">Wikipedia</SelectItem>
                               </SelectContent>
                             </Select>
-                            <Input
+                            <URLInput
+                              validationKey={`sameas-${index}`}
                               placeholder="URL completa"
                               value={sameAs.url}
                               onChange={(e) => {
