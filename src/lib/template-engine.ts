@@ -95,9 +95,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .control-item-image { 
             width: 100%; 
-            aspect-ratio: 3/2; 
+            height: 100%;
             object-fit: cover; 
-            border-radius: 8px; 
+            display: block;
         }
         .control-item-text-overlay {
             position: absolute;
