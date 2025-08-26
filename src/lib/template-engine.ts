@@ -229,7 +229,19 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         /* Consultoria */
         .personalized-service { background: var(--white); padding: 2.5rem 0; }
         .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
-        .service-image { border-radius: 1rem; box-shadow: 0 8px 16px rgba(0,0,0,.1); }
+        .service-image { 
+            width: 100%; 
+            height: 100%;
+            object-fit: cover; 
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        .service-image-container { 
+            width: 100%; 
+            overflow: hidden; 
+            position: relative;
+            border-radius: 1rem;
+        }
         @media (min-width: 992px) {
             .service-content { grid-template-columns: 1.2fr .8fr; }
         }
