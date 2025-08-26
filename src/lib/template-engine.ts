@@ -275,7 +275,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#isFirst3}}
                     <div class="control-item control-item-side">
                         <div class="image-container fixed-horizontal">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
                             <div class="control-item-text-overlay">
                                 <p>{{text}}</p>
                             </div>
@@ -289,7 +289,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#isLast2}}
                     <div class="control-item control-item-side">
                         <div class="image-container fixed-vertical">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
                             <div class="control-item-text-overlay">
                                 <p>{{text}}</p>
                             </div>
@@ -313,7 +313,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{/advisory.cta}}
             </div>
             <div class="service-image-container">
-                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image">
+                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" style="transform: scale({{advisory.image.scale}})">
             </div>
         </div>
     </section>
