@@ -101,13 +101,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .control-item-text-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.7);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: white;
-            padding: 1rem;
-            font-weight: 500;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-weight: 600;
+            text-align: center;
+            padding: 0.5rem;
         }
         .control-item-text-overlay p {
             margin: 0;
