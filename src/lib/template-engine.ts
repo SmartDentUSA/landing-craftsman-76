@@ -114,23 +114,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             margin: 0;
         }
         
-        /* Correção para control-item-side */
-        .control-item.control-item-side {
-            display: block !important;
-            flex-direction: unset !important;
+        /* Solução de proporção fixa para imagens */
+        .image-container {
+            width: 100%;
+            position: relative;
+            padding-top: 66.66%; /* Define a proporção 3:2 (altura/largura) */
+            height: 0;
+            overflow: hidden;
         }
-        .control-item.control-item-side .image-container {
-            display: block !important;
-            flex: none !important;
-            height: auto !important;
-        }
-        .control-item.control-item-side .image-container.fixed-horizontal {
-            width: 418.5px !important;
-            height: 279px !important;
-        }
-        .control-item.control-item-side .image-container.fixed-vertical {
-            width: 280px !important;
-            height: 180px !important;
+        
+        .control-item-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
         
         /* Layout de duas colunas para soluções */
