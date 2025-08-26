@@ -69,8 +69,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .button-secondary { background: #e9ecef; color: #111; }
         .banner-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
         .banner-images img { 
-            width: 200px; 
-            height: 300px; 
+            width: 100%; 
+            aspect-ratio: 2/3; 
             object-fit: cover; 
             border-radius: 8px; 
         }
@@ -88,10 +88,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: grid; grid-template-columns: 1fr; 
         }
         .control-item-text { padding: 1.25rem; font-weight: 500; }
-        .image-container { width: 100%; height: 220px; overflow: hidden; }
+        .image-container { width: 100%; overflow: hidden; }
         .control-item-image { 
-            width: 300px; 
-            height: 200px; 
+            width: 100%; 
+            aspect-ratio: 3/2; 
             object-fit: cover; 
             border-radius: 8px; 
         }
