@@ -638,11 +638,6 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             width: auto;
         }
 
-        @media (min-width: 768px) {
-            .header-menu {
-                display: block;
-            }
-        }
 
         /* Bloco 1: Banner Principal */
         .main-banner {
