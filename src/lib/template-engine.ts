@@ -155,9 +155,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#visible}}
                 <a href="{{href}}" class="button button-primary">{{label}}</a>
                 {{/visible}}
+                {{^visible}}
+                <a href="{{href}}" class="button button-primary">{{label}}</a>
+                {{/visible}}
                 {{/banner.cta_primary}}
                 {{#banner.cta_secondary}}
                 {{#visible}}
+                <a href="{{href}}" class="button button-secondary">{{label}}</a>
+                {{/visible}}
+                {{^visible}}
                 <a href="{{href}}" class="button button-secondary">{{label}}</a>
                 {{/visible}}
                 {{/banner.cta_secondary}}
@@ -231,10 +237,20 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <h2>{{cta_final.title}}</h2>
             <p>{{cta_final.paragraph}}</p>
             {{#cta_final.primary}}
-            <a href="{{cta_final.primary.href}}" class="button button-primary">{{cta_final.primary.label}}</a>
+            {{#visible}}
+            <a href="{{href}}" class="button button-primary">{{label}}</a>
+            {{/visible}}
+            {{^visible}}
+            <a href="{{href}}" class="button button-primary">{{label}}</a>
+            {{/visible}}
             {{/cta_final.primary}}
             {{#cta_final.secondary}}
-            <a href="{{cta_final.secondary.href}}" class="button button-secondary">{{cta_final.secondary.label}}</a>
+            {{#visible}}
+            <a href="{{href}}" class="button button-secondary">{{label}}</a>
+            {{/visible}}
+            {{^visible}}
+            <a href="{{href}}" class="button button-secondary">{{label}}</a>
+            {{/visible}}
             {{/cta_final.secondary}}
         </div>
     </section>

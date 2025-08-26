@@ -996,10 +996,20 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
                 <p>{{banner.description}}</p>
                 {{/banner.description}}
                 {{#banner.primaryButton}}
-                <a href="{{banner.primaryButton.url}}" class="button button-primary">{{banner.primaryButton.text}}</a>
+                {{#visible}}
+                <a href="{{url}}" class="button button-primary">{{text}}</a>
+                {{/visible}}
+                {{^visible}}
+                <a href="{{url}}" class="button button-primary">{{text}}</a>
+                {{/visible}}
                 {{/banner.primaryButton}}
                 {{#banner.secondaryButton}}
-                <a href="{{banner.secondaryButton.url}}" class="button button-secondary">{{banner.secondaryButton.text}}</a>
+                {{#visible}}
+                <a href="{{url}}" class="button button-secondary">{{text}}</a>
+                {{/visible}}
+                {{^visible}}
+                <a href="{{url}}" class="button button-secondary">{{text}}</a>
+                {{/visible}}
                 {{/banner.secondaryButton}}
             </div>
             <div class="banner-images">
