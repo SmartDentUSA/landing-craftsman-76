@@ -101,7 +101,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .control-grid-5 {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
-                grid-template-rows: repeat(3, 200px);
+                grid-template-rows: auto auto auto;
                 gap: 1rem;
                 grid-template-areas: 
                     "solution-1 solution-1 solution-2 solution-2"
@@ -119,7 +119,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .banner-text { flex: 1; padding-right: 2rem; }
             .banner-images { flex: 1; grid-template-columns: repeat(3, 1fr); }
             .control-grid { grid-template-columns: repeat(2, 1fr); }
-            .image-container { height: 100%; }
+            .image-container { width: 100%; }
         }
 
         /* Consultoria */
