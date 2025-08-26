@@ -88,12 +88,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: grid; grid-template-columns: 1fr; 
         }
         .control-item-text { padding: 1.25rem; font-weight: 500; }
-        .image-container { width: 100%; overflow: hidden; }
+        .image-container { 
+            width: 100%; 
+            overflow: hidden; 
+            position: relative;
+        }
         .control-item-image { 
             width: 100%; 
             aspect-ratio: 3/2; 
             object-fit: cover; 
             border-radius: 8px; 
+        }
+        .control-item-text-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 1rem;
+            font-weight: 500;
+        }
+        .control-item-text-overlay p {
+            margin: 0;
         }
         
         /* Layout de duas colunas para soluções */
@@ -243,11 +260,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#solutions}}
                     {{#isFirst3}}
                     <div class="control-item control-item-side">
-                        <div class="control-item-text">
-                            <p>{{text}}</p>
-                        </div>
                         <div class="image-container fixed-horizontal">
                             <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}});">
+                            <div class="control-item-text-overlay">
+                                <p>{{text}}</p>
+                            </div>
                         </div>
                     </div>
                     {{/isFirst3}}
@@ -257,11 +274,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#solutions}}
                     {{#isLast2}}
                     <div class="control-item control-item-side">
-                        <div class="control-item-text">
-                            <p>{{text}}</p>
-                        </div>
                         <div class="image-container fixed-vertical">
                             <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}});">
+                            <div class="control-item-text-overlay">
+                                <p>{{text}}</p>
+                            </div>
                         </div>
                     </div>
                     {{/isLast2}}
