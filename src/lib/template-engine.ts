@@ -238,7 +238,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .service-image-container { 
             width: 100%; 
-            aspect-ratio: 4/3;
+            aspect-ratio: 1200/343.2;
             overflow: hidden; 
             position: relative;
             border-radius: 1rem;
