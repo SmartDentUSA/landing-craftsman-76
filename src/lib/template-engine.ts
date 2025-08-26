@@ -72,7 +72,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         /* Seção soluções / controle */
         .control-section { padding: 2.5rem 0; }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
-        .control-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .control-grid { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 1rem; 
+        }
         .control-item {
             background: var(--white); border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,.08);
             display: grid; grid-template-columns: 1fr; 
@@ -80,6 +84,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .control-item-text { padding: 1.25rem; font-weight: 500; }
         .image-container { width: 100%; height: 220px; overflow: hidden; }
         .control-item-image { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Layout personalizado para 5 soluções - Grid específico */
+        @media (min-width: 768px) {
+            .control-grid-5 {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(3, 200px);
+                gap: 1rem;
+                grid-template-areas: 
+                    "solution-1 solution-1 solution-2 solution-2"
+                    "solution-4 solution-3 solution-3 solution-5"
+                    "solution-4 solution-3 solution-3 solution-5";
+            }
+            .solution-1 { grid-area: solution-1; }
+            .solution-2 { grid-area: solution-2; }
+            .solution-3 { grid-area: solution-3; }
+            .solution-4 { grid-area: solution-4; }
+            .solution-5 { grid-area: solution-5; }
+        }
         @media (min-width: 768px) {
             .banner-content { flex-direction: row; align-items: center; }
             .banner-text { flex: 1; padding-right: 2rem; }
@@ -184,9 +207,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <section class="control-section">
         <div class="container">
             <h2>{{solutions_title}}</h2>
-            <div class="control-grid">
+            <div class="{{#solutions}}{{#is5Solutions}}control-grid-5{{/is5Solutions}}{{^is5Solutions}}control-grid{{/is5Solutions}}{{/solutions}}{{^solutions}}control-grid{{/solutions}}">
                 {{#solutions}}
-                <div class="control-item control-item-side">
+                <div class="control-item control-item-side solution-{{index}}">
                     <div class="control-item-text">
                         <p>{{text}}</p>
                     </div>
@@ -490,9 +513,14 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </html>`;
 
 export const generateHTML = (data: any): string => {
-  // Processa os dados para adicionar os ícones SVG corretos
+  // Processa os dados para adicionar os ícones SVG corretos e detectar 5 soluções
   const processedData = {
     ...data,
+    solutions: data.solutions?.map((solution: any, index: number) => ({
+      ...solution,
+      index: index + 1,
+      is5Solutions: data.solutions.length === 5
+    })),
     footer: {
       ...data.footer,
       social: data.footer.social.map((social: any) => ({
