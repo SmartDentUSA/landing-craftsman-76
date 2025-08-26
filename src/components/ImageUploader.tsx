@@ -23,6 +23,7 @@ interface ImageUploaderProps {
   onChange: (value: ImageData) => void;
   placeholder?: string;
   className?: string;
+  proportionInfo?: string; // Informação sobre proporções recomendadas
 }
 
 // Variants disponíveis no Cloudflare Images
@@ -36,7 +37,8 @@ export const ImageUploader = ({
   value, 
   onChange, 
   placeholder = "URL da imagem",
-  className 
+  className,
+  proportionInfo
 }: ImageUploaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -168,6 +170,13 @@ export const ImageUploader = ({
 
   return (
     <div className={className}>
+      {proportionInfo && (
+        <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800 font-medium">📐 Proporções Recomendadas:</p>
+          <p className="text-xs text-blue-700 mt-1">{proportionInfo}</p>
+        </div>
+      )}
+      
       <Tabs value={normalizedValue.mode} onValueChange={(value) => updateImageData({ mode: value as 'url' | 'cloudflare' })}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="url" className="flex items-center gap-2">

@@ -1111,11 +1111,16 @@ const Editor = () => {
                     </div>
                     
                     <div>
-                      <Label>Imagens do Banner</Label>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label>Imagens do Banner</Label>
+                        <span className="text-sm text-muted-foreground">
+                          {data.banner.images.length}/3 imagens
+                        </span>
+                      </div>
                       {data.banner.images.map((image, index) => (
                         <div key={index} className="mt-4 p-4 border rounded-lg">
                           <div className="flex justify-between items-center mb-2">
-                            <Label>Imagem {index + 1}</Label>
+                            <Label>Imagem {index + 1} do Banner</Label>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1140,7 +1145,8 @@ const Editor = () => {
                                 banner: { ...prev.banner, images: newImages }
                               }));
                             }}
-                            placeholder={`URL da imagem ${index + 1}`}
+                            placeholder={`URL da imagem ${index + 1} do banner`}
+                            proportionInfo="200px (largura) x 300px (altura) - Proporção: 16:9"
                           />
                         </div>
                       ))}
@@ -1157,9 +1163,10 @@ const Editor = () => {
                           }));
                         }}
                         className="mt-2"
+                        disabled={data.banner.images.length >= 3}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Imagem
+                        {data.banner.images.length >= 3 ? "Máximo de 3 imagens atingido" : "Adicionar Imagem"}
                       </Button>
                     </div>
                   </AccordionContent>
@@ -1178,48 +1185,68 @@ const Editor = () => {
                       />
                     </div>
                     
-                    {data.solutions.map((solution, index) => (
-                      <div key={index} className="p-4 border rounded-lg space-y-4">
-                        <div className="flex justify-between items-center">
-                          <Label>Solução {index + 1}</Label>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newSolutions = data.solutions.filter((_, i) => i !== index);
-                              setData(prev => ({ ...prev, solutions: newSolutions }));
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">
+                        {data.solutions.length}/5 soluções
+                      </span>
+                    </div>
+                    
+                    {data.solutions.map((solution, index) => {
+                      // Determinar a proporção baseada no índice
+                      const getProportionInfo = (idx: number) => {
+                        if (idx <= 2) {
+                          // Imagens 1-3 (índices 0-2)
+                          return "200x300px - Proporção vertical de 2:3 (mais altas que largas)";
+                        } else {
+                          // Imagens 4-5 (índices 3-4)
+                          return "300x200px - Proporção de 3:2 (mais horizontais)";
+                        }
+                      };
+
+                      return (
+                        <div key={index} className="p-4 border rounded-lg space-y-4">
+                          <div className="flex justify-between items-center">
+                            <Label>Solução {index + 1}</Label>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newSolutions = data.solutions.filter((_, i) => i !== index);
+                                setData(prev => ({ ...prev, solutions: newSolutions }));
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div>
+                            <Label>Texto</Label>
+                            <Textarea
+                              value={solution.text}
+                              onChange={(e) => {
+                                const newSolutions = [...data.solutions];
+                                newSolutions[index].text = e.target.value;
+                                setData(prev => ({ ...prev, solutions: newSolutions }));
+                              }}
+                              placeholder="Descrição da solução"
+                              rows={3}
+                            />
+                          </div>
+                          <div>
+                            <Label>Imagem da Solução {index + 1}</Label>
+                            <ImageUploader
+                              value={solution.image}
+                              onChange={(imageData) => {
+                                const newSolutions = [...data.solutions];
+                                newSolutions[index].image = imageData;
+                                setData(prev => ({ ...prev, solutions: newSolutions }));
+                              }}
+                              placeholder={`URL da imagem da solução ${index + 1}`}
+                              proportionInfo={getProportionInfo(index)}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label>Texto</Label>
-                          <Textarea
-                            value={solution.text}
-                            onChange={(e) => {
-                              const newSolutions = [...data.solutions];
-                              newSolutions[index].text = e.target.value;
-                              setData(prev => ({ ...prev, solutions: newSolutions }));
-                            }}
-                            placeholder="Descrição da solução"
-                            rows={3}
-                          />
-                        </div>
-                        <div>
-                          <Label>Imagem</Label>
-                          <ImageUploader
-                            value={solution.image}
-                            onChange={(imageData) => {
-                              const newSolutions = [...data.solutions];
-                              newSolutions[index].image = imageData;
-                              setData(prev => ({ ...prev, solutions: newSolutions }));
-                            }}
-                            placeholder="URL da imagem da solução"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     
                     <Button
                       variant="outline"
@@ -1230,9 +1257,10 @@ const Editor = () => {
                           solutions: [...prev.solutions, { text: '', image: createImageData() }]
                         }));
                       }}
+                      disabled={data.solutions.length >= 5}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Solução
+                      {data.solutions.length >= 5 ? "Máximo de 5 soluções atingido" : "Adicionar Solução"}
                     </Button>
                   </AccordionContent>
                 </AccordionItem>
