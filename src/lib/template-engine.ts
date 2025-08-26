@@ -152,20 +152,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <h1>{{banner.title}}</h1>
                 <p>{{banner.subtitle}}</p>
                 {{#banner.cta_primary}}
-                {{#visible}}
+                {{#label}}
                 <a href="{{href}}" class="button button-primary">{{label}}</a>
-                {{/visible}}
-                {{^visible}}
-                <a href="{{href}}" class="button button-primary">{{label}}</a>
-                {{/visible}}
+                {{/label}}
                 {{/banner.cta_primary}}
                 {{#banner.cta_secondary}}
-                {{#visible}}
+                {{#label}}
                 <a href="{{href}}" class="button button-secondary">{{label}}</a>
-                {{/visible}}
-                {{^visible}}
-                <a href="{{href}}" class="button button-secondary">{{label}}</a>
-                {{/visible}}
+                {{/label}}
                 {{/banner.cta_secondary}}
             </div>
             <div class="banner-images">
@@ -237,20 +231,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <h2>{{cta_final.title}}</h2>
             <p>{{cta_final.paragraph}}</p>
             {{#cta_final.primary}}
-            {{#visible}}
+            {{#label}}
             <a href="{{href}}" class="button button-primary">{{label}}</a>
-            {{/visible}}
-            {{^visible}}
-            <a href="{{href}}" class="button button-primary">{{label}}</a>
-            {{/visible}}
+            {{/label}}
             {{/cta_final.primary}}
             {{#cta_final.secondary}}
-            {{#visible}}
+            {{#label}}
             <a href="{{href}}" class="button button-secondary">{{label}}</a>
-            {{/visible}}
-            {{^visible}}
-            <a href="{{href}}" class="button button-secondary">{{label}}</a>
-            {{/visible}}
+            {{/label}}
             {{/cta_final.secondary}}
         </div>
     </section>

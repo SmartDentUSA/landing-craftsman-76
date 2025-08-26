@@ -1017,7 +1017,9 @@ const Editor = () => {
                                 ...prev,
                                 banner: {
                                   ...prev.banner,
-                                  cta_primary: { ...prev.banner.cta_primary, visible: checked }
+                                  cta_primary: checked 
+                                    ? { ...prev.banner.cta_primary, visible: true }
+                                    : { label: '', href: '', visible: false }
                                 }
                               }))}
                             />
@@ -1067,7 +1069,9 @@ const Editor = () => {
                                 ...prev,
                                 banner: {
                                   ...prev.banner,
-                                  cta_secondary: { ...prev.banner.cta_secondary, visible: checked }
+                                  cta_secondary: checked 
+                                    ? { ...prev.banner.cta_secondary, visible: true }
+                                    : { label: '', href: '', visible: false }
                                 }
                               }))}
                             />
@@ -1424,7 +1428,9 @@ const Editor = () => {
                                 ...prev,
                                 cta_final: {
                                   ...prev.cta_final,
-                                  primary: { ...prev.cta_final.primary, visible: checked }
+                                  primary: checked 
+                                    ? { ...prev.cta_final.primary, visible: true }
+                                    : { label: '', href: '', visible: false }
                                 }
                               }))}
                             />
@@ -1474,7 +1480,9 @@ const Editor = () => {
                                 ...prev,
                                 cta_final: {
                                   ...prev.cta_final,
-                                  secondary: { ...prev.cta_final.secondary, visible: checked }
+                                  secondary: checked 
+                                    ? { ...prev.cta_final.secondary, visible: true }
+                                    : { label: '', href: '', visible: false }
                                 }
                               }))}
                             />
