@@ -127,7 +127,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: block;
         }
         
-        /* Grid responsivo para soluções */
+        /* Grid assimétrico para soluções */
         .control-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -137,14 +137,21 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         @media (min-width: 768px) {
             .control-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 2rem;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(3, minmax(200px, auto));
+                gap: 1.5rem;
+                grid-template-areas: 
+                    "large large med1 small1"
+                    "large large med2 small2"
+                    "med3 med4 med5 small3";
             }
         }
         
         @media (min-width: 1200px) {
             .control-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(3, minmax(250px, auto));
+                gap: 2rem;
             }
         }
         
@@ -162,11 +169,46 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         }
         
+        /* Tamanhos específicos para layout assimétrico */
+        .control-item-large {
+            grid-area: large;
+        }
+        
+        .control-item-medium:nth-child(2) { grid-area: med1; }
+        .control-item-medium:nth-child(3) { grid-area: med2; }
+        .control-item-medium:nth-child(6) { grid-area: med3; }
+        .control-item-medium:nth-child(7) { grid-area: med4; }
+        .control-item-medium:nth-child(8) { grid-area: med5; }
+        
+        .control-item-small:nth-child(4) { grid-area: small1; }
+        .control-item-small:nth-child(5) { grid-area: small2; }
+        .control-item-small:nth-child(9) { grid-area: small3; }
+        
         .image-container {
             width: 100%;
-            aspect-ratio: 4/3;
+            height: 100%;
             overflow: hidden;
             position: relative;
+        }
+        
+        .image-container-large {
+            aspect-ratio: 3/2;
+        }
+        
+        .image-container-medium {
+            aspect-ratio: 4/3;
+        }
+        
+        .image-container-small {
+            aspect-ratio: 1/1;
+        }
+        
+        @media (max-width: 767px) {
+            .image-container-large,
+            .image-container-medium,
+            .image-container-small {
+                aspect-ratio: 4/3;
+            }
         }
         
         .control-item-image {
@@ -282,8 +324,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <h2>{{solutions_title}}</h2>
             <div class="control-grid">
                 {{#solutions}}
-                <div class="control-item">
-                    <div class="image-container">
+                <div class="control-item {{size}}">
+                    <div class="image-container image-container-{{sizeType}}">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
@@ -589,12 +631,29 @@ export const generateHTML = (data: any): string => {
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
-    solutions: data.solutions?.map((solution: any, index: number) => ({
-      ...solution,
-      index: index + 1,
-      isFirst3: index < 3, // Primeiras 3 imagens (índices 0, 1 e 2)
-      isLast2: index >= 3  // Últimas 2 imagens (índices 3 e 4)
-    })),
+    solutions: data.solutions?.map((solution: any, index: number) => {
+      // Define tamanhos para layout assimétrico
+      let size, sizeType;
+      if (index === 0) {
+        size = 'control-item-large';
+        sizeType = 'large';
+      } else if (index < 6) {
+        size = 'control-item-medium';
+        sizeType = 'medium';
+      } else {
+        size = 'control-item-small';
+        sizeType = 'small';
+      }
+      
+      return {
+        ...solution,
+        index: index + 1,
+        size,
+        sizeType,
+        isFirst3: index < 3,
+        isLast2: index >= 3
+      };
+    }),
     footer: {
       ...data.footer,
       social: data.footer.social.map((social: any) => ({
