@@ -238,9 +238,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .service-image-container { 
             width: 100%; 
+            aspect-ratio: 4/3;
             overflow: hidden; 
             position: relative;
             border-radius: 1rem;
+            box-shadow: 0 8px 16px rgba(0,0,0,.1);
         }
         @media (min-width: 992px) {
             .service-content { grid-template-columns: 1.2fr .8fr; }
