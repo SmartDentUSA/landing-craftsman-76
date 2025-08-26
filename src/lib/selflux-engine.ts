@@ -62,7 +62,10 @@ const createClassMap = (namespace: string) => ({
   // Buttons - classes exatas do template
   "button": `${namespace}-button`,
   "button-primary": `${namespace}-button-primary`,
-  "button-secondary": `${namespace}-button-secondary`
+  "button-secondary": `${namespace}-button-secondary`,
+  
+  // Estado ativo - classe exata do template
+  "active": `${namespace}-active`
 });
 
 // Resolução de imagens Cloudflare
@@ -446,7 +449,7 @@ const generateSelFluxCSS = (namespace: string): string => {
       line-height: 1.6;
     }
 
-    .${namespace}-faq-item.active .${namespace}-faq-answer {
+    .${namespace}-faq-item.${namespace}-active .${namespace}-faq-answer {
       display: block;
     }
 
@@ -456,7 +459,7 @@ const generateSelFluxCSS = (namespace: string): string => {
       transition: 0.2s;
     }
 
-    .${namespace}-faq-item.active .${namespace}-faq-icon {
+    .${namespace}-faq-item.${namespace}-active .${namespace}-faq-icon {
       transform: rotate(0deg);
     }
 
@@ -580,14 +583,18 @@ export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string =
   // Gerar CSS SelFlux completo baseado no exemplo
   const selfluxCSS = generateSelFluxCSS(config.namespace);
   
-  // Gerar JavaScript adaptado para SelFlux
+  // Extrair apenas o conteúdo do body do HTML original
+  const bodyMatch = renamedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const bodyContent = bodyMatch ? bodyMatch[1] : renamedHtml;
+  
+  // Gerar JavaScript adaptado para SelFlux com classe active correta
   const selfluxJS = `
     document.addEventListener('DOMContentLoaded', () => {
-      const faqQuestions = document.querySelectorAll('.${config.namespace}-root .${config.namespace}-faq-question');
+      const faqQuestions = document.querySelectorAll('.${config.namespace}-faq-question');
       faqQuestions.forEach(question => {
         question.addEventListener('click', () => {
           const faqItem = question.closest('.${config.namespace}-faq-item');
-          faqItem.classList.toggle('active');
+          faqItem.classList.toggle('${config.namespace}-active');
         });
       });
     });
@@ -596,7 +603,7 @@ export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string =
   // Montar HTML final com wrapper, CSS e JavaScript SelFlux
   const finalHtml = `<div class="${config.namespace}-root">
 <style>${selfluxCSS}</style>
-${renamedHtml}
+${bodyContent}
 <script>${selfluxJS}</script>
 </div>`;
   
