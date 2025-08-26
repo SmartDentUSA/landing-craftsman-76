@@ -113,11 +113,17 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 flex-direction: column;
                 gap: 1rem;
             }
-            .vertical-image {
-                aspect-ratio: 2/3; /* 200x300px */
+            .fixed-horizontal {
+                width: 300px;
+                height: 90px;
+                aspect-ratio: 10/3;
+                object-fit: cover;
             }
-            .horizontal-image {
-                aspect-ratio: 3/2; /* 300x200px */
+            .fixed-vertical {
+                width: 280px;
+                height: 180px;
+                aspect-ratio: 14/9;
+                object-fit: cover;
             }
         }
         @media (min-width: 768px) {
@@ -233,7 +239,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             <p>{{text}}</p>
                         </div>
                         <div class="image-container">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image horizontal-image" style="transform: scale({{image.scale}});">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image fixed-horizontal" style="transform: scale({{image.scale}});">
                         </div>
                     </div>
                     {{/isFirst3}}
@@ -247,7 +253,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             <p>{{text}}</p>
                         </div>
                         <div class="image-container">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image vertical-image" style="transform: scale({{image.scale}});">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image fixed-vertical" style="transform: scale({{image.scale}});">
                         </div>
                     </div>
                     {{/isLast2}}
