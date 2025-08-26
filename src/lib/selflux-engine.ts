@@ -140,37 +140,59 @@ const prefixCss = (css: string, scope: string): string => {
 export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string => {
   const config = embedConfig || { mode: 'default', namespace: 'sd' };
   
+  console.log('🔧 generateSafeHTML called with config:', config);
+  console.log('🔧 Data keys:', Object.keys(data || {}));
+  
   // Resolver imagens primeiro
   const processedData = resolveImagesInData(data);
+  console.log('🔧 Images resolved, processed data sample:', {
+    logo_url: processedData?.logo_url,
+    banner_images_count: processedData?.banner?.images?.length
+  });
   
   // Gerar HTML normal
   let html = originalGenerateHTML(processedData);
+  console.log('🔧 Original HTML generated, length:', html?.length);
   
   // Se não for modo SelFlux, retornar HTML normal
   if (config.mode !== 'selflux') {
+    console.log('🔧 Mode is not selflux, returning original HTML');
     return html;
   }
+  
+  console.log('🔧 SelFlux mode active, applying transformations...');
   
   // Aplicar transformações SelFlux
   const classMap = createClassMap(config.namespace);
   const scope = `.${config.namespace}-root`;
   
+  console.log('🔧 Class map sample:', Object.fromEntries(Object.entries(classMap).slice(0, 3)));
+  console.log('🔧 Scope:', scope);
+  
   // Extrair CSS inline se existir
   const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   let inlineCss = styleMatch ? styleMatch[1] : '';
+  console.log('🔧 CSS extracted, length:', inlineCss?.length);
   
   // Prefixar CSS
   const prefixedCss = prefixCss(inlineCss, scope);
+  console.log('🔧 CSS prefixed, sample:', prefixedCss.substring(0, 200));
   
   // Remover <style> original e renomear classes
   const strippedHtml = styleMatch ? html.replace(styleMatch[0], '') : html;
   const renamedHtml = renameClassesInHtml(strippedHtml, classMap);
+  console.log('🔧 Classes renamed, HTML sample:', renamedHtml.substring(0, 300));
   
   // Montar HTML final com wrapper e CSS prefixado
-  return `<div class="${config.namespace}-root">
+  const finalHtml = `<div class="${config.namespace}-root">
 <style>${prefixedCss}</style>
 ${renamedHtml}
 </div>`;
+  
+  console.log('🔧 Final HTML generated, length:', finalHtml?.length);
+  console.log('🔧 Final HTML preview:', finalHtml.substring(0, 500));
+  
+  return finalHtml;
 };
 
 // Função para gerar email HTML safe

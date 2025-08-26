@@ -464,8 +464,12 @@ const Editor = () => {
     const processedData = beforePreview(data);
     const embedConfig = getEmbedConfig({ embed: data.embed });
     
+    console.log('🎯 Current embed config:', data.embed);
+    console.log('🎯 Processed embed config:', embedConfig);
+    
     // Usar generateSafeHTML se for modo SelFlux
     if (embedConfig.mode === 'selflux') {
+      console.log('🚀 Editor: Using SelFlux mode with config:', embedConfig);
       return generateSafeHTML({
         ...processedData,
         // Converter ImageData para formato compatível com template
@@ -498,6 +502,7 @@ const Editor = () => {
     }
     
     // Modo padrão
+    console.log('🚀 Editor: Using default mode');
     return generateHTML({
       ...processedData,
       // Converter ImageData para formato compatível com template
@@ -670,11 +675,49 @@ const Editor = () => {
     });
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(generatedHTML);
+  const handleCopyCode = async () => {
+    const htmlToUse = previewTab === 'landing-preview' ? generatedHTML : generatedEmailHTML;
+    console.log('📋 Copying HTML, length:', htmlToUse?.length);
+    console.log('📋 HTML preview:', htmlToUse?.substring(0, 500));
+    
+    try {
+      await navigator.clipboard.writeText(htmlToUse);
+      toast({
+        title: "Código copiado!",
+        description: `Código ${previewTab === 'landing-preview' ? 'da landing page' : 'do email'} copiado para a área de transferência.`,
+      });
+    } catch (error) {
+      console.error('Erro ao copiar:', error);
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o código para a área de transferência.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Debug function - temporary
+  const handleTestSelFlux = () => {
+    console.log('🧪 Testing SelFlux generation...');
+    console.log('🧪 Current data.embed:', data.embed);
+    
+    if (!data.embed || data.embed.mode !== 'selflux') {
+      console.log('❌ SelFlux mode not active!');
+      toast({
+        title: "Atenção!",
+        description: "Modo SelFlux não está ativo. Ative em 'Modo de Incorporação'.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const testConfig = { mode: 'selflux' as const, namespace: data.embed.namespace || 'sd' };
+    const testHTML = generateSafeHTML(data, testConfig);
+    console.log('🧪 Generated SelFlux HTML:', testHTML.substring(0, 1000));
+    
     toast({
-      title: "Código copiado",
-      description: "HTML copiado para a área de transferência!",
+      title: "Teste SelFlux",
+      description: "HTML SelFlux gerado. Verifique o console para detalhes.",
     });
   };
 
@@ -2923,6 +2966,9 @@ const Editor = () => {
                 <Button variant="outline" size="sm" onClick={handleCopyCode}>
                   <Copy className="h-4 w-4 mr-2" />
                   Copiar
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleTestSelFlux} className="bg-orange-100 hover:bg-orange-200">
+                  🧪 Test SelFlux
                 </Button>
               </div>
             </div>
