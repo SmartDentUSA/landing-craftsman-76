@@ -144,14 +144,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 flex-direction: column;
                 gap: 1rem;
             }
-        .image-container.fixed-horizontal {
-            width: 418.5px;
-            height: 279px;
-            overflow: hidden;
-        }
-            .image-container.fixed-vertical {
-                width: 280px;
-                height: 180px;
+            .image-container {
+                aspect-ratio: 2/3;
                 overflow: hidden;
             }
             .control-item-image {
@@ -274,7 +268,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#solutions}}
                     {{#isFirst3}}
                     <div class="control-item control-item-side">
-                        <div class="image-container fixed-horizontal">
+                        <div class="image-container">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
                             <div class="control-item-text-overlay">
                                 <p>{{text}}</p>
@@ -288,7 +282,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#solutions}}
                     {{#isLast2}}
                     <div class="control-item control-item-side">
-                        <div class="image-container fixed-vertical">
+                        <div class="image-container">
                             <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
                             <div class="control-item-text-overlay">
                                 <p>{{text}}</p>
