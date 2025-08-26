@@ -132,8 +132,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 gap: 1rem;
             }
         .image-container.fixed-horizontal {
-            width: 465px;
-            height: 310px;
+            width: 418.5px;
+            height: 279px;
             overflow: hidden;
         }
             .image-container.fixed-vertical {
