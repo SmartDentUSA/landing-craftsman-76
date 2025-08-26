@@ -12,6 +12,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== CLOUDFLARE DIRECT UPLOAD DEBUG START ===')
+    console.log('Request method:', req.method)
+    console.log('Deno.env variables available:', Object.keys(Deno.env.toObject()).filter(k => k.includes('CLOUDFLARE')))
+    
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { 
         status: 405, 
@@ -19,16 +23,19 @@ serve(async (req) => {
       })
     }
 
+    // Get credentials with detailed logging
     const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')?.trim()
     const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')?.trim()
 
-    console.log('Checking Cloudflare credentials for direct upload...')
-    console.log('Account ID present:', !!CLOUDFLARE_ACCOUNT_ID)
+    console.log('=== CREDENTIAL CHECK ===')
+    console.log('Raw CLOUDFLARE_API_TOKEN exists:', !!Deno.env.get('CLOUDFLARE_API_TOKEN'))
+    console.log('Raw CLOUDFLARE_ACCOUNT_ID exists:', !!Deno.env.get('CLOUDFLARE_ACCOUNT_ID'))
+    console.log('Trimmed API Token present:', !!CLOUDFLARE_API_TOKEN)
+    console.log('Trimmed Account ID present:', !!CLOUDFLARE_ACCOUNT_ID)
     console.log('Account ID length:', CLOUDFLARE_ACCOUNT_ID?.length || 0)
-    console.log('Account ID value (masked):', CLOUDFLARE_ACCOUNT_ID ? `${CLOUDFLARE_ACCOUNT_ID.substring(0, 8)}...${CLOUDFLARE_ACCOUNT_ID.substring(-4)}` : 'null')
-    console.log('API Token present:', !!CLOUDFLARE_API_TOKEN)
+    console.log('Account ID value (first 8 chars):', CLOUDFLARE_ACCOUNT_ID ? CLOUDFLARE_ACCOUNT_ID.substring(0, 8) : 'null')
     console.log('API Token length:', CLOUDFLARE_API_TOKEN?.length || 0)
-    console.log('API Token value (masked):', CLOUDFLARE_API_TOKEN ? `${CLOUDFLARE_API_TOKEN.substring(0, 8)}...${CLOUDFLARE_API_TOKEN.substring(-4)}` : 'null')
+    console.log('API Token value (first 8 chars):', CLOUDFLARE_API_TOKEN ? CLOUDFLARE_API_TOKEN.substring(0, 8) : 'null')
 
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
       console.error('Missing Cloudflare credentials')
