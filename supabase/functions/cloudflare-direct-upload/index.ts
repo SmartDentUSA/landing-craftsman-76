@@ -24,7 +24,11 @@ serve(async (req) => {
 
     console.log('Checking Cloudflare credentials for direct upload...')
     console.log('Account ID present:', !!CLOUDFLARE_ACCOUNT_ID)
+    console.log('Account ID length:', CLOUDFLARE_ACCOUNT_ID?.length || 0)
+    console.log('Account ID value (masked):', CLOUDFLARE_ACCOUNT_ID ? `${CLOUDFLARE_ACCOUNT_ID.substring(0, 8)}...${CLOUDFLARE_ACCOUNT_ID.substring(-4)}` : 'null')
     console.log('API Token present:', !!CLOUDFLARE_API_TOKEN)
+    console.log('API Token length:', CLOUDFLARE_API_TOKEN?.length || 0)
+    console.log('API Token value (masked):', CLOUDFLARE_API_TOKEN ? `${CLOUDFLARE_API_TOKEN.substring(0, 8)}...${CLOUDFLARE_API_TOKEN.substring(-4)}` : 'null')
 
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
       console.error('Missing Cloudflare credentials')
@@ -39,12 +43,26 @@ serve(async (req) => {
       )
     }
 
-    // Validate Account ID format (should be 32 characters)
-    if (CLOUDFLARE_ACCOUNT_ID.length !== 32) {
-      console.error('Invalid Account ID format:', CLOUDFLARE_ACCOUNT_ID)
+    // Validate Account ID format (should be 32-33 characters)
+    if (CLOUDFLARE_ACCOUNT_ID.length < 32 || CLOUDFLARE_ACCOUNT_ID.length > 33) {
+      console.error('Invalid Account ID format - length:', CLOUDFLARE_ACCOUNT_ID.length, 'expected: 32-33')
       return new Response(
         JSON.stringify({ 
-          error: 'Account ID do Cloudflare inválido. Deve ter 32 caracteres.' 
+          error: `Account ID do Cloudflare inválido. Deve ter 32-33 caracteres. Atual: ${CLOUDFLARE_ACCOUNT_ID.length}` 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Validate Account ID contains only valid characters (hex)
+    if (!/^[a-f0-9]+$/i.test(CLOUDFLARE_ACCOUNT_ID)) {
+      console.error('Invalid Account ID format - contains invalid characters')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Account ID do Cloudflare contém caracteres inválidos. Deve conter apenas letras e números.' 
         }),
         { 
           status: 400, 
