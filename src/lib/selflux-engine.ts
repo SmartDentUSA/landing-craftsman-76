@@ -139,10 +139,15 @@ const resolveImagesInData = (data: any, accountHash?: string): any => {
 const renameClassesInHtml = (html: string, classMap: Record<string, string>): string => {
   let processedHtml = html;
   
+  console.log('🔍 HTML ANTES da renomeação (primeiros 1000 chars):', html.substring(0, 1000));
+  console.log('🔍 Mapeamento de classes:', Object.keys(classMap).slice(0, 10));
+  
   // Ordenar classes por tamanho decrescente para evitar conflitos de substring
   const sortedEntries = Object.entries(classMap).sort(([a], [b]) => b.length - a.length);
   
   for (const [from, to] of sortedEntries) {
+    const beforeLength = processedHtml.length;
+    
     // Escapar caracteres especiais regex
     const escapedFrom = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     
@@ -161,7 +166,14 @@ const renameClassesInHtml = (html: string, classMap: Record<string, string>): st
     // Substituir class='other-classes from' por class='other-classes to'
     const withinClassRegexSingle = new RegExp(`(class\\s*=\\s*'[^']*?)\\b${escapedFrom}\\b([^']*')`, 'g');
     processedHtml = processedHtml.replace(withinClassRegexSingle, `$1${to}$2`);
+    
+    const afterLength = processedHtml.length;
+    if (afterLength !== beforeLength) {
+      console.log(`🔄 Classe '${from}' → '${to}' substituída (delta: ${afterLength - beforeLength})`);
+    }
   }
+  
+  console.log('🔍 HTML DEPOIS da renomeação (primeiros 1000 chars):', processedHtml.substring(0, 1000));
   
   return processedHtml;
 };
