@@ -179,8 +179,8 @@ interface LandingPageData {
   cta_final: {
     title: string;
     paragraph: string;
-    primary: { label: string; href: string };
-    secondary: { label: string; href: string };
+    primary: { label: string; href: string; visible?: boolean };
+    secondary: { label: string; href: string; visible?: boolean };
   };
   footer_links_title: string;
   footer: {
@@ -1005,65 +1005,108 @@ const Editor = () => {
                       />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>CTA Primário - Label</Label>
-                        <Input
-                          value={data.banner.cta_primary.label}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            banner: {
-                              ...prev.banner,
-                              cta_primary: { ...prev.banner.cta_primary, label: e.target.value }
-                            }
-                          }))}
-                          placeholder="Texto do botão primário"
-                        />
-                      </div>
-                      <div>
-                        <Label>CTA Primário - URL</Label>
-                        <Input
-                          value={data.banner.cta_primary.href}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            banner: {
-                              ...prev.banner,
-                              cta_primary: { ...prev.banner.cta_primary, href: e.target.value }
-                            }
-                          }))}
-                          placeholder="URL do botão primário"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>CTA Secundário - Label</Label>
-                        <Input
-                          value={data.banner.cta_secondary.label}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            banner: {
-                              ...prev.banner,
-                              cta_secondary: { ...prev.banner.cta_secondary, label: e.target.value }
-                            }
-                          }))}
-                          placeholder="Texto do botão secundário"
-                        />
-                      </div>
-                      <div>
-                        <Label>CTA Secundário - URL</Label>
-                        <Input
-                          value={data.banner.cta_secondary.href}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            banner: {
-                              ...prev.banner,
-                              cta_secondary: { ...prev.banner.cta_secondary, href: e.target.value }
-                            }
-                          }))}
-                          placeholder="URL do botão secundário"
-                        />
+                    <div>
+                      <Label>CTAs do Banner</Label>
+                      <div className="space-y-4 mt-2">
+                        {/* CTA Primário */}
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={data.banner.cta_primary.visible !== false}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                banner: {
+                                  ...prev.banner,
+                                  cta_primary: { ...prev.banner.cta_primary, visible: checked }
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">CTA Primário</Label>
+                          </div>
+                          
+                          {data.banner.cta_primary.visible !== false && (
+                            <div className="grid grid-cols-2 gap-4 ml-6">
+                              <div>
+                                <Label>Label</Label>
+                                <Input
+                                  value={data.banner.cta_primary.label}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    banner: {
+                                      ...prev.banner,
+                                      cta_primary: { ...prev.banner.cta_primary, label: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="Texto do botão primário"
+                                />
+                              </div>
+                              <div>
+                                <Label>URL</Label>
+                                <Input
+                                  value={data.banner.cta_primary.href}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    banner: {
+                                      ...prev.banner,
+                                      cta_primary: { ...prev.banner.cta_primary, href: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="URL do botão primário"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* CTA Secundário */}
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={data.banner.cta_secondary.visible !== false}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                banner: {
+                                  ...prev.banner,
+                                  cta_secondary: { ...prev.banner.cta_secondary, visible: checked }
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">CTA Secundário</Label>
+                          </div>
+                          
+                          {data.banner.cta_secondary.visible !== false && (
+                            <div className="grid grid-cols-2 gap-4 ml-6">
+                              <div>
+                                <Label>Label</Label>
+                                <Input
+                                  value={data.banner.cta_secondary.label}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    banner: {
+                                      ...prev.banner,
+                                      cta_secondary: { ...prev.banner.cta_secondary, label: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="Texto do botão secundário"
+                                />
+                              </div>
+                              <div>
+                                <Label>URL</Label>
+                                <Input
+                                  value={data.banner.cta_secondary.href}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    banner: {
+                                      ...prev.banner,
+                                      cta_secondary: { ...prev.banner.cta_secondary, href: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="URL do botão secundário"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
@@ -1369,65 +1412,108 @@ const Editor = () => {
                       />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>CTA Primário - Label</Label>
-                        <Input
-                          value={data.cta_final.primary.label}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            cta_final: {
-                              ...prev.cta_final,
-                              primary: { ...prev.cta_final.primary, label: e.target.value }
-                            }
-                          }))}
-                          placeholder="Texto do botão primário"
-                        />
-                      </div>
-                      <div>
-                        <Label>CTA Primário - URL</Label>
-                        <Input
-                          value={data.cta_final.primary.href}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            cta_final: {
-                              ...prev.cta_final,
-                              primary: { ...prev.cta_final.primary, href: e.target.value }
-                            }
-                          }))}
-                          placeholder="URL do botão primário"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>CTA Secundário - Label</Label>
-                        <Input
-                          value={data.cta_final.secondary.label}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            cta_final: {
-                              ...prev.cta_final,
-                              secondary: { ...prev.cta_final.secondary, label: e.target.value }
-                            }
-                          }))}
-                          placeholder="Texto do botão secundário"
-                        />
-                      </div>
-                      <div>
-                        <Label>CTA Secundário - URL</Label>
-                        <Input
-                          value={data.cta_final.secondary.href}
-                          onChange={(e) => setData(prev => ({
-                            ...prev,
-                            cta_final: {
-                              ...prev.cta_final,
-                              secondary: { ...prev.cta_final.secondary, href: e.target.value }
-                            }
-                          }))}
-                          placeholder="URL do botão secundário"
-                        />
+                    <div>
+                      <Label>CTAs da Seção Final</Label>
+                      <div className="space-y-4 mt-2">
+                        {/* CTA Primário */}
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={data.cta_final.primary.visible !== false}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                cta_final: {
+                                  ...prev.cta_final,
+                                  primary: { ...prev.cta_final.primary, visible: checked }
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">CTA Primário</Label>
+                          </div>
+                          
+                          {data.cta_final.primary.visible !== false && (
+                            <div className="grid grid-cols-2 gap-4 ml-6">
+                              <div>
+                                <Label>Label</Label>
+                                <Input
+                                  value={data.cta_final.primary.label}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    cta_final: {
+                                      ...prev.cta_final,
+                                      primary: { ...prev.cta_final.primary, label: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="Texto do botão primário"
+                                />
+                              </div>
+                              <div>
+                                <Label>URL</Label>
+                                <Input
+                                  value={data.cta_final.primary.href}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    cta_final: {
+                                      ...prev.cta_final,
+                                      primary: { ...prev.cta_final.primary, href: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="URL do botão primário"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* CTA Secundário */}
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={data.cta_final.secondary.visible !== false}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                cta_final: {
+                                  ...prev.cta_final,
+                                  secondary: { ...prev.cta_final.secondary, visible: checked }
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">CTA Secundário</Label>
+                          </div>
+                          
+                          {data.cta_final.secondary.visible !== false && (
+                            <div className="grid grid-cols-2 gap-4 ml-6">
+                              <div>
+                                <Label>Label</Label>
+                                <Input
+                                  value={data.cta_final.secondary.label}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    cta_final: {
+                                      ...prev.cta_final,
+                                      secondary: { ...prev.cta_final.secondary, label: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="Texto do botão secundário"
+                                />
+                              </div>
+                              <div>
+                                <Label>URL</Label>
+                                <Input
+                                  value={data.cta_final.secondary.href}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    cta_final: {
+                                      ...prev.cta_final,
+                                      secondary: { ...prev.cta_final.secondary, href: e.target.value }
+                                    }
+                                  }))}
+                                  placeholder="URL do botão secundário"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </AccordionContent>
