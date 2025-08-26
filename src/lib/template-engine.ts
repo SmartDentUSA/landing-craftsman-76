@@ -96,23 +96,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             border-radius: 8px; 
         }
         
-        /* Layout personalizado para 5 soluções - Grid específico */
+        /* Layout de duas colunas para soluções */
         @media (min-width: 768px) {
-            .control-grid-5 {
+            .control-grid-2col {
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                grid-template-rows: auto auto auto;
-                gap: 1rem;
-                grid-template-areas: 
-                    "solution-1 solution-1 solution-2 solution-2"
-                    "solution-4 solution-3 solution-3 solution-5"
-                    "solution-4 solution-3 solution-3 solution-5";
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
             }
-            .solution-1 { grid-area: solution-1; }
-            .solution-2 { grid-area: solution-2; }
-            .solution-3 { grid-area: solution-3; }
-            .solution-4 { grid-area: solution-4; }
-            .solution-5 { grid-area: solution-5; }
+            .column-left {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .column-right {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .vertical-image {
+                aspect-ratio: 2/3; /* 200x300px */
+            }
+            .horizontal-image {
+                aspect-ratio: 3/2; /* 300x200px */
+            }
         }
         @media (min-width: 768px) {
             .banner-content { flex-direction: row; align-items: center; }
@@ -218,17 +224,35 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <section class="control-section">
         <div class="container">
             <h2>{{solutions_title}}</h2>
-            <div class="{{#solutions}}{{#is5Solutions}}control-grid-5{{/is5Solutions}}{{^is5Solutions}}control-grid{{/is5Solutions}}{{/solutions}}{{^solutions}}control-grid{{/solutions}}">
-                {{#solutions}}
-                <div class="control-item control-item-side solution-{{index}}">
-                    <div class="control-item-text">
-                        <p>{{text}}</p>
+            <div class="control-grid-2col">
+                <div class="column-left">
+                    {{#solutions}}
+                    {{#isFirst2}}
+                    <div class="control-item control-item-side">
+                        <div class="control-item-text">
+                            <p>{{text}}</p>
+                        </div>
+                        <div class="image-container">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image vertical-image" style="transform: scale({{image.scale}});">
+                        </div>
                     </div>
-                    <div class="image-container">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image full-height" style="transform: scale({{image.scale}});">
-                    </div>
+                    {{/isFirst2}}
+                    {{/solutions}}
                 </div>
-                {{/solutions}}
+                <div class="column-right">
+                    {{#solutions}}
+                    {{#isLast3}}
+                    <div class="control-item control-item-side">
+                        <div class="control-item-text">
+                            <p>{{text}}</p>
+                        </div>
+                        <div class="image-container">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image horizontal-image" style="transform: scale({{image.scale}});">
+                        </div>
+                    </div>
+                    {{/isLast3}}
+                    {{/solutions}}
+                </div>
             </div>
         </div>
     </section>
@@ -524,13 +548,14 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </html>`;
 
 export const generateHTML = (data: any): string => {
-  // Processa os dados para adicionar os ícones SVG corretos e detectar 5 soluções
+  // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
     solutions: data.solutions?.map((solution: any, index: number) => ({
       ...solution,
       index: index + 1,
-      is5Solutions: data.solutions.length === 5
+      isFirst2: index < 2, // Primeiras 2 imagens (índices 0 e 1)
+      isLast3: index >= 2  // Últimas 3 imagens (índices 2, 3 e 4)
     })),
     footer: {
       ...data.footer,
