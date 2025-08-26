@@ -462,7 +462,7 @@ const Editor = () => {
   // Gerar HTML baseado nos dados processados
   const generatedHTML = useMemo(() => {
     const processedData = beforePreview(data);
-    const embedConfig = getEmbedConfig({ embed: data.embed });
+    const embedConfig = getEmbedConfig(data);
     
     console.log('🎯 Current embed config:', data.embed);
     console.log('🎯 Processed embed config:', embedConfig);
