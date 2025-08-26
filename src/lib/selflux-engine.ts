@@ -1,5 +1,5 @@
 import { generateHTML as originalGenerateHTML, generateEmailHTML as originalGenerateEmailHTML } from './template-engine';
-import * as Mustache from 'mustache';
+import Mustache from 'mustache';
 
 // Mapeamento de ícones SVG para redes sociais
 const SOCIAL_ICONS: Record<string, string> = {
