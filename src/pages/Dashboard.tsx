@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
+import { generateHTML } from "@/lib/template-engine";
 
 
 const Dashboard = () => {
@@ -30,11 +31,12 @@ const Dashboard = () => {
 
   const handleCopyCode = async (landingPage: LandingPage) => {
     if (landingPage.status === 'approved') {
-      // In a real app, this would fetch the actual HTML from the landing page data
-      const sampleHTML = '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1></body></html>';
-      
       try {
-        await navigator.clipboard.writeText(sampleHTML);
+        // Gera o HTML real usando os dados da landing page
+        const htmlCode = landingPage.data ? generateHTML(landingPage.data) : 
+          '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1><p>Dados não encontrados.</p></body></html>';
+        
+        await navigator.clipboard.writeText(htmlCode);
         toast({
           title: "Código copiado!",
           description: "HTML da landing page copiado para a área de transferência.",
