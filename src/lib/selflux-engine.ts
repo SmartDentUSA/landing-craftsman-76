@@ -6,94 +6,63 @@ interface EmbedConfig {
   namespace: string;
 }
 
-// Mapeamento baseado no exemplo SelFlux fornecido
+// Mapeamento exato baseado no template original
 const createClassMap = (namespace: string) => ({
-  // Header e navegação (baseado no exemplo)
-  "header-menu": `${namespace}-head`,
-  "header-menu-container": `${namespace}-head-bar`,
-  "container": `${namespace}-c`,
-  "nav-logo": `${namespace}-logo`,
-  "nav": `${namespace}-nav`,
-  "logo-img": `${namespace}-logo`,
+  // Header e navegação - classes exatas do template
+  "header-menu": `${namespace}-header-menu`,
+  "header-menu-container": `${namespace}-header-menu-container`,
+  "container": `${namespace}-container`,
+  "nav-logo": `${namespace}-nav-logo`,
+  "nav-menu": `${namespace}-nav-menu`,
+  "menu-item": `${namespace}-menu-item`,
+  "logo-img": `${namespace}-logo-img`,
   
-  // Banner/Hero principal
-  "main-banner": `${namespace}-hero`,
-  "banner-content": `${namespace}-hero-row`,
-  "banner-text": `${namespace}-hero-content`,
-  "banner-title": `${namespace}-h1`,
-  "banner-description": `${namespace}-lead`,
-  "banner-images": `${namespace}-hero-gallery`,
-  "banner-image": `${namespace}-img`,
+  // Banner principal - classes exatas do template
+  "main-banner": `${namespace}-main-banner`,
+  "banner-content": `${namespace}-banner-content`,
+  "banner-text": `${namespace}-banner-text`,
+  "banner-images": `${namespace}-banner-images`,
   
-  // Seções principais
-  "solutions-section": `${namespace}-sec`,
-  "solutions-grid": `${namespace}-grid2`,
-  "solution-card": `${namespace}-card`,
-  "solution-image": `${namespace}-card-img`,
-  "solution-description": `${namespace}-card-body`,
+  // Control/Solutions section - classes exatas do template
+  "control-section": `${namespace}-control-section`,
+  "control-grid": `${namespace}-control-grid`,
+  "control-item": `${namespace}-control-item`,
+  "control-item-side": `${namespace}-control-item-side`,
+  "control-item-text": `${namespace}-control-item-text`,
+  "control-item-image": `${namespace}-control-item-image`,
+  "image-container": `${namespace}-image-container`,
+  "full-height": `${namespace}-full-height`,
   
-  // Advisory/Consultoria
-  "advisory-section": `${namespace}-sec`,
-  "advisory-content": `${namespace}-consult-grid`,
-  "advisory-text": `${namespace}-consult-text`,
-  "advisory-image": `${namespace}-consult-img`,
+  // Service/Advisory section - classes exatas do template
+  "personalized-service": `${namespace}-personalized-service`,
+  "service-content": `${namespace}-service-content`,
+  "service-text": `${namespace}-service-text`,
+  "service-image-container": `${namespace}-service-image-container`,
+  "service-image": `${namespace}-service-image`,
   
-  // FAQ
-  "faq-section": `${namespace}-faq`,
-  "faq-accordion": `${namespace}-accordion`,
+  // FAQ - classes exatas do template
+  "faq-section": `${namespace}-faq-section`,
+  "faq-accordion": `${namespace}-faq-accordion`,
   "faq-item": `${namespace}-faq-item`,
-  "faq-question": `${namespace}-faq-q`,
-  "faq-answer": `${namespace}-faq-a`,
+  "faq-question": `${namespace}-faq-question`,
+  "faq-answer": `${namespace}-faq-answer`,
+  "faq-icon": `${namespace}-faq-icon`,
   
-  // CTA
-  "cta-section": `${namespace}-cta`,
+  // CTA - classes exatas do template
+  "cta-section": `${namespace}-cta-section`,
+  "cta-content": `${namespace}-cta-content`,
   
-  // Footer
+  // Footer - classes exatas do template
   "footer": `${namespace}-footer`,
-  "footer-content": `${namespace}-footer-grid`,
+  "footer-grid": `${namespace}-footer-grid`,
+  "footer-info": `${namespace}-footer-info`,
+  "footer-links": `${namespace}-footer-links`,
+  "footer-social": `${namespace}-footer-social`,
   
-  // Buttons
-  "btn": `${namespace}-btn`,
-  "btn-primary": `${namespace}-btn primary`,
-  "btn-secondary": `${namespace}-btn secondary`,
-  "button": `${namespace}-btn`,
-  "button-primary": `${namespace}-btn primary`,
-  "button-secondary": `${namespace}-btn secondary`,
-  
-  // Section headers
-  "section-title": `${namespace}-h2`,
-  "section-subtitle": `${namespace}-lead`,
-  
-  // Grid e layout
-  "grid": `${namespace}-grid2`,
-  "grid-cols-2": `${namespace}-grid2`,
-  "md:grid-cols-2": `${namespace}-grid2`,
-  
-  // Images
-  "image": `${namespace}-img`,
-  "img": `${namespace}-img`,
-  
-  // Typography
-  "text-center": `${namespace}-text-center`,
-  "text-left": `${namespace}-text-left`,
-  
-  // Layout utilities
-  "w-full": `${namespace}-w-full`,
-  "h-full": `${namespace}-h-full`,
-  "max-w-7xl": `${namespace}-max-w-7xl`,
-  "mx-auto": `${namespace}-mx-auto`,
-  "px-4": `${namespace}-px-4`,
-  "py-8": `${namespace}-py-8`,
-  "py-12": `${namespace}-py-12`,
-  "py-16": `${namespace}-py-16`,
-  "mb-4": `${namespace}-mb-4`,
-  "mb-8": `${namespace}-mb-8`,
-  "space-y-8": `${namespace}-space-y-8`,
-  
-  // Responsive utilities básicos
-  "md:flex": `${namespace}-md-flex`,
-  "md:items-center": `${namespace}-md-items-center`,
-  "md:text-left": `${namespace}-md-text-left`
+  // Buttons - classes exatas do template
+  "button": `${namespace}-button`,
+  "button-primary": `${namespace}-button-primary`,
+  "button-secondary": `${namespace}-button-secondary`
 });
 
 // Resolução de imagens Cloudflare
@@ -225,68 +194,348 @@ const prefixCss = (css: string, scope: string): string => {
   });
 };
 
-// CSS SelFlux baseado no exemplo fornecido
+// CSS SelFlux idêntico ao template original com namespace
 const generateSelFluxCSS = (namespace: string): string => {
   return `
-    /* --- NAMESPACE: ${namespace}- (SelFlux-safe) --- */
-    .${namespace}-root, .${namespace}-root * { box-sizing: border-box; }
-    .${namespace}-root { --${namespace}-primary:#0a84ff; --${namespace}-text:#0b1220; --${namespace}-muted:#3b4556; --${namespace}-bg:#f5f7fb; --${namespace}-white:#fff; }
-    .${namespace}-c{width:min(100%,1200px);margin:0 auto;padding:0 16px;}
-    .${namespace}-img{max-width:100%;display:block;height:auto;}
-    .${namespace}-btn{display:inline-block;padding:.75rem 1rem;border-radius:.75rem;font-weight:700;text-decoration:none}
-    .${namespace}-btn.primary{background:var(--${namespace}-primary);color:#fff}
-    .${namespace}-btn.secondary{background:#e9ecef;color:#111}
-    .${namespace}-h1{font-size:2.2rem;margin:.25rem 0 .75rem;color:var(--${namespace}-text);line-height:1.2}
-    .${namespace}-lead{color:var(--${namespace}-muted);line-height:1.6}
+    /* Variáveis CSS para o namespace ${namespace} */
+    .${namespace}-root {
+      --primary: #0a84ff;
+      --text: #0b1220;
+      --muted: #3b4556;
+      --bg: #f5f7fb;
+      --white: #fff;
+    }
+
+    /* Reset e base */
+    .${namespace}-root * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .${namespace}-root {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* Container */
+    .${namespace}-container {
+      width: min(100%, 1200px);
+      margin: 0 auto;
+      padding: 0 16px;
+    }
 
     /* Header */
-    .${namespace}-head{background:var(--${namespace}-white);border-bottom:1px solid #eef2f7;position:sticky;top:0;z-index:10}
-    .${namespace}-head-bar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
-    .${namespace}-logo{height:40px;width:auto}
-    .${namespace}-nav{display:flex;gap:1rem;flex-wrap:wrap}
-    .${namespace}-nav a{padding:.5rem .75rem;border-radius:.5rem;color:#555;font-weight:600;text-decoration:none}
-    .${namespace}-nav a:hover{background:#f1f5f9;color:#111}
+    .${namespace}-header-menu {
+      background: var(--white);
+      border-bottom: 1px solid #eef2f7;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
 
-    /* Hero */
-    .${namespace}-hero{background:var(--${namespace}-white);padding:3rem 0 2rem}
-    .${namespace}-hero-row{display:flex;flex-direction:column;gap:1.5rem}
-    .${namespace}-hero-badge{font-size:.85rem;font-weight:700;letter-spacing:.3px;color:#0a84ff}
-    .${namespace}-hero-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
-    .${namespace}-hero-gallery img{border-radius:.75rem}
+    .${namespace}-header-menu-container {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
 
-    /* Sections */
-    .${namespace}-sec{padding:2.5rem 0}
-    .${namespace}-h2{text-align:center;margin:0 0 1.5rem;font-size:1.9rem;color:var(--${namespace}-text)}
-    .${namespace}-grid2{display:grid;grid-template-columns:1fr;gap:1rem}
-    .${namespace}-card{background:var(--${namespace}-white);border-radius:1rem;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.07)}
-    .${namespace}-card-img{width:100%;height:220px;object-fit:cover}
-    .${namespace}-card-body{padding:1.25rem;color:var(--${namespace}-muted);font-weight:500}
+    .${namespace}-logo-img {
+      height: 40px;
+      width: auto;
+    }
 
-    /* Consultoria */
-    .${namespace}-consult-grid{display:grid;grid-template-columns:1fr;gap:1.5rem;align-items:center}
-    .${namespace}-consult-img{border-radius:1rem;box-shadow:0 8px 16px rgba(0,0,0,.09)}
+    .${namespace}-header-menu nav {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .${namespace}-header-menu nav a {
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      color: #555;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .${namespace}-header-menu nav a:hover {
+      background: #f1f5f9;
+      color: #111;
+    }
+
+    /* Banner principal */
+    .${namespace}-main-banner {
+      background: var(--white);
+      padding: 3rem 0 2rem;
+    }
+
+    .${namespace}-banner-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .${namespace}-banner-text p:first-child {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .${namespace}-banner-text h1 {
+      font-size: 2.2rem;
+      margin: 0.25rem 0 0.75rem;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .${namespace}-banner-text p:nth-child(3) {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .${namespace}-banner-images {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .${namespace}-banner-images img {
+      border-radius: 0.75rem;
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Buttons */
+    .${namespace}-button {
+      display: inline-block;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      font-weight: 700;
+      text-decoration: none;
+      margin: 0 0.25rem;
+    }
+
+    .${namespace}-button-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .${namespace}-button-secondary {
+      background: #e9ecef;
+      color: #111;
+    }
+
+    /* Control/Solutions section */
+    .${namespace}-control-section {
+      padding: 2.5rem 0;
+    }
+
+    .${namespace}-control-section h2 {
+      text-align: center;
+      margin: 0 0 1.5rem;
+      font-size: 1.9rem;
+      color: var(--text);
+    }
+
+    .${namespace}-control-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .${namespace}-control-item {
+      background: var(--white);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
+    }
+
+    .${namespace}-control-item-image {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .${namespace}-control-item-text {
+      padding: 1.25rem;
+    }
+
+    .${namespace}-control-item-text p {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* Service/Advisory section */
+    .${namespace}-personalized-service {
+      padding: 2.5rem 0;
+    }
+
+    .${namespace}-service-content {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .${namespace}-service-text h2 {
+      text-align: left;
+      margin-bottom: 0.5rem;
+      font-size: 1.9rem;
+      color: var(--text);
+    }
+
+    .${namespace}-service-text p {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .${namespace}-service-image {
+      border-radius: 1rem;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.09);
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
 
     /* FAQ */
-    .${namespace}-faq h2{text-align:center;margin-bottom:1rem}
-    .${namespace}-accordion{display:grid;gap:.75rem}
-    .${namespace}-faq-item{background:var(--${namespace}-white);border:1px solid #eef2f7;border-radius:.75rem;overflow:hidden}
-    .${namespace}-faq-q{padding:1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:600}
-    .${namespace}-faq-a{display:none;padding:0 1rem 1rem;color:#555;line-height:1.6}
-    .${namespace}-faq-item.active .${namespace}-faq-a{display:block}
+    .${namespace}-faq-section {
+      padding: 2.5rem 0;
+    }
+
+    .${namespace}-faq-section h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-size: 1.9rem;
+      color: var(--text);
+    }
+
+    .${namespace}-faq-accordion {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .${namespace}-faq-item {
+      background: var(--white);
+      border: 1px solid #eef2f7;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    .${namespace}-faq-question {
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .${namespace}-faq-answer {
+      display: none;
+      padding: 0 1rem 1rem;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .${namespace}-faq-item.active .${namespace}-faq-answer {
+      display: block;
+    }
+
+    .${namespace}-faq-icon {
+      font-size: 1.25rem;
+      transform: rotate(180deg);
+      transition: 0.2s;
+    }
+
+    .${namespace}-faq-item.active .${namespace}-faq-icon {
+      transform: rotate(0deg);
+    }
 
     /* CTA final */
-    .${namespace}-cta{padding:2.5rem 0;text-align:center;background:var(--${namespace}-white)}
+    .${namespace}-cta-section {
+      padding: 2.5rem 0;
+      text-align: center;
+      background: var(--white);
+    }
+
+    .${namespace}-cta-content h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.9rem;
+      color: var(--text);
+    }
+
+    .${namespace}-cta-content p {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
 
     /* Footer */
-    .${namespace}-footer{background:#0b1220;color:#d0d8e0;padding:2rem 0}
-    .${namespace}-footer-grid{display:grid;grid-template-columns:1fr;gap:1.5rem}
-    .${namespace}-footer a{color:#d0d8e0;text-decoration:none}
+    .${namespace}-footer {
+      background: #0b1220;
+      color: #d0d8e0;
+      padding: 2rem 0;
+    }
 
-    @media (min-width:768px){
-      .${namespace}-hero-row{flex-direction:row;align-items:center}
-      .${namespace}-grid2{grid-template-columns:repeat(2,1fr)}
-      .${namespace}-consult-grid{grid-template-columns:1.2fr .8fr}
-      .${namespace}-footer-grid{grid-template-columns:repeat(3,1fr)}
+    .${namespace}-footer-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .${namespace}-footer-links ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .${namespace}-footer-links li {
+      margin: 0.5rem 0;
+    }
+
+    .${namespace}-footer a {
+      color: #d0d8e0;
+      text-decoration: none;
+    }
+
+    .${namespace}-footer-social a {
+      margin-right: 0.5rem;
+      display: inline-block;
+      color: #d0d8e0;
+      transition: color 0.2s;
+    }
+
+    .${namespace}-footer-social a:hover {
+      color: #fff;
+    }
+
+    /* Media queries */
+    @media (min-width: 768px) {
+      .${namespace}-banner-content {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .${namespace}-control-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .${namespace}-service-content {
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+
+      .${namespace}-footer-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
   `;
 };
@@ -333,13 +582,15 @@ export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string =
   
   // Gerar JavaScript adaptado para SelFlux
   const selfluxJS = `
-    (function(){
-      document.querySelectorAll('.${config.namespace}-root .${config.namespace}-faq-q').forEach(function(q){
-        q.addEventListener('click', function(){
-          q.parentElement.classList.toggle('active');
+    document.addEventListener('DOMContentLoaded', () => {
+      const faqQuestions = document.querySelectorAll('.${config.namespace}-root .${config.namespace}-faq-question');
+      faqQuestions.forEach(question => {
+        question.addEventListener('click', () => {
+          const faqItem = question.closest('.${config.namespace}-faq-item');
+          faqItem.classList.toggle('active');
         });
       });
-    })();
+    });
   `;
   
   // Montar HTML final com wrapper, CSS e JavaScript SelFlux
