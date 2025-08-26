@@ -301,7 +301,7 @@ const Editor = () => {
     
     // Configuração de incorporação
     embed: {
-      mode: 'default',
+      mode: 'selflux',
       namespace: 'sd'
     },
     
