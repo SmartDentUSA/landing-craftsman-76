@@ -227,21 +227,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div class="control-grid-2col">
                 <div class="column-left">
                     {{#solutions}}
-                    {{#isFirst2}}
-                    <div class="control-item control-item-side">
-                        <div class="control-item-text">
-                            <p>{{text}}</p>
-                        </div>
-                        <div class="image-container">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image vertical-image" style="transform: scale({{image.scale}});">
-                        </div>
-                    </div>
-                    {{/isFirst2}}
-                    {{/solutions}}
-                </div>
-                <div class="column-right">
-                    {{#solutions}}
-                    {{#isLast3}}
+                    {{#isFirst3}}
                     <div class="control-item control-item-side">
                         <div class="control-item-text">
                             <p>{{text}}</p>
@@ -250,7 +236,21 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image horizontal-image" style="transform: scale({{image.scale}});">
                         </div>
                     </div>
-                    {{/isLast3}}
+                    {{/isFirst3}}
+                    {{/solutions}}
+                </div>
+                <div class="column-right">
+                    {{#solutions}}
+                    {{#isLast2}}
+                    <div class="control-item control-item-side">
+                        <div class="control-item-text">
+                            <p>{{text}}</p>
+                        </div>
+                        <div class="image-container">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image vertical-image" style="transform: scale({{image.scale}});">
+                        </div>
+                    </div>
+                    {{/isLast2}}
                     {{/solutions}}
                 </div>
             </div>
@@ -554,8 +554,8 @@ export const generateHTML = (data: any): string => {
     solutions: data.solutions?.map((solution: any, index: number) => ({
       ...solution,
       index: index + 1,
-      isFirst2: index < 2, // Primeiras 2 imagens (índices 0 e 1)
-      isLast3: index >= 2  // Últimas 3 imagens (índices 2, 3 e 4)
+      isFirst3: index < 3, // Primeiras 3 imagens (índices 0, 1 e 2)
+      isLast2: index >= 3  // Últimas 2 imagens (índices 3 e 4)
     })),
     footer: {
       ...data.footer,
