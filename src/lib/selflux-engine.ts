@@ -965,14 +965,14 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
     <header class="header-menu">
         <div class="container header-menu-container">
             {{#logo.image}}
-            <img class="logo-img" src="{{{logo.image}}}" alt="{{logo.alt}}">
+            <img class="logo-img" src="{{logo.image}}" alt="{{logo.alt}}">
             {{/logo.image}}
             {{^logo.image}}
             <div class="logo">{{logo.text}}</div>
             {{/logo.image}}
             <nav>
                 {{#headerMenu.links}}
-                <a href="{{{url}}}">{{text}}</a>
+                <a href="{{url}}">{{text}}</a>
                 {{/headerMenu.links}}
             </nav>
         </div>
@@ -990,10 +990,10 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
                 <p>{{banner.description}}</p>
                 {{/banner.description}}
                 {{#banner.primaryButton}}
-                <a href="{{{banner.primaryButton.url}}}" class="button button-primary">{{banner.primaryButton.text}}</a>
+                <a href="{{banner.primaryButton.url}}" class="button button-primary">{{banner.primaryButton.text}}</a>
                 {{/banner.primaryButton}}
                 {{#banner.secondaryButton}}
-                <a href="{{{banner.secondaryButton.url}}}" class="button button-secondary">{{banner.secondaryButton.text}}</a>
+                <a href="{{banner.secondaryButton.url}}" class="button button-secondary">{{banner.secondaryButton.text}}</a>
                 {{/banner.secondaryButton}}
             </div>
             <div class="banner-images">
@@ -1087,7 +1087,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
                 <h3>{{footer.linksTitle}}</h3>
                 <ul>
                     {{#footer.links}}
-                    <li><a href="{{{url}}}">{{text}}</a></li>
+                    <li><a href="{{url}}">{{text}}</a></li>
                     {{/footer.links}}
                 </ul>
             </div>
