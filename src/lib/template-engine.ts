@@ -114,21 +114,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             margin: 0;
         }
         
-        /* Solução de proporção fixa para imagens */
+        /* Mesma abordagem das imagens do banner */
         .image-container {
             width: 100%;
-            position: relative;
-            padding-top: 66.66%; /* Define a proporção 3:2 (altura/largura) */
-            height: 0;
             overflow: hidden;
         }
         
         .control-item-image {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            height: 100%;
+            aspect-ratio: 2/3;
             object-fit: cover;
             display: block;
         }
