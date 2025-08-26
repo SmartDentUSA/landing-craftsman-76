@@ -145,12 +145,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 gap: 1rem;
             }
             .image-container {
-                aspect-ratio: 2/3;
                 overflow: hidden;
             }
             .control-item-image {
                 width: 100%;
-                height: 100%;
+                aspect-ratio: 2/3;
                 object-fit: cover;
                 display: block;
             }
