@@ -6,295 +6,94 @@ interface EmbedConfig {
   namespace: string;
 }
 
-// Mapeamento completo e preciso de todas as classes do template original
+// Mapeamento baseado no exemplo SelFlux fornecido
 const createClassMap = (namespace: string) => ({
-  // Header e navegação
-  "header": `${namespace}-header`,
-  "header-menu": `${namespace}-header-menu`,
-  "header-menu-container": `${namespace}-header-menu-container`,
+  // Header e navegação (baseado no exemplo)
+  "header-menu": `${namespace}-head`,
+  "header-menu-container": `${namespace}-head-bar`,
+  "container": `${namespace}-c`,
+  "nav-logo": `${namespace}-logo`,
   "nav": `${namespace}-nav`,
-  "nav-logo": `${namespace}-nav-logo`,
-  "nav-links": `${namespace}-nav-links`,
-  "nav-menu": `${namespace}-nav-menu`,
-  "nav-menu-item": `${namespace}-nav-menu-item`,
-  "menu-item": `${namespace}-menu-item`,
-  "logo-img": `${namespace}-logo-img`,
+  "logo-img": `${namespace}-logo`,
   
-  // Banner principal  
-  "main-banner": `${namespace}-main-banner`,
-  "banner": `${namespace}-banner`,
-  "banner-content": `${namespace}-banner-content`,
-  "banner-text": `${namespace}-banner-text`,
-  "banner-title": `${namespace}-banner-title`,
-  "banner-subtitle": `${namespace}-banner-subtitle`,
-  "banner-images": `${namespace}-banner-images`,
-  "banner-image": `${namespace}-banner-image`,
-  "banner-description": `${namespace}-banner-description`,
+  // Banner/Hero principal
+  "main-banner": `${namespace}-hero`,
+  "banner-content": `${namespace}-hero-row`,
+  "banner-text": `${namespace}-hero-content`,
+  "banner-title": `${namespace}-h1`,
+  "banner-description": `${namespace}-lead`,
+  "banner-images": `${namespace}-hero-gallery`,
+  "banner-image": `${namespace}-img`,
   
-  // Hero section
-  "hero": `${namespace}-hero`,
-  "hero-content": `${namespace}-hero-content`,
-  "hero-text": `${namespace}-hero-text`,
-  "hero-title": `${namespace}-hero-title`,
-  "hero-subtitle": `${namespace}-hero-subtitle`,
-  "hero-buttons": `${namespace}-hero-buttons`,
-  "hero-image": `${namespace}-hero-image`,
-  
-  // Container e layout principal
-  "container": `${namespace}-container`,
-  "main-container": `${namespace}-main-container`,
-  "content-container": `${namespace}-content-container`,
-  
-  // Seções de controle
-  "control-section": `${namespace}-control-section`,
-  "control-grid": `${namespace}-control-grid`,
-  "control-item": `${namespace}-control-item`,
-  "control-item-side": `${namespace}-control-item-side`,
-  "control-item-text": `${namespace}-control-item-text`,
-  "control-item-image": `${namespace}-control-item-image`,
-  
-  // Solutions/Soluções
-  "solutions": `${namespace}-solutions`,
-  "solutions-section": `${namespace}-solutions-section`,
-  "solutions-grid": `${namespace}-solutions-grid`,
-  "solution-card": `${namespace}-solution-card`,
-  "solution-icon": `${namespace}-solution-icon`,
-  "solution-title": `${namespace}-solution-title`,
-  "solution-description": `${namespace}-solution-description`,
-  
-  // Services/Serviços
-  "service": `${namespace}-service`,
-  "service-section": `${namespace}-service-section`,
-  "service-content": `${namespace}-service-content`,
-  "service-grid": `${namespace}-service-grid`,
-  "service-card": `${namespace}-service-card`,
-  "service-icon": `${namespace}-service-icon`,
-  "service-title": `${namespace}-service-title`,
-  "service-description": `${namespace}-service-description`,
-  "service-text": `${namespace}-service-text`,
-  "service-image": `${namespace}-service-image`,
-  "service-image-container": `${namespace}-service-image-container`,
+  // Seções principais
+  "solutions-section": `${namespace}-sec`,
+  "solutions-grid": `${namespace}-grid2`,
+  "solution-card": `${namespace}-card`,
+  "solution-image": `${namespace}-card-img`,
+  "solution-description": `${namespace}-card-body`,
   
   // Advisory/Consultoria
-  "advisory": `${namespace}-advisory`,
-  "advisory-section": `${namespace}-advisory-section`,
-  "advisory-content": `${namespace}-advisory-content`,
-  "advisory-text": `${namespace}-advisory-text`,
-  "advisory-image": `${namespace}-advisory-image`,
-  "personalized-service": `${namespace}-personalized-service`,
+  "advisory-section": `${namespace}-sec`,
+  "advisory-content": `${namespace}-consult-grid`,
+  "advisory-text": `${namespace}-consult-text`,
+  "advisory-image": `${namespace}-consult-img`,
   
   // FAQ
-  "faq": `${namespace}-faq`,
-  "faq-section": `${namespace}-faq-section`,
-  "faq-accordion": `${namespace}-faq-accordion`,
+  "faq-section": `${namespace}-faq`,
+  "faq-accordion": `${namespace}-accordion`,
   "faq-item": `${namespace}-faq-item`,
-  "faq-question": `${namespace}-faq-question`,
-  "faq-answer": `${namespace}-faq-answer`,
+  "faq-question": `${namespace}-faq-q`,
+  "faq-answer": `${namespace}-faq-a`,
   
   // CTA
-  "cta": `${namespace}-cta`,
-  "cta-section": `${namespace}-cta-section`,
-  "cta-content": `${namespace}-cta-content`,
-  "cta-text": `${namespace}-cta-text`,
-  "cta-button": `${namespace}-cta-button`,
+  "cta-section": `${namespace}-cta`,
   
   // Footer
   "footer": `${namespace}-footer`,
-  "footer-content": `${namespace}-footer-content`,
-  "footer-grid": `${namespace}-footer-grid`,
-  "footer-info": `${namespace}-footer-info`,
-  "footer-links": `${namespace}-footer-links`,
-  "footer-social": `${namespace}-footer-social`,
-  "footer-link": `${namespace}-footer-link`,
+  "footer-content": `${namespace}-footer-grid`,
   
   // Buttons
   "btn": `${namespace}-btn`,
-  "btn-primary": `${namespace}-btn-primary`,
-  "btn-secondary": `${namespace}-btn-secondary`,
-  "button": `${namespace}-button`,
-  "button-primary": `${namespace}-button-primary`,
-  "button-secondary": `${namespace}-button-secondary`,
-  "cta-btn": `${namespace}-cta-btn`,
+  "btn-primary": `${namespace}-btn primary`,
+  "btn-secondary": `${namespace}-btn secondary`,
+  "button": `${namespace}-btn`,
+  "button-primary": `${namespace}-btn primary`,
+  "button-secondary": `${namespace}-btn secondary`,
   
-  // Seções genéricas
-  "section": `${namespace}-section`,
-  "section-header": `${namespace}-section-header`,
-  "section-title": `${namespace}-section-title`,
-  "section-subtitle": `${namespace}-section-subtitle`,
-  "section-content": `${namespace}-section-content`,
-  "section-description": `${namespace}-section-description`,
+  // Section headers
+  "section-title": `${namespace}-h2`,
+  "section-subtitle": `${namespace}-lead`,
   
   // Grid e layout
-  "grid": `${namespace}-grid`,
-  "grid-cols-1": `${namespace}-grid-cols-1`,
-  "grid-cols-2": `${namespace}-grid-cols-2`,
-  "grid-cols-3": `${namespace}-grid-cols-3`,
-  "md:grid-cols-2": `${namespace}-md-grid-cols-2`,
-  "md:grid-cols-3": `${namespace}-md-grid-cols-3`,
-  "lg:grid-cols-3": `${namespace}-lg-grid-cols-3`,
-  "lg:grid-cols-4": `${namespace}-lg-grid-cols-4`,
+  "grid": `${namespace}-grid2`,
+  "grid-cols-2": `${namespace}-grid2`,
+  "md:grid-cols-2": `${namespace}-grid2`,
   
-  // Cards genéricos
-  "card": `${namespace}-card`,
-  "card-content": `${namespace}-card-content`,
-  "card-header": `${namespace}-card-header`,
-  "card-title": `${namespace}-card-title`,
-  "card-description": `${namespace}-card-description`,
-  
-  // Imagens
-  "image": `${namespace}-image`,
-  "image-container": `${namespace}-image-container`,
+  // Images
+  "image": `${namespace}-img`,
   "img": `${namespace}-img`,
-  
-  // Layout utilities mais específicos
-  "w-full": `${namespace}-w-full`,
-  "h-full": `${namespace}-h-full`,
-  "w-auto": `${namespace}-w-auto`,
-  "h-auto": `${namespace}-h-auto`,
-  "w-64": `${namespace}-w-64`,
-  "h-64": `${namespace}-h-64`,
-  
-  // Spacing utilities comuns
-  "max-w-7xl": `${namespace}-max-w-7xl`,
-  "max-w-6xl": `${namespace}-max-w-6xl`,
-  "max-w-4xl": `${namespace}-max-w-4xl`,
-  "mx-auto": `${namespace}-mx-auto`,
-  "px-4": `${namespace}-px-4`,
-  "px-6": `${namespace}-px-6`,
-  "px-8": `${namespace}-px-8`,
-  "py-8": `${namespace}-py-8`,
-  "py-12": `${namespace}-py-12`,
-  "py-16": `${namespace}-py-16`,
-  "py-20": `${namespace}-py-20`,
-  "py-24": `${namespace}-py-24`,
-  "py-32": `${namespace}-py-32`,
-  "mb-4": `${namespace}-mb-4`,
-  "mb-6": `${namespace}-mb-6`,
-  "mb-8": `${namespace}-mb-8`,
-  "mb-12": `${namespace}-mb-12`,
-  "mt-4": `${namespace}-mt-4`,
-  "mt-8": `${namespace}-mt-8`,
-  "mt-12": `${namespace}-mt-12`,
-  "space-y-4": `${namespace}-space-y-4`,
-  "space-y-6": `${namespace}-space-y-6`,
-  "space-y-8": `${namespace}-space-y-8`,
-  "space-y-12": `${namespace}-space-y-12`,
-  "gap-4": `${namespace}-gap-4`,
-  "gap-6": `${namespace}-gap-6`,
-  "gap-8": `${namespace}-gap-8`,
-  "gap-12": `${namespace}-gap-12`,
   
   // Typography
   "text-center": `${namespace}-text-center`,
   "text-left": `${namespace}-text-left`,
-  "text-right": `${namespace}-text-right`,
-  "text-xs": `${namespace}-text-xs`,
-  "text-sm": `${namespace}-text-sm`,
-  "text-base": `${namespace}-text-base`,
-  "text-lg": `${namespace}-text-lg`,
-  "text-xl": `${namespace}-text-xl`,
-  "text-2xl": `${namespace}-text-2xl`,
-  "text-3xl": `${namespace}-text-3xl`,
-  "text-4xl": `${namespace}-text-4xl`,
-  "text-5xl": `${namespace}-text-5xl`,
-  "text-6xl": `${namespace}-text-6xl`,
-  "font-normal": `${namespace}-font-normal`,
-  "font-medium": `${namespace}-font-medium`,
-  "font-semibold": `${namespace}-font-semibold`,
-  "font-bold": `${namespace}-font-bold`,
-  "leading-tight": `${namespace}-leading-tight`,
-  "leading-relaxed": `${namespace}-leading-relaxed`,
   
-  // Colors
-  "text-white": `${namespace}-text-white`,
-  "text-black": `${namespace}-text-black`,
-  "text-gray-500": `${namespace}-text-gray-500`,
-  "text-gray-600": `${namespace}-text-gray-600`,
-  "text-gray-700": `${namespace}-text-gray-700`,
-  "text-gray-800": `${namespace}-text-gray-800`,
-  "text-gray-900": `${namespace}-text-gray-900`,
-  "text-blue-600": `${namespace}-text-blue-600`,
-  "text-blue-700": `${namespace}-text-blue-700`,
-  "bg-white": `${namespace}-bg-white`,
-  "bg-gray-50": `${namespace}-bg-gray-50`,
-  "bg-gray-100": `${namespace}-bg-gray-100`,
-  "bg-blue-600": `${namespace}-bg-blue-600`,
-  "bg-blue-700": `${namespace}-bg-blue-700`,
-  "hover:bg-blue-700": `${namespace}-hover-bg-blue-700`,
-  "hover:bg-gray-50": `${namespace}-hover-bg-gray-50`,
+  // Layout utilities
+  "w-full": `${namespace}-w-full`,
+  "h-full": `${namespace}-h-full`,
+  "max-w-7xl": `${namespace}-max-w-7xl`,
+  "mx-auto": `${namespace}-mx-auto`,
+  "px-4": `${namespace}-px-4`,
+  "py-8": `${namespace}-py-8`,
+  "py-12": `${namespace}-py-12`,
+  "py-16": `${namespace}-py-16`,
+  "mb-4": `${namespace}-mb-4`,
+  "mb-8": `${namespace}-mb-8`,
+  "space-y-8": `${namespace}-space-y-8`,
   
-  // Flexbox e layout
-  "flex": `${namespace}-flex`,
-  "inline-flex": `${namespace}-inline-flex`,
-  "flex-col": `${namespace}-flex-col`,
-  "flex-row": `${namespace}-flex-row`,
-  "items-start": `${namespace}-items-start`,
-  "items-center": `${namespace}-items-center`,
-  "items-end": `${namespace}-items-end`,
-  "justify-start": `${namespace}-justify-start`,
-  "justify-center": `${namespace}-justify-center`,
-  "justify-end": `${namespace}-justify-end`,
-  "justify-between": `${namespace}-justify-between`,
-  "space-x-2": `${namespace}-space-x-2`,
-  "space-x-4": `${namespace}-space-x-4`,
-  "space-x-6": `${namespace}-space-x-6`,
-  
-  // Borders e visual
-  "rounded": `${namespace}-rounded`,
-  "rounded-lg": `${namespace}-rounded-lg`,
-  "rounded-xl": `${namespace}-rounded-xl`,
-  "rounded-full": `${namespace}-rounded-full`,
-  "border": `${namespace}-border`,
-  "border-gray-200": `${namespace}-border-gray-200`,
-  "border-gray-300": `${namespace}-border-gray-300`,
-  "shadow": `${namespace}-shadow`,
-  "shadow-sm": `${namespace}-shadow-sm`,
-  "shadow-md": `${namespace}-shadow-md`,
-  "shadow-lg": `${namespace}-shadow-lg`,
-  "shadow-xl": `${namespace}-shadow-xl`,
-  
-  // Interactive states
-  "hover:shadow-lg": `${namespace}-hover-shadow-lg`,
-  "transition": `${namespace}-transition`,
-  "transition-all": `${namespace}-transition-all`,
-  "duration-200": `${namespace}-duration-200`,
-  "duration-300": `${namespace}-duration-300`,
-  "transform": `${namespace}-transform`,
-  "hover:scale-105": `${namespace}-hover-scale-105`,
-  
-  // Responsive utilities
-  "sm:text-xl": `${namespace}-sm-text-xl`,
-  "md:text-2xl": `${namespace}-md-text-2xl`,
-  "lg:text-3xl": `${namespace}-lg-text-3xl`,
-  "xl:text-4xl": `${namespace}-xl-text-4xl`,
-  "sm:py-12": `${namespace}-sm-py-12`,
-  "md:py-16": `${namespace}-md-py-16`,
-  "lg:py-20": `${namespace}-lg-py-20`,
-  "sm:px-6": `${namespace}-sm-px-6`,
-  "md:px-8": `${namespace}-md-px-8`,
-  "lg:px-8": `${namespace}-lg-px-8`,
-  
-  // Position
-  "relative": `${namespace}-relative`,
-  "absolute": `${namespace}-absolute`,
-  "fixed": `${namespace}-fixed`,
-  "sticky": `${namespace}-sticky`,
-  "top-0": `${namespace}-top-0`,
-  "bottom-0": `${namespace}-bottom-0`,
-  "left-0": `${namespace}-left-0`,
-  "right-0": `${namespace}-right-0`,
-  
-  // Display
-  "block": `${namespace}-block`,
-  "inline": `${namespace}-inline`,
-  "inline-block": `${namespace}-inline-block`,
-  "hidden": `${namespace}-hidden`,
-  "sm:block": `${namespace}-sm-block`,
-  "md:block": `${namespace}-md-block`,
-  "lg:block": `${namespace}-lg-block`,
-  "sm:hidden": `${namespace}-sm-hidden`,
-  "md:hidden": `${namespace}-md-hidden`,
-  "lg:hidden": `${namespace}-lg-hidden`
+  // Responsive utilities básicos
+  "md:flex": `${namespace}-md-flex`,
+  "md:items-center": `${namespace}-md-items-center`,
+  "md:text-left": `${namespace}-md-text-left`
 });
 
 // Resolução de imagens Cloudflare
@@ -426,6 +225,72 @@ const prefixCss = (css: string, scope: string): string => {
   });
 };
 
+// CSS SelFlux baseado no exemplo fornecido
+const generateSelFluxCSS = (namespace: string): string => {
+  return `
+    /* --- NAMESPACE: ${namespace}- (SelFlux-safe) --- */
+    .${namespace}-root, .${namespace}-root * { box-sizing: border-box; }
+    .${namespace}-root { --${namespace}-primary:#0a84ff; --${namespace}-text:#0b1220; --${namespace}-muted:#3b4556; --${namespace}-bg:#f5f7fb; --${namespace}-white:#fff; }
+    .${namespace}-c{width:min(100%,1200px);margin:0 auto;padding:0 16px;}
+    .${namespace}-img{max-width:100%;display:block;height:auto;}
+    .${namespace}-btn{display:inline-block;padding:.75rem 1rem;border-radius:.75rem;font-weight:700;text-decoration:none}
+    .${namespace}-btn.primary{background:var(--${namespace}-primary);color:#fff}
+    .${namespace}-btn.secondary{background:#e9ecef;color:#111}
+    .${namespace}-h1{font-size:2.2rem;margin:.25rem 0 .75rem;color:var(--${namespace}-text);line-height:1.2}
+    .${namespace}-lead{color:var(--${namespace}-muted);line-height:1.6}
+
+    /* Header */
+    .${namespace}-head{background:var(--${namespace}-white);border-bottom:1px solid #eef2f7;position:sticky;top:0;z-index:10}
+    .${namespace}-head-bar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    .${namespace}-logo{height:40px;width:auto}
+    .${namespace}-nav{display:flex;gap:1rem;flex-wrap:wrap}
+    .${namespace}-nav a{padding:.5rem .75rem;border-radius:.5rem;color:#555;font-weight:600;text-decoration:none}
+    .${namespace}-nav a:hover{background:#f1f5f9;color:#111}
+
+    /* Hero */
+    .${namespace}-hero{background:var(--${namespace}-white);padding:3rem 0 2rem}
+    .${namespace}-hero-row{display:flex;flex-direction:column;gap:1.5rem}
+    .${namespace}-hero-badge{font-size:.85rem;font-weight:700;letter-spacing:.3px;color:#0a84ff}
+    .${namespace}-hero-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+    .${namespace}-hero-gallery img{border-radius:.75rem}
+
+    /* Sections */
+    .${namespace}-sec{padding:2.5rem 0}
+    .${namespace}-h2{text-align:center;margin:0 0 1.5rem;font-size:1.9rem;color:var(--${namespace}-text)}
+    .${namespace}-grid2{display:grid;grid-template-columns:1fr;gap:1rem}
+    .${namespace}-card{background:var(--${namespace}-white);border-radius:1rem;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.07)}
+    .${namespace}-card-img{width:100%;height:220px;object-fit:cover}
+    .${namespace}-card-body{padding:1.25rem;color:var(--${namespace}-muted);font-weight:500}
+
+    /* Consultoria */
+    .${namespace}-consult-grid{display:grid;grid-template-columns:1fr;gap:1.5rem;align-items:center}
+    .${namespace}-consult-img{border-radius:1rem;box-shadow:0 8px 16px rgba(0,0,0,.09)}
+
+    /* FAQ */
+    .${namespace}-faq h2{text-align:center;margin-bottom:1rem}
+    .${namespace}-accordion{display:grid;gap:.75rem}
+    .${namespace}-faq-item{background:var(--${namespace}-white);border:1px solid #eef2f7;border-radius:.75rem;overflow:hidden}
+    .${namespace}-faq-q{padding:1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:600}
+    .${namespace}-faq-a{display:none;padding:0 1rem 1rem;color:#555;line-height:1.6}
+    .${namespace}-faq-item.active .${namespace}-faq-a{display:block}
+
+    /* CTA final */
+    .${namespace}-cta{padding:2.5rem 0;text-align:center;background:var(--${namespace}-white)}
+
+    /* Footer */
+    .${namespace}-footer{background:#0b1220;color:#d0d8e0;padding:2rem 0}
+    .${namespace}-footer-grid{display:grid;grid-template-columns:1fr;gap:1.5rem}
+    .${namespace}-footer a{color:#d0d8e0;text-decoration:none}
+
+    @media (min-width:768px){
+      .${namespace}-hero-row{flex-direction:row;align-items:center}
+      .${namespace}-grid2{grid-template-columns:repeat(2,1fr)}
+      .${namespace}-consult-grid{grid-template-columns:1.2fr .8fr}
+      .${namespace}-footer-grid{grid-template-columns:repeat(3,1fr)}
+    }
+  `;
+};
+
 // Função principal para gerar HTML safe para SelFlux
 export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string => {
   const config = embedConfig || { mode: 'default', namespace: 'sd' };
@@ -459,38 +324,29 @@ export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string =
   console.log('🔧 Class map sample:', Object.fromEntries(Object.entries(classMap).slice(0, 3)));
   console.log('🔧 Scope:', scope);
   
-  // Extrair CSS inline se existir
-  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  let inlineCss = styleMatch ? styleMatch[1] : '';
-  console.log('🔧 CSS extracted, length:', inlineCss?.length);
-  
-  // Remover <style> original primeiro
-  const strippedHtml = styleMatch ? html.replace(styleMatch[0], '') : html;
-  
-  // Renomear classes no CSS primeiro (ordenar por tamanho para evitar conflitos)
-  let processedCss = inlineCss;
-  const sortedClassEntries = Object.entries(classMap).sort(([a], [b]) => b.length - a.length);
-  
-  sortedClassEntries.forEach(([oldClass, newClass]) => {
-    // Escapar caracteres especiais para uso em regex
-    const escapedOldClass = oldClass.replace(/[.*+?^${}()|[\]\\:]/g, '\\$&');
-    const classRegex = new RegExp(`\\.${escapedOldClass}\\b`, 'g');
-    processedCss = processedCss.replace(classRegex, `.${newClass}`);
-  });
-  console.log('🔧 CSS classes renamed, sample:', processedCss.substring(0, 200));
-  
-  // Aplicar escopo ao CSS
-  const prefixedCss = prefixCss(processedCss, scope);
-  console.log('🔧 CSS prefixed, sample:', prefixedCss.substring(0, 200));
-  
   // Renomear classes no HTML
-  const renamedHtml = renameClassesInHtml(strippedHtml, classMap);
-  console.log('🔧 HTML classes renamed, sample:', renamedHtml.substring(0, 300));
+  const renamedHtml = renameClassesInHtml(html, classMap);
+  console.log('🔧 Classes renamed in HTML');
   
-  // Montar HTML final com wrapper e CSS prefixado
+  // Gerar CSS SelFlux completo baseado no exemplo
+  const selfluxCSS = generateSelFluxCSS(config.namespace);
+  
+  // Gerar JavaScript adaptado para SelFlux
+  const selfluxJS = `
+    (function(){
+      document.querySelectorAll('.${config.namespace}-root .${config.namespace}-faq-q').forEach(function(q){
+        q.addEventListener('click', function(){
+          q.parentElement.classList.toggle('active');
+        });
+      });
+    })();
+  `;
+  
+  // Montar HTML final com wrapper, CSS e JavaScript SelFlux
   const finalHtml = `<div class="${config.namespace}-root">
-<style>${prefixedCss}</style>
+<style>${selfluxCSS}</style>
 ${renamedHtml}
+<script>${selfluxJS}</script>
 </div>`;
   
   console.log('🔧 Final HTML generated, length:', finalHtml?.length);
