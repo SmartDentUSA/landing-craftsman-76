@@ -197,52 +197,62 @@ const prefixCss = (css: string, scope: string): string => {
   });
 };
 
-// CSS SelFlux idêntico ao template original com namespace
+// CSS SelFlux IDÊNTICO ao template original com namespace
 const generateSelFluxCSS = (namespace: string): string => {
   return `
-    /* Variáveis CSS para o namespace ${namespace} */
+    /* Variáveis CSS EXATAS do template original */
     .${namespace}-root {
-      --primary: #0a84ff;
-      --text: #0b1220;
-      --muted: #3b4556;
-      --bg: #f5f7fb;
+      --primary-color: #007bff;
+      --secondary-color: #6c757d;
+      --text-color: #333;
+      --background-color: #f8f9fa;
       --white: #fff;
     }
 
-    /* Reset e base */
+    /* Reset e base IDÊNTICOS ao template */
     .${namespace}-root * {
-      margin: 0;
-      padding: 0;
       box-sizing: border-box;
     }
 
     .${namespace}-root {
-      font-family: 'Inter', system-ui, sans-serif;
-      color: var(--text);
-      background: var(--bg);
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      color: var(--text-color);
+      background: var(--background-color);
     }
 
-    /* Container */
+    .${namespace}-root a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .${namespace}-root img {
+      max-width: 100%;
+      display: block;
+    }
+
+    /* Container EXATO do template original */
     .${namespace}-container {
-      width: min(100%, 1200px);
+      width: 100%;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 0 16px;
+      padding: 0 1rem;
     }
 
-    /* Header */
+    /* Header EXATO do template original */
     .${namespace}-header-menu {
       background: var(--white);
-      border-bottom: 1px solid #eef2f7;
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 100;
+      border-bottom: 1px solid #eee;
     }
 
     .${namespace}-header-menu-container {
-      height: 64px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      height: 64px;
       gap: 1rem;
     }
 
@@ -258,11 +268,10 @@ const generateSelFluxCSS = (namespace: string): string => {
     }
 
     .${namespace}-header-menu nav a {
-      padding: 0.5rem 0.75rem;
-      border-radius: 0.5rem;
+      padding: .5rem .75rem;
+      border-radius: .5rem;
       color: #555;
-      font-weight: 600;
-      text-decoration: none;
+      font-weight: 500;
     }
 
     .${namespace}-header-menu nav a:hover {
@@ -270,7 +279,7 @@ const generateSelFluxCSS = (namespace: string): string => {
       color: #111;
     }
 
-    /* Banner principal */
+    /* Banner principal EXATO do template original */
     .${namespace}-main-banner {
       background: var(--white);
       padding: 3rem 0 2rem;
@@ -282,52 +291,32 @@ const generateSelFluxCSS = (namespace: string): string => {
       gap: 1.5rem;
     }
 
-    .${namespace}-banner-text p:first-child {
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      color: var(--primary);
-      margin-bottom: 0.5rem;
+    .${namespace}-banner-text p {
+      margin: 0.25rem 0 0.75rem;
     }
 
     .${namespace}-banner-text h1 {
-      font-size: 2.2rem;
-      margin: 0.25rem 0 0.75rem;
-      color: var(--text);
-      line-height: 1.2;
-    }
-
-    .${namespace}-banner-text p:nth-child(3) {
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 1rem;
+      font-size: 2rem;
+      margin: 0 0 .5rem;
     }
 
     .${namespace}-banner-images {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
+      gap: .75rem;
     }
 
-    .${namespace}-banner-images img {
-      border-radius: 0.75rem;
-      max-width: 100%;
-      height: auto;
-      display: block;
-    }
-
-    /* Buttons */
+    /* Buttons EXATOS do template original */
     .${namespace}-button {
       display: inline-block;
-      padding: 0.75rem 1rem;
-      border-radius: 0.75rem;
-      font-weight: 700;
-      text-decoration: none;
-      margin: 0 0.25rem;
+      padding: .75rem 1rem;
+      border-radius: .75rem;
+      font-weight: 600;
+      margin-right: .5rem;
     }
 
     .${namespace}-button-primary {
-      background: var(--primary);
+      background: var(--primary-color);
       color: #fff;
     }
 
@@ -336,16 +325,14 @@ const generateSelFluxCSS = (namespace: string): string => {
       color: #111;
     }
 
-    /* Control/Solutions section */
+    /* Seção soluções / controle EXATA do template original */
     .${namespace}-control-section {
       padding: 2.5rem 0;
     }
 
     .${namespace}-control-section h2 {
       text-align: center;
-      margin: 0 0 1.5rem;
-      font-size: 1.9rem;
-      color: var(--text);
+      margin-bottom: 1.5rem;
     }
 
     .${namespace}-control-grid {
@@ -358,26 +345,31 @@ const generateSelFluxCSS = (namespace: string): string => {
       background: var(--white);
       border-radius: 1rem;
       overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
-    }
-
-    .${namespace}-control-item-image {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
+      box-shadow: 0 4px 6px rgba(0,0,0,.08);
+      display: grid;
+      grid-template-columns: 1fr;
     }
 
     .${namespace}-control-item-text {
       padding: 1.25rem;
-    }
-
-    .${namespace}-control-item-text p {
-      color: var(--muted);
       font-weight: 500;
     }
 
-    /* Service/Advisory section */
+    .${namespace}-image-container {
+      width: 100%;
+      height: 220px;
+      overflow: hidden;
+    }
+
+    .${namespace}-control-item-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Consultoria EXATA do template original */
     .${namespace}-personalized-service {
+      background: var(--white);
       padding: 2.5rem 0;
     }
 
@@ -388,28 +380,12 @@ const generateSelFluxCSS = (namespace: string): string => {
       align-items: center;
     }
 
-    .${namespace}-service-text h2 {
-      text-align: left;
-      margin-bottom: 0.5rem;
-      font-size: 1.9rem;
-      color: var(--text);
-    }
-
-    .${namespace}-service-text p {
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 1rem;
-    }
-
     .${namespace}-service-image {
       border-radius: 1rem;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.09);
-      max-width: 100%;
-      height: auto;
-      display: block;
+      box-shadow: 0 8px 16px rgba(0,0,0,.1);
     }
 
-    /* FAQ */
+    /* FAQ EXATO do template original */
     .${namespace}-faq-section {
       padding: 2.5rem 0;
     }
@@ -417,36 +393,32 @@ const generateSelFluxCSS = (namespace: string): string => {
     .${namespace}-faq-section h2 {
       text-align: center;
       margin-bottom: 1rem;
-      font-size: 1.9rem;
-      color: var(--text);
     }
 
     .${namespace}-faq-accordion {
       display: grid;
-      gap: 0.75rem;
+      gap: .75rem;
     }
 
     .${namespace}-faq-item {
       background: var(--white);
-      border: 1px solid #eef2f7;
-      border-radius: 0.75rem;
+      border-radius: .75rem;
       overflow: hidden;
+      border: 1px solid #eee;
     }
 
     .${namespace}-faq-question {
       padding: 1rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
       cursor: pointer;
-      font-weight: 600;
     }
 
     .${namespace}-faq-answer {
       display: none;
       padding: 0 1rem 1rem;
       color: #555;
-      line-height: 1.6;
     }
 
     .${namespace}-faq-item.${namespace}-active .${namespace}-faq-answer {
@@ -456,33 +428,25 @@ const generateSelFluxCSS = (namespace: string): string => {
     .${namespace}-faq-icon {
       font-size: 1.25rem;
       transform: rotate(180deg);
-      transition: 0.2s;
+      transition: .2s;
     }
 
     .${namespace}-faq-item.${namespace}-active .${namespace}-faq-icon {
       transform: rotate(0deg);
     }
 
-    /* CTA final */
+    /* CTA final EXATO do template original */
     .${namespace}-cta-section {
       padding: 2.5rem 0;
       text-align: center;
       background: var(--white);
     }
 
-    .${namespace}-cta-content h2 {
-      margin-bottom: 0.5rem;
-      font-size: 1.9rem;
-      color: var(--text);
+    .${namespace}-cta-content a {
+      margin: 0 .25rem;
     }
 
-    .${namespace}-cta-content p {
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 1rem;
-    }
-
-    /* Footer */
+    /* Footer EXATO do template original */
     .${namespace}-footer {
       background: #0b1220;
       color: #d0d8e0;
@@ -502,16 +466,15 @@ const generateSelFluxCSS = (namespace: string): string => {
     }
 
     .${namespace}-footer-links li {
-      margin: 0.5rem 0;
+      margin: .5rem 0;
     }
 
-    .${namespace}-footer a {
+    .${namespace}-footer-links a {
       color: #d0d8e0;
-      text-decoration: none;
     }
 
     .${namespace}-footer-social a {
-      margin-right: 0.5rem;
+      margin-right: .5rem;
       display: inline-block;
       color: #d0d8e0;
       transition: color 0.2s;
@@ -521,23 +484,39 @@ const generateSelFluxCSS = (namespace: string): string => {
       color: #fff;
     }
 
-    /* Media queries */
+    /* Media queries EXATOS do template original */
     @media (min-width: 768px) {
       .${namespace}-banner-content {
         flex-direction: row;
         align-items: center;
       }
 
+      .${namespace}-banner-text {
+        flex: 1;
+        padding-right: 2rem;
+      }
+
+      .${namespace}-banner-images {
+        flex: 1;
+        grid-template-columns: repeat(3, 1fr);
+      }
+
       .${namespace}-control-grid {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      .${namespace}-service-content {
-        grid-template-columns: 1.2fr 0.8fr;
+      .${namespace}-image-container {
+        height: 100%;
       }
 
       .${namespace}-footer-grid {
         grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (min-width: 992px) {
+      .${namespace}-service-content {
+        grid-template-columns: 1.2fr .8fr;
       }
     }
   `;
