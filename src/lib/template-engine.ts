@@ -125,6 +125,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 aspect-ratio: 14/9;
                 object-fit: cover;
             }
+            .control-item .image-container {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            .control-item {
+                display: flex;
+                flex-direction: column;
+            }
         }
         @media (min-width: 768px) {
             .banner-content { flex-direction: row; align-items: center; }
