@@ -799,7 +799,7 @@ const Editor = () => {
 
             {/* Aba Conteúdo (Landing Page) */}
             <TabsContent value="landing-page" className="space-y-4">
-              <Accordion type="single" collapsible defaultValue="seo">
+              <Accordion type="single" collapsible defaultValue="banner">
                 
                 {/* SEO Básico */}
                 <AccordionItem value="seo">
