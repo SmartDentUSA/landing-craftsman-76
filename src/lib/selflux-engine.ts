@@ -6,141 +6,295 @@ interface EmbedConfig {
   namespace: string;
 }
 
-// Mapeamento completo de classes do template
+// Mapeamento completo e preciso de todas as classes do template original
 const createClassMap = (namespace: string) => ({
-  // Layout principal
-  "container": `${namespace}-c`,
-  "header": `${namespace}-h`,
-  "nav": `${namespace}-n`,
-  "nav-logo": `${namespace}-nl`,
-  "nav-links": `${namespace}-nli`,
-  "nav-menu": `${namespace}-nm`,
-  "nav-menu-item": `${namespace}-nmi`,
-  "footer": `${namespace}-f`,
-  "footer-content": `${namespace}-fc`,
-  "footer-links": `${namespace}-fl`,
-  "footer-social": `${namespace}-fs`,
+  // Header e navegação
+  "header": `${namespace}-header`,
+  "header-menu": `${namespace}-header-menu`,
+  "header-menu-container": `${namespace}-header-menu-container`,
+  "nav": `${namespace}-nav`,
+  "nav-logo": `${namespace}-nav-logo`,
+  "nav-links": `${namespace}-nav-links`,
+  "nav-menu": `${namespace}-nav-menu`,
+  "nav-menu-item": `${namespace}-nav-menu-item`,
+  "menu-item": `${namespace}-menu-item`,
+  "logo-img": `${namespace}-logo-img`,
   
-  // Banner/Hero
-  "hero": `${namespace}-he`,
-  "hero-content": `${namespace}-hc`,
-  "hero-text": `${namespace}-ht`,
-  "hero-title": `${namespace}-hti`,
-  "hero-subtitle": `${namespace}-hs`,
-  "hero-buttons": `${namespace}-hb`,
-  "hero-image": `${namespace}-hi`,
-  "banner": `${namespace}-ban`,
-  "banner-content": `${namespace}-bc`,
-  "banner-text": `${namespace}-bt`,
-  "banner-title": `${namespace}-bti`,
-  "banner-subtitle": `${namespace}-bst`,
-  "banner-images": `${namespace}-bi`,
+  // Banner principal  
+  "main-banner": `${namespace}-main-banner`,
+  "banner": `${namespace}-banner`,
+  "banner-content": `${namespace}-banner-content`,
+  "banner-text": `${namespace}-banner-text`,
+  "banner-title": `${namespace}-banner-title`,
+  "banner-subtitle": `${namespace}-banner-subtitle`,
+  "banner-images": `${namespace}-banner-images`,
+  "banner-image": `${namespace}-banner-image`,
+  "banner-description": `${namespace}-banner-description`,
   
-  // Solutions
-  "solutions": `${namespace}-sol`,
-  "solutions-grid": `${namespace}-sg`,
-  "solution-card": `${namespace}-sc`,
-  "solution-icon": `${namespace}-si`,
-  "solution-title": `${namespace}-sti`,
-  "solution-description": `${namespace}-sde`,
+  // Hero section
+  "hero": `${namespace}-hero`,
+  "hero-content": `${namespace}-hero-content`,
+  "hero-text": `${namespace}-hero-text`,
+  "hero-title": `${namespace}-hero-title`,
+  "hero-subtitle": `${namespace}-hero-subtitle`,
+  "hero-buttons": `${namespace}-hero-buttons`,
+  "hero-image": `${namespace}-hero-image`,
   
-  // Services
-  "service": `${namespace}-ser`,
-  "service-content": `${namespace}-sec`,
-  "service-grid": `${namespace}-segr`,
-  "service-card": `${namespace}-seca`,
-  "service-icon": `${namespace}-sei`,
-  "service-title": `${namespace}-set`,
-  "service-description": `${namespace}-sed`,
+  // Container e layout principal
+  "container": `${namespace}-container`,
+  "main-container": `${namespace}-main-container`,
+  "content-container": `${namespace}-content-container`,
+  
+  // Seções de controle
+  "control-section": `${namespace}-control-section`,
+  "control-grid": `${namespace}-control-grid`,
+  "control-item": `${namespace}-control-item`,
+  "control-item-side": `${namespace}-control-item-side`,
+  "control-item-text": `${namespace}-control-item-text`,
+  "control-item-image": `${namespace}-control-item-image`,
+  
+  // Solutions/Soluções
+  "solutions": `${namespace}-solutions`,
+  "solutions-section": `${namespace}-solutions-section`,
+  "solutions-grid": `${namespace}-solutions-grid`,
+  "solution-card": `${namespace}-solution-card`,
+  "solution-icon": `${namespace}-solution-icon`,
+  "solution-title": `${namespace}-solution-title`,
+  "solution-description": `${namespace}-solution-description`,
+  
+  // Services/Serviços
+  "service": `${namespace}-service`,
+  "service-section": `${namespace}-service-section`,
+  "service-content": `${namespace}-service-content`,
+  "service-grid": `${namespace}-service-grid`,
+  "service-card": `${namespace}-service-card`,
+  "service-icon": `${namespace}-service-icon`,
+  "service-title": `${namespace}-service-title`,
+  "service-description": `${namespace}-service-description`,
+  "service-text": `${namespace}-service-text`,
+  "service-image": `${namespace}-service-image`,
+  "service-image-container": `${namespace}-service-image-container`,
   
   // Advisory/Consultoria
-  "advisory": `${namespace}-adv`,
-  "advisory-content": `${namespace}-ac`,
-  "advisory-text": `${namespace}-at`,
-  "advisory-image": `${namespace}-ai`,
-  "personalized-service": `${namespace}-psv`,
+  "advisory": `${namespace}-advisory`,
+  "advisory-section": `${namespace}-advisory-section`,
+  "advisory-content": `${namespace}-advisory-content`,
+  "advisory-text": `${namespace}-advisory-text`,
+  "advisory-image": `${namespace}-advisory-image`,
+  "personalized-service": `${namespace}-personalized-service`,
   
   // FAQ
   "faq": `${namespace}-faq`,
-  "faq-section": `${namespace}-fse`,
-  "faq-accordion": `${namespace}-facc`,
-  "faq-item": `${namespace}-fi`,
-  "faq-question": `${namespace}-fq`,
-  "faq-answer": `${namespace}-fa`,
+  "faq-section": `${namespace}-faq-section`,
+  "faq-accordion": `${namespace}-faq-accordion`,
+  "faq-item": `${namespace}-faq-item`,
+  "faq-question": `${namespace}-faq-question`,
+  "faq-answer": `${namespace}-faq-answer`,
   
   // CTA
   "cta": `${namespace}-cta`,
-  "cta-section": `${namespace}-cs`,
-  "cta-content": `${namespace}-cc`,
-  "cta-text": `${namespace}-ct`,
-  "cta-button": `${namespace}-cb`,
+  "cta-section": `${namespace}-cta-section`,
+  "cta-content": `${namespace}-cta-content`,
+  "cta-text": `${namespace}-cta-text`,
+  "cta-button": `${namespace}-cta-button`,
+  
+  // Footer
+  "footer": `${namespace}-footer`,
+  "footer-content": `${namespace}-footer-content`,
+  "footer-grid": `${namespace}-footer-grid`,
+  "footer-info": `${namespace}-footer-info`,
+  "footer-links": `${namespace}-footer-links`,
+  "footer-social": `${namespace}-footer-social`,
+  "footer-link": `${namespace}-footer-link`,
   
   // Buttons
   "btn": `${namespace}-btn`,
-  "btn-primary": `${namespace}-bp`,
-  "btn-secondary": `${namespace}-bs`,
-  "button": `${namespace}-bu`,
-  "button-primary": `${namespace}-bup`,
-  "button-secondary": `${namespace}-bus`,
+  "btn-primary": `${namespace}-btn-primary`,
+  "btn-secondary": `${namespace}-btn-secondary`,
+  "button": `${namespace}-button`,
+  "button-primary": `${namespace}-button-primary`,
+  "button-secondary": `${namespace}-button-secondary`,
+  "cta-btn": `${namespace}-cta-btn`,
   
   // Seções genéricas
-  "section": `${namespace}-sec`,
-  "section-header": `${namespace}-she`,
-  "section-title": `${namespace}-sti`,
-  "section-subtitle": `${namespace}-ssu`,
-  "section-content": `${namespace}-sco`,
-  "control-section": `${namespace}-csec`,
+  "section": `${namespace}-section`,
+  "section-header": `${namespace}-section-header`,
+  "section-title": `${namespace}-section-title`,
+  "section-subtitle": `${namespace}-section-subtitle`,
+  "section-content": `${namespace}-section-content`,
+  "section-description": `${namespace}-section-description`,
   
   // Grid e layout
-  "grid": `${namespace}-gr`,
-  "control-grid": `${namespace}-cgr`,
-  "grid-cols-1": `${namespace}-gc1`,
-  "grid-cols-2": `${namespace}-gc2`,
-  "grid-cols-3": `${namespace}-gc3`,
-  "md:grid-cols-2": `${namespace}-mdgc2`,
-  "md:grid-cols-3": `${namespace}-mdgc3`,
-  "lg:grid-cols-3": `${namespace}-lgc3`,
+  "grid": `${namespace}-grid`,
+  "grid-cols-1": `${namespace}-grid-cols-1`,
+  "grid-cols-2": `${namespace}-grid-cols-2`,
+  "grid-cols-3": `${namespace}-grid-cols-3`,
+  "md:grid-cols-2": `${namespace}-md-grid-cols-2`,
+  "md:grid-cols-3": `${namespace}-md-grid-cols-3`,
+  "lg:grid-cols-3": `${namespace}-lg-grid-cols-3`,
+  "lg:grid-cols-4": `${namespace}-lg-grid-cols-4`,
   
-  // Cards
-  "card": `${namespace}-ca`,
-  "control-item": `${namespace}-ci`,
-  "control-item-text": `${namespace}-cit`,
-  "control-item-image": `${namespace}-cii`,
+  // Cards genéricos
+  "card": `${namespace}-card`,
+  "card-content": `${namespace}-card-content`,
+  "card-header": `${namespace}-card-header`,
+  "card-title": `${namespace}-card-title`,
+  "card-description": `${namespace}-card-description`,
   
   // Imagens
-  "image-container": `${namespace}-ic`,
-  "logo-img": `${namespace}-li`,
-  "service-image": `${namespace}-si`,
+  "image": `${namespace}-image`,
+  "image-container": `${namespace}-image-container`,
+  "img": `${namespace}-img`,
   
-  // Utilities Tailwind comuns
-  "max-w-7xl": `${namespace}-mw7`,
-  "mx-auto": `${namespace}-mxa`,
-  "px-4": `${namespace}-px4`,
-  "py-8": `${namespace}-py8`,
-  "py-16": `${namespace}-py16`,
-  "py-20": `${namespace}-py20`,
-  "sm:px-6": `${namespace}-smpx6`,
-  "lg:px-8": `${namespace}-lgpx8`,
-  "text-center": `${namespace}-tc`,
-  "text-4xl": `${namespace}-t4xl`,
-  "text-6xl": `${namespace}-t6xl`,
-  "font-bold": `${namespace}-fb`,
-  "font-semibold": `${namespace}-fsb`,
-  "text-white": `${namespace}-tw`,
-  "text-gray-600": `${namespace}-tg6`,
-  "bg-blue-600": `${namespace}-bb6`,
-  "bg-white": `${namespace}-bw`,
-  "hover:bg-blue-700": `${namespace}-hbb7`,
-  "rounded-lg": `${namespace}-rlg`,
-  "shadow-lg": `${namespace}-slg`,
-  "mb-8": `${namespace}-mb8`,
-  "mt-8": `${namespace}-mt8`,
-  "space-y-8": `${namespace}-sy8`,
-  "gap-8": `${namespace}-g8`,
-  "flex": `${namespace}-fl`,
-  "items-center": `${namespace}-ic`,
-  "justify-center": `${namespace}-jc`,
-  "space-x-4": `${namespace}-sx4`
+  // Layout utilities mais específicos
+  "w-full": `${namespace}-w-full`,
+  "h-full": `${namespace}-h-full`,
+  "w-auto": `${namespace}-w-auto`,
+  "h-auto": `${namespace}-h-auto`,
+  "w-64": `${namespace}-w-64`,
+  "h-64": `${namespace}-h-64`,
+  
+  // Spacing utilities comuns
+  "max-w-7xl": `${namespace}-max-w-7xl`,
+  "max-w-6xl": `${namespace}-max-w-6xl`,
+  "max-w-4xl": `${namespace}-max-w-4xl`,
+  "mx-auto": `${namespace}-mx-auto`,
+  "px-4": `${namespace}-px-4`,
+  "px-6": `${namespace}-px-6`,
+  "px-8": `${namespace}-px-8`,
+  "py-8": `${namespace}-py-8`,
+  "py-12": `${namespace}-py-12`,
+  "py-16": `${namespace}-py-16`,
+  "py-20": `${namespace}-py-20`,
+  "py-24": `${namespace}-py-24`,
+  "py-32": `${namespace}-py-32`,
+  "mb-4": `${namespace}-mb-4`,
+  "mb-6": `${namespace}-mb-6`,
+  "mb-8": `${namespace}-mb-8`,
+  "mb-12": `${namespace}-mb-12`,
+  "mt-4": `${namespace}-mt-4`,
+  "mt-8": `${namespace}-mt-8`,
+  "mt-12": `${namespace}-mt-12`,
+  "space-y-4": `${namespace}-space-y-4`,
+  "space-y-6": `${namespace}-space-y-6`,
+  "space-y-8": `${namespace}-space-y-8`,
+  "space-y-12": `${namespace}-space-y-12`,
+  "gap-4": `${namespace}-gap-4`,
+  "gap-6": `${namespace}-gap-6`,
+  "gap-8": `${namespace}-gap-8`,
+  "gap-12": `${namespace}-gap-12`,
+  
+  // Typography
+  "text-center": `${namespace}-text-center`,
+  "text-left": `${namespace}-text-left`,
+  "text-right": `${namespace}-text-right`,
+  "text-xs": `${namespace}-text-xs`,
+  "text-sm": `${namespace}-text-sm`,
+  "text-base": `${namespace}-text-base`,
+  "text-lg": `${namespace}-text-lg`,
+  "text-xl": `${namespace}-text-xl`,
+  "text-2xl": `${namespace}-text-2xl`,
+  "text-3xl": `${namespace}-text-3xl`,
+  "text-4xl": `${namespace}-text-4xl`,
+  "text-5xl": `${namespace}-text-5xl`,
+  "text-6xl": `${namespace}-text-6xl`,
+  "font-normal": `${namespace}-font-normal`,
+  "font-medium": `${namespace}-font-medium`,
+  "font-semibold": `${namespace}-font-semibold`,
+  "font-bold": `${namespace}-font-bold`,
+  "leading-tight": `${namespace}-leading-tight`,
+  "leading-relaxed": `${namespace}-leading-relaxed`,
+  
+  // Colors
+  "text-white": `${namespace}-text-white`,
+  "text-black": `${namespace}-text-black`,
+  "text-gray-500": `${namespace}-text-gray-500`,
+  "text-gray-600": `${namespace}-text-gray-600`,
+  "text-gray-700": `${namespace}-text-gray-700`,
+  "text-gray-800": `${namespace}-text-gray-800`,
+  "text-gray-900": `${namespace}-text-gray-900`,
+  "text-blue-600": `${namespace}-text-blue-600`,
+  "text-blue-700": `${namespace}-text-blue-700`,
+  "bg-white": `${namespace}-bg-white`,
+  "bg-gray-50": `${namespace}-bg-gray-50`,
+  "bg-gray-100": `${namespace}-bg-gray-100`,
+  "bg-blue-600": `${namespace}-bg-blue-600`,
+  "bg-blue-700": `${namespace}-bg-blue-700`,
+  "hover:bg-blue-700": `${namespace}-hover-bg-blue-700`,
+  "hover:bg-gray-50": `${namespace}-hover-bg-gray-50`,
+  
+  // Flexbox e layout
+  "flex": `${namespace}-flex`,
+  "inline-flex": `${namespace}-inline-flex`,
+  "flex-col": `${namespace}-flex-col`,
+  "flex-row": `${namespace}-flex-row`,
+  "items-start": `${namespace}-items-start`,
+  "items-center": `${namespace}-items-center`,
+  "items-end": `${namespace}-items-end`,
+  "justify-start": `${namespace}-justify-start`,
+  "justify-center": `${namespace}-justify-center`,
+  "justify-end": `${namespace}-justify-end`,
+  "justify-between": `${namespace}-justify-between`,
+  "space-x-2": `${namespace}-space-x-2`,
+  "space-x-4": `${namespace}-space-x-4`,
+  "space-x-6": `${namespace}-space-x-6`,
+  
+  // Borders e visual
+  "rounded": `${namespace}-rounded`,
+  "rounded-lg": `${namespace}-rounded-lg`,
+  "rounded-xl": `${namespace}-rounded-xl`,
+  "rounded-full": `${namespace}-rounded-full`,
+  "border": `${namespace}-border`,
+  "border-gray-200": `${namespace}-border-gray-200`,
+  "border-gray-300": `${namespace}-border-gray-300`,
+  "shadow": `${namespace}-shadow`,
+  "shadow-sm": `${namespace}-shadow-sm`,
+  "shadow-md": `${namespace}-shadow-md`,
+  "shadow-lg": `${namespace}-shadow-lg`,
+  "shadow-xl": `${namespace}-shadow-xl`,
+  
+  // Interactive states
+  "hover:shadow-lg": `${namespace}-hover-shadow-lg`,
+  "transition": `${namespace}-transition`,
+  "transition-all": `${namespace}-transition-all`,
+  "duration-200": `${namespace}-duration-200`,
+  "duration-300": `${namespace}-duration-300`,
+  "transform": `${namespace}-transform`,
+  "hover:scale-105": `${namespace}-hover-scale-105`,
+  
+  // Responsive utilities
+  "sm:text-xl": `${namespace}-sm-text-xl`,
+  "md:text-2xl": `${namespace}-md-text-2xl`,
+  "lg:text-3xl": `${namespace}-lg-text-3xl`,
+  "xl:text-4xl": `${namespace}-xl-text-4xl`,
+  "sm:py-12": `${namespace}-sm-py-12`,
+  "md:py-16": `${namespace}-md-py-16`,
+  "lg:py-20": `${namespace}-lg-py-20`,
+  "sm:px-6": `${namespace}-sm-px-6`,
+  "md:px-8": `${namespace}-md-px-8`,
+  "lg:px-8": `${namespace}-lg-px-8`,
+  
+  // Position
+  "relative": `${namespace}-relative`,
+  "absolute": `${namespace}-absolute`,
+  "fixed": `${namespace}-fixed`,
+  "sticky": `${namespace}-sticky`,
+  "top-0": `${namespace}-top-0`,
+  "bottom-0": `${namespace}-bottom-0`,
+  "left-0": `${namespace}-left-0`,
+  "right-0": `${namespace}-right-0`,
+  
+  // Display
+  "block": `${namespace}-block`,
+  "inline": `${namespace}-inline`,
+  "inline-block": `${namespace}-inline-block`,
+  "hidden": `${namespace}-hidden`,
+  "sm:block": `${namespace}-sm-block`,
+  "md:block": `${namespace}-md-block`,
+  "lg:block": `${namespace}-lg-block`,
+  "sm:hidden": `${namespace}-sm-hidden`,
+  "md:hidden": `${namespace}-md-hidden`,
+  "lg:hidden": `${namespace}-lg-hidden`
 });
 
 // Resolução de imagens Cloudflare
@@ -313,10 +467,14 @@ export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string =
   // Remover <style> original primeiro
   const strippedHtml = styleMatch ? html.replace(styleMatch[0], '') : html;
   
-  // Renomear classes no CSS primeiro
+  // Renomear classes no CSS primeiro (ordenar por tamanho para evitar conflitos)
   let processedCss = inlineCss;
-  Object.entries(classMap).forEach(([oldClass, newClass]) => {
-    const classRegex = new RegExp(`\\.${oldClass}\\b`, 'g');
+  const sortedClassEntries = Object.entries(classMap).sort(([a], [b]) => b.length - a.length);
+  
+  sortedClassEntries.forEach(([oldClass, newClass]) => {
+    // Escapar caracteres especiais para uso em regex
+    const escapedOldClass = oldClass.replace(/[.*+?^${}()|[\]\\:]/g, '\\$&');
+    const classRegex = new RegExp(`\\.${escapedOldClass}\\b`, 'g');
     processedCss = processedCss.replace(classRegex, `.${newClass}`);
   });
   console.log('🔧 CSS classes renamed, sample:', processedCss.substring(0, 200));
