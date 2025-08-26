@@ -101,14 +101,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .control-item-text-overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            bottom: 0;
+            left: 0;
+            right: 0;
             color: white;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            font-weight: 600;
-            text-align: center;
-            padding: 0.5rem;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 1);
+            font-weight: 700;
+            padding: 1rem;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
         }
         .control-item-text-overlay p {
             margin: 0;
@@ -246,7 +246,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
             <div class="banner-images">
                 {{#banner.images}}
-                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}});">
+                <img src="{{src}}" alt="{{alt}}">
                 {{/banner.images}}
             </div>
         </div>
@@ -262,7 +262,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#isFirst3}}
                     <div class="control-item control-item-side">
                         <div class="image-container fixed-horizontal">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}});">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
                             <div class="control-item-text-overlay">
                                 <p>{{text}}</p>
                             </div>
@@ -276,7 +276,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     {{#isLast2}}
                     <div class="control-item control-item-side">
                         <div class="image-container fixed-vertical">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}});">
+                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
                             <div class="control-item-text-overlay">
                                 <p>{{text}}</p>
                             </div>
@@ -300,7 +300,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{/advisory.cta}}
             </div>
             <div class="service-image-container">
-                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" style="transform: scale({{advisory.image.scale}});">
+                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image">
             </div>
         </div>
     </section>
