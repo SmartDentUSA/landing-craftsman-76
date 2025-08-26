@@ -114,6 +114,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             margin: 0;
         }
         
+        /* Correção para control-item-side */
+        .control-item.control-item-side {
+            display: block;
+        }
+        .control-item.control-item-side .image-container.fixed-horizontal,
+        .control-item.control-item-side .image-container.fixed-vertical {
+            display: block;
+        }
+        
         /* Layout de duas colunas para soluções */
         @media (min-width: 768px) {
             .control-grid-2col {
