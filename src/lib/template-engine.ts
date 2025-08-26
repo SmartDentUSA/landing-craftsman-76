@@ -68,6 +68,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .button-primary { background: var(--primary-color); color: #fff; }
         .button-secondary { background: #e9ecef; color: #111; }
         .banner-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+        .banner-images img { 
+            width: 200px; 
+            height: 300px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+        }
 
         /* Seção soluções / controle */
         .control-section { padding: 2.5rem 0; }
@@ -83,7 +89,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .control-item-text { padding: 1.25rem; font-weight: 500; }
         .image-container { width: 100%; height: 220px; overflow: hidden; }
-        .control-item-image { width: 100%; height: 100%; object-fit: cover; }
+        .control-item-image { 
+            width: 300px; 
+            height: 200px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+        }
         
         /* Layout personalizado para 5 soluções - Grid específico */
         @media (min-width: 768px) {
