@@ -131,11 +131,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 flex-direction: column;
                 gap: 1rem;
             }
-            .image-container.fixed-horizontal {
-                width: 300px;
-                height: 90px;
-                overflow: hidden;
-            }
+        .image-container.fixed-horizontal {
+            width: 465px;
+            height: 310px;
+            overflow: hidden;
+        }
             .image-container.fixed-vertical {
                 width: 280px;
                 height: 180px;
