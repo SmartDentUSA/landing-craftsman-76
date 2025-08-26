@@ -127,6 +127,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                display: block;
             }
             .control-item {
                 display: flex;
