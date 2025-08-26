@@ -127,43 +127,54 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: block;
         }
         
-        /* Layout de duas colunas para soluções */
+        /* Grid responsivo para soluções */
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
         @media (min-width: 768px) {
-            .control-grid-2col {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
+            .control-grid {
+                grid-template-columns: repeat(2, 1fr);
                 gap: 2rem;
             }
-            .column-left {
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-            }
-            .column-right {
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-            }
-        .image-container.fixed-horizontal {
-            width: 418.5px;
-            height: 279px;
-            overflow: hidden;
         }
-            .image-container.fixed-vertical {
-                width: 280px;
-                height: 180px;
-                overflow: hidden;
+        
+        @media (min-width: 1200px) {
+            .control-grid {
+                grid-template-columns: repeat(3, 1fr);
             }
-            .control-item-image {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-            }
-            .control-item {
-                display: flex;
-                flex-direction: column;
-            }
+        }
+        
+        .control-item {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+        
+        .control-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .image-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .control-item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
         }
         @media (min-width: 768px) {
             .banner-content { flex-direction: row; align-items: center; }
@@ -269,35 +280,17 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <section class="control-section">
         <div class="container">
             <h2>{{solutions_title}}</h2>
-            <div class="control-grid-2col">
-                <div class="column-left">
-                    {{#solutions}}
-                    {{#isFirst3}}
-                    <div class="control-item control-item-side">
-                        <div class="image-container fixed-horizontal">
+            <div class="control-grid">
+                {{#solutions}}
+                <div class="control-item">
+                    <div class="image-container">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
-                            <div class="control-item-text-overlay">
-                                <p>{{text}}</p>
-                            </div>
+                        <div class="control-item-text-overlay">
+                            <p>{{text}}</p>
                         </div>
                     </div>
-                    {{/isFirst3}}
-                    {{/solutions}}
                 </div>
-                <div class="column-right">
-                    {{#solutions}}
-                    {{#isLast2}}
-                    <div class="control-item control-item-side">
-                        <div class="image-container fixed-vertical">
-                            <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
-                            <div class="control-item-text-overlay">
-                                <p>{{text}}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {{/isLast2}}
-                    {{/solutions}}
-                </div>
+                {{/solutions}}
             </div>
         </div>
     </section>
