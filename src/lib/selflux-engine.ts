@@ -124,15 +124,32 @@ const renameClassesInHtml = (html: string, classMap: Record<string, string>): st
 
 // Prefixar CSS com escopo
 const prefixCss = (css: string, scope: string): string => {
-  return css.replace(/(^|\})\s*([^@\}][^{]+)\{/g, (match, brace, selector) => {
-    // Não duplique escopo se já existir
-    const scoped = selector.split(',').map((s: string) => {
+  console.log('🔧 Prefixing CSS with scope:', scope);
+  
+  return css.replace(/([^{}]+)\{/g, (match, selector) => {
+    // Skip at-rules e comentários
+    if (selector.trim().startsWith('@') || selector.trim().startsWith('/*')) {
+      return match;
+    }
+    
+    // Processa múltiplos seletores separados por vírgula
+    const scoped = selector.split(',').map((s) => {
       s = s.trim();
-      if (!s || s.startsWith(scope)) return s;
+      
+      // Pula vazios
+      if (!s) return s;
+      
+      // Se já tem o escopo, não duplicar
+      if (s.startsWith(scope)) return s;
+      
+      // Para :root, adicionar escopo antes
+      if (s === ':root') return `${scope} ${s}`;
+      
+      // Para outros seletores, adicionar escopo
       return `${scope} ${s}`;
     }).join(', ');
     
-    return `${brace}${scoped}{`;
+    return `${scoped}{`;
   });
 };
 
@@ -174,14 +191,24 @@ export const generateSafeHTML = (data: any, embedConfig?: EmbedConfig): string =
   let inlineCss = styleMatch ? styleMatch[1] : '';
   console.log('🔧 CSS extracted, length:', inlineCss?.length);
   
-  // Prefixar CSS
-  const prefixedCss = prefixCss(inlineCss, scope);
+  // Remover <style> original primeiro
+  const strippedHtml = styleMatch ? html.replace(styleMatch[0], '') : html;
+  
+  // Renomear classes no CSS primeiro
+  let processedCss = inlineCss;
+  Object.entries(classMap).forEach(([oldClass, newClass]) => {
+    const classRegex = new RegExp(`\\.${oldClass}\\b`, 'g');
+    processedCss = processedCss.replace(classRegex, `.${newClass}`);
+  });
+  console.log('🔧 CSS classes renamed, sample:', processedCss.substring(0, 200));
+  
+  // Aplicar escopo ao CSS
+  const prefixedCss = prefixCss(processedCss, scope);
   console.log('🔧 CSS prefixed, sample:', prefixedCss.substring(0, 200));
   
-  // Remover <style> original e renomear classes
-  const strippedHtml = styleMatch ? html.replace(styleMatch[0], '') : html;
+  // Renomear classes no HTML
   const renamedHtml = renameClassesInHtml(strippedHtml, classMap);
-  console.log('🔧 Classes renamed, HTML sample:', renamedHtml.substring(0, 300));
+  console.log('🔧 HTML classes renamed, sample:', renamedHtml.substring(0, 300));
   
   // Montar HTML final com wrapper e CSS prefixado
   const finalHtml = `<div class="${config.namespace}-root">
