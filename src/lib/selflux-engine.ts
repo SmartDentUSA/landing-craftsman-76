@@ -624,7 +624,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         /* Bloco 1: Banner Principal */
         .main-banner {
             background-color: var(--white);
-            padding: 4rem 0 2rem;
+            padding: 3rem 0 2rem;
         }
 
         .banner-content {
@@ -694,7 +694,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             }
 
             .banner-text h1 {
-                font-size: 3.5rem;
+                font-size: 2rem;
             }
 
             .banner-images {
@@ -706,7 +706,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         /* Bloco 2: Controle de vendas */
         .sales-control {
             background-color: var(--background-color);
-            padding: 4rem 0;
+            padding: 2.5rem 0;
         }
 
         .sales-control h2 {
@@ -773,9 +773,9 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
 
         /* Bloco 3: Atendimento Personalizado */
         .personalized-service {
-            background-color: #000;
-            color: var(--white);
-            padding: 4rem 0;
+            background-color: var(--white);
+            color: var(--text-color);
+            padding: 2.5rem 0;
         }
 
         .service-content {
@@ -797,7 +797,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
 
         .service-text p {
             font-size: 1rem;
-            color: rgba(255,255,255,0.7);
+            color: var(--secondary-color);
             margin-bottom: 1.5rem;
         }
 
@@ -828,7 +828,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         
         /* Seção de Perguntas Frequentes */
         .faq-section {
-            padding: 4rem 0;
+            padding: 2.5rem 0;
             text-align: center;
         }
         
@@ -858,14 +858,14 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         }
 
         .faq-question::after {
-            content: '+';
+            content: '⌄';
             font-size: 1.5rem;
             font-weight: bold;
             transition: transform 0.3s ease;
         }
 
         .faq-question.active::after {
-            transform: rotate(45deg);
+            transform: rotate(180deg);
         }
         
         .faq-answer {
@@ -877,7 +877,7 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         /* Seção CTA de Teste Grátis */
         .cta-section {
             background-color: var(--background-color);
-            padding: 4rem 0;
+            padding: 2.5rem 0;
             text-align: center;
         }
         
@@ -900,9 +900,9 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
         
         /* Rodapé */
         .footer {
-            background-color: #1a1a1a;
+            background-color: #0b1220;
             color: #ccc;
-            padding: 4rem 0;
+            padding: 2.5rem 0;
             font-size: 0.9rem;
         }
         
