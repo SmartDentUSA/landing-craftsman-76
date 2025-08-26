@@ -549,7 +549,19 @@ const generateSelFluxCSS = (namespace: string): string => {
 
 // Template SelFlux otimizado baseado no código do usuário
 const OPTIMIZED_SELFLUX_TEMPLATE = `
-<div id="lpcontent">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <meta name="description" content="{{description}}">
+    
+    <!-- Fonte Poppins do Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary-color: #007bff;
