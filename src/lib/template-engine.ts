@@ -229,6 +229,28 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         /* Consultoria */
         .personalized-service { background: var(--white); padding: 2.5rem 0; }
         .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
+        
+        .service-item {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+        
+        .service-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .service-image-container { 
+            width: 100%; 
+            aspect-ratio: 1200/343.2;
+            overflow: hidden; 
+            position: relative;
+        }
+        
         .service-image { 
             width: 100%; 
             height: 100%;
@@ -236,16 +258,26 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: block;
             transition: transform 0.3s ease;
         }
-        .service-image-container { 
-            width: 100%; 
-            aspect-ratio: 1200/343.2;
-            overflow: hidden; 
-            position: relative;
-            border-radius: 1rem;
-            box-shadow: 0 8px 16px rgba(0,0,0,.1);
+        
+        .service-text-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            color: white;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 1);
+            font-weight: 700;
+            padding: 1rem;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
         }
+        
+        .service-text-overlay h2,
+        .service-text-overlay p {
+            margin: 0;
+        }
+        
         @media (min-width: 992px) {
-            .service-content { grid-template-columns: 1.2fr .8fr; }
+            .service-content { grid-template-columns: 1fr; }
         }
 
         /* FAQ */
@@ -354,15 +386,17 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- Consultoria -->
     <section class="personalized-service">
         <div class="container service-content">
-            <div class="service-text">
-                <h2>{{advisory.title}}</h2>
-                <p>{{advisory.paragraph}}</p>
-                {{#advisory.cta}}
-                <a href="{{advisory.cta.href}}" class="button button-primary">{{advisory.cta.label}}</a>
-                {{/advisory.cta}}
-            </div>
-            <div class="service-image-container">
-                <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" style="transform: scale({{advisory.image.scale}})">
+            <div class="service-item">
+                <div class="service-image-container">
+                    <img src="{{advisory.image.src}}" alt="{{advisory.image.alt}}" class="service-image" style="transform: scale({{advisory.image.scale}})">
+                    <div class="service-text-overlay">
+                        <h2>{{advisory.title}}</h2>
+                        <p>{{advisory.paragraph}}</p>
+                        {{#advisory.cta}}
+                        <a href="{{advisory.cta.href}}" class="button button-primary">{{advisory.cta.label}}</a>
+                        {{/advisory.cta}}
+                    </div>
+                </div>
             </div>
         </div>
     </section>
