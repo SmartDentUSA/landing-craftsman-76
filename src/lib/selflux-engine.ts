@@ -593,9 +593,10 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
 
         /* Cabeçalho com links */
         .header-menu {
-            display: none;
             background-color: var(--white);
-            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
             border-bottom: 1px solid #eee;
         }
         
@@ -603,18 +604,28 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 64px;
+            gap: 1rem;
         }
 
-        .header-menu a {
+        .header-menu nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .header-menu nav a {
             text-decoration: none;
             color: var(--text-color);
             font-weight: 500;
-            margin: 0 10px;
-            transition: color 0.3s ease;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
         }
 
-        .header-menu a:hover {
-            color: var(--primary-color);
+        .header-menu nav a:hover {
+            color: #111;
+            background: #f1f5f9;
         }
 
         .logo {
