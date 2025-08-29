@@ -801,6 +801,24 @@ const Editor = () => {
             <TabsContent value="landing-page" className="space-y-4">
               <Accordion type="single" collapsible defaultValue="banner">
                 
+                {/* Nome da Página */}
+                <AccordionItem value="page-name">
+                  <AccordionTrigger>Nome da Página</AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div>
+                      <Label>Nome da Landing Page</Label>
+                      <Input
+                        value={data.name}
+                        onChange={(e) => setData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Digite o nome da página"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Este nome aparecerá no dashboard e será usado para gerar URLs automáticas
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                
                 {/* SEO Básico */}
                 <AccordionItem value="seo">
                   <AccordionTrigger>SEO Básico</AccordionTrigger>
