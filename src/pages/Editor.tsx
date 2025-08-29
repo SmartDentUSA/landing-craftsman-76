@@ -652,6 +652,28 @@ const Editor = () => {
     });
   };
 
+  const handleUnapprove = () => {
+    const processedData = { ...data };
+    processedData.status = 'draft';
+    
+    const storeData = {
+      name: processedData.name,
+      status: processedData.status,
+      template: processedData.template,
+      data: processedData
+    };
+    
+    if (id) {
+      updateLandingPage(id, storeData);
+    }
+    
+    setData(processedData);
+    toast({
+      title: "Landing page desaprovada",
+      description: "Status alterado para rascunho!",
+    });
+  };
+
   const handlePreview = () => {
     const newWindow = window.open();
     if (newWindow) {
@@ -755,9 +777,15 @@ const Editor = () => {
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
-              <Button onClick={handleApprove} size="sm">
-                Aprovar
-              </Button>
+              {data.status === 'approved' ? (
+                <Button variant="outline" onClick={handleUnapprove} size="sm">
+                  Desaprovar
+                </Button>
+              ) : (
+                <Button onClick={handleApprove} size="sm">
+                  Aprovar
+                </Button>
+              )}
             </div>
           </div>
         </div>
