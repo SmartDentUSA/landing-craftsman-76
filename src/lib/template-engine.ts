@@ -196,7 +196,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         @media (min-width: 768px) {
           .control-section {
-            padding-bottom: 0rem;
+            padding-bottom: 0.1rem;
           }
         }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
