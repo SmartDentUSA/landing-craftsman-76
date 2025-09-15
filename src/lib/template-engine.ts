@@ -264,10 +264,43 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             left: 0;
             right: 0;
             color: white;
-            text-shadow: 2px 2px 6px rgba(0, 0, 0, 1);
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9), 1px 1px 4px rgba(0, 0, 0, 1);
             font-weight: 700;
             padding: 1rem;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
+            background: linear-gradient(transparent 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.8) 100%);
+        }
+        
+        @media (max-width: 768px) {
+            .control-item-text-overlay {
+                padding: 1.5rem;
+                background: linear-gradient(transparent 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.85) 100%);
+                font-size: 1rem;
+                line-height: 1.4;
+                text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9), 1px 1px 4px rgba(0, 0, 0, 1);
+            }
+            
+            .control-item-text-overlay h2 {
+                font-size: 1.25rem;
+                line-height: 1.3;
+                margin-bottom: 0.5rem;
+            }
+            
+            .control-item-text-overlay p {
+                font-size: 0.95rem;
+                line-height: 1.4;
+            }
+            
+            .image-container-large {
+                aspect-ratio: 4/3;
+            }
+            
+            .image-container-medium {
+                aspect-ratio: 4/3;
+            }
+            
+            .image-container-small {
+                aspect-ratio: 4/3;
+            }
         }
         .control-item-text-overlay p {
             margin: 0;
