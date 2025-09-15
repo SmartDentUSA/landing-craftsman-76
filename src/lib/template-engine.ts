@@ -189,7 +189,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Seção soluções / controle */
-        .control-section { padding: 2.5rem 0 0.5rem 0; }
+        .control-section { padding: 2.5rem 0 0.5rem 0; overflow: visible; }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
         .control-grid { 
             display: grid; 
@@ -246,6 +246,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             grid-template-columns: 1fr;
             gap: 1.5rem;
             margin: 2rem 0;
+            overflow: visible;
+            position: relative;
         }
         
         @media (min-width: 768px) {
@@ -261,11 +263,36 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
             
             /* Aplicar escalas personalizadas apenas no desktop */
-            .control-item:nth-child(1) { transform: scale(var(--container-scale-1, 1.0)); transform-origin: center; }
-            .control-item:nth-child(2) { transform: scale(var(--container-scale-2, 1.0)); transform-origin: center; }
-            .control-item:nth-child(3) { transform: scale(var(--container-scale-3, 1.0)); transform-origin: center; }
-            .control-item:nth-child(4) { transform: scale(var(--container-scale-4, 1.0)); transform-origin: center; }
-            .control-item:nth-child(5) { transform: scale(var(--container-scale-5, 1.0)); transform-origin: center; }
+            .control-item:nth-child(1) { 
+                transform: scale(var(--container-scale-1, 1.0)); 
+                transform-origin: center; 
+                z-index: calc(10 + var(--container-scale-1, 1.0) * 10);
+                position: relative;
+            }
+            .control-item:nth-child(2) { 
+                transform: scale(var(--container-scale-2, 1.0)); 
+                transform-origin: center; 
+                z-index: calc(10 + var(--container-scale-2, 1.0) * 10);
+                position: relative;
+            }
+            .control-item:nth-child(3) { 
+                transform: scale(var(--container-scale-3, 1.0)); 
+                transform-origin: center; 
+                z-index: calc(10 + var(--container-scale-3, 1.0) * 10);
+                position: relative;
+            }
+            .control-item:nth-child(4) { 
+                transform: scale(var(--container-scale-4, 1.0)); 
+                transform-origin: center; 
+                z-index: calc(10 + var(--container-scale-4, 1.0) * 10);
+                position: relative;
+            }
+            .control-item:nth-child(5) { 
+                transform: scale(var(--container-scale-5, 1.0)); 
+                transform-origin: center; 
+                z-index: calc(10 + var(--container-scale-5, 1.0) * 10);
+                position: relative;
+            }
         }
         
         @media (min-width: 1200px) {
@@ -292,11 +319,26 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         
         @media (min-width: 768px) {
-            .control-item:nth-child(1):hover { transform: scale(var(--container-scale-1, 1.0)) translateY(-4px); }
-            .control-item:nth-child(2):hover { transform: scale(var(--container-scale-2, 1.0)) translateY(-4px); }
-            .control-item:nth-child(3):hover { transform: scale(var(--container-scale-3, 1.0)) translateY(-4px); }
-            .control-item:nth-child(4):hover { transform: scale(var(--container-scale-4, 1.0)) translateY(-4px); }
-            .control-item:nth-child(5):hover { transform: scale(var(--container-scale-5, 1.0)) translateY(-4px); }
+            .control-item:nth-child(1):hover { 
+                transform: scale(calc(var(--container-scale-1, 1.0) * 1.05)) translateY(-4px); 
+                z-index: calc(20 + var(--container-scale-1, 1.0) * 10);
+            }
+            .control-item:nth-child(2):hover { 
+                transform: scale(calc(var(--container-scale-2, 1.0) * 1.05)) translateY(-4px); 
+                z-index: calc(20 + var(--container-scale-2, 1.0) * 10);
+            }
+            .control-item:nth-child(3):hover { 
+                transform: scale(calc(var(--container-scale-3, 1.0) * 1.05)) translateY(-4px); 
+                z-index: calc(20 + var(--container-scale-3, 1.0) * 10);
+            }
+            .control-item:nth-child(4):hover { 
+                transform: scale(calc(var(--container-scale-4, 1.0) * 1.05)) translateY(-4px); 
+                z-index: calc(20 + var(--container-scale-4, 1.0) * 10);
+            }
+            .control-item:nth-child(5):hover { 
+                transform: scale(calc(var(--container-scale-5, 1.0) * 1.05)) translateY(-4px); 
+                z-index: calc(20 + var(--container-scale-5, 1.0) * 10);
+            }
             
             .control-item:hover {
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
