@@ -195,7 +195,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         .image-container {
             width: 100%;
-            height: 100%;
+            height: auto;
             overflow: hidden;
             position: relative;
         }
@@ -231,7 +231,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .banner-content { flex-direction: row; align-items: center; }
             .banner-text { flex: 1; padding-right: 2rem; }
             .banner-images { flex: 1; grid-template-columns: repeat(3, 1fr); }
-            .image-container { width: 100%; }
+        }
+        
+        /* Failsafe para garantir responsividade no grid de soluções */
+        .control-grid .image-container {
+            height: auto;
+        }
+        
+        .control-grid .control-item-image {
+            height: 100%;
         }
 
         /* Consultoria */
