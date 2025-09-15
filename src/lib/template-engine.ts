@@ -1233,8 +1233,8 @@ export const generateHTML = (data: any): string => {
   // Calcular e adicionar variáveis CSS para larguras das colunas
   if (processedData.solutions) {
     const columnWeights = calculateColumnWidths(processedData.solutions);
-    const totalWeight = columnWeights.reduce((sum, w) => sum + w, 0);
-    const columnFractions = columnWeights.map(w => `${(w / totalWeight).toFixed(3)}fr`);
+    // calculateColumnWidths já retorna frações normalizadas, usar diretamente
+    const columnFractions = columnWeights.map(w => w === 0 ? '0fr' : `${w.toFixed(3)}fr`);
     
     // Adicionar variáveis CSS ao processedData
     processedData.columnVars = {
