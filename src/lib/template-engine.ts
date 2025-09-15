@@ -494,7 +494,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         /* Desktop Info Section */
         .desktop-info {
             padding: 2.5rem 0;
-            background: var(--white);
+            background: var(--background-color);
             text-align: center;
         }
 
@@ -510,12 +510,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Desktop Table Styles */
-        .desktop-table-card {
+        .desktop-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
             background: var(--white);
             border-radius: .75rem;
             overflow: hidden;
             border: 1px solid #eee;
-            margin-top: 2rem;
+            box-shadow: none;
         }
 
         .desktop-table-title {
@@ -524,13 +527,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             color: var(--text-color);
             margin-bottom: 1rem;
             text-align: center;
-            padding: 1rem 1rem 0;
-        }
-
-        .desktop-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--white);
         }
 
         .desktop-table thead th {
@@ -551,11 +547,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         .desktop-table tbody tr:nth-child(even) {
-            background: #f9fafb;
+            background: var(--white);
         }
 
         .desktop-table tbody tr:hover {
-            background: #f3f4f6;
+            background: #f9fafb;
         }
 
         .desktop-table tbody tr:last-child td {
@@ -824,9 +820,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <p>{{desktop_info.text}}</p>
                 
                 {{#desktop_info.show_table}}
-                <div class="desktop-table-card">
-                    <h3 class="desktop-table-title">{{desktop_info.table_title}}</h3>
-                    <table class="desktop-table">
+                <h3 class="desktop-table-title">{{desktop_info.table_title}}</h3>
+                <table class="desktop-table">
                         <thead>
                             <tr>
                                 {{#desktop_info.table_headers}}
@@ -837,14 +832,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         <tbody>
                             {{#desktop_info.table_data}}
                             <tr>
-                                {{#.}}
-                                <td>{{.}}</td>
-                                {{/.}}
+                                {{#../desktop_info.table_headers}}
+                                <td>{{lookup ../this .}}</td>
+                                {{/../desktop_info.table_headers}}
                             </tr>
                             {{/desktop_info.table_data}}
                         </tbody>
                     </table>
-                </div>
                 {{/desktop_info.show_table}}
             </div>
         </div>
