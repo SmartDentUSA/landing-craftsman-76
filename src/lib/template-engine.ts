@@ -1137,13 +1137,15 @@ export const generateHTML = (data: any): string => {
                          (!solutions[3]?.image?.src) && 
                          (!solutions[4]?.image?.src);
     
-    // Verificar se a coluna 3 está completamente vazia (solutions[2] e solutions[4] são ambos vazios)
+    // Verificar se a coluna 3 está completamente vazia (solutions[2], solutions[4] e solutions[8] são todos vazios)
     const isColumn3Empty = (!solutions[2] || !solutions[2].image?.src) && 
-                          (!solutions[4] || !solutions[4].image?.src);
+                          (!solutions[4] || !solutions[4].image?.src) &&
+                          (!solutions[8] || !solutions[8].image?.src);
     
-    // Verificar se a coluna 2 está completamente vazia (solutions[1] e solutions[3] são ambos vazios)
+    // Verificar se a coluna 2 está completamente vazia (solutions[1], solutions[3] e solutions[7] são todos vazios)
     const isColumn2Empty = (!solutions[1] || !solutions[1].image?.src) && 
-                          (!solutions[3] || !solutions[3].image?.src);
+                          (!solutions[3] || !solutions[3].image?.src) &&
+                          (!solutions[7] || !solutions[7].image?.src);
     
     
     // Se apenas solução 1 tem conteúdo, ela ocupa toda a largura
@@ -1157,7 +1159,11 @@ export const generateHTML = (data: any): string => {
       { solution: solutions[1], columns: [2] },     // med1 em coluna 2
       { solution: solutions[2], columns: [3] },     // small1 em coluna 3
       { solution: solutions[3], columns: [2] },     // med2 em coluna 2  
-      { solution: solutions[4], columns: [3] }      // small2 em coluna 3
+      { solution: solutions[4], columns: [3] },     // small2 em coluna 3
+      { solution: solutions[5], columns: [0] },     // med3 em coluna 0
+      { solution: solutions[6], columns: [1] },     // med4 em coluna 1
+      { solution: solutions[7], columns: [2] },     // med5 em coluna 2
+      { solution: solutions[8], columns: [3] }      // small3 em coluna 3
     ];
     
     // Calcular pesos baseado na presença e escala das imagens
