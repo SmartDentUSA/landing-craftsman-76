@@ -510,15 +510,27 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Desktop Table Styles */
-        .desktop-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 2rem;
+        .desktop-table-card {
             background: var(--white);
             border-radius: .75rem;
             overflow: hidden;
             border: 1px solid #eee;
-            box-shadow: none;
+            margin-top: 2rem;
+        }
+
+        .desktop-table-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            text-align: center;
+            padding: 1rem 1rem 0;
+        }
+
+        .desktop-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
         }
 
         .desktop-table thead th {
@@ -528,8 +540,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             text-align: left;
             font-weight: 600;
             font-size: 1rem;
-            text-transform: none;
-            letter-spacing: normal;
             border-bottom: 1px solid #eee;
         }
 
@@ -541,23 +551,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         .desktop-table tbody tr:nth-child(even) {
-            background: var(--white);
+            background: #f9fafb;
         }
 
         .desktop-table tbody tr:hover {
-            background: #f9fafb;
+            background: #f3f4f6;
         }
 
         .desktop-table tbody tr:last-child td {
             border-bottom: none;
-        }
-
-        .desktop-table-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-color);
-            margin-bottom: 1rem;
-            text-align: center;
         }
 
         /* Desktop-only visibility */
@@ -822,7 +824,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <p>{{desktop_info.text}}</p>
                 
                 {{#desktop_info.show_table}}
-                <div class="desktop-table-container">
+                <div class="desktop-table-card">
                     <h3 class="desktop-table-title">{{desktop_info.table_title}}</h3>
                     <table class="desktop-table">
                         <thead>
@@ -835,9 +837,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         <tbody>
                             {{#desktop_info.table_data}}
                             <tr>
-                                {{#../desktop_info.table_headers}}
-                                <td>{{lookup ../this .}}</td>
-                                {{/../desktop_info.table_headers}}
+                                {{#.}}
+                                <td>{{.}}</td>
+                                {{/.}}
                             </tr>
                             {{/desktop_info.table_data}}
                         </tbody>
