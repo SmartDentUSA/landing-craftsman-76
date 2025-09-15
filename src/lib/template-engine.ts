@@ -812,8 +812,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
 
     <!-- Desktop Info Section -->
-    {{#desktop_info.visible}}
-    <section class="desktop-info desktop-only">
+    {{#desktop_info.visible_any}}
+    <section class="desktop-info {{desktop_info.visibility_class}}">
         <div class="container">
             <div class="desktop-info-content">
                 <h2>{{desktop_info.title}}</h2>
@@ -830,20 +830,20 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             </tr>
                         </thead>
                         <tbody>
-                            {{#desktop_info.table_data}}
+                            {{#desktop_info.table_rows}}
                             <tr>
-                                {{#../desktop_info.table_headers}}
-                                <td>{{lookup ../this .}}</td>
-                                {{/../desktop_info.table_headers}}
+                                {{#.}}
+                                <td>{{.}}</td>
+                                {{/.}}
                             </tr>
-                            {{/desktop_info.table_data}}
+                            {{/desktop_info.table_rows}}
                         </tbody>
                     </table>
                 {{/desktop_info.show_table}}
             </div>
         </div>
     </section>
-    {{/desktop_info.visible}}
+    {{/desktop_info.visible_any}}
 
     <!-- Consultoria -->
     <section class="personalized-service">
@@ -1379,6 +1379,29 @@ export const generateHTML = (data: any): string => {
       }))
     }
   };
+
+  // Process desktop info section
+  if (data.desktop_info && (data.desktop_info.visible_desktop || data.desktop_info.visible_mobile)) {
+    // Pre-process table data to be arrays ordered by headers
+    const table_rows = data.desktop_info.table_data?.map((row: any) => 
+      data.desktop_info.table_headers?.map((header: string) => row[header] || '') || []
+    ) || [];
+    
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.desktop_info.visible_desktop && !data.desktop_info.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.desktop_info.visible_desktop && data.desktop_info.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.desktop_info = {
+      ...data.desktop_info,
+      visible_any: true,
+      visibility_class: visibility_class,
+      table_rows: table_rows
+    };
+  }
   
   // Calcular e adicionar variáveis CSS para larguras das colunas
   if (processedData.solutions) {

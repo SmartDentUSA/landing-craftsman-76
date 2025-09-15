@@ -174,7 +174,8 @@ interface LandingPageData {
   desktop_info: {
     title: string;
     text: string;
-    visible: boolean;
+    visible_desktop: boolean;
+    visible_mobile: boolean;
     show_table: boolean;
     table_title: string;
     table_headers: string[];
@@ -404,7 +405,8 @@ const Editor = () => {
     desktop_info: {
       title: 'Excelência em Odontologia Digital',
       text: 'Com mais de 10 anos de experiência no mercado, a Smart Dent se consolidou como referência em soluções tecnológicas para clínicas odontológicas. Nossa missão é democratizar o acesso à tecnologia de ponta, oferecendo equipamentos, materiais e consultoria especializada para profissionais que buscam excelência.',
-      visible: true,
+      visible_desktop: true,
+      visible_mobile: true,
       show_table: false,
       table_title: 'Especificações Técnicas',
       table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
@@ -639,7 +641,8 @@ const Editor = () => {
             loadedData.desktop_info = { 
               title: '', 
               text: '', 
-              visible: false, 
+              visible_desktop: false,
+              visible_mobile: false, 
               show_table: false, 
               table_title: 'Especificações Técnicas',
               table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
@@ -679,7 +682,8 @@ const Editor = () => {
             migratedData.desktop_info = { 
               title: '', 
               text: '', 
-              visible: false, 
+              visible_desktop: false,
+              visible_mobile: false, 
               show_table: false, 
               table_title: 'Especificações Técnicas',
               table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
@@ -1451,29 +1455,55 @@ const Editor = () => {
                 <AccordionItem value="desktop-info">
                   <AccordionTrigger>Informações Desktop</AccordionTrigger>
                   <AccordionContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={data.desktop_info?.visible ?? false}
-                        onCheckedChange={(checked) => setData(prev => ({
-                          ...prev,
-                          desktop_info: { 
-                            ...(prev.desktop_info || { 
-                              title: '', 
-                              text: '', 
-                              visible: false, 
-                              show_table: false, 
-                              table_title: 'Especificações Técnicas',
-                              table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
-                              table_data: []
-                            }), 
-                            visible: checked 
-                          }
-                        }))}
-                      />
-                      <Label className="font-medium">Mostrar seção apenas no desktop</Label>
-                    </div>
+                     <div className="space-y-3">
+                       <div className="flex items-center space-x-2">
+                         <Switch
+                           checked={data.desktop_info?.visible_desktop ?? false}
+                           onCheckedChange={(checked) => setData(prev => ({
+                             ...prev,
+                             desktop_info: { 
+                               ...(prev.desktop_info || { 
+                                 title: '', 
+                                 text: '', 
+                                 visible_desktop: false,
+                                 visible_mobile: false, 
+                                 show_table: false, 
+                                 table_title: 'Especificações Técnicas',
+                                 table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+                                 table_data: []
+                               }), 
+                               visible_desktop: checked 
+                             }
+                           }))}
+                         />
+                         <Label className="font-medium">Visível no desktop</Label>
+                       </div>
+                       
+                       <div className="flex items-center space-x-2">
+                         <Switch
+                           checked={data.desktop_info?.visible_mobile ?? false}
+                           onCheckedChange={(checked) => setData(prev => ({
+                             ...prev,
+                             desktop_info: { 
+                               ...(prev.desktop_info || { 
+                                 title: '', 
+                                 text: '', 
+                                 visible_desktop: false,
+                                 visible_mobile: false, 
+                                 show_table: false, 
+                                 table_title: 'Especificações Técnicas',
+                                 table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+                                 table_data: []
+                               }), 
+                               visible_mobile: checked 
+                             }
+                           }))}
+                         />
+                         <Label className="font-medium">Visível no mobile</Label>
+                       </div>
+                     </div>
                     
-                    {(data.desktop_info?.visible ?? false) && (
+                    {((data.desktop_info?.visible_desktop ?? false) || (data.desktop_info?.visible_mobile ?? false)) && (
                       <>
                         <div>
                           <Label>Título</Label>
