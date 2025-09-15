@@ -1128,7 +1128,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 export const generateHTML = (data: any): string => {
   // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
   const calculateColumnWidths = (solutions: any[]) => {
-    const columnWeights = [1, 1, 1, 1]; // Default: colunas iguais
+    const columnWeights = [0, 0, 0, 0]; // Inicial: começar em 0 para permitir colapso/expansão reais
     
     // Verificar se apenas a solução 1 tem conteúdo
     const onlySolution1 = solutions[0]?.image?.src && 
@@ -1145,10 +1145,6 @@ export const generateHTML = (data: any): string => {
     const isColumn2Empty = (!solutions[1] || !solutions[1].image?.src) && 
                           (!solutions[3] || !solutions[3].image?.src);
     
-    // Verificar se solutions 1, 2 e 3 têm imagem (scenario específico para reduzir large)
-    const has123Images = solutions[0]?.image?.src && 
-                        solutions[1]?.image?.src && 
-                        solutions[2]?.image?.src;
     
     // Se apenas solução 1 tem conteúdo, ela ocupa toda a largura
     if (onlySolution1) {
@@ -1177,16 +1173,18 @@ export const generateHTML = (data: any): string => {
           if (col < 4) columnWeights[col] = Math.max(columnWeights[col], weight);
         });
       } else {
-        // Sem imagem, coluna pode ser muito menor
+        // Sem imagem, não aplica peso; manter 0 para permitir colapso
         columns.forEach(col => {
-          if (col < 4) columnWeights[col] = 0.1;
+          if (col < 4) columnWeights[col] = 0;
         });
       }
     });
     
-    // Reduzir drasticamente segunda metade de 'large' quando 1,2,3 têm imagens
-    if (has123Images && solutions[0]?.containerScale < 1.0) {
-      columnWeights[1] = Math.max(0.1, columnWeights[1] * 0.3); // Reduzir segunda coluna de large
+    // Colapsar colunas 0 e 1 quando a solução 1 não tem imagem
+    const isLargeEmpty = (!solutions[0] || !solutions[0].image?.src);
+    if (isLargeEmpty) {
+      columnWeights[0] = 0;
+      columnWeights[1] = 0;
     }
     
     // Se a coluna 2 está completamente vazia, definir peso 0 para colapsar
