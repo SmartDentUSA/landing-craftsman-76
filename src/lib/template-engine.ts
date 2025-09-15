@@ -1170,12 +1170,8 @@ export const generateHTML = (data: any): string => {
         columns.forEach(col => {
           if (col < 4) columnWeights[col] = Math.max(columnWeights[col], weight);
         });
-      } else {
-        // Sem imagem, não aplica peso; manter 0 para permitir colapso
-        columns.forEach(col => {
-          if (col < 4) columnWeights[col] = 0;
-        });
       }
+      // Removido o else que zerava as colunas - deixar que apenas colunas realmente vazias sejam 0
     });
     
     // Colapsar colunas 0 e 1 quando a solução 1 não tem imagem
