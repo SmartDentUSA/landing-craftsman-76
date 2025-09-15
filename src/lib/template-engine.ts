@@ -491,6 +491,36 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             transform: scale(1.2);
         }
 
+        /* Desktop Info Section */
+        .desktop-info {
+            padding: 80px 0;
+            background: linear-gradient(135deg, rgba(74, 144, 226, 0.05), rgba(80, 200, 120, 0.05));
+            text-align: center;
+        }
+
+        .desktop-info-content h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 24px;
+            line-height: 1.3;
+        }
+
+        .desktop-info-content p {
+            font-size: 1.25rem;
+            color: #4a5568;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Desktop-only visibility */
+        @media (max-width: 767px) {
+            .desktop-only {
+                display: none !important;
+            }
+        }
+
         /* Consultoria */
         .personalized-service { background: var(--white); padding: 1.25rem 0 2.5rem 0; }
         .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
@@ -736,6 +766,18 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
         </div>
     </section>
+
+    <!-- Desktop Info Section -->
+    {{#desktop_info.visible}}
+    <section class="desktop-info desktop-only">
+        <div class="container">
+            <div class="desktop-info-content">
+                <h2>{{desktop_info.title}}</h2>
+                <p>{{desktop_info.text}}</p>
+            </div>
+        </div>
+    </section>
+    {{/desktop_info.visible}}
 
     <!-- Consultoria -->
     <section class="personalized-service">
@@ -1337,6 +1379,11 @@ export const SAMPLE_DATA = {
       "image": { "src": "https://via.placeholder.com/800x600?text=Automacao", "alt": "Automação de processos" }
     }
   ],
+  "desktop_info": {
+    "title": "Excelência em Odontologia Digital",
+    "text": "Com mais de 10 anos de experiência no mercado, a Smart Dent se consolidou como referência em soluções tecnológicas para clínicas odontológicas. Nossa missão é democratizar o acesso à tecnologia de ponta, oferecendo equipamentos, materiais e consultoria especializada para profissionais que buscam excelência.",
+    "visible": true
+  },
   "advisory": {
     "title": "Consultoria especializada para você investir de forma consciente e segura",
     "paragraph": "Nossa consultoria especializada ajuda você a implantar soluções digitais com foco em previsibilidade e escala, reduzindo riscos e maximizando o retorno do seu investimento.",

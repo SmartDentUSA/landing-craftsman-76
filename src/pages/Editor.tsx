@@ -171,6 +171,11 @@ interface LandingPageData {
   };
   solutions_title: string;
   solutions: Solution[];
+  desktop_info: {
+    title: string;
+    text: string;
+    visible: boolean;
+  };
   advisory: {
     title: string;
     paragraph: string;
@@ -392,6 +397,11 @@ const Editor = () => {
         containerScale: 1.0
       }
     ],
+    desktop_info: {
+      title: 'Excelência em Odontologia Digital',
+      text: 'Com mais de 10 anos de experiência no mercado, a Smart Dent se consolidou como referência em soluções tecnológicas para clínicas odontológicas. Nossa missão é democratizar o acesso à tecnologia de ponta, oferecendo equipamentos, materiais e consultoria especializada para profissionais que buscam excelência.',
+      visible: true
+    },
     advisory: {
       title: 'Consultoria personalizada para o seu negócio',
       paragraph: 'Nossa equipe de especialistas oferece consultoria completa para implementação de odontologia digital em clínicas de todos os portes.',
@@ -1390,6 +1400,52 @@ const Editor = () => {
                       <Plus className="h-4 w-4 mr-2" />
                       {data.solutions.length >= 5 ? "Máximo de 5 soluções atingido" : "Adicionar Solução"}
                     </Button>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Informações Desktop */}
+                <AccordionItem value="desktop-info">
+                  <AccordionTrigger>Informações Desktop</AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={data.desktop_info.visible}
+                        onCheckedChange={(checked) => setData(prev => ({
+                          ...prev,
+                          desktop_info: { ...prev.desktop_info, visible: checked }
+                        }))}
+                      />
+                      <Label className="font-medium">Mostrar seção apenas no desktop</Label>
+                    </div>
+                    
+                    {data.desktop_info.visible && (
+                      <>
+                        <div>
+                          <Label>Título</Label>
+                          <Input
+                            value={data.desktop_info.title}
+                            onChange={(e) => setData(prev => ({
+                              ...prev,
+                              desktop_info: { ...prev.desktop_info, title: e.target.value }
+                            }))}
+                            placeholder="Título da seção desktop"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label>Texto</Label>
+                          <Textarea
+                            value={data.desktop_info.text}
+                            onChange={(e) => setData(prev => ({
+                              ...prev,
+                              desktop_info: { ...prev.desktop_info, text: e.target.value }
+                            }))}
+                            placeholder="Texto descritivo para preencher a página"
+                            rows={4}
+                          />
+                        </div>
+                      </>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
