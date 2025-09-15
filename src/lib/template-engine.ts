@@ -28,9 +28,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             --text-color: #333;
             --background-color: #f8f9fa;
             --white: #fff;
-            {{#solutions}}
-            --container-scale-{{index}}: {{containerScale}};
-            {{/solutions}}
+            {{#columnVars}}
+            --col-1: {{col1}};
+            --col-2: {{col2}};
+            --col-3: {{col3}};
+            --col-4: {{col4}};
+            {{/columnVars}}
         }
         * { box-sizing: border-box; }
         body {
@@ -189,7 +192,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
 
         /* Seção soluções / controle */
-        .control-section { padding: 2.5rem 0 0.5rem 0; overflow: visible; }
+        .control-section { padding: 2.5rem 0 0.5rem 0; }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
         .control-grid { 
             display: grid; 
@@ -246,52 +249,18 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             grid-template-columns: 1fr;
             gap: 1.5rem;
             margin: 2rem 0;
-            overflow: visible;
-            position: relative;
         }
         
         @media (min-width: 768px) {
             .control-grid {
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: var(--col-1, 1fr) var(--col-2, 1fr) var(--col-3, 1fr) var(--col-4, 1fr);
                 grid-template-rows: repeat(3, minmax(200px, auto));
                 gap: 1.5rem;
                 grid-template-areas: 
                     "large large med1 small1"
                     "large large med2 small2"
                     "med3 med4 med5 small3";
-            }
-            
-            /* Aplicar escalas personalizadas apenas no desktop */
-            .control-item:nth-child(1) { 
-                transform: scale(var(--container-scale-1, 1.0)); 
-                transform-origin: center; 
-                z-index: calc(10 + var(--container-scale-1, 1.0) * 10);
-                position: relative;
-            }
-            .control-item:nth-child(2) { 
-                transform: scale(var(--container-scale-2, 1.0)); 
-                transform-origin: center; 
-                z-index: calc(10 + var(--container-scale-2, 1.0) * 10);
-                position: relative;
-            }
-            .control-item:nth-child(3) { 
-                transform: scale(var(--container-scale-3, 1.0)); 
-                transform-origin: center; 
-                z-index: calc(10 + var(--container-scale-3, 1.0) * 10);
-                position: relative;
-            }
-            .control-item:nth-child(4) { 
-                transform: scale(var(--container-scale-4, 1.0)); 
-                transform-origin: center; 
-                z-index: calc(10 + var(--container-scale-4, 1.0) * 10);
-                position: relative;
-            }
-            .control-item:nth-child(5) { 
-                transform: scale(var(--container-scale-5, 1.0)); 
-                transform-origin: center; 
-                z-index: calc(10 + var(--container-scale-5, 1.0) * 10);
-                position: relative;
             }
         }
         
@@ -319,28 +288,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         
         @media (min-width: 768px) {
-            .control-item:nth-child(1):hover { 
-                transform: scale(calc(var(--container-scale-1, 1.0) * 1.05)) translateY(-4px); 
-                z-index: calc(20 + var(--container-scale-1, 1.0) * 10);
-            }
-            .control-item:nth-child(2):hover { 
-                transform: scale(calc(var(--container-scale-2, 1.0) * 1.05)) translateY(-4px); 
-                z-index: calc(20 + var(--container-scale-2, 1.0) * 10);
-            }
-            .control-item:nth-child(3):hover { 
-                transform: scale(calc(var(--container-scale-3, 1.0) * 1.05)) translateY(-4px); 
-                z-index: calc(20 + var(--container-scale-3, 1.0) * 10);
-            }
-            .control-item:nth-child(4):hover { 
-                transform: scale(calc(var(--container-scale-4, 1.0) * 1.05)) translateY(-4px); 
-                z-index: calc(20 + var(--container-scale-4, 1.0) * 10);
-            }
-            .control-item:nth-child(5):hover { 
-                transform: scale(calc(var(--container-scale-5, 1.0) * 1.05)) translateY(-4px); 
-                z-index: calc(20 + var(--container-scale-5, 1.0) * 10);
-            }
-            
             .control-item:hover {
+                transform: translateY(-4px);
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
             }
         }
@@ -731,9 +680,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <!-- Desktop Grid -->
             <div class="control-grid">
                 {{#solutions}}
-                <div class="control-item {{size}}">
+                <div class="control-item {{size}}" {{#gridColumn}}style="{{gridColumn}}"{{/gridColumn}}>
                     <div class="image-container image-container-{{sizeType}}">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#image.scale}}style="transform: scale({{image.scale}})"{{/image.scale}}>
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
                         </div>
@@ -1158,18 +1107,62 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </html>`;
 
 export const generateHTML = (data: any): string => {
+  // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
+  const calculateColumnWidths = (solutions: any[]) => {
+    const columnWeights = [1, 1, 1, 1]; // Default: colunas iguais
+    
+    // Mapear solutions para suas colunas (considerando o layout assimétrico)
+    const columnAssignments = [
+      { solution: solutions[0], columns: [0, 1] }, // large ocupa colunas 0 e 1
+      { solution: solutions[1], columns: [2] },     // med1 em coluna 2
+      { solution: solutions[2], columns: [3] },     // small1 em coluna 3
+      { solution: solutions[3], columns: [2] },     // med2 em coluna 2
+      { solution: solutions[4], columns: [3] }      // small2 em coluna 3
+    ];
+    
+    // Calcular pesos baseado na presença e escala das imagens
+    columnAssignments.forEach(({ solution, columns }) => {
+      if (solution && solution.image && solution.image.src) {
+        const scale = solution.containerScale || 1.0;
+        const weight = 1 + (scale - 1) * 0.5; // Escala influencia peso moderadamente
+        
+        columns.forEach(col => {
+          if (col < 4) columnWeights[col] = Math.max(columnWeights[col], weight);
+        });
+      } else {
+        // Sem imagem, coluna pode ser menor
+        columns.forEach(col => {
+          if (col < 4) columnWeights[col] = 0.3;
+        });
+      }
+    });
+    
+    // Normalizar para garantir largura mínima
+    const minWeight = 0.5;
+    const normalizedWeights = columnWeights.map(w => Math.max(w, minWeight));
+    
+    return normalizedWeights;
+  };
+  
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
     solutions: data.solutions?.map((solution: any, index: number) => {
       // Define tamanhos para layout assimétrico
-      let size, sizeType;
+      let size, sizeType, gridColumn = '';
       if (index === 0) {
         size = 'control-item-large';
         sizeType = 'large';
       } else if (index < 6) {
         size = 'control-item-medium';
         sizeType = 'medium';
+        
+        // Verificar se coluna adjacente está vazia para spanning
+        if (index === 1 && (!data.solutions[2] || !data.solutions[2].image?.src)) {
+          gridColumn = 'grid-column: span 2;'; // med1 expande para small1
+        } else if (index === 3 && (!data.solutions[4] || !data.solutions[4].image?.src)) {
+          gridColumn = 'grid-column: span 2;'; // med2 expande para small2
+        }
       } else {
         size = 'control-item-small';
         sizeType = 'small';
@@ -1183,7 +1176,8 @@ export const generateHTML = (data: any): string => {
         slideIndex: index,
         isFirst3: index < 3,
         isLast2: index >= 3,
-        containerScale: solution.containerScale || 1.0
+        containerScale: solution.containerScale || 1.0,
+        gridColumn
       };
     }),
     footer: {
@@ -1194,6 +1188,21 @@ export const generateHTML = (data: any): string => {
       }))
     }
   };
+  
+  // Calcular e adicionar variáveis CSS para larguras das colunas
+  if (processedData.solutions) {
+    const columnWeights = calculateColumnWidths(processedData.solutions);
+    const totalWeight = columnWeights.reduce((sum, w) => sum + w, 0);
+    const columnFractions = columnWeights.map(w => `${(w / totalWeight).toFixed(3)}fr`);
+    
+    // Adicionar variáveis CSS ao processedData
+    processedData.columnVars = {
+      col1: columnFractions[0],
+      col2: columnFractions[1], 
+      col3: columnFractions[2],
+      col4: columnFractions[3]
+    };
+  }
 
   return Mustache.render(TEMPLATE_HTML, processedData);
 };
