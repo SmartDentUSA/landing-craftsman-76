@@ -1139,6 +1139,10 @@ export const generateHTML = (data: any): string => {
       { solution: solutions[4], columns: [3] }      // small2 em coluna 3
     ];
     
+    // Verificar se colunas 3 e 4 estão completamente vazias
+    const isColumn3Empty = !solutions[2] || !solutions[2].image?.src;
+    const isColumn4Empty = !solutions[4] || !solutions[4].image?.src;
+    
     // Calcular pesos baseado na presença e escala das imagens
     columnAssignments.forEach(({ solution, columns }) => {
       if (solution && solution.image && solution.image.src) {
@@ -1156,9 +1160,18 @@ export const generateHTML = (data: any): string => {
       }
     });
     
-    // Normalizar para garantir largura mínima
+    // Se colunas 3 ou 4 estão completamente vazias, definir peso 0 para sumí-las
+    if (isColumn3Empty) {
+      columnWeights[3] = 0;
+    }
+    
+    // Normalizar para garantir largura mínima (exceto para colunas vazias)
     const minWeight = 0.5;
-    const normalizedWeights = columnWeights.map(w => Math.max(w, minWeight));
+    const normalizedWeights = columnWeights.map((w, index) => {
+      // Manter peso 0 para colunas vazias
+      if (w === 0) return 0;
+      return Math.max(w, minWeight);
+    });
     
     return normalizedWeights;
   };
