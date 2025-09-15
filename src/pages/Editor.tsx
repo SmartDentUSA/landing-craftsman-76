@@ -26,6 +26,7 @@ interface ImageData {
   variant?: 'w-480' | 'w-768' | 'w-1200';
   alt: string;
   scale: number;
+  href?: string;
 }
 
 interface MenuItem {
@@ -477,9 +478,12 @@ const Editor = () => {
         banner: {
           ...processedData.banner,
           images: processedData.banner.images.map(img => ({
-            src: img.src,
-            alt: img.alt,
-            scale: img.scale
+            image: {
+              src: img.src,
+              alt: img.alt,
+              scale: img.scale,
+              href: img.href
+            }
           }))
         },
         solutions: processedData.solutions.map(s => ({
@@ -512,7 +516,8 @@ const Editor = () => {
         images: processedData.banner.images.map(img => ({
           src: img.src,
           alt: img.alt,
-          scale: img.scale
+          scale: img.scale,
+          href: img.href
         }))
       },
       solutions: processedData.solutions.map(s => ({
