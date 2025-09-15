@@ -635,6 +635,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             // Mobile Carousel functionality
             let currentSlide = 0;
             const totalSlides = document.querySelectorAll('.carousel-slide').length;
+            let autoplayInterval = null;
+            let isAutoplayActive = false;
             
             function updateCarousel() {
                 const track = document.querySelector('.carousel-track');
@@ -649,6 +651,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 }
             }
             
+            function startAutoplay() {
+                if (totalSlides > 1 && !isAutoplayActive) {
+                    isAutoplayActive = true;
+                    autoplayInterval = setInterval(() => {
+                        currentSlide = (currentSlide + 1) % totalSlides;
+                        updateCarousel();
+                    }, 3000);
+                }
+            }
+            
+            function stopAutoplay() {
+                if (autoplayInterval) {
+                    clearInterval(autoplayInterval);
+                    autoplayInterval = null;
+                    isAutoplayActive = false;
+                }
+            }
+            
+            function resetAutoplay() {
+                stopAutoplay();
+                setTimeout(startAutoplay, 100);
+            }
+            
             window.moveCarousel = function(direction) {
                 currentSlide += direction;
                 
@@ -659,15 +684,20 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 }
                 
                 updateCarousel();
+                resetAutoplay();
             };
             
             window.goToSlide = function(index) {
                 currentSlide = index;
                 updateCarousel();
+                resetAutoplay();
             };
             
             // Initialize carousel
             updateCarousel();
+            
+            // Start autoplay
+            startAutoplay();
             
             // Add touch/swipe support
             let startX = 0;
@@ -680,6 +710,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 carousel.addEventListener('touchstart', function(e) {
                     startX = e.touches[0].clientX;
                     isSwipping = true;
+                    stopAutoplay();
                 });
                 
                 carousel.addEventListener('touchmove', function(e) {
@@ -700,6 +731,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         } else {
                             window.moveCarousel(-1); // Swipe right - previous slide
                         }
+                    } else {
+                        resetAutoplay();
                     }
                 });
             }
