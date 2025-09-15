@@ -493,23 +493,18 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
         /* Desktop Info Section */
         .desktop-info {
-            padding: 80px 0;
-            background: linear-gradient(135deg, rgba(74, 144, 226, 0.05), rgba(80, 200, 120, 0.05));
+            padding: 2.5rem 0;
+            background: var(--white);
             text-align: center;
         }
 
         .desktop-info-content h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 24px;
-            line-height: 1.3;
+            margin-bottom: 1rem;
+            color: var(--text-color);
         }
 
         .desktop-info-content p {
-            font-size: 1.25rem;
-            color: #4a5568;
-            line-height: 1.6;
+            color: var(--text-color);
             max-width: 800px;
             margin: 0 auto;
         }
