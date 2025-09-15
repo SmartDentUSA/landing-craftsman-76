@@ -57,6 +57,107 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .header-menu nav a:hover { background: #f1f5f9; color: #111; }
 
+        /* Menu hamburger mobile */
+        .mobile-menu-btn {
+            display: none;
+            flex-direction: column;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            gap: 4px;
+        }
+        .mobile-menu-btn span {
+            width: 25px;
+            height: 3px;
+            background: #333;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+        .mobile-menu-btn.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+        .mobile-menu-btn.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .mobile-menu-btn.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+
+        /* Mobile menu overlay */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .mobile-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Mobile menu */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            height: 100vh;
+            background: var(--white);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            padding: 2rem 1.5rem;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+        }
+        .mobile-menu.active {
+            right: 0;
+        }
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        .mobile-menu nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .mobile-menu nav a {
+            padding: 1rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .mobile-menu nav a:hover {
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .header-menu nav {
+                display: none;
+            }
+            .mobile-menu-btn {
+                display: flex;
+            }
+        }
+
         /* Banner principal */
         .main-banner { background: var(--white); padding: 3rem 0 2rem; }
         .banner-content { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -444,6 +545,50 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .footer-grid { grid-template-columns: repeat(3, 1fr); }
         }
     </style>
+    <script>
+        // Mobile menu functionality
+        function toggleMobileMenu() {
+            const btn = document.querySelector('.mobile-menu-btn');
+            const overlay = document.querySelector('.mobile-menu-overlay');
+            const menu = document.querySelector('.mobile-menu');
+            
+            btn.classList.toggle('active');
+            overlay.classList.toggle('active');
+            menu.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            if (menu.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+        
+        function closeMobileMenu() {
+            const btn = document.querySelector('.mobile-menu-btn');
+            const overlay = document.querySelector('.mobile-menu-overlay');
+            const menu = document.querySelector('.mobile-menu');
+            
+            btn.classList.remove('active');
+            overlay.classList.remove('active');
+            menu.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        // Close menu on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+            }
+        });
+        
+        // Close menu on window resize to desktop
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                closeMobileMenu();
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- Header -->
@@ -455,8 +600,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <a href="{{href}}">{{label}}</a>
                 {{/menu}}
             </nav>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </header>
+
+    <!-- Mobile menu overlay -->
+    <div class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+    
+    <!-- Mobile menu -->
+    <div class="mobile-menu">
+        <div class="mobile-menu-header">
+            <img class="logo-img" src="{{logo_url}}" alt="{{logo_alt}}">
+            <button class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Fechar menu">&times;</button>
+        </div>
+        <nav>
+            {{#menu}}
+            <a href="{{href}}" onclick="closeMobileMenu()">{{label}}</a>
+            {{/menu}}
+        </nav>
+    </div>
 
     <!-- Banner principal -->
     <header class="main-banner">
