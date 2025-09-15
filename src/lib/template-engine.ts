@@ -666,6 +666,16 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         @media (max-width: 767px) {
             .footer { font-size: 0.875rem; }
+            .footer-grid { 
+                grid-template-columns: 1fr 1fr; 
+                position: relative; 
+            }
+            .footer-social { 
+                position: absolute; 
+                top: 0; 
+                right: 0; 
+                grid-column: unset; 
+            }
         }
     </style>
     <script>
