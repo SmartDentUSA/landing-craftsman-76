@@ -242,6 +242,102 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             height: 100%;
         }
 
+        /* Mobile/Desktop visibility controls */
+        .desktop-only { display: block; }
+        .mobile-only { display: none; }
+        
+        @media (max-width: 767px) {
+            .desktop-only { display: none; }
+            .mobile-only { display: block; }
+        }
+
+        /* Mobile Carousel Styles */
+        .mobile-carousel {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+        
+        .carousel-track {
+            display: flex;
+            transition: transform 0.3s ease;
+            width: 100%;
+        }
+        
+        .carousel-slide {
+            flex: 0 0 100%;
+            width: 100%;
+        }
+        
+        .carousel-slide .image-container {
+            aspect-ratio: 4/3;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+        
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: hsl(192, 95%, 35%);
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .carousel-btn:hover {
+            background: white;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .carousel-prev {
+            left: 10px;
+        }
+        
+        .carousel-next {
+            right: 10px;
+        }
+        
+        .carousel-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+        
+        .carousel-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            background: hsl(220, 13%, 91%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .carousel-dot.active {
+            background: hsl(192, 95%, 35%);
+            transform: scale(1.2);
+        }
+
         /* Consultoria */
         .personalized-service { background: var(--white); padding: 1.25rem 0 2.5rem 0; }
         .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
@@ -381,7 +477,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <section class="control-section">
         <div class="container">
             <h2>{{solutions_title}}</h2>
-            <div class="control-grid">
+            
+            <!-- Desktop Grid -->
+            <div class="control-grid desktop-only">
                 {{#solutions}}
                 <div class="control-item {{size}}">
                     <div class="image-container image-container-{{sizeType}}">
@@ -392,6 +490,31 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     </div>
                 </div>
                 {{/solutions}}
+            </div>
+            
+            <!-- Mobile Carousel -->
+            <div class="mobile-carousel mobile-only">
+                <div class="carousel-container">
+                    <div class="carousel-track" id="solutions-carousel">
+                        {{#solutions}}
+                        <div class="carousel-slide">
+                            <div class="image-container">
+                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
+                                <div class="control-item-text-overlay">
+                                    <p>{{text}}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {{/solutions}}
+                    </div>
+                    <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)">‹</button>
+                    <button class="carousel-btn carousel-next" onclick="moveCarousel(1)">›</button>
+                </div>
+                <div class="carousel-indicators">
+                    {{#solutions}}
+                    <button class="carousel-dot" onclick="goToSlide({{@index}})"></button>
+                    {{/solutions}}
+                </div>
             </div>
         </div>
     </section>
@@ -482,6 +605,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // FAQ functionality
             const faqQuestions = document.querySelectorAll('.faq-question');
             faqQuestions.forEach(question => {
                 question.addEventListener('click', () => {
@@ -489,6 +613,78 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     faqItem.classList.toggle('active');
                 });
             });
+            
+            // Mobile Carousel functionality
+            let currentSlide = 0;
+            const totalSlides = document.querySelectorAll('.carousel-slide').length;
+            
+            function updateCarousel() {
+                const track = document.querySelector('.carousel-track');
+                const dots = document.querySelectorAll('.carousel-dot');
+                
+                if (track && dots.length > 0) {
+                    track.style.transform = 'translateX(-' + (currentSlide * 100) + '%)';
+                    
+                    dots.forEach((dot, index) => {
+                        dot.classList.toggle('active', index === currentSlide);
+                    });
+                }
+            }
+            
+            window.moveCarousel = function(direction) {
+                currentSlide += direction;
+                
+                if (currentSlide >= totalSlides) {
+                    currentSlide = 0;
+                } else if (currentSlide < 0) {
+                    currentSlide = totalSlides - 1;
+                }
+                
+                updateCarousel();
+            };
+            
+            window.goToSlide = function(index) {
+                currentSlide = index;
+                updateCarousel();
+            };
+            
+            // Initialize carousel
+            updateCarousel();
+            
+            // Add touch/swipe support
+            let startX = 0;
+            let currentX = 0;
+            let isSwipping = false;
+            
+            const carousel = document.querySelector('.carousel-container');
+            
+            if (carousel) {
+                carousel.addEventListener('touchstart', function(e) {
+                    startX = e.touches[0].clientX;
+                    isSwipping = true;
+                });
+                
+                carousel.addEventListener('touchmove', function(e) {
+                    if (!isSwipping) return;
+                    currentX = e.touches[0].clientX;
+                });
+                
+                carousel.addEventListener('touchend', function(e) {
+                    if (!isSwipping) return;
+                    isSwipping = false;
+                    
+                    const diffX = startX - currentX;
+                    const threshold = 50;
+                    
+                    if (Math.abs(diffX) > threshold) {
+                        if (diffX > 0) {
+                            window.moveCarousel(1); // Swipe left - next slide
+                        } else {
+                            window.moveCarousel(-1); // Swipe right - previous slide
+                        }
+                    }
+                });
+            }
         });
     </script>
 </body>
