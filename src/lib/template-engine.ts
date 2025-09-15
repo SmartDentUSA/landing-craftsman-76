@@ -509,6 +509,55 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             margin: 0 auto;
         }
 
+        /* Desktop Table Styles */
+        .desktop-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            background: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .desktop-table thead th {
+            background: #2563eb;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .desktop-table tbody td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            color: var(--text-color);
+            font-size: 0.875rem;
+        }
+
+        .desktop-table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .desktop-table tbody tr:hover {
+            background: #f3f4f6;
+        }
+
+        .desktop-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .desktop-table-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
         /* Desktop-only visibility */
         @media (max-width: 767px) {
             .desktop-only {
@@ -769,6 +818,30 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div class="desktop-info-content">
                 <h2>{{desktop_info.title}}</h2>
                 <p>{{desktop_info.text}}</p>
+                
+                {{#desktop_info.show_table}}
+                <div class="desktop-table-container">
+                    <h3 class="desktop-table-title">{{desktop_info.table_title}}</h3>
+                    <table class="desktop-table">
+                        <thead>
+                            <tr>
+                                {{#desktop_info.table_headers}}
+                                <th>{{.}}</th>
+                                {{/desktop_info.table_headers}}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#desktop_info.table_data}}
+                            <tr>
+                                {{#../desktop_info.table_headers}}
+                                <td>{{lookup ../this .}}</td>
+                                {{/../desktop_info.table_headers}}
+                            </tr>
+                            {{/desktop_info.table_data}}
+                        </tbody>
+                    </table>
+                </div>
+                {{/desktop_info.show_table}}
             </div>
         </div>
     </section>

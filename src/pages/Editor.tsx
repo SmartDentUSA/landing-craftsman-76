@@ -175,6 +175,10 @@ interface LandingPageData {
     title: string;
     text: string;
     visible: boolean;
+    show_table: boolean;
+    table_title: string;
+    table_headers: string[];
+    table_data: Array<{ [key: string]: string }>;
   };
   advisory: {
     title: string;
@@ -400,7 +404,15 @@ const Editor = () => {
     desktop_info: {
       title: 'Excelência em Odontologia Digital',
       text: 'Com mais de 10 anos de experiência no mercado, a Smart Dent se consolidou como referência em soluções tecnológicas para clínicas odontológicas. Nossa missão é democratizar o acesso à tecnologia de ponta, oferecendo equipamentos, materiais e consultoria especializada para profissionais que buscam excelência.',
-      visible: true
+      visible: true,
+      show_table: false,
+      table_title: 'Especificações Técnicas',
+      table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+      table_data: [
+        { 'Propriedade': 'Performance', 'Requisito': 'Alta', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 9001' },
+        { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
+        { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
+      ]
     },
     advisory: {
       title: 'Consultoria personalizada para o seu negócio',
@@ -624,7 +636,19 @@ const Editor = () => {
           
           // Garantir que todos os campos obrigatórios existam (defaults seguros)
           if (!loadedData.desktop_info) {
-            loadedData.desktop_info = { title: '', text: '', visible: false };
+            loadedData.desktop_info = { 
+              title: '', 
+              text: '', 
+              visible: false, 
+              show_table: false, 
+              table_title: 'Especificações Técnicas',
+              table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+              table_data: [
+                { 'Propriedade': 'Performance', 'Requisito': 'Alta', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 9001' },
+                { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
+                { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
+              ]
+            };
           }
           
           // Garantir que todos os campos ImageData existem
@@ -652,7 +676,19 @@ const Editor = () => {
             migratedData.logo_url = createImageData(migratedData.logo_url, migratedData.logo_alt || '');
           }
           if (!migratedData.desktop_info) {
-            migratedData.desktop_info = { title: '', text: '', visible: false };
+            migratedData.desktop_info = { 
+              title: '', 
+              text: '', 
+              visible: false, 
+              show_table: false, 
+              table_title: 'Especificações Técnicas',
+              table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+              table_data: [
+                { 'Propriedade': 'Performance', 'Requisito': 'Alta', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 9001' },
+                { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
+                { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
+              ]
+            };
           }
           setData({
             ...data,
@@ -1420,7 +1456,18 @@ const Editor = () => {
                         checked={data.desktop_info?.visible ?? false}
                         onCheckedChange={(checked) => setData(prev => ({
                           ...prev,
-                          desktop_info: { ...(prev.desktop_info || { title: '', text: '', visible: false }), visible: checked }
+                          desktop_info: { 
+                            ...(prev.desktop_info || { 
+                              title: '', 
+                              text: '', 
+                              visible: false, 
+                              show_table: false, 
+                              table_title: 'Especificações Técnicas',
+                              table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+                              table_data: []
+                            }), 
+                            visible: checked 
+                          }
                         }))}
                       />
                       <Label className="font-medium">Mostrar seção apenas no desktop</Label>
@@ -1434,7 +1481,7 @@ const Editor = () => {
                             value={data.desktop_info?.title ?? ''}
                             onChange={(e) => setData(prev => ({
                               ...prev,
-                              desktop_info: { ...(prev.desktop_info || { title: '', text: '', visible: false }), title: e.target.value }
+                              desktop_info: { ...prev.desktop_info!, title: e.target.value }
                             }))}
                             placeholder="Título da seção desktop"
                           />
@@ -1446,12 +1493,164 @@ const Editor = () => {
                             value={data.desktop_info?.text ?? ''}
                             onChange={(e) => setData(prev => ({
                               ...prev,
-                              desktop_info: { ...(prev.desktop_info || { title: '', text: '', visible: false }), text: e.target.value }
+                              desktop_info: { ...prev.desktop_info!, text: e.target.value }
                             }))}
                             placeholder="Texto descritivo para preencher a página"
                             rows={4}
                           />
                         </div>
+
+                        <Separator />
+
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={data.desktop_info?.show_table ?? false}
+                            onCheckedChange={(checked) => setData(prev => ({
+                              ...prev,
+                              desktop_info: { ...prev.desktop_info!, show_table: checked }
+                            }))}
+                          />
+                          <Label className="font-medium">Mostrar tabela</Label>
+                        </div>
+
+                        {(data.desktop_info?.show_table ?? false) && (
+                          <>
+                            <div>
+                              <Label>Título da Tabela</Label>
+                              <Input
+                                value={data.desktop_info?.table_title ?? ''}
+                                onChange={(e) => setData(prev => ({
+                                  ...prev,
+                                  desktop_info: { ...prev.desktop_info!, table_title: e.target.value }
+                                }))}
+                                placeholder="Título da tabela"
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="font-medium">Cabeçalhos da Tabela</Label>
+                              <div className="space-y-2">
+                                {(data.desktop_info?.table_headers ?? []).map((header, index) => (
+                                  <div key={index} className="flex items-center space-x-2">
+                                    <Input
+                                      value={header}
+                                      onChange={(e) => {
+                                        const newHeaders = [...(data.desktop_info?.table_headers ?? [])];
+                                        newHeaders[index] = e.target.value;
+                                        setData(prev => ({
+                                          ...prev,
+                                          desktop_info: { ...prev.desktop_info!, table_headers: newHeaders }
+                                        }));
+                                      }}
+                                      placeholder={`Cabeçalho ${index + 1}`}
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const newHeaders = (data.desktop_info?.table_headers ?? []).filter((_, i) => i !== index);
+                                        const newData = (data.desktop_info?.table_data ?? []).map(row => {
+                                          const newRow = { ...row };
+                                          delete newRow[header];
+                                          return newRow;
+                                        });
+                                        setData(prev => ({
+                                          ...prev,
+                                          desktop_info: { 
+                                            ...prev.desktop_info!, 
+                                            table_headers: newHeaders,
+                                            table_data: newData
+                                          }
+                                        }));
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newHeaders = [...(data.desktop_info?.table_headers ?? []), `Coluna ${(data.desktop_info?.table_headers?.length ?? 0) + 1}`];
+                                    setData(prev => ({
+                                      ...prev,
+                                      desktop_info: { ...prev.desktop_info!, table_headers: newHeaders }
+                                    }));
+                                  }}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Adicionar Coluna
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label className="font-medium">Dados da Tabela</Label>
+                              <div className="space-y-3">
+                                {(data.desktop_info?.table_data ?? []).map((row, rowIndex) => (
+                                  <Card key={rowIndex}>
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium">Linha {rowIndex + 1}</span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const newData = (data.desktop_info?.table_data ?? []).filter((_, i) => i !== rowIndex);
+                                            setData(prev => ({
+                                              ...prev,
+                                              desktop_info: { ...prev.desktop_info!, table_data: newData }
+                                            }));
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {(data.desktop_info?.table_headers ?? []).map((header, colIndex) => (
+                                          <div key={colIndex}>
+                                            <Label className="text-xs">{header}</Label>
+                                            <Input
+                                              value={row[header] ?? ''}
+                                              onChange={(e) => {
+                                                const newData = [...(data.desktop_info?.table_data ?? [])];
+                                                newData[rowIndex] = { ...newData[rowIndex], [header]: e.target.value };
+                                                setData(prev => ({
+                                                  ...prev,
+                                                  desktop_info: { ...prev.desktop_info!, table_data: newData }
+                                                }));
+                                              }}
+                                              placeholder={`Valor para ${header}`}
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newRow: { [key: string]: string } = {};
+                                    (data.desktop_info?.table_headers ?? []).forEach(header => {
+                                      newRow[header] = '';
+                                    });
+                                    const newData = [...(data.desktop_info?.table_data ?? []), newRow];
+                                    setData(prev => ({
+                                      ...prev,
+                                      desktop_info: { ...prev.desktop_info!, table_data: newData }
+                                    }));
+                                  }}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Adicionar Linha
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
                   </AccordionContent>
