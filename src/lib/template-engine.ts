@@ -131,7 +131,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         .control-item-image {
             width: 100%;
-            aspect-ratio: 2/3;
+            height: 100%;
             object-fit: cover;
             display: block;
         }
