@@ -64,6 +64,7 @@ interface SEOData {
   twitter_site: string;
   twitter_creator: string;
   hreflang: Array<{ lang: string; url: string }>;
+  hreflang_auto: boolean;
   publish_date: string;
   lastmod: string;
   faq_enable: boolean;
@@ -336,6 +337,7 @@ const Editor = () => {
       twitter_site: '@smartdent',
       twitter_creator: '@smartdent',
       hreflang: [],
+      hreflang_auto: false,
       publish_date: new Date().toISOString(),
       lastmod: new Date().toISOString(),
       faq_enable: true
@@ -2428,11 +2430,66 @@ const Editor = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Hreflang */}
+                     {/* Hreflang */}
                     <AccordionItem value="hreflang">
                       <AccordionTrigger>Hreflang (Multi-idioma)</AccordionTrigger>
                       <AccordionContent className="space-y-4">
-                        {data.seo.hreflang.map((hreflang, index) => (
+                        
+                        {/* Toggle para geração automática */}
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-blue-50">
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium">Gerar Hreflang Automaticamente</Label>
+                            <p className="text-xs text-gray-600">
+                              Cria automaticamente variantes para pt-BR, pt-PT, en-US, es-ES baseadas no domínio www.smartdent.com.br
+                            </p>
+                          </div>
+                          <Switch
+                            checked={data.seo.hreflang_auto}
+                            onCheckedChange={(checked) => setData(prev => ({
+                              ...prev,
+                              seo: { ...prev.seo, hreflang_auto: checked }
+                            }))}
+                          />
+                        </div>
+
+                        {/* Preview das URLs automáticas */}
+                        {data.seo.hreflang_auto && data.name && (
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <Label className="text-xs font-medium text-gray-700">Preview das URLs geradas:</Label>
+                            <div className="mt-2 space-y-1 text-xs">
+                              {(() => {
+                                const slug = data.name
+                                  .toLowerCase()
+                                  .normalize('NFD')
+                                  .replace(/[\u0300-\u036f]/g, '')
+                                  .replace(/[^a-z0-9\s-]/g, '')
+                                  .replace(/\s+/g, '-')
+                                  .replace(/-+/g, '-')
+                                  .replace(/^-|-$/g, '');
+                                return [
+                                  { lang: 'pt-BR', url: `https://www.smartdent.com.br/${slug}` },
+                                  { lang: 'pt-PT', url: `https://www.smartdent.com.br/pt/${slug}` },
+                                  { lang: 'en-US', url: `https://www.smartdent.com.br/en/${slug}` },
+                                  { lang: 'es-ES', url: `https://www.smartdent.com.br/es/${slug}` },
+                                  { lang: 'x-default', url: `https://www.smartdent.com.br/${slug}` }
+                                ].map(item => (
+                                  <div key={item.lang} className="flex justify-between">
+                                    <span className="font-mono text-blue-600">{item.lang}:</span>
+                                    <span className="text-gray-600">{item.url}</span>
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                         {/* Configuração manual (quando automático está desabilitado) */}
+                        {!data.seo.hreflang_auto && (
+                          <>
+                            <div className="text-sm text-gray-600 p-3 bg-yellow-50 rounded-lg">
+                              Configure manualmente as variantes de idioma ou ative a geração automática acima.
+                            </div>
+                            {data.seo.hreflang.map((hreflang, index) => (
                           <div key={index} className="flex gap-2">
                             <Input
                               placeholder="Idioma (ex: pt-BR)"
@@ -2475,22 +2532,24 @@ const Editor = () => {
                             </Button>
                           </div>
                         ))}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setData(prev => ({
-                              ...prev,
-                              seo: {
-                                ...prev.seo,
-                                hreflang: [...prev.seo.hreflang, { lang: '', url: '' }]
-                              }
-                            }));
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Idioma
-                        </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setData(prev => ({
+                                  ...prev,
+                                  seo: {
+                                    ...prev.seo,
+                                    hreflang: [...prev.seo.hreflang, { lang: '', url: '' }]
+                                  }
+                                }));
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Adicionar Idioma
+                            </Button>
+                          </>
+                        )}
                       </AccordionContent>
                     </AccordionItem>
 

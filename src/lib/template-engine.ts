@@ -17,7 +17,36 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{seo_description}}">
+    <meta name="robots" content="{{meta_robots}}">
     <title>{{seo_title}}</title>
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{canonical_url}}">
+    
+    <!-- Hreflang Tags -->
+    {{#hreflang}}
+    <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
+    {{/hreflang}}
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="{{og_title}}">
+    <meta property="og:description" content="{{og_description}}">
+    <meta property="og:image" content="{{og_image_url}}">
+    <meta property="og:type" content="{{og_type}}">
+    <meta property="og:site_name" content="{{og_site_name}}">
+    <meta property="og:url" content="{{canonical_url}}">
+    
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="{{twitter_card}}">
+    <meta name="twitter:title" content="{{twitter_title}}">
+    <meta name="twitter:description" content="{{twitter_description}}">
+    <meta name="twitter:image" content="{{twitter_image_url}}">
+    {{#twitter_site}}<meta name="twitter:site" content="{{twitter_site}}">{{/twitter_site}}
+    {{#twitter_creator}}<meta name="twitter:creator" content="{{twitter_creator}}">{{/twitter_creator}}
+    
+    <!-- Publication Dates -->
+    {{#publish_date}}<meta name="publish_date" content="{{publish_date}}">{{/publish_date}}
+    {{#lastmod}}<meta name="lastmod" content="{{lastmod}}">{{/lastmod}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1258,6 +1287,30 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </body>
 </html>`;
 
+// Função para gerar hreflang automático
+const generateAutoHreflang = (pageName: string): Array<{ lang: string; url: string }> => {
+  if (!pageName) return [];
+  
+  const slug = pageName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, '-') // Substitui espaços por hífens
+    .replace(/-+/g, '-') // Remove hífens duplicados
+    .replace(/^-|-$/g, ''); // Remove hífens do início e fim
+  
+  const baseUrl = 'https://www.smartdent.com.br';
+  
+  return [
+    { lang: 'pt-BR', url: `${baseUrl}/${slug}` },
+    { lang: 'pt-PT', url: `${baseUrl}/pt/${slug}` },
+    { lang: 'en-US', url: `${baseUrl}/en/${slug}` },
+    { lang: 'es-ES', url: `${baseUrl}/es/${slug}` },
+    { lang: 'x-default', url: `${baseUrl}/${slug}` }
+  ];
+};
+
 export const generateHTML = (data: any): string => {
   // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
   const calculateColumnWidths = (solutions: any[]) => {
@@ -1441,6 +1494,40 @@ export const generateHTML = (data: any): string => {
       col3: columnFractions[2],
       col4: columnFractions[3]
     };
+  }
+
+  // Processar hreflang automático se habilitado
+  if (data.seo?.hreflang_auto && data.name) {
+    processedData.hreflang = generateAutoHreflang(data.name);
+  } else {
+    processedData.hreflang = data.seo?.hreflang || [];
+  }
+
+  // Processar URLs de imagens para SEO
+  const processImageUrl = (image: any) => {
+    if (!image) return '';
+    if (image.mode === 'cloudflare' && image.cf_id) {
+      const variant = image.variant || 'w-1200';
+      return `https://imagedelivery.net/oWuZOWwUTsYPJBr84OqTgQ/${image.cf_id}/${variant}`;
+    }
+    return image.src || '';
+  };
+
+  // Adicionar URLs de imagens processadas para og e twitter
+  processedData.og_image_url = processImageUrl(data.seo?.og_image);
+  processedData.twitter_image_url = processImageUrl(data.seo?.twitter_image);
+
+  // Garantir canonical_url se não estiver definido
+  if (!processedData.canonical_url && data.name) {
+    const slug = data.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    processedData.canonical_url = `https://www.smartdent.com.br/${slug}`;
   }
 
   return Mustache.render(TEMPLATE_HTML, processedData);
