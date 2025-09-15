@@ -292,6 +292,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 transform: translateY(-4px);
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
             }
+            
+            /* Fixed font sizes for text overlays */
+            .control-item-large .control-item-text-overlay {
+                font-size: 1.25rem;
+                line-height: 1.4;
+                padding: 1.5rem;
+            }
+            
+            .control-item-medium .control-item-text-overlay {
+                font-size: 1rem;
+                line-height: 1.4;
+                padding: 1.25rem;
+            }
+            
+            .control-item-small .control-item-text-overlay {
+                font-size: 0.875rem;
+                line-height: 1.4;
+                padding: 1rem;
+            }
         }
         
         /* Tamanhos específicos para layout assimétrico */
