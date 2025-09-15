@@ -48,6 +48,7 @@ interface FAQ {
 
 // Estrutura completa de dados SEO e Social
 interface SEOData {
+  domain: string;
   seo_title: string;
   seo_description: string;
   canonical_url: string;
@@ -347,10 +348,10 @@ const onSave = (data: LandingPageData): LandingPageData => {
   if (!processedData.seo.twitter_title) processedData.seo.twitter_title = processedData.seo_title;
   if (!processedData.seo.twitter_description) processedData.seo.twitter_description = processedData.seo_description;
   
-  // Autocompletar canonical_url se vazio
-  if (!processedData.seo.canonical_url && window.location.hostname !== 'localhost') {
-    const slug = processedData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    processedData.seo.canonical_url = `https://${window.location.hostname}/${slug}`;
+  // Autocompletar canonical_url usando domínio personalizado e título SEO
+  if (!processedData.seo.canonical_url && processedData.seo.domain && processedData.seo.seo_title) {
+    const slug = processedData.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    processedData.seo.canonical_url = `https://${processedData.seo.domain}/${slug}`;
   }
   
   // Validações e avisos
@@ -399,6 +400,7 @@ const Editor = () => {
     
     // SEO & Social
     seo: {
+      domain: 'www.smartdent.com.br',
       seo_title: 'Smart Dent - Sistema de Gestão Odontológica',
       seo_description: 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.',
       canonical_url: '',
@@ -2279,10 +2281,27 @@ const Editor = () => {
                 <CardContent>
                   <Accordion type="single" collapsible defaultValue="basic-seo">
                     
-                    {/* SEO Básico */}
+                     {/* SEO Básico */}
                     <AccordionItem value="basic-seo">
                       <AccordionTrigger>SEO Básico</AccordionTrigger>
                       <AccordionContent className="space-y-4">
+                        <div>
+                          <Label>Domínio a ser utilizado</Label>
+                          <Input
+                            value={data.seo.domain}
+                            onChange={(e) => setData(prev => ({
+                              ...prev,
+                              seo: { ...prev.seo, domain: e.target.value }
+                            }))}
+                            placeholder="www.seudominio.com.br"
+                          />
+                          {data.seo.domain && data.seo.seo_title && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              URL Canônica: https://{data.seo.domain}/{data.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}
+                            </p>
+                          )}
+                        </div>
+                        
                         <div>
                           <Label>Título SEO</Label>
                           <Input
@@ -2612,7 +2631,7 @@ const Editor = () => {
                           <div className="space-y-1">
                             <Label className="text-sm font-medium">Gerar Hreflang Automaticamente</Label>
                             <p className="text-xs text-gray-600">
-                              Cria automaticamente variantes para pt-BR, pt-PT, en-US, es-ES baseadas no domínio www.smartdent.com.br
+                              Cria automaticamente variantes para pt-BR, pt-PT, en-US, es-ES baseadas no domínio configurado
                             </p>
                           </div>
                           <Switch
@@ -2630,7 +2649,7 @@ const Editor = () => {
                             <Label className="text-xs font-medium text-gray-700">Preview das URLs geradas:</Label>
                             <div className="mt-2 space-y-1 text-xs">
                               {(() => {
-                                const slug = data.name
+                                const slug = (data.seo.seo_title || data.name)
                                   .toLowerCase()
                                   .normalize('NFD')
                                   .replace(/[\u0300-\u036f]/g, '')
@@ -2638,12 +2657,13 @@ const Editor = () => {
                                   .replace(/\s+/g, '-')
                                   .replace(/-+/g, '-')
                                   .replace(/^-|-$/g, '');
+                                const domain = data.seo.domain || 'www.smartdent.com.br';
                                 return [
-                                  { lang: 'pt-BR', url: `https://www.smartdent.com.br/${slug}` },
-                                  { lang: 'pt-PT', url: `https://www.smartdent.com.br/pt/${slug}` },
-                                  { lang: 'en-US', url: `https://www.smartdent.com.br/en/${slug}` },
-                                  { lang: 'es-ES', url: `https://www.smartdent.com.br/es/${slug}` },
-                                  { lang: 'x-default', url: `https://www.smartdent.com.br/${slug}` }
+                                  { lang: 'pt-BR', url: `https://${domain}/${slug}` },
+                                  { lang: 'pt-PT', url: `https://${domain}/pt/${slug}` },
+                                  { lang: 'en-US', url: `https://${domain}/en/${slug}` },
+                                  { lang: 'es-ES', url: `https://${domain}/es/${slug}` },
+                                  { lang: 'x-default', url: `https://${domain}/${slug}` }
                                 ].map(item => (
                                   <div key={item.lang} className="flex justify-between">
                                     <span className="font-mono text-blue-600">{item.lang}:</span>

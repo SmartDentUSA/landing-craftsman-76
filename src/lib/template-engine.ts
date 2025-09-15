@@ -1296,7 +1296,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </html>`;
 
 // Função para gerar hreflang automático
-const generateAutoHreflang = (pageName: string): Array<{ lang: string; url: string }> => {
+const generateAutoHreflang = (pageName: string, domain: string = 'www.smartdent.com.br'): Array<{ lang: string; url: string }> => {
   if (!pageName) return [];
   
   const slug = pageName
@@ -1308,7 +1308,7 @@ const generateAutoHreflang = (pageName: string): Array<{ lang: string; url: stri
     .replace(/-+/g, '-') // Remove hífens duplicados
     .replace(/^-|-$/g, ''); // Remove hífens do início e fim
   
-  const baseUrl = 'https://www.smartdent.com.br';
+  const baseUrl = `https://${domain}`;
   
   return [
     { lang: 'pt-BR', url: `${baseUrl}/${slug}` },
@@ -1505,8 +1505,10 @@ export const generateHTML = (data: any): string => {
   }
 
   // Processar hreflang automático se habilitado
-  if (data.seo?.hreflang_auto && data.name) {
-    processedData.hreflang = generateAutoHreflang(data.name);
+  if (data.seo?.hreflang_auto && (data.seo?.seo_title || data.name)) {
+    const pageName = data.seo?.seo_title || data.name;
+    const domain = data.seo?.domain || 'www.smartdent.com.br';
+    processedData.hreflang = generateAutoHreflang(pageName, domain);
   } else {
     processedData.hreflang = data.seo?.hreflang || [];
   }
@@ -1526,8 +1528,8 @@ export const generateHTML = (data: any): string => {
   processedData.twitter_image_url = processImageUrl(data.seo?.twitter_image);
 
   // Garantir canonical_url se não estiver definido
-  if (!processedData.canonical_url && data.name) {
-    const slug = data.name
+  if (!processedData.canonical_url && data.seo?.domain && (data.seo?.seo_title || data.name)) {
+    const slug = (data.seo?.seo_title || data.name)
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -1535,7 +1537,7 @@ export const generateHTML = (data: any): string => {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
-    processedData.canonical_url = `https://www.smartdent.com.br/${slug}`;
+    processedData.canonical_url = `https://${data.seo.domain}/${slug}`;
   }
 
   // Gerar Schema Markup automaticamente se habilitado
@@ -1624,7 +1626,7 @@ export const generateHTML = (data: any): string => {
       "isPartOf": {
         "@type": "WebSite",
         "name": data.seo?.og_site_name || "Smart Dent",
-        "url": "https://www.smartdent.com.br"
+        "url": `https://${data.seo?.domain || 'www.smartdent.com.br'}`
       }
     });
 
