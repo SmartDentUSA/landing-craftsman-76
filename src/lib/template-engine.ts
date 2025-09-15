@@ -28,6 +28,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             --text-color: #333;
             --background-color: #f8f9fa;
             --white: #fff;
+            {{#solutions}}
+            --container-scale-{{index}}: {{containerScale}};
+            {{/solutions}}
         }
         * { box-sizing: border-box; }
         body {
@@ -256,6 +259,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     "large large med2 small2"
                     "med3 med4 med5 small3";
             }
+            
+            /* Aplicar escalas personalizadas apenas no desktop */
+            .control-item:nth-child(1) { transform: scale(var(--container-scale-1, 1.0)); transform-origin: center; }
+            .control-item:nth-child(2) { transform: scale(var(--container-scale-2, 1.0)); transform-origin: center; }
+            .control-item:nth-child(3) { transform: scale(var(--container-scale-3, 1.0)); transform-origin: center; }
+            .control-item:nth-child(4) { transform: scale(var(--container-scale-4, 1.0)); transform-origin: center; }
+            .control-item:nth-child(5) { transform: scale(var(--container-scale-5, 1.0)); transform-origin: center; }
         }
         
         @media (min-width: 1200px) {
@@ -274,9 +284,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             position: relative;
         }
         
-        .control-item:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        @media (max-width: 767px) {
+            .control-item:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .control-item:nth-child(1):hover { transform: scale(var(--container-scale-1, 1.0)) translateY(-4px); }
+            .control-item:nth-child(2):hover { transform: scale(var(--container-scale-2, 1.0)) translateY(-4px); }
+            .control-item:nth-child(3):hover { transform: scale(var(--container-scale-3, 1.0)) translateY(-4px); }
+            .control-item:nth-child(4):hover { transform: scale(var(--container-scale-4, 1.0)) translateY(-4px); }
+            .control-item:nth-child(5):hover { transform: scale(var(--container-scale-5, 1.0)) translateY(-4px); }
+            
+            .control-item:hover {
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            }
         }
         
         /* Tamanhos específicos para layout assimétrico */
@@ -1116,7 +1140,8 @@ export const generateHTML = (data: any): string => {
         sizeType,
         slideIndex: index,
         isFirst3: index < 3,
-        isLast2: index >= 3
+        isLast2: index >= 3,
+        containerScale: solution.containerScale || 1.0
       };
     }),
     footer: {

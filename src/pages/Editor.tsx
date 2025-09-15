@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
@@ -37,6 +38,7 @@ interface MenuItem {
 interface Solution {
   text: string;
   image: ImageData;
+  containerScale?: number; // Escala do container (0.3-2.0) - padrão 1.0
 }
 
 interface FAQ {
@@ -381,11 +383,13 @@ const Editor = () => {
     solutions: [
       { 
         text: 'Resinas 3D: material biocompatível com alta resistência e acabamento superior para restaurações duradouras.',
-        image: createImageData('https://via.placeholder.com/200x150?text=Resinas', 'Resinas 3D de alta qualidade')
+        image: createImageData('https://via.placeholder.com/200x150?text=Resinas', 'Resinas 3D de alta qualidade'),
+        containerScale: 1.0
       },
       { 
         text: 'Scanner intraoral: precisão milimétrica para diagnósticos certeiros e tratamentos mais eficazes.',
-        image: createImageData('https://via.placeholder.com/200x150?text=Scanner', 'Scanner intraoral de última geração')
+        image: createImageData('https://via.placeholder.com/200x150?text=Scanner', 'Scanner intraoral de última geração'),
+        containerScale: 1.0
       }
     ],
     advisory: {
@@ -1333,6 +1337,41 @@ const Editor = () => {
                               proportionInfo={getProportionInfo(index)}
                             />
                           </div>
+                          <div>
+                            <Label>Proporção do Container (Desktop)</Label>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>Mínimo (0.3)</span>
+                                <span>Normal (1.0)</span>
+                                <span>Destaque (2.0)</span>
+                              </div>
+                              <Slider
+                                value={[solution.containerScale || 1.0]}
+                                onValueChange={(value) => {
+                                  const newSolutions = [...data.solutions];
+                                  newSolutions[index].containerScale = value[0];
+                                  setData(prev => ({ ...prev, solutions: newSolutions }));
+                                }}
+                                min={0.3}
+                                max={2.0}
+                                step={0.1}
+                                className="w-full"
+                              />
+                              <div className="text-sm text-muted-foreground">
+                                Atual: {(solution.containerScale || 1.0).toFixed(1)}x
+                                {!solution.image.src && solution.containerScale && solution.containerScale > 0.6 && (
+                                  <span className="text-orange-600 ml-2">
+                                    ⚠️ Sugestão: Use escala menor (≤0.5) para containers sem imagem
+                                  </span>
+                                )}
+                                {solution.image.src && solution.containerScale && solution.containerScale < 0.7 && (
+                                  <span className="text-blue-600 ml-2">
+                                    💡 Sugestão: Use escala maior (≥0.8) para destacar conteúdo com imagem
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -1343,7 +1382,7 @@ const Editor = () => {
                       onClick={() => {
                         setData(prev => ({
                           ...prev,
-                          solutions: [...prev.solutions, { text: '', image: createImageData() }]
+                          solutions: [...prev.solutions, { text: '', image: createImageData(), containerScale: 1.0 }]
                         }));
                       }}
                       disabled={data.solutions.length >= 5}
