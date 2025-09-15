@@ -249,6 +249,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         @media (max-width: 767px) {
             .desktop-only { display: none; }
             .mobile-only { display: block; }
+            .control-grid { display: none !important; }
         }
 
         /* Mobile Carousel Styles */
@@ -510,11 +511,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)">‹</button>
                     <button class="carousel-btn carousel-next" onclick="moveCarousel(1)">›</button>
                 </div>
-                <div class="carousel-indicators">
-                    {{#solutions}}
-                    <button class="carousel-dot" onclick="goToSlide({{@index}})"></button>
-                    {{/solutions}}
-                </div>
+                        <div class="carousel-indicators">
+                            {{#solutions}}
+                            <button class="carousel-dot" onclick="goToSlide({{slideIndex}})"></button>
+                            {{/solutions}}
+                        </div>
             </div>
         </div>
     </section>
@@ -897,6 +898,7 @@ export const generateHTML = (data: any): string => {
         index: index + 1,
         size,
         sizeType,
+        slideIndex: index,
         isFirst3: index < 3,
         isLast2: index >= 3
       };
