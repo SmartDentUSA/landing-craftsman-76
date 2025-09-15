@@ -212,6 +212,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             aspect-ratio: 1/1;
         }
         
+        @media (min-width: 768px) {
+            .control-item,
+            .image-container,
+            .image-container-large,
+            .image-container-medium,
+            .image-container-small {
+                height: 100%;
+                aspect-ratio: auto;
+            }
+            
+            .control-item .control-item-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        }
+        
         @media (max-width: 767px) {
             .image-container-large,
             .image-container-medium,
@@ -484,7 +501,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#solutions}}
                 <div class="control-item {{size}}">
                     <div class="image-container image-container-{{sizeType}}">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#image.scale}}style="transform: scale({{image.scale}})"{{/image.scale}}>
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
                         </div>
@@ -500,7 +517,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         {{#solutions}}
                         <div class="carousel-slide">
                             <div class="image-container">
-                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{image.scale}})">
+                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#image.scale}}style="transform: scale({{image.scale}})"{{/image.scale}}>
                                 <div class="control-item-text-overlay">
                                     <p>{{text}}</p>
                                 </div>
