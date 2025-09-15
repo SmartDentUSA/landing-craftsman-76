@@ -664,6 +664,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         @media (min-width: 768px) {
             .footer-grid { grid-template-columns: repeat(3, 1fr); }
         }
+        @media (max-width: 767px) {
+            .footer { font-size: 0.875rem; }
+        }
     </style>
     <script>
         // Mobile menu functionality
