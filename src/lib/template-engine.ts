@@ -231,7 +231,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .banner-content { flex-direction: row; align-items: center; }
             .banner-text { flex: 1; padding-right: 2rem; }
             .banner-images { flex: 1; grid-template-columns: repeat(3, 1fr); }
-            .control-grid { grid-template-columns: repeat(2, 1fr); }
             .image-container { width: 100%; }
         }
 

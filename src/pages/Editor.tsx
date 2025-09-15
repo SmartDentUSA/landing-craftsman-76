@@ -494,7 +494,10 @@ const Editor = () => {
           if (index === 0) {
             size = "control-item-large";
             sizeType = "large";
-          } else if (index >= 3) {
+          } else if (index < 6) {
+            size = "control-item-medium";
+            sizeType = "medium";
+          } else {
             size = "control-item-small";
             sizeType = "small";
           }
@@ -544,7 +547,10 @@ const Editor = () => {
         if (index === 0) {
           size = "control-item-large";
           sizeType = "large";
-        } else if (index >= 3) {
+        } else if (index < 6) {
+          size = "control-item-medium";
+          sizeType = "medium";
+        } else {
           size = "control-item-small";
           sizeType = "small";
         }
