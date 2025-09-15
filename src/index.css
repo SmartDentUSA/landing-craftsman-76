@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* Poppins font is loaded from index.html */
 
 /* Landing Page Generator Design System - Modern Brazilian Aesthetic */
 
@@ -126,9 +126,7 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
-    font-variation-settings: 'opsz' 32;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
   }
 }
 
