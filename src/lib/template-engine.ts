@@ -515,35 +515,37 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             border-collapse: collapse;
             margin-top: 2rem;
             background: var(--white);
-            border-radius: 8px;
+            border-radius: .75rem;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+            box-shadow: none;
         }
 
         .desktop-table thead th {
-            background: #2563eb;
-            color: white;
+            background: var(--white);
+            color: var(--text-color);
             padding: 1rem;
             text-align: left;
             font-weight: 600;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            font-size: 1rem;
+            text-transform: none;
+            letter-spacing: normal;
+            border-bottom: 1px solid #eee;
         }
 
         .desktop-table tbody td {
-            padding: 0.875rem 1rem;
-            border-bottom: 1px solid #e5e7eb;
-            color: var(--text-color);
-            font-size: 0.875rem;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            color: #555;
+            font-size: 1rem;
         }
 
         .desktop-table tbody tr:nth-child(even) {
-            background: #f9fafb;
+            background: var(--white);
         }
 
         .desktop-table tbody tr:hover {
-            background: #f3f4f6;
+            background: #f9fafb;
         }
 
         .desktop-table tbody tr:last-child td {
