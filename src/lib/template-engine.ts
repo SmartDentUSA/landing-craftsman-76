@@ -1164,10 +1164,8 @@ export const generateHTML = (data: any): string => {
     columnAssignments.forEach(({ solution, columns }, index) => {
       if (solution && solution.image && solution.image.src) {
         const scale = solution.containerScale || 1.0;
-        // Tornar containerScale mais efetivo
-        const weight = index === 0 ? 
-          1 + (scale - 1) * 1.5 : // Solução 1: escala mais agressiva
-          1 + (scale - 1) * 0.8;  // Outras soluções: escala moderada
+        // Nova fórmula: Solução 1 usa weight = scale * 2, outras usam scale * 1
+        const weight = index === 0 ? scale * 2 : scale * 1;
         
         columns.forEach(col => {
           if (col < 4) columnWeights[col] = Math.max(columnWeights[col], weight);
@@ -1197,21 +1195,34 @@ export const generateHTML = (data: any): string => {
       columnWeights[3] = 0;
     }
     
-    // Normalizar para garantir largura mínima (exceto para colunas vazias) - peso mínimo reduzido
+    // Aplicar peso mínimo apenas para colunas com conteúdo
     const minWeight = 0.2;
-    const normalizedWeights = columnWeights.map((w, index) => {
-      // Manter peso 0 para colunas vazias
-      if (w === 0) return 0;
-      return Math.max(w, minWeight);
+    const processedWeights = columnWeights.map(w => {
+      if (w === 0) return 0; // Manter colunas vazias em 0
+      return Math.max(w, minWeight); // Aplicar mínimo apenas para colunas com conteúdo
     });
     
-    // Recalcular pesos finais como frações
-    const finalTotalWeight = normalizedWeights.reduce((sum, weight) => sum + weight, 0);
-    const fractionWeights = normalizedWeights.map(weight => 
-      weight === 0 ? 0 : weight / finalTotalWeight
-    );
+    // Nova normalização baseada em soma fixa de 4.0
+    const targetSum = 4.0;
+    const currentSum = processedWeights.reduce((sum, weight) => sum + weight, 0);
     
-    return fractionWeights;
+    if (currentSum === 0) {
+      // Fallback: distribuir igualmente se tudo está vazio
+      return [1, 1, 1, 1];
+    }
+    
+    if (currentSum < targetSum) {
+      // Redistribuir espaço extra proporcionalmente entre colunas não vazias
+      const extraSpace = targetSum - currentSum;
+      const nonEmptyColumns = processedWeights.filter(w => w > 0).length;
+      const extraPerColumn = extraSpace / nonEmptyColumns;
+      
+      return processedWeights.map(w => w === 0 ? 0 : w + extraPerColumn);
+    } else {
+      // Reduzir proporcionalmente se soma excede target
+      const scaleFactor = targetSum / currentSum;
+      return processedWeights.map(w => w * scaleFactor);
+    }
   };
   
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
