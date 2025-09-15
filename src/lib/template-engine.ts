@@ -47,6 +47,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- Publication Dates -->
     {{#publish_date}}<meta name="publish_date" content="{{publish_date}}">{{/publish_date}}
     {{#lastmod}}<meta name="lastmod" content="{{lastmod}}">{{/lastmod}}
+    
+    <!-- Schema Markup JSON-LD -->
+    {{#schema_json_ld}}
+    <script type="application/ld+json">
+    {{{schema_json_ld}}}
+    </script>
+    {{/schema_json_ld}}
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1528,6 +1536,102 @@ export const generateHTML = (data: any): string => {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     processedData.canonical_url = `https://www.smartdent.com.br/${slug}`;
+  }
+
+  // Gerar Schema Markup automaticamente se habilitado
+  if (data.seo?.hreflang_auto) {
+    const schemaGraph = [];
+
+    // Schema para Software Application
+    schemaGraph.push({
+      "@type": "SoftwareApplication",
+      "name": data.schema?.software_app?.name || data.banner?.title?.split(':')[0] || "Smart Dent",
+      "applicationCategory": data.schema?.software_app?.application_category || "HealthApplication",
+      "description": data.seo_description,
+      "url": processedData.canonical_url,
+      "operatingSystem": data.schema?.software_app?.operating_system || "Web",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": data.schema?.software_app?.rating_value || "4.8",
+        "ratingCount": data.schema?.software_app?.rating_count || "150"
+      },
+      ...(data.schema?.offers?.length > 0 && {
+        "offers": data.schema.offers.map((offer: any) => ({
+          "@type": "Offer",
+          "name": offer.name,
+          "description": offer.description,
+          "price": offer.price,
+          "priceCurrency": offer.currency,
+          "availability": offer.availability === "InStock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          ...(offer.valid_through && { "validThrough": offer.valid_through })
+        }))
+      })
+    });
+
+    // Adicionar FAQ Schema se existir FAQ
+    if (data.faq && data.faq.length > 0 && data.seo?.faq_enable !== false) {
+      schemaGraph.push({
+        "@type": "FAQPage",
+        "mainEntity": data.faq.map((faq: any) => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer
+          }
+        }))
+      });
+    }
+
+    // Adicionar Organization Schema
+    if (data.brand?.legal_name) {
+      schemaGraph.push({
+        "@type": "Organization",
+        "name": data.brand.legal_name,
+        "legalName": data.brand.legal_name,
+        "url": processedData.canonical_url,
+        "logo": processImageUrl(data.logo_url),
+        "sameAs": data.brand.same_as?.map((sa: any) => sa.url) || [],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer service",
+          "availableLanguage": ["Portuguese", "English", "Spanish"]
+        }
+      });
+    }
+
+    // Adicionar Breadcrumb Schema se configurado
+    if (data.schema?.breadcrumb?.length > 0) {
+      schemaGraph.push({
+        "@type": "BreadcrumbList",
+        "itemListElement": data.schema.breadcrumb.map((crumb: any, index: number) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "name": crumb.name,
+          "item": crumb.url
+        }))
+      });
+    }
+
+    // Adicionar WebPage Schema
+    schemaGraph.push({
+      "@type": "WebPage",
+      "name": data.seo_title,
+      "description": data.seo_description,
+      "url": processedData.canonical_url,
+      "datePublished": data.seo?.publish_date,
+      "dateModified": data.seo?.lastmod,
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": data.seo?.og_site_name || "Smart Dent",
+        "url": "https://www.smartdent.com.br"
+      }
+    });
+
+    processedData.schema_json_ld = JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": schemaGraph
+    });
   }
 
   return Mustache.render(TEMPLATE_HTML, processedData);

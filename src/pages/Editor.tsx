@@ -259,9 +259,87 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   return processedData;
 };
 
-// Função onSave para herança e autocompletar
+// Função de análise de conteúdo para automação SEO
+const analyzeContent = (data: LandingPageData) => {
+  const content = `${data.banner.title} ${data.banner.subtitle} ${data.solutions_title} ${data.solutions.map(s => s.text).join(' ')} ${data.desktop_info.text} ${data.advisory.title} ${data.advisory.paragraph}`;
+  
+  // Extrair palavras-chave principais
+  const words = content.toLowerCase().match(/\b\w{4,}\b/g) || [];
+  const wordCount: Record<string, number> = {};
+  words.forEach(word => {
+    wordCount[word] = (wordCount[word] || 0) + 1;
+  });
+  
+  const keywords = Object.entries(wordCount)
+    .sort(([,a], [,b]) => (b as number) - (a as number))
+    .slice(0, 5)
+    .map(([word]) => word);
+    
+  return { keywords, content };
+};
+
+// Função de auto-geração de meta descriptions
+const generateMetaDescription = (data: LandingPageData): string => {
+  const { keywords } = analyzeContent(data);
+  const mainKeyword = keywords[0] || 'tecnologia';
+  
+  if (data.banner.subtitle.length <= 150) {
+    return data.banner.subtitle;
+  }
+  
+  const shortDesc = `${data.banner.title.split(':')[0]} - ${keywords.slice(0, 3).join(', ')} com qualidade profissional e resultados garantidos.`;
+  return shortDesc.length <= 160 ? shortDesc : shortDesc.substring(0, 157) + '...';
+};
+
+// Função de auto-geração de títulos SEO
+const generateSEOTitle = (data: LandingPageData): string => {
+  const { keywords } = analyzeContent(data);
+  const mainKeyword = keywords[0] || 'tecnologia';
+  
+  const baseTitle = data.banner.title.split(':')[0] || data.banner.title;
+  const titleWithKeyword = `${baseTitle} - ${mainKeyword.charAt(0).toUpperCase() + mainKeyword.slice(1)} Profissional`;
+  
+  return titleWithKeyword.length <= 60 ? titleWithKeyword : baseTitle;
+};
+
+// Função de auto-geração de alt-text para imagens
+const generateImageAltText = (image: ImageData, context: string): string => {
+  if (image.alt && image.alt !== '') return image.alt;
+  
+  const contextWords = context.toLowerCase().split(' ').slice(0, 3).join(' ');
+  return `Imagem ${contextWords} - Smart Dent tecnologia odontológica`;
+};
+
+// Função onSave para herança e autocompletar com automação
 const onSave = (data: LandingPageData): LandingPageData => {
   const processedData = { ...data };
+  
+  // Automação SEO se habilitada
+  if (data.seo.hreflang_auto) {
+    // Auto-gerar meta description se vazia
+    if (!processedData.seo_description || processedData.seo_description === 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.') {
+      processedData.seo_description = generateMetaDescription(data);
+    }
+    
+    // Auto-gerar SEO title se padrão
+    if (!processedData.seo_title || processedData.seo_title === 'Smart Dent - Sistema de Gestão Odontológica') {
+      processedData.seo_title = generateSEOTitle(data);
+    }
+    
+    // Auto-gerar alt-text para imagens principais
+    processedData.banner.images = processedData.banner.images.map((img, idx) => ({
+      ...img,
+      alt: generateImageAltText(img, `banner imagem ${idx + 1} ${data.banner.title}`)
+    }));
+    
+    processedData.solutions = processedData.solutions.map((solution, idx) => ({
+      ...solution,
+      image: {
+        ...solution.image,
+        alt: generateImageAltText(solution.image, `solução ${idx + 1} ${solution.text.substring(0, 30)}`)
+      }
+    }));
+  }
   
   // Herdar og_* de seo_* se vazios
   if (!processedData.seo.og_title) processedData.seo.og_title = processedData.seo_title;
@@ -2262,6 +2340,100 @@ const Editor = () => {
                             </SelectContent>
                           </Select>
                         </div>
+
+                        {/* Painel de Automação SEO */}
+                        <div className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <Label className="text-sm font-semibold text-blue-900">Automação Inteligente SEO</Label>
+                              <p className="text-xs text-blue-700 mt-1">
+                                Ative para gerar automaticamente meta descriptions, títulos e alt-text baseados no conteúdo
+                              </p>
+                            </div>
+                            <Switch
+                              checked={data.seo.hreflang_auto}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                seo: { ...prev.seo, hreflang_auto: checked }
+                              }))}
+                            />
+                          </div>
+
+                          {data.seo.hreflang_auto && (
+                            <div className="space-y-3">
+                              {/* Preview do Conteúdo Analisado */}
+                              <div className="p-3 bg-white rounded-lg border">
+                                <Label className="text-xs font-medium text-gray-700">Análise de Conteúdo:</Label>
+                                <div className="mt-2">
+                                  {(() => {
+                                    const { keywords } = analyzeContent(data);
+                                    return (
+                                      <div className="flex flex-wrap gap-1">
+                                        <span className="text-xs text-gray-600">Palavras-chave detectadas:</span>
+                                        {keywords.slice(0, 5).map((keyword, idx) => (
+                                          <Badge key={idx} variant="secondary" className="text-xs">
+                                            {keyword}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+
+                              {/* Preview do Meta Description Gerado */}
+                              <div className="p-3 bg-white rounded-lg border">
+                                <Label className="text-xs font-medium text-gray-700">Meta Description Gerada:</Label>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {generateMetaDescription(data)}
+                                  <span className="ml-2 text-xs text-blue-600">
+                                    ({generateMetaDescription(data).length}/160 caracteres)
+                                  </span>
+                                </p>
+                              </div>
+
+                              {/* Preview do SEO Title Gerado */}
+                              <div className="p-3 bg-white rounded-lg border">
+                                <Label className="text-xs font-medium text-gray-700">SEO Title Gerado:</Label>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {generateSEOTitle(data)}
+                                  <span className="ml-2 text-xs text-blue-600">
+                                    ({generateSEOTitle(data).length}/60 caracteres)
+                                  </span>
+                                </p>
+                              </div>
+
+                              {/* Score SEO */}
+                              <div className="p-3 bg-white rounded-lg border">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-xs font-medium text-gray-700">Score SEO:</Label>
+                                  <div className="flex items-center gap-2">
+                                    {(() => {
+                                      const titleScore = data.seo_title.length > 0 && data.seo_title.length <= 60 ? 25 : 0;
+                                      const descScore = data.seo_description.length > 0 && data.seo_description.length <= 160 ? 25 : 0;
+                                      const canonicalScore = data.seo.canonical_url ? 25 : 0;
+                                      const imageScore = data.seo.og_image.src ? 25 : 0;
+                                      const totalScore = titleScore + descScore + canonicalScore + imageScore;
+                                      return (
+                                        <>
+                                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                                            <div 
+                                              className={`h-2 rounded-full ${totalScore >= 75 ? 'bg-green-500' : totalScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                              style={{ width: `${totalScore}%` }}
+                                            ></div>
+                                          </div>
+                                          <span className={`text-xs font-medium ${totalScore >= 75 ? 'text-green-600' : totalScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                            {totalScore}%
+                                          </span>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </AccordionContent>
                     </AccordionItem>
 
@@ -3543,8 +3715,151 @@ const Editor = () => {
           </Tabs>
         </div>
 
+        {/* Export Professional Panel */}
+        {data.seo.hreflang_auto && (
+          <div className="w-1/2 bg-gradient-to-br from-green-50 to-blue-50 border-l">
+            <div className="p-4 border-b bg-white">
+              <h3 className="font-semibold text-green-800 mb-4">🚀 Exportação Profissional</h3>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  onClick={() => {
+                    const completeHTML = generateHTML(beforePreview(onSave(data)));
+                    navigator.clipboard.writeText(completeHTML);
+                    toast({ title: "HTML Completo Copiado!", description: "Código pronto para editor web" });
+                  }}
+                >
+                  <Code className="h-4 w-4 mr-2" />
+                  HTML Completo
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-purple-50 hover:bg-purple-100 border-purple-200"
+                  onClick={() => {
+                    const processedData = beforePreview(onSave(data));
+                    const schemaData = {
+                      "@context": "https://schema.org",
+                      "@graph": [
+                        {
+                          "@type": "SoftwareApplication",
+                          "name": processedData.schema.software_app.name,
+                          "applicationCategory": processedData.schema.software_app.application_category,
+                          "aggregateRating": {
+                            "@type": "AggregateRating",
+                            "ratingValue": processedData.schema.software_app.rating_value,
+                            "ratingCount": processedData.schema.software_app.rating_count
+                          }
+                        },
+                        ...(processedData.faq.length > 0 ? [{
+                          "@type": "FAQPage",
+                          "mainEntity": processedData.faq.map(faq => ({
+                            "@type": "Question",
+                            "name": faq.question,
+                            "acceptedAnswer": {
+                              "@type": "Answer",
+                              "text": faq.answer
+                            }
+                          }))
+                        }] : [])
+                      ]
+                    };
+                    navigator.clipboard.writeText(JSON.stringify(schemaData, null, 2));
+                    toast({ title: "Schema Markup Copiado!", description: "Dados estruturados JSON-LD prontos" });
+                  }}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Schema JSON-LD
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
+                  onClick={() => {
+                    const processedData = beforePreview(onSave(data));
+                    const metaTags = `
+<!-- SEO Meta Tags -->
+<title>${processedData.seo_title}</title>
+<meta name="description" content="${processedData.seo_description}">
+<meta name="robots" content="${processedData.seo.meta_robots}">
+<link rel="canonical" href="${processedData.seo.canonical_url}">
+
+<!-- Open Graph -->
+<meta property="og:title" content="${processedData.seo.og_title || processedData.seo_title}">
+<meta property="og:description" content="${processedData.seo.og_description || processedData.seo_description}">
+<meta property="og:type" content="${processedData.seo.og_type}">
+<meta property="og:image" content="${processedData.seo.og_image.src}">
+
+<!-- Twitter Cards -->
+<meta name="twitter:card" content="${processedData.seo.twitter_card}">
+<meta name="twitter:title" content="${processedData.seo.twitter_title || processedData.seo_title}">
+<meta name="twitter:description" content="${processedData.seo.twitter_description || processedData.seo_description}">
+<meta name="twitter:image" content="${processedData.seo.twitter_image.src || processedData.seo.og_image.src}">`;
+                    navigator.clipboard.writeText(metaTags);
+                    toast({ title: "Meta Tags Copiadas!", description: "Código para <head> do seu site" });
+                  }}
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  Meta Tags
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-red-50 hover:bg-red-100 border-red-200"
+                  onClick={() => {
+                    const processedData = beforePreview(onSave(data));
+                    const gtmCode = `
+<!-- Google Tag Manager - Data Layer -->
+<script>
+dataLayer = [{
+  'page_title': '${processedData.seo_title}',
+  'page_type': 'landing_page',
+  'content_group1': '${processedData.template}',
+  'custom_map': {
+    'dimension1': '${processedData.name}',
+    'dimension2': '${processedData.status}'
+  }
+}];
+</script>`;
+                    navigator.clipboard.writeText(gtmCode);
+                    toast({ title: "GTM Code Copiado!", description: "Código para Google Tag Manager" });
+                  }}
+                >
+                  📊 GTM Code
+                </Button>
+              </div>
+              
+              {/* SEO Score Resumo */}
+              <div className="mt-4 p-3 bg-white rounded-lg border">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Otimização SEO:</span>
+                  {(() => {
+                    const titleScore = data.seo_title.length > 0 && data.seo_title.length <= 60 ? 25 : 0;
+                    const descScore = data.seo_description.length > 0 && data.seo_description.length <= 160 ? 25 : 0;
+                    const canonicalScore = data.seo.canonical_url ? 25 : 0;
+                    const imageScore = data.seo.og_image.src ? 25 : 0;
+                    const totalScore = titleScore + descScore + canonicalScore + imageScore;
+                    return (
+                      <span className={`font-bold ${totalScore >= 75 ? 'text-green-600' : totalScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {totalScore}% 
+                        {totalScore >= 75 ? ' ✅ Excelente' : totalScore >= 50 ? ' ⚠️ Bom' : ' ❌ Precisa melhorar'}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Preview Panel */}
-        <div className="w-1/2 bg-gray-100 flex flex-col">
+        <div className={`${data.seo.hreflang_auto ? 'w-1/2' : 'w-1/2'} bg-gray-100 flex flex-col`}>
           <div className="p-4 bg-white border-b">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Preview em Tempo Real</h2>
