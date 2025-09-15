@@ -88,6 +88,7 @@ interface ImageData {
   cf_id?: string;
   variant?: string;
   url?: string;
+  href?: string; // URL de direcionamento opcional
 }
 
 const resolveImage = (img: ImageData, accountHash?: string): string => {
@@ -697,6 +698,15 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             max-width: 200px;
             border-radius: 8px;
             object-fit: cover;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .banner-images a {
+            display: block;
+            cursor: pointer;
+        }
+        .banner-images a:hover img {
+            transform: scale(1.02);
+            opacity: 0.9;
         }
 
         @media (min-width: 768px) {
@@ -1014,7 +1024,14 @@ const OPTIMIZED_SELFLUX_TEMPLATE = `
             </div>
             <div class="banner-images">
                 {{#banner.images}}
-                <img src="{{image.src}}" alt="{{image.alt}}">
+                {{#image.href}}
+                <a href="{{image.href}}" target="_blank" rel="noopener noreferrer">
+                    <img src="{{image.src}}" alt="{{image.alt}}" style="transform: scale({{image.scale}})">
+                </a>
+                {{/image.href}}
+                {{^image.href}}
+                <img src="{{image.src}}" alt="{{image.alt}}" style="transform: scale({{image.scale}})">
+                {{/image.href}}
                 {{/banner.images}}
             </div>
         </div>

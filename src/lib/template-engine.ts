@@ -72,7 +72,16 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             width: 100%; 
             aspect-ratio: 2/3; 
             object-fit: cover; 
-            border-radius: 8px; 
+            border-radius: 8px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .banner-images a {
+            display: block;
+            cursor: pointer;
+        }
+        .banner-images a:hover img {
+            transform: scale(1.02);
+            opacity: 0.9;
         }
 
         /* Seção soluções / controle */
@@ -348,7 +357,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
             <div class="banner-images">
                 {{#banner.images}}
-                <img src="{{src}}" alt="{{alt}}">
+                {{#href}}
+                <a href="{{href}}" target="_blank" rel="noopener noreferrer">
+                    <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})">
+                </a>
+                {{/href}}
+                {{^href}}
+                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})">
+                {{/href}}
                 {{/banner.images}}
             </div>
         </div>

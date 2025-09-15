@@ -16,6 +16,7 @@ interface ImageData {
   variant?: 'w-480' | 'w-768' | 'w-1200';
   alt: string;
   scale: number;
+  href?: string; // URL de direcionamento opcional
 }
 
 interface ImageUploaderProps {
@@ -307,6 +308,19 @@ export const ImageUploader = ({
               onChange={(e) => updateImageData({ scale: parseFloat(e.target.value) })}
               className="w-full"
             />
+          </div>
+          
+          <div>
+            <Label className="text-sm font-medium">URL de Direcionamento (opcional)</Label>
+            <Input
+              placeholder="https://exemplo.com (deixe em branco se não quiser link)"
+              value={normalizedValue.href || ''}
+              onChange={(e) => updateImageData({ href: e.target.value })}
+              type="url"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Quando preenchido, a imagem se tornará clicável e redirecionará para esta URL
+            </p>
           </div>
           
           {/* Preview e URL final */}
