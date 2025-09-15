@@ -1130,18 +1130,18 @@ export const generateHTML = (data: any): string => {
   const calculateColumnWidths = (solutions: any[]) => {
     const columnWeights = [1, 1, 1, 1]; // Default: colunas iguais
     
-    // Mapear solutions para suas colunas (considerando o layout assimétrico)
+    // Verificar se a coluna 3 está completamente vazia (solutions[2] e solutions[4] são ambos vazios)
+    const isColumn3Empty = (!solutions[2] || !solutions[2].image?.src) && 
+                          (!solutions[4] || !solutions[4].image?.src);
+    
+    // Mapear solutions para suas colunas (corrigido para corresponder ao grid-template-areas)
     const columnAssignments = [
       { solution: solutions[0], columns: [0, 1] }, // large ocupa colunas 0 e 1
       { solution: solutions[1], columns: [2] },     // med1 em coluna 2
       { solution: solutions[2], columns: [3] },     // small1 em coluna 3
-      { solution: solutions[3], columns: [2] },     // med2 em coluna 2
+      { solution: solutions[3], columns: [2] },     // med2 em coluna 2  
       { solution: solutions[4], columns: [3] }      // small2 em coluna 3
     ];
-    
-    // Verificar se colunas 3 e 4 estão completamente vazias
-    const isColumn3Empty = !solutions[2] || !solutions[2].image?.src;
-    const isColumn4Empty = !solutions[4] || !solutions[4].image?.src;
     
     // Calcular pesos baseado na presença e escala das imagens
     columnAssignments.forEach(({ solution, columns }) => {
@@ -1160,10 +1160,13 @@ export const generateHTML = (data: any): string => {
       }
     });
     
-    // Se colunas 3 ou 4 estão completamente vazias, definir peso 0 para sumí-las
+    // Se a coluna 3 está completamente vazia, definir peso 0 para colapsar
     if (isColumn3Empty) {
       columnWeights[3] = 0;
     }
+    
+    // Calcular total de peso excluindo colunas com peso 0
+    const totalWeight = columnWeights.reduce((sum, weight) => sum + (weight > 0 ? weight : 0), 0);
     
     // Normalizar para garantir largura mínima (exceto para colunas vazias)
     const minWeight = 0.5;
@@ -1173,7 +1176,13 @@ export const generateHTML = (data: any): string => {
       return Math.max(w, minWeight);
     });
     
-    return normalizedWeights;
+    // Recalcular pesos finais como frações
+    const finalTotalWeight = normalizedWeights.reduce((sum, weight) => sum + weight, 0);
+    const fractionWeights = normalizedWeights.map(weight => 
+      weight === 0 ? 0 : weight / finalTotalWeight
+    );
+    
+    return fractionWeights;
   };
   
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
