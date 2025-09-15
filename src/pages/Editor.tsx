@@ -620,31 +620,39 @@ const Editor = () => {
       if (landingPage) {
         // Se há dados estruturados, usar direto mas garantir campos obrigatórios
         if (landingPage.data && typeof landingPage.data === 'object') {
-          const loadedData = { ...landingPage.data, template: landingPage.template };
+          const loadedData = { ...landingPage.data, template: landingPage.template } as LandingPageData;
+          
+          // Garantir que todos os campos obrigatórios existam (defaults seguros)
+          if (!loadedData.desktop_info) {
+            loadedData.desktop_info = { title: '', text: '', visible: false };
+          }
           
           // Garantir que todos os campos ImageData existem
-          if (!loadedData.logo_url || typeof loadedData.logo_url === 'string') {
-            loadedData.logo_url = createImageData(typeof loadedData.logo_url === 'string' ? loadedData.logo_url : '', loadedData.logo_alt || '');
+          if (!loadedData.logo_url || typeof (loadedData.logo_url as any) === 'string') {
+            loadedData.logo_url = createImageData(typeof (loadedData.logo_url as any) === 'string' ? (loadedData.logo_url as any) : '', loadedData.logo_alt || '');
           }
           if (!loadedData.seo?.og_image) {
-            loadedData.seo = { ...loadedData.seo, og_image: createImageData() };
+            loadedData.seo = { ...loadedData.seo, og_image: createImageData() } as any;
           }
           if (!loadedData.seo?.twitter_image) {
-            loadedData.seo = { ...loadedData.seo, twitter_image: createImageData() };
+            loadedData.seo = { ...loadedData.seo, twitter_image: createImageData() } as any;
           }
           if (!loadedData.email?.logo_src) {
-            loadedData.email = { ...loadedData.email, logo_src: createImageData() };
+            loadedData.email = { ...loadedData.email, logo_src: createImageData() } as any;
           }
           if (!loadedData.email?.imagem_src) {
-            loadedData.email = { ...loadedData.email, imagem_src: createImageData() };
+            loadedData.email = { ...loadedData.email, imagem_src: createImageData() } as any;
           }
           
           setData(loadedData);
         } else {
           // Migrar dados antigos para novo formato se necessário
-          const migratedData = { ...landingPage.data || {} };
+          const migratedData: any = { ...landingPage.data || {} };
           if (typeof migratedData.logo_url === 'string') {
             migratedData.logo_url = createImageData(migratedData.logo_url, migratedData.logo_alt || '');
+          }
+          if (!migratedData.desktop_info) {
+            migratedData.desktop_info = { title: '', text: '', visible: false };
           }
           setData({
             ...data,
@@ -1409,24 +1417,24 @@ const Editor = () => {
                   <AccordionContent className="space-y-4">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={data.desktop_info.visible}
+                        checked={data.desktop_info?.visible ?? false}
                         onCheckedChange={(checked) => setData(prev => ({
                           ...prev,
-                          desktop_info: { ...prev.desktop_info, visible: checked }
+                          desktop_info: { ...(prev.desktop_info || { title: '', text: '', visible: false }), visible: checked }
                         }))}
                       />
                       <Label className="font-medium">Mostrar seção apenas no desktop</Label>
                     </div>
                     
-                    {data.desktop_info.visible && (
+                    {(data.desktop_info?.visible ?? false) && (
                       <>
                         <div>
                           <Label>Título</Label>
                           <Input
-                            value={data.desktop_info.title}
+                            value={data.desktop_info?.title ?? ''}
                             onChange={(e) => setData(prev => ({
                               ...prev,
-                              desktop_info: { ...prev.desktop_info, title: e.target.value }
+                              desktop_info: { ...(prev.desktop_info || { title: '', text: '', visible: false }), title: e.target.value }
                             }))}
                             placeholder="Título da seção desktop"
                           />
@@ -1435,10 +1443,10 @@ const Editor = () => {
                         <div>
                           <Label>Texto</Label>
                           <Textarea
-                            value={data.desktop_info.text}
+                            value={data.desktop_info?.text ?? ''}
                             onChange={(e) => setData(prev => ({
                               ...prev,
-                              desktop_info: { ...prev.desktop_info, text: e.target.value }
+                              desktop_info: { ...(prev.desktop_info || { title: '', text: '', visible: false }), text: e.target.value }
                             }))}
                             placeholder="Texto descritivo para preencher a página"
                             rows={4}
