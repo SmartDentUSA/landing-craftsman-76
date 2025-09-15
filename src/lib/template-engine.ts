@@ -479,7 +479,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <h2>{{solutions_title}}</h2>
             
             <!-- Desktop Grid -->
-            <div class="control-grid desktop-only">
+            <div class="control-grid">
                 {{#solutions}}
                 <div class="control-item {{size}}">
                     <div class="image-container image-container-{{sizeType}}">
