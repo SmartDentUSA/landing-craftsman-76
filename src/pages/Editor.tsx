@@ -486,14 +486,30 @@ const Editor = () => {
             }
           }))
         },
-        solutions: processedData.solutions.map(s => ({
-          ...s,
-          image: {
-            src: s.image.src,
-            alt: s.image.alt,
-            scale: s.image.scale
+        solutions: processedData.solutions.map((s, index) => {
+          // Auto-generate size and sizeType based on index for asymmetric grid layout
+          let size = "control-item-medium";
+          let sizeType = "medium";
+          
+          if (index === 0) {
+            size = "control-item-large";
+            sizeType = "large";
+          } else if (index >= 3) {
+            size = "control-item-small";
+            sizeType = "small";
           }
-        })),
+          
+          return {
+            ...s,
+            image: {
+              src: s.image.src,
+              alt: s.image.alt,
+              scale: s.image.scale
+            },
+            size,
+            sizeType
+          };
+        }),
         advisory: {
           ...processedData.advisory,
           image: {
@@ -520,14 +536,30 @@ const Editor = () => {
           href: img.href
         }))
       },
-      solutions: processedData.solutions.map(s => ({
-        ...s,
-        image: {
-          src: s.image.src,
-          alt: s.image.alt,
-          scale: s.image.scale
+      solutions: processedData.solutions.map((s, index) => {
+        // Auto-generate size and sizeType based on index for asymmetric grid layout
+        let size = "control-item-medium";
+        let sizeType = "medium";
+        
+        if (index === 0) {
+          size = "control-item-large";
+          sizeType = "large";
+        } else if (index >= 3) {
+          size = "control-item-small";
+          sizeType = "small";
         }
-      })),
+        
+        return {
+          ...s,
+          image: {
+            src: s.image.src,
+            alt: s.image.alt,
+            scale: s.image.scale
+          },
+          size,
+          sizeType
+        };
+      }),
       advisory: {
         ...processedData.advisory,
         image: {
