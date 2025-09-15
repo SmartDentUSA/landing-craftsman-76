@@ -1130,9 +1130,30 @@ export const generateHTML = (data: any): string => {
   const calculateColumnWidths = (solutions: any[]) => {
     const columnWeights = [1, 1, 1, 1]; // Default: colunas iguais
     
+    // Verificar se apenas a solução 1 tem conteúdo
+    const onlySolution1 = solutions[0]?.image?.src && 
+                         (!solutions[1]?.image?.src) && 
+                         (!solutions[2]?.image?.src) && 
+                         (!solutions[3]?.image?.src) && 
+                         (!solutions[4]?.image?.src);
+    
     // Verificar se a coluna 3 está completamente vazia (solutions[2] e solutions[4] são ambos vazios)
     const isColumn3Empty = (!solutions[2] || !solutions[2].image?.src) && 
                           (!solutions[4] || !solutions[4].image?.src);
+    
+    // Verificar se a coluna 2 está completamente vazia (solutions[1] e solutions[3] são ambos vazios)
+    const isColumn2Empty = (!solutions[1] || !solutions[1].image?.src) && 
+                          (!solutions[3] || !solutions[3].image?.src);
+    
+    // Verificar se solutions 1, 2 e 3 têm imagem (scenario específico para reduzir large)
+    const has123Images = solutions[0]?.image?.src && 
+                        solutions[1]?.image?.src && 
+                        solutions[2]?.image?.src;
+    
+    // Se apenas solução 1 tem conteúdo, ela ocupa toda a largura
+    if (onlySolution1) {
+      return [1, 0, 0, 0];
+    }
     
     // Mapear solutions para suas colunas (corrigido para corresponder ao grid-template-areas)
     const columnAssignments = [
@@ -1144,32 +1165,42 @@ export const generateHTML = (data: any): string => {
     ];
     
     // Calcular pesos baseado na presença e escala das imagens
-    columnAssignments.forEach(({ solution, columns }) => {
+    columnAssignments.forEach(({ solution, columns }, index) => {
       if (solution && solution.image && solution.image.src) {
         const scale = solution.containerScale || 1.0;
-        const weight = 1 + (scale - 1) * 0.5; // Escala influencia peso moderadamente
+        // Tornar containerScale mais efetivo
+        const weight = index === 0 ? 
+          1 + (scale - 1) * 1.5 : // Solução 1: escala mais agressiva
+          1 + (scale - 1) * 0.8;  // Outras soluções: escala moderada
         
         columns.forEach(col => {
           if (col < 4) columnWeights[col] = Math.max(columnWeights[col], weight);
         });
       } else {
-        // Sem imagem, coluna pode ser menor
+        // Sem imagem, coluna pode ser muito menor
         columns.forEach(col => {
-          if (col < 4) columnWeights[col] = 0.3;
+          if (col < 4) columnWeights[col] = 0.1;
         });
       }
     });
+    
+    // Reduzir drasticamente segunda metade de 'large' quando 1,2,3 têm imagens
+    if (has123Images && solutions[0]?.containerScale < 1.0) {
+      columnWeights[1] = Math.max(0.1, columnWeights[1] * 0.3); // Reduzir segunda coluna de large
+    }
+    
+    // Se a coluna 2 está completamente vazia, definir peso 0 para colapsar
+    if (isColumn2Empty) {
+      columnWeights[2] = 0;
+    }
     
     // Se a coluna 3 está completamente vazia, definir peso 0 para colapsar
     if (isColumn3Empty) {
       columnWeights[3] = 0;
     }
     
-    // Calcular total de peso excluindo colunas com peso 0
-    const totalWeight = columnWeights.reduce((sum, weight) => sum + (weight > 0 ? weight : 0), 0);
-    
-    // Normalizar para garantir largura mínima (exceto para colunas vazias)
-    const minWeight = 0.5;
+    // Normalizar para garantir largura mínima (exceto para colunas vazias) - peso mínimo reduzido
+    const minWeight = 0.2;
     const normalizedWeights = columnWeights.map((w, index) => {
       // Manter peso 0 para colunas vazias
       if (w === 0) return 0;
