@@ -193,6 +193,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
         /* Seção soluções / controle */
         .control-section { padding: 2.5rem 0 0.5rem 0; }
+        
+        @media (min-width: 768px) {
+          .control-section {
+            padding-bottom: 0rem;
+          }
+        }
         .control-section h2 { text-align: center; margin-bottom: 1.5rem; }
         .control-grid { 
             display: grid; 
@@ -496,6 +502,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             padding: 2.5rem 0;
             background: var(--background-color);
             text-align: center;
+        }
+        
+        @media (min-width: 768px) {
+          .desktop-info {
+            padding-top: 1.5rem;
+          }
         }
 
         .desktop-info-content h2 {
