@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
-import { CSVReviewUploader } from "@/components/CSVReviewUploader";
+const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
@@ -3236,16 +3236,18 @@ const Editor = () => {
                                  </div>
 
                                  {/* Manual Reviews Upload */}
-                                 <CSVReviewUploader
-                                   reviews={data.schema.manual_reviews || []}
-                                   onReviewsUpdate={(reviews) => setData(prev => ({
-                                     ...prev,
-                                     schema: {
-                                       ...prev.schema,
-                                       manual_reviews: reviews
-                                     }
-                                   }))}
-                                 />
+                                 <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando reviews…</div>}>
+                                   <CSVReviewUploader
+                                     reviews={data.schema.manual_reviews || []}
+                                     onReviewsUpdate={(reviews) => setData(prev => ({
+                                       ...prev,
+                                       schema: {
+                                         ...prev.schema,
+                                         manual_reviews: reviews
+                                       }
+                                     }))}
+                                   />
+                                 </Suspense>
 
                                  {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
                                   <div className="text-sm text-green-600 font-medium">
