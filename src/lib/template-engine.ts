@@ -1564,7 +1564,8 @@ export const generateHTML = (data: any): string => {
   };
 
   // Adicionar URLs de imagens processadas para og e twitter
-  processedData.og_image_url = processImageUrl(data.seo?.og_image);
+  // 🔧 CORREÇÃO: Preservar URL original da Solução 1 para Open Graph
+  processedData.og_image_url = data.seo?.og_image?.src || '';
   processedData.twitter_image_url = processImageUrl(data.seo?.twitter_image);
 
   // Garantir canonical_url se não estiver definido
