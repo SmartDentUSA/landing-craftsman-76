@@ -87,6 +87,15 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
       // Replace existing reviews with new ones
       onReviewsUpdate(newReviews);
       
+      // Save to database
+      try {
+        const useLandingPages = (await import('@/hooks/useLandingPages')).default;
+        const landingPageId = window.location.pathname.split('/').pop() || 'default';
+        await useLandingPages.getState().saveManualReviews(landingPageId, newReviews);
+      } catch (error) {
+        console.error('Error saving to database:', error);
+      }
+      
       toast({
         title: "✅ Reviews importadas!",
         description: `${newReviews.length} avaliações carregadas com sucesso`
@@ -153,6 +162,14 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Formato: Nome;Nota;Comentário (ex: João Silva;5/5;Excelente serviço)
+              <br />
+              <a 
+                href="/template-reviews.csv" 
+                download 
+                className="text-blue-600 hover:underline"
+              >
+                📄 Baixar modelo CSV
+              </a>
             </p>
           </div>
 

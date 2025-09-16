@@ -97,6 +97,39 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_reviews: {
+        Row: {
+          approved: boolean
+          author_name: string
+          created_at: string
+          id: string
+          landing_page_id: string
+          rating: number
+          review_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean
+          author_name: string
+          created_at?: string
+          id?: string
+          landing_page_id: string
+          rating: number
+          review_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean
+          author_name?: string
+          created_at?: string
+          id?: string
+          landing_page_id?: string
+          rating?: number
+          review_text?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       raw_reviews: {
         Row: {
           author_name: string

@@ -23,12 +23,18 @@ interface ApprovedReview {
   id: string;
   display_order: number;
   notes: string;
-  raw_reviews: {
+  raw_reviews?: {
     author_name: string;
     rating: number;
     review_text: string;
     review_date: string;
   };
+  // For manual reviews
+  author_name?: string;
+  rating?: number;
+  review_text?: string;
+  review_date?: string;
+  source?: 'manual' | 'google';
 }
 
 interface ReviewModerationModalProps {
@@ -108,17 +114,41 @@ export const ReviewModerationModal: React.FC<ReviewModerationModalProps> = ({
 
   const loadApprovedReviews = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('moderate-reviews', {
-        body: { action: 'get_approved', landing_page_id: landingPageId }
-      });
+      setLoading(true);
+      
+      // Load both approved Google reviews and manual reviews
+      const [googleReviews, manualReviews] = await Promise.all([
+        supabase.functions.invoke('moderate-reviews', {
+          body: { action: 'get_approved', landing_page_id: landingPageId }
+        }),
+        supabase.from('manual_reviews')
+          .select('*')
+          .eq('landing_page_id', landingPageId)
+          .eq('approved', true)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) throw error;
+      let allApprovedReviews = [];
 
-      if (data.success) {
-        setApprovedReviews(data.data || []);
-      } else {
-        throw new Error(data.error);
+      // Add Google reviews
+      if (googleReviews.data?.success) {
+        allApprovedReviews = [...(googleReviews.data.data || [])];
       }
+
+      // Add manual reviews with consistent format
+      if (manualReviews.data) {
+        const formattedManualReviews = manualReviews.data.map(review => ({
+          id: review.id,
+          author_name: review.author_name,
+          rating: review.rating,
+          review_text: review.review_text,
+          review_date: new Date(review.created_at).toLocaleDateString(),
+          source: 'manual'
+        }));
+        allApprovedReviews = [...allApprovedReviews, ...formattedManualReviews];
+      }
+
+      setApprovedReviews(allApprovedReviews);
     } catch (error) {
       console.error('Error loading approved reviews:', error);
       toast({
@@ -126,22 +156,73 @@ export const ReviewModerationModal: React.FC<ReviewModerationModalProps> = ({
         description: "Falha ao carregar reviews aprovadas",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const generateSchema = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('moderate-reviews', {
-        body: { action: 'generate_schema', landing_page_id: landingPageId }
-      });
+      setLoading(true);
+      
+      // Generate schema including both Google and manual reviews
+      const [googleSchema, manualReviews] = await Promise.all([
+        supabase.functions.invoke('moderate-reviews', {
+          body: { action: 'generate_schema', landing_page_id: landingPageId }
+        }),
+        supabase.from('manual_reviews')
+          .select('*')
+          .eq('landing_page_id', landingPageId)
+          .eq('approved', true)
+      ]);
 
-      if (error) throw error;
+      let combinedSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "5",
+          "reviewCount": "0"
+        },
+        "review": []
+      };
 
-      if (data.success) {
-        setSchema(data);
-      } else {
-        throw new Error(data.error);
+      // Start with Google reviews if available
+      if (googleSchema.data?.success) {
+        combinedSchema = googleSchema.data.data;
       }
+
+      // Add manual reviews
+      if (manualReviews.data && manualReviews.data.length > 0) {
+        const manualReviewsSchema = manualReviews.data.map(review => ({
+          "@type": "Review",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": review.rating,
+            "bestRating": 5
+          },
+          "author": {
+            "@type": "Person",
+            "name": review.author_name
+          },
+          "reviewBody": review.review_text,
+          "datePublished": review.created_at.split('T')[0]
+        }));
+
+        combinedSchema.review = [...(combinedSchema.review || []), ...manualReviewsSchema];
+        
+        // Recalculate aggregate rating
+        const totalReviews = combinedSchema.review.length;
+        const totalRating = combinedSchema.review.reduce((sum: number, review: any) => 
+          sum + review.reviewRating.ratingValue, 0);
+        
+        if (totalReviews > 0) {
+          combinedSchema.aggregateRating.ratingValue = (totalRating / totalReviews).toFixed(1);
+          combinedSchema.aggregateRating.reviewCount = totalReviews.toString();
+        }
+      }
+
+      setSchema(JSON.stringify(combinedSchema, null, 2));
     } catch (error) {
       console.error('Error generating schema:', error);
       toast({
@@ -149,6 +230,8 @@ export const ReviewModerationModal: React.FC<ReviewModerationModalProps> = ({
         description: "Falha ao gerar schema",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -333,21 +416,35 @@ export const ReviewModerationModal: React.FC<ReviewModerationModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Badge variant="default">#{index + 1}</Badge>
-                        <span className="font-medium">{approved.raw_reviews.author_name}</span>
-                        <div className="flex">{renderStars(approved.raw_reviews.rating)}</div>
+                        <span className="font-medium">
+                          {approved.source === 'manual' ? approved.author_name : approved.raw_reviews?.author_name}
+                        </span>
+                        <div className="flex">
+                          {renderStars(approved.source === 'manual' ? approved.rating : approved.raw_reviews?.rating)}
+                        </div>
+                        {approved.source === 'manual' && (
+                          <Badge variant="secondary" className="text-xs">Manual</Badge>
+                        )}
                       </div>
                       <Badge variant="outline" className="bg-green-50 text-green-700">
                         Aprovada
                       </Badge>
                     </div>
-                    {approved.raw_reviews.review_text && (
-                      <p className="text-sm text-muted-foreground">{approved.raw_reviews.review_text}</p>
-                    )}
-                    {approved.notes && (
-                      <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                        Nota: {approved.notes}
-                      </p>
-                    )}
+                    <div className="space-y-2">
+                      {(approved.source === 'manual' ? approved.review_text : approved.raw_reviews?.review_text) && (
+                        <p className="text-sm text-muted-foreground">
+                          {approved.source === 'manual' ? approved.review_text : approved.raw_reviews?.review_text}
+                        </p>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        Data: {approved.source === 'manual' ? approved.review_date : approved.raw_reviews?.review_date}
+                      </div>
+                      {approved.notes && (
+                        <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                          Nota: {approved.notes}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
