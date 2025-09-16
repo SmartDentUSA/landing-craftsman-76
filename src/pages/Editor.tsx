@@ -765,6 +765,29 @@ const Editor = () => {
           if (!loadedData.email?.imagem_src) {
             loadedData.email = { ...loadedData.email, imagem_src: createImageData() } as any;
           }
+          // Garantir bloco google_reviews para compatibilidade retroativa
+          if (!loadedData.schema) {
+            loadedData.schema = {
+              software_app: {
+                name: 'Smart Dent',
+                category: 'HealthApplication',
+                rating_value: '4.8',
+                rating_count: '150',
+                price: '0',
+                price_currency: 'BRL',
+                operating_system: 'Web',
+                application_category: 'HealthApplication'
+              },
+              offers: [],
+              breadcrumb: [],
+              google_reviews: { url: '', auto_extract: false, last_extracted: '', status: 'idle' }
+            } as any;
+          } else if (!(loadedData as any).schema.google_reviews) {
+            loadedData.schema = {
+              ...(loadedData.schema as any),
+              google_reviews: { url: '', auto_extract: false, last_extracted: '', status: 'idle' }
+            } as any;
+          }
           
           setData(loadedData);
         } else {
@@ -788,6 +811,26 @@ const Editor = () => {
                 { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
               ]
             };
+          }
+          // Garantir bloco schema/google_reviews ao migrar
+          if (!migratedData.schema) {
+            migratedData.schema = {
+              software_app: {
+                name: 'Smart Dent',
+                category: 'HealthApplication',
+                rating_value: '4.8',
+                rating_count: '150',
+                price: '0',
+                price_currency: 'BRL',
+                operating_system: 'Web',
+                application_category: 'HealthApplication'
+              },
+              offers: [],
+              breadcrumb: [],
+              google_reviews: { url: '', auto_extract: false, last_extracted: '', status: 'idle' }
+            } as any;
+          } else if (!migratedData.schema.google_reviews) {
+            migratedData.schema.google_reviews = { url: '', auto_extract: false, last_extracted: '', status: 'idle' };
           }
           setData({
             ...data,
