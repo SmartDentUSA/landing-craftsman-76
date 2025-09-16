@@ -53,16 +53,46 @@ export const ReviewModerationModal: React.FC<ReviewModerationModalProps> = ({
   const loadPendingReviews = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('moderate-reviews', {
-        body: { action: 'get_pending', place_id: placeId }
-      });
+      
+      // Try with the provided placeId first, then with generated placeId as fallback
+      let reviewsData = null;
+      let error = null;
+      
+      try {
+        const { data, error: err } = await supabase.functions.invoke('moderate-reviews', {
+          body: { action: 'get_pending', place_id: placeId }
+        });
+        if (err) throw err;
+        reviewsData = data;
+      } catch (firstError: any) {
+        // If no reviews found with provided placeId and it doesn't start with "generated_", 
+        // try with generated placeId as fallback for backward compatibility
+        if (!placeId.startsWith('generated_')) {
+          try {
+            const generatedPlaceId = `generated_${Math.abs(placeId.split('').reduce((a, b) => {
+              a = ((a << 5) - a) + b.charCodeAt(0);
+              return a & a;
+            }, 0))}`;
+            
+            const { data, error: err } = await supabase.functions.invoke('moderate-reviews', {
+              body: { action: 'get_pending', place_id: generatedPlaceId }
+            });
+            if (err) throw err;
+            reviewsData = data;
+          } catch (secondError) {
+            error = firstError;
+          }
+        } else {
+          error = firstError;
+        }
+      }
 
       if (error) throw error;
 
-      if (data.success) {
-        setPendingReviews(data.data || []);
+      if (reviewsData && reviewsData.success) {
+        setPendingReviews(reviewsData.data || []);
       } else {
-        throw new Error(data.error);
+        throw new Error(reviewsData?.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Error loading pending reviews:', error);

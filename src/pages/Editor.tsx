@@ -91,6 +91,7 @@ interface SchemaData {
     last_extracted: string;
     status: 'idle' | 'loading' | 'success' | 'error';
     error_message?: string;
+    place_id?: string;
   };
   offers: Array<{
     name: string;
@@ -3111,12 +3112,13 @@ const Editor = () => {
                                   </Button>
 
                                   <ReviewModerationModal
-                                    placeId={data.schema.google_reviews?.url ? 
-                                      (data.schema.google_reviews.url.match(/cid=([^&]+)/)?.[1] || 
-                                       `generated_${Math.abs(data.schema.google_reviews.url.split('').reduce((a, b) => {
-                                         a = ((a << 5) - a) + b.charCodeAt(0);
-                                         return a & a;
-                                       }, 0))}`) : ''
+                                    placeId={data.schema.google_reviews?.place_id || 
+                                      (data.schema.google_reviews?.url ? 
+                                        (data.schema.google_reviews.url.match(/cid=([^&]+)/)?.[1] || 
+                                         `generated_${Math.abs(data.schema.google_reviews.url.split('').reduce((a, b) => {
+                                           a = ((a << 5) - a) + b.charCodeAt(0);
+                                           return a & a;
+                                         }, 0))}`) : '')
                                     }
                                     landingPageId={id || 'default'}
                                   >
@@ -3168,7 +3170,8 @@ const Editor = () => {
                                                 ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
                                                 status: 'success',
                                                 last_extracted: result.extracted_at,
-                                                auto_extract: true
+                                                auto_extract: true,
+                                                place_id: result.data?.place_id
                                               }
                                             }
                                           }));
