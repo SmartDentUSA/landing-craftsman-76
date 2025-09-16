@@ -591,13 +591,24 @@ const onSave = (data: LandingPageData): LandingPageData => {
   // 🎯 CORREÇÃO 4: Schema Markup - Garantir que hreflang_auto está habilitado
   // (A geração do schema já está implementada no template-engine.ts)
   
-  // 🎯 CORREÇÃO 5: Fallback automático para imagem OG
-  if (!processedData.seo.og_image.src && processedData.banner.images && processedData.banner.images.length > 0) {
-    processedData.seo.og_image = {
-      ...processedData.banner.images[0],
-      alt: 'Imagem OG - ' + processedData.banner.title
-    };
-    console.info('✅ Imagem OG definida automaticamente usando primeira imagem do banner');
+  // 🎯 CORREÇÃO 5: Fallback automático para imagem OG - Priorizar Soluções 1
+  if (!processedData.seo.og_image.src) {
+    // 1ª prioridade: Imagem da Soluções 1
+    if (processedData.solutions && processedData.solutions.length > 0 && processedData.solutions[0].image.src) {
+      processedData.seo.og_image = {
+        ...processedData.solutions[0].image,
+        alt: 'Imagem OG - ' + processedData.solutions[0].text.substring(0, 50)
+      };
+      console.info('✅ Imagem OG definida automaticamente usando Soluções 1');
+    }
+    // 2ª prioridade: Fallback para banner (caso não haja soluções)
+    else if (processedData.banner.images && processedData.banner.images.length > 0) {
+      processedData.seo.og_image = {
+        ...processedData.banner.images[0],
+        alt: 'Imagem OG - ' + processedData.banner.title
+      };
+      console.info('✅ Imagem OG definida automaticamente usando primeira imagem do banner (fallback)');
+    }
   }
   
   // Validações e avisos
@@ -3087,28 +3098,28 @@ const Editor = () => {
                                       
                                       {/* Botões de correção rápida */}
                                       <div className="flex flex-wrap gap-1 pt-2">
-                                        {!data.seo.og_image.src && data.banner.images.length > 0 && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-xs h-6 px-2"
-                                            onClick={() => {
-                                              setData(prev => ({
-                                                ...prev,
-                                                seo: {
-                                                  ...prev.seo,
-                                                  og_image: {
-                                                    ...data.banner.images[0],
-                                                    alt: 'Imagem OG - ' + data.banner.title
-                                                  }
-                                                }
-                                              }));
-                                              toast({ title: "✅ Imagem OG definida automaticamente" });
-                                            }}
-                                          >
-                                            📸 Usar 1ª imagem como OG
-                                          </Button>
-                                        )}
+                        {!data.seo.og_image.src && data.solutions.length > 0 && data.solutions[0].image.src && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-6 px-2"
+                            onClick={() => {
+                              setData(prev => ({
+                                ...prev,
+                                seo: {
+                                  ...prev.seo,
+                                  og_image: {
+                                    ...data.solutions[0].image,
+                                    alt: 'Imagem OG - ' + data.solutions[0].text.substring(0, 50)
+                                  }
+                                }
+                              }));
+                              toast({ title: "✅ Imagem da Soluções 1 definida como OG" });
+                            }}
+                          >
+                            📸 Usar Soluções 1 como OG
+                          </Button>
+                        )}
                                         
                                         {!data.seo.canonical_url && data.seo.domain && (
                                           <Button
