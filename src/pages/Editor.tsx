@@ -4753,7 +4753,7 @@ const Editor = () => {
                     ].map(({ key, label, description }) => (
                       <div key={key} className="flex items-start space-x-3 p-3 border rounded-lg">
                         <Switch
-                          checked={data.email.sections[key as keyof typeof data.email.sections]?.enabled || false}
+                          checked={data.email.sections?.[key as any]?.enabled ?? false}
                           onCheckedChange={(checked) => setData(prev => ({
                             ...prev,
                             email: {
@@ -5150,7 +5150,16 @@ const Editor = () => {
                           email: { 
                             ...prev.email, 
                             sections: {
-                              ...prev.email.sections,
+                              ...(prev.email.sections ?? {
+                                header: { enabled: true },
+                                content: { enabled: true },
+                                ctas: { enabled: true },
+                                highlights: { enabled: true },
+                                benefits: { enabled: true },
+                                main_image: { enabled: true },
+                                solutions: { enabled: false },
+                                footer: { enabled: true }
+                              }),
                               solutions: { enabled: checked }
                             },
                             show_solutions_in_email: checked 
