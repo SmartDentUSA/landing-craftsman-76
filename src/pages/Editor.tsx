@@ -317,22 +317,24 @@ const analyzeContent = (data: LandingPageData) => {
 };
 
 // Função de auto-geração de meta descriptions
-const generateMetaDescription = (data: LandingPageData): string => {
+const generateMetaDescription = (data: LandingPageData, customKeywords?: string[]): string => {
   const { keywords } = analyzeContent(data);
-  const mainKeyword = keywords[0] || 'tecnologia';
+  const finalKeywords = customKeywords && customKeywords.length > 0 ? customKeywords : keywords;
+  const mainKeyword = finalKeywords[0] || 'tecnologia';
   
   if (data.banner.subtitle.length <= 150) {
     return data.banner.subtitle;
   }
   
-  const shortDesc = `${data.banner.title.split(':')[0]} - ${keywords.slice(0, 3).join(', ')} com qualidade profissional e resultados garantidos.`;
+  const shortDesc = `${data.banner.title.split(':')[0]} - ${finalKeywords.slice(0, 3).join(', ')} com qualidade profissional e resultados garantidos.`;
   return shortDesc.length <= 160 ? shortDesc : shortDesc.substring(0, 157) + '...';
 };
 
 // Função de auto-geração de títulos SEO
-const generateSEOTitle = (data: LandingPageData): string => {
+const generateSEOTitle = (data: LandingPageData, customKeywords?: string[]): string => {
   const { keywords } = analyzeContent(data);
-  const mainKeyword = keywords[0] || 'tecnologia';
+  const finalKeywords = customKeywords && customKeywords.length > 0 ? customKeywords : keywords;
+  const mainKeyword = finalKeywords[0] || 'tecnologia';
   
   const baseTitle = data.banner.title.split(':')[0] || data.banner.title;
   const titleWithKeyword = `${baseTitle} - ${mainKeyword.charAt(0).toUpperCase() + mainKeyword.slice(1)} Profissional`;
@@ -493,7 +495,48 @@ const Editor = () => {
   const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   
+  // Estados para campos editáveis da Automação SEO
+  const [autoKeywords, setAutoKeywords] = useState<string[]>([]);
+  const [autoMetaDesc, setAutoMetaDesc] = useState('');
+  const [autoSeoTitle, setAutoSeoTitle] = useState('');
+  
   const [previewTab, setPreviewTab] = useState('landing-preview');
+  
+  // Função para aplicar valores automáticos aos campos principais
+  const applyAutoSEOValues = () => {
+    setData(prev => ({
+      ...prev,
+      seo_title: autoSeoTitle || generateSEOTitle(data),
+      seo_description: autoMetaDesc || generateMetaDescription(data),
+      seo: {
+        ...prev.seo,
+        seo_title: autoSeoTitle || generateSEOTitle(data),
+        seo_description: autoMetaDesc || generateMetaDescription(data)
+      }
+    }));
+    toast({
+      title: "Valores SEO aplicados",
+      description: "Os valores gerados automaticamente foram aplicados aos campos principais.",
+    });
+  };
+  
+  // Função para regenerar valores baseado nas palavras-chave editadas
+  const regenerateAutoValues = () => {
+    const { keywords } = analyzeContent(data);
+    const finalKeywords = autoKeywords.length > 0 ? autoKeywords : keywords;
+    
+    // Regenerar meta description e title usando as palavras-chave editadas
+    const newMetaDesc = generateMetaDescription(data, finalKeywords);
+    const newSeoTitle = generateSEOTitle(data, finalKeywords);
+    
+    setAutoMetaDesc(newMetaDesc);
+    setAutoSeoTitle(newSeoTitle);
+    
+    toast({
+      title: "Conteúdo regenerado",
+      description: "Meta description e título SEO foram regenerados com base nas suas palavras-chave.",
+    });
+  };
   const [data, setData] = useState<LandingPageData>({
     name: 'Smart Dent Campanha Q1',
     status: 'draft',
@@ -2660,48 +2703,170 @@ const Editor = () => {
                             />
                           </div>
 
-                          {data.seo.hreflang_auto && (
-                            <div className="space-y-3">
-                              {/* Preview do Conteúdo Analisado */}
+                           {data.seo.hreflang_auto && (
+                            <div className="space-y-4">
+                              {/* Palavras-chave editáveis */}
                               <div className="p-3 bg-white rounded-lg border">
-                                <Label className="text-xs font-medium text-gray-700">Análise de Conteúdo:</Label>
-                                <div className="mt-2">
-                                  {(() => {
-                                    const { keywords } = analyzeContent(data);
-                                    return (
-                                      <div className="flex flex-wrap gap-1">
-                                        <span className="text-xs text-gray-600">Palavras-chave detectadas:</span>
-                                        {keywords.slice(0, 5).map((keyword, idx) => (
-                                          <Badge key={idx} variant="secondary" className="text-xs">
-                                            {keyword}
-                                          </Badge>
-                                        ))}
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-xs font-medium text-gray-700">Palavras-chave:</Label>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const { keywords } = analyzeContent(data);
+                                      setAutoKeywords(keywords.slice(0, 8));
+                                    }}
+                                    className="text-xs h-6 px-2"
+                                  >
+                                    Detectar
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {autoKeywords.length > 0 ? autoKeywords.map((keyword, idx) => (
+                                      <div key={idx} className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                                        <span className="text-xs text-blue-800">{keyword}</span>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => setAutoKeywords(prev => prev.filter((_, i) => i !== idx))}
+                                          className="h-4 w-4 p-0 text-blue-600 hover:text-red-600"
+                                        >
+                                          ×
+                                        </Button>
                                       </div>
-                                    );
-                                  })()}
+                                    )) : (
+                                      <span className="text-xs text-gray-500">Clique em "Detectar" para análise automática</span>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      placeholder="Adicionar palavra-chave"
+                                      className="text-xs h-8"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          const value = (e.target as HTMLInputElement).value.trim();
+                                          if (value && !autoKeywords.includes(value)) {
+                                            setAutoKeywords(prev => [...prev, value]);
+                                            (e.target as HTMLInputElement).value = '';
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Preview do Meta Description Gerado */}
+                              {/* Meta Description editável */}
                               <div className="p-3 bg-white rounded-lg border">
-                                <Label className="text-xs font-medium text-gray-700">Meta Description Gerada:</Label>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {generateMetaDescription(data)}
-                                  <span className="ml-2 text-xs text-blue-600">
-                                    ({generateMetaDescription(data).length}/160 caracteres)
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-xs font-medium text-gray-700">Meta Description:</Label>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setAutoMetaDesc(generateMetaDescription(data, autoKeywords))}
+                                      className="text-xs h-6 px-2"
+                                    >
+                                      Regenerar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setData(prev => ({
+                                          ...prev,
+                                          seo_description: autoMetaDesc
+                                        }));
+                                        toast({
+                                          title: "Meta description aplicada",
+                                          description: "A meta description foi aplicada ao campo principal.",
+                                        });
+                                      }}
+                                      className="text-xs h-6 px-2"
+                                    >
+                                      Aplicar
+                                    </Button>
+                                  </div>
+                                </div>
+                                <Textarea
+                                  value={autoMetaDesc}
+                                  onChange={(e) => setAutoMetaDesc(e.target.value)}
+                                  placeholder="Clique em Regenerar para gerar automaticamente"
+                                  className="text-xs min-h-[60px] resize-none"
+                                  maxLength={160}
+                                />
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-xs text-gray-500">Meta description para SEO</span>
+                                  <span className={`text-xs ${autoMetaDesc.length > 160 ? 'text-red-600' : autoMetaDesc.length > 140 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                    {autoMetaDesc.length}/160 caracteres
                                   </span>
-                                </p>
+                                </div>
                               </div>
 
-                              {/* Preview do SEO Title Gerado */}
+                              {/* SEO Title editável */}
                               <div className="p-3 bg-white rounded-lg border">
-                                <Label className="text-xs font-medium text-gray-700">SEO Title Gerado:</Label>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {generateSEOTitle(data)}
-                                  <span className="ml-2 text-xs text-blue-600">
-                                    ({generateSEOTitle(data).length}/60 caracteres)
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-xs font-medium text-gray-700">SEO Title:</Label>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setAutoSeoTitle(generateSEOTitle(data, autoKeywords))}
+                                      className="text-xs h-6 px-2"
+                                    >
+                                      Regenerar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setData(prev => ({
+                                          ...prev,
+                                          seo_title: autoSeoTitle
+                                        }));
+                                        toast({
+                                          title: "SEO title aplicado",
+                                          description: "O título SEO foi aplicado ao campo principal.",
+                                        });
+                                      }}
+                                      className="text-xs h-6 px-2"
+                                    >
+                                      Aplicar
+                                    </Button>
+                                  </div>
+                                </div>
+                                <Input
+                                  value={autoSeoTitle}
+                                  onChange={(e) => setAutoSeoTitle(e.target.value)}
+                                  placeholder="Clique em Regenerar para gerar automaticamente"
+                                  className="text-xs h-8"
+                                  maxLength={60}
+                                />
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-xs text-gray-500">Título para resultados de busca</span>
+                                  <span className={`text-xs ${autoSeoTitle.length > 60 ? 'text-red-600' : autoSeoTitle.length > 50 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                    {autoSeoTitle.length}/60 caracteres
                                   </span>
-                                </p>
+                                </div>
+                              </div>
+
+                              {/* Botão para aplicar todos os valores */}
+                              <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <Label className="text-sm font-medium text-blue-900">Aplicar Automação Completa</Label>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      Aplicar todos os valores gerados aos campos principais de SEO
+                                    </p>
+                                  </div>
+                                  <Button
+                                    onClick={applyAutoSEOValues}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  >
+                                    Aplicar Tudo
+                                  </Button>
+                                </div>
                               </div>
 
                               {/* Score SEO */}
