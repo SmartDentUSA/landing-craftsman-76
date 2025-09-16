@@ -299,7 +299,9 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
 
 // Função de análise de conteúdo para automação SEO
 const analyzeContent = (data: LandingPageData) => {
-  const content = `${data.banner.title} ${data.banner.subtitle} ${data.solutions_title} ${data.solutions.map(s => s.text).join(' ')} ${data.desktop_info.text} ${data.advisory.title} ${data.advisory.paragraph}`;
+  // Incluir conteúdo de FAQ na análise
+  const faqContent = data.faq?.map(faq => `${faq.question} ${faq.answer}`).join(' ') || '';
+  const content = `${data.banner.title} ${data.banner.subtitle} ${data.solutions_title} ${data.solutions.map(s => s.text).join(' ')} ${data.desktop_info.text} ${data.advisory.title} ${data.advisory.paragraph} ${faqContent}`;
   
   // Extrair palavras-chave principais
   const words = content.toLowerCase().match(/\b\w{4,}\b/g) || [];
