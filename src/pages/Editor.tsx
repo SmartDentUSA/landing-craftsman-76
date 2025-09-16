@@ -93,6 +93,13 @@ interface SchemaData {
     error_message?: string;
     place_id?: string;
   };
+  manual_reviews?: Array<{
+    id: string;
+    author_name: string;
+    rating: number;
+    review_text: string;
+    approved: boolean;
+  }>;
   offers: Array<{
     name: string;
     description: string;
@@ -2452,15 +2459,24 @@ const Editor = () => {
                       <AccordionTrigger>SEO Básico</AccordionTrigger>
                       <AccordionContent className="space-y-4">
                         <div>
-                          <Label>Domínio a ser utilizado</Label>
-                          <Input
-                            value={data.seo.domain}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              seo: { ...prev.seo, domain: e.target.value }
-                            }))}
-                            placeholder="www.seudominio.com.br"
-                          />
+                           <Label>Domínio a ser utilizado</Label>
+                           <Input
+                             value={data.seo.domain}
+                             onChange={(e) => {
+                               setData(prev => ({
+                                 ...prev,
+                                 seo: { 
+                                   ...prev.seo, 
+                                   domain: e.target.value,
+                                   // Auto-generate canonical URL when domain changes
+                                   canonical_url: e.target.value && prev.seo.seo_title ? 
+                                     `https://${e.target.value}/${prev.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` :
+                                     prev.seo.canonical_url
+                                 }
+                               }));
+                             }}
+                             placeholder="exemplo.com.br"
+                           />
                           {data.seo.domain && data.seo.seo_title && (
                             <p className="text-xs text-gray-500 mt-1">
                               URL Canônica: https://{data.seo.domain}/{data.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}
@@ -2469,15 +2485,27 @@ const Editor = () => {
                         </div>
                         
                         <div>
-                          <Label>Título SEO</Label>
-                          <Input
-                            value={data.seo.seo_title}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              seo: { ...prev.seo, seo_title: e.target.value }
-                            }))}
-                            placeholder="Título otimizado para SEO"
-                          />
+                           <Label>Título SEO</Label>
+                           <Input
+                             value={data.seo.seo_title}
+                             onChange={(e) => {
+                               setData(prev => ({
+                                 ...prev,
+                                 seo: { 
+                                   ...prev.seo, 
+                                   seo_title: e.target.value,
+                                   // Auto-generate canonical URL when title changes
+                                   canonical_url: prev.seo.domain && e.target.value ? 
+                                     `https://${prev.seo.domain}/${e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` :
+                                     prev.seo.canonical_url
+                                 }
+                               }));
+                             }}
+                             placeholder="Título otimizado para SEO"
+                           />
+                           <p className="text-xs text-gray-500 mt-1">
+                             {data.seo.seo_title.length}/60 caracteres
+                           </p>
                         </div>
                         
                         <div>
@@ -3204,9 +3232,21 @@ const Editor = () => {
                                   >
                                     Extrair Reviews Individuais
                                   </Button>
-                                </div>
-                                
-                                {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
+                                 </div>
+
+                                 {/* Manual Reviews Upload */}
+                                 <CSVReviewUploader
+                                   reviews={data.schema.manual_reviews || []}
+                                   onReviewsUpdate={(reviews) => setData(prev => ({
+                                     ...prev,
+                                     schema: {
+                                       ...prev.schema,
+                                       manual_reviews: reviews
+                                     }
+                                   }))}
+                                 />
+
+                                 {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
                                   <div className="text-sm text-green-600 font-medium">
                                     ✅ Extraído: {new Date(data.schema.google_reviews.last_extracted).toLocaleDateString()}
                                   </div>
