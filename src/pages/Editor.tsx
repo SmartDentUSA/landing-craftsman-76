@@ -1093,6 +1093,14 @@ const Editor = () => {
     const processedData = beforePreview(data);
     const embedConfig = getEmbedConfig({ embed: data.embed });
     
+    console.log("🔄 Regenerando email HTML...", {
+      timestamp: Date.now(),
+      brand_name: processedData.email.brand_name,
+      titulo_principal: processedData.email.titulo_principal,
+      show_solutions: processedData.email.show_solutions_in_email,
+      solutions_count: processedData.solutions?.length || 0
+    });
+    
     // Usar generateSafeEmailHTML se for modo SelFlux
     if (embedConfig.mode === 'selflux') {
       return generateSafeEmailHTML({
@@ -1118,7 +1126,21 @@ const Editor = () => {
         image_alt: solution.image?.alt || solution.title || ''
       })) || []
     });
-  }, [data]);
+  }, [
+    data.brand.legal_name,
+    data.seo.domain,
+    data.email.titulo_principal,
+    data.email.subtitulo,
+    data.email.cta_label,
+    data.email.cta_href,
+    data.email.imagem_src.src,
+    data.email.imagem_src.alt,
+    data.email.logo_src.src,
+    data.email.show_solutions_in_email,
+    data.email.solutions_title,
+    JSON.stringify(data.solutions), // Para detectar mudanças profundas no array
+    data.embed?.mode
+  ]);
 
   // Calcular score SEO de forma eficiente com useMemo
   const seoScore = useMemo(() => computeSEOScore(data), [
