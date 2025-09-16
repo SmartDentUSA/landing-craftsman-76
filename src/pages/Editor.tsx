@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2 } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { useToast } from "@/hooks/use-toast";
@@ -758,6 +758,7 @@ const EditorContent = () => {
   const [autoKeywords, setAutoKeywords] = useState<string[]>([]);
   const [autoMetaDesc, setAutoMetaDesc] = useState('');
   const [autoSeoTitle, setAutoSeoTitle] = useState('');
+  const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false });
   
   const [previewTab, setPreviewTab] = useState('landing-preview');
   
@@ -3079,26 +3080,51 @@ const EditorContent = () => {
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    disabled={aiLoading.hidden}
                                     onClick={async () => {
+                                      if (aiLoading.hidden) return;
+                                      setAiLoading(prev => ({ ...prev, hidden: true }));
                                       try {
-                                         const content = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
-                                        const response = await supabase.functions.invoke('ai-seo-generator', {
+                                        const contentRaw = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
+                                        const content = (contentRaw || '').trim();
+                                        if (!content) {
+                                          toast({ title: "Informe o contexto", description: "Adicione detalhes no campo 'Conteúdo Oculto SEO' para a IA trabalhar melhor.", variant: "destructive" });
+                                          return;
+                                        }
+                                        const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
                                           body: { type: 'hidden_content', content }
                                         });
-                                        if (response.data?.content) {
+                                        if (error) {
+                                          const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
+                                          const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
+                                          toast({ title: "Erro de IA", description: tip, variant: "destructive" });
+                                          return;
+                                        }
+                                        if ((fnData as any)?.error) {
+                                          const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar conteúdo.";
+                                          const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
+                                          toast({ title: "Erro de IA", description: hint, variant: "destructive" });
+                                          return;
+                                        }
+                                        if ((fnData as any)?.content) {
                                           setData(prev => ({
                                             ...prev,
-                                            seo: { ...prev.seo, seo_hidden_content: response.data.content }
+                                            seo: { ...prev.seo, seo_hidden_content: (fnData as any).content }
                                           }));
                                           toast({ title: "Conteúdo SEO gerado", description: "Conteúdo oculto gerado com IA." });
+                                        } else {
+                                          toast({ title: "Sem conteúdo", description: "A IA não retornou conteúdo. Tente novamente com mais detalhes.", variant: "destructive" });
                                         }
-                                      } catch (error) {
-                                        toast({ title: "Erro", description: "Falha ao gerar conteúdo SEO.", variant: "destructive" });
+                                      } catch (error: any) {
+                                        const msg = error?.message || "Erro inesperado ao gerar conteúdo SEO.";
+                                        toast({ title: "Erro", description: msg, variant: "destructive" });
+                                      } finally {
+                                        setAiLoading(prev => ({ ...prev, hidden: false }));
                                       }
                                     }}
                                     className="text-xs h-6 px-2 border-purple-300 text-purple-700"
                                   >
-                                    🤖 Gerar com IA
+                                    {aiLoading.hidden ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 Gerar com IA"}
                                   </Button>
                                 </div>
                                  <Textarea
@@ -3134,32 +3160,57 @@ const EditorContent = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      disabled={aiLoading.keywords}
                                       onClick={async () => {
+                                        if (aiLoading.keywords) return;
+                                        setAiLoading(prev => ({ ...prev, keywords: true }));
                                         try {
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
-                                          const response = await supabase.functions.invoke('ai-seo-generator', {
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000).trim();
+                                          if (!content) {
+                                            toast({ title: "Informe o conteúdo", description: "Forneça título/subtítulo/descrição para gerar palavras-chave.", variant: "destructive" });
+                                            return;
+                                          }
+                                          const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
                                             body: { type: 'keywords', content }
                                           });
-                                          if (response.data?.content) {
+                                          if (error) {
+                                            const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
+                                            const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
+                                            toast({ title: "Erro de IA", description: tip, variant: "destructive" });
+                                            return;
+                                          }
+                                          if ((fnData as any)?.error) {
+                                            const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar keywords.";
+                                            const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
+                                            toast({ title: "Erro de IA", description: hint, variant: "destructive" });
+                                            return;
+                                          }
+                                          const payload = (fnData as any)?.content;
+                                          if (payload) {
                                             const keywords = [
-                                              ...(response.data.content.primary || []),
-                                              ...(response.data.content.secondary || []).slice(0, 5),
-                                              ...(response.data.content.lsi || []).slice(0, 3)
+                                              ...(payload.primary || []),
+                                              ...(payload.secondary || []).slice(0, 5),
+                                              ...(payload.lsi || []).slice(0, 3)
                                             ];
                                             setAutoKeywords(keywords);
                                             setData(prev => ({
                                               ...prev,
-                                              seo: { ...prev.seo, ai_keywords: response.data.content }
+                                              seo: { ...prev.seo, ai_keywords: payload }
                                             }));
                                             toast({ title: "Keywords geradas", description: "Palavras-chave otimizadas com IA." });
+                                          } else {
+                                            toast({ title: "Sem conteúdo", description: "A IA não retornou keywords.", variant: "destructive" });
                                           }
-                                        } catch (error) {
-                                          toast({ title: "Erro", description: "Falha ao gerar keywords.", variant: "destructive" });
+                                        } catch (error: any) {
+                                          const msg = error?.message || "Erro inesperado ao gerar keywords.";
+                                          toast({ title: "Erro", description: msg, variant: "destructive" });
+                                        } finally {
+                                          setAiLoading(prev => ({ ...prev, keywords: false }));
                                         }
                                       }}
                                       className="text-xs h-6 px-2 border-purple-300 text-purple-700"
                                     >
-                                      🤖 IA
+                                      {aiLoading.keywords ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}
                                     </Button>
                                   </div>
                                 </div>
@@ -3215,27 +3266,51 @@ const EditorContent = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      disabled={aiLoading.meta}
                                       onClick={async () => {
+                                        if (aiLoading.meta) return;
+                                        setAiLoading(prev => ({ ...prev, meta: true }));
                                         try {
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
-                                          const response = await supabase.functions.invoke('ai-seo-generator', {
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000).trim();
+                                          if (!content) {
+                                            toast({ title: "Informe o conteúdo", description: "Forneça título/subtítulo/descrição para gerar meta description.", variant: "destructive" });
+                                            return;
+                                          }
+                                          const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
                                             body: { type: 'meta_description', content }
                                           });
-                                          if (response.data?.content) {
-                                            setAutoMetaDesc(response.data.content);
+                                          if (error) {
+                                            const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
+                                            const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
+                                            toast({ title: "Erro de IA", description: tip, variant: "destructive" });
+                                            return;
+                                          }
+                                          if ((fnData as any)?.error) {
+                                            const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar meta description.";
+                                            const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
+                                            toast({ title: "Erro de IA", description: hint, variant: "destructive" });
+                                            return;
+                                          }
+                                          if ((fnData as any)?.content) {
+                                            setAutoMetaDesc((fnData as any).content);
                                             setData(prev => ({
                                               ...prev,
                                               seo: { ...prev.seo, seo_generated_by_ai: true }
                                             }));
                                             toast({ title: "Meta description gerada", description: "Descrição otimizada com IA." });
+                                          } else {
+                                            toast({ title: "Sem conteúdo", description: "A IA não retornou meta description.", variant: "destructive" });
                                           }
-                                        } catch (error) {
-                                          toast({ title: "Erro", description: "Falha ao gerar meta description.", variant: "destructive" });
+                                        } catch (error: any) {
+                                          const msg = error?.message || "Erro inesperado ao gerar meta description.";
+                                          toast({ title: "Erro", description: msg, variant: "destructive" });
+                                        } finally {
+                                          setAiLoading(prev => ({ ...prev, meta: false }));
                                         }
                                       }}
                                       className="text-xs h-6 px-2 border-purple-300 text-purple-700"
                                     >
-                                      🤖 IA
+                                      {aiLoading.meta ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -3287,27 +3362,51 @@ const EditorContent = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      disabled={aiLoading.title}
                                       onClick={async () => {
+                                        if (aiLoading.title) return;
+                                        setAiLoading(prev => ({ ...prev, title: true }));
                                         try {
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
-                                          const response = await supabase.functions.invoke('ai-seo-generator', {
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000).trim();
+                                          if (!content) {
+                                            toast({ title: "Informe o conteúdo", description: "Forneça título/subtítulo/descrição para gerar título SEO.", variant: "destructive" });
+                                            return;
+                                          }
+                                          const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
                                             body: { type: 'seo_title', content }
                                           });
-                                          if (response.data?.content) {
-                                            setAutoSeoTitle(response.data.content);
+                                          if (error) {
+                                            const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
+                                            const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
+                                            toast({ title: "Erro de IA", description: tip, variant: "destructive" });
+                                            return;
+                                          }
+                                          if ((fnData as any)?.error) {
+                                            const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar título SEO.";
+                                            const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
+                                            toast({ title: "Erro de IA", description: hint, variant: "destructive" });
+                                            return;
+                                          }
+                                          if ((fnData as any)?.content) {
+                                            setAutoSeoTitle((fnData as any).content);
                                             setData(prev => ({
                                               ...prev,
                                               seo: { ...prev.seo, seo_generated_by_ai: true }
                                             }));
                                             toast({ title: "Título SEO gerado", description: "Título otimizado com IA." });
+                                          } else {
+                                            toast({ title: "Sem conteúdo", description: "A IA não retornou título.", variant: "destructive" });
                                           }
-                                        } catch (error) {
-                                          toast({ title: "Erro", description: "Falha ao gerar título SEO.", variant: "destructive" });
+                                        } catch (error: any) {
+                                          const msg = error?.message || "Erro inesperado ao gerar título SEO.";
+                                          toast({ title: "Erro", description: msg, variant: "destructive" });
+                                        } finally {
+                                          setAiLoading(prev => ({ ...prev, title: false }));
                                         }
                                       }}
                                       className="text-xs h-6 px-2 border-purple-300 text-purple-700"
                                     >
-                                      🤖 IA
+                                      {aiLoading.title ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}
                                     </Button>
                                     <Button
                                       size="sm"
