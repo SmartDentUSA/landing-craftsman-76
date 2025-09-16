@@ -26,14 +26,14 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
 
       setUser(session.user);
 
-      // Get user role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .single();
+      // Check if user has admin role using RPC function
+      const { data: isAdmin } = await supabase
+        .rpc('has_role', { 
+          _user_id: session.user.id, 
+          _role: 'admin' 
+        });
 
-      const role = roleData?.role || 'user';
+      const role = isAdmin ? 'admin' : 'user';
       setUserRole(role);
 
       // Check if user has required role
