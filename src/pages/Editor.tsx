@@ -18,6 +18,7 @@ import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
 import { generateHTML, generateEmailHTML } from "@/lib/template-engine";
 import { generateSafeHTML, generateSafeEmailHTML, getEmbedConfig } from "@/lib/selflux-engine";
+import { supabase } from "@/integrations/supabase/client";
 
 // Interface de dados de imagem para o novo sistema
 interface ImageData {
@@ -97,6 +98,9 @@ interface SchemaData {
     currency: string;
     availability: string;
     valid_through: string;
+    productUrl?: string;
+    sourceType?: 'manual' | 'imported';
+    lastUpdated?: string;
   }>;
   breadcrumb: Array<{ name: string; url: string }>;
 }
@@ -390,6 +394,7 @@ const Editor = () => {
   const { toast } = useToast();
   const { id } = useParams();
   const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
+  const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   
   const [previewTab, setPreviewTab] = useState('landing-preview');
   const [data, setData] = useState<LandingPageData>({
@@ -867,6 +872,64 @@ const Editor = () => {
         title: "Landing page criada",
         description: "Nova landing page salva com sucesso!",
       });
+    }
+  };
+
+  const extractProductData = async (index: number) => {
+    const offer = data.schema.offers[index];
+    if (!offer.productUrl) {
+      toast({
+        title: "URL necessária",
+        description: "Por favor, insira a URL do produto primeiro",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExtractingProduct(index);
+    
+    try {
+      const { data: result, error } = await supabase.functions.invoke('extract-product-data', {
+        body: { url: offer.productUrl }
+      });
+
+      if (error) throw error;
+
+      if (result.success) {
+        const productData = result.data;
+        const newOffers = [...data.schema.offers];
+        
+        // Atualizar dados extraídos
+        newOffers[index] = {
+          ...newOffers[index],
+          name: productData.name || newOffers[index].name,
+          price: productData.price || newOffers[index].price,
+          description: productData.description || newOffers[index].description,
+          sourceType: 'imported',
+          lastUpdated: new Date().toISOString()
+        };
+        
+        setData(prev => ({
+          ...prev,
+          schema: { ...prev.schema, offers: newOffers }
+        }));
+        
+        toast({
+          title: "Importação concluída!",
+          description: "Dados do produto importados com sucesso!",
+        });
+      } else {
+        throw new Error(result.error || 'Erro ao extrair dados do produto');
+      }
+    } catch (error) {
+      console.error('Erro ao extrair dados do produto:', error);
+      toast({
+        title: "Erro na importação",
+        description: error.message || 'Erro ao extrair dados do produto. Verifique a URL e tente novamente.',
+        variant: "destructive",
+      });
+    } finally {
+      setExtractingProduct(null);
     }
   };
 
@@ -3146,6 +3209,58 @@ const Editor = () => {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
+
+                            {/* URL do Produto */}
+                            <div className="space-y-2">
+                              <Label>URL do Produto (Loja Integrada)</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  value={offer.productUrl || ''}
+                                  onChange={(e) => {
+                                    const newOffers = [...data.schema.offers];
+                                    newOffers[index].productUrl = e.target.value;
+                                    setData(prev => ({
+                                      ...prev,
+                                      schema: { ...prev.schema, offers: newOffers }
+                                    }));
+                                  }}
+                                  placeholder="https://minhaloja.lojaintegrada.com.br/produto/123"
+                                  className="flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => extractProductData(index)}
+                                  disabled={!offer.productUrl || extractingProduct === index}
+                                  className="shrink-0"
+                                >
+                                  {extractingProduct === index ? (
+                                    <>⏳ Importando...</>
+                                  ) : (
+                                    <>🔗 Importar</>
+                                  )}
+                                </Button>
+                              </div>
+                              {offer.sourceType === 'imported' && offer.lastUpdated && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Badge variant="secondary" className="text-xs">
+                                    Importado
+                                  </Badge>
+                                  <span>Última atualização: {new Date(offer.lastUpdated).toLocaleString('pt-BR')}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => extractProductData(index)}
+                                    disabled={extractingProduct === index}
+                                    className="ml-auto text-xs h-6 px-2"
+                                  >
+                                    ↻ Atualizar
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                             
                             <div>
                               <Label>Nome da Oferta</Label>
@@ -3270,14 +3385,17 @@ const Editor = () => {
                               ...prev,
                               schema: {
                                 ...prev.schema,
-                                offers: [...prev.schema.offers, {
-                                  name: '',
-                                  description: '',
-                                  price: '',
-                                  currency: 'BRL',
-                                  availability: 'InStock',
-                                  valid_through: ''
-                                }]
+                          offers: [...prev.schema.offers, {
+                            name: '',
+                            description: '',
+                            price: '',
+                            currency: 'BRL',
+                            availability: 'InStock',
+                            valid_through: '',
+                            productUrl: '',
+                            sourceType: 'manual' as const,
+                            lastUpdated: undefined
+                          }]
                               }
                             }));
                           }}
