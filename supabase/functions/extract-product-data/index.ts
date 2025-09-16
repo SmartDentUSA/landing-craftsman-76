@@ -26,10 +26,7 @@ serve(async (req) => {
       throw new Error('URL é obrigatória');
     }
 
-    // Validar se é URL da Loja Integrada
-    if (!url.includes('lojaintegrada.com.br') && !url.includes('loja.com.br')) {
-      throw new Error('URL deve ser de uma loja da Loja Integrada');
-    }
+    // Permitir domínios customizados - não validar domínio rigidamente
 
     console.log('Extraindo dados da URL:', url);
 
@@ -45,7 +42,43 @@ serve(async (req) => {
 
     const html = await response.text();
     
-    // Extrair dados do HTML usando regex simples
+    // Tentar extrair dados do JSON-LD primeiro
+    const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis);
+    if (jsonLdMatches) {
+      for (const match of jsonLdMatches) {
+        try {
+          const jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
+          const data = JSON.parse(jsonContent);
+          
+          // Handle array of structured data
+          const items = Array.isArray(data) ? data : [data];
+          
+          for (const item of items) {
+            if (item['@type'] === 'Product' && item.name) {
+              console.log('Found product in JSON-LD:', item);
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  data: {
+                    name: item.name,
+                    price: item.offers?.price || item.offers?.priceRange || '',
+                    description: item.description || '',
+                    image: item.image?.[0] || item.image || '',
+                    available: item.offers?.availability !== 'OutOfStock'
+                  },
+                  extracted_at: new Date().toISOString()
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+        } catch (e) {
+          console.log('Failed to parse JSON-LD:', e);
+        }
+      }
+    }
+    
+    // Fallback para extração por regex
     const productData: ProductData = {
       name: '',
       price: '',
@@ -113,7 +146,7 @@ serve(async (req) => {
         extracted_at: new Date().toISOString()
       }),
       {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

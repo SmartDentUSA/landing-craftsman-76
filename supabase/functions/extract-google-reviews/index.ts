@@ -47,7 +47,7 @@ serve(async (req) => {
       error: error.message,
       extracted_at: new Date().toISOString()
     }), {
-      status: 400,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -140,13 +140,13 @@ async function extractReviewsData(url: string): Promise<GoogleReviewsData> {
           for (const item of items) {
             if (item.aggregateRating?.ratingValue && item.aggregateRating?.reviewCount) {
               console.log('Found data in JSON-LD:', item.aggregateRating);
-              rating = parseFloat(item.aggregateRating.ratingValue);
-              reviewCount = parseInt(item.aggregateRating.reviewCount);
-              businessName = item.name || businessName;
+              let tempRating = parseFloat(item.aggregateRating.ratingValue);
+              let tempReviewCount = parseInt(item.aggregateRating.reviewCount);
+              let tempBusinessName = item.name;
               
-              if (rating > 0 && rating <= 5 && reviewCount > 0) {
+              if (tempRating > 0 && tempRating <= 5 && tempReviewCount > 0) {
                 console.log('Successfully extracted from JSON-LD');
-                return { rating, reviewCount, businessName };
+                return { rating: tempRating, reviewCount: tempReviewCount, businessName: tempBusinessName };
               }
             }
           }
@@ -281,7 +281,12 @@ async function extractReviewsData(url: string): Promise<GoogleReviewsData> {
         console.log('Rating hints found in HTML:', ratingHints.slice(0, 5));
       }
       
-      throw new Error('Não foi possível extrair a avaliação. O Google Maps pode estar carregando dinamicamente. Tente um link direto do Google My Business.');
+      // Return with partial data instead of throwing error
+      return {
+        rating: 0,
+        reviewCount: reviewCount,
+        businessName: businessName || 'Negócio não identificado'
+      };
     }
 
     const result = {
