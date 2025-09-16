@@ -961,11 +961,12 @@ const Editor = () => {
               </Button>
               <div>
                 <h1 className="text-xl font-semibold">{data.name}</h1>
-                <p className="text-sm text-gray-500">
-                  Status: <Badge variant={data.status === 'approved' ? 'default' : 'secondary'}>
+                <div className="text-sm text-gray-500 flex items-center gap-2">
+                  Status:
+                  <Badge variant={data.status === 'approved' ? 'default' : 'secondary'}>
                     {data.status === 'approved' ? 'Aprovado' : 'Rascunho'}
                   </Badge>
-                </p>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -2859,148 +2860,154 @@ const Editor = () => {
                         </div>
                         
                         {/* Google Reviews Extraction */}
-                        <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Label htmlFor="google-reviews-url">Link das Avaliações Google</Label>
-                            <Badge variant="secondary">Auto-extração</Badge>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <Input
-                              id="google-reviews-url"
-                              value={data.schema.google_reviews.url}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  google_reviews: { ...prev.schema.google_reviews, url: e.target.value }
-                                }
-                              }))}
-                              placeholder="https://www.google.com/maps/place/..."
-                              className="w-full"
-                            />
+                          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor="google-reviews-url">Link das Avaliações Google</Label>
+                              <Badge variant="secondary">Auto-extração</Badge>
+                            </div>
                             
-                            <div className="flex items-center gap-3">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={!data.schema.google_reviews.url || data.schema.google_reviews.status === 'loading'}
-                                onClick={async () => {
-                                  setData(prev => ({
-                                    ...prev,
-                                    schema: {
-                                      ...prev.schema,
-                                      google_reviews: { ...prev.schema.google_reviews, status: 'loading' }
+                            <div className="space-y-3">
+                              <Input
+                                id="google-reviews-url"
+                                value={data.schema.google_reviews?.url ?? ''}
+                                onChange={(e) => setData(prev => ({
+                                  ...prev,
+                                  schema: {
+                                    ...prev.schema,
+                                    google_reviews: {
+                                      ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                      url: e.target.value
                                     }
-                                  }));
-
-                                  try {
-                                    const { supabase } = await import("@/integrations/supabase/client");
-                                    const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
-                                      body: { url: data.schema.google_reviews.url }
-                                    });
-
-                                    if (error) throw error;
-
-                                    if (result.success) {
-                                      setData(prev => ({
-                                        ...prev,
-                                        schema: {
-                                          ...prev.schema,
-                                          software_app: {
-                                            ...prev.schema.software_app,
-                                            rating_value: result.data.rating.toString(),
-                                            rating_count: result.data.reviewCount.toString()
-                                          },
-                                          google_reviews: {
-                                            ...prev.schema.google_reviews,
-                                            status: 'success',
-                                            last_extracted: result.extracted_at,
-                                            auto_extract: true
-                                          }
-                                        }
-                                      }));
-                                      toast({
-                                        title: "✅ Reviews extraídas!",
-                                        description: `Nota: ${result.data.rating}/5 (${result.data.reviewCount} avaliações)`
-                                      });
-                                    } else {
-                                      throw new Error(result.error);
-                                    }
-                                  } catch (error: any) {
+                                  }
+                                }))}
+                                placeholder="https://www.google.com/maps/place/..."
+                                className="w-full"
+                              />
+                              
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={!(data.schema.google_reviews?.url) || data.schema.google_reviews?.status === 'loading'}
+                                  onClick={async () => {
                                     setData(prev => ({
                                       ...prev,
                                       schema: {
                                         ...prev.schema,
                                         google_reviews: {
-                                          ...prev.schema.google_reviews,
-                                          status: 'error',
-                                          error_message: error.message
+                                          ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                          status: 'loading'
                                         }
                                       }
                                     }));
-                                    toast({
-                                      title: "❌ Erro na extração",
-                                      description: error.message,
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }}
-                              >
-                                {data.schema.google_reviews.status === 'loading' ? 'Extraindo...' : 'Extrair Automaticamente'}
-                              </Button>
-                              
-                              {data.schema.google_reviews.status === 'success' && (
-                                <div className="text-sm text-green-600 font-medium">
-                                  ✅ Extraído: {new Date(data.schema.google_reviews.last_extracted).toLocaleDateString()}
-                                </div>
-                              )}
-                              
-                              {data.schema.google_reviews.status === 'error' && (
-                                <div className="text-sm text-red-600 font-medium">
-                                  ❌ {data.schema.google_reviews.error_message}
-                                </div>
-                              )}
+  
+                                    try {
+                                      const { supabase } = await import("@/integrations/supabase/client");
+                                      const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
+                                        body: { url: data.schema.google_reviews?.url }
+                                      });
+  
+                                      if (error) throw error;
+  
+                                      if (result.success) {
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: {
+                                            ...prev.schema,
+                                            software_app: {
+                                              ...prev.schema.software_app,
+                                              rating_value: result.data.rating.toString(),
+                                              rating_count: result.data.reviewCount.toString()
+                                            },
+                                            google_reviews: {
+                                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                              status: 'success',
+                                              last_extracted: result.extracted_at,
+                                              auto_extract: true
+                                            }
+                                          }
+                                        }));
+                                        toast({
+                                          title: "✅ Reviews extraídas!",
+                                          description: `Nota: ${result.data.rating}/5 (${result.data.reviewCount} avaliações)`
+                                        });
+                                      } else {
+                                        throw new Error(result.error);
+                                      }
+                                    } catch (error: any) {
+                                      setData(prev => ({
+                                        ...prev,
+                                        schema: {
+                                          ...prev.schema,
+                                          google_reviews: {
+                                            ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                            status: 'error',
+                                            error_message: error.message
+                                          }
+                                        }
+                                      }));
+                                      toast({
+                                        title: "❌ Erro na extração",
+                                        description: error.message,
+                                        variant: "destructive"
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {data.schema.google_reviews?.status === 'loading' ? 'Extraindo...' : 'Extrair Automaticamente'}
+                                </Button>
+                                
+                                {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
+                                  <div className="text-sm text-green-600 font-medium">
+                                    ✅ Extraído: {new Date(data.schema.google_reviews.last_extracted).toLocaleDateString()}
+                                  </div>
+                                )}
+                                
+                                {data.schema.google_reviews?.status === 'error' && (
+                                  <div className="text-sm text-red-600 font-medium">
+                                    ❌ {data.schema.google_reviews?.error_message}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Avaliação (0-5)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              max="5"
-                              step="0.1"
-                              value={data.schema.software_app.rating_value}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, rating_value: e.target.value }
-                                }
-                              }))}
-                              placeholder="4.8"
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label>Avaliação (0-5)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="5"
+                                step="0.1"
+                                value={data.schema.software_app.rating_value}
+                                onChange={(e) => setData(prev => ({
+                                  ...prev,
+                                  schema: {
+                                    ...prev.schema,
+                                    software_app: { ...prev.schema.software_app, rating_value: e.target.value }
+                                  }
+                                }))}
+                                placeholder="4.8"
+                              />
+                            </div>
+                            <div>
+                              <Label>Número de Avaliações</Label>
+                              <Input
+                                type="number"
+                                value={data.schema.software_app.rating_count}
+                                onChange={(e) => setData(prev => ({
+                                  ...prev,
+                                  schema: {
+                                    ...prev.schema,
+                                    software_app: { ...prev.schema.software_app, rating_count: e.target.value }
+                                  }
+                                }))}
+                                placeholder="150"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label>Número de Avaliações</Label>
-                            <Input
-                              type="number"
-                              value={data.schema.software_app.rating_count}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, rating_count: e.target.value }
-                                }
-                              }))}
-                              placeholder="150"
-                            />
-                          </div>
-                        </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                           <div>
