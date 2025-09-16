@@ -297,6 +297,140 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   return processedData;
 };
 
+// Função centralizada para calcular score SEO
+const computeSEOScore = (data: LandingPageData) => {
+  let score = 0;
+  const breakdown: Array<{ item: string; status: 'ok' | 'pending'; points: number; message?: string }> = [];
+  
+  // 1. Título SEO (20 pts)
+  const titleLength = (data.seo_title || '').length;
+  if (titleLength >= 1 && titleLength <= 60) {
+    score += 20;
+    breakdown.push({ item: 'Título SEO', status: 'ok', points: 20 });
+  } else {
+    breakdown.push({ 
+      item: 'Título SEO', 
+      status: 'pending', 
+      points: 20, 
+      message: titleLength === 0 ? 'Defina um título SEO' : 'Ajuste o título para ≤60 caracteres' 
+    });
+  }
+  
+  // 2. Descrição SEO (20 pts)
+  const descLength = (data.seo_description || '').length;
+  if (descLength >= 1 && descLength <= 160) {
+    score += 20;
+    breakdown.push({ item: 'Descrição SEO', status: 'ok', points: 20 });
+  } else {
+    breakdown.push({ 
+      item: 'Descrição SEO', 
+      status: 'pending', 
+      points: 20, 
+      message: descLength === 0 ? 'Defina uma descrição SEO' : 'Ajuste a descrição para ≤160 caracteres' 
+    });
+  }
+  
+  // 3. URL Canônica (15 pts)
+  const canonicalValid = data.seo.canonical_url && data.seo.canonical_url.startsWith('https://');
+  if (canonicalValid) {
+    score += 15;
+    breakdown.push({ item: 'URL Canônica', status: 'ok', points: 15 });
+  } else {
+    breakdown.push({ 
+      item: 'URL Canônica', 
+      status: 'pending', 
+      points: 15, 
+      message: 'Informe/valide a URL canônica (deve começar com https://)' 
+    });
+  }
+  
+  // 4. Imagem OG (15 pts)
+  const ogImageValid = data.seo.og_image && data.seo.og_image.src && data.seo.og_image.src.trim() !== '';
+  if (ogImageValid) {
+    score += 15;
+    breakdown.push({ item: 'Imagem OG', status: 'ok', points: 15 });
+  } else {
+    breakdown.push({ 
+      item: 'Imagem OG', 
+      status: 'pending', 
+      points: 15, 
+      message: 'Defina uma imagem OG (recomendado 1200×630)' 
+    });
+  }
+  
+  // 5. OG Title/Description (10 pts)
+  const ogDataValid = data.seo.og_title && data.seo.og_description;
+  if (ogDataValid) {
+    score += 10;
+    breakdown.push({ item: 'OG Title/Description', status: 'ok', points: 10 });
+  } else {
+    breakdown.push({ 
+      item: 'OG Title/Description', 
+      status: 'pending', 
+      points: 10, 
+      message: 'Complete os dados Open Graph' 
+    });
+  }
+  
+  // 6. Twitter Card (5 pts)
+  const twitterCardValid = data.seo.twitter_card && data.seo.twitter_card.trim() !== '';
+  if (twitterCardValid) {
+    score += 5;
+    breakdown.push({ item: 'Twitter Card', status: 'ok', points: 5 });
+  } else {
+    breakdown.push({ 
+      item: 'Twitter Card', 
+      status: 'pending', 
+      points: 5, 
+      message: 'Defina o tipo de Twitter Card' 
+    });
+  }
+  
+  // 7. Meta Robots (5 pts)
+  const robotsValid = data.seo.meta_robots && data.seo.meta_robots.trim() !== '';
+  if (robotsValid) {
+    score += 5;
+    breakdown.push({ item: 'Meta Robots', status: 'ok', points: 5 });
+  } else {
+    breakdown.push({ 
+      item: 'Meta Robots', 
+      status: 'pending', 
+      points: 5, 
+      message: 'Defina as diretrizes para robôs' 
+    });
+  }
+  
+  // 8. H1 (Banner Title) (5 pts)
+  const h1Valid = data.banner.title && data.banner.title.trim() !== '';
+  if (h1Valid) {
+    score += 5;
+    breakdown.push({ item: 'H1 (Título Principal)', status: 'ok', points: 5 });
+  } else {
+    breakdown.push({ 
+      item: 'H1 (Título Principal)', 
+      status: 'pending', 
+      points: 5, 
+      message: 'Defina o título principal do banner' 
+    });
+  }
+  
+  // 9. FAQ habilitado (5 pts)
+  const faqValid = data.seo.faq_enable && data.faq && data.faq.length > 0;
+  if (faqValid) {
+    score += 5;
+    breakdown.push({ item: 'FAQ Schema', status: 'ok', points: 5 });
+  } else {
+    breakdown.push({ 
+      item: 'FAQ Schema', 
+      status: 'pending', 
+      points: 5, 
+      message: 'Habilite FAQ com pelo menos uma pergunta' 
+    });
+  }
+  
+  return { score, breakdown, percentage: Math.round(score) };
+};
+
 // Função de análise de conteúdo para automação SEO
 const analyzeContent = (data: LandingPageData) => {
   // Incluir conteúdo de FAQ na análise
@@ -456,6 +590,15 @@ const onSave = (data: LandingPageData): LandingPageData => {
   
   // 🎯 CORREÇÃO 4: Schema Markup - Garantir que hreflang_auto está habilitado
   // (A geração do schema já está implementada no template-engine.ts)
+  
+  // 🎯 CORREÇÃO 5: Fallback automático para imagem OG
+  if (!processedData.seo.og_image.src && processedData.banner.images && processedData.banner.images.length > 0) {
+    processedData.seo.og_image = {
+      ...processedData.banner.images[0],
+      alt: 'Imagem OG - ' + processedData.banner.title
+    };
+    console.info('✅ Imagem OG definida automaticamente usando primeira imagem do banner');
+  }
   
   // Validações e avisos
   if (processedData.seo_title && processedData.seo_title.length > 60) {
@@ -869,6 +1012,21 @@ const Editor = () => {
       imagem_alt: processedData.email.imagem_src.alt
     });
   }, [data]);
+
+  // Calcular score SEO de forma eficiente com useMemo
+  const seoScore = useMemo(() => computeSEOScore(data), [
+    data.seo_title,
+    data.seo_description,
+    data.seo.canonical_url,
+    data.seo.og_image.src,
+    data.seo.og_title,
+    data.seo.og_description,
+    data.seo.twitter_card,
+    data.seo.meta_robots,
+    data.banner.title,
+    data.seo.faq_enable,
+    data.faq?.length
+  ]);
 
   useEffect(() => {
     if (id) {
@@ -2871,33 +3029,143 @@ const Editor = () => {
                                 </div>
                               </div>
 
-                              {/* Score SEO */}
-                              <div className="p-3 bg-white rounded-lg border">
+                              {/* Score SEO Avançado */}
+                              <div className="p-3 bg-white rounded-lg border space-y-3">
                                 <div className="flex items-center justify-between">
-                                  <Label className="text-xs font-medium text-gray-700">Score SEO:</Label>
+                                  <Label className="text-xs font-medium text-gray-700">Score SEO Avançado:</Label>
                                   <div className="flex items-center gap-2">
                                     {(() => {
-                                      const titleScore = data.seo_title.length > 0 && data.seo_title.length <= 60 ? 25 : 0;
-                                      const descScore = data.seo_description.length > 0 && data.seo_description.length <= 160 ? 25 : 0;
-                                      const canonicalScore = data.seo.canonical_url ? 25 : 0;
-                                      const imageScore = data.seo.og_image.src ? 25 : 0;
-                                      const totalScore = titleScore + descScore + canonicalScore + imageScore;
+                                      const { score, percentage, breakdown } = computeSEOScore(data);
                                       return (
                                         <>
                                           <div className="w-16 bg-gray-200 rounded-full h-2">
                                             <div 
-                                              className={`h-2 rounded-full ${totalScore >= 75 ? 'bg-green-500' : totalScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                                              style={{ width: `${totalScore}%` }}
+                                              className={`h-2 rounded-full ${percentage >= 75 ? 'bg-green-500' : percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                              style={{ width: `${percentage}%` }}
                                             ></div>
                                           </div>
-                                          <span className={`text-xs font-medium ${totalScore >= 75 ? 'text-green-600' : totalScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                                            {totalScore}%
+                                          <span className={`text-xs font-medium ${percentage >= 75 ? 'text-green-600' : percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                            {percentage}%
                                           </span>
                                         </>
                                       );
                                     })()}
                                   </div>
                                 </div>
+                                
+                                {/* Checklist detalhado */}
+                                {(() => {
+                                  const { breakdown } = computeSEOScore(data);
+                                  const pendingItems = breakdown.filter(item => item.status === 'pending');
+                                  const okItems = breakdown.filter(item => item.status === 'ok');
+                                  
+                                  return (
+                                    <div className="space-y-2">
+                                      {/* Itens OK */}
+                                      {okItems.length > 0 && (
+                                        <div className="text-xs">
+                                          <p className="text-green-600 font-medium mb-1">✅ Completo ({okItems.length}/9):</p>
+                                          <div className="text-green-700 space-y-1">
+                                            {okItems.map((item, idx) => (
+                                              <p key={idx}>• {item.item} ({item.points}pts)</p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Itens Pendentes */}
+                                      {pendingItems.length > 0 && (
+                                        <div className="text-xs">
+                                          <p className="text-amber-600 font-medium mb-1">⚠️ Pendente ({pendingItems.length}/9):</p>
+                                          <div className="text-amber-700 space-y-1">
+                                            {pendingItems.map((item, idx) => (
+                                              <p key={idx}>• {item.message} ({item.points}pts)</p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Botões de correção rápida */}
+                                      <div className="flex flex-wrap gap-1 pt-2">
+                                        {!data.seo.og_image.src && data.banner.images.length > 0 && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs h-6 px-2"
+                                            onClick={() => {
+                                              setData(prev => ({
+                                                ...prev,
+                                                seo: {
+                                                  ...prev.seo,
+                                                  og_image: {
+                                                    ...data.banner.images[0],
+                                                    alt: 'Imagem OG - ' + data.banner.title
+                                                  }
+                                                }
+                                              }));
+                                              toast({ title: "✅ Imagem OG definida automaticamente" });
+                                            }}
+                                          >
+                                            📸 Usar 1ª imagem como OG
+                                          </Button>
+                                        )}
+                                        
+                                        {!data.seo.canonical_url && data.seo.domain && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs h-6 px-2"
+                                            onClick={() => {
+                                              const slug = (data.seo_title || data.name || 'home').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                                              const canonical = generateCanonicalUrl(data.seo.domain, slug);
+                                              setData(prev => ({
+                                                ...prev,
+                                                seo: { ...prev.seo, canonical_url: canonical }
+                                              }));
+                                              toast({ title: "✅ URL canônica gerada" });
+                                            }}
+                                          >
+                                            🔗 Gerar Canonical
+                                          </Button>
+                                        )}
+                                        
+                                        {(!data.seo_title || data.seo_title === 'Smart Dent - Sistema de Gestão Odontológica') && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs h-6 px-2"
+                                            onClick={() => {
+                                              const newTitle = generateSEOTitle(data);
+                                              setData(prev => ({
+                                                ...prev,
+                                                seo_title: newTitle,
+                                                seo: { ...prev.seo, seo_title: newTitle }
+                                              }));
+                                              toast({ title: "✅ Título SEO gerado automaticamente" });
+                                            }}
+                                          >
+                                            📝 Gerar Título
+                                          </Button>
+                                        )}
+                                        
+                                        {(!data.seo_description || data.seo_description === 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.') && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs h-6 px-2"
+                                            onClick={() => {
+                                              const newDesc = generateMetaDescription(data);
+                                              setData(prev => ({ ...prev, seo_description: newDesc }));
+                                              toast({ title: "✅ Descrição SEO gerada automaticamente" });
+                                            }}
+                                          >
+                                            📄 Gerar Descrição
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           )}
@@ -4706,24 +4974,40 @@ dataLayer = [{
                 </Button>
               </div>
               
-              {/* SEO Score Resumo */}
-              <div className="mt-4 p-3 bg-white rounded-lg border">
+              {/* SEO Score Resumo Avançado */}
+              <div className="mt-4 p-3 bg-white rounded-lg border space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">Otimização SEO:</span>
                   {(() => {
-                    const titleScore = data.seo_title.length > 0 && data.seo_title.length <= 60 ? 25 : 0;
-                    const descScore = data.seo_description.length > 0 && data.seo_description.length <= 160 ? 25 : 0;
-                    const canonicalScore = data.seo.canonical_url ? 25 : 0;
-                    const imageScore = data.seo.og_image.src ? 25 : 0;
-                    const totalScore = titleScore + descScore + canonicalScore + imageScore;
+                    const { score, percentage } = computeSEOScore(data);
                     return (
-                      <span className={`font-bold ${totalScore >= 75 ? 'text-green-600' : totalScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {totalScore}% 
-                        {totalScore >= 75 ? ' ✅ Excelente' : totalScore >= 50 ? ' ⚠️ Bom' : ' ❌ Precisa melhorar'}
+                      <span className={`font-bold ${percentage >= 75 ? 'text-green-600' : percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {percentage}% 
+                        {percentage >= 75 ? ' ✅ Excelente' : percentage >= 50 ? ' ⚠️ Bom' : ' ❌ Precisa melhorar'}
                       </span>
                     );
                   })()}
                 </div>
+                
+                {/* Resumo rápido do que falta */}
+                {(() => {
+                  const { breakdown } = computeSEOScore(data);
+                  const pendingItems = breakdown.filter(item => item.status === 'pending');
+                  
+                  if (pendingItems.length > 0) {
+                    return (
+                      <div className="text-xs text-amber-700">
+                        <p className="font-medium">Para 100%: {pendingItems.slice(0, 3).map(item => item.item).join(', ')}{pendingItems.length > 3 ? ` +${pendingItems.length - 3} itens` : ''}</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="text-xs text-green-700 font-medium">
+                      🎉 SEO 100% otimizado! Todos os critérios atendidos.
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
