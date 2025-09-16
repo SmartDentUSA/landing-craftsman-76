@@ -1332,9 +1332,6 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 const sanitizeDomain = (domain: string): string => {
   if (!domain) return '';
   
-  // Log para debugging
-  console.log('🔧 Sanitizando domain:', domain);
-  
   let cleaned = domain
     .trim()
     .replace(/^https?:\/\/+/g, '') // Remove protocolos múltiplos
@@ -1344,20 +1341,18 @@ const sanitizeDomain = (domain: string): string => {
   
   // Detectar e corrigir duplicações específicas
   if (cleaned.includes('https://')) {
-    console.warn('⚠️ Domain contém protocolo residual:', cleaned);
     cleaned = cleaned.replace(/https?:\/\/+/g, '');
   }
   
-  console.log('✅ Domain sanitizado:', cleaned);
   return cleaned;
 };
 
-// 🔧 NOVA: Função para detectar URLs de placeholder
+// 🔧 NOVA: Função para detectar URLs de placeholder (mais específica)
 const isPlaceholderUrl = (url: string): boolean => {
-  if (!url) return true;
+  if (!url || url.trim() === '') return true;
   return url.includes('via.placeholder.com') || 
-         url.includes('placeholder') || 
-         url.trim() === '';
+         url.includes('placeholder.com') ||
+         url.includes('placehold.it');
 };
 
 // Função para gerar hreflang automático

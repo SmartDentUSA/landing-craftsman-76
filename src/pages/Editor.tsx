@@ -330,17 +330,16 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 3. URL Canônica (15 pts) - 🔧 Validação aprimorada
+  // 3. URL Canônica (15 pts) - 🔧 Validação balanceada
   let canonicalValid = false;
-  let canonicalMessage = 'Informe/valide a URL canônica (deve começar com https://)';
+  let canonicalMessage = 'Informe a URL canônica (deve começar com https://)';
   
   if (data.seo.canonical_url) {
-    const url = data.seo.canonical_url;
-    // Detectar URLs duplicadas
-    if (url.includes('https://https://')) {
-      canonicalMessage = '⚠️ URL canônica com protocolo duplicado (https://https://)';
-    } else if (url.startsWith('https://')) {
+    const url = data.seo.canonical_url.trim();
+    if (url.startsWith('https://') && !url.includes('https://https://')) {
       canonicalValid = true;
+    } else if (url.includes('https://https://')) {
+      canonicalMessage = 'URL canônica com protocolo duplicado';
     } else {
       canonicalMessage = 'URL canônica deve começar com https://';
     }
@@ -358,14 +357,14 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 4. Imagem OG (15 pts) - 🔧 Validação aprimorada para detectar placeholders
+  // 4. Imagem OG (15 pts) - 🔧 Validação mais flexível
   let ogImageValid = false;
-  let ogImageMessage = 'Configure uma imagem válida para Open Graph';
+  let ogImageMessage = 'Configure uma imagem para Open Graph';
   
   if (data.seo.og_image?.src) {
     const ogSrc = data.seo.og_image.src.trim();
-    if (ogSrc.includes('via.placeholder.com') || ogSrc.includes('placeholder')) {
-      ogImageMessage = '⚠️ Substitua a imagem placeholder por uma imagem real';
+    if (ogSrc.includes('via.placeholder.com') || ogSrc.includes('placeholder.com')) {
+      ogImageMessage = 'Recomendamos substituir por uma imagem específica da marca';
     } else if (ogSrc !== '') {
       ogImageValid = true;
     }
@@ -420,22 +419,24 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 7. Meta Robots (5 pts) - 🔧 Validação aprimorada detectando valores vazios
+  // 7. Meta Robots (5 pts) - 🔧 Validação mais flexível
   const validRobotValues = ['index', 'noindex', 'follow', 'nofollow', 'index, follow', 'noindex, nofollow'];
   let robotsValid = false;
-  let robotsMessage = 'Defina diretrizes válidas para robôs';
+  let robotsMessage = 'Configure diretrizes para robôs (opcional)';
   
   if (data.seo.meta_robots) {
     const robotsValue = data.seo.meta_robots.trim();
     if (robotsValue === '') {
-      robotsMessage = '⚠️ Meta robots está vazio (será usado fallback: "index, follow")';
+      robotsValid = true; // Aceita vazio - usará fallback
+      robotsMessage = 'Usará padrão: "index, follow"';
     } else if (validRobotValues.some(valid => robotsValue.includes(valid))) {
       robotsValid = true;
     } else {
       robotsMessage = 'Use valores válidos: index, follow, noindex, nofollow';
     }
   } else {
-    robotsMessage = 'Configure Meta Robots (será usado fallback: "index, follow")';
+    robotsValid = true; // Aceita não configurado
+    robotsMessage = 'Usará padrão: "index, follow"';
   }
   
   if (robotsValid) {
