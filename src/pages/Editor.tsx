@@ -278,6 +278,22 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   processedData.seo.og_image = resolveImageSrc(data.seo.og_image);
   processedData.seo.twitter_image = resolveImageSrc(data.seo.twitter_image);
 
+  // Sincronizar campos SEO na preparação para preview
+  if (processedData.seo_title && processedData.seo_title !== processedData.seo.seo_title) {
+    processedData.seo.seo_title = processedData.seo_title;
+  }
+  if (processedData.seo.seo_title && processedData.seo.seo_title !== processedData.seo_title) {
+    processedData.seo_title = processedData.seo.seo_title;
+  }
+  
+  console.info('🎯 Preview preparado com:', {
+    seo_title: processedData.seo_title,
+    seo_seo_title: processedData.seo.seo_title,
+    domain: processedData.seo.domain,
+    canonical_url: processedData.seo.canonical_url,
+    manual_reviews: processedData.schema?.manual_reviews?.length || 0
+  });
+
   return processedData;
 };
 
@@ -369,10 +385,19 @@ const onSave = (data: LandingPageData): LandingPageData => {
   if (!processedData.seo.twitter_title) processedData.seo.twitter_title = processedData.seo_title;
   if (!processedData.seo.twitter_description) processedData.seo.twitter_description = processedData.seo_description;
   
+  // Sincronizar campos SEO principais
+  if (processedData.seo_title && processedData.seo_title !== processedData.seo.seo_title) {
+    processedData.seo.seo_title = processedData.seo_title;
+  }
+  if (processedData.seo.seo_title && processedData.seo.seo_title !== processedData.seo_title) {
+    processedData.seo_title = processedData.seo.seo_title;
+  }
+  
   // Autocompletar canonical_url usando domínio personalizado e título SEO
   if (!processedData.seo.canonical_url && processedData.seo.domain && processedData.seo.seo_title) {
     const slug = processedData.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     processedData.seo.canonical_url = `https://${processedData.seo.domain}/${slug}`;
+    console.info('🎯 URL Canônica gerada automaticamente:', processedData.seo.canonical_url);
   }
   
   // Validações e avisos

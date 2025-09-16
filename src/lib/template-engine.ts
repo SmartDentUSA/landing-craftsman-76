@@ -1577,6 +1577,34 @@ export const generateHTML = (data: any): string => {
   if (data.seo?.hreflang_auto) {
     const schemaGraph = [];
 
+    // Combinar reviews manuais e do Google para agregateRating e reviews
+    const manualReviews = data.schema?.manual_reviews || [];
+    const googleReviews = data.schema?.google_reviews?.reviews || [];
+    const allReviews = [...manualReviews, ...googleReviews];
+    
+    // Calcular rating agregado das reviews reais
+    let aggregateRating = {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "150"
+    };
+    
+    if (allReviews.length > 0) {
+      const totalRating = allReviews.reduce((sum: number, review: any) => sum + (review.rating || 5), 0);
+      const avgRating = (totalRating / allReviews.length).toFixed(1);
+      aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": avgRating,
+        "reviewCount": allReviews.length.toString()
+      };
+      console.info('🎯 Schema atualizado com reviews reais:', { 
+        totalReviews: allReviews.length, 
+        manualReviews: manualReviews.length,
+        googleReviews: googleReviews.length,
+        avgRating 
+      });
+    }
+
     // Schema para Software Application
     schemaGraph.push({
       "@type": "SoftwareApplication",
@@ -1585,11 +1613,22 @@ export const generateHTML = (data: any): string => {
       "description": data.seo_description,
       "url": processedData.canonical_url,
       "operatingSystem": data.schema?.software_app?.operating_system || "Web",
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": data.schema?.software_app?.rating_value || "4.8",
-        "ratingCount": data.schema?.software_app?.rating_count || "150"
-      },
+      "aggregateRating": aggregateRating,
+      ...(allReviews.length > 0 && {
+        "review": allReviews.slice(0, 10).map((review: any) => ({
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": review.author_name || "Cliente"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": review.rating || 5,
+            "bestRating": 5
+          },
+          "reviewBody": review.review_text || review.text || "Excelente serviço!"
+        }))
+      }),
       ...(data.schema?.offers?.length > 0 && {
         "offers": data.schema.offers.map((offer: any) => ({
           "@type": "Offer",
