@@ -4693,7 +4693,18 @@ const Editor = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const allEnabled = Object.values(data.email.sections).every(section => section.enabled);
+                          const allEnabled = Object.values(
+                            data.email.sections || {
+                              header: { enabled: true },
+                              content: { enabled: true },
+                              ctas: { enabled: true },
+                              highlights: { enabled: true },
+                              benefits: { enabled: true },
+                              main_image: { enabled: true },
+                              solutions: { enabled: false },
+                              footer: { enabled: true }
+                            }
+                          ).every((section: any) => section.enabled);
                           setData(prev => ({
                             ...prev,
                             email: {
@@ -4712,7 +4723,18 @@ const Editor = () => {
                           }));
                         }}
                       >
-                        {Object.values(data.email.sections).every(section => section.enabled) ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
+                        {Object.values(
+                          data.email.sections || {
+                            header: { enabled: true },
+                            content: { enabled: true },
+                            ctas: { enabled: true },
+                            highlights: { enabled: true },
+                            benefits: { enabled: true },
+                            main_image: { enabled: true },
+                            solutions: { enabled: false },
+                            footer: { enabled: true }
+                          }
+                        ).every((section: any) => section.enabled) ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
                       </Button>
                     </div>
                   </CardTitle>
@@ -4737,7 +4759,16 @@ const Editor = () => {
                             email: {
                               ...prev.email,
                               sections: {
-                                ...prev.email.sections,
+                                ...(prev.email.sections ?? {
+                                  header: { enabled: true },
+                                  content: { enabled: true },
+                                  ctas: { enabled: true },
+                                  highlights: { enabled: true },
+                                  benefits: { enabled: true },
+                                  main_image: { enabled: true },
+                                  solutions: { enabled: false },
+                                  footer: { enabled: true }
+                                }),
                                 [key]: { enabled: checked }
                               }
                             }
@@ -4753,7 +4784,18 @@ const Editor = () => {
                   
                   <div className="mt-4 p-3 bg-muted rounded-lg">
                     <p className="text-sm">
-                      <strong>Seções ativas:</strong> {Object.values(data.email.sections).filter(s => s.enabled).length} de 8
+                      <strong>Seções ativas:</strong> {Object.values(
+                        data.email.sections || {
+                          header: { enabled: true },
+                          content: { enabled: true },
+                          ctas: { enabled: true },
+                          highlights: { enabled: true },
+                          benefits: { enabled: true },
+                          main_image: { enabled: true },
+                          solutions: { enabled: false },
+                          footer: { enabled: true }
+                        }
+                      ).filter((s: any) => s.enabled).length} de 8
                     </p>
                   </div>
                 </CardContent>
@@ -4765,7 +4807,7 @@ const Editor = () => {
                 <AccordionItem value="email-header">
                   <AccordionTrigger className="flex items-center gap-2">
                     Header do Email
-                    {!data.email.sections.header.enabled && (
+                    {!((data.email.sections?.header?.enabled) ?? true) && (
                       <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
                     )}
                   </AccordionTrigger>
@@ -4836,7 +4878,7 @@ const Editor = () => {
                 <AccordionItem value="email-content">
                   <AccordionTrigger className="flex items-center gap-2">
                     Conteúdo Principal
-                    {!data.email.sections.content.enabled && (
+                    {!((data.email.sections?.content?.enabled) ?? true) && (
                       <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
                     )}
                   </AccordionTrigger>
@@ -4872,7 +4914,7 @@ const Editor = () => {
                 <AccordionItem value="email-ctas">
                   <AccordionTrigger className="flex items-center gap-2">
                     CTAs do Email
-                    {!data.email.sections.ctas.enabled && (
+                    {!((data.email.sections?.ctas?.enabled) ?? true) && (
                       <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
                     )}
                   </AccordionTrigger>
@@ -4952,7 +4994,7 @@ const Editor = () => {
                 <AccordionItem value="email-highlights">
                   <AccordionTrigger className="flex items-center gap-2">
                     Destaques
-                    {!data.email.sections.highlights.enabled && (
+                    {!((data.email.sections?.highlights?.enabled) ?? true) && (
                       <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
                     )}
                   </AccordionTrigger>
