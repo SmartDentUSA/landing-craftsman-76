@@ -3264,6 +3264,7 @@ const Editor = () => {
               </Card>
 
               {/* Google Reviews Extraction Card */}
+              {false && (
               <Card className="border-l-4 border-l-blue-500/50">
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
@@ -3495,6 +3496,7 @@ const Editor = () => {
                   )}
                 </CardContent>
               </Card>
+              )}
 
               {/* Manual Reviews Upload Card */}
               <Card className="border-l-4 border-l-purple-500/50">
