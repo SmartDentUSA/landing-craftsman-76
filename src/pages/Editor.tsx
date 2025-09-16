@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { useToast } from "@/hooks/use-toast";
@@ -3012,589 +3012,691 @@ const Editor = () => {
             </TabsContent>
 
             {/* Aba Schema & Offers */}
-            <TabsContent value="schema-offers" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Schema & Ofertas (JSON-LD)</CardTitle>
+            <TabsContent value="schema-offers" className="space-y-6">
+              
+              {/* Schema Software Application Card */}
+              <Card className="border-l-4 border-l-primary/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Laptop className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Software Application Schema</CardTitle>
+                      <p className="text-sm text-muted-foreground">Configure os dados estruturados da sua aplicação</p>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <Accordion type="single" collapsible defaultValue="software-app">
-                    
-                    {/* Software Application */}
-                    <AccordionItem value="software-app">
-                      <AccordionTrigger>Software Application</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Nome da Aplicação</Label>
-                            <Input
-                              value={data.schema.software_app.name}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, name: e.target.value }
-                                }
-                              }))}
-                              placeholder="Nome do software"
-                            />
-                          </div>
-                          <div>
-                            <Label>Categoria</Label>
-                            <Select
-                              value={data.schema.software_app.category}
-                              onValueChange={(value) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, category: value }
-                                }
-                              }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="HealthApplication">Health Application</SelectItem>
-                                <SelectItem value="BusinessApplication">Business Application</SelectItem>
-                                <SelectItem value="WebApplication">Web Application</SelectItem>
-                                <SelectItem value="MobileApplication">Mobile Application</SelectItem>
-                                <SelectItem value="DesktopApplication">Desktop Application</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        {/* Google Reviews Extraction */}
-                          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <Label htmlFor="google-reviews-url">Link das Avaliações Google</Label>
-                              <Badge variant="secondary">Auto-extração</Badge>
-                            </div>
-                            
-                            <div className="space-y-3">
-                              <Input
-                                id="google-reviews-url"
-                                value={data.schema.google_reviews?.url ?? ''}
-                                onChange={(e) => setData(prev => ({
-                                  ...prev,
-                                  schema: {
-                                    ...prev.schema,
-                                    google_reviews: {
-                                      ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                      url: e.target.value
-                                    }
-                                  }
-                                }))}
-                                placeholder="https://www.google.com/maps/place/..."
-                                className="w-full"
-                              />
-                              
-                              <div className="flex items-center gap-3">
-                                <div className="flex gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={!(data.schema.google_reviews?.url) || data.schema.google_reviews?.status === 'loading'}
-                                    onClick={async () => {
-                                      setData(prev => ({
-                                        ...prev,
-                                        schema: {
-                                          ...prev.schema,
-                                          google_reviews: {
-                                            ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                            status: 'loading'
-                                          }
-                                        }
-                                      }));
-    
-                                      try {
-                                        const { supabase } = await import("@/integrations/supabase/client");
-                                        const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
-                                          body: { url: data.schema.google_reviews?.url }
-                                        });
-    
-                                        if (error) throw error;
-    
-                                        if (result.success) {
-                                          setData(prev => ({
-                                            ...prev,
-                                            schema: {
-                                              ...prev.schema,
-                                              software_app: {
-                                                ...prev.schema.software_app,
-                                                rating_value: result.data.rating.toString(),
-                                                rating_count: result.data.reviewCount.toString()
-                                              },
-                                              google_reviews: {
-                                                ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                                status: 'success',
-                                                last_extracted: result.extracted_at,
-                                                auto_extract: true
-                                              }
-                                            }
-                                          }));
-                                          toast({
-                                            title: "✅ Reviews extraídas!",
-                                            description: `Nota: ${result.data.rating}/5 (${result.data.reviewCount} avaliações)`
-                                          });
-                                        } else {
-                                          throw new Error(result.error);
-                                        }
-                                      } catch (error: any) {
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: {
-                                            ...prev.schema,
-                                            google_reviews: {
-                                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                              status: 'error',
-                                              error_message: error.message
-                                            }
-                                          }
-                                        }));
-                                        toast({
-                                          title: "❌ Erro na extração",
-                                          description: error.message,
-                                          variant: "destructive"
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    {data.schema.google_reviews?.status === 'loading' ? 'Extraindo...' : 'Extrair Automaticamente'}
-                                  </Button>
+                <CardContent className="space-y-6">
+                  {/* Informações Básicas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Tag className="w-4 h-4" />
+                        Nome da Aplicação
+                      </Label>
+                      <Input
+                        value={data.schema.software_app.name}
+                        onChange={(e) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, name: e.target.value }
+                          }
+                        }))}
+                        placeholder="Nome do software"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Folder className="w-4 h-4" />
+                        Categoria
+                      </Label>
+                      <Select
+                        value={data.schema.software_app.category}
+                        onValueChange={(value) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, category: value }
+                          }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="HealthApplication">Health Application</SelectItem>
+                          <SelectItem value="BusinessApplication">Business Application</SelectItem>
+                          <SelectItem value="WebApplication">Web Application</SelectItem>
+                          <SelectItem value="MobileApplication">Mobile Application</SelectItem>
+                          <SelectItem value="DesktopApplication">Desktop Application</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-                                  <ReviewModerationModal
-                                    placeId={data.schema.google_reviews?.place_id || 
-                                      (data.schema.google_reviews?.url ? 
-                                        (data.schema.google_reviews.url.match(/cid=([^&]+)/)?.[1] || 
-                                         `generated_${Math.abs(data.schema.google_reviews.url.split('').reduce((a, b) => {
-                                           a = ((a << 5) - a) + b.charCodeAt(0);
-                                           return a & a;
-                                         }, 0))}`) : '')
-                                    }
-                                    landingPageId={id || 'default'}
-                                  >
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      disabled={!(data.schema.google_reviews?.url)}
-                                    >
-                                      <Users className="w-4 h-4 mr-1" />
-                                      Moderar Reviews
-                                    </Button>
-                                  </ReviewModerationModal>
+                  {/* Avaliações e Preço */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        Avaliação (0-5)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={data.schema.software_app.rating_value}
+                        onChange={(e) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, rating_value: e.target.value }
+                          }
+                        }))}
+                        placeholder="4.8"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Avaliações
+                      </Label>
+                      <Input
+                        type="number"
+                        value={data.schema.software_app.rating_count}
+                        onChange={(e) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, rating_count: e.target.value }
+                          }
+                        }))}
+                        placeholder="150"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-green-500" />
+                        Preço
+                      </Label>
+                      <Input
+                        value={data.schema.software_app.price}
+                        onChange={(e) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, price: e.target.value }
+                          }
+                        }))}
+                        placeholder="0 (para gratuito)"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        Moeda
+                      </Label>
+                      <Select
+                        value={data.schema.software_app.price_currency}
+                        onValueChange={(value) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, price_currency: value }
+                          }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BRL">BRL (Real)</SelectItem>
+                          <SelectItem value="USD">USD (Dólar)</SelectItem>
+                          <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={!(data.schema.google_reviews?.url)}
-                                    onClick={async () => {
-                                      setData(prev => ({
-                                        ...prev,
-                                        schema: {
-                                          ...prev.schema,
-                                          google_reviews: {
-                                            ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                            status: 'loading'
-                                          }
-                                        }
-                                      }));
-    
-                                      try {
-                                        const { supabase } = await import("@/integrations/supabase/client");
-                                        const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
-                                          body: { 
-                                            url: data.schema.google_reviews?.url,
-                                            extract_individual_reviews: true
-                                          }
-                                        });
-    
-                                        if (error) throw error;
-    
-                                        if (result.success) {
-                                          setData(prev => ({
-                                            ...prev,
-                                            schema: {
-                                              ...prev.schema,
-                                              google_reviews: {
-                                                ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                                status: 'success',
-                                                last_extracted: result.extracted_at,
-                                                auto_extract: true,
-                                                place_id: result.data?.place_id
-                                              }
-                                            }
-                                          }));
-                                          toast({
-                                            title: "✅ Reviews extraídas com sucesso!",
-                                            description: `${result.data.reviews_extracted} reviews salvas de ${result.data.total_found} encontradas`
-                                          });
-                                        } else {
-                                          throw new Error(result.error);
-                                        }
-                                      } catch (error: any) {
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: {
-                                            ...prev.schema,
-                                            google_reviews: {
-                                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                              status: 'error',
-                                              error_message: error.message
-                                            }
-                                          }
-                                        }));
-                                        toast({
-                                          title: "❌ Erro na extração individual",
-                                          description: error.message,
-                                          variant: "destructive"
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    Extrair Reviews Individuais
-                                  </Button>
-                                 </div>
+                  {/* Sistema e Categoria */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Monitor className="w-4 h-4" />
+                        Sistema Operacional
+                      </Label>
+                      <Input
+                        value={data.schema.software_app.operating_system}
+                        onChange={(e) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, operating_system: e.target.value }
+                          }
+                        }))}
+                        placeholder="Web, Windows, macOS, etc."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Tag className="w-4 h-4" />
+                        Categoria da Aplicação
+                      </Label>
+                      <Input
+                        value={data.schema.software_app.application_category}
+                        onChange={(e) => setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            software_app: { ...prev.schema.software_app, application_category: e.target.value }
+                          }
+                        }))}
+                        placeholder="HealthApplication"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                                 {/* Manual Reviews Upload */}
-                                 <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando reviews…</div>}>
-                                   <CSVReviewUploader
-                                     reviews={data.schema.manual_reviews || []}
-                                     onReviewsUpdate={(reviews) => setData(prev => ({
-                                       ...prev,
-                                       schema: {
-                                         ...prev.schema,
-                                         manual_reviews: reviews
-                                       }
-                                     }))}
-                                   />
-                                 </Suspense>
+              {/* Google Reviews Extraction Card */}
+              <Card className="border-l-4 border-l-blue-500/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Star className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Reviews do Google</CardTitle>
+                      <p className="text-sm text-muted-foreground">Extraia automaticamente avaliações do Google</p>
+                    </div>
+                    {data.schema.google_reviews?.status === 'success' && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        ✅ Ativo
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="google-reviews-url" className="flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Link das Avaliações Google
+                    </Label>
+                    <Input
+                      id="google-reviews-url"
+                      value={data.schema.google_reviews?.url ?? ''}
+                      onChange={(e) => setData(prev => ({
+                        ...prev,
+                        schema: {
+                          ...prev.schema,
+                          google_reviews: {
+                            ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                            url: e.target.value
+                          }
+                        }
+                      }))}
+                      placeholder="https://www.google.com/maps/place/..."
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!(data.schema.google_reviews?.url) || data.schema.google_reviews?.status === 'loading'}
+                      onClick={async () => {
+                        setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            google_reviews: {
+                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                              status: 'loading'
+                            }
+                          }
+                        }));
 
-                                 {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
-                                  <div className="text-sm text-green-600 font-medium">
-                                    ✅ Extraído: {new Date(data.schema.google_reviews.last_extracted).toLocaleDateString()}
-                                  </div>
-                                )}
-                                
-                                {data.schema.google_reviews?.status === 'error' && (
-                                  <div className="text-sm text-red-600 font-medium">
-                                    ❌ {data.schema.google_reviews?.error_message}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                        try {
+                          const { supabase } = await import("@/integrations/supabase/client");
+                          const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
+                            body: { url: data.schema.google_reviews?.url }
+                          });
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label>Avaliação (0-5)</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="5"
-                                step="0.1"
-                                value={data.schema.software_app.rating_value}
-                                onChange={(e) => setData(prev => ({
-                                  ...prev,
-                                  schema: {
-                                    ...prev.schema,
-                                    software_app: { ...prev.schema.software_app, rating_value: e.target.value }
-                                  }
-                                }))}
-                                placeholder="4.8"
-                              />
-                            </div>
-                            <div>
-                              <Label>Número de Avaliações</Label>
-                              <Input
-                                type="number"
-                                value={data.schema.software_app.rating_count}
-                                onChange={(e) => setData(prev => ({
-                                  ...prev,
-                                  schema: {
-                                    ...prev.schema,
-                                    software_app: { ...prev.schema.software_app, rating_count: e.target.value }
-                                  }
-                                }))}
-                                placeholder="150"
-                              />
-                            </div>
-                          </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Preço</Label>
-                            <Input
-                              value={data.schema.software_app.price}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, price: e.target.value }
-                                }
-                              }))}
-                              placeholder="0 (para gratuito)"
-                            />
-                          </div>
-                          <div>
-                            <Label>Moeda</Label>
-                            <Select
-                              value={data.schema.software_app.price_currency}
-                              onValueChange={(value) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, price_currency: value }
-                                }
-                              }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="BRL">BRL (Real)</SelectItem>
-                                <SelectItem value="USD">USD (Dólar)</SelectItem>
-                                <SelectItem value="EUR">EUR (Euro)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>Sistema Operacional</Label>
-                            <Input
-                              value={data.schema.software_app.operating_system}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, operating_system: e.target.value }
-                                }
-                              }))}
-                              placeholder="Web, Windows, macOS, etc."
-                            />
-                          </div>
-                          <div>
-                            <Label>Categoria da Aplicação</Label>
-                            <Input
-                              value={data.schema.software_app.application_category}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                schema: {
-                                  ...prev.schema,
-                                  software_app: { ...prev.schema.software_app, application_category: e.target.value }
-                                }
-                              }))}
-                              placeholder="HealthApplication"
-                            />
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
+                          if (error) throw error;
 
-                    {/* Ofertas */}
-                    <AccordionItem value="offers">
-                      <AccordionTrigger>Ofertas</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        {data.schema.offers.map((offer, index) => (
-                          <div key={index} className="p-4 border rounded-lg space-y-4">
-                            <div className="flex justify-between items-center">
-                              <Label>Oferta {index + 1}</Label>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const newOffers = data.schema.offers.filter((_, i) => i !== index);
-                                  setData(prev => ({
-                                    ...prev,
-                                    schema: { ...prev.schema, offers: newOffers }
-                                  }));
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-
-                            {/* URL do Produto */}
-                            <div className="space-y-2">
-                              <Label>URL do Produto (Loja Integrada)</Label>
-                              <div className="flex gap-2">
-                                <Input
-                                  value={offer.productUrl || ''}
-                                  onChange={(e) => {
-                                    const newOffers = [...data.schema.offers];
-                                    newOffers[index].productUrl = e.target.value;
-                                    setData(prev => ({
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    }));
-                                  }}
-                                  placeholder="https://minhaloja.lojaintegrada.com.br/produto/123"
-                                  className="flex-1"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => extractProductData(index)}
-                                  disabled={!offer.productUrl || extractingProduct === index}
-                                  className="shrink-0"
-                                >
-                                  {extractingProduct === index ? (
-                                    <>⏳ Importando...</>
-                                  ) : (
-                                    <>🔗 Importar</>
-                                  )}
-                                </Button>
-                              </div>
-                              {offer.sourceType === 'imported' && offer.lastUpdated && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Badge variant="secondary" className="text-xs">
-                                    Importado
-                                  </Badge>
-                                  <span>Última atualização: {new Date(offer.lastUpdated).toLocaleString('pt-BR')}</span>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => extractProductData(index)}
-                                    disabled={extractingProduct === index}
-                                    className="ml-auto text-xs h-6 px-2"
-                                  >
-                                    ↻ Atualizar
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div>
-                              <Label>Nome da Oferta</Label>
-                              <Input
-                                value={offer.name}
-                                onChange={(e) => {
-                                  const newOffers = [...data.schema.offers];
-                                  newOffers[index].name = e.target.value;
-                                  setData(prev => ({
-                                    ...prev,
-                                    schema: { ...prev.schema, offers: newOffers }
-                                  }));
-                                }}
-                                placeholder="Nome da oferta"
-                              />
-                            </div>
-                            
-                            <div>
-                              <Label>Descrição</Label>
-                              <Textarea
-                                value={offer.description}
-                                onChange={(e) => {
-                                  const newOffers = [...data.schema.offers];
-                                  newOffers[index].description = e.target.value;
-                                  setData(prev => ({
-                                    ...prev,
-                                    schema: { ...prev.schema, offers: newOffers }
-                                  }));
-                                }}
-                                placeholder="Descrição da oferta"
-                                rows={2}
-                              />
-                            </div>
-                            
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
-                                <Label>Preço</Label>
-                                <Input
-                                  value={offer.price}
-                                  onChange={(e) => {
-                                    const newOffers = [...data.schema.offers];
-                                    newOffers[index].price = e.target.value;
-                                    setData(prev => ({
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    }));
-                                  }}
-                                  placeholder="199.90"
-                                />
-                              </div>
-                              <div>
-                                <Label>Moeda</Label>
-                                <Select
-                                  value={offer.currency}
-                                  onValueChange={(value) => {
-                                    const newOffers = [...data.schema.offers];
-                                    newOffers[index].currency = value;
-                                    setData(prev => ({
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    }));
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="BRL">BRL</SelectItem>
-                                    <SelectItem value="USD">USD</SelectItem>
-                                    <SelectItem value="EUR">EUR</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Disponibilidade</Label>
-                                <Select
-                                  value={offer.availability}
-                                  onValueChange={(value) => {
-                                    const newOffers = [...data.schema.offers];
-                                    newOffers[index].availability = value;
-                                    setData(prev => ({
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    }));
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="InStock">Em Estoque</SelectItem>
-                                    <SelectItem value="OutOfStock">Fora de Estoque</SelectItem>
-                                    <SelectItem value="PreOrder">Pré-venda</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <Label>Válido Até</Label>
-                              <Input
-                                type="date"
-                                value={offer.valid_through}
-                                onChange={(e) => {
-                                  const newOffers = [...data.schema.offers];
-                                  newOffers[index].valid_through = e.target.value;
-                                  setData(prev => ({
-                                    ...prev,
-                                    schema: { ...prev.schema, offers: newOffers }
-                                  }));
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
+                          if (result.success) {
                             setData(prev => ({
                               ...prev,
                               schema: {
                                 ...prev.schema,
+                                software_app: {
+                                  ...prev.schema.software_app,
+                                  rating_value: result.data.rating.toString(),
+                                  rating_count: result.data.reviewCount.toString()
+                                },
+                                google_reviews: {
+                                  ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                  status: 'success',
+                                  last_extracted: result.extracted_at,
+                                  auto_extract: true
+                                }
+                              }
+                            }));
+                            toast({
+                              title: "✅ Reviews extraídas!",
+                              description: `Nota: ${result.data.rating}/5 (${result.data.reviewCount} avaliações)`
+                            });
+                          } else {
+                            throw new Error(result.error);
+                          }
+                        } catch (error: any) {
+                          setData(prev => ({
+                            ...prev,
+                            schema: {
+                              ...prev.schema,
+                              google_reviews: {
+                                ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                status: 'error',
+                                error_message: error.message
+                              }
+                            }
+                          }));
+                          toast({
+                            title: "❌ Erro na extração",
+                            description: error.message,
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <Star className="w-4 h-4 mr-1" />
+                      {data.schema.google_reviews?.status === 'loading' ? 'Extraindo...' : 'Extrair Automaticamente'}
+                    </Button>
+
+                    <ReviewModerationModal
+                      placeId={data.schema.google_reviews?.place_id || 
+                        (data.schema.google_reviews?.url ? 
+                          (data.schema.google_reviews.url.match(/cid=([^&]+)/)?.[1] || 
+                           `generated_${Math.abs(data.schema.google_reviews.url.split('').reduce((a, b) => {
+                             a = ((a << 5) - a) + b.charCodeAt(0);
+                             return a & a;
+                           }, 0))}`) : '')
+                      }
+                      landingPageId={id || 'default'}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!(data.schema.google_reviews?.url)}
+                      >
+                        <Users className="w-4 h-4 mr-1" />
+                        Moderar Reviews
+                      </Button>
+                    </ReviewModerationModal>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!(data.schema.google_reviews?.url)}
+                      onClick={async () => {
+                        setData(prev => ({
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            google_reviews: {
+                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                              status: 'loading'
+                            }
+                          }
+                        }));
+
+                        try {
+                          const { supabase } = await import("@/integrations/supabase/client");
+                          const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
+                            body: { 
+                              url: data.schema.google_reviews?.url,
+                              extract_individual_reviews: true
+                            }
+                          });
+
+                          if (error) throw error;
+
+                          if (result.success) {
+                            setData(prev => ({
+                              ...prev,
+                              schema: {
+                                ...prev.schema,
+                                google_reviews: {
+                                  ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                  status: 'success',
+                                  last_extracted: result.extracted_at,
+                                  auto_extract: true,
+                                  place_id: result.data?.place_id
+                                }
+                              }
+                            }));
+                            toast({
+                              title: "✅ Reviews extraídas com sucesso!",
+                              description: `${result.data.reviews_extracted} reviews salvas de ${result.data.total_found} encontradas`
+                            });
+                          } else {
+                            throw new Error(result.error);
+                          }
+                        } catch (error: any) {
+                          setData(prev => ({
+                            ...prev,
+                            schema: {
+                              ...prev.schema,
+                              google_reviews: {
+                                ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                status: 'error',
+                                error_message: error.message
+                              }
+                            }
+                          }));
+                          toast({
+                            title: "❌ Erro na extração individual",
+                            description: error.message,
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Extrair Reviews Individuais
+                    </Button>
+                  </div>
+
+                  {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-green-700 font-medium">
+                        Extraído em: {new Date(data.schema.google_reviews.last_extracted).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {data.schema.google_reviews?.status === 'error' && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="text-sm text-red-700 font-medium">
+                        ❌ {data.schema.google_reviews?.error_message}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Manual Reviews Upload Card */}
+              <Card className="border-l-4 border-l-purple-500/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <Users className="w-5 h-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Reviews Manuais</CardTitle>
+                      <p className="text-sm text-muted-foreground">Adicione reviews personalizadas via CSV</p>
+                    </div>
+                    {data.schema.manual_reviews && data.schema.manual_reviews.length > 0 && (
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                        {data.schema.manual_reviews.length} reviews
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando uploader…</div>}>
+                    <CSVReviewUploader
+                      reviews={data.schema.manual_reviews || []}
+                      onReviewsUpdate={(reviews) => setData(prev => ({
+                        ...prev,
+                        schema: {
+                          ...prev.schema,
+                          manual_reviews: reviews
+                        }
+                      }))}
+                    />
+                  </Suspense>
+                </CardContent>
+              </Card>
+
+              {/* Ofertas Card */}
+              <Card className="border-l-4 border-l-orange-500/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-500/10 rounded-lg">
+                        <DollarSign className="w-5 h-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Ofertas de Produtos</CardTitle>
+                        <p className="text-sm text-muted-foreground">Configure ofertas estruturadas para SEO</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                      {data.schema.offers.length} ofertas
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {data.schema.offers.map((offer, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-4 bg-card">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <Label className="font-medium">Oferta {index + 1}</Label>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newOffers = data.schema.offers.filter((_, i) => i !== index);
+                            setData(prev => ({
+                              ...prev,
+                              schema: { ...prev.schema, offers: newOffers }
+                            }));
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* URL do Produto */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Globe className="w-4 h-4" />
+                          URL do Produto (Loja Integrada)
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={offer.productUrl || ''}
+                            onChange={(e) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].productUrl = e.target.value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                            placeholder="https://minhaloja.lojaintegrada.com.br/produto/123"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => extractProductData(index)}
+                            disabled={!offer.productUrl || extractingProduct === index}
+                            className="shrink-0"
+                          >
+                            {extractingProduct === index ? (
+                              <>⏳ Importando...</>
+                            ) : (
+                              <>🔗 Importar</>
+                            )}
+                          </Button>
+                        </div>
+                        {offer.sourceType === 'imported' && offer.lastUpdated && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Badge variant="secondary" className="text-xs">
+                              Importado
+                            </Badge>
+                            <span>Última atualização: {new Date(offer.lastUpdated).toLocaleString('pt-BR')}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => extractProductData(index)}
+                              disabled={extractingProduct === index}
+                              className="ml-auto text-xs h-6 px-2"
+                            >
+                              ↻ Atualizar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Tag className="w-4 h-4" />
+                            Nome da Oferta
+                          </Label>
+                          <Input
+                            value={offer.name}
+                            onChange={(e) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].name = e.target.value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                            placeholder="Nome da oferta"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Descrição</Label>
+                          <Textarea
+                            value={offer.description}
+                            onChange={(e) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].description = e.target.value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                            placeholder="Descrição da oferta"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-green-500" />
+                            Preço
+                          </Label>
+                          <Input
+                            value={offer.price}
+                            onChange={(e) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].price = e.target.value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                            placeholder="199.90"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Moeda</Label>
+                          <Select
+                            value={offer.currency}
+                            onValueChange={(value) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].currency = value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BRL">BRL</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Disponibilidade</Label>
+                          <Select
+                            value={offer.availability}
+                            onValueChange={(value) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].availability = value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="InStock">Em Estoque</SelectItem>
+                              <SelectItem value="OutOfStock">Fora de Estoque</SelectItem>
+                              <SelectItem value="PreOrder">Pré-venda</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Válido Até</Label>
+                          <Input
+                            type="date"
+                            value={offer.valid_through}
+                            onChange={(e) => {
+                              const newOffers = [...data.schema.offers];
+                              newOffers[index].valid_through = e.target.value;
+                              setData(prev => ({
+                                ...prev,
+                                schema: { ...prev.schema, offers: newOffers }
+                              }));
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setData(prev => ({
+                        ...prev,
+                        schema: {
+                          ...prev.schema,
                           offers: [...prev.schema.offers, {
                             name: '',
                             description: '',
@@ -3606,81 +3708,98 @@ const Editor = () => {
                             sourceType: 'manual' as const,
                             lastUpdated: undefined
                           }]
-                              }
-                            }));
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Oferta
-                        </Button>
-                      </AccordionContent>
-                    </AccordionItem>
+                        }
+                      }));
+                    }}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Nova Oferta
+                  </Button>
+                </CardContent>
+              </Card>
 
-                    {/* Breadcrumb */}
-                    <AccordionItem value="breadcrumb">
-                      <AccordionTrigger>Breadcrumb</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        {data.schema.breadcrumb.map((crumb, index) => (
-                          <div key={index} className="flex gap-2">
-                            <Input
-                              placeholder="Nome"
-                              value={crumb.name}
-                              onChange={(e) => {
-                                const newBreadcrumb = [...data.schema.breadcrumb];
-                                newBreadcrumb[index].name = e.target.value;
-                                setData(prev => ({
-                                  ...prev,
-                                  schema: { ...prev.schema, breadcrumb: newBreadcrumb }
-                                }));
-                              }}
-                            />
-                            <Input
-                              placeholder="URL"
-                              value={crumb.url}
-                              onChange={(e) => {
-                                const newBreadcrumb = [...data.schema.breadcrumb];
-                                newBreadcrumb[index].url = e.target.value;
-                                setData(prev => ({
-                                  ...prev,
-                                  schema: { ...prev.schema, breadcrumb: newBreadcrumb }
-                                }));
-                              }}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newBreadcrumb = data.schema.breadcrumb.filter((_, i) => i !== index);
-                                setData(prev => ({
-                                  ...prev,
-                                  schema: { ...prev.schema, breadcrumb: newBreadcrumb }
-                                }));
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
+              {/* Breadcrumb Card */}
+              <Card className="border-l-4 border-l-indigo-500/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-500/10 rounded-lg">
+                        <Folder className="w-5 h-5 text-indigo-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Breadcrumb Navigation</CardTitle>
+                        <p className="text-sm text-muted-foreground">Configure a navegação estruturada</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                      {data.schema.breadcrumb.length} itens
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {data.schema.breadcrumb.map((crumb, index) => (
+                    <div key={index} className="flex gap-2 p-3 bg-muted/30 rounded-lg">
+                      <div className="flex-1 grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Nome da página"
+                          value={crumb.name}
+                          onChange={(e) => {
+                            const newBreadcrumb = [...data.schema.breadcrumb];
+                            newBreadcrumb[index].name = e.target.value;
                             setData(prev => ({
                               ...prev,
-                              schema: {
-                                ...prev.schema,
-                                breadcrumb: [...prev.schema.breadcrumb, { name: '', url: '' }]
-                              }
+                              schema: { ...prev.schema, breadcrumb: newBreadcrumb }
                             }));
                           }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Item
-                        </Button>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+                        />
+                        <Input
+                          placeholder="URL da página"
+                          value={crumb.url}
+                          onChange={(e) => {
+                            const newBreadcrumb = [...data.schema.breadcrumb];
+                            newBreadcrumb[index].url = e.target.value;
+                            setData(prev => ({
+                              ...prev,
+                              schema: { ...prev.schema, breadcrumb: newBreadcrumb }
+                            }));
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const newBreadcrumb = data.schema.breadcrumb.filter((_, i) => i !== index);
+                          setData(prev => ({
+                            ...prev,
+                            schema: { ...prev.schema, breadcrumb: newBreadcrumb }
+                          }));
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setData(prev => ({
+                        ...prev,
+                        schema: {
+                          ...prev.schema,
+                          breadcrumb: [...prev.schema.breadcrumb, { name: '', url: '' }]
+                        }
+                      }));
+                    }}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Item do Breadcrumb
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
