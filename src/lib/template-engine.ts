@@ -1229,6 +1229,42 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
             </td>
           </tr>
 
+          <!-- Cards de Soluções com Imagens -->
+          {{#solutions}}
+          {{#show_solutions_in_email}}
+          <tr>
+            <td align="left" class="p-xs" style="padding:24px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
+              <h2 style="margin:0 0 16px; font-size:20px; color:#0b1220;">{{solutions_title}}</h2>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 16px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                {{#solutions_list}}
+                <tr>
+                  <td style="padding:8px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eef2f7; border-radius:12px; overflow:hidden;">
+                      <tr>
+                        <td class="stack" valign="top" style="width:40%; max-width:40%; padding:0;">
+                          <img src="{{image_src}}" alt="{{image_alt}}" width="200" style="width:100%; max-width:200px; height:120px; object-fit:cover; border:0; display:block;">
+                        </td>
+                        <td class="stack" valign="top" style="width:60%; max-width:60%; padding:16px; font-family:Arial, Helvetica, sans-serif;">
+                          <h3 style="margin:0 0 8px; font-size:16px; color:#0b1220;">{{title}}</h3>
+                          <p style="margin:0; font-size:14px; color:#3b4556; line-height:1.5;">
+                            {{description}}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                {{/solutions_list}}
+              </table>
+            </td>
+          </tr>
+          {{/show_solutions_in_email}}
+          {{/solutions}}
+
           <!-- Destaques (2 colunas responsivas) -->
           <tr>
             <td align="center" style="padding:8px 16px 8px;">
@@ -1816,7 +1852,22 @@ export const generateHTML = (data: any): string => {
 };
 
 export const generateEmailHTML = (emailData: any): string => {
-  return Mustache.render(EMAIL_TEMPLATE_HTML, emailData);
+  // Processar dados das soluções para o email
+  const processedEmailData = {
+    ...emailData,
+    solutions: {
+      show_solutions_in_email: emailData.show_solutions_in_email || false,
+      solutions_title: emailData.solutions_title || "Nossos Serviços",
+      solutions_list: emailData.solutions_list ? emailData.solutions_list.map((solution: any) => ({
+        title: solution.title,
+        description: solution.description,
+        image_src: solution.image?.src || solution.image || '',
+        image_alt: solution.image?.alt || solution.title || ''
+      })) : []
+    }
+  };
+  
+  return Mustache.render(EMAIL_TEMPLATE_HTML, processedEmailData);
 };
 
 // Sample data for testing

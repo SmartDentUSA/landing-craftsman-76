@@ -135,6 +135,13 @@ interface EmailData {
   logo_alt: string;
   selo: string;
   titulo_principal: string;
+  show_solutions_in_email?: boolean;
+  solutions_title?: string;
+  solutions_list?: Array<{
+    title: string;
+    description: string;
+    image: ImageData;
+  }>;
   subtitulo: string;
   cta_href: string;
   cta_label: string;
@@ -959,7 +966,9 @@ const Editor = () => {
       endereco_completo: 'Rua Exemplo, 123 - Centro, Ribeirão Preto - SP',
       link_suporte: 'https://smartdent.com.br/suporte',
       link_descadastro: 'https://smartdent.com.br/descadastro',
-      link_preferencias: 'https://smartdent.com.br/preferencias'
+      link_preferencias: 'https://smartdent.com.br/preferencias',
+      show_solutions_in_email: false,
+      solutions_title: 'Nossos Serviços'
     }
   });
 
@@ -1094,12 +1103,20 @@ const Editor = () => {
       }, embedConfig);
     }
     
-    // Modo padrão
+    // Modo padrão - incluir soluções no email
     return generateEmailHTML({
       ...processedData.email,
       logo_src: processedData.email.logo_src.src,
       imagem_src: processedData.email.imagem_src.src,
-      imagem_alt: processedData.email.imagem_src.alt
+      imagem_alt: processedData.email.imagem_src.alt,
+      show_solutions_in_email: processedData.email.show_solutions_in_email || false,
+      solutions_title: processedData.email.solutions_title || "Nossos Serviços",
+      solutions_list: processedData.solutions?.map((solution: any) => ({
+        title: solution.title,
+        description: solution.description,
+        image_src: solution.image?.src || '',
+        image_alt: solution.image?.alt || solution.title || ''
+      })) || []
     });
   }, [data]);
 
@@ -4871,6 +4888,40 @@ const Editor = () => {
                         placeholder="Imagem principal do email"
                       />
                     </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Cards de Soluções */}
+                <AccordionItem value="email-solutions">
+                  <AccordionTrigger>Cards de Soluções</AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={data.email.show_solutions_in_email || false}
+                        onCheckedChange={(checked) => setData(prev => ({
+                          ...prev,
+                          email: { ...prev.email, show_solutions_in_email: checked }
+                        }))}
+                      />
+                      <Label>Incluir cards de soluções no email</Label>
+                    </div>
+                    
+                    {data.email.show_solutions_in_email && (
+                      <div>
+                        <Label>Título da Seção</Label>
+                        <Input
+                          value={data.email.solutions_title || "Nossos Serviços"}
+                          onChange={(e) => setData(prev => ({
+                            ...prev,
+                            email: { ...prev.email, solutions_title: e.target.value }
+                          }))}
+                          placeholder="Título para a seção de soluções no email"
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Os cards utilizarão as soluções configuradas na aba "Conteúdo"
+                        </p>
+                      </div>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
