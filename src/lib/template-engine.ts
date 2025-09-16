@@ -29,18 +29,18 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/hreflang}}
     
     <!-- Open Graph Tags -->
-    <meta property="og:title" content="{{og_title}}">
-    <meta property="og:description" content="{{og_description}}">
-    <meta property="og:image" content="{{og_image_url}}">
-    <meta property="og:type" content="{{og_type}}">
-    <meta property="og:site_name" content="{{og_site_name}}">
-    <meta property="og:url" content="{{canonical_url}}">
+    {{#og_title}}<meta property="og:title" content="{{og_title}}">{{/og_title}}
+    {{#og_description}}<meta property="og:description" content="{{og_description}}">{{/og_description}}
+    {{#og_image_url}}<meta property="og:image" content="{{og_image_url}}">{{/og_image_url}}
+    {{#og_type}}<meta property="og:type" content="{{og_type}}">{{/og_type}}
+    {{#og_site_name}}<meta property="og:site_name" content="{{og_site_name}}">{{/og_site_name}}
+    {{#canonical_url}}<meta property="og:url" content="{{canonical_url}}">{{/canonical_url}}
     
     <!-- Twitter Cards -->
-    <meta name="twitter:card" content="{{twitter_card}}">
-    <meta name="twitter:title" content="{{twitter_title}}">
-    <meta name="twitter:description" content="{{twitter_description}}">
-    <meta name="twitter:image" content="{{twitter_image_url}}">
+    {{#twitter_card}}<meta name="twitter:card" content="{{twitter_card}}">{{/twitter_card}}
+    {{#twitter_title}}<meta name="twitter:title" content="{{twitter_title}}">{{/twitter_title}}
+    {{#twitter_description}}<meta name="twitter:description" content="{{twitter_description}}">{{/twitter_description}}
+    {{#twitter_image_url}}<meta name="twitter:image" content="{{twitter_image_url}}">{{/twitter_image_url}}
     {{#twitter_site}}<meta name="twitter:site" content="{{twitter_site}}">{{/twitter_site}}
     {{#twitter_creator}}<meta name="twitter:creator" content="{{twitter_creator}}">{{/twitter_creator}}
     
