@@ -17,7 +17,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{seo_description}}">
-    {{#meta_robots}}<meta name="robots" content="{{meta_robots}}">{{/meta_robots}}
+    <meta name="robots" content="{{meta_robots}}">
     <title>{{seo_title}}</title>
     
     <!-- Canonical URL -->
@@ -1328,10 +1328,28 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </body>
 </html>`;
 
-// Função para sanitizar domínio (remover protocolos duplicados)
+// 🔧 FUNÇÃO SANITIZAÇÃO APRIMORADA - Evita URLs duplicadas
 const sanitizeDomain = (domain: string): string => {
   if (!domain) return '';
-  return domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  
+  // Log para debugging
+  console.log('🔧 Sanitizando domain:', domain);
+  
+  let cleaned = domain
+    .trim()
+    .replace(/^https?:\/\/+/g, '') // Remove protocolos múltiplos
+    .replace(/^www\.+/g, '') // Remove www múltiplos
+    .replace(/\/+$/g, '') // Remove barras finais
+    .replace(/\/+/g, '/'); // Normaliza barras múltiplas
+  
+  // Detectar e corrigir duplicações específicas
+  if (cleaned.includes('https://')) {
+    console.warn('⚠️ Domain contém protocolo residual:', cleaned);
+    cleaned = cleaned.replace(/https?:\/\/+/g, '');
+  }
+  
+  console.log('✅ Domain sanitizado:', cleaned);
+  return cleaned;
 };
 
 // Função para gerar hreflang automático
@@ -1544,11 +1562,13 @@ export const generateHTML = (data: any): string => {
     };
   }
 
-  // Processar hreflang automático se habilitado
+  // 🔧 PROCESSAR HREFLANG COM DOMAIN SANITIZADO
   if (data.seo?.hreflang_auto && (data.seo?.seo_title || data.name)) {
     const pageName = data.seo?.seo_title || data.name;
     const domain = data.seo?.domain || 'www.smartdent.com.br';
-    processedData.hreflang = generateAutoHreflang(pageName, domain);
+    const cleanDomain = sanitizeDomain(domain);
+    processedData.hreflang = generateAutoHreflang(pageName, cleanDomain);
+    console.log('🔧 Hreflang auto-gerado para domain:', cleanDomain);
   } else {
     processedData.hreflang = data.seo?.hreflang || [];
   }
@@ -1568,7 +1588,7 @@ export const generateHTML = (data: any): string => {
   processedData.og_image_url = data.seo?.og_image?.src || '';
   processedData.twitter_image_url = processImageUrl(data.seo?.twitter_image);
 
-  // Garantir canonical_url se não estiver definido
+  // 🔧 GARANTIR CANONICAL URL SEM DUPLICAÇÃO
   if (!processedData.canonical_url && data.seo?.domain && (data.seo?.seo_title || data.name)) {
     const slug = (data.seo?.seo_title || data.name)
       .toLowerCase()
@@ -1579,7 +1599,24 @@ export const generateHTML = (data: any): string => {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     const cleanDomain = sanitizeDomain(data.seo.domain);
-    processedData.canonical_url = `https://${cleanDomain}/${slug}`;
+    if (cleanDomain) {
+      processedData.canonical_url = `https://${cleanDomain}/${slug}`;
+      console.log('🔧 Canonical URL gerada:', processedData.canonical_url);
+    }
+  }
+  
+  // Validar e corrigir canonical_url existente
+  if (processedData.canonical_url) {
+    const original = processedData.canonical_url;
+    // Detectar e corrigir https://https://
+    if (processedData.canonical_url.includes('https://https://')) {
+      processedData.canonical_url = processedData.canonical_url.replace(/https:\/\/https:\/\/+/g, 'https://');
+      console.warn('⚠️ Canonical URL duplicada corrigida:', original, '→', processedData.canonical_url);
+    }
+    // Garantir que inicia com https://
+    if (!processedData.canonical_url.startsWith('https://') && !processedData.canonical_url.startsWith('http://')) {
+      processedData.canonical_url = `https://${processedData.canonical_url}`;
+    }
   }
 
   // 🔧 CORREÇÃO CRÍTICA: Garantir fallbacks para Meta Robots

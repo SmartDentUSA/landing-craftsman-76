@@ -297,7 +297,7 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   return processedData;
 };
 
-// Função centralizada para calcular score SEO
+// 🔧 FUNÇÃO SCORE SEO APRIMORADA - Inclui validações críticas
 const computeSEOScore = (data: LandingPageData) => {
   let score = 0;
   const breakdown: Array<{ item: string; status: 'ok' | 'pending'; points: number; message?: string }> = [];
@@ -330,8 +330,22 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 3. URL Canônica (15 pts)
-  const canonicalValid = data.seo.canonical_url && data.seo.canonical_url.startsWith('https://');
+  // 3. URL Canônica (15 pts) - 🔧 Validação aprimorada
+  let canonicalValid = false;
+  let canonicalMessage = 'Informe/valide a URL canônica (deve começar com https://)';
+  
+  if (data.seo.canonical_url) {
+    const url = data.seo.canonical_url;
+    // Detectar URLs duplicadas
+    if (url.includes('https://https://')) {
+      canonicalMessage = '⚠️ URL canônica com protocolo duplicado (https://https://)';
+    } else if (url.startsWith('https://')) {
+      canonicalValid = true;
+    } else {
+      canonicalMessage = 'URL canônica deve começar com https://';
+    }
+  }
+  
   if (canonicalValid) {
     score += 15;
     breakdown.push({ item: 'URL Canônica', status: 'ok', points: 15 });
@@ -340,7 +354,7 @@ const computeSEOScore = (data: LandingPageData) => {
       item: 'URL Canônica', 
       status: 'pending', 
       points: 15, 
-      message: 'Informe/valide a URL canônica (deve começar com https://)' 
+      message: canonicalMessage 
     });
   }
   
@@ -358,22 +372,31 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 5. OG Title/Description (10 pts)
-  const ogDataValid = data.seo.og_title && data.seo.og_description;
-  if (ogDataValid) {
+  // 5. OG Title/Description (10 pts) - 🔧 Validação aprimorada
+  const ogTitleValid = data.seo.og_title && data.seo.og_title.trim() !== '';
+  const ogDescValid = data.seo.og_description && data.seo.og_description.trim() !== '';
+  
+  if (ogTitleValid && ogDescValid) {
     score += 10;
     breakdown.push({ item: 'OG Title/Description', status: 'ok', points: 10 });
   } else {
+    const missing = [];
+    if (!ogTitleValid) missing.push('título');
+    if (!ogDescValid) missing.push('descrição');
     breakdown.push({ 
       item: 'OG Title/Description', 
       status: 'pending', 
       points: 10, 
-      message: 'Complete os dados Open Graph' 
+      message: `Complete ${missing.join(' e ')} do Open Graph` 
     });
   }
   
-  // 6. Twitter Card (5 pts)
-  const twitterCardValid = data.seo.twitter_card && data.seo.twitter_card.trim() !== '';
+  // 6. Twitter Card (5 pts) - 🔧 Validação aprimorada
+  const validTwitterCards = ['summary', 'summary_large_image', 'app', 'player'];
+  const twitterCardValid = data.seo.twitter_card && 
+                          data.seo.twitter_card.trim() !== '' && 
+                          validTwitterCards.includes(data.seo.twitter_card);
+  
   if (twitterCardValid) {
     score += 5;
     breakdown.push({ item: 'Twitter Card', status: 'ok', points: 5 });
@@ -382,12 +405,19 @@ const computeSEOScore = (data: LandingPageData) => {
       item: 'Twitter Card', 
       status: 'pending', 
       points: 5, 
-      message: 'Defina o tipo de Twitter Card' 
+      message: 'Defina tipo válido de Twitter Card (summary_large_image recomendado)' 
     });
   }
   
-  // 7. Meta Robots (5 pts)
-  const robotsValid = data.seo.meta_robots && data.seo.meta_robots.trim() !== '';
+  // 7. Meta Robots (5 pts) - 🔧 Validação aprimorada com fallback
+  const validRobotValues = ['index', 'noindex', 'follow', 'nofollow', 'index, follow', 'noindex, nofollow'];
+  let robotsValid = false;
+  
+  if (data.seo.meta_robots && data.seo.meta_robots.trim() !== '') {
+    const robotsValue = data.seo.meta_robots.trim();
+    robotsValid = validRobotValues.some(valid => robotsValue.includes(valid));
+  }
+  
   if (robotsValid) {
     score += 5;
     breakdown.push({ item: 'Meta Robots', status: 'ok', points: 5 });
@@ -396,7 +426,7 @@ const computeSEOScore = (data: LandingPageData) => {
       item: 'Meta Robots', 
       status: 'pending', 
       points: 5, 
-      message: 'Defina as diretrizes para robôs' 
+      message: 'Defina diretrizes válidas para robôs (fallback: "index, follow")' 
     });
   }
   
@@ -486,20 +516,45 @@ const generateImageAltText = (image: ImageData, context: string): string => {
   return `Imagem ${contextWords} - Smart Dent tecnologia odontológica`;
 };
 
-// Função para sanitizar domínio (remover protocolos e www duplicados)
+// 🔧 FUNÇÃO SANITIZAÇÃO APRIMORADA - Evita URLs duplicadas
 const sanitizeDomain = (domain: string): string => {
   if (!domain) return '';
-  return domain
-    .replace(/^https?:\/\//, '') // Remove protocolo
-    .replace(/^www\./, '') // Remove www
-    .replace(/\/+$/, ''); // Remove barras finais
+  
+  // Log para debugging
+  console.log('🔧 Editor - Sanitizando domain:', domain);
+  
+  let cleaned = domain
+    .trim()
+    .replace(/^https?:\/\/+/g, '') // Remove protocolos múltiplos
+    .replace(/^www\.+/g, '') // Remove www múltiplos
+    .replace(/\/+$/g, '') // Remove barras finais
+    .replace(/\/+/g, '/'); // Normaliza barras múltiplas
+  
+  // Detectar e corrigir duplicações específicas
+  if (cleaned.includes('https://')) {
+    console.warn('⚠️ Editor - Domain contém protocolo residual:', cleaned);
+    cleaned = cleaned.replace(/https?:\/\/+/g, '');
+  }
+  
+  console.log('✅ Editor - Domain sanitizado:', cleaned);
+  return cleaned;
 };
 
-// Função para gerar URL canônica correta
+// 🔧 FUNÇÃO CANONICAL URL APRIMORADA - Evita duplicações
 const generateCanonicalUrl = (domain: string, slug: string): string => {
   const cleanDomain = sanitizeDomain(domain);
   const cleanSlug = slug?.replace(/^\//, '') || '';
-  return `https://${cleanDomain}/${cleanSlug}`;
+  
+  const canonical = `https://${cleanDomain}/${cleanSlug}`;
+  console.log('🔧 Editor - Canonical URL gerada:', canonical);
+  
+  // Validação final para evitar duplicações
+  if (canonical.includes('https://https://')) {
+    console.error('❌ Editor - Canonical URL duplicada detectada:', canonical);
+    return canonical.replace(/https:\/\/https:\/\/+/g, 'https://');
+  }
+  
+  return canonical;
 };
 
 // Função onSave para herança e autocompletar com automação
