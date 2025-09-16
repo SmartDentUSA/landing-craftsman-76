@@ -1230,7 +1230,6 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
           </tr>
 
           <!-- Cards de Soluções com Imagens -->
-          {{#solutions}}
           {{#show_solutions_in_email}}
           <tr>
             <td align="left" class="p-xs" style="padding:24px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
@@ -1263,7 +1262,6 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
             </td>
           </tr>
           {{/show_solutions_in_email}}
-          {{/solutions}}
 
           <!-- Destaques (2 colunas responsivas) -->
           <tr>
@@ -1852,19 +1850,20 @@ export const generateHTML = (data: any): string => {
 };
 
 export const generateEmailHTML = (emailData: any): string => {
-  // Processar dados das soluções para o email
+  // Log para debug das soluções
+  console.log("📧 generateEmailHTML - dados recebidos:", {
+    show_solutions_in_email: emailData.show_solutions_in_email,
+    solutions_list_count: emailData.solutions_list?.length || 0,
+    solutions_preview: emailData.solutions_list?.slice(0, 2).map((s: any) => ({
+      title: s.title,
+      has_image: !!s.image_src,
+      image_src: s.image_src
+    }))
+  });
+  
+  // Usar os dados diretamente como vêm do Editor (sem remapeamento duplo)
   const processedEmailData = {
-    ...emailData,
-    solutions: {
-      show_solutions_in_email: emailData.show_solutions_in_email || false,
-      solutions_title: emailData.solutions_title || "Nossos Serviços",
-      solutions_list: emailData.solutions_list ? emailData.solutions_list.map((solution: any) => ({
-        title: solution.title,
-        description: solution.description,
-        image_src: solution.image?.src || solution.image || '',
-        image_alt: solution.image?.alt || solution.title || ''
-      })) : []
-    }
+    ...emailData
   };
   
   return Mustache.render(EMAIL_TEMPLATE_HTML, processedEmailData);

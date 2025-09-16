@@ -1126,8 +1126,18 @@ const Editor = () => {
     console.log("📧 Dados do email processados:", {
       solutions_enabled: processedData.email.show_solutions_in_email,
       solutions_count: solutionsList.length,
-      solutions_preview: solutionsList.map(s => ({ title: s.title, has_image: !!s.image_src }))
+      solutions_preview: solutionsList.map(s => ({ 
+        title: s.title, 
+        has_image: !!s.image_src,
+        image_url: s.image_src ? s.image_src.substring(0, 50) + '...' : 'sem imagem'
+      }))
     });
+    
+    // Validar se há soluções com imagens quando habilitado
+    const validSolutions = solutionsList.filter(s => s.image_src);
+    if (processedData.email.show_solutions_in_email && validSolutions.length === 0) {
+      console.warn("⚠️ Cards de soluções habilitados mas nenhuma solução tem imagem válida");
+    }
     
     // Modo padrão - incluir soluções no email
     return generateEmailHTML({
