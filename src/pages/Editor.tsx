@@ -3081,7 +3081,7 @@ const EditorContent = () => {
                                     variant="outline"
                                     onClick={async () => {
                                       try {
-                                        const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
+                                         const content = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
                                         const response = await supabase.functions.invoke('ai-seo-generator', {
                                           body: { type: 'hidden_content', content }
                                         });
@@ -3101,19 +3101,18 @@ const EditorContent = () => {
                                     🤖 Gerar com IA
                                   </Button>
                                 </div>
-                                <Textarea
-                                  value={data.seo.seo_hidden_content || ''}
-                                  onChange={(e) => setData(prev => ({
-                                    ...prev,
-                                    seo: { ...prev.seo, seo_hidden_content: e.target.value }
-                                  }))}
-                                  placeholder="Contexto SEO que não aparece visualmente na página mas é usado pelos mecanismos de busca..."
-                                  className="text-xs min-h-[80px] resize-none"
-                                  maxLength={300}
-                                />
-                                <p className="text-xs text-purple-600 mt-1">
-                                  Este texto ajuda os mecanismos de busca a entender melhor o contexto da página
-                                </p>
+                                 <Textarea
+                                   value={data.seo.seo_hidden_content || ''}
+                                   onChange={(e) => setData(prev => ({
+                                     ...prev,
+                                     seo: { ...prev.seo, seo_hidden_content: e.target.value }
+                                   }))}
+                                   placeholder="Descreva detalhadamente seu produto/serviço, características, benefícios, público-alvo, diferenciais competitivos e qualquer informação relevante. Quanto mais detalhes, melhor será o conteúdo SEO gerado pela IA..."
+                                   className="text-xs min-h-[120px] max-h-[400px] resize-y overflow-auto"
+                                 />
+                                 <p className="text-xs text-purple-600 mt-1">
+                                   {(data.seo.seo_hidden_content || '').length} caracteres • Campo ilimitado para descrição completa
+                                 </p>
                               </div>
 
                               {/* Palavras-chave editáveis com IA */}
