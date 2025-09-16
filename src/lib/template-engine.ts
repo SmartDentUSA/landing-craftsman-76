@@ -17,11 +17,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{seo_description}}">
-    <meta name="robots" content="{{meta_robots}}">
+    {{#meta_robots}}<meta name="robots" content="{{meta_robots}}">{{/meta_robots}}
     <title>{{seo_title}}</title>
     
     <!-- Canonical URL -->
-    <link rel="canonical" href="{{canonical_url}}">
+    {{#canonical_url}}<link rel="canonical" href="{{canonical_url}}">{{/canonical_url}}
     
     <!-- Hreflang Tags -->
     {{#hreflang}}
@@ -1328,8 +1328,14 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
 </body>
 </html>`;
 
+// Função para sanitizar domínio (remover protocolos duplicados)
+const sanitizeDomain = (domain: string): string => {
+  if (!domain) return '';
+  return domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+};
+
 // Função para gerar hreflang automático
-const generateAutoHreflang = (pageName: string, domain: string = 'www.smartdent.com.br'): Array<{ lang: string; url: string }> => {
+const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.br'): Array<{ lang: string; url: string }> => {
   if (!pageName) return [];
   
   const slug = pageName
@@ -1341,7 +1347,8 @@ const generateAutoHreflang = (pageName: string, domain: string = 'www.smartdent.
     .replace(/-+/g, '-') // Remove hífens duplicados
     .replace(/^-|-$/g, ''); // Remove hífens do início e fim
   
-  const baseUrl = `https://${domain}`;
+  const cleanDomain = sanitizeDomain(domain);
+  const baseUrl = `https://${cleanDomain}`;
   
   return [
     { lang: 'pt-BR', url: `${baseUrl}/${slug}` },
@@ -1570,7 +1577,38 @@ export const generateHTML = (data: any): string => {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
-    processedData.canonical_url = `https://${data.seo.domain}/${slug}`;
+    const cleanDomain = sanitizeDomain(data.seo.domain);
+    processedData.canonical_url = `https://${cleanDomain}/${slug}`;
+  }
+
+  // 🔧 CORREÇÃO CRÍTICA: Garantir fallbacks para Meta Robots
+  if (!processedData.meta_robots || processedData.meta_robots.trim() === '') {
+    processedData.meta_robots = 'index, follow';
+  }
+
+  // 🔧 CORREÇÃO CRÍTICA: Garantir fallbacks completos para Open Graph
+  if (!processedData.og_title || processedData.og_title.trim() === '') {
+    processedData.og_title = data.seo_title || data.name || '';
+  }
+  if (!processedData.og_description || processedData.og_description.trim() === '') {
+    processedData.og_description = data.seo_description || '';
+  }
+  if (!processedData.og_type || processedData.og_type.trim() === '') {
+    processedData.og_type = 'website';
+  }
+  if (!processedData.og_site_name || processedData.og_site_name.trim() === '') {
+    processedData.og_site_name = data.brand?.name || data.name || '';
+  }
+
+  // 🔧 CORREÇÃO CRÍTICA: Garantir fallbacks completos para Twitter Cards
+  if (!processedData.twitter_card || processedData.twitter_card.trim() === '') {
+    processedData.twitter_card = 'summary_large_image';
+  }
+  if (!processedData.twitter_title || processedData.twitter_title.trim() === '') {
+    processedData.twitter_title = processedData.og_title || data.seo_title || data.name || '';
+  }
+  if (!processedData.twitter_description || processedData.twitter_description.trim() === '') {
+    processedData.twitter_description = processedData.og_description || data.seo_description || '';
   }
 
   // Gerar Schema Markup automaticamente se habilitado

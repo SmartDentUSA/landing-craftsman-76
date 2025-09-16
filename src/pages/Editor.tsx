@@ -486,10 +486,13 @@ const generateImageAltText = (image: ImageData, context: string): string => {
   return `Imagem ${contextWords} - Smart Dent tecnologia odontológica`;
 };
 
-// Função para sanitizar domínio (remover protocolos)
+// Função para sanitizar domínio (remover protocolos e www duplicados)
 const sanitizeDomain = (domain: string): string => {
   if (!domain) return '';
-  return domain.replace(/^https?:\/\//, '');
+  return domain
+    .replace(/^https?:\/\//, '') // Remove protocolo
+    .replace(/^www\./, '') // Remove www
+    .replace(/\/+$/, ''); // Remove barras finais
 };
 
 // Função para gerar URL canônica correta
