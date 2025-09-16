@@ -1368,8 +1368,8 @@ const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.
     .replace(/-+/g, '-') // Remove hífens duplicados
     .replace(/^-|-$/g, ''); // Remove hífens do início e fim
   
-  const cleanDomain = sanitizeDomain(domain);
-  const baseUrl = `https://${cleanDomain}`;
+  // Domain já vem sanitizado da linha 1572, não precisa sanitizar novamente
+  const baseUrl = `https://${domain}`;
   
   return [
     { lang: 'pt-BR', url: `${baseUrl}/${slug}` },
