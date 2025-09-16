@@ -1095,11 +1095,15 @@ const Editor = () => {
     
     console.log("🔄 Regenerando email HTML...", {
       timestamp: Date.now(),
-      brand_name: processedData.email.brand_name,
-      titulo_principal: processedData.email.titulo_principal,
       show_solutions: processedData.email.show_solutions_in_email,
-      solutions_count: processedData.solutions?.length || 0
+      solutions_count: processedData.solutions?.length || 0,
+      solutions_with_images: processedData.solutions?.filter(s => s.image?.src).length || 0
     });
+    
+    // Validar soluções quando habilitadas
+    if (processedData.email.show_solutions_in_email && (!processedData.solutions || processedData.solutions.length === 0)) {
+      console.warn("⚠️ Soluções habilitadas no email mas nenhuma solução encontrada");
+    }
     
     // Usar generateSafeEmailHTML se for modo SelFlux
     if (embedConfig.mode === 'selflux') {
@@ -1111,6 +1115,20 @@ const Editor = () => {
       }, embedConfig);
     }
     
+    // Corrigir mapeamento das soluções para o email
+    const solutionsList = processedData.solutions?.map((solution: any, index: number) => ({
+      title: solution.title || `Solução ${index + 1}`,
+      description: solution.text || solution.description || '',
+      image_src: solution.image?.src || '',
+      image_alt: solution.image?.alt || solution.title || `Solução ${index + 1}`
+    })) || [];
+    
+    console.log("📧 Dados do email processados:", {
+      solutions_enabled: processedData.email.show_solutions_in_email,
+      solutions_count: solutionsList.length,
+      solutions_preview: solutionsList.map(s => ({ title: s.title, has_image: !!s.image_src }))
+    });
+    
     // Modo padrão - incluir soluções no email
     return generateEmailHTML({
       ...processedData.email,
@@ -1119,26 +1137,45 @@ const Editor = () => {
       imagem_alt: processedData.email.imagem_src.alt,
       show_solutions_in_email: processedData.email.show_solutions_in_email || false,
       solutions_title: processedData.email.solutions_title || "Nossos Serviços",
-      solutions_list: processedData.solutions?.map((solution: any) => ({
-        title: solution.title,
-        description: solution.description,
-        image_src: solution.image?.src || '',
-        image_alt: solution.image?.alt || solution.title || ''
-      })) || []
+      solutions_list: solutionsList
     });
   }, [
-    data.brand.legal_name,
-    data.seo.domain,
+    // Campos principais do email
+    data.email.assunto_email,
+    data.email.preheader_texto,
+    data.email.url_site,
+    data.email.logo_src.src,
+    data.email.logo_alt,
+    data.email.selo,
     data.email.titulo_principal,
     data.email.subtitulo,
     data.email.cta_label,
     data.email.cta_href,
+    data.email.cta_subcopy,
+    data.email.bloco1_titulo,
+    data.email.bloco1_texto,
+    data.email.bloco2_titulo,
+    data.email.bloco2_texto,
+    data.email.beneficio_1,
+    data.email.beneficio_2,
+    data.email.beneficio_3,
+    data.email.imagem_href,
     data.email.imagem_src.src,
     data.email.imagem_src.alt,
-    data.email.logo_src.src,
+    data.email.cta2_label,
+    data.email.cta2_href,
+    data.email.brand_name,
+    data.email.endereco_completo,
+    data.email.link_suporte,
+    data.email.link_descadastro,
+    data.email.link_preferencias,
+    // Campos de soluções
     data.email.show_solutions_in_email,
     data.email.solutions_title,
-    JSON.stringify(data.solutions), // Para detectar mudanças profundas no array
+    JSON.stringify(data.solutions),
+    // Outros campos relevantes
+    data.brand.legal_name,
+    data.seo.domain,
     data.embed?.mode
   ]);
 
@@ -5220,6 +5257,7 @@ dataLayer = [{
             <TabsContent value="email-preview" className="flex-1 p-4">
               <div className="h-full border rounded-lg overflow-hidden">
                 <iframe
+                  key={`email-${generatedEmailHTML.length}-${Date.now()}`}
                   srcDoc={generatedEmailHTML}
                   className="w-full h-full"
                   title="Email Preview"
