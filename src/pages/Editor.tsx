@@ -3157,57 +3157,87 @@ const EditorContent = () => {
                                     >
                                       Detectar
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      disabled={aiLoading.keywords}
-                                      onClick={async () => {
-                                        if (aiLoading.keywords) return;
-                                        setAiLoading(prev => ({ ...prev, keywords: true }));
-                                        try {
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000).trim();
-                                          if (!content) {
-                                            toast({ title: "Informe o conteúdo", description: "Forneça título/subtítulo/descrição para gerar palavras-chave.", variant: "destructive" });
-                                            return;
-                                          }
-                                          const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                            body: { type: 'keywords', content }
-                                          });
-                                          if (error) {
-                                            const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
-                                            const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
-                                            toast({ title: "Erro de IA", description: tip, variant: "destructive" });
-                                            return;
-                                          }
-                                          if ((fnData as any)?.error) {
-                                            const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar keywords.";
-                                            const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
-                                            toast({ title: "Erro de IA", description: hint, variant: "destructive" });
-                                            return;
-                                          }
-                                          const payload = (fnData as any)?.content;
-                                          if (payload) {
-                                            const keywords = [
-                                              ...(payload.primary || []),
-                                              ...(payload.secondary || []).slice(0, 5),
-                                              ...(payload.lsi || []).slice(0, 3)
-                                            ];
-                                            setAutoKeywords(keywords);
-                                            setData(prev => ({
-                                              ...prev,
-                                              seo: { ...prev.seo, ai_keywords: payload }
-                                            }));
-                                            toast({ title: "Keywords geradas", description: "Palavras-chave otimizadas com IA." });
-                                          } else {
-                                            toast({ title: "Sem conteúdo", description: "A IA não retornou keywords.", variant: "destructive" });
-                                          }
-                                        } catch (error: any) {
-                                          const msg = error?.message || "Erro inesperado ao gerar keywords.";
-                                          toast({ title: "Erro", description: msg, variant: "destructive" });
-                                        } finally {
-                                          setAiLoading(prev => ({ ...prev, keywords: false }));
-                                        }
-                                      }}
+                                     <Button
+                                       size="sm"
+                                       variant="outline"
+                                       disabled={aiLoading.keywords}
+                                       onClick={async () => {
+                                         if (aiLoading.keywords) return;
+                                         setAiLoading(prev => ({ ...prev, keywords: true }));
+                                         try {
+                                           // Usar conteúdo oculto SEO como fonte primária
+                                           const primaryContent = data.seo.seo_hidden_content?.trim();
+                                           const fallbackContent = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.trim();
+                                           
+                                           if (!primaryContent && !fallbackContent) {
+                                             toast({ title: "Informe o conteúdo", description: "Adicione conteúdo no 'Conteúdo Oculto SEO' ou forneça título/subtítulo/descrição.", variant: "destructive" });
+                                             return;
+                                           }
+
+                                           // Usar conteúdo oculto SEO (até 4000 chars) ou fallback básico
+                                           const content = primaryContent ? primaryContent.slice(0, 4000) : fallbackContent.slice(0, 1000);
+                                           
+                                           const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
+                                             body: { type: 'keywords', content }
+                                           });
+                                           if (error) {
+                                             const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
+                                             const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
+                                             toast({ title: "Erro de IA", description: tip, variant: "destructive" });
+                                             return;
+                                           }
+                                           if ((fnData as any)?.error) {
+                                             const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar keywords.";
+                                             const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
+                                             toast({ title: "Erro de IA", description: hint, variant: "destructive" });
+                                             return;
+                                           }
+                                           const payload = (fnData as any)?.content;
+                                           if (payload && !payload.warning) {
+                                             // Verificar se há keywords válidas
+                                             const hasKeywords = (payload.primary?.length > 0) || 
+                                                               (payload.secondary?.length > 0) || 
+                                                               (payload.lsi?.length > 0) || 
+                                                               (payload.long_tail?.length > 0);
+                                             
+                                             if (!hasKeywords) {
+                                               toast({ 
+                                                 title: "Sem keywords", 
+                                                 description: primaryContent ? 
+                                                   "IA não conseguiu extrair palavras-chave. Tente reformular o conteúdo oculto SEO." :
+                                                   "Adicione mais detalhes no 'Conteúdo Oculto SEO' para melhores resultados.", 
+                                                 variant: "destructive" 
+                                               });
+                                               return;
+                                             }
+
+                                             const keywords = [
+                                               ...(payload.primary || []),
+                                               ...(payload.secondary || []).slice(0, 5),
+                                               ...(payload.lsi || []).slice(0, 3)
+                                             ];
+                                             setAutoKeywords(keywords);
+                                             setData(prev => ({
+                                               ...prev,
+                                               seo: { ...prev.seo, ai_keywords: payload }
+                                             }));
+                                             toast({ 
+                                               title: "Keywords geradas", 
+                                               description: primaryContent ? 
+                                                 "Palavras-chave geradas com base no seu conteúdo SEO!" : 
+                                                 "Keywords geradas! Para melhores resultados, use 'Conteúdo Oculto SEO'." 
+                                             });
+                                           } else {
+                                             const warningMsg = payload?.warning || "A IA não retornou keywords válidas.";
+                                             toast({ title: "Aviso", description: warningMsg, variant: "destructive" });
+                                           }
+                                         } catch (error: any) {
+                                           const msg = error?.message || "Erro inesperado ao gerar keywords.";
+                                           toast({ title: "Erro", description: msg, variant: "destructive" });
+                                         } finally {
+                                           setAiLoading(prev => ({ ...prev, keywords: false }));
+                                         }
+                                       }}
                                       className="text-xs h-6 px-2 border-purple-300 text-purple-700"
                                     >
                                       {aiLoading.keywords ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}

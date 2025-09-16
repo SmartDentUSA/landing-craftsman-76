@@ -57,8 +57,18 @@ serve(async (req) => {
         break;
 
       case 'keywords':
-        systemPrompt = 'Você é um especialista em análise semântica e SEO. Identifique palavras-chave relevantes e relacionadas.';
-        userPrompt = `Analise este conteúdo: "${content}"\n\nExtrait e gere:\n1. Palavras-chave primárias (2-3)\n2. Palavras-chave secundárias (5-7)\n3. LSI keywords (termos relacionados)\n4. Palavras-chave de cauda longa\n\nFormato JSON: {"primary": ["palavra1", "palavra2"], "secondary": ["palavra3", "palavra4"], "lsi": ["termo1", "termo2"], "long_tail": ["frase completa 1"]}`;
+        systemPrompt = `Você é um especialista em SEO. Analise o conteúdo fornecido e gere palavras-chave relevantes organizadas em categorias.
+
+IMPORTANTE: Retorne APENAS um objeto JSON válido, sem explicações, sem markdown, sem \`\`\`json, sem texto adicional.
+
+Formato EXATO:
+{
+  "primary": ["palavra1", "palavra2"],
+  "secondary": ["palavra3", "palavra4"], 
+  "lsi": ["palavra5", "palavra6"],
+  "long_tail": ["frase longa 1", "frase longa 2"]
+}`;
+        userPrompt = `Analise este conteúdo e gere 3-5 palavras-chave primárias, 4-6 secundárias, 4-6 LSI (semanticamente relacionadas) e 3-5 long-tail (frases de 3+ palavras) para SEO: ${content}`;
         break;
 
       case 'hidden_content':
@@ -99,13 +109,48 @@ serve(async (req) => {
     const data = await response.json();
     let generatedContent = data.choices[0].message.content.trim();
 
-    // Parse JSON para keywords
+    // Parse JSON para keywords com limpeza robusta
     if (type === 'keywords') {
       try {
-        generatedContent = JSON.parse(generatedContent);
+        // Limpar possível markdown e extrair JSON
+        let cleanContent = generatedContent.trim();
+        
+        // Remover cercas de markdown se existirem
+        cleanContent = cleanContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+        
+        // Extrair apenas o conteúdo entre o primeiro { e último }
+        const firstBrace = cleanContent.indexOf('{');
+        const lastBrace = cleanContent.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
+        }
+        
+        // Normalizar aspas se necessário
+        cleanContent = cleanContent.replace(/[""]/g, '"').replace(/['']/g, "'");
+        
+        const parsedContent = JSON.parse(cleanContent);
+        
+        // Validar estrutura mínima
+        generatedContent = {
+          primary: Array.isArray(parsedContent.primary) ? parsedContent.primary : [],
+          secondary: Array.isArray(parsedContent.secondary) ? parsedContent.secondary : [],
+          lsi: Array.isArray(parsedContent.lsi) ? parsedContent.lsi : [],
+          long_tail: Array.isArray(parsedContent.long_tail) ? parsedContent.long_tail : []
+        };
+        
       } catch (e) {
         console.error('❌ Erro ao parsear JSON de keywords:', e);
-        generatedContent = { primary: [], secondary: [], lsi: [], long_tail: [] };
+        console.error('Conteúdo bruto recebido:', generatedContent);
+        
+        // Retornar estrutura vazia com warning
+        generatedContent = {
+          primary: [],
+          secondary: [],
+          lsi: [],
+          long_tail: [],
+          warning: 'IA retornou formato inválido, tente novamente'
+        };
       }
     }
 
