@@ -1352,6 +1352,14 @@ const sanitizeDomain = (domain: string): string => {
   return cleaned;
 };
 
+// 🔧 NOVA: Função para detectar URLs de placeholder
+const isPlaceholderUrl = (url: string): boolean => {
+  if (!url) return true;
+  return url.includes('via.placeholder.com') || 
+         url.includes('placeholder') || 
+         url.trim() === '';
+};
+
 // Função para gerar hreflang automático
 const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.br'): Array<{ lang: string; url: string }> => {
   if (!pageName) return [];
@@ -1583,10 +1591,35 @@ export const generateHTML = (data: any): string => {
     return image.src || '';
   };
 
-  // Adicionar URLs de imagens processadas para og e twitter
-  // 🔧 CORREÇÃO: Preservar URL original da Solução 1 para Open Graph
-  processedData.og_image_url = data.seo?.og_image?.src || '';
-  processedData.twitter_image_url = processImageUrl(data.seo?.twitter_image);
+  // 🔧 CORREÇÃO CRÍTICA: Melhorar lógica para evitar imagens placeholder
+  let ogImageUrl = data.seo?.og_image?.src || '';
+  
+  // Se og_image é placeholder ou vazio, tentar usar imagem da Solução 1
+  if (isPlaceholderUrl(ogImageUrl) && data.solutions?.[0]?.image?.src) {
+    const solution1Image = data.solutions[0].image.src;
+    if (!isPlaceholderUrl(solution1Image)) {
+      ogImageUrl = processImageUrl(data.solutions[0].image);
+      console.log('🔧 OG Image: usando Solução 1 em vez de placeholder');
+    }
+  }
+  
+  // Se ainda é placeholder, usar banner_image se válido
+  if (isPlaceholderUrl(ogImageUrl) && data.banner_image?.src) {
+    const bannerImage = data.banner_image.src;
+    if (!isPlaceholderUrl(bannerImage)) {
+      ogImageUrl = processImageUrl(data.banner_image);
+      console.log('🔧 OG Image: usando banner em vez de placeholder');
+    }
+  }
+  
+  // Se ainda é placeholder, deixar vazio para evitar placeholders no OG
+  if (isPlaceholderUrl(ogImageUrl)) {
+    ogImageUrl = '';
+    console.warn('⚠️ OG Image removida (era placeholder)');
+  }
+  
+  processedData.og_image_url = ogImageUrl;
+  processedData.twitter_image_url = ogImageUrl; // Usar mesma lógica para Twitter
 
   // 🔧 GARANTIR CANONICAL URL SEM DUPLICAÇÃO
   if (!processedData.canonical_url && data.seo?.domain && (data.seo?.seo_title || data.name)) {
@@ -1774,7 +1807,7 @@ export const generateHTML = (data: any): string => {
       "isPartOf": {
         "@type": "WebSite",
         "name": data.seo?.og_site_name || "Smart Dent",
-        "url": `https://${data.seo?.domain || 'www.smartdent.com.br'}`
+        "url": `https://${sanitizeDomain(data.seo?.domain || 'www.smartdent.com.br')}`
       }
     });
 

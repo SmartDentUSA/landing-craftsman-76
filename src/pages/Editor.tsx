@@ -358,8 +358,19 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 4. Imagem OG (15 pts)
-  const ogImageValid = data.seo.og_image && data.seo.og_image.src && data.seo.og_image.src.trim() !== '';
+  // 4. Imagem OG (15 pts) - 🔧 Validação aprimorada para detectar placeholders
+  let ogImageValid = false;
+  let ogImageMessage = 'Configure uma imagem válida para Open Graph';
+  
+  if (data.seo.og_image?.src) {
+    const ogSrc = data.seo.og_image.src.trim();
+    if (ogSrc.includes('via.placeholder.com') || ogSrc.includes('placeholder')) {
+      ogImageMessage = '⚠️ Substitua a imagem placeholder por uma imagem real';
+    } else if (ogSrc !== '') {
+      ogImageValid = true;
+    }
+  }
+  
   if (ogImageValid) {
     score += 15;
     breakdown.push({ item: 'Imagem OG', status: 'ok', points: 15 });
@@ -367,8 +378,8 @@ const computeSEOScore = (data: LandingPageData) => {
     breakdown.push({ 
       item: 'Imagem OG', 
       status: 'pending', 
-      points: 15, 
-      message: 'Defina uma imagem OG (recomendado 1200×630)' 
+      points: 15,
+      message: ogImageMessage
     });
   }
   
@@ -409,13 +420,22 @@ const computeSEOScore = (data: LandingPageData) => {
     });
   }
   
-  // 7. Meta Robots (5 pts) - 🔧 Validação aprimorada com fallback
+  // 7. Meta Robots (5 pts) - 🔧 Validação aprimorada detectando valores vazios
   const validRobotValues = ['index', 'noindex', 'follow', 'nofollow', 'index, follow', 'noindex, nofollow'];
   let robotsValid = false;
+  let robotsMessage = 'Defina diretrizes válidas para robôs';
   
-  if (data.seo.meta_robots && data.seo.meta_robots.trim() !== '') {
+  if (data.seo.meta_robots) {
     const robotsValue = data.seo.meta_robots.trim();
-    robotsValid = validRobotValues.some(valid => robotsValue.includes(valid));
+    if (robotsValue === '') {
+      robotsMessage = '⚠️ Meta robots está vazio (será usado fallback: "index, follow")';
+    } else if (validRobotValues.some(valid => robotsValue.includes(valid))) {
+      robotsValid = true;
+    } else {
+      robotsMessage = 'Use valores válidos: index, follow, noindex, nofollow';
+    }
+  } else {
+    robotsMessage = 'Configure Meta Robots (será usado fallback: "index, follow")';
   }
   
   if (robotsValid) {
@@ -426,7 +446,7 @@ const computeSEOScore = (data: LandingPageData) => {
       item: 'Meta Robots', 
       status: 'pending', 
       points: 5, 
-      message: 'Defina diretrizes válidas para robôs (fallback: "index, follow")' 
+      message: robotsMessage 
     });
   }
   
