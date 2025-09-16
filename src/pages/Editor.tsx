@@ -3242,6 +3242,7 @@ const Editor = () => {
             <TabsContent value="schema-offers" className="space-y-6">
               
               {/* Schema Software Application Card */}
+              {false && (
               <Card className="border-l-4 border-l-primary/50">
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
@@ -3425,8 +3426,9 @@ const Editor = () => {
                       />
                     </div>
                   </div>
-                </CardContent>
+                 </CardContent>
               </Card>
+              )}
 
               {/* Google Reviews Extraction Card */}
               {false && (
