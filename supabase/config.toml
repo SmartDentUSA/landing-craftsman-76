@@ -1,16 +1,16 @@
 project_id = "pgfgripuanuwwolmtknn"
 
 [functions.upload-image]
-verify_jwt = false
+verify_jwt = true
 
 [functions.update-secret]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-google-reviews]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-product-data]
-verify_jwt = false
+verify_jwt = true
 
 [functions.moderate-reviews]
-verify_jwt = false
+verify_jwt = true

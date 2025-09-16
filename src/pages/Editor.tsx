@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -741,7 +742,7 @@ const onApprove = (data: LandingPageData): LandingPageData => {
   return processedData;
 };
 
-const Editor = () => {
+const EditorContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
@@ -5477,6 +5478,14 @@ dataLayer = [{
         </div>
       </div>
     </div>
+  );
+};
+
+const Editor = () => {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <EditorContent />
+    </ProtectedRoute>
   );
 };
 

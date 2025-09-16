@@ -8,9 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 import { generateHTML } from "@/lib/template-engine";
 import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 
-const Dashboard = () => {
+const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { landingPages, deleteLandingPage } = useLandingPages();
@@ -234,6 +235,14 @@ const Dashboard = () => {
         </Card>
       </main>
     </div>
+  );
+};
+
+const Dashboard = () => {
+  return (
+    <ProtectedRoute requiredRole="user">
+      <DashboardContent />
+    </ProtectedRoute>
   );
 };
 

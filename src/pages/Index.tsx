@@ -21,11 +21,11 @@ const Index = () => {
           <div className="flex gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => navigate('/editor')}
+              onClick={() => navigate('/auth')}
               className="gradient-primary shadow-primary text-white"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Criar Primeira Landing
+              Entrar / Criar Conta
             </Button>
             <Button 
               size="lg" 
@@ -34,7 +34,7 @@ const Index = () => {
               className="border-muted-foreground/30 text-muted-foreground hover:bg-muted"
             >
               <FileText className="h-5 w-5 mr-2" />
-              Ver Projetos Existentes
+              Ver Dashboard
             </Button>
           </div>
         </div>

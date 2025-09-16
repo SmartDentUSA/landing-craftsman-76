@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import CodeView from "./pages/CodeView";
 import CloudflareSettings from "./pages/CloudflareSettings";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/editor" element={<Editor />} />
           <Route path="/editor/:id" element={<Editor />} />

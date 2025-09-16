@@ -28,13 +28,11 @@ serve(async (req) => {
       );
     }
 
-    // Log para debug
-    console.log(`Updating secret: ${secretName}`);
-
-    // Simular a configuração do secret (os secrets são gerenciados pelo Supabase via dashboard)
-    // Esta função serve para confirmar que a configuração foi solicitada
-    console.log(`Secret ${secretName} configuration requested`);
-    console.log(`Secret value length: ${secretValue.length}`);
+    // Security: No logging of sensitive data
+    console.log(`Secret configuration requested for: ${secretName}`);
+    
+    // Secret configuration is managed via Supabase dashboard
+    // This function confirms the configuration request
     
     return new Response(
       JSON.stringify({ 
