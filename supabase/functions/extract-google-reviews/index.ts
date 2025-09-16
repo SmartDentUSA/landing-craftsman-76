@@ -66,45 +66,129 @@ function isValidGoogleUrl(url: string): boolean {
 
 async function extractReviewsData(url: string): Promise<GoogleReviewsData> {
   try {
+    console.log('Fetching Google Maps page...');
+    
     // Fazer request para a página do Google Maps
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
 
     if (!response.ok) {
+      console.error('Failed to fetch page, status:', response.status);
       throw new Error('Não foi possível acessar a página do Google Maps');
     }
 
     const html = await response.text();
+    console.log('Page fetched successfully, HTML length:', html.length);
     
-    // Extrair avaliação usando regex patterns
-    const ratingMatch = html.match(/data-value="([\d,\.]+)"/);
-    const reviewCountMatch = html.match(/"(\d{1,3}(?:[,\.]\d{3})*)\s*avaliações?"/) || 
-                            html.match(/"(\d{1,3}(?:[,\.]\d{3})*)\s*reviews?"/) ||
-                            html.match(/(\d{1,3}(?:[,\.]\d{3})*)\s*avaliações/);
-    
-    // Extrair nome do negócio
-    const businessNameMatch = html.match(/<title[^>]*>([^<]+) - Google Maps<\/title>/) ||
-                             html.match(/data-value="([^"]+)"\s+aria-label="[^"]*nome/);
+    // Múltiplos padrões para extrair a avaliação
+    const ratingPatterns = [
+      // Padrão aria-label
+      /aria-label="([^"]*?)(\d+,\d+|\d+\.\d+|\d+)\s*estrelas?[^"]*"/i,
+      /aria-label="[^"]*?(\d+,\d+|\d+\.\d+|\d+)\s*de\s*5[^"]*"/i,
+      // Padrão data-value
+      /data-value="([\d,\.]+)"/,
+      // Padrão JSON-LD
+      /"ratingValue"\s*:\s*"?(\d+\.?\d*)"?/,
+      /"aggregateRating"[^}]*"ratingValue"\s*:\s*"?(\d+\.?\d*)"?/,
+      // Padrões de texto visível
+      /(\d+,\d+|\d+\.\d+|\d+)\s*de\s*5\s*estrelas?/i,
+      /Avaliação:\s*(\d+,\d+|\d+\.\d+|\d+)/i,
+      // Padrão span com rating
+      /<span[^>]*>(\d+,\d+|\d+\.\d+|\d+)<\/span>[^<]*estrelas?/i
+    ];
 
-    if (!ratingMatch) {
+    // Múltiplos padrões para extrair o número de reviews
+    const reviewCountPatterns = [
+      // Padrões em português
+      /"?(\d{1,3}(?:[,\.]\d{3})*)\s*avaliações?"[^a-zA-Z]/i,
+      /(\d{1,3}(?:[,\.]\d{3})*)\s*avaliações?\s*\)/i,
+      /\((\d{1,3}(?:[,\.]\d{3})*)\s*avaliações?\)/i,
+      // Padrões em inglês
+      /"?(\d{1,3}(?:[,\.]\d{3})*)\s*reviews?"[^a-zA-Z]/i,
+      /(\d{1,3}(?:[,\.]\d{3})*)\s*reviews?\s*\)/i,
+      /\((\d{1,3}(?:[,\.]\d{3})*)\s*reviews?\)/i,
+      // Padrões JSON-LD
+      /"reviewCount"\s*:\s*"?(\d+)"?/,
+      /"ratingCount"\s*:\s*"?(\d+)"?/
+    ];
+
+    // Padrões para nome do negócio
+    const businessNamePatterns = [
+      /<title[^>]*>([^<]+?)\s*[-–]\s*Google Maps<\/title>/i,
+      /"name"\s*:\s*"([^"]+)"/,
+      /data-value="([^"]+)"\s+aria-label="[^"]*nome/i,
+      /<h1[^>]*>([^<]+)<\/h1>/
+    ];
+
+    let rating: number | null = null;
+    let reviewCount: number = 0;
+    let businessName: string | undefined = undefined;
+
+    // Tentar extrair avaliação
+    console.log('Attempting to extract rating...');
+    for (const pattern of ratingPatterns) {
+      const match = html.match(pattern);
+      if (match) {
+        const ratingStr = match[1] || match[2];
+        if (ratingStr) {
+          const parsedRating = parseFloat(ratingStr.replace(',', '.'));
+          if (!isNaN(parsedRating) && parsedRating > 0 && parsedRating <= 5) {
+            rating = parsedRating;
+            console.log('Rating extracted:', rating, 'using pattern:', pattern.source);
+            break;
+          }
+        }
+      }
+    }
+
+    // Tentar extrair número de reviews
+    console.log('Attempting to extract review count...');
+    for (const pattern of reviewCountPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        const countStr = match[1].replace(/[,\.]/g, '');
+        const parsedCount = parseInt(countStr);
+        if (!isNaN(parsedCount) && parsedCount > 0) {
+          reviewCount = parsedCount;
+          console.log('Review count extracted:', reviewCount, 'using pattern:', pattern.source);
+          break;
+        }
+      }
+    }
+
+    // Tentar extrair nome do negócio
+    console.log('Attempting to extract business name...');
+    for (const pattern of businessNamePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        const name = match[1].trim();
+        if (name && name.length > 0 && name !== 'Google Maps') {
+          businessName = name;
+          console.log('Business name extracted:', businessName, 'using pattern:', pattern.source);
+          break;
+        }
+      }
+    }
+
+    if (rating === null) {
+      console.error('Could not extract rating from HTML');
+      // Log a sample of the HTML for debugging
+      const htmlSample = html.substring(0, 2000);
+      console.log('HTML sample for debugging:', htmlSample);
       throw new Error('Não foi possível extrair a avaliação. Verifique se o link está correto.');
     }
 
-    const rating = parseFloat(ratingMatch[1].replace(',', '.'));
-    const reviewCountStr = reviewCountMatch ? reviewCountMatch[1] : '0';
-    const reviewCount = parseInt(reviewCountStr.replace(/[,\.]/g, ''));
-    const businessName = businessNameMatch ? businessNameMatch[1].trim() : undefined;
-
-    console.log('Parsed data:', { rating, reviewCount, businessName });
-
-    return {
+    const result = {
       rating: rating,
       reviewCount: reviewCount,
       businessName: businessName
     };
+
+    console.log('Final extracted data:', result);
+    return result;
 
   } catch (error) {
     console.error('Error parsing Google reviews page:', error);
