@@ -12,7 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users } from "lucide-react";
+import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
@@ -2991,78 +2992,172 @@ const Editor = () => {
                               />
                               
                               <div className="flex items-center gap-3">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={!(data.schema.google_reviews?.url) || data.schema.google_reviews?.status === 'loading'}
-                                  onClick={async () => {
-                                    setData(prev => ({
-                                      ...prev,
-                                      schema: {
-                                        ...prev.schema,
-                                        google_reviews: {
-                                          ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                          status: 'loading'
-                                        }
-                                      }
-                                    }));
-  
-                                    try {
-                                      const { supabase } = await import("@/integrations/supabase/client");
-                                      const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
-                                        body: { url: data.schema.google_reviews?.url }
-                                      });
-  
-                                      if (error) throw error;
-  
-                                      if (result.success) {
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: {
-                                            ...prev.schema,
-                                            software_app: {
-                                              ...prev.schema.software_app,
-                                              rating_value: result.data.rating.toString(),
-                                              rating_count: result.data.reviewCount.toString()
-                                            },
-                                            google_reviews: {
-                                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                              status: 'success',
-                                              last_extracted: result.extracted_at,
-                                              auto_extract: true
-                                            }
-                                          }
-                                        }));
-                                        toast({
-                                          title: "✅ Reviews extraídas!",
-                                          description: `Nota: ${result.data.rating}/5 (${result.data.reviewCount} avaliações)`
-                                        });
-                                      } else {
-                                        throw new Error(result.error);
-                                      }
-                                    } catch (error: any) {
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!(data.schema.google_reviews?.url) || data.schema.google_reviews?.status === 'loading'}
+                                    onClick={async () => {
                                       setData(prev => ({
                                         ...prev,
                                         schema: {
                                           ...prev.schema,
                                           google_reviews: {
                                             ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
-                                            status: 'error',
-                                            error_message: error.message
+                                            status: 'loading'
                                           }
                                         }
                                       }));
-                                      toast({
-                                        title: "❌ Erro na extração",
-                                        description: error.message,
-                                        variant: "destructive"
-                                      });
+    
+                                      try {
+                                        const { supabase } = await import("@/integrations/supabase/client");
+                                        const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
+                                          body: { url: data.schema.google_reviews?.url }
+                                        });
+    
+                                        if (error) throw error;
+    
+                                        if (result.success) {
+                                          setData(prev => ({
+                                            ...prev,
+                                            schema: {
+                                              ...prev.schema,
+                                              software_app: {
+                                                ...prev.schema.software_app,
+                                                rating_value: result.data.rating.toString(),
+                                                rating_count: result.data.reviewCount.toString()
+                                              },
+                                              google_reviews: {
+                                                ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                                status: 'success',
+                                                last_extracted: result.extracted_at,
+                                                auto_extract: true
+                                              }
+                                            }
+                                          }));
+                                          toast({
+                                            title: "✅ Reviews extraídas!",
+                                            description: `Nota: ${result.data.rating}/5 (${result.data.reviewCount} avaliações)`
+                                          });
+                                        } else {
+                                          throw new Error(result.error);
+                                        }
+                                      } catch (error: any) {
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: {
+                                            ...prev.schema,
+                                            google_reviews: {
+                                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                              status: 'error',
+                                              error_message: error.message
+                                            }
+                                          }
+                                        }));
+                                        toast({
+                                          title: "❌ Erro na extração",
+                                          description: error.message,
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    {data.schema.google_reviews?.status === 'loading' ? 'Extraindo...' : 'Extrair Automaticamente'}
+                                  </Button>
+
+                                  <ReviewModerationModal
+                                    placeId={data.schema.google_reviews?.url ? 
+                                      (data.schema.google_reviews.url.match(/cid=([^&]+)/)?.[1] || 
+                                       `generated_${Math.abs(data.schema.google_reviews.url.split('').reduce((a, b) => {
+                                         a = ((a << 5) - a) + b.charCodeAt(0);
+                                         return a & a;
+                                       }, 0))}`) : ''
                                     }
-                                  }}
-                                >
-                                  {data.schema.google_reviews?.status === 'loading' ? 'Extraindo...' : 'Extrair Automaticamente'}
-                                </Button>
+                                    landingPageId={id || 'default'}
+                                  >
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={!(data.schema.google_reviews?.url)}
+                                    >
+                                      <Users className="w-4 h-4 mr-1" />
+                                      Moderar Reviews
+                                    </Button>
+                                  </ReviewModerationModal>
+
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!(data.schema.google_reviews?.url)}
+                                    onClick={async () => {
+                                      setData(prev => ({
+                                        ...prev,
+                                        schema: {
+                                          ...prev.schema,
+                                          google_reviews: {
+                                            ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                            status: 'loading'
+                                          }
+                                        }
+                                      }));
+    
+                                      try {
+                                        const { supabase } = await import("@/integrations/supabase/client");
+                                        const { data: result, error } = await supabase.functions.invoke('extract-google-reviews', {
+                                          body: { 
+                                            url: data.schema.google_reviews?.url,
+                                            extract_individual_reviews: true
+                                          }
+                                        });
+    
+                                        if (error) throw error;
+    
+                                        if (result.success) {
+                                          setData(prev => ({
+                                            ...prev,
+                                            schema: {
+                                              ...prev.schema,
+                                              google_reviews: {
+                                                ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                                status: 'success',
+                                                last_extracted: result.extracted_at,
+                                                auto_extract: true
+                                              }
+                                            }
+                                          }));
+                                          toast({
+                                            title: "✅ Reviews extraídas com sucesso!",
+                                            description: `${result.data.reviews_extracted} reviews salvas de ${result.data.total_found} encontradas`
+                                          });
+                                        } else {
+                                          throw new Error(result.error);
+                                        }
+                                      } catch (error: any) {
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: {
+                                            ...prev.schema,
+                                            google_reviews: {
+                                              ...(prev.schema.google_reviews ?? { url: '', auto_extract: false, last_extracted: '', status: 'idle' as const }),
+                                              status: 'error',
+                                              error_message: error.message
+                                            }
+                                          }
+                                        }));
+                                        toast({
+                                          title: "❌ Erro na extração individual",
+                                          description: error.message,
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Extrair Reviews Individuais
+                                  </Button>
+                                </div>
                                 
                                 {data.schema.google_reviews?.status === 'success' && data.schema.google_reviews?.last_extracted && (
                                   <div className="text-sm text-green-600 font-medium">

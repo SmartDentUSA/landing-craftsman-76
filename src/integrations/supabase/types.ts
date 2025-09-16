@@ -14,7 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      approved_reviews: {
+        Row: {
+          approved_at: string
+          approved_by: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          landing_page_id: string
+          notes: string | null
+          raw_review_id: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          landing_page_id: string
+          notes?: string | null
+          raw_review_id: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          landing_page_id?: string
+          notes?: string | null
+          raw_review_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approved_reviews_raw_review_id_fkey"
+            columns: ["raw_review_id"]
+            isOneToOne: false
+            referencedRelation: "raw_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extraction_jobs: {
+        Row: {
+          business_name: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          google_maps_url: string
+          id: string
+          place_id: string
+          reviews_extracted: number | null
+          started_at: string | null
+          status: string
+          total_reviews_found: number | null
+        }
+        Insert: {
+          business_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          google_maps_url: string
+          id?: string
+          place_id: string
+          reviews_extracted?: number | null
+          started_at?: string | null
+          status?: string
+          total_reviews_found?: number | null
+        }
+        Update: {
+          business_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          google_maps_url?: string
+          id?: string
+          place_id?: string
+          reviews_extracted?: number | null
+          started_at?: string | null
+          status?: string
+          total_reviews_found?: number | null
+        }
+        Relationships: []
+      }
+      raw_reviews: {
+        Row: {
+          author_name: string
+          author_url: string | null
+          created_at: string
+          extracted_at: string
+          id: string
+          is_local_guide: boolean | null
+          place_id: string
+          profile_photo_url: string | null
+          rating: number
+          relative_time: string | null
+          response_date: string | null
+          response_from_owner: string | null
+          review_date: string | null
+          review_likes: number | null
+          review_text: string | null
+        }
+        Insert: {
+          author_name: string
+          author_url?: string | null
+          created_at?: string
+          extracted_at?: string
+          id?: string
+          is_local_guide?: boolean | null
+          place_id: string
+          profile_photo_url?: string | null
+          rating: number
+          relative_time?: string | null
+          response_date?: string | null
+          response_from_owner?: string | null
+          review_date?: string | null
+          review_likes?: number | null
+          review_text?: string | null
+        }
+        Update: {
+          author_name?: string
+          author_url?: string | null
+          created_at?: string
+          extracted_at?: string
+          id?: string
+          is_local_guide?: boolean | null
+          place_id?: string
+          profile_photo_url?: string | null
+          rating?: number
+          relative_time?: string | null
+          response_date?: string | null
+          response_from_owner?: string | null
+          review_date?: string | null
+          review_likes?: number | null
+          review_text?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

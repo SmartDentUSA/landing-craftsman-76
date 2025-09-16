@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.extract-product-data]
 verify_jwt = false
+
+[functions.moderate-reviews]
+verify_jwt = false
