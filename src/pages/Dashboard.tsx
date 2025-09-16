@@ -1,10 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2 } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 import { generateHTML } from "@/lib/template-engine";
 import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
@@ -15,6 +17,65 @@ const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { landingPages, deleteLandingPage } = useLandingPages();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [promotingToAdmin, setPromotingToAdmin] = useState(false);
+
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserEmail(session.user.email);
+        
+        // Get user role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        setUserRole(roleData?.role || 'user');
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
+  const handlePromoteToAdmin = async () => {
+    if (!userEmail) return;
+    
+    setPromotingToAdmin(true);
+    try {
+      const { data, error } = await supabase.rpc('promote_user_to_admin', { 
+        _email: userEmail 
+      });
+      
+      if (error) throw error;
+      
+      if (data) {
+        toast({
+          title: "Acesso de administrador ativado!",
+          description: "Você agora tem acesso total ao editor.",
+        });
+        
+        // Update role state
+        setUserRole('admin');
+        
+        // Redirect to editor
+        navigate('/editor');
+      } else {
+        throw new Error('Não foi possível ativar o acesso de administrador');
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao ativar acesso",
+        description: "Não foi possível ativar o acesso de administrador. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setPromotingToAdmin(false);
+    }
+  };
 
   const handleCreateNew = () => {
     navigate('/editor');
@@ -85,6 +146,39 @@ const DashboardContent = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Admin Promotion Banner */}
+      {userEmail === 'danilohen@gmail.com' && userRole !== 'admin' && (
+        <div className="bg-gradient-to-r from-primary/10 to-accent/10 border-b border-primary/20">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-primary" />
+                <div>
+                  <h3 className="font-semibold text-primary">Ativar Acesso de Administrador</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Clique no botão para ativar o acesso completo ao editor de landing pages.
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={handlePromoteToAdmin}
+                disabled={promotingToAdmin}
+                className="gradient-primary shadow-primary"
+              >
+                {promotingToAdmin ? (
+                  <>Ativando...</>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Ativar Acesso
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <header className="border-b bg-card shadow-soft">
         <div className="container mx-auto px-6 py-4">
