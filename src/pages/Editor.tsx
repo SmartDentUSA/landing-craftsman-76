@@ -795,6 +795,28 @@ const Editor = () => {
             } as any;
           }
           
+          // Garantir bloco banner para evitar undefined.title
+          if (!loadedData.banner) {
+            loadedData.banner = {
+              badge_text: '',
+              title: '',
+              subtitle: '',
+              cta_primary: { label: '', href: '' },
+              cta_secondary: { label: '', href: '' },
+              images: [createImageData()]
+            } as any;
+          } else {
+            loadedData.banner = {
+              ...loadedData.banner,
+              badge_text: loadedData.banner.badge_text || '',
+              title: loadedData.banner.title || '',
+              subtitle: loadedData.banner.subtitle || '',
+              cta_primary: loadedData.banner.cta_primary || { label: '', href: '' },
+              cta_secondary: loadedData.banner.cta_secondary || { label: '', href: '' },
+              images: Array.isArray(loadedData.banner.images) && loadedData.banner.images.length ? loadedData.banner.images : [createImageData()]
+            } as any;
+          }
+          
           setData(loadedData);
         } else {
           // Migrar dados antigos para novo formato se necessário
@@ -837,6 +859,28 @@ const Editor = () => {
             } as any;
           } else if (!migratedData.schema.google_reviews) {
             migratedData.schema.google_reviews = { url: '', auto_extract: false, last_extracted: '', status: 'idle' };
+          }
+          
+          // Garantir bloco banner
+          if (!migratedData.banner) {
+            migratedData.banner = {
+              badge_text: '',
+              title: '',
+              subtitle: '',
+              cta_primary: { label: '', href: '' },
+              cta_secondary: { label: '', href: '' },
+              images: [createImageData()]
+            } as any;
+          } else {
+            migratedData.banner = {
+              ...migratedData.banner,
+              badge_text: migratedData.banner.badge_text || '',
+              title: migratedData.banner.title || '',
+              subtitle: migratedData.banner.subtitle || '',
+              cta_primary: migratedData.banner.cta_primary || { label: '', href: '' },
+              cta_secondary: migratedData.banner.cta_secondary || { label: '', href: '' },
+              images: Array.isArray(migratedData.banner.images) && migratedData.banner.images.length ? migratedData.banner.images : [createImageData()]
+            } as any;
           }
           setData({
             ...data,
