@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.moderate-reviews]
 verify_jwt = true
+
+[functions.ai-seo-generator]
+verify_jwt = true

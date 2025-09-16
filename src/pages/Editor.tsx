@@ -73,6 +73,11 @@ interface SEOData {
   publish_date: string;
   lastmod: string;
   faq_enable: boolean;
+  // Novos campos para SEO inteligente com IA
+  seo_hidden_content?: string;
+  ai_keywords?: any;
+  seo_generated_by_ai?: boolean;
+  ai_seo_enabled?: boolean;
 }
 
 // Schema e Offers para JSON-LD
@@ -3047,41 +3052,117 @@ const EditorContent = () => {
                           </Select>
                         </div>
 
-                        {/* Painel de Automação SEO */}
+                        {/* Painel de Automação SEO com IA */}
                         <div className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
                           <div className="flex items-center justify-between mb-3">
                             <div>
-                              <Label className="text-sm font-semibold text-blue-900">Automação Inteligente SEO</Label>
+                              <Label className="text-sm font-semibold text-blue-900">SEO Inteligente com IA</Label>
                               <p className="text-xs text-blue-700 mt-1">
-                                Ative para gerar automaticamente meta descriptions, títulos e alt-text baseados no conteúdo
+                                Use inteligência artificial para gerar conteúdo SEO otimizado automaticamente
                               </p>
                             </div>
                             <Switch
-                              checked={data.seo.hreflang_auto}
+                              checked={data.seo.ai_seo_enabled || false}
                               onCheckedChange={(checked) => setData(prev => ({
                                 ...prev,
-                                seo: { ...prev.seo, hreflang_auto: checked }
+                                seo: { ...prev.seo, ai_seo_enabled: checked, hreflang_auto: checked }
                               }))}
                             />
                           </div>
 
-                           {data.seo.hreflang_auto && (
+                           {data.seo.ai_seo_enabled && (
                             <div className="space-y-4">
-                              {/* Palavras-chave editáveis */}
-                              <div className="p-3 bg-white rounded-lg border">
+                              {/* Conteúdo Oculto SEO */}
+                              <div className="p-3 bg-white rounded-lg border border-purple-200">
                                 <div className="flex items-center justify-between mb-2">
-                                  <Label className="text-xs font-medium text-gray-700">Palavras-chave:</Label>
+                                  <Label className="text-xs font-medium text-purple-700">Conteúdo Oculto SEO:</Label>
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
-                                      const { keywords } = analyzeContent(data);
-                                      setAutoKeywords(keywords.slice(0, 8));
+                                    onClick={async () => {
+                                      try {
+                                        const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
+                                        const response = await supabase.functions.invoke('ai-seo-generator', {
+                                          body: { type: 'hidden_content', content }
+                                        });
+                                        if (response.data?.content) {
+                                          setData(prev => ({
+                                            ...prev,
+                                            seo: { ...prev.seo, seo_hidden_content: response.data.content }
+                                          }));
+                                          toast({ title: "Conteúdo SEO gerado", description: "Conteúdo oculto gerado com IA." });
+                                        }
+                                      } catch (error) {
+                                        toast({ title: "Erro", description: "Falha ao gerar conteúdo SEO.", variant: "destructive" });
+                                      }
                                     }}
-                                    className="text-xs h-6 px-2"
+                                    className="text-xs h-6 px-2 border-purple-300 text-purple-700"
                                   >
-                                    Detectar
+                                    🤖 Gerar com IA
                                   </Button>
+                                </div>
+                                <Textarea
+                                  value={data.seo.seo_hidden_content || ''}
+                                  onChange={(e) => setData(prev => ({
+                                    ...prev,
+                                    seo: { ...prev.seo, seo_hidden_content: e.target.value }
+                                  }))}
+                                  placeholder="Contexto SEO que não aparece visualmente na página mas é usado pelos mecanismos de busca..."
+                                  className="text-xs min-h-[80px] resize-none"
+                                  maxLength={300}
+                                />
+                                <p className="text-xs text-purple-600 mt-1">
+                                  Este texto ajuda os mecanismos de busca a entender melhor o contexto da página
+                                </p>
+                              </div>
+
+                              {/* Palavras-chave editáveis com IA */}
+                              <div className="p-3 bg-white rounded-lg border">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-xs font-medium text-gray-700">Palavras-chave:</Label>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const { keywords } = analyzeContent(data);
+                                        setAutoKeywords(keywords.slice(0, 8));
+                                      }}
+                                      className="text-xs h-6 px-2"
+                                    >
+                                      Detectar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={async () => {
+                                        try {
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
+                                          const response = await supabase.functions.invoke('ai-seo-generator', {
+                                            body: { type: 'keywords', content }
+                                          });
+                                          if (response.data?.content) {
+                                            const keywords = [
+                                              ...(response.data.content.primary || []),
+                                              ...(response.data.content.secondary || []).slice(0, 5),
+                                              ...(response.data.content.lsi || []).slice(0, 3)
+                                            ];
+                                            setAutoKeywords(keywords);
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, ai_keywords: response.data.content }
+                                            }));
+                                            toast({ title: "Keywords geradas", description: "Palavras-chave otimizadas com IA." });
+                                          }
+                                        } catch (error) {
+                                          toast({ title: "Erro", description: "Falha ao gerar keywords.", variant: "destructive" });
+                                        }
+                                      }}
+                                      className="text-xs h-6 px-2 border-purple-300 text-purple-700"
+                                    >
+                                      🤖 IA
+                                    </Button>
+                                  </div>
                                 </div>
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap gap-1">
@@ -3135,6 +3216,31 @@ const EditorContent = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      onClick={async () => {
+                                        try {
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
+                                          const response = await supabase.functions.invoke('ai-seo-generator', {
+                                            body: { type: 'meta_description', content }
+                                          });
+                                          if (response.data?.content) {
+                                            setAutoMetaDesc(response.data.content);
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, seo_generated_by_ai: true }
+                                            }));
+                                            toast({ title: "Meta description gerada", description: "Descrição otimizada com IA." });
+                                          }
+                                        } catch (error) {
+                                          toast({ title: "Erro", description: "Falha ao gerar meta description.", variant: "destructive" });
+                                        }
+                                      }}
+                                      className="text-xs h-6 px-2 border-purple-300 text-purple-700"
+                                    >
+                                      🤖 IA
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
                                       onClick={() => {
                                         setData(prev => ({
                                           ...prev,
@@ -3178,6 +3284,31 @@ const EditorContent = () => {
                                       className="text-xs h-6 px-2"
                                     >
                                       Regenerar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={async () => {
+                                        try {
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000);
+                                          const response = await supabase.functions.invoke('ai-seo-generator', {
+                                            body: { type: 'seo_title', content }
+                                          });
+                                          if (response.data?.content) {
+                                            setAutoSeoTitle(response.data.content);
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, seo_generated_by_ai: true }
+                                            }));
+                                            toast({ title: "Título SEO gerado", description: "Título otimizado com IA." });
+                                          }
+                                        } catch (error) {
+                                          toast({ title: "Erro", description: "Falha ao gerar título SEO.", variant: "destructive" });
+                                        }
+                                      }}
+                                      className="text-xs h-6 px-2 border-purple-300 text-purple-700"
+                                    >
+                                      🤖 IA
                                     </Button>
                                     <Button
                                       size="sm"

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       approved_reviews: {
         Row: {
+          ai_keywords: Json | null
           approved_at: string
           approved_by: string | null
           created_at: string
@@ -24,8 +25,11 @@ export type Database = {
           landing_page_id: string
           notes: string | null
           raw_review_id: string
+          seo_generated_by_ai: boolean | null
+          seo_hidden_content: string | null
         }
         Insert: {
+          ai_keywords?: Json | null
           approved_at?: string
           approved_by?: string | null
           created_at?: string
@@ -34,8 +38,11 @@ export type Database = {
           landing_page_id: string
           notes?: string | null
           raw_review_id: string
+          seo_generated_by_ai?: boolean | null
+          seo_hidden_content?: string | null
         }
         Update: {
+          ai_keywords?: Json | null
           approved_at?: string
           approved_by?: string | null
           created_at?: string
@@ -44,6 +51,8 @@ export type Database = {
           landing_page_id?: string
           notes?: string | null
           raw_review_id?: string
+          seo_generated_by_ai?: boolean | null
+          seo_hidden_content?: string | null
         }
         Relationships: [
           {

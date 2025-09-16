@@ -48,6 +48,17 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{#publish_date}}<meta name="publish_date" content="{{publish_date}}">{{/publish_date}}
     {{#lastmod}}<meta name="lastmod" content="{{lastmod}}">{{/lastmod}}
     
+    <!-- SEO AI Keywords -->
+    {{#ai_keywords}}
+    {{#primary}}<meta name="keywords" content="{{.}}">{{/primary}}
+    {{/ai_keywords}}
+    
+    <!-- SEO Hidden Content for Search Engines -->
+    {{#seo_hidden_content}}
+    <meta name="theme-color" content="#007bff">
+    <meta name="category" content="{{seo_hidden_content}}">
+    {{/seo_hidden_content}}
+    
     <!-- Schema Markup JSON-LD -->
     {{#schema_json_ld}}
     <script type="application/ld+json">
