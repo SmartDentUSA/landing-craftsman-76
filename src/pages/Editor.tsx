@@ -128,6 +128,17 @@ interface BrandData {
 }
 
 interface EmailData {
+  // Configurações de visibilidade das seções
+  sections?: {
+    header: { enabled: boolean };
+    content: { enabled: boolean };
+    ctas: { enabled: boolean };
+    highlights: { enabled: boolean };
+    benefits: { enabled: boolean };
+    main_image: { enabled: boolean };
+    solutions: { enabled: boolean };
+    footer: { enabled: boolean };
+  };
   assunto_email: string;
   preheader_texto: string;
   url_site: string;
@@ -939,6 +950,18 @@ const Editor = () => {
       ]
     },
     email: {
+      // Configurações de visibilidade das seções
+      sections: {
+        header: { enabled: true },
+        content: { enabled: true },
+        ctas: { enabled: true },
+        highlights: { enabled: true },
+        benefits: { enabled: true },
+        main_image: { enabled: true },
+        solutions: { enabled: false },
+        footer: { enabled: true }
+      },
+      // Campos do email existentes
       assunto_email: 'Novidades Smart Dent - Odontologia Digital',
       preheader_texto: 'Conheça as últimas inovações em tecnologia odontológica',
       url_site: 'https://smartdent.com.br',
@@ -967,6 +990,7 @@ const Editor = () => {
       link_suporte: 'https://smartdent.com.br/suporte',
       link_descadastro: 'https://smartdent.com.br/descadastro',
       link_preferencias: 'https://smartdent.com.br/preferencias',
+      // Campos de compatibilidade
       show_solutions_in_email: false,
       solutions_title: 'Nossos Serviços'
     }
@@ -1145,7 +1169,7 @@ const Editor = () => {
       logo_src: processedData.email.logo_src.src,
       imagem_src: processedData.email.imagem_src.src,
       imagem_alt: processedData.email.imagem_src.alt,
-      show_solutions_in_email: processedData.email.show_solutions_in_email || false,
+      show_solutions_in_email: processedData.email.sections?.solutions?.enabled || processedData.email.show_solutions_in_email || false,
       solutions_title: processedData.email.solutions_title || "Nossos Serviços",
       solutions_list: solutionsList
     });
@@ -1180,6 +1204,7 @@ const Editor = () => {
     data.email.link_descadastro,
     data.email.link_preferencias,
     // Campos de soluções
+    data.email.sections?.solutions?.enabled,
     data.email.show_solutions_in_email,
     data.email.solutions_title,
     JSON.stringify(data.solutions),
@@ -4658,11 +4683,92 @@ const Editor = () => {
 
             {/* Aba Email Marketing */}
             <TabsContent value="email" className="space-y-4">
+              {/* Controles Gerais */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    Controles de Seções do Email
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const allEnabled = Object.values(data.email.sections).every(section => section.enabled);
+                          setData(prev => ({
+                            ...prev,
+                            email: {
+                              ...prev.email,
+                              sections: {
+                                header: { enabled: !allEnabled },
+                                content: { enabled: !allEnabled },
+                                ctas: { enabled: !allEnabled },
+                                highlights: { enabled: !allEnabled },
+                                benefits: { enabled: !allEnabled },
+                                main_image: { enabled: !allEnabled },
+                                solutions: { enabled: !allEnabled },
+                                footer: { enabled: !allEnabled }
+                              }
+                            }
+                          }));
+                        }}
+                      >
+                        {Object.values(data.email.sections).every(section => section.enabled) ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
+                      </Button>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { key: 'header', label: 'Cabeçalho', description: 'Logo, selo, título' },
+                      { key: 'content', label: 'Conteúdo', description: 'Título principal, subtítulo' },
+                      { key: 'ctas', label: 'CTAs', description: 'Botões de ação' },
+                      { key: 'highlights', label: 'Destaques', description: 'Blocos informativos' },
+                      { key: 'benefits', label: 'Benefícios', description: 'Lista de vantagens' },
+                      { key: 'main_image', label: 'Imagem Principal', description: 'Imagem com link' },
+                      { key: 'solutions', label: 'Cards de Soluções', description: 'Produtos/serviços' },
+                      { key: 'footer', label: 'Rodapé', description: 'Endereço, links' }
+                    ].map(({ key, label, description }) => (
+                      <div key={key} className="flex items-start space-x-3 p-3 border rounded-lg">
+                        <Switch
+                          checked={data.email.sections[key as keyof typeof data.email.sections]?.enabled || false}
+                          onCheckedChange={(checked) => setData(prev => ({
+                            ...prev,
+                            email: {
+                              ...prev.email,
+                              sections: {
+                                ...prev.email.sections,
+                                [key]: { enabled: checked }
+                              }
+                            }
+                          }))}
+                        />
+                        <div className="flex-1">
+                          <Label className="font-medium">{label}</Label>
+                          <p className="text-sm text-muted-foreground">{description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <p className="text-sm">
+                      <strong>Seções ativas:</strong> {Object.values(data.email.sections).filter(s => s.enabled).length} de 8
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Accordion type="single" collapsible defaultValue="email-header">
                 
-                {/* Header do Email */}
+                 {/* Header do Email */}
                 <AccordionItem value="email-header">
-                  <AccordionTrigger>Header do Email</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Header do Email
+                    {!data.email.sections.header.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>
                       <Label>Assunto do Email</Label>
@@ -4728,7 +4834,12 @@ const Editor = () => {
 
                 {/* Conteúdo Principal */}
                 <AccordionItem value="email-content">
-                  <AccordionTrigger>Conteúdo Principal</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Conteúdo Principal
+                    {!data.email.sections.content.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>
                       <Label>Título Principal</Label>
@@ -4759,7 +4870,12 @@ const Editor = () => {
 
                 {/* CTAs */}
                 <AccordionItem value="email-ctas">
-                  <AccordionTrigger>CTAs do Email</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    CTAs do Email
+                    {!data.email.sections.ctas.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div className="space-y-4">
                       <h4 className="font-medium">CTA Primário</h4>
@@ -4834,7 +4950,12 @@ const Editor = () => {
 
                 {/* Destaques */}
                 <AccordionItem value="email-highlights">
-                  <AccordionTrigger>Destaques</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Destaques
+                    {!data.email.sections.highlights.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -4890,7 +5011,12 @@ const Editor = () => {
 
                 {/* Benefícios */}
                 <AccordionItem value="email-benefits">
-                  <AccordionTrigger>Benefícios</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Benefícios
+                    {!data.email.sections?.benefits?.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>
                       <Label>Benefício 1</Label>
@@ -4932,7 +5058,12 @@ const Editor = () => {
 
                 {/* Imagem do Email */}
                 <AccordionItem value="email-image">
-                  <AccordionTrigger>Imagem do Email</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Imagem Principal
+                    {!data.email.sections?.main_image?.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>
                       <Label>URL de Destino da Imagem</Label>
@@ -4962,20 +5093,32 @@ const Editor = () => {
 
                 {/* Cards de Soluções */}
                 <AccordionItem value="email-solutions">
-                  <AccordionTrigger>Cards de Soluções</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Cards de Soluções
+                    {!data.email.sections?.solutions?.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={data.email.show_solutions_in_email || false}
+                        checked={data.email.sections?.solutions?.enabled || data.email.show_solutions_in_email || false}
                         onCheckedChange={(checked) => setData(prev => ({
                           ...prev,
-                          email: { ...prev.email, show_solutions_in_email: checked }
+                          email: { 
+                            ...prev.email, 
+                            sections: {
+                              ...prev.email.sections,
+                              solutions: { enabled: checked }
+                            },
+                            show_solutions_in_email: checked 
+                          }
                         }))}
                       />
                       <Label>Incluir cards de soluções no email</Label>
                     </div>
                     
-                    {data.email.show_solutions_in_email && (
+                    {(data.email.sections?.solutions?.enabled || data.email.show_solutions_in_email) && (
                       <div>
                         <Label>Título da Seção</Label>
                         <Input
@@ -4996,7 +5139,12 @@ const Editor = () => {
 
                 {/* Footer */}
                 <AccordionItem value="email-footer">
-                  <AccordionTrigger>Footer do Email</AccordionTrigger>
+                  <AccordionTrigger className="flex items-center gap-2">
+                    Footer do Email
+                    {!data.email.sections?.footer?.enabled && (
+                      <Badge variant="secondary" className="text-xs">Desabilitado</Badge>
+                    )}
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>
                       <Label>Nome da Marca</Label>

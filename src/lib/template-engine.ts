@@ -1195,6 +1195,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
             </td>
           </tr>
 
+          {{#sections.header.enabled}}
           <!-- Hero -->
           <tr>
             <td align="left" class="p-xs" style="padding:32px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
@@ -1207,7 +1208,9 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               </p>
             </td>
           </tr>
+          {{/sections.header.enabled}}
 
+          {{#sections.ctas.enabled}}
           <!-- CTA principal (botão com VML para Outlook) -->
           <tr>
             <td align="left" class="p-xs" style="padding:12px 32px 24px 32px;">
@@ -1228,8 +1231,10 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               </p>
             </td>
           </tr>
+          {{/sections.ctas.enabled}}
 
           <!-- Cards de Soluções com Imagens -->
+          {{#sections.solutions.enabled}}
           {{#show_solutions_in_email}}
           <tr>
             <td align="left" class="p-xs" style="padding:24px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
@@ -1262,6 +1267,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
             </td>
           </tr>
           {{/show_solutions_in_email}}
+          {{/sections.solutions.enabled}}
 
           <!-- Destaques (2 colunas responsivas) -->
           <tr>
@@ -1297,6 +1303,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
             </td>
           </tr>
 
+          {{#sections.benefits.enabled}}
           <!-- Lista de benefícios -->
           <tr>
             <td align="left" class="p-xs" style="padding:8px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
@@ -1308,7 +1315,9 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               </ul>
             </td>
           </tr>
+          {{/sections.benefits.enabled}}
 
+          {{#sections.main_image.enabled}}
           <!-- Imagem (opcional) -->
           <tr>
             <td align="center" style="padding:8px 32px 16px 32px;">
@@ -1317,7 +1326,9 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               </a>
             </td>
           </tr>
+          {{/sections.main_image.enabled}}
 
+          {{#sections.ctas.enabled}}
           <!-- CTA secundário -->
           <tr>
             <td align="left" class="p-xs" style="padding:0 32px 24px 32px;">
@@ -1334,10 +1345,12 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               <!--<![endif]-->
             </td>
           </tr>
+          {{/sections.ctas.enabled}}
 
           <!-- Divider -->
           <tr><td style="height:1px; line-height:1px; background:#eef2f7;">&nbsp;</td></tr>
 
+          {{#sections.footer.enabled}}
           <!-- Rodapé -->
           <tr>
             <td align="left" style="padding:18px 24px 28px 24px; font-family:Arial, Helvetica, sans-serif; color:#6b7280; font-size:12px; line-height:1.6;">
@@ -1353,6 +1366,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               </p>
             </td>
           </tr>
+          {{/sections.footer.enabled}}
         </table>
         <!-- /Container -->
       </td>
@@ -1863,7 +1877,18 @@ export const generateEmailHTML = (emailData: any): string => {
   
   // Usar os dados diretamente como vêm do Editor (sem remapeamento duplo)
   const processedEmailData = {
-    ...emailData
+    ...emailData,
+    // Garantir que sections tenha valores padrão para compatibilidade
+    sections: emailData.sections || {
+      header: { enabled: true },
+      content: { enabled: true },
+      ctas: { enabled: true },
+      highlights: { enabled: true },
+      benefits: { enabled: true },
+      main_image: { enabled: true },
+      solutions: { enabled: emailData.show_solutions_in_email || false },
+      footer: { enabled: true }
+    }
   };
   
   return Mustache.render(EMAIL_TEMPLATE_HTML, processedEmailData);
