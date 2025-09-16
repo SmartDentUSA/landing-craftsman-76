@@ -1269,6 +1269,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
           {{/show_solutions_in_email}}
           {{/sections.solutions.enabled}}
 
+          {{#sections.highlights.enabled}}
           <!-- Destaques (2 colunas responsivas) -->
           <tr>
             <td align="center" style="padding:8px 16px 8px;">
@@ -1302,6 +1303,7 @@ const EMAIL_TEMPLATE_HTML = `<!doctype html>
               </table>
             </td>
           </tr>
+          {{/sections.highlights.enabled}}
 
           {{#sections.benefits.enabled}}
           <!-- Lista de benefícios -->
@@ -1878,8 +1880,17 @@ export const generateEmailHTML = (emailData: any): string => {
   // Usar os dados diretamente como vêm do Editor (sem remapeamento duplo)
   const processedEmailData = {
     ...emailData,
-    // Garantir que sections tenha valores padrão para compatibilidade
-    sections: emailData.sections || {
+    // Preservar configurações de seções do usuário, aplicando padrões apenas se necessário
+    sections: emailData.sections ? {
+      header: { enabled: emailData.sections.header?.enabled ?? true },
+      content: { enabled: emailData.sections.content?.enabled ?? true },
+      ctas: { enabled: emailData.sections.ctas?.enabled ?? true },
+      highlights: { enabled: emailData.sections.highlights?.enabled ?? true },
+      benefits: { enabled: emailData.sections.benefits?.enabled ?? true },
+      main_image: { enabled: emailData.sections.main_image?.enabled ?? true },
+      solutions: { enabled: emailData.sections.solutions?.enabled ?? (emailData.show_solutions_in_email || false) },
+      footer: { enabled: emailData.sections.footer?.enabled ?? true }
+    } : {
       header: { enabled: true },
       content: { enabled: true },
       ctas: { enabled: true },

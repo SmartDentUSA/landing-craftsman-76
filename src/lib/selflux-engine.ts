@@ -1205,6 +1205,9 @@ export const generateSafeEmailHTML = (emailData: any, embedConfig?: EmbedConfig)
   // Resolver imagens primeiro
   const processedData = resolveImagesInData(emailData);
   
+  // Preservar configurações de seções explícitas do usuário
+  console.log('🔧 Preservando configurações de seções no email:', processedData.sections);
+  
   // Gerar HTML normal do email
   let html = originalGenerateEmailHTML(processedData);
   
