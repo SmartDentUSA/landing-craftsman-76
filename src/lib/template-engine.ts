@@ -791,11 +791,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         
         .offer-name {
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
             color: var(--text-color);
-            line-height: 1.3;
+            line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -803,46 +803,59 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             min-height: 2.6em;
         }
         
-        /* Star Rating */
-        .offer-rating {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            margin-bottom: 0.5rem;
-            font-size: 0.75rem;
-        }
-        
-        .offer-stars {
-            color: #fbbf24;
-        }
-        
-        .offer-rating-text {
-            color: #6b7280;
-            font-size: 0.7rem;
-        }
-        
-        /* Price Section */
-        .offer-prices {
-            margin-bottom: 1rem;
-        }
-        
-        .offer-price {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-color);
-            margin-bottom: 0.25rem;
-        }
-        
-        .offer-price-installment {
+        /* Botão Comprar sobre a imagem */
+        .offer-buy-button {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
             font-size: 0.8rem;
-            color: #6b7280;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .offer-card:hover .offer-buy-button {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .offer-buy-button:hover {
+            background: #0056b3;
+            transform: translateX(-50%) translateY(-2px);
+        }
+        
+        /* Price Section - Simplificada */
+        .offer-prices {
+            margin-bottom: 0.5rem;
+        }
+        
+        .offer-price-current {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f2937;
             margin-bottom: 0.25rem;
+            display: block;
         }
         
         .offer-price-original {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             color: #9ca3af;
             text-decoration: line-through;
+            margin-right: 0.5rem;
+        }
+        
+        .offer-price-installment {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
         }
         
         .offer-links {
@@ -1213,38 +1226,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div class="offers-grid">
                 {{#offers}}
                 <div class="offer-card">
+                    {{#discount_percentage}}
+                    <div class="offer-badge">-{{discount_percentage}}%</div>
+                    {{/discount_percentage}}
                     {{#image}}
                     <div class="offer-image-container">
                         <img src="{{image}}" alt="{{name}}" class="offer-image">
+                        {{#productUrl}}
+                        <button class="offer-buy-button" onclick="window.open('{{productUrl}}', '_blank')">Comprar</button>
+                        {{/productUrl}}
                     </div>
                     {{/image}}
                     <div class="offer-content">
                         <h3 class="offer-name">{{name}}</h3>
-                        {{#description}}
-                        <p class="offer-description">{{description}}</p>
-                        {{/description}}
-                        {{#price}}
-                        <div class="offer-price">{{currency}} {{price}}</div>
-                        {{/price}}
-                        <div class="offer-links">
-                            {{#youtube_url}}
-                            <a href="{{youtube_url}}" target="_blank" class="offer-link youtube">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>
-                                YouTube
-                            </a>
-                            {{/youtube_url}}
-                            {{#instagram_url}}
-                            <a href="{{instagram_url}}" target="_blank" class="offer-link instagram">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.06 8H12a4 4 0 1 1 4 4z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-                                Instagram
-                            </a>
-                            {{/instagram_url}}
-                            {{#productUrl}}
-                            <a href="{{productUrl}}" target="_blank" class="offer-link store">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 8L2 3H1m6 10v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
-                                Ver Produto
-                            </a>
-                            {{/productUrl}}
+                        <div class="offer-prices">
+                            {{#original_price}}
+                            <span class="offer-price-original">R$ {{original_price}}</span>
+                            {{/original_price}}
+                            {{#price}}
+                            <div class="offer-price-current">R$ {{price}}</div>
+                            {{/price}}
+                            {{#installment_price}}
+                            <div class="offer-price-installment">{{installment_price}}</div>
+                            {{/installment_price}}
                         </div>
                     </div>
                 </div>
@@ -1966,11 +1970,7 @@ export const generateHTML = (data: any): string => {
         }
       }
       
-      // Add rating defaults if not present
-      if (!processedOffer.rating && !processedOffer.rating_count) {
-        processedOffer.rating = '5.0';
-        processedOffer.rating_count = Math.floor(Math.random() * 50) + 10; // Random between 10-59
-      }
+      // Ratings removidos para layout simplificado
       
       // Handle image URL processing (Cloudflare support)
       if (offer.image) {

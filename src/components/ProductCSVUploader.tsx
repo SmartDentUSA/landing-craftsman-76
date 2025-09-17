@@ -13,6 +13,9 @@ import Papa from 'papaparse';
 interface ProductData {
   name: string;
   price: string;
+  originalPrice?: string;
+  promoPrice?: string;
+  installmentText?: string;
   description: string;
   image?: string;
   available?: boolean;
@@ -35,12 +38,16 @@ interface ProductCSVUploaderProps {
     name: string;
     description: string;
     price: string;
+    originalPrice?: string;
+    promoPrice?: string;
+    installmentText?: string;
     currency: string;
     availability: string;
     valid_through: string;
     productUrl: string;
     youtube_url?: string;
     instagram_url?: string;
+    available?: boolean;
     sourceType: 'imported';
     lastUpdated: string;
   }>) => void;
@@ -287,10 +294,14 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
               name: productData.name || 'Produto Importado',
               description: productData.description || '',
               price: productData.price || '0',
+              originalPrice: productData.originalPrice,
+              promoPrice: productData.promoPrice,
+              installmentText: productData.installmentText,
               currency: 'BRL',
               availability: productData.available !== false ? 'InStock' : 'OutOfStock',
               valid_through: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
               productUrl: product.url,
+              available: productData.available,
               sourceType: 'imported' as const,
               lastUpdated: new Date().toISOString()
             };
@@ -482,12 +493,13 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
                        <div className="text-sm font-medium truncate">
                          {product.data?.name || new URL(product.url).hostname}
                        </div>
-                       {product.data && (
-                         <div className="text-xs text-muted-foreground line-clamp-2">
-                           {product.data.price && `Preço: ${product.data.price}`}
-                           {product.data.description && ` • ${product.data.description}`}
-                         </div>
-                       )}
+                        {product.data && (
+                          <div className="text-xs text-muted-foreground line-clamp-2">
+                            {product.data.originalPrice && `De: R$ ${product.data.originalPrice}`}
+                            {product.data.price && ` Por: R$ ${product.data.price}`}
+                            {product.data.installmentText && ` • ${product.data.installmentText}`}
+                          </div>
+                        )}
                         {(product.image_url || product.youtube_url || product.instagram_url) && (
                           <div className="flex gap-2 mt-1">
                             {product.image_url && (

@@ -9,6 +9,9 @@ const corsHeaders = {
 interface ProductData {
   name: string;
   price: string;
+  originalPrice?: string;
+  promoPrice?: string;
+  installmentText?: string;
   description: string;
   image?: string;
   available?: boolean;
@@ -70,6 +73,9 @@ serve(async (req) => {
                   data: {
                     name: item.name,
                     price: item.offers?.price || item.offers?.priceRange || '',
+                    originalPrice: item.offers?.highPrice || '',
+                    promoPrice: item.offers?.lowPrice || item.offers?.price || '',
+                    installmentText: item.offers?.priceSpecification?.priceCurrency ? `ou ${item.offers?.priceSpecification?.maxPrice || ''} em até 12x` : '',
                     description: item.description || '',
                     image: normalizedImage,
                     available: item.offers?.availability !== 'OutOfStock'
@@ -103,21 +109,98 @@ serve(async (req) => {
       productData.name = titleMatch[1].trim().replace(/\s+/g, ' ');
     }
 
-    // Extrair preço - primeiro tentar meta property da Loja Integrada
-    let priceFound = false;
+    // Extrair preços múltiplos - Loja Integrada e outros e-commerces brasileiros
+    
+    // 1. Tentar meta property da Loja Integrada
     const priceMetaMatch = html.match(/<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["'][^>]*>/i);
     if (priceMetaMatch) {
-      productData.price = priceMetaMatch[1].trim();
-      priceFound = true;
-      console.log('Price found via meta property:', productData.price);
+      productData.promoPrice = priceMetaMatch[1].trim();
+      console.log('Promotional price found via meta property:', productData.promoPrice);
     }
     
-    // Fallback: buscar por padrão R$ no HTML
-    if (!priceFound) {
-      const priceMatch = html.match(/R\$\s*[\d.,]+/gi);
-      if (priceMatch && priceMatch.length > 0) {
-        productData.price = priceMatch[0].replace(/[^\d.,]/g, '').replace(',', '.');
-        console.log('Price found via regex:', productData.price);
+    // 2. Buscar preços riscados (preço original)
+    const originalPricePatterns = [
+      /de[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /preço[:\s]*normal[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /valor[:\s]*original[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /<del[^>]*>.*?R?\$?\s*([\d.,]+).*?<\/del>/gi,
+      /<s[^>]*>.*?R?\$?\s*([\d.,]+).*?<\/s>/gi,
+      /text-decoration[:\s]*line-through[^>]*>.*?R?\$?\s*([\d.,]+)/gi
+    ];
+    
+    for (const pattern of originalPricePatterns) {
+      const match = html.match(pattern);
+      if (match && match[0]) {
+        const price = match[0].replace(/[^\d.,]/g, '').replace(',', '.');
+        if (price && parseFloat(price) > 0) {
+          productData.originalPrice = price;
+          console.log('Original price found:', productData.originalPrice);
+          break;
+        }
+      }
+    }
+    
+    // 3. Buscar preços promocionais (destacados)
+    const promoPricePatterns = [
+      /por[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /apenas[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /oferta[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /promoção[:\s]*R?\$?\s*([\d.,]+)/gi,
+      /<span[^>]*class="[^"]*price[^"]*"[^>]*>.*?R?\$?\s*([\d.,]+)/gi,
+      /<div[^>]*class="[^"]*promo[^"]*"[^>]*>.*?R?\$?\s*([\d.,]+)/gi
+    ];
+    
+    if (!productData.promoPrice) {
+      for (const pattern of promoPricePatterns) {
+        const match = html.match(pattern);
+        if (match && match[0]) {
+          const price = match[0].replace(/[^\d.,]/g, '').replace(',', '.');
+          if (price && parseFloat(price) > 0) {
+            productData.promoPrice = price;
+            console.log('Promotional price found via pattern:', productData.promoPrice);
+            break;
+          }
+        }
+      }
+    }
+    
+    // 4. Buscar informações de parcelamento
+    const installmentPatterns = [
+      /ou\s*até?\s*(\d+)x?\s*de\s*R?\$?\s*([\d.,]+)/gi,
+      /(\d+)x?\s*de\s*R?\$?\s*([\d.,]+)\s*sem\s*juros?/gi,
+      /parcelamento[:\s]*(\d+)x?\s*R?\$?\s*([\d.,]+)/gi,
+      /em\s*até?\s*(\d+)x?\s*R?\$?\s*([\d.,]+)/gi
+    ];
+    
+    for (const pattern of installmentPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[2]) {
+        const installments = match[1];
+        const installmentValue = match[2].replace(/[^\d.,]/g, '').replace(',', '.');
+        productData.installmentText = `ou ${installments}x de R$ ${installmentValue}`;
+        console.log('Installment info found:', productData.installmentText);
+        break;
+      }
+    }
+    
+    // 5. Fallback: buscar qualquer preço no formato R$ 
+    if (!productData.price && !productData.promoPrice) {
+      const allPrices = html.match(/R\$\s*[\d.,]+/gi);
+      if (allPrices && allPrices.length > 0) {
+        // Usar o primeiro preço encontrado como preço principal
+        productData.price = allPrices[0].replace(/[^\d.,]/g, '').replace(',', '.');
+        console.log('Fallback price found via regex:', productData.price);
+      }
+    }
+    
+    // 6. Definir preço principal (usar promocional se existir, senão o preço normal)
+    if (productData.promoPrice && !productData.price) {
+      productData.price = productData.promoPrice;
+    } else if (productData.price && productData.promoPrice && productData.price !== productData.promoPrice) {
+      // Se temos ambos e são diferentes, o price vira originalPrice se ainda não temos um
+      if (!productData.originalPrice) {
+        productData.originalPrice = productData.price;
+        productData.price = productData.promoPrice;
       }
     }
 

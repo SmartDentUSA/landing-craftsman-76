@@ -4739,11 +4739,27 @@ const EditorContent = () => {
                   {/* Importação em Massa via CSV */}
                   <ProductCSVUploader 
                     onProductsUpdate={(importedProducts) => {
+                      // Processar dados dos produtos importados para incluir estrutura de preços
+                      const processedProducts = importedProducts.map(product => ({
+                        ...product,
+                        selected: true,
+                        original_price: product.originalPrice || '',
+                        installment_price: product.installmentText || '',
+                        discount_percentage: product.originalPrice && product.price 
+                          ? Math.round(((parseFloat(product.originalPrice) - parseFloat(product.price)) / parseFloat(product.originalPrice)) * 100)
+                          : 0,
+                        sourceType: 'imported' as const,
+                        lastUpdated: new Date().toISOString(),
+                        currency: 'R$',
+                        availability: product.available ? 'InStock' : 'OutOfStock',
+                        valid_through: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias
+                      }));
+                      
                       setData(prev => ({
                         ...prev,
                         schema: {
                           ...prev.schema,
-                          offers: [...prev.schema.offers, ...importedProducts]
+                          offers: [...prev.schema.offers, ...processedProducts]
                         }
                       }));
                       toast({
