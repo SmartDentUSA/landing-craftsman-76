@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
@@ -4441,28 +4441,40 @@ const EditorContent = () => {
                                    ⏳ Importando...
                                  </Badge>
                                )}
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={() => setEditingOffer(index)}
-                                 className="h-8 w-8 p-0"
-                               >
-                                 <Edit className="h-4 w-4" />
-                               </Button>
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={() => {
-                                   const newOffers = data.schema.offers.filter((_, i) => i !== index);
-                                   setData(prev => ({
-                                     ...prev,
-                                     schema: { ...prev.schema, offers: newOffers }
-                                   }));
-                                 }}
-                                 className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                               >
-                                 <Trash2 className="h-4 w-4" />
-                               </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingOffer(index)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {offer.productUrl && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => extractProductData(index)}
+                                    disabled={extractingProduct === index}
+                                    className="h-8 w-8 p-0"
+                                    title="Importar dados da Loja Integrada"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newOffers = data.schema.offers.filter((_, i) => i !== index);
+                                    setData(prev => ({
+                                      ...prev,
+                                      schema: { ...prev.schema, offers: newOffers }
+                                    }));
+                                  }}
+                                  className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                                   </div>
                                 </div>
                               )}
