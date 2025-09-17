@@ -37,6 +37,13 @@ export default function BlogGenerator() {
   const navigate = useNavigate();
   const { getLandingPage } = useLandingPages();
   const [landingPage, setLandingPage] = useState<LandingPageData | null>(null);
+  // Helper function to ensure keywords is always an array
+  const normalizeKeywords = (keywords: any): string[] => {
+    if (Array.isArray(keywords)) return keywords;
+    if (typeof keywords === 'string') return keywords.split(',').map(k => k.trim()).filter(Boolean);
+    return [];
+  };
+
   const [blogPost, setBlogPost] = useState<BlogPost>({
     title: "",
     content: "",
@@ -84,7 +91,7 @@ export default function BlogGenerator() {
           ...prev,
           title: seoData.seo_title || prev.title,
           meta_description: seoData.seo_description || prev.meta_description,
-          keywords: seoData.ai_keywords || prev.keywords,
+          keywords: normalizeKeywords(seoData.ai_keywords || prev.keywords),
           intelligent_links: seoData.intelligent_links || prev.intelligent_links,
         }));
 
@@ -171,7 +178,7 @@ export default function BlogGenerator() {
           title: data.title,
           content: data.content,
           meta_description: data.meta_description || "",
-          keywords: data.keywords || [],
+          keywords: normalizeKeywords(data.keywords || []),
           youtube_video_url: data.youtube_video_url || "",
           status: data.status,
           published_domains: data.published_domains || [],
@@ -270,9 +277,7 @@ export default function BlogGenerator() {
       }
 
       if (keywordsResponse.data?.content) {
-        const keywords = Array.isArray(keywordsResponse.data.content) 
-          ? keywordsResponse.data.content 
-          : keywordsResponse.data.content.split(',').map((k: string) => k.trim());
+        const keywords = normalizeKeywords(keywordsResponse.data.content);
         setBlogPost(prev => ({ ...prev, keywords }));
       }
 
@@ -496,8 +501,8 @@ const saveBlogPost = async () => {
                 <Label htmlFor="keywords">Keywords (separadas por vírgula)</Label>
                 <Input
                   id="keywords"
-                  value={blogPost.keywords.join(", ")}
-                  onChange={(e) => setBlogPost(prev => ({ 
+                  value={normalizeKeywords(blogPost.keywords).join(", ")}
+                  onChange={(e) => setBlogPost(prev => ({
                     ...prev, 
                     keywords: e.target.value.split(",").map(k => k.trim()).filter(k => k)
                   }))}
@@ -672,9 +677,9 @@ const saveBlogPost = async () => {
                   <p className="text-muted-foreground">
                     {blogPost.meta_description}
                   </p>
-                  {blogPost.keywords.length > 0 && (
+                  {normalizeKeywords(blogPost.keywords).length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-4">
-                      {blogPost.keywords.map((keyword, index) => (
+                      {normalizeKeywords(blogPost.keywords).map((keyword, index) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {keyword}
                         </Badge>
