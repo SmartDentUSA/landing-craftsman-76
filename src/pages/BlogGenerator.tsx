@@ -80,6 +80,9 @@ export default function BlogGenerator() {
         setBlogPost({
           ...stateData.blogData,
           keywords: normalizeKeywords(stateData.blogData.keywords || []),
+          published_domains: Array.isArray(stateData.blogData.published_domains) 
+            ? stateData.blogData.published_domains 
+            : [],
         });
         
         toast({
@@ -466,7 +469,7 @@ const saveBlogPost = async () => {
           <Badge variant={blogPost.status === "published" ? "default" : "secondary"}>
             {blogPost.status === "published" ? "Publicado" : "Rascunho"}
           </Badge>
-          {blogPost.published_domains.length > 0 && (
+          {blogPost.published_domains?.length > 0 && (
             <Badge variant="outline">
               {blogPost.published_domains.length} domínio(s)
             </Badge>
