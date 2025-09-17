@@ -325,6 +325,66 @@ export type Database = {
         }
         Relationships: []
       }
+      video_testimonials: {
+        Row: {
+          ai_extracted_benefits: Json | null
+          ai_keywords: Json | null
+          approved: boolean | null
+          client_name: string
+          created_at: string
+          display_order: number | null
+          id: string
+          instagram_url: string | null
+          landing_page_id: string
+          location: string | null
+          profession: string | null
+          sentiment_score: number | null
+          specialty: string | null
+          state: string | null
+          testimonial_text: string
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          ai_extracted_benefits?: Json | null
+          ai_keywords?: Json | null
+          approved?: boolean | null
+          client_name: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          instagram_url?: string | null
+          landing_page_id: string
+          location?: string | null
+          profession?: string | null
+          sentiment_score?: number | null
+          specialty?: string | null
+          state?: string | null
+          testimonial_text: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          ai_extracted_benefits?: Json | null
+          ai_keywords?: Json | null
+          approved?: boolean | null
+          client_name?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          instagram_url?: string | null
+          landing_page_id?: string
+          location?: string | null
+          profession?: string | null
+          sentiment_score?: number | null
+          specialty?: string | null
+          state?: string | null
+          testimonial_text?: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

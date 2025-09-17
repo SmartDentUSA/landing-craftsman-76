@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
+import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
@@ -4186,6 +4187,9 @@ const EditorContent = () => {
                   </Suspense>
                 </CardContent>
               </Card>
+
+              {/* Video Testimonials Section */}
+              <VideoTestimonialsSection landingPageId={id || 'default'} />
 
               {/* Ofertas Card */}
               <Card className="border-l-4 border-l-orange-500/50">

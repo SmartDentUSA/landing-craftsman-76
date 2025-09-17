@@ -83,8 +83,6 @@ Formato EXATO:
 FAQ CONTENT:
 ${content}
 
-CONTEXTO: ${requestBody.context || ''}
-
 INSTRUÇÕES:
 1. Identifique as principais dúvidas (como, onde, quando, por que, quanto)
 2. Gere keywords long-tail baseadas nas perguntas
@@ -95,6 +93,29 @@ INSTRUÇÕES:
 FORMATO: Responda APENAS com as keywords separadas por vírgula, sem numeração ou explicações.
 
 EXEMPLO: "como funciona [produto], melhor [categoria] para [necessidade], [produto] vale a pena, onde comprar [produto]"`;
+        break;
+
+      case 'video_testimonial_analysis':
+        systemPrompt = `Você é um especialista em SEO e análise de depoimentos. Analise depoimentos em vídeo para extrair máximo valor SEO.
+
+IMPORTANTE: Retorne APENAS um objeto JSON válido, sem explicações, sem markdown, sem \`\`\`json, sem texto adicional.
+
+Formato EXATO:
+{
+  "keywords": ["palavra1", "palavra2", "palavra3"],
+  "benefits": ["benefício1", "benefício2", "benefício3"],
+  "sentiment_score": 0.95
+}`;
+        userPrompt = `Analise este depoimento e extraia informações SEO relevantes:
+
+DEPOIMENTO: ${content}
+
+Extraia:
+1. KEYWORDS: termos que potenciais clientes buscariam (produtos, serviços, benefícios, localização)
+2. BENEFITS: principais benefícios mencionados pelo cliente
+3. SENTIMENT_SCORE: nível de satisfação de 0 a 1 (0=negativo, 1=muito positivo)
+
+Retorne no formato JSON especificado.`;
         break;
 
       case 'blog_content':
@@ -158,7 +179,7 @@ Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
 
       default:
         return new Response(
-          JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content, blog_content' }),
+          JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content, blog_content, video_testimonial_analysis, faq_keywords' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
@@ -205,8 +226,8 @@ Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
       const data = await response.json();
       let generatedContent = data.choices[0].message.content.trim();
 
-    // Parse JSON para keywords com limpeza robusta
-    if (type === 'keywords') {
+    // Parse JSON para keywords e video testimonial analysis com limpeza robusta
+    if (type === 'keywords' || type === 'video_testimonial_analysis') {
       try {
         // Limpar possível markdown e extrair JSON
         let cleanContent = generatedContent.trim();
@@ -227,26 +248,43 @@ Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
         
         const parsedContent = JSON.parse(cleanContent);
         
-        // Validar estrutura mínima
-        generatedContent = {
-          primary: Array.isArray(parsedContent.primary) ? parsedContent.primary : [],
-          secondary: Array.isArray(parsedContent.secondary) ? parsedContent.secondary : [],
-          lsi: Array.isArray(parsedContent.lsi) ? parsedContent.lsi : [],
-          long_tail: Array.isArray(parsedContent.long_tail) ? parsedContent.long_tail : []
-        };
+        // Validar estrutura mínima baseada no tipo
+        if (type === 'keywords') {
+          generatedContent = {
+            primary: Array.isArray(parsedContent.primary) ? parsedContent.primary : [],
+            secondary: Array.isArray(parsedContent.secondary) ? parsedContent.secondary : [],
+            lsi: Array.isArray(parsedContent.lsi) ? parsedContent.lsi : [],
+            long_tail: Array.isArray(parsedContent.long_tail) ? parsedContent.long_tail : []
+          };
+        } else if (type === 'video_testimonial_analysis') {
+          generatedContent = {
+            keywords: Array.isArray(parsedContent.keywords) ? parsedContent.keywords : [],
+            benefits: Array.isArray(parsedContent.benefits) ? parsedContent.benefits : [],
+            sentiment_score: typeof parsedContent.sentiment_score === 'number' ? parsedContent.sentiment_score : 0.8
+          };
+        }
         
       } catch (e) {
-        console.error('❌ Erro ao parsear JSON de keywords:', e);
+        console.error('❌ Erro ao parsear JSON:', e);
         console.error('Conteúdo bruto recebido:', generatedContent);
         
-        // Retornar estrutura vazia com warning
-        generatedContent = {
-          primary: [],
-          secondary: [],
-          lsi: [],
-          long_tail: [],
-          warning: 'IA retornou formato inválido, tente novamente'
-        };
+        // Retornar estrutura vazia com warning baseada no tipo
+        if (type === 'keywords') {
+          generatedContent = {
+            primary: [],
+            secondary: [],
+            lsi: [],
+            long_tail: [],
+            warning: 'IA retornou formato inválido, tente novamente'
+          };
+        } else if (type === 'video_testimonial_analysis') {
+          generatedContent = {
+            keywords: [],
+            benefits: [],
+            sentiment_score: 0.8,
+            warning: 'IA retornou formato inválido, tente novamente'
+          };
+        }
       }
     }
 

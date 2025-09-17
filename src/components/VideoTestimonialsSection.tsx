@@ -1,0 +1,449 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { VideoIcon, Instagram, Youtube, Plus, Edit, Trash2, Star, MapPin, Wand2 } from 'lucide-react';
+
+interface VideoTestimonial {
+  id: string;
+  client_name: string;
+  profession?: string;
+  location?: string;
+  state?: string;
+  youtube_url?: string;
+  instagram_url?: string;
+  testimonial_text: string;
+  specialty?: string;
+  ai_keywords?: any;
+  ai_extracted_benefits?: any;
+  sentiment_score?: number;
+  approved: boolean;
+  display_order?: number;
+}
+
+interface VideoTestimonialsSectionProps {
+  landingPageId: string;
+}
+
+export default function VideoTestimonialsSection({ landingPageId }: VideoTestimonialsSectionProps) {
+  const [testimonials, setTestimonials] = useState<VideoTestimonial[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTestimonial, setEditingTestimonial] = useState<VideoTestimonial | null>(null);
+  const [formData, setFormData] = useState({
+    client_name: '',
+    profession: '',
+    location: '',
+    state: '',
+    youtube_url: '',
+    instagram_url: '',
+    testimonial_text: '',
+    specialty: ''
+  });
+
+  const specialties = [
+    'implantodontia',
+    'ortodontia', 
+    'endodontia',
+    'periodontia',
+    'prótese',
+    'cirurgia',
+    'estética',
+    'odontopediatria'
+  ];
+
+  const states = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
+    'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  ];
+
+  useEffect(() => {
+    loadTestimonials();
+  }, [landingPageId]);
+
+  const loadTestimonials = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('video_testimonials')
+        .select('*')
+        .eq('landing_page_id', landingPageId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      setTestimonials(data || []);
+    } catch (error) {
+      console.error('Error loading testimonials:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar depoimentos",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processWithAI = async (testimonial: VideoTestimonial) => {
+    try {
+      setAiProcessing(true);
+      
+      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'video_testimonial_analysis',
+          content: testimonial.testimonial_text,
+          context: {
+            client_name: testimonial.client_name,
+            profession: testimonial.profession,
+            location: testimonial.location,
+            specialty: testimonial.specialty
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // Update testimonial with AI-generated data
+      const { error: updateError } = await supabase
+        .from('video_testimonials')
+        .update({
+          ai_keywords: data.keywords || [],
+          ai_extracted_benefits: data.benefits || [],
+          sentiment_score: data.sentiment_score || 0.8
+        })
+        .eq('id', testimonial.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "IA Processada",
+        description: "Depoimento analisado e enriquecido com IA",
+      });
+      
+      loadTestimonials();
+    } catch (error) {
+      console.error('Error processing with AI:', error);
+      toast({
+        title: "Erro na IA",
+        description: "Falha ao processar com IA",
+        variant: "destructive",
+      });
+    } finally {
+      setAiProcessing(false);
+    }
+  };
+
+  const saveTestimonial = async () => {
+    try {
+      setLoading(true);
+      
+      const testimonialData = {
+        ...formData,
+        landing_page_id: landingPageId,
+        approved: true,
+        display_order: testimonials.length + 1
+      };
+
+      if (editingTestimonial) {
+        const { error } = await supabase
+          .from('video_testimonials')
+          .update(testimonialData)
+          .eq('id', editingTestimonial.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('video_testimonials')
+          .insert([testimonialData]);
+        
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: editingTestimonial ? "Depoimento atualizado" : "Depoimento adicionado",
+      });
+      
+      setIsDialogOpen(false);
+      resetForm();
+      loadTestimonials();
+    } catch (error) {
+      console.error('Error saving testimonial:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar depoimento",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTestimonial = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('video_testimonials')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Depoimento removido",
+      });
+      
+      loadTestimonials();
+    } catch (error) {
+      console.error('Error deleting testimonial:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao remover depoimento",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      client_name: '',
+      profession: '',
+      location: '',
+      state: '',
+      youtube_url: '',
+      instagram_url: '',
+      testimonial_text: '',
+      specialty: ''
+    });
+    setEditingTestimonial(null);
+  };
+
+  const openEditDialog = (testimonial: VideoTestimonial) => {
+    setFormData({
+      client_name: testimonial.client_name,
+      profession: testimonial.profession || '',
+      location: testimonial.location || '',
+      state: testimonial.state || '',
+      youtube_url: testimonial.youtube_url || '',
+      instagram_url: testimonial.instagram_url || '',
+      testimonial_text: testimonial.testimonial_text,
+      specialty: testimonial.specialty || ''
+    });
+    setEditingTestimonial(testimonial);
+    setIsDialogOpen(true);
+  };
+
+  const getVideoId = (url: string) => {
+    if (url.includes('youtube.com/shorts/')) {
+      return url.split('/shorts/')[1]?.split('?')[0];
+    }
+    if (url.includes('youtu.be/')) {
+      return url.split('youtu.be/')[1]?.split('?')[0];
+    }
+    if (url.includes('watch?v=')) {
+      return url.split('watch?v=')[1]?.split('&')[0];
+    }
+    return null;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <VideoIcon className="h-5 w-5" />
+          📺 Depoimentos em Vídeo
+          <Badge variant="outline" className="ml-auto">
+            {testimonials.length} depoimentos
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              Gerencie depoimentos do YouTube e Instagram para maximizar o SEO local
+            </p>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Depoimento
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingTestimonial ? 'Editar' : 'Adicionar'} Depoimento
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Nome do cliente"
+                    value={formData.client_name}
+                    onChange={(e) => setFormData({...formData, client_name: e.target.value})}
+                  />
+                  <Input
+                    placeholder="Profissão"
+                    value={formData.profession}
+                    onChange={(e) => setFormData({...formData, profession: e.target.value})}
+                  />
+                  <Input
+                    placeholder="Cidade"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
+                  <Select value={formData.state} onValueChange={(value) => setFormData({...formData, state: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {states.map(state => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={formData.specialty} onValueChange={(value) => setFormData({...formData, specialty: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Especialidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {specialties.map(specialty => (
+                        <SelectItem key={specialty} value={specialty}>
+                          {specialty.charAt(0).toUpperCase() + specialty.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="URL do YouTube"
+                    value={formData.youtube_url}
+                    onChange={(e) => setFormData({...formData, youtube_url: e.target.value})}
+                  />
+                  <Input
+                    placeholder="URL do Instagram"
+                    value={formData.instagram_url}
+                    onChange={(e) => setFormData({...formData, instagram_url: e.target.value})}
+                  />
+                </div>
+                <Textarea
+                  placeholder="Texto do depoimento..."
+                  value={formData.testimonial_text}
+                  onChange={(e) => setFormData({...formData, testimonial_text: e.target.value})}
+                  rows={4}
+                  className="col-span-2"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={saveTestimonial} disabled={loading}>
+                    {loading ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Carregando depoimentos...</div>
+          ) : testimonials.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum depoimento cadastrado ainda
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {testimonials.map((testimonial) => (
+                <Card key={testimonial.id} className="relative">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-semibold">{testimonial.client_name}</h4>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {testimonial.profession && <span>{testimonial.profession}</span>}
+                          {testimonial.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {testimonial.location}, {testimonial.state}
+                            </span>
+                          )}
+                          {testimonial.sentiment_score && (
+                            <span className="flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                              {(testimonial.sentiment_score * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => processWithAI(testimonial)}
+                          disabled={aiProcessing}
+                        >
+                          <Wand2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(testimonial)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteTestimonial(testimonial.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <p className="text-sm mb-3 line-clamp-3">{testimonial.testimonial_text}</p>
+
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {testimonial.specialty && (
+                        <Badge variant="secondary">{testimonial.specialty}</Badge>
+                      )}
+                      {Array.isArray(testimonial.ai_keywords) && testimonial.ai_keywords.slice(0, 3).map((keyword: string, idx: number) => (
+                        <Badge key={idx} variant="outline">{keyword}</Badge>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      {testimonial.youtube_url && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={testimonial.youtube_url} target="_blank" rel="noopener noreferrer">
+                            <Youtube className="h-4 w-4 mr-1" />
+                            YouTube
+                          </a>
+                        </Button>
+                      )}
+                      {testimonial.instagram_url && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={testimonial.instagram_url} target="_blank" rel="noopener noreferrer">
+                            <Instagram className="h-4 w-4 mr-1" />
+                            Instagram
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
