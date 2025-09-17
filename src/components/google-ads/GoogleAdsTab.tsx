@@ -276,11 +276,34 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Campanha Google Ads</h2>
-          <p className="text-muted-foreground">
-            Gere CSV compatível com Google Ads Editor em 1-2 cliques
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Campanha Google Ads</h2>
+            <p className="text-muted-foreground">
+              Gere CSV compatível com Google Ads Editor em 1-2 cliques
+            </p>
+          </div>
+          
+          {campaignConfig.enabled && (
+            <div className="flex items-center gap-2">
+              {hasErrors ? (
+                <Badge variant="destructive" className="gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Configuração Incompleta
+                </Badge>
+              ) : warnings.length > 0 ? (
+                <Badge variant="secondary" className="gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {warnings.length} Aviso{warnings.length > 1 ? 's' : ''}
+                </Badge>
+              ) : (
+                <Badge variant="default" className="gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Configuração Válida
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-3">
@@ -450,64 +473,65 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
             </TabsContent>
           </Tabs>
 
-          {/* Preview and Warnings */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
-                <div className="flex items-center gap-2">
-                  {lastGeneratedAt && (
-                    <span className="text-xs text-muted-foreground">
-                      Gerado: {lastGeneratedAt.toLocaleTimeString()}
-                    </span>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRegenerateAds}
-                    disabled={isGeneratingAds}
-                    className="gap-1"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
-                    Regenerar
-                  </Button>
-                </div>
+          {/* Preview */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
+              <div className="flex items-center gap-2">
+                {lastGeneratedAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Gerado: {lastGeneratedAt.toLocaleTimeString()}
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateAds}
+                  disabled={isGeneratingAds}
+                  className="gap-1"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
+                  Regenerar
+                </Button>
               </div>
-              
-              {isGeneratingAds ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-4 w-2/3" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : previewData ? (
-                <AdPreviewCards
-                  adCopies={previewData.adCopies}
-                  finalUrl={previewData.finalUrl}
-                  sitelinks={previewData.sitelinks}
-                  videos={previewData.videos}
-                />
-              ) : null}
             </div>
             
-            <WarningsPanel warnings={warnings} />
-          </div>
-
-          {/* Export Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleExportCSV}
-              disabled={isLoading || hasErrors}
-              size="lg"
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              {isLoading ? 'Gerando CSV...' : 'Exportar CSV'}
-            </Button>
+            {isGeneratingAds ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : previewData ? (
+              <AdPreviewCards
+                adCopies={previewData.adCopies}
+                finalUrl={previewData.finalUrl}
+                sitelinks={previewData.sitelinks}
+                videos={previewData.videos}
+              />
+            ) : null}
+            
+            {/* Export Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleExportCSV}
+                disabled={isLoading || hasErrors}
+                size="lg"
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                {isLoading ? 'Gerando CSV...' : 'Exportar CSV'}
+                {hasErrors && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (Corrija os erros primeiro)
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
         </>
       )}
