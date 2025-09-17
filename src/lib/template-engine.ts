@@ -1312,7 +1312,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{/resources_section.subtitle}}
             </div>
             <div class="offers-content">
-                <div class="desktop-carousel">
+                <div class="desktop-carousel desktop-only">
                     <div class="resources-grid">
                         {{#resources_products}}
                         <div class="offer-card">
@@ -1347,7 +1347,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 </div>
 
                 <!-- Mobile Carousel -->
-                <div class="mobile-carousel">
+                <div class="mobile-carousel mobile-only">
                     <div class="carousel-track">
                         {{#resources_products}}
                         <div class="offer-card">
