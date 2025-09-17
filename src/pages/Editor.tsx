@@ -3397,35 +3397,101 @@ const EditorContent = () => {
                                      size="sm"
                                      variant="outline"
                                      disabled={aiLoading.blog}
-                                     onClick={async () => {
-                                       if (aiLoading.blog) return;
-                                       setAiLoading(prev => ({ ...prev, blog: true }));
-                                       try {
-                                         const contentRaw = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
-                                         const content = (contentRaw || '').trim();
-                                         if (!content) {
-                                           toast({ title: "Conteúdo insuficiente", description: "Preencha título, subtítulo e parágrafo principal.", variant: "destructive" });
-                                           return;
-                                         }
-                                         
-                                         const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                           body: { type: 'blog_content', content }
-                                         });
-                                         
-                                         if (error) throw error;
-                                         if (result?.content) {
-                                           // Redirecionar para a página de blog com o conteúdo
-                                           navigate(`/blog-generator/${id}`, { 
-                                             state: { generatedContent: result.content }
-                                           });
-                                         }
-                                       } catch (error) {
-                                         console.error('Erro ao gerar blog:', error);
-                                         toast({ title: "Erro", description: "Falha ao gerar blog post", variant: "destructive" });
-                                       } finally {
-                                         setAiLoading(prev => ({ ...prev, blog: false }));
-                                       }
-                                     }}
+                                      onClick={async () => {
+                                        if (aiLoading.blog) return;
+                                        setAiLoading(prev => ({ ...prev, blog: true }));
+                                        try {
+                                          // Validar dados básicos
+                                          if (!data.banner.title?.trim()) {
+                                            toast({ title: "Conteúdo insuficiente", description: "Preencha o título principal do banner.", variant: "destructive" });
+                                            return;
+                                          }
+                                          if (!data.banner.subtitle?.trim()) {
+                                            toast({ title: "Conteúdo insuficiente", description: "Preencha o subtítulo do banner.", variant: "destructive" });
+                                            return;
+                                          }
+                                          if (!data.advisory.paragraph?.trim()) {
+                                            toast({ title: "Conteúdo insuficiente", description: "Preencha o parágrafo da seção consultoria.", variant: "destructive" });
+                                            return;
+                                          }
+
+                                          // Preparar conteúdo completo da landing page
+                                          const fullLandingPageContent = {
+                                            banner: {
+                                              title: data.banner.title,
+                                              subtitle: data.banner.subtitle
+                                            },
+                                            solutions: {
+                                              title: data.solutions_title,
+                                              items: data.solutions.map(solution => ({
+                                                text: solution.text,
+                                                image: solution.image,
+                                                isFirstSolution: data.solutions.indexOf(solution) === 0
+                                              }))
+                                            },
+                                            faq: {
+                                              title: data.faq_title,
+                                              items: data.faq.map(faq => ({
+                                                question: faq.question,
+                                                answer: faq.answer
+                                              }))
+                                            }
+                                          };
+
+                                          // Preparar conteúdo simplificado
+                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
+                                          
+                                          console.log('🤖 Enviando dados para IA:', {
+                                            type: 'blog_content',
+                                            content,
+                                            title: data.banner.title,
+                                            fullLandingPageContent
+                                          });
+
+                                          const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
+                                            body: { 
+                                              type: 'blog_content', 
+                                              content,
+                                              title: data.banner.title,
+                                              fullLandingPageContent
+                                            }
+                                          });
+                                          
+                                          console.log('🤖 Resposta da IA:', { result, error });
+                                          
+                                          if (error) {
+                                            console.error('Erro na function:', error);
+                                            throw new Error(`Erro da function: ${error.message || 'Erro desconhecido'}`);
+                                          }
+                                          
+                                          if (!result) {
+                                            throw new Error('Nenhum resultado retornado pela IA');
+                                          }
+                                          
+                                          if (!result.success) {
+                                            throw new Error(result.error || 'Falha na geração do conteúdo');
+                                          }
+                                          
+                                          if (result?.content) {
+                                            // Redirecionar para a página de blog com o conteúdo
+                                            navigate(`/blog-generator/${id}`, { 
+                                              state: { generatedContent: result.content }
+                                            });
+                                          } else {
+                                            throw new Error('Conteúdo não gerado pela IA');
+                                          }
+                                        } catch (error) {
+                                          console.error('❌ Erro ao gerar blog:', error);
+                                          const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+                                          toast({ 
+                                            title: "Erro na geração do blog", 
+                                            description: errorMessage, 
+                                            variant: "destructive" 
+                                          });
+                                        } finally {
+                                          setAiLoading(prev => ({ ...prev, blog: false }));
+                                        }
+                                      }}
                                    >
                                      {aiLoading.blog ? (
                                        <>
