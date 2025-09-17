@@ -62,7 +62,10 @@ export default function BlogGenerator() {
 
   const loadLandingPage = async () => {
     try {
-      const { data, error } = await supabase
+      console.log(`🔍 Buscando landing page com ID: "${id}"`);
+      
+      // Primeira tentativa: buscar por ID exato
+      let { data, error } = await supabase
         .from("approved_reviews")
         .select("*")
         .eq("landing_page_id", id)
@@ -70,19 +73,67 @@ export default function BlogGenerator() {
 
       if (error) throw error;
 
+      // Se não encontrou, tentar buscar qualquer landing page disponível
+      if (!data) {
+        console.log(`⚠️ Nenhuma landing page encontrada para ID "${id}". Buscando qualquer landing page disponível...`);
+        
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("approved_reviews")
+          .select("*")
+          .limit(1)
+          .maybeSingle();
+
+        if (fallbackError) throw fallbackError;
+        
+        if (fallbackData) {
+          console.log(`✅ Usando landing page de fallback: "${fallbackData.landing_page_id}"`);
+          data = fallbackData;
+          
+          toast({
+            title: "Landing page carregada",
+            description: `Usando dados da landing page "${fallbackData.landing_page_id}" como referência.`,
+          });
+        }
+      }
+
       if (data) {
         setLandingPage({
           id: data.landing_page_id,
           title: "Landing Page",
-          description: data.notes || "",
+          description: data.notes || data.seo_hidden_content || "Landing page para geração de blog",
           content: data,
+        });
+        console.log(`✅ Landing page carregada com sucesso: "${data.landing_page_id}"`);
+      } else {
+        // Se ainda não encontrou, usar dados genéricos
+        console.log("⚠️ Nenhuma landing page encontrada. Usando dados genéricos...");
+        setLandingPage({
+          id: id || "generic",
+          title: "Landing Page Genérica",
+          description: "Conteúdo sobre odontologia digital e tecnologia SmartDent",
+          content: null,
+        });
+        
+        toast({
+          title: "Aviso",
+          description: "Nenhuma landing page específica encontrada. Usando dados genéricos para geração do blog.",
+          variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Erro ao carregar landing page:", error);
+      
+      // Fallback final: usar dados genéricos
+      setLandingPage({
+        id: id || "generic",
+        title: "Landing Page Genérica",
+        description: "Conteúdo sobre odontologia digital e tecnologia SmartDent",
+        content: null,
+      });
+      
       toast({
-        title: "Erro",
-        description: "Erro ao carregar dados da landing page.",
+        title: "Erro de carregamento",
+        description: "Erro ao carregar dados específicos. Usando dados genéricos para o blog.",
         variant: "destructive",
       });
     }
