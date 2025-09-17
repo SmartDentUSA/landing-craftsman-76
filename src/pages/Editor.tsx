@@ -4665,34 +4665,64 @@ const EditorContent = () => {
                                      className="text-sm h-8"
                                    />
                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                      value={offer.price || ''}
-                                      onChange={(e) => {
-                                        const newOffers = [...data.schema.offers];
-                                        newOffers[index] = { ...newOffers[index], price: e.target.value };
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: { ...prev.schema, offers: newOffers }
-                                        }));
-                                      }}
-                                      placeholder="Preço"
-                                      className="text-sm h-8"
-                                    />
-                                    <Input
-                                      value={offer.productUrl || ''}
-                                      onChange={(e) => {
-                                        const newOffers = [...data.schema.offers];
-                                        newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: { ...prev.schema, offers: newOffers }
-                                        }));
-                                      }}
-                                      placeholder="URL do produto"
-                                      className="text-sm h-8"
-                                    />
-                                  </div>
+                                   <div className="grid grid-cols-2 gap-2">
+                                     <Input
+                                       value={offer.price || ''}
+                                       onChange={(e) => {
+                                         const newOffers = [...data.schema.offers];
+                                         newOffers[index] = { ...newOffers[index], price: e.target.value };
+                                         setData(prev => ({
+                                           ...prev,
+                                           schema: { ...prev.schema, offers: newOffers }
+                                         }));
+                                       }}
+                                       placeholder="Preço"
+                                       className="text-sm h-8"
+                                     />
+                                     <div className="flex gap-1">
+                                       <Input
+                                         value={offer.productUrl || ''}
+                                         onChange={(e) => {
+                                           const newOffers = [...data.schema.offers];
+                                           newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
+                                           setData(prev => ({
+                                             ...prev,
+                                             schema: { ...prev.schema, offers: newOffers }
+                                           }));
+                                         }}
+                                         onBlur={(e) => {
+                                           const url = e.target.value.trim();
+                                           if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                                             const normalizedUrl = `https://${url}`;
+                                             const newOffers = [...data.schema.offers];
+                                             newOffers[index] = { ...newOffers[index], productUrl: normalizedUrl };
+                                             setData(prev => ({
+                                               ...prev,
+                                               schema: { ...prev.schema, offers: newOffers }
+                                             }));
+                                           }
+                                         }}
+                                         placeholder="URL do produto"
+                                         className="text-sm h-8"
+                                       />
+                                       {offer.productUrl && offer.productUrl.trim() && (
+                                         <Button
+                                           variant="outline"
+                                           size="sm"
+                                           onClick={() => extractProductData(index)}
+                                           disabled={extractingProduct === index}
+                                           className="h-8 px-2 text-xs"
+                                           title="Importar dados da Loja Integrada"
+                                         >
+                                           {extractingProduct === index ? (
+                                             <Loader2 className="h-3 w-3 animate-spin" />
+                                           ) : (
+                                             <Download className="h-3 w-3" />
+                                           )}
+                                         </Button>
+                                       )}
+                                     </div>
+                                   </div>
                                    <Input
                                      value={offer.image || ''}
                                      onChange={(e) => {
@@ -4783,11 +4813,17 @@ const EditorContent = () => {
                                      <div className="text-sm font-medium truncate">
                                        {offer.name || `Oferta ${index + 1}`}
                                      </div>
-                                     <div className="text-xs text-muted-foreground line-clamp-2">
-                                       {offer.price && `Preço: R$ ${offer.price}`}
-                                       {offer.description && ` • ${offer.description}`}
-                                       {offer.productUrl && !offer.name && ` • ${new URL(offer.productUrl).hostname}`}
-                                     </div>
+                                      <div className="text-xs text-muted-foreground line-clamp-2">
+                                        {offer.price && `Preço: R$ ${offer.price}`}
+                                        {offer.description && ` • ${offer.description}`}
+                                        {offer.productUrl && !offer.name && ` • ${(() => {
+                                          try {
+                                            return new URL(offer.productUrl).hostname;
+                                          } catch {
+                                            return offer.productUrl.replace(/^https?:\/\//, '').split('/')[0];
+                                          }
+                                        })()}`}
+                                      </div>
                                       <div className="flex gap-1 mt-1 flex-wrap">
                                         {offer.sourceType === 'imported' && (
                                           <Badge variant="secondary" className="text-xs">

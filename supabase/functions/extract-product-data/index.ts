@@ -103,11 +103,22 @@ serve(async (req) => {
       productData.name = titleMatch[1].trim().replace(/\s+/g, ' ');
     }
 
-    // Extrair preço
-    const priceMatch = html.match(/R\$\s*[\d.,]+/gi);
-    if (priceMatch && priceMatch.length > 0) {
-      // Pegar o primeiro preço encontrado
-      productData.price = priceMatch[0].replace(/[^\d.,]/g, '').replace(',', '.');
+    // Extrair preço - primeiro tentar meta property da Loja Integrada
+    let priceFound = false;
+    const priceMetaMatch = html.match(/<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (priceMetaMatch) {
+      productData.price = priceMetaMatch[1].trim();
+      priceFound = true;
+      console.log('Price found via meta property:', productData.price);
+    }
+    
+    // Fallback: buscar por padrão R$ no HTML
+    if (!priceFound) {
+      const priceMatch = html.match(/R\$\s*[\d.,]+/gi);
+      if (priceMatch && priceMatch.length > 0) {
+        productData.price = priceMatch[0].replace(/[^\d.,]/g, '').replace(',', '.');
+        console.log('Price found via regex:', productData.price);
+      }
     }
 
     // Extrair descrição
