@@ -801,7 +801,7 @@ const EditorContent = () => {
   const { toast } = useToast();
   const { id } = useParams();
   const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
-  const { syncOffersToRepository } = useProductSync();
+  const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
   
@@ -853,6 +853,7 @@ const EditorContent = () => {
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [generatingBlog, setGeneratingBlog] = useState(false);
+  const [isImportingFromRepo, setIsImportingFromRepo] = useState(false);
   
   // Auto-sync offers to repository when they change
   const handleAutoSyncOffers = useCallback(async (newData: LandingPageData) => {
@@ -864,6 +865,86 @@ const EditorContent = () => {
       }
     }
   }, [id, syncOffersToRepository]);
+
+  // Import products from repository
+  const handleImportFromRepository = useCallback(async () => {
+    setIsImportingFromRepo(true);
+    try {
+      const repoProducts = await loadApprovedProductsForAI();
+      
+      if (repoProducts.length === 0) {
+        toast({
+          title: "Nenhum produto encontrado",
+          description: "Não há produtos aprovados no repositório para importar.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Map repository products to offer format
+      const mappedOffers = repoProducts.map(product => ({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        currency: 'R$',
+        availability: 'InStock',
+        valid_through: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        productUrl: product.link,
+        image: product.image,
+        sourceType: 'imported' as const,
+        lastUpdated: new Date().toISOString(),
+        selected: true,
+      }));
+
+      // Deduplicate with existing offers
+      const existingNames = new Set(data.schema.offers.map(offer => offer.name.toLowerCase()));
+      const existingUrls = new Set(data.schema.offers.map(offer => offer.productUrl?.toLowerCase()).filter(Boolean));
+      
+      const newOffers = mappedOffers.filter(offer => 
+        !existingNames.has(offer.name.toLowerCase()) && 
+        (!offer.productUrl || !existingUrls.has(offer.productUrl.toLowerCase()))
+      );
+
+      if (newOffers.length === 0) {
+        toast({
+          title: "Produtos já existem",
+          description: "Todos os produtos do repositório já estão nas ofertas.",
+        });
+        return;
+      }
+
+      // Update data with new offers
+      setData(prev => {
+        const updatedData = {
+          ...prev,
+          schema: {
+            ...prev.schema,
+            offers: [...prev.schema.offers, ...newOffers]
+          }
+        };
+        
+        // Auto-sync back to repository
+        handleAutoSyncOffers(updatedData);
+        
+        return updatedData;
+      });
+
+      toast({
+        title: "Produtos importados",
+        description: `${newOffers.length} produto(s) adicionado(s) às ofertas.`,
+      });
+
+    } catch (error) {
+      console.error('Error importing from repository:', error);
+      toast({
+        title: "Erro na importação",
+        description: "Não foi possível importar os produtos do repositório.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingFromRepo(false);
+    }
+  }, [loadApprovedProductsForAI, handleAutoSyncOffers, toast]);
 
   // Função para aplicar valores automáticos aos campos principais
   const applyAutoSEOValues = () => {
@@ -5084,10 +5165,29 @@ const EditorContent = () => {
                      <div className="space-y-4">
                        <div className="flex items-center justify-between">
                          <h4 className="font-medium">Ofertas Configuradas</h4>
-                         <div className="flex items-center gap-3">
-                           <Badge variant="secondary" className="text-xs">
-                             {data.schema.offers.filter(offer => offer.selected !== false).length} de {data.schema.offers.length} selecionadas
-                           </Badge>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="text-xs">
+                              {data.schema.offers.filter(offer => offer.selected !== false).length} de {data.schema.offers.length} selecionadas
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleImportFromRepository}
+                              disabled={isImportingFromRepo}
+                              className="text-xs"
+                            >
+                              {isImportingFromRepo ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Importando...
+                                </>
+                              ) : (
+                                <>
+                                  <Wand2 className="w-4 h-4 mr-2" />
+                                  Capturar do Repositório
+                                </>
+                              )}
+                            </Button>
                            <div className="flex gap-1">
                              <Button
                                variant="outline"

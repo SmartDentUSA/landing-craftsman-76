@@ -136,9 +136,33 @@ export const useProductSync = () => {
     }
   }, [toast]);
 
+  const loadApprovedProductsForAI = useCallback(async () => {
+    try {
+      const { data: products } = await supabase
+        .from('products_repository')
+        .select('*')
+        .eq('approved', true)
+        .eq('use_in_ai_generation', true)
+        .order('display_order', { ascending: true });
+
+      return products?.map(product => ({
+        name: product.name,
+        description: product.description || '',
+        price: product.price ? product.price.toString() : '',
+        image: product.image_url || '',
+        link: product.product_url || '',
+      })) || [];
+
+    } catch (error) {
+      console.error('Error loading approved products for AI:', error);
+      return [];
+    }
+  }, []);
+
   return {
     syncOffersToRepository,
     loadProductsFromRepository,
     migrateExistingOffers,
+    loadApprovedProductsForAI,
   };
 };
