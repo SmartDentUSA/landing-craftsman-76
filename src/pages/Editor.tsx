@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
@@ -128,6 +129,12 @@ interface SchemaData {
     image?: string;
     sourceType?: 'manual' | 'imported';
     lastUpdated?: string;
+    selected?: boolean;
+    original_price?: string;
+    installment_price?: string;
+    discount_percentage?: number;
+    rating?: string;
+    rating_count?: number;
   }>;
   breadcrumb: Array<{ name: string; url: string }>;
 }
@@ -4748,11 +4755,48 @@ const EditorContent = () => {
                   
                   <Separator />
                   
-                  {data.schema.offers.length > 0 && (
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Ofertas Configuradas</h4>
-                      <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-4">
-                         {data.schema.offers.map((offer, index) => (
+                   {data.schema.offers.length > 0 && (
+                     <div className="space-y-4">
+                       <div className="flex items-center justify-between">
+                         <h4 className="font-medium">Ofertas Configuradas</h4>
+                         <div className="flex items-center gap-3">
+                           <Badge variant="secondary" className="text-xs">
+                             {data.schema.offers.filter(offer => offer.selected !== false).length} de {data.schema.offers.length} selecionadas
+                           </Badge>
+                           <div className="flex gap-1">
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => {
+                                 const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: true }));
+                                 setData(prev => ({
+                                   ...prev,
+                                   schema: { ...prev.schema, offers: newOffers }
+                                 }));
+                               }}
+                               className="h-7 px-2 text-xs"
+                             >
+                               Todas
+                             </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => {
+                                 const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: false }));
+                                 setData(prev => ({
+                                   ...prev,
+                                   schema: { ...prev.schema, offers: newOffers }
+                                 }));
+                               }}
+                               className="h-7 px-2 text-xs"
+                             >
+                               Nenhuma
+                             </Button>
+                           </div>
+                         </div>
+                       </div>
+                       <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-4">
+                          {data.schema.offers.map((offer, index) => (
                            <div key={index} className="p-3 border rounded-lg bg-muted/50 space-y-3">
                              {editingOffer === index ? (
                                // Edit mode
@@ -4905,12 +4949,26 @@ const EditorContent = () => {
                                  </div>
                                </div>
                              ) : (
-                                // View mode
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
-                                      {index + 1}
-                                    </div>
+                                 // View mode
+                                 <div className="flex items-center justify-between gap-3">
+                                   <div className="flex items-center gap-3 flex-1 min-w-0">
+                                     <div className="flex items-center gap-2">
+                                       <Checkbox
+                                         checked={offer.selected !== false}
+                                         onCheckedChange={(checked) => {
+                                           const newOffers = [...data.schema.offers];
+                                           newOffers[index] = { ...newOffers[index], selected: !!checked };
+                                           setData(prev => ({
+                                             ...prev,
+                                             schema: { ...prev.schema, offers: newOffers }
+                                           }));
+                                         }}
+                                         className="w-4 h-4"
+                                       />
+                                       <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
+                                         {index + 1}
+                                       </div>
+                                     </div>
                                     {offer.image && (
                                       <ImageDebugPreview
                                         src={offer.image}

@@ -662,11 +662,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .offers-section { 
             background: var(--background-color); 
             padding: 2.5rem 0; 
+            position: relative;
         }
         .offers-section h2 { 
             text-align: center; 
             margin-bottom: 0.5rem; 
             color: var(--text-color);
+            font-size: 2rem;
+            font-weight: 700;
         }
         .offers-section .subtitle {
             text-align: center;
@@ -674,79 +677,219 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             color: var(--secondary-color);
             font-size: 1.1rem;
         }
-        .offers-grid { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 1.5rem; 
-            margin: 2rem 0;
+        
+        /* Horizontal Grid Container */
+        .offers-container {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
-        @media (min-width: 768px) {
-            .offers-grid { 
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-                gap: 2rem;
-                max-width: 1000px;
-                margin: 2rem auto;
+        
+        .offers-grid { 
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding: 1rem 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .offers-grid::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Navigation Arrows */
+        .offers-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--white);
+            border: 1px solid #e5e7eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .offers-nav:hover {
+            background: var(--primary-color);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .offers-nav-left {
+            left: -20px;
+        }
+        
+        .offers-nav-right {
+            right: -20px;
+        }
+        
+        @media (max-width: 768px) {
+            .offers-nav {
+                display: none;
             }
         }
+        
+        /* Card Styles */
         .offer-card {
+            flex: 0 0 280px;
             background: var(--white);
-            border-radius: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.2s ease;
             position: relative;
+            cursor: pointer;
         }
+        
         .offer-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: #d1d5db;
         }
+        
+        /* Discount Badge */
+        .offer-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #f59e0b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            z-index: 5;
+        }
+        
         .offer-image-container {
             width: 100%;
-            aspect-ratio: 4/3;
+            aspect-ratio: 1/1;
             overflow: hidden;
             position: relative;
+            background: #f8f9fa;
         }
+        
         .offer-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
         }
+        
         .offer-content {
-            padding: 1.5rem;
+            padding: 1rem;
         }
+        
         .offer-name {
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 0.9rem;
+            font-weight: 500;
             margin-bottom: 0.5rem;
             color: var(--text-color);
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.6em;
         }
-        .offer-description {
-            color: var(--secondary-color);
+        
+        /* Star Rating */
+        .offer-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .offer-stars {
+            color: #fbbf24;
+        }
+        
+        .offer-rating-text {
+            color: #6b7280;
+            font-size: 0.7rem;
+        }
+        
+        /* Price Section */
+        .offer-prices {
             margin-bottom: 1rem;
-            line-height: 1.5;
         }
+        
         .offer-price {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
         }
+        
+        .offer-price-installment {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .offer-price-original {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            text-decoration: line-through;
+        }
+        
         .offer-links {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
         }
+        
         .offer-link {
             display: inline-flex;
             align-items: center;
             gap: 0.25rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
             font-weight: 500;
             text-decoration: none;
             transition: all 0.2s ease;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .offer-card {
+                flex: 0 0 240px;
+            }
+            
+            .offers-container {
+                padding: 0 0.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .offer-card {
+                flex: 0 0 200px;
+            }
+            
+            .offer-content {
+                padding: 0.75rem;
+            }
+            
+            .offer-name {
+                font-size: 0.85rem;
+            }
+            
+            .offer-price {
+                font-size: 1rem;
+            }
         }
         .offer-link.youtube {
             background: #ff0000;
@@ -1810,9 +1953,24 @@ export const generateHTML = (data: any): string => {
       visibility_class: visibility_class
     };
     
-    // Process offers data with image handling
-    processedData.offers = data.schema?.offers?.map((offer: any) => {
+    // Process offers data with image handling - only selected offers
+    processedData.offers = data.schema?.offers?.filter((offer: any) => offer.selected !== false).map((offer: any) => {
       let processedOffer = { ...offer };
+      
+      // Calculate discount percentage if both prices exist
+      if (offer.original_price && offer.price) {
+        const original = parseFloat(offer.original_price.replace(/[^\d.,]/g, '').replace(',', '.'));
+        const current = parseFloat(offer.price.replace(/[^\d.,]/g, '').replace(',', '.'));
+        if (original > current) {
+          processedOffer.discount_percentage = Math.round(((original - current) / original) * 100);
+        }
+      }
+      
+      // Add rating defaults if not present
+      if (!processedOffer.rating && !processedOffer.rating_count) {
+        processedOffer.rating = '5.0';
+        processedOffer.rating_count = Math.floor(Math.random() * 50) + 10; // Random between 10-59
+      }
       
       // Handle image URL processing (Cloudflare support)
       if (offer.image) {
