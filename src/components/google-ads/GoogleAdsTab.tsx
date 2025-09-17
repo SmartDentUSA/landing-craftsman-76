@@ -46,6 +46,7 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
     negatives: [],
     ecommerce_links: [],
     include_brand_policies: true,
+    custom_institutional_links: [],
     youtube_videos: [],
     utm: {
       source: 'google',

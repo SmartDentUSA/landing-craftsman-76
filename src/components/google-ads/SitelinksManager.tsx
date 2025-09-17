@@ -26,7 +26,11 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
   useEffect(() => {
     generateAutoSitelinks();
     generateBrandSitelinks();
-  }, [data]);
+    // Initialize custom institutional links from config
+    if (config.custom_institutional_links) {
+      setCustomInstitutionalLinks(config.custom_institutional_links);
+    }
+  }, [data, config.custom_institutional_links]);
 
   const generateAutoSitelinks = () => {
     if (data?.intelligent_links) {
@@ -67,6 +71,9 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
     if (newInstitutionalLink.label && newInstitutionalLink.url) {
       const newLinks = [...customInstitutionalLinks, { ...newInstitutionalLink }];
       setCustomInstitutionalLinks(newLinks);
+      onChange({
+        custom_institutional_links: newLinks
+      });
       setNewInstitutionalLink({ label: '', url: '' });
     }
   };
@@ -74,6 +81,9 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
   const removeCustomInstitutionalLink = (index: number) => {
     const newLinks = customInstitutionalLinks.filter((_, i) => i !== index);
     setCustomInstitutionalLinks(newLinks);
+    onChange({
+      custom_institutional_links: newLinks
+    });
   };
 
   const startEditingInstitutional = (index: number, link: any) => {
@@ -86,6 +96,9 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
       const newLinks = [...customInstitutionalLinks];
       newLinks[index] = { ...editInstitutionalData };
       setCustomInstitutionalLinks(newLinks);
+      onChange({
+        custom_institutional_links: newLinks
+      });
       setEditingInstitutional(null);
       setEditInstitutionalData({ label: '', url: '' });
     }
@@ -100,7 +113,7 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
     const manual = config.ecommerce_links || [];
     const auto = autoSitelinks.length > 0 ? autoSitelinks : [];
     const brand = config.include_brand_policies ? brandSitelinks : [];
-    const customInstitutional = customInstitutionalLinks;
+    const customInstitutional = config.custom_institutional_links || [];
     return [...manual, ...auto, ...brand, ...customInstitutional];
   };
 

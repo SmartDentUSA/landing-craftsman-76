@@ -40,6 +40,7 @@ export interface GoogleAdsCampaignConfig {
   // Sitelinks from e-commerce
   ecommerce_links: { label: string; url: string }[];
   include_brand_policies: boolean;
+  custom_institutional_links: { label: string; url: string }[];
   
   // Video extensions
   youtube_videos: { url: string; label?: string }[];
