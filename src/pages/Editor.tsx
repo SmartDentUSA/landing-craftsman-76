@@ -19,6 +19,7 @@ import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, 
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
+import { ProductCSVUploader } from "@/components/ProductCSVUploader";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
@@ -4251,6 +4252,28 @@ const EditorContent = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Importação em Massa via CSV */}
+                  <ProductCSVUploader 
+                    onProductsUpdate={(importedProducts) => {
+                      setData(prev => ({
+                        ...prev,
+                        schema: {
+                          ...prev.schema,
+                          offers: [...prev.schema.offers, ...importedProducts]
+                        }
+                      }));
+                      toast({
+                        title: "Produtos importados",
+                        description: `${importedProducts.length} produto(s) adicionado(s) às ofertas`,
+                      });
+                    }}
+                  />
+                  
+                  <Separator />
+                  
+                  {data.schema.offers.length > 0 && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Ofertas Configuradas</h4>
                   {data.schema.offers.map((offer, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-4 bg-card">
                       <div className="flex justify-between items-center">
@@ -4451,9 +4474,11 @@ const EditorContent = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
-                  
-                  <Button
+                   ))}
+                    </div>
+                  )}
+                   
+                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
