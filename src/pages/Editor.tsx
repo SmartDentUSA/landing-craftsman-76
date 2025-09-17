@@ -120,6 +120,8 @@ interface SchemaData {
     availability: string;
     valid_through: string;
     productUrl?: string;
+    youtube_url?: string;
+    instagram_url?: string;
     sourceType?: 'manual' | 'imported';
     lastUpdated?: string;
   }>;

@@ -1832,15 +1832,47 @@ export const generateHTML = (data: any): string => {
         }))
       }),
       ...(data.schema?.offers?.length > 0 && {
-        "offers": data.schema.offers.map((offer: any) => ({
-          "@type": "Offer",
-          "name": offer.name,
-          "description": offer.description,
-          "price": offer.price,
-          "priceCurrency": offer.currency,
-          "availability": offer.availability === "InStock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-          ...(offer.valid_through && { "validThrough": offer.valid_through })
-        }))
+        "offers": data.schema.offers.map((offer: any) => {
+          const offerSchema: any = {
+            "@type": "Offer",
+            "name": offer.name,
+            "description": offer.description,
+            "price": offer.price,
+            "priceCurrency": offer.currency,
+            "availability": offer.availability === "InStock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            ...(offer.valid_through && { "validThrough": offer.valid_through }),
+            ...(offer.productUrl && { "url": offer.productUrl })
+          };
+
+          // Adicionar vídeos se disponíveis
+          const videos = [];
+          if (offer.youtube_url) {
+            videos.push({
+              "@type": "VideoObject",
+              "name": `Vídeo do produto: ${offer.name}`,
+              "description": `Demonstração em vídeo do produto ${offer.name}`,
+              "embedUrl": offer.youtube_url,
+              "uploadDate": new Date().toISOString().split('T')[0],
+              "thumbnailUrl": `https://img.youtube.com/vi/${offer.youtube_url.split('v=')[1]?.split('&')[0]}/maxresdefault.jpg`
+            });
+          }
+          
+          if (offer.instagram_url) {
+            videos.push({
+              "@type": "VideoObject", 
+              "name": `Vídeo Instagram: ${offer.name}`,
+              "description": `Demonstração no Instagram do produto ${offer.name}`,
+              "embedUrl": offer.instagram_url,
+              "uploadDate": new Date().toISOString().split('T')[0]
+            });
+          }
+
+          if (videos.length > 0) {
+            offerSchema.video = videos.length === 1 ? videos[0] : videos;
+          }
+
+          return offerSchema;
+        })
       })
     });
 
