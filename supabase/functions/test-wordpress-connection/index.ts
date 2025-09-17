@@ -94,6 +94,13 @@ serve(async (req) => {
           },
         });
 
+        // Log da resposta para diagnóstico
+        console.log(`📊 Status da resposta /users/me: ${usersResponse.status}`);
+        const wwwAuth = usersResponse.headers.get('WWW-Authenticate');
+        if (wwwAuth) {
+          console.log(`🔐 WWW-Authenticate header: ${wwwAuth}`);
+        }
+
         if (usersResponse.ok) {
           const userData = await usersResponse.json();
           console.log('✅ Usuário WordPress autenticado via /users/me:', userData.name || userData.username);
@@ -113,29 +120,50 @@ serve(async (req) => {
             },
           });
 
+          console.log(`📊 Status da resposta /posts: ${postsResponse.status}`);
+          
           if (postsResponse.ok) {
             console.log('✅ Usuário WordPress autenticado via /posts');
             return { success: true, user: user };
           } else if (postsResponse.status === 401) {
+            const postsWwwAuth = postsResponse.headers.get('WWW-Authenticate');
+            if (postsWwwAuth) {
+              console.log(`🔐 WWW-Authenticate header em /posts: ${postsWwwAuth}`);
+            }
             return { 
               success: false, 
-              error: 'Credenciais inválidas. Verifique o usuário e Application Password.' 
+              error: 'invalid_credentials',
+              details: 'Credenciais inválidas. Verifique se está usando um Application Password (não a senha normal).' 
+            };
+          } else {
+            return { 
+              success: false, 
+              error: 'auth_blocked',
+              details: `Erro ${postsResponse.status}. O servidor pode estar bloqueando headers de Authorization.` 
             };
           }
         }
 
-        // Análise dos erros
+        // Análise detalhada dos erros de /users/me
         if (usersResponse.status === 401) {
           return { 
             success: false, 
-            error: 'Credenciais inválidas. Verifique o usuário e Application Password.' 
+            error: 'invalid_credentials',
+            details: 'Credenciais inválidas. Certifique-se de usar seu username (não email) e um Application Password.' 
+          };
+        } else if (usersResponse.status === 403) {
+          return { 
+            success: false, 
+            error: 'auth_blocked',
+            details: 'Acesso negado. O servidor pode estar bloqueando headers de Authorization.' 
           };
         } else {
           const errorText = await usersResponse.text();
           console.log('❌ Erro na autenticação WordPress:', usersResponse.status, errorText);
           return { 
             success: false, 
-            error: `Erro de autenticação HTTP ${usersResponse.status}. Verifique as credenciais.` 
+            error: 'connection_error',
+            details: `Erro HTTP ${usersResponse.status}. Verifique a conectividade e configurações do servidor.` 
           };
         }
       } catch (error) {
@@ -164,7 +192,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: result.error 
+          error: result.error || 'connection_error',
+          details: result.details || result.error || 'Erro desconhecido'
         }),
         { 
           status: 400, 

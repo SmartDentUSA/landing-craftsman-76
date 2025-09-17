@@ -244,9 +244,25 @@ export default function PublicationSettings() {
         });
       } else {
         setWpStatus("error");
+        
+        // Mensagens específicas baseadas no tipo de erro
+        let title = "Erro na conexão WordPress";
+        let description = data?.details || data?.error || "Não foi possível conectar ao WordPress.";
+        
+        if (data?.error === 'invalid_credentials') {
+          title = "Credenciais inválidas";
+          description = "Use seu username do WordPress (não email) e gere um Application Password em: WP Admin → Users → Your Profile → Application Passwords";
+        } else if (data?.error === 'auth_blocked') {
+          title = "Authorization bloqueado";
+          description = "Seu servidor está bloqueando headers de Authorization. Contate seu provedor de hospedagem para habilitar Basic Authentication.";
+        } else if (data?.error === 'connection_error') {
+          title = "Erro de conexão";
+          description = "Verifique se a URL está correta e se o site está acessível.";
+        }
+        
         toast({
-          title: "Erro na conexão WordPress",
-          description: data?.error || "Não foi possível conectar ao WordPress.",
+          title,
+          description,
           variant: "destructive",
         });
       }
