@@ -2009,3 +2009,187 @@ export const SAMPLE_DATA = {
     ]
   }
 };
+
+// Função para gerar HTML do blog post
+export const generateBlogHTML = (blogData: any, landingPageData: any) => {
+  const {
+    title,
+    content,
+    meta_description,
+    keywords,
+    landing_page_title,
+    landing_page_url,
+    created_at
+  } = blogData;
+
+  const publishDate = new Date(created_at).toLocaleDateString('pt-BR');
+  const readingTime = Math.max(1, Math.ceil(content.length / 1000));
+
+  const blogTemplate = `<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <meta name="description" content="${meta_description}">
+    <meta name="keywords" content="${(keywords || []).join(', ')}">
+    <meta name="robots" content="index, follow">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #fafafa;
+        }
+        
+        .container {
+            max-width: 768px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #1f2937;
+        }
+        
+        .back-link {
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        
+        .article {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-meta {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+        
+        .article-content {
+            font-size: 1.125rem;
+            line-height: 1.7;
+        }
+        
+        .article-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem;
+            color: #111827;
+        }
+        
+        .article-content p {
+            margin-bottom: 1.25rem;
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #3b82f6;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        @media (max-width: 768px) {
+            .article {
+                padding: 1.5rem;
+                margin: 0 -1rem 2rem;
+                border-radius: 0;
+            }
+            
+            .article-title {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">${landingPageData.brand?.legal_name || 'Blog'}</div>
+                <a href="${landing_page_url}" class="back-link">← Voltar ao site</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <article class="article">
+            <div class="article-meta">
+                <span>📅 ${publishDate}</span>
+                <span>⏱️ ${readingTime} min de leitura</span>
+            </div>
+            
+            <h1 class="article-title">${title}</h1>
+            
+            <div class="article-content">
+                ${content}
+            </div>
+        </article>
+        
+        <div class="cta-section">
+            <h2>Interessado em ${landing_page_title}?</h2>
+            <p>Conheça mais sobre nossa solução e descubra como podemos ajudar você.</p>
+            <a href="${landing_page_url}" class="cta-button">Saiba Mais</a>
+        </div>
+    </div>
+</body>
+</html>`;
+
+  return blogTemplate;
+};

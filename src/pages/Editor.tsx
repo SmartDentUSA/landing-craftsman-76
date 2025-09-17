@@ -19,7 +19,7 @@ const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
-import { generateHTML, generateEmailHTML } from "@/lib/template-engine";
+import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { generateSafeHTML, generateSafeEmailHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -761,6 +761,8 @@ const EditorContent = () => {
   const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false });
   
   const [previewTab, setPreviewTab] = useState('landing-preview');
+  const [blogPostData, setBlogPostData] = useState<any>(null);
+  const [generatingBlog, setGeneratingBlog] = useState(false);
   
   // Função para aplicar valores automáticos aos campos principais
   const applyAutoSEOValues = () => {
@@ -1120,6 +1122,49 @@ const EditorContent = () => {
     });
   }, [data]);
 
+  // Função para gerar blog post usando IA
+  const generateBlogPost = async () => {
+    if (!data.seo_description) {
+      toast({ title: "Erro", description: "Adicione uma descrição SEO primeiro para gerar o blog post" });
+      return;
+    }
+
+    setGeneratingBlog(true);
+    try {
+      // Gerar conteúdo do blog usando IA
+      const { data: blogContentResult, error: blogError } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'blog_content',
+          content: data.seo_description,
+          title: data.seo_title || data.banner.title,
+          landingPageData: data
+        }
+      });
+
+      if (blogError) throw blogError;
+
+      const blogData = {
+        title: blogContentResult.title || `${data.banner.title} - Guia Completo`,
+        content: blogContentResult.content || '',
+        meta_description: blogContentResult.meta_description || data.seo_description,
+        keywords: blogContentResult.keywords || [],
+        created_at: new Date().toISOString(),
+        landing_page_id: parseInt(id!),
+        landing_page_title: data.banner.title,
+        landing_page_url: data.seo.canonical_url,
+      };
+
+      setBlogPostData(blogData);
+      setPreviewTab('blog-preview');
+      toast({ title: "Sucesso!", description: "Blog post gerado com sucesso!" });
+    } catch (error) {
+      console.error('Erro ao gerar blog post:', error);
+      toast({ title: "Erro", description: "Erro ao gerar blog post. Tente novamente." });
+    } finally {
+      setGeneratingBlog(false);
+    }
+  };
+
   const generatedEmailHTML = useMemo(() => {
     const processedData = beforePreview(data);
     const embedConfig = getEmbedConfig({ embed: data.embed });
@@ -1220,6 +1265,18 @@ const EditorContent = () => {
     data.seo.domain,
     data.embed?.mode
   ]);
+
+  // Gerar HTML do blog post
+  const generatedBlogHTML = useMemo(() => {
+    if (!blogPostData) return '<div style="padding: 2rem; text-align: center; color: #666;">Clique em "🚀 Gerar Blog" para visualizar o blog post</div>';
+
+    try {
+      return generateBlogHTML(blogPostData, data);
+    } catch (error) {
+      console.error('Erro ao gerar HTML do blog:', error);
+      return '<div style="padding: 2rem; text-align: center; color: #f00;">Erro ao gerar preview do blog</div>';
+    }
+  }, [blogPostData, data]);
 
   // Calcular score SEO de forma eficiente com useMemo
   const seoScore = useMemo(() => computeSEOScore(data), [
@@ -5708,9 +5765,10 @@ dataLayer = [{
           </div>
           
           <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
-            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-2">
+            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-3">
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
+              <TabsTrigger value="blog-preview">Blog Post</TabsTrigger>
             </TabsList>
             
             <TabsContent value="landing-preview" className="flex-1 p-4">
@@ -5731,6 +5789,63 @@ dataLayer = [{
                   className="w-full h-full"
                   title="Email Preview"
                 />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="blog-preview" className="flex-1 p-4">
+              <div className="h-full flex flex-col">
+                {!blogPostData && (
+                  <div className="flex-1 flex items-center justify-center border rounded-lg">
+                    <div className="text-center space-y-4">
+                      <p className="text-muted-foreground">
+                        Gere um blog post baseado na sua landing page
+                      </p>
+                      <Button 
+                        onClick={generateBlogPost} 
+                        disabled={generatingBlog}
+                        className="gap-2"
+                      >
+                        {generatingBlog ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          '🚀'
+                        )}
+                        {generatingBlog ? 'Gerando...' : 'Gerar Blog'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {blogPostData && (
+                  <div className="h-full flex flex-col space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">Preview do Blog Post</h3>
+                      <Button 
+                        onClick={generateBlogPost} 
+                        disabled={generatingBlog}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        {generatingBlog ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          '🔄'
+                        )}
+                        {generatingBlog ? 'Regenerando...' : 'Regenerar'}
+                      </Button>
+                    </div>
+                    
+                    <div className="flex-1 border rounded-lg overflow-hidden">
+                      <iframe
+                        key={`blog-${Date.now()}`}
+                        srcDoc={generatedBlogHTML}
+                        className="w-full h-full"
+                        title="Blog Post Preview"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
