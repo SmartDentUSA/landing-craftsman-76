@@ -3353,37 +3353,58 @@ const EditorContent = () => {
                                     )}
                                   </div>
                                   
-                                  {/* Campo para visualizar/editar keywords geradas */}
-                                  <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                      <Label className="text-xs font-medium text-green-700">Keywords Geradas</Label>
-                                      <div className="flex items-center gap-1">
-                                        {Array.isArray(data.seo.ai_keywords) || typeof data.seo.ai_keywords === 'string' ? (
-                                          <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
-                                            {Array.isArray(data.seo.ai_keywords)
-                                              ? data.seo.ai_keywords.length
-                                              : (data.seo.ai_keywords || '')
-                                                  .split(',')
-                                                  .map(k => k.trim())
-                                                  .filter(Boolean).length} keywords
-                                          </div>
-                                        ) : (
-                                          <div className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                            Vazio
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <Textarea
-                                      value={Array.isArray(data.seo.ai_keywords) ? data.seo.ai_keywords.join(', ') : (data.seo.ai_keywords || '')}
-                                      onChange={(e) => setData(prev => ({
-                                        ...prev,
-                                        seo: { ...prev.seo, ai_keywords: e.target.value }
-                                      }))}
-                                      placeholder="As keywords geradas pela IA aparecerão aqui. Você pode editá-las manualmente."
-                                      className="text-xs min-h-[60px] text-green-700 bg-white/50"
-                                    />
-                                  </div>
+                                {/* Campo para visualizar/editar keywords geradas */}
+                                   <div className="space-y-2">
+                                     <div className="flex items-center justify-between">
+                                       <Label className="text-xs font-medium text-green-700">Keywords Geradas</Label>
+                                       <div className="flex items-center gap-1">
+                                         {Array.isArray(data.seo.ai_keywords) || typeof data.seo.ai_keywords === 'string' ? (
+                                           <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
+                                             {Array.isArray(data.seo.ai_keywords)
+                                               ? data.seo.ai_keywords.length
+                                               : (data.seo.ai_keywords || '')
+                                                   .split(',')
+                                                   .map(k => k.trim())
+                                                   .filter(Boolean).length} keywords
+                                           </div>
+                                         ) : (
+                                           <div className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                             Vazio
+                                           </div>
+                                         )}
+                                         <Button
+                                           size="sm"
+                                           variant="ghost"
+                                           onClick={() => {
+                                             setData(prev => ({
+                                               ...prev,
+                                               seo: { ...prev.seo, ai_keywords: '' }
+                                             }));
+                                             toast({ 
+                                               title: "Keywords limpos", 
+                                               description: "Todas as keywords foram removidas." 
+                                             });
+                                           }}
+                                           className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
+                                           title="Limpar todos os keywords"
+                                         >
+                                           <Trash2 className="h-3 w-3" />
+                                         </Button>
+                                       </div>
+                                     </div>
+                                     <Textarea
+                                       value={Array.isArray(data.seo.ai_keywords) ? data.seo.ai_keywords.join(', ') : (data.seo.ai_keywords || '')}
+                                       onChange={(e) => setData(prev => ({
+                                         ...prev,
+                                         seo: { ...prev.seo, ai_keywords: e.target.value }
+                                       }))}
+                                       placeholder="Digite suas keywords separadas por vírgula ou clique em 'Gerar Keywords' para gerar automaticamente via IA..."
+                                       className="text-xs min-h-[80px] text-green-700 bg-white/50 resize-none"
+                                     />
+                                     <div className="text-xs text-green-600 bg-white/50 p-2 rounded border">
+                                       💡 Dica: Separe múltiplas keywords por vírgula. Ex: "scanner intraoral, odontologia digital, prótese dentária"
+                                     </div>
+                                   </div>
                                 </div>
 
                                 {/* Links Inteligentes (Palavras-chave → URL) */}
@@ -3410,11 +3431,17 @@ const EditorContent = () => {
                                         variant="outline"
                                         onClick={() => {
                                           const newLinks = { ...data.seo.intelligent_links };
-                                          newLinks[""] = "";
+                                          // Generate unique key using timestamp to avoid conflicts
+                                          const uniqueKey = `nova-palavra-${Date.now()}`;
+                                          newLinks[uniqueKey] = "";
                                           setData(prev => ({
                                             ...prev,
                                             seo: { ...prev.seo, intelligent_links: newLinks }
                                           }));
+                                          toast({ 
+                                            title: "Link adicionado", 
+                                            description: "Configure a palavra-chave e URL do novo link." 
+                                          });
                                         }}
                                       >
                                         <Plus className="w-3 h-3 mr-1" />
@@ -3424,54 +3451,66 @@ const EditorContent = () => {
                                   </div>
                                   
                                   <div className="space-y-2 max-h-32 overflow-y-auto">
-                                    {Object.entries(data.seo.intelligent_links || {}).map(([keyword, url], index) => (
-                                      <div key={index} className="flex gap-2 items-center p-2 border rounded bg-white/50">
-                                        <div className="flex-1 grid grid-cols-2 gap-2">
-                                          <Input
-                                            placeholder="Palavra-chave"
-                                            value={keyword}
-                                            onChange={(e) => {
-                                              const newLinks = { ...data.seo.intelligent_links };
-                                              delete newLinks[keyword];
-                                              newLinks[e.target.value] = url;
-                                              setData(prev => ({
-                                                ...prev,
-                                                seo: { ...prev.seo, intelligent_links: newLinks }
-                                              }));
-                                            }}
-                                            className="text-xs"
-                                          />
-                                          <Input
-                                            placeholder="URL (ex: /produtos/scanner)"
-                                            value={url}
-                                            onChange={(e) => {
-                                              const newLinks = { ...data.seo.intelligent_links };
-                                              newLinks[keyword] = e.target.value;
-                                              setData(prev => ({
-                                                ...prev,
-                                                seo: { ...prev.seo, intelligent_links: newLinks }
-                                              }));
-                                            }}
-                                            className="text-xs"
-                                          />
-                                        </div>
-                                        <Button
-                                          onClick={() => {
-                                            const newLinks = { ...data.seo.intelligent_links };
-                                            delete newLinks[keyword];
-                                            setData(prev => ({
-                                              ...prev,
-                                              seo: { ...prev.seo, intelligent_links: newLinks }
-                                            }));
-                                          }}
-                                          size="sm"
-                                          variant="ghost"
-                                          className="text-red-500 hover:text-red-700 px-2"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    ))}
+                                     {Object.entries(data.seo.intelligent_links || {}).filter(([keyword]) => keyword.trim() !== '').map(([keyword, url], index) => (
+                                       <div key={keyword} className="flex gap-2 items-center p-2 border rounded bg-white/50 hover:bg-white/80 transition-colors">
+                                         <div className="flex-1 grid grid-cols-2 gap-2">
+                                           <Input
+                                             placeholder="Ex: scanner intraoral"
+                                             value={keyword}
+                                             onChange={(e) => {
+                                               const newValue = e.target.value;
+                                               const newLinks = { ...data.seo.intelligent_links };
+                                               
+                                               // Only update if the new value is different and not empty
+                                               if (newValue !== keyword) {
+                                                 delete newLinks[keyword];
+                                                 if (newValue.trim()) {
+                                                   newLinks[newValue] = url;
+                                                 }
+                                                 setData(prev => ({
+                                                   ...prev,
+                                                   seo: { ...prev.seo, intelligent_links: newLinks }
+                                                 }));
+                                               }
+                                             }}
+                                             className="text-xs focus:ring-2 focus:ring-cyan-500"
+                                           />
+                                           <Input
+                                             placeholder="Ex: /produtos/scanner-intraoral"
+                                             value={url}
+                                             onChange={(e) => {
+                                               const newLinks = { ...data.seo.intelligent_links };
+                                               newLinks[keyword] = e.target.value;
+                                               setData(prev => ({
+                                                 ...prev,
+                                                 seo: { ...prev.seo, intelligent_links: newLinks }
+                                               }));
+                                             }}
+                                             className="text-xs focus:ring-2 focus:ring-cyan-500"
+                                           />
+                                         </div>
+                                         <Button
+                                           onClick={() => {
+                                             const newLinks = { ...data.seo.intelligent_links };
+                                             delete newLinks[keyword];
+                                             setData(prev => ({
+                                               ...prev,
+                                               seo: { ...prev.seo, intelligent_links: newLinks }
+                                             }));
+                                             toast({ 
+                                               title: "Link removido", 
+                                               description: `Link "${keyword}" foi removido com sucesso.` 
+                                             });
+                                           }}
+                                           size="sm"
+                                           variant="ghost"
+                                           className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 transition-colors"
+                                           title="Remover este link"
+                                         >
+                                           <Trash2 className="h-3 w-3" />
+                                         </Button>
+                                       </div>
+                                     ))}
 
                                     {Object.keys(data.seo.intelligent_links || {}).length === 0 && (
                                       <div className="text-center py-4 text-cyan-600 bg-white/50 rounded border">
