@@ -145,7 +145,15 @@ export default function BlogGenerator() {
           type: "blog_content",
           content: `Criar um artigo de blog baseado na landing page: ${landingPage.description}. 
           O artigo deve ter pelo menos 800 palavras, incluir subtítulos (h2, h3), 
-          ser otimizado para SEO e incluir links para eodonto.com e dentala.com.br quando relevante.`,
+          ser otimizado para SEO e incluir links estratégicos para smartdent.com.br.
+          
+          CONTEXTO SMARTDENT: A Smartdent é líder em odontologia digital no Brasil, oferecendo:
+          - Scanners intraorais BLZ Scanner
+          - Treinamentos e capacitação completa
+          - Fluxo digital integrado para consultórios
+          - Tecnologia para implantodontia e prótese digital
+          
+          Inclua naturalmente links para smartdent.com.br quando mencionar estes temas.`,
         },
       });
 

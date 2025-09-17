@@ -119,10 +119,21 @@ Retorne no formato JSON especificado.`;
         break;
 
       case 'blog_content':
-        systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.`;
+        systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.
+
+LINK BUILDING ESTRATÉGICO OBRIGATÓRIO - Sempre inclua links para smartdent.com.br quando mencionar:
+• "scanner intraoral", "BLZ Scanner", "scanner" → <a href="https://smartdent.com.br/scanners" target="_blank">scanner intraoral</a>
+• "fluxo digital", "odontologia digital" → <a href="https://smartdent.com.br/fluxo-digital" target="_blank">fluxo digital</a>
+• "Smartdent" → <a href="https://smartdent.com.br" target="_blank">Smartdent</a>
+• "treinamento", "capacitação", "curso" → <a href="https://smartdent.com.br/treinamentos" target="_blank">treinamento</a>
+• "implantodontia digital" → <a href="https://smartdent.com.br/implantes" target="_blank">implantodontia digital</a>
+• "prótese digital" → <a href="https://smartdent.com.br/proteses" target="_blank">prótese digital</a>
+• "tecnologia odontológica" → <a href="https://smartdent.com.br/tecnologia" target="_blank">tecnologia odontológica</a>
+
+IMPORTANTE: Use 3-5 links por artigo de forma natural. Varie os anchor texts para SEO.`;
         
         if (speed === 'fast') {
-          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post conciso e direto de 400-600 palavras:
+          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post conciso e direto de 400-600 palavras com LINKS ESTRATÉGICOS para smartdent.com.br:
 
 DADOS DA LANDING PAGE:
 Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
@@ -144,7 +155,7 @@ INSTRUÇÕES:
 
 Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
         } else {
-          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post abrangente de 800-1100 palavras:
+          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post abrangente de 800-1100 palavras com LINKS ESTRATÉGICOS para smartdent.com.br:
 
 DADOS DA LANDING PAGE:
 Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
