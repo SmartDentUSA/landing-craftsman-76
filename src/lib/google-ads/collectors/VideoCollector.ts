@@ -68,7 +68,7 @@ export class VideoCollector {
       .filter((extension): extension is NonNullable<typeof extension> => extension !== null);
   }
   
-  private static extractYouTubeId(url: string): string | null {
+  static extractYouTubeId(url: string): string | null {
     if (!url) return null;
     
     // Handle various YouTube URL formats

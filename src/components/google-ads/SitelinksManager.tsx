@@ -151,14 +151,32 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
                       {sitelink.url}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeSitelink(index)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newLabel = prompt('Novo rótulo:', sitelink.label);
+                        if (newLabel && newLabel.trim()) {
+                          const currentLinks = config.ecommerce_links || [];
+                          const updatedLinks = [...currentLinks];
+                          updatedLinks[index] = { ...sitelink, label: newLabel.trim() };
+                          onChange({ ecommerce_links: updatedLinks });
+                        }
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSitelink(index)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -193,7 +211,20 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
                       {sitelink.url}
                     </div>
                   </div>
-                  <Badge variant="outline">Institucional</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">Institucional</Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        // For now, just show a message that editing institutional links is not available
+                        alert('Links institucionais são gerados automaticamente e não podem ser editados.');
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

@@ -13,9 +13,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { GoogleAdsCampaignConfig, ValidationWarning, AdPreview } from '@/types/google-ads';
 import { KeywordManager } from './KeywordManager';
 import { SitelinksManager } from './SitelinksManager';
+import { VideoManager } from './VideoManager';
 import { AdPreviewCards } from './AdPreviewCards';
 import { UTMBuilder } from './UTMBuilder';
 import { WarningsPanel } from './WarningsPanel';
+import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
+import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
 import { useToast } from '@/hooks/use-toast';
 
 interface GoogleAdsTabProps {
@@ -153,11 +156,29 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
     // Generate real ad copies with AI
     const adCopies = await generateAdCopies();
     
+    // Collect all sitelinks
+    let allSitelinks = [...(campaignConfig.ecommerce_links || [])];
+    
+    // Add auto-detected sitelinks
+    if (data?.intelligent_links) {
+      const autoSitelinks = SitelinksCollector.collectFromIntelligentLinks(data.intelligent_links);
+      allSitelinks = [...allSitelinks, ...autoSitelinks];
+    }
+    
+    // Add brand policy sitelinks if enabled
+    if (campaignConfig.include_brand_policies && data?.seo?.canonical_url) {
+      const brandSitelinks = SitelinksCollector.collectBrandPolicies(data.seo.canonical_url);
+      allSitelinks = [...allSitelinks, ...brandSitelinks];
+    }
+    
+    // Collect videos
+    const videos = await VideoCollector.collectAll(landingPageId, campaignConfig.youtube_videos || []);
+    
     if (adCopies) {
       setPreviewData({
         adCopies,
-        sitelinks: campaignConfig.ecommerce_links,
-        videos: [],
+        sitelinks: allSitelinks.slice(0, 6), // Google Ads limit
+        videos: videos.slice(0, 20), // Google Ads limit
         finalUrl: data?.seo?.canonical_url || '',
         warnings: newWarnings
       });
@@ -177,35 +198,33 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
   const handleExportCSV = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/export-google-ads-csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { data: result, error } = await supabase.functions.invoke('export-google-ads-csv', {
+        body: {
           landingPageId,
-          config: campaignConfig
-        })
+          config: campaignConfig,
+          landingPageData: data
+        }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Download CSV
-        const blob = new Blob([result.csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `google-ads-${landingPageId}-${Date.now()}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        toast({
-          title: 'CSV exportado com sucesso!',
-          description: 'Arquivo pronto para importação no Google Ads Editor.',
-        });
-      } else {
-        throw new Error('Erro ao exportar CSV');
+      if (error) {
+        throw error;
       }
+
+      // Download CSV
+      const blob = new Blob([result.csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `google-ads-${landingPageId}-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'CSV exportado com sucesso!',
+        description: 'Arquivo pronto para importação no Google Ads Editor.',
+      });
     } catch (error) {
+      console.error('Export error:', error);
       toast({
         title: 'Erro no export',
         description: 'Não foi possível gerar o arquivo CSV.',
@@ -352,30 +371,12 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
             </TabsContent>
 
             <TabsContent value="videos">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Extensões de Vídeo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Vídeos serão coletados automaticamente dos depoimentos e blog posts.
-                      Adicione URLs do YouTube abaixo para vídeos adicionais.
-                    </p>
-                    <Textarea
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      value={campaignConfig.youtube_videos.map(v => v.url).join('\n')}
-                      onChange={(e) => {
-                        const urls = e.target.value.split('\n').filter(url => url.trim());
-                        setCampaignConfig(prev => ({
-                          ...prev,
-                          youtube_videos: urls.map(url => ({ url }))
-                        }));
-                      }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <VideoManager
+                config={campaignConfig}
+                data={data}
+                landingPageId={landingPageId}
+                onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
+              />
             </TabsContent>
 
             <TabsContent value="utm">
@@ -425,6 +426,7 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
                   adCopies={previewData.adCopies}
                   finalUrl={previewData.finalUrl}
                   sitelinks={previewData.sitelinks}
+                  videos={previewData.videos}
                 />
               ) : null}
             </div>

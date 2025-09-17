@@ -24,23 +24,31 @@ export const KeywordManager = ({ config, data, onChange }: KeywordManagerProps) 
   }, [config.include_ai_keywords, config.include_faq_longtail, data]);
 
   const generateKeywords = () => {
-    let keywords: string[] = [];
+    const aiKeywords: string[] = [];
+    const faqKeywords: string[] = [];
+    const seoKeywords: string[] = [];
 
     // Collect from AI keywords
     if (config.include_ai_keywords && data?.seo?.ai_keywords) {
       try {
-        keywords.push(...KeywordCollector.collectFromAI(data.seo.ai_keywords));
+        aiKeywords.push(...KeywordCollector.collectFromAI(data.seo.ai_keywords));
       } catch (error) {
         console.warn('Error collecting AI keywords:', error);
       }
     }
 
     // Collect from FAQ
-    if (config.include_faq_longtail && data?.faq) {
-      keywords.push(...KeywordCollector.collectFromFAQ(data.faq));
+    if (config.include_faq_longtail && data?.faq?.length > 0) {
+      faqKeywords.push(...KeywordCollector.collectFromFAQ(data.faq));
     }
 
-    setGeneratedKeywords(KeywordCollector.normalizeKeywords(keywords));
+    // Collect SEO intelligent keywords (from seo.keywords array)
+    if (data?.seo?.keywords?.length > 0) {
+      seoKeywords.push(...data.seo.keywords.filter((k: string) => k && k.trim().length > 0));
+    }
+
+    const allKeywords = [...aiKeywords, ...faqKeywords, ...seoKeywords];
+    setGeneratedKeywords(KeywordCollector.normalizeKeywords(allKeywords));
   };
 
   const handleExtraKeywordsChange = (value: string) => {
@@ -110,10 +118,7 @@ export const KeywordManager = ({ config, data, onChange }: KeywordManagerProps) 
       {/* Generated Keywords Preview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Keywords Geradas Automaticamente
-            <Badge variant="secondary">{generatedKeywords.length}</Badge>
-          </CardTitle>
+          <CardTitle>Keywords Geradas Automaticamente</CardTitle>
         </CardHeader>
         <CardContent>
           {generatedKeywords.length === 0 ? (
@@ -121,17 +126,81 @@ export const KeywordManager = ({ config, data, onChange }: KeywordManagerProps) 
               Nenhuma keyword encontrada. Ative as opções acima ou adicione keywords manuais.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {generatedKeywords.slice(0, 20).map((keyword, index) => (
-                <Badge key={index} variant="outline">
-                  {keyword}
-                </Badge>
-              ))}
-              {generatedKeywords.length > 20 && (
-                <Badge variant="secondary">
-                  +{generatedKeywords.length - 20} mais
-                </Badge>
+            <div className="space-y-4">
+              {/* Keywords from FAQ */}
+              {config.include_faq_longtail && data?.faq?.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="default">FAQ</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {KeywordCollector.collectFromFAQ(data.faq).length} keywords
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {KeywordCollector.collectFromFAQ(data.faq).slice(0, 10).map((keyword, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              {/* Keywords from SEO */}
+              {data?.seo?.keywords?.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="default">SEO Inteligente</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {data.seo.keywords.length} keywords
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {data.seo.keywords.slice(0, 10).map((keyword: string, index: number) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Keywords from AI */}
+              {config.include_ai_keywords && data?.seo?.ai_keywords && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="default">IA</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {(() => {
+                        try {
+                          return KeywordCollector.collectFromAI(data.seo.ai_keywords).length;
+                        } catch {
+                          return 0;
+                        }
+                      })()} keywords
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      try {
+                        return KeywordCollector.collectFromAI(data.seo.ai_keywords).slice(0, 10).map((keyword, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {keyword}
+                          </Badge>
+                        ));
+                      } catch {
+                        return <span className="text-sm text-muted-foreground">Erro ao carregar keywords da IA</span>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 border-t">
+                <span className="text-sm font-medium">
+                  Total: {generatedKeywords.length} keywords geradas
+                </span>
+              </div>
             </div>
           )}
         </CardContent>
