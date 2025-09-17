@@ -2019,11 +2019,35 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     keywords,
     landing_page_title,
     landing_page_url,
-    created_at
+    created_at,
+    cover_image,
+    content_images
   } = blogData;
 
   const publishDate = new Date(created_at).toLocaleDateString('pt-BR');
   const readingTime = Math.max(1, Math.ceil(content.length / 1000));
+  
+  // Processar conteúdo para inserir imagens
+  let processedContent = content || '';
+  
+  // Inserir imagem de capa
+  if (cover_image?.src) {
+    processedContent = processedContent.replace(
+      '<!-- IMAGEM_CAPA -->', 
+      `<img src="${cover_image.src}" alt="${cover_image.alt || 'Imagem de capa'}" class="cover-image">`
+    );
+  }
+  
+  // Inserir imagens das soluções ao longo do conteúdo
+  if (content_images && Array.isArray(content_images)) {
+    content_images.forEach((image, index) => {
+      if (image?.src) {
+        const placeholder = `<!-- IMAGEM_SOLUCAO_${index + 2} -->`;
+        const imageHtml = `<img src="${image.src}" alt="${image.alt || `Solução ${index + 2}`}" class="content-image">`;
+        processedContent = processedContent.replace(placeholder, imageHtml);
+      }
+    });
+  }
 
   const blogTemplate = `<!DOCTYPE html>
 <html lang="pt-br">
@@ -2145,6 +2169,26 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             transition: transform 0.2s;
         }
         
+        .cover-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            margin: 20px 0 30px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .content-image {
+            width: 100%;
+            max-width: 600px;
+            height: 250px;
+            object-fit: cover;
+            margin: 25px auto;
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
         @media (max-width: 768px) {
             .article {
                 padding: 1.5rem;
@@ -2178,7 +2222,7 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             <h1 class="article-title">${title}</h1>
             
             <div class="article-content">
-                ${content}
+                ${processedContent}
             </div>
         </article>
         

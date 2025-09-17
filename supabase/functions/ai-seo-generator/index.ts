@@ -77,17 +77,64 @@ Formato EXATO:
         break;
 
       case 'blog_content':
-        const isFastMode = speed === 'fast';
-        systemPrompt = `Você é um especialista em criação de conteúdo para blogs. Crie artigos ${isFastMode ? 'concisos e diretos' : 'informativos e completos'}, envolventes e otimizados para SEO.`;
-        userPrompt = `Crie um artigo ${isFastMode ? 'de 400-600 palavras' : 'completo (mínimo 800 palavras)'} sobre: ${content}${title ? ` com título: "${title}"` : ''}${landingPageData ? ` (contexto: ${JSON.stringify(landingPageData).substring(0, 300)})` : ''}. 
-        O artigo deve incluir:
-        - Introdução envolvente
-        - ${isFastMode ? '3-4 seções principais' : 'Subtítulos (h2, h3) bem estruturados'}
-        - Conteúdo informativo e útil
-        - Conclusão${isFastMode ? '' : ' impactante'}
-        - Call-to-action natural
-        ${isFastMode ? 'Mantenha foco e objetividade.' : '- Otimização para palavras-chave relevantes'}
-        Formato: HTML simples com tags h2, h3, p, ul, li, strong, em.`;
+        systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.`;
+        
+        const { fullLandingPageContent } = body;
+        
+        if (speed === 'fast') {
+          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post conciso e direto de 400-600 palavras:
+
+DADOS DA LANDING PAGE:
+Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
+
+Soluções: ${fullLandingPageContent?.solutions?.title || ''}
+${fullLandingPageContent?.solutions?.items?.map((s, i) => `${i + 1}. ${s.text}`).join('\n') || ''}
+
+FAQ: ${fullLandingPageContent?.faq?.title || ''}
+${fullLandingPageContent?.faq?.items?.map(f => `P: ${f.question}\nR: ${f.answer}`).join('\n\n') || ''}
+
+Conteúdo SEO: ${fullLandingPageContent?.seo?.hidden_content || fullLandingPageContent?.seo?.description || ''}
+
+INSTRUÇÕES:
+1. Use a Solução 1 como tema para uma imagem de capa (inserir <!-- IMAGEM_CAPA -->)
+2. Distribua as outras soluções ao longo do conteúdo (inserir <!-- IMAGEM_SOLUCAO_2 -->, <!-- IMAGEM_SOLUCAO_3 -->, etc.)
+3. Transforme o FAQ em uma seção natural do blog
+4. Crie introdução baseada no banner
+5. Estrutura: Intro → Seções por Solução → FAQ → CTA
+
+Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
+        } else {
+          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post abrangente de 800-1100 palavras:
+
+DADOS DA LANDING PAGE:
+Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
+
+Soluções: ${fullLandingPageContent?.solutions?.title || ''}
+${fullLandingPageContent?.solutions?.items?.map((s, i) => `${i + 1}. ${s.text}`).join('\n') || ''}
+
+FAQ: ${fullLandingPageContent?.faq?.title || ''}
+${fullLandingPageContent?.faq?.items?.map(f => `P: ${f.question}\nR: ${f.answer}`).join('\n\n') || ''}
+
+Conteúdo SEO: ${fullLandingPageContent?.seo?.hidden_content || fullLandingPageContent?.seo?.description || ''}
+
+INSTRUÇÕES DETALHADAS:
+1. Introdução envolvente baseada no banner (2-3 parágrafos)
+2. Imagem de capa: <!-- IMAGEM_CAPA --> (baseada na Solução 1)
+3. Crie uma seção para cada solução com subtítulo H2
+4. Insira imagens ao longo do conteúdo: <!-- IMAGEM_SOLUCAO_2 -->, <!-- IMAGEM_SOLUCAO_3 -->, <!-- IMAGEM_SOLUCAO_4 -->, <!-- IMAGEM_SOLUCAO_5 -->
+5. Transforme o FAQ em seção "Perguntas Frequentes" com H2
+6. Conclusão que reforce os benefícios das soluções
+7. Call-to-action conectando com a landing page
+
+FORMATAÇÃO:
+- Use H2 para seções principais, H3 para subseções
+- Listas bullet points para benefícios
+- Parágrafos bem estruturados
+- Tom profissional mas acessível
+- SEO otimizado com palavras-chave naturais
+
+Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
+        }
         break;
 
       default:

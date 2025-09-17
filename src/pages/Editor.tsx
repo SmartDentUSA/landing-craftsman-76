@@ -1124,16 +1124,6 @@ const EditorContent = () => {
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {
-    // Verificar se há conteúdo disponível (prioritizar conteúdo oculto SEO)
-    const contentSource = data.seo.seo_hidden_content?.trim() || data.seo_description?.trim();
-    if (!contentSource) {
-      toast({ 
-        title: "Erro", 
-        description: "Adicione um Conteúdo Oculto SEO ou uma descrição SEO primeiro para gerar o blog post" 
-      });
-      return;
-    }
-
     setGeneratingBlog(true);
     
     // Timeout controller
@@ -1152,17 +1142,43 @@ const EditorContent = () => {
       // Mensagem de progresso
       const progressToast = toast({
         title: "Gerando blog...",
-        description: fastMode ? "Modo rápido ativado" : "Usando conteúdo detalhado",
+        description: fastMode ? "Modo rápido com conteúdo da landing page" : "Usando todo conteúdo da landing page",
       });
 
-      // Gerar conteúdo do blog usando IA (priorizando conteúdo oculto SEO)
+      // Coletar todo o conteúdo da landing page
+      const fullContent = {
+        banner: {
+          title: data.banner.title,
+          subtitle: data.banner.subtitle
+        },
+        solutions: {
+          title: data.solutions_title,
+          items: data.solutions.map((s, index) => ({
+            text: s.text,
+            image: s.image,
+            isFirstSolution: index === 0 // Para usar como capa
+          }))
+        },
+        faq: {
+          title: data.faq_title,
+          items: data.faq.map(f => ({
+            question: f.question,
+            answer: f.answer
+          }))
+        },
+        seo: {
+          hidden_content: data.seo.seo_hidden_content,
+          description: data.seo_description
+        }
+      };
+
+      // Gerar conteúdo do blog usando IA com todo o conteúdo da landing page
       const { data: blogContentResult, error: blogError } = await supabase.functions.invoke('ai-seo-generator', {
         body: {
           type: 'blog_content',
-          content: contentSource,
+          content: data.seo.seo_hidden_content?.trim() || data.seo_description?.trim() || data.banner.title,
           title: data.seo_title || data.banner.title,
-          landingPageData: data,
-          contentType: data.seo.seo_hidden_content?.trim() ? 'hidden_content' : 'seo_description',
+          fullLandingPageContent: fullContent,
           speed: fastMode ? 'fast' : 'detailed'
         },
       });
@@ -1178,6 +1194,8 @@ const EditorContent = () => {
         landing_page_id: parseInt(id!),
         landing_page_title: data.banner.title,
         landing_page_url: data.seo.canonical_url,
+        cover_image: data.solutions[0]?.image, // Usar primeira solução como capa
+        content_images: data.solutions.slice(1, 5).map(s => s.image).filter(Boolean), // Soluções 2-5
       };
 
       setBlogPostData(blogData);
@@ -1187,6 +1205,7 @@ const EditorContent = () => {
       console.error('Erro ao gerar blog post:', error);
       toast({ title: "Erro", description: "Erro ao gerar blog post. Tente novamente." });
     } finally {
+      clearTimeout(timeoutId);
       setGeneratingBlog(false);
     }
   };
