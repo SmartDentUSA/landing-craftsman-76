@@ -1222,7 +1222,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </header>
 
     <!-- Soluções / Controle -->
-    <section class="control-section">
+    {{#solutions_section.visible_any}}
+    <section class="control-section {{solutions_section.visibility_class}}">
         <div class="container">
             <h2>{{solutions_title}}</h2>
             
@@ -1266,6 +1267,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
         </div>
     </section>
+    {{/solutions_section.visible_any}}
 
     <!-- Desktop Info Section -->
     {{#desktop_info.visible_any}}
@@ -1391,7 +1393,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/resources_section.visible_any}}
 
     <!-- Consultoria -->
-    <section class="personalized-service">
+    {{#advisory.visible_any}}
+    <section class="personalized-service {{advisory.visibility_class}}">
         <div class="container service-content">
             <div class="service-item">
                 <div class="service-image-container">
@@ -1407,6 +1410,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
         </div>
     </section>
+    {{/advisory.visible_any}}
 
     <!-- FAQ -->
     <section class="faq-section">
@@ -2202,6 +2206,40 @@ export const generateHTML = (data: any): string => {
       
       return processedOffer;
     }) || [];
+  }
+  
+  // Process advisory section
+  if (data.advisory && (data.advisory.visible_desktop || data.advisory.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.advisory.visible_desktop && !data.advisory.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.advisory.visible_desktop && data.advisory.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.advisory = {
+      ...data.advisory,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
+  }
+  
+  // Process solutions section
+  if (data.solutions_section && (data.solutions_section.visible_desktop || data.solutions_section.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.solutions_section.visible_desktop && !data.solutions_section.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.solutions_section.visible_desktop && data.solutions_section.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.solutions_section = {
+      ...data.solutions_section,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
   }
   
   // Calcular e adicionar variáveis CSS para larguras das colunas

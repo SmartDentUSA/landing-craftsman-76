@@ -266,8 +266,14 @@ interface LandingPageData {
   advisory: {
     title: string;
     paragraph: string;
+    visible_desktop: boolean;
+    visible_mobile: boolean;
     cta: { label: string; href: string };
     image: ImageData;
+  };
+  solutions_section: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
   };
   faq_title: string;
   faq: FAQ[];
@@ -1009,8 +1015,14 @@ const EditorContent = () => {
     advisory: {
       title: 'Consultoria personalizada para o seu negócio',
       paragraph: 'Nossa equipe de especialistas oferece consultoria completa para implementação de odontologia digital em clínicas de todos os portes.',
+      visible_desktop: true,
+      visible_mobile: true,
       cta: { label: 'Agendar consultoria', href: 'https://smartdent.com.br/consultoria' },
       image: createImageData('https://via.placeholder.com/400x300?text=Consultoria', 'Equipe de consultores especializados')
+    },
+    solutions_section: {
+      visible_desktop: true,
+      visible_mobile: true
     },
     faq_title: 'Perguntas frequentes',
     faq: [
@@ -2335,6 +2347,47 @@ const EditorContent = () => {
                 <AccordionItem value="solutions">
                   <AccordionTrigger>Soluções</AccordionTrigger>
                   <AccordionContent className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4" />
+                          Visibilidade da Seção
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.solutions_section?.visible_desktop ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                solutions_section: { 
+                                  ...prev.solutions_section!, 
+                                  visible_desktop: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no desktop</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.solutions_section?.visible_mobile ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                solutions_section: { 
+                                  ...prev.solutions_section!, 
+                                  visible_mobile: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no mobile</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    {((data.solutions_section?.visible_desktop ?? false) || (data.solutions_section?.visible_mobile ?? false)) && (
+                      <>
                     <div>
                       <Label>Título da Seção</Label>
                       <Input
@@ -2456,6 +2509,8 @@ const EditorContent = () => {
                       <Plus className="h-4 w-4 mr-2" />
                       {data.solutions.length >= 5 ? "Máximo de 5 soluções atingido" : "Adicionar Solução"}
                     </Button>
+                      </>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
@@ -2862,6 +2917,47 @@ const EditorContent = () => {
                  <AccordionItem value="advisory">
                   <AccordionTrigger>Consultoria</AccordionTrigger>
                   <AccordionContent className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4" />
+                          Visibilidade da Seção
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.advisory?.visible_desktop ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                advisory: { 
+                                  ...prev.advisory, 
+                                  visible_desktop: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no desktop</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.advisory?.visible_mobile ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                advisory: { 
+                                  ...prev.advisory, 
+                                  visible_mobile: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no mobile</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    {((data.advisory?.visible_desktop ?? false) || (data.advisory?.visible_mobile ?? false)) && (
+                      <>
                     <div>
                       <Label>Título</Label>
                       <Input
@@ -2929,6 +3025,8 @@ const EditorContent = () => {
                         placeholder="URL da imagem da consultoria"
                       />
                     </div>
+                      </>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
