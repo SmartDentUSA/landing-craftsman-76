@@ -69,6 +69,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          include_offers: boolean | null
           intelligent_links: Json | null
           keywords: string[] | null
           landing_page_id: string
@@ -85,6 +86,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          include_offers?: boolean | null
           intelligent_links?: Json | null
           keywords?: string[] | null
           landing_page_id: string
@@ -101,6 +103,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          include_offers?: boolean | null
           intelligent_links?: Json | null
           keywords?: string[] | null
           landing_page_id?: string

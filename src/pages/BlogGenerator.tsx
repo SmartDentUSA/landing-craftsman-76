@@ -354,16 +354,23 @@ const saveBlogPost = async () => {
           }
         });
       }
+      
+      console.log("💾 Salvando blog post com dados:", {
+        title: blogPost.title,
+        hasContent: !!blogPost.content,
+        includeOffers: blogPost.include_offers
+      });
+      
       const blogData = {
         landing_page_id: landingPage.id,
-        title: blogPost.title,
-        content: blogPost.content,
-        meta_description: blogPost.meta_description,
-        keywords: blogPost.keywords,
-        youtube_video_url: blogPost.youtube_video_url,
-        status: blogPost.status,
-        intelligent_links: blogPost.intelligent_links,
-        include_offers: blogPost.include_offers,
+        title: blogPost.title || "",
+        content: blogPost.content || "",
+        meta_description: blogPost.meta_description || "",
+        keywords: blogPost.keywords || [],
+        youtube_video_url: blogPost.youtube_video_url || "",
+        status: blogPost.status || "draft",
+        intelligent_links: blogPost.intelligent_links || {},
+        include_offers: blogPost.include_offers || false,
       };
 
       if (blogPost.id) {
@@ -373,6 +380,11 @@ const saveBlogPost = async () => {
           .eq("id", blogPost.id);
 
         if (error) throw error;
+        
+        toast({
+          title: "Blog post atualizado",
+          description: "O blog post foi atualizado com sucesso.",
+        });
       } else {
         const { data, error } = await supabase
           .from("blog_posts")
@@ -382,17 +394,17 @@ const saveBlogPost = async () => {
 
         if (error) throw error;
         setBlogPost(prev => ({ ...prev, id: data.id }));
+        
+        toast({
+          title: "Blog post criado",
+          description: "O blog post foi criado com sucesso.",
+        });
       }
-
-      toast({
-        title: "Blog post salvo",
-        description: "O blog post foi salvo com sucesso.",
-      });
     } catch (error) {
       console.error("Erro ao salvar blog post:", error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar blog post.",
+        description: `Erro ao salvar blog post: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -456,12 +468,35 @@ const saveBlogPost = async () => {
   };
 
   const publishBlogPost = async () => {
+    // Ensure we have a saved blog post before publishing
     if (!blogPost.id) {
+      console.log("📝 Salvando blog post antes de publicar...");
       await saveBlogPost();
+      
+      // Wait a moment for state to update
+      if (!blogPost.id) {
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar blog post. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (!blogPost.id) {
+      toast({
+        title: "Erro",
+        description: "ID do blog post não encontrado. Salve o post primeiro.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setPublishing(true);
     try {
+      console.log("🚀 Publicando blog post:", blogPost.id);
+      
       const { data, error } = await supabase.functions.invoke("publish-blog-post", {
         body: {
           blog_post_id: blogPost.id,
@@ -607,6 +642,18 @@ const saveBlogPost = async () => {
                 />
               </div>
 
+              {(() => {
+                // Debug offers data
+                console.log("🔍 Verificando ofertas:", {
+                  hasContent: !!landingPage?.content,
+                  hasSchema: !!landingPage?.content?.schema,
+                  hasOffers: !!landingPage?.content?.schema?.offers,
+                  offersLength: landingPage?.content?.schema?.offers?.length,
+                  allOffers: landingPage?.content?.schema?.offers
+                });
+                return null;
+              })()}
+              
               {landingPage?.content?.schema?.offers && landingPage.content.schema.offers.length > 0 && (
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -614,6 +661,15 @@ const saveBlogPost = async () => {
                     onCheckedChange={(checked) => setBlogPost(prev => ({ ...prev, include_offers: checked }))}
                   />
                   <Label>Incluir ofertas no blog ({landingPage.content.schema.offers.length} disponíveis)</Label>
+                </div>
+              )}
+              
+              {/* Fallback check for other possible offer structures */}
+              {(!landingPage?.content?.schema?.offers || landingPage.content.schema.offers.length === 0) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="text-yellow-800 text-sm">
+                    <strong>Info:</strong> Nenhuma oferta configurada na landing page. Configure ofertas no Editor para ativá-las aqui.
+                  </div>
                 </div>
               )}
 
@@ -794,7 +850,7 @@ const saveBlogPost = async () => {
       <div className="flex justify-between">
         <Button
           onClick={saveBlogPost}
-          disabled={loading || !blogPost.title || !blogPost.content}
+          disabled={loading}
           variant="outline"
         >
           {loading ? (
@@ -802,6 +858,8 @@ const saveBlogPost = async () => {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Salvando...
             </>
+          ) : blogPost.id ? (
+            "Atualizar Rascunho"
           ) : (
             "Salvar Rascunho"
           )}
