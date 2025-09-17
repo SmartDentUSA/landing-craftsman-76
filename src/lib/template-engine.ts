@@ -1765,10 +1765,23 @@ export const generateHTML = (data: any): string => {
   if (data.seo?.hreflang_auto) {
     const schemaGraph = [];
 
-    // Combinar reviews manuais e do Google para agregateRating e reviews
+    // Combinar reviews manuais, do Google e depoimentos em vídeo para agregateRating e reviews
     const manualReviews = data.schema?.manual_reviews || [];
     const googleReviews = data.schema?.google_reviews?.reviews || [];
-    const allReviews = [...manualReviews, ...googleReviews];
+    const videoTestimonials = data.schema?.video_testimonials || [];
+    
+    // Converter depoimentos em vídeo para formato de review
+    const videoTestimonialsAsReviews = videoTestimonials.map((testimonial: any) => ({
+      author_name: testimonial.client_name,
+      rating: 5, // Assumir rating máximo para depoimentos em vídeo
+      review_text: testimonial.testimonial_text,
+      location: testimonial.location,
+      specialty: testimonial.specialty,
+      youtube_url: testimonial.youtube_url,
+      instagram_url: testimonial.instagram_url
+    }));
+    
+    const allReviews = [...manualReviews, ...googleReviews, ...videoTestimonialsAsReviews];
     
     // Calcular rating agregado das reviews reais
     let aggregateRating = {
@@ -1789,6 +1802,7 @@ export const generateHTML = (data: any): string => {
         totalReviews: allReviews.length, 
         manualReviews: manualReviews.length,
         googleReviews: googleReviews.length,
+        videoTestimonials: videoTestimonials.length,
         avgRating 
       });
     }
@@ -1845,9 +1859,9 @@ export const generateHTML = (data: any): string => {
       });
     }
 
-    // Adicionar Organization Schema
+    // Adicionar Organization Schema com informações completas
     if (data.brand?.legal_name) {
-      schemaGraph.push({
+      const organizationSchema: any = {
         "@type": "Organization",
         "name": data.brand.legal_name,
         "legalName": data.brand.legal_name,
@@ -1859,7 +1873,75 @@ export const generateHTML = (data: any): string => {
           "contactType": "customer service",
           "availableLanguage": ["Portuguese", "English", "Spanish"]
         }
-      });
+      };
+
+      // Adicionar descrição se disponível
+      if (data.brand.description) {
+        organizationSchema.description = data.brand.description;
+      }
+
+      // Adicionar endereço se disponível
+      if (data.brand.address) {
+        organizationSchema.address = {
+          "@type": "PostalAddress",
+          "streetAddress": data.brand.address.street,
+          "addressLocality": data.brand.address.city,
+          "addressRegion": data.brand.address.state,
+          "postalCode": data.brand.address.postal_code,
+          "addressCountry": data.brand.address.country || "BR"
+        };
+      }
+
+      // Adicionar telefone se disponível
+      if (data.brand.telephone) {
+        organizationSchema.telephone = data.brand.telephone;
+      }
+
+      schemaGraph.push(organizationSchema);
+    }
+
+    // Adicionar schema para políticas e documentos legais
+    if (data.brand?.policies) {
+      const policies = [];
+      
+      if (data.brand.policies.privacy_policy) {
+        policies.push({
+          "@type": "WebPage",
+          "name": "Política de Privacidade",
+          "url": data.brand.policies.privacy_policy,
+          "inLanguage": "pt-BR"
+        });
+      }
+      
+      if (data.brand.policies.terms_service) {
+        policies.push({
+          "@type": "WebPage", 
+          "name": "Termos de Serviço",
+          "url": data.brand.policies.terms_service,
+          "inLanguage": "pt-BR"
+        });
+      }
+      
+      if (data.brand.policies.return_policy) {
+        policies.push({
+          "@type": "WebPage",
+          "name": "Política de Devolução",
+          "url": data.brand.policies.return_policy,
+          "inLanguage": "pt-BR"
+        });
+      }
+
+      if (policies.length > 0) {
+        schemaGraph.push({
+          "@type": "ItemList",
+          "name": "Políticas e Documentos Legais",
+          "itemListElement": policies.map((policy, index) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "item": policy
+          }))
+        });
+      }
     }
 
     // Adicionar Breadcrumb Schema se configurado
