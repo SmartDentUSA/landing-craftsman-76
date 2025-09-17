@@ -4314,34 +4314,62 @@ const EditorContent = () => {
                                      className="text-sm h-8"
                                    />
                                  </div>
-                                 <div className="grid grid-cols-2 gap-2">
-                                   <Input
-                                     value={offer.price || ''}
-                                     onChange={(e) => {
-                                       const newOffers = [...data.schema.offers];
-                                       newOffers[index] = { ...newOffers[index], price: e.target.value };
-                                       setData(prev => ({
-                                         ...prev,
-                                         schema: { ...prev.schema, offers: newOffers }
-                                       }));
-                                     }}
-                                     placeholder="Preço"
-                                     className="text-sm h-8"
-                                   />
-                                   <Input
-                                     value={offer.productUrl || ''}
-                                     onChange={(e) => {
-                                       const newOffers = [...data.schema.offers];
-                                       newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
-                                       setData(prev => ({
-                                         ...prev,
-                                         schema: { ...prev.schema, offers: newOffers }
-                                       }));
-                                     }}
-                                     placeholder="URL do produto"
-                                     className="text-sm h-8"
-                                   />
-                                 </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                      value={offer.price || ''}
+                                      onChange={(e) => {
+                                        const newOffers = [...data.schema.offers];
+                                        newOffers[index] = { ...newOffers[index], price: e.target.value };
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: { ...prev.schema, offers: newOffers }
+                                        }));
+                                      }}
+                                      placeholder="Preço"
+                                      className="text-sm h-8"
+                                    />
+                                    <Input
+                                      value={offer.productUrl || ''}
+                                      onChange={(e) => {
+                                        const newOffers = [...data.schema.offers];
+                                        newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: { ...prev.schema, offers: newOffers }
+                                        }));
+                                      }}
+                                      placeholder="URL do produto"
+                                      className="text-sm h-8"
+                                    />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                      value={offer.youtube_url || ''}
+                                      onChange={(e) => {
+                                        const newOffers = [...data.schema.offers];
+                                        newOffers[index] = { ...newOffers[index], youtube_url: e.target.value };
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: { ...prev.schema, offers: newOffers }
+                                        }));
+                                      }}
+                                      placeholder="Vídeo YouTube"
+                                      className="text-sm h-8"
+                                    />
+                                    <Input
+                                      value={offer.instagram_url || ''}
+                                      onChange={(e) => {
+                                        const newOffers = [...data.schema.offers];
+                                        newOffers[index] = { ...newOffers[index], instagram_url: e.target.value };
+                                        setData(prev => ({
+                                          ...prev,
+                                          schema: { ...prev.schema, offers: newOffers }
+                                        }));
+                                      }}
+                                      placeholder="Vídeo Instagram"
+                                      className="text-sm h-8"
+                                    />
+                                  </div>
                                  <Textarea
                                    value={offer.description || ''}
                                    onChange={(e) => {
@@ -4388,11 +4416,23 @@ const EditorContent = () => {
                                        {offer.description && ` • ${offer.description}`}
                                        {offer.productUrl && !offer.name && ` • ${new URL(offer.productUrl).hostname}`}
                                      </div>
-                                     {offer.sourceType === 'imported' && (
-                                       <Badge variant="secondary" className="text-xs mt-1">
-                                         Importado {offer.lastUpdated && `• ${new Date(offer.lastUpdated).toLocaleDateString('pt-BR')}`}
-                                       </Badge>
-                                     )}
+                                      <div className="flex gap-1 mt-1 flex-wrap">
+                                        {offer.sourceType === 'imported' && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            Importado {offer.lastUpdated && `• ${new Date(offer.lastUpdated).toLocaleDateString('pt-BR')}`}
+                                          </Badge>
+                                        )}
+                                        {offer.youtube_url && (
+                                          <Badge variant="outline" className="text-xs">
+                                            📺 YouTube
+                                          </Badge>
+                                        )}
+                                        {offer.instagram_url && (
+                                          <Badge variant="outline" className="text-xs">
+                                            📱 Instagram
+                                          </Badge>
+                                        )}
+                                      </div>
                                    </div>
                                  </div>
                              <div className="flex items-center gap-2">
@@ -4440,17 +4480,19 @@ const EditorContent = () => {
                         ...prev,
                         schema: {
                           ...prev.schema,
-                          offers: [...prev.schema.offers, {
-                            name: '',
-                            description: '',
-                            price: '',
-                            currency: 'BRL',
-                            availability: 'InStock',
-                            valid_through: '',
-                            productUrl: '',
-                            sourceType: 'manual' as const,
-                            lastUpdated: undefined
-                          }]
+                           offers: [...prev.schema.offers, {
+                             name: '',
+                             description: '',
+                             price: '',
+                             currency: 'BRL',
+                             availability: 'InStock',
+                             valid_through: '',
+                             productUrl: '',
+                             youtube_url: '',
+                             instagram_url: '',
+                             sourceType: 'manual' as const,
+                             lastUpdated: undefined
+                           }]
                         }
                       }));
                     }}
