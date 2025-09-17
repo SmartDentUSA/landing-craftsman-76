@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ interface LandingPageData {
 export default function BlogGenerator() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { getLandingPage } = useLandingPages();
   const [landingPage, setLandingPage] = useState<LandingPageData | null>(null);
   // Helper function to ensure keywords is always an array
@@ -62,10 +63,35 @@ export default function BlogGenerator() {
 
   useEffect(() => {
     if (id) {
-      loadLandingPageFromEditor();
-      loadExistingBlogPost();
+      // Check if data was passed from Editor
+      const stateData = location.state as any;
+      if (stateData?.fromEditor && stateData?.blogData && stateData?.landingPageData) {
+        console.log("🔄 Carregando dados do Editor...");
+        
+        // Set landing page data from Editor
+        setLandingPage({
+          id: id,
+          title: stateData.landingPageData.name || stateData.landingPageData.banner?.title || "Landing Page",
+          description: stateData.landingPageData.banner?.subtitle || stateData.landingPageData.seo_description || "",
+          content: stateData.landingPageData,
+        });
+        
+        // Set blog data from Editor
+        setBlogPost({
+          ...stateData.blogData,
+          keywords: normalizeKeywords(stateData.blogData.keywords || []),
+        });
+        
+        toast({
+          title: "Dados carregados do Editor!",
+          description: "Continue editando seu blog post aqui.",
+        });
+      } else {
+        loadLandingPageFromEditor();
+        loadExistingBlogPost();
+      }
     }
-  }, [id]);
+  }, [id, location.state]);
 
   const loadLandingPageFromEditor = async () => {
     try {
@@ -429,9 +455,9 @@ const saveBlogPost = async () => {
             Voltar
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Gerador de Blog Post</h1>
+            <h1 className="text-3xl font-bold">Editor de Blog Post</h1>
             <p className="text-muted-foreground">
-              Landing Page: {landingPage.id}
+              Edite o conteúdo e publique seu blog post
             </p>
           </div>
         </div>
@@ -454,7 +480,7 @@ const saveBlogPost = async () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Conteúdo do Blog Post
+                Editar Conteúdo
                 <Button
                   onClick={generateBlogContent}
                   disabled={generating}
@@ -476,38 +502,35 @@ const saveBlogPost = async () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Título</Label>
-                <Input
-                  id="title"
-                  value={blogPost.title}
-                  onChange={(e) => setBlogPost(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Título do blog post"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="meta_description">Meta Description</Label>
-                <Textarea
-                  id="meta_description"
-                  value={blogPost.meta_description}
-                  onChange={(e) => setBlogPost(prev => ({ ...prev, meta_description: e.target.value }))}
-                  placeholder="Descrição para SEO (máx. 160 caracteres)"
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="keywords">Keywords (separadas por vírgula)</Label>
-                <Input
-                  id="keywords"
-                  value={normalizeKeywords(blogPost.keywords).join(", ")}
-                  onChange={(e) => setBlogPost(prev => ({
-                    ...prev, 
-                    keywords: e.target.value.split(",").map(k => k.trim()).filter(k => k)
-                  }))}
-                  placeholder="palavra-chave1, palavra-chave2, palavra-chave3"
-                />
+              {/* SEO Data Display (Read-only) */}
+              <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Dados SEO (editáveis no Editor)</div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Título:</span>
+                  <p className="text-sm font-medium">{blogPost.title || "Não definido"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Meta Description:</span>
+                  <p className="text-sm">{blogPost.meta_description || "Não definida"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Keywords:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {normalizeKeywords(blogPost.keywords).map((keyword, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate(`/editor/${id}`)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                >
+                  ← Editar SEO no Editor
+                </Button>
               </div>
 
               <div>
@@ -659,7 +682,7 @@ const saveBlogPost = async () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Preview
+                Preview Final
                 <Button
                   onClick={() => setPreviewMode(!previewMode)}
                   size="sm"

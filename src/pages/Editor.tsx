@@ -6029,7 +6029,7 @@ dataLayer = [{
                   <div className="h-full flex flex-col space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">Preview do Blog Post</h3>
-                      <div className="flex gap-2">
+                       <div className="flex gap-2">
                         <Button 
                           onClick={() => generateBlogPost()} 
                           disabled={generatingBlog}
@@ -6052,6 +6052,21 @@ dataLayer = [{
                           className="gap-2"
                         >
                           ⚡ Rápido
+                        </Button>
+                        <Button 
+                          onClick={() => navigate(`/blog-generator/${id}`, { 
+                            state: { 
+                              blogData: blogPostData, 
+                              landingPageData: data,
+                              fromEditor: true 
+                            } 
+                          })} 
+                          variant="default"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Editar
                         </Button>
                        </div>
                     </div>
