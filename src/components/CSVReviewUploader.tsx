@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Upload, CheckCircle, Star } from 'lucide-react';
+import { Trash2, Upload, CheckCircle, Star, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ManualReview {
@@ -25,6 +25,8 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
   onReviewsUpdate
 }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [editingReview, setEditingReview] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ author_name: '', rating: 5, review_text: '' });
   const { toast } = useToast();
 
   const parseCSV = (csvText: string): ManualReview[] => {
@@ -130,6 +132,37 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
     onReviewsUpdate(updatedReviews);
   };
 
+  const startEdit = (review: ManualReview) => {
+    setEditingReview(review.id);
+    setEditForm({
+      author_name: review.author_name,
+      rating: review.rating,
+      review_text: review.review_text
+    });
+  };
+
+  const saveEdit = () => {
+    if (!editingReview) return;
+    
+    const updatedReviews = reviews.map(r => 
+      r.id === editingReview 
+        ? { ...r, ...editForm }
+        : r
+    );
+    onReviewsUpdate(updatedReviews);
+    setEditingReview(null);
+    
+    toast({
+      title: "✅ Review atualizada",
+      description: "Avaliação editada com sucesso"
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingReview(null);
+    setEditForm({ author_name: '', rating: 5, review_text: '' });
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -185,38 +218,86 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
               <div className="max-h-60 overflow-y-auto space-y-2">
                 {reviews.map((review) => (
                   <div key={review.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{review.author_name}</span>
-                          <div className="flex">{renderStars(review.rating)}</div>
-                          {review.approved && (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          )}
+                    {editingReview === review.id ? (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs">Nome do Autor</Label>
+                          <Input
+                            value={editForm.author_name}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, author_name: e.target.value }))}
+                            className="h-8"
+                          />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {review.review_text}
-                        </p>
+                        <div>
+                          <Label className="text-xs">Avaliação (1-5)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="5"
+                            value={editForm.rating}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, rating: parseInt(e.target.value) || 1 }))}
+                            className="h-8"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Comentário</Label>
+                          <Input
+                            value={editForm.review_text}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, review_text: e.target.value }))}
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={saveEdit} className="text-xs">
+                            Salvar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit} className="text-xs">
+                            Cancelar
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <Button
-                          size="sm"
-                          variant={review.approved ? "secondary" : "outline"}
-                          onClick={() => toggleApproval(review.id)}
-                          className="text-xs px-2 py-1"
-                        >
-                          {review.approved ? "Aprovada" : "Pendente"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeReview(review.id)}
-                          className="text-xs p-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                    ) : (
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{review.author_name}</span>
+                            <div className="flex">{renderStars(review.rating)}</div>
+                            {review.approved && (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {review.review_text}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <Button
+                            size="sm"
+                            variant={review.approved ? "secondary" : "outline"}
+                            onClick={() => toggleApproval(review.id)}
+                            className="text-xs px-2 py-1"
+                          >
+                            {review.approved ? "Aprovada" : "Pendente"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => startEdit(review)}
+                            className="text-xs p-1"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeReview(review.id)}
+                            className="text-xs p-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

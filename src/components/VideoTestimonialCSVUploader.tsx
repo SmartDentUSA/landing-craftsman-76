@@ -36,7 +36,7 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
   const { toast } = useToast();
 
   const downloadTemplate = () => {
-    const csvContent = `Depoimento;YouTube;Instagram;Nome
+    const csvContent = `Transcrição do depoimento;Vídeo youtube;Video instagram;Nome
 "Excelente atendimento e qualidade superior!";https://youtube.com/watch?v=exemplo1;;João Silva
 "Profissionais muito capacitados e atenciosos";;;Maria Santos
 "Superou todas as minhas expectativas";https://youtube.com/watch?v=exemplo2;https://instagram.com/p/exemplo;Pedro Costa`;
@@ -148,7 +148,7 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
       if (parsedTestimonials.length === 0) {
         toast({
           title: "❌ Nenhum depoimento encontrado",
-          description: "Verifique se o arquivo CSV está no formato correto: Depoimento;YouTube;Instagram;Nome",
+          description: "Verifique se o arquivo CSV está no formato correto: Transcrição do depoimento;Vídeo youtube;Video instagram;Nome",
           variant: "destructive"
         });
         return;
@@ -248,7 +248,7 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
             </div>
             <div className="text-sm text-muted-foreground mt-1 space-y-2">
               <p>
-                <strong>Formato esperado:</strong> Depoimento;YouTube;Instagram;Nome
+                <strong>Formato esperado:</strong> Transcrição do depoimento;Vídeo youtube;Video instagram;Nome
               </p>
               <div className="bg-gray-50 p-2 rounded text-xs font-mono">
                 Exemplo:<br />
