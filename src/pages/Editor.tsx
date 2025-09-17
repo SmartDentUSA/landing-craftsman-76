@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
+import { TagInput } from "@/components/ui/tag-input";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -765,6 +766,43 @@ const EditorContent = () => {
   
   // Estados para campos editáveis da Automação SEO
   const [autoKeywords, setAutoKeywords] = useState<string[]>([]);
+
+  // Helper functions for keywords management
+  const parseKeywords = (keywords: any): string[] => {
+    if (Array.isArray(keywords)) return keywords;
+    if (typeof keywords === 'string') {
+      return keywords.split(',').map(k => k.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const stringifyKeywords = (keywords: string[]): string => {
+    return keywords.join(', ');
+  };
+
+  // Handle navigation issues - redirect to valid ID if undefined
+  useEffect(() => {
+    if (id === 'undefined' || !id) {
+      // Try to get first available landing page
+      const landingPages = Object.keys(localStorage).filter(key => 
+        key.startsWith('landing_page_') && !key.includes('undefined')
+      );
+      
+      if (landingPages.length > 0) {
+        const firstValidId = landingPages[0].replace('landing_page_', '');
+        navigate(`/editor/${firstValidId}`, { replace: true });
+        return;
+      } else {
+        toast({
+          title: "ID inválido",
+          description: "Redirecionando para o dashboard...",
+          variant: "destructive"
+        });
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+    }
+  }, [id, navigate, toast]);
   const [autoMetaDesc, setAutoMetaDesc] = useState('');
   const [autoSeoTitle, setAutoSeoTitle] = useState('');
   const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false, faqKeywords: false, blog: false });
@@ -1392,6 +1430,15 @@ const EditorContent = () => {
           if (!loadedData.email?.imagem_src) {
             loadedData.email = { ...loadedData.email, imagem_src: createImageData() } as any;
           }
+          
+          // Garantir campos SEO específicos
+          if (!loadedData.seo?.intelligent_links) {
+            loadedData.seo = { ...loadedData.seo, intelligent_links: {} } as any;
+          }
+          if (!loadedData.seo?.ai_keywords) {
+            loadedData.seo = { ...loadedData.seo, ai_keywords: '' } as any;
+          }
+          
           // Garantir bloco google_reviews para compatibilidade retroativa
           if (!loadedData.schema) {
             loadedData.schema = {
@@ -3353,58 +3400,47 @@ const EditorContent = () => {
                                     )}
                                   </div>
                                   
-                                {/* Campo para visualizar/editar keywords geradas */}
-                                   <div className="space-y-2">
-                                     <div className="flex items-center justify-between">
-                                       <Label className="text-xs font-medium text-green-700">Keywords Geradas</Label>
-                                       <div className="flex items-center gap-1">
-                                         {Array.isArray(data.seo.ai_keywords) || typeof data.seo.ai_keywords === 'string' ? (
-                                           <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
-                                             {Array.isArray(data.seo.ai_keywords)
-                                               ? data.seo.ai_keywords.length
-                                               : (data.seo.ai_keywords || '')
-                                                   .split(',')
-                                                   .map(k => k.trim())
-                                                   .filter(Boolean).length} keywords
-                                           </div>
-                                         ) : (
-                                           <div className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                             Vazio
-                                           </div>
-                                         )}
-                                         <Button
-                                           size="sm"
-                                           variant="ghost"
-                                           onClick={() => {
-                                             setData(prev => ({
-                                               ...prev,
-                                               seo: { ...prev.seo, ai_keywords: '' }
-                                             }));
-                                             toast({ 
-                                               title: "Keywords limpos", 
-                                               description: "Todas as keywords foram removidas." 
-                                             });
-                                           }}
-                                           className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
-                                           title="Limpar todos os keywords"
-                                         >
-                                           <Trash2 className="h-3 w-3" />
-                                         </Button>
-                                       </div>
-                                     </div>
-                                     <Textarea
-                                       value={Array.isArray(data.seo.ai_keywords) ? data.seo.ai_keywords.join(', ') : (data.seo.ai_keywords || '')}
-                                       onChange={(e) => setData(prev => ({
-                                         ...prev,
-                                         seo: { ...prev.seo, ai_keywords: e.target.value }
-                                       }))}
-                                       placeholder="Digite suas keywords separadas por vírgula ou clique em 'Gerar Keywords' para gerar automaticamente via IA..."
-                                       className="text-xs min-h-[80px] text-green-700 bg-white/50 resize-none"
-                                     />
-                                     <div className="text-xs text-green-600 bg-white/50 p-2 rounded border">
-                                       💡 Dica: Separe múltiplas keywords por vírgula. Ex: "scanner intraoral, odontologia digital, prótese dentária"
-                                     </div>
-                                   </div>
+                                 {/* Campo para visualizar/editar keywords geradas */}
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-medium text-green-700">Keywords do FAQ</Label>
+                                        <div className="flex items-center gap-1">
+                                          <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
+                                            {parseKeywords(data.seo.ai_keywords).length} keywords
+                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                              setData(prev => ({
+                                                ...prev,
+                                                seo: { ...prev.seo, ai_keywords: '' }
+                                              }));
+                                              toast({ 
+                                                title: "Keywords limpos", 
+                                                description: "Todas as keywords foram removidas." 
+                                              });
+                                            }}
+                                            className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
+                                            title="Limpar todos os keywords"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <TagInput
+                                        value={parseKeywords(data.seo.ai_keywords)}
+                                        onChange={(keywords) => setData(prev => ({
+                                          ...prev,
+                                          seo: { ...prev.seo, ai_keywords: stringifyKeywords(keywords) }
+                                        }))}
+                                        placeholder="Digite uma keyword e pressione Enter..."
+                                        className="text-xs text-green-700 bg-white/50"
+                                      />
+                                      <div className="text-xs text-green-600 bg-white/50 p-2 rounded border">
+                                        💡 Dica: Digite uma palavra-chave e pressione Enter para adicionar. Clique no X para remover.
+                                      </div>
+                                    </div>
                                 </div>
 
                                 {/* Links Inteligentes (Palavras-chave → URL) */}
@@ -3420,7 +3456,17 @@ const EditorContent = () => {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => navigate(`/blog-generator/${id}`)}
+                                         onClick={() => {
+                                           if (!id || id === 'undefined') {
+                                             toast({
+                                               title: "ID inválido",
+                                               description: "Salve a landing page primeiro antes de acessar o gerador de blog.",
+                                               variant: "destructive"
+                                             });
+                                             return;
+                                           }
+                                           navigate(`/blog-generator/${id}`);
+                                         }}
                                         className="text-xs"
                                       >
                                         <FileText className="w-3 h-3 mr-1" />
@@ -3429,20 +3475,22 @@ const EditorContent = () => {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => {
-                                          const newLinks = { ...data.seo.intelligent_links };
-                                          // Generate unique key using timestamp to avoid conflicts
-                                          const uniqueKey = `nova-palavra-${Date.now()}`;
-                                          newLinks[uniqueKey] = "";
-                                          setData(prev => ({
-                                            ...prev,
-                                            seo: { ...prev.seo, intelligent_links: newLinks }
-                                          }));
-                                          toast({ 
-                                            title: "Link adicionado", 
-                                            description: "Configure a palavra-chave e URL do novo link." 
-                                          });
-                                        }}
+                                         onClick={() => {
+                                           // Ensure intelligent_links exists before spreading
+                                           const currentLinks = data.seo.intelligent_links || {};
+                                           const newLinks = { ...currentLinks };
+                                           // Generate unique key using timestamp to avoid conflicts
+                                           const uniqueKey = `nova-palavra-${Date.now()}`;
+                                           newLinks[uniqueKey] = "";
+                                           setData(prev => ({
+                                             ...prev,
+                                             seo: { ...prev.seo, intelligent_links: newLinks }
+                                           }));
+                                           toast({ 
+                                             title: "Link adicionado", 
+                                             description: "Configure a palavra-chave e URL do novo link." 
+                                           });
+                                         }}
                                       >
                                         <Plus className="w-3 h-3 mr-1" />
                                         Adicionar
