@@ -32,7 +32,15 @@ serve(async (req) => {
     // Testar conexão com WordPress REST API
     const testWordPressAPI = async () => {
       try {
-        const wpApiUrl = `${url.replace(/\/$/, '')}/wp-json/wp/v2/users/me`;
+        // Validar e normalizar URL
+        let normalizedUrl = url.trim();
+        if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+          normalizedUrl = `https://${normalizedUrl}`;
+        }
+        normalizedUrl = normalizedUrl.replace(/\/+$/, ''); // Remove barras no final
+
+        const wpApiUrl = `${normalizedUrl}/wp-json/wp/v2/users/me`;
+        console.log(`🌐 Testando URL normalizada: ${wpApiUrl}`);
         
         const response = await fetch(wpApiUrl, {
           method: 'GET',

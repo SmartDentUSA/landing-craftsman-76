@@ -506,16 +506,43 @@ const saveBlogPost = async () => {
 
       if (error) throw error;
 
-      setBlogPost(prev => ({ 
-        ...prev, 
-        status: "published",
-        published_domains: data.published_domains || ["eodonto.com", "dentala.com.br"]
-      }));
+      if (data.success) {
+        setBlogPost(prev => ({
+          ...prev,
+          status: "published",
+          published_domains: data.published_domains || []
+        }));
+        
+        // Mensagem de sucesso com detalhes
+        let successMessage = `✅ Publicado em ${data.published_domains.length} site(s): ${data.published_domains.join(', ')}`;
+        
+        if (data.errors && data.errors.length > 0) {
+          successMessage += `\n\n⚠️ Alguns problemas: ${data.errors.join('; ')}`;
+        }
 
-      toast({
-        title: "Blog post publicado",
-        description: "O blog post foi publicado com sucesso nos domínios configurados.",
-      });
+        // Log URLs para debug
+        if (data.published_domains.includes('eodonto.com')) {
+          const filename = blogPost.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-');
+          console.log(`📂 Conteúdo publicado em: https://eodonto.com/blog/${filename}.html`);
+        }
+
+        toast({
+          title: "Publicação Realizada!",
+          description: successMessage,
+        });
+      } else {
+        let errorMessage = data.message || data.error || "Falha na publicação";
+        
+        if (data.errors && data.errors.length > 0) {
+          errorMessage += `\n\nDetalhes: ${data.errors.join('; ')}`;
+        }
+
+        toast({
+          title: "Erro na publicação",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Erro ao publicar blog post:", error);
       toast({
