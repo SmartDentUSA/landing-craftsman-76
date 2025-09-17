@@ -1233,6 +1233,95 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
     {{/desktop_info.visible_any}}
 
+    <!-- Recursos e Downloads Section -->
+    {{#resources_section.visible_any}}
+    <section class="offers-section {{resources_section.visibility_class}}">
+        <div class="container">
+            <div class="offers-header">
+                <h2>{{resources_section.title}}</h2>
+                {{#resources_section.subtitle}}
+                <p class="offers-subtitle">{{resources_section.subtitle}}</p>
+                {{/resources_section.subtitle}}
+            </div>
+            <div class="offers-content">
+                <div class="desktop-carousel">
+                    <div class="offers-grid">
+                        {{#resources_products}}
+                        <div class="offer-card">
+                            {{#image}}
+                            <div class="offer-image-container">
+                                <img src="{{image}}" alt="{{name}}" class="offer-image">
+                            </div>
+                            {{/image}}
+                            <div class="offer-content">
+                                <h3 class="offer-title">{{name}}</h3>
+                                <div class="offer-buttons">
+                                    {{#resource_cta1}}
+                                    {{#visible}}
+                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                    {{/visible}}
+                                    {{/resource_cta1}}
+                                    {{#resource_cta2}}
+                                    {{#visible}}
+                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                    {{/visible}}
+                                    {{/resource_cta2}}
+                                    {{#resource_cta3}}
+                                    {{#visible}}
+                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                    {{/visible}}
+                                    {{/resource_cta3}}
+                                </div>
+                            </div>
+                        </div>
+                        {{/resources_products}}
+                    </div>
+                </div>
+
+                <!-- Mobile Carousel -->
+                <div class="mobile-carousel">
+                    <div class="carousel-track">
+                        {{#resources_products}}
+                        <div class="offer-card">
+                            {{#image}}
+                            <div class="offer-image-container">
+                                <img src="{{image}}" alt="{{name}}" class="offer-image">
+                            </div>
+                            {{/image}}
+                            <div class="offer-content">
+                                <h3 class="offer-title">{{name}}</h3>
+                                <div class="offer-buttons">
+                                    {{#resource_cta1}}
+                                    {{#visible}}
+                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                    {{/visible}}
+                                    {{/resource_cta1}}
+                                    {{#resource_cta2}}
+                                    {{#visible}}
+                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                    {{/visible}}
+                                    {{/resource_cta2}}
+                                    {{#resource_cta3}}
+                                    {{#visible}}
+                                    <a href="{{url}}" class="button button-secondary offer-link" target="_blank">{{label}}</a>
+                                    {{/visible}}
+                                    {{/resource_cta3}}
+                                </div>
+                            </div>
+                        </div>
+                        {{/resources_products}}
+                    </div>
+                    <div class="carousel-controls">
+                        {{#resources_products}}
+                        <button class="carousel-dot {{#first}}active{{/first}}"></button>
+                        {{/resources_products}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {{/resources_section.visible_any}}
+
     <!-- Consultoria -->
     <section class="personalized-service">
         <div class="container service-content">
@@ -2005,6 +2094,43 @@ export const generateHTML = (data: any): string => {
           }
         }
       }
+      
+      return processedOffer;
+    }) || [];
+  }
+  
+  // Process resources section
+  if (data.resources_section && (data.resources_section.visible_desktop || data.resources_section.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.resources_section.visible_desktop && !data.resources_section.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.resources_section.visible_desktop && data.resources_section.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.resources_section = {
+      ...data.resources_section,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
+    
+    // Process resources products - only products with show_in_resources = true
+    processedData.resources_products = data.schema?.offers?.filter((offer: any) => offer.show_in_resources === true).map((offer: any, index: number) => {
+      let processedOffer = { ...offer };
+      
+      // Handle image URL processing (Cloudflare support)
+      if (offer.image) {
+        if (offer.image.includes('ACCOUNT_HASH_PLACEHOLDER') && typeof window !== 'undefined') {
+          const accountHash = localStorage.getItem('cloudflareAccountHash');
+          if (accountHash) {
+            processedOffer.image = offer.image.replace('ACCOUNT_HASH_PLACEHOLDER', accountHash);
+          }
+        }
+      }
+      
+      // Add first flag for carousel
+      processedOffer.first = index === 0;
       
       return processedOffer;
     }) || [];

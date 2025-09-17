@@ -135,6 +135,11 @@ interface SchemaData {
     discount_percentage?: number;
     rating?: string;
     rating_count?: number;
+    // Novos campos para seção de recursos
+    show_in_resources?: boolean;
+    resource_cta1?: { label: string; url: string; visible: boolean };
+    resource_cta2?: { label: string; url: string; visible: boolean };
+    resource_cta3?: { label: string; url: string; visible: boolean };
   }>;
   breadcrumb: Array<{ name: string; url: string }>;
 }
@@ -245,6 +250,12 @@ interface LandingPageData {
     table_title: string;
     table_headers: string[];
     table_data: Array<{ [key: string]: string }>;
+  };
+  resources_section: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+    title: string;
+    subtitle?: string;
   };
   offers_section: {
     visible_desktop: boolean;
@@ -989,6 +1000,12 @@ const EditorContent = () => {
       title: 'Ofertas Especiais',
       subtitle: 'Produtos em destaque com preços promocionais'
     },
+    resources_section: {
+      visible_desktop: false,
+      visible_mobile: false,
+      title: 'Recursos e Downloads',
+      subtitle: 'Materiais técnicos e informações dos produtos'
+    },
     advisory: {
       title: 'Consultoria personalizada para o seu negócio',
       paragraph: 'Nossa equipe de especialistas oferece consultoria completa para implementação de odontologia digital em clínicas de todos os portes.',
@@ -1442,6 +1459,14 @@ const EditorContent = () => {
               subtitle: 'Produtos em destaque com preços promocionais'
             };
           }
+          if (!loadedData.resources_section) {
+            loadedData.resources_section = {
+              visible_desktop: false,
+              visible_mobile: false,
+              title: 'Recursos e Downloads',
+              subtitle: 'Materiais técnicos e informações dos produtos'
+            };
+          }
           
           // Garantir que todos os campos ImageData existem
           if (!loadedData.logo_url || typeof (loadedData.logo_url as any) === 'string') {
@@ -1543,6 +1568,14 @@ const EditorContent = () => {
               visible_mobile: true,
               title: 'Ofertas Especiais',
               subtitle: 'Produtos em destaque com preços promocionais'
+            };
+          }
+          if (!migratedData.resources_section) {
+            migratedData.resources_section = {
+              visible_desktop: false,
+              visible_mobile: false,
+              title: 'Recursos e Downloads',
+              subtitle: 'Materiais técnicos e informações dos produtos'
             };
           }
           // Garantir bloco schema/google_reviews ao migrar
@@ -2741,9 +2774,91 @@ const EditorContent = () => {
                        )}
                      </AccordionContent>
                    </AccordionItem>
-                 )}
+                  )}
 
-                 {/* Consultoria */}
+                  {/* Recursos e Downloads na Landing Page */}
+                  {data.schema?.offers && data.schema.offers.filter(offer => offer.show_in_resources).length > 0 && (
+                    <AccordionItem value="resources-section">
+                      <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                          <Folder className="h-4 w-4" />
+                          Recursos e Downloads
+                          <Badge variant="secondary">{data.schema.offers.filter(offer => offer.show_in_resources).length}</Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={data.resources_section?.visible_desktop ?? false}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                resources_section: { 
+                                  ...(prev.resources_section || { 
+                                    visible_desktop: false,
+                                    visible_mobile: false, 
+                                    title: 'Recursos e Downloads',
+                                    subtitle: 'Materiais técnicos e informações dos produtos'
+                                  }), 
+                                  visible_desktop: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no desktop</Label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={data.resources_section?.visible_mobile ?? false}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                resources_section: { 
+                                  ...(prev.resources_section || { 
+                                    visible_desktop: false,
+                                    visible_mobile: false, 
+                                    title: 'Recursos e Downloads',
+                                    subtitle: 'Materiais técnicos e informações dos produtos'
+                                  }), 
+                                  visible_mobile: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no mobile</Label>
+                          </div>
+                        </div>
+                        
+                        {((data.resources_section?.visible_desktop ?? false) || (data.resources_section?.visible_mobile ?? false)) && (
+                          <>
+                            <div>
+                              <Label>Título da Seção</Label>
+                              <Input
+                                value={data.resources_section?.title ?? ''}
+                                onChange={(e) => setData(prev => ({
+                                  ...prev,
+                                  resources_section: { ...prev.resources_section!, title: e.target.value }
+                                }))}
+                                placeholder="Ex: Recursos e Downloads"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label>Subtítulo (opcional)</Label>
+                              <Input
+                                value={data.resources_section?.subtitle ?? ''}
+                                onChange={(e) => setData(prev => ({
+                                  ...prev,
+                                  resources_section: { ...prev.resources_section!, subtitle: e.target.value }
+                                }))}
+                                placeholder="Ex: Materiais técnicos e informações dos produtos"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                  {/* Consultoria */}
                  <AccordionItem value="advisory">
                   <AccordionTrigger>Consultoria</AccordionTrigger>
                   <AccordionContent className="space-y-4">
@@ -4977,20 +5092,249 @@ const EditorContent = () => {
                                        className="text-sm h-8"
                                      />
                                    </div>
-                                 <Textarea
-                                   value={offer.description || ''}
-                                   onChange={(e) => {
-                                     const newOffers = [...data.schema.offers];
-                                     newOffers[index] = { ...newOffers[index], description: e.target.value };
-                                     setData(prev => ({
-                                       ...prev,
-                                       schema: { ...prev.schema, offers: newOffers }
-                                     }));
-                                   }}
-                                   placeholder="Descrição da oferta"
-                                   className="text-sm min-h-[60px]"
-                                 />
-                                 <div className="flex justify-end gap-2">
+                                  <Textarea
+                                    value={offer.description || ''}
+                                    onChange={(e) => {
+                                      const newOffers = [...data.schema.offers];
+                                      newOffers[index] = { ...newOffers[index], description: e.target.value };
+                                      setData(prev => ({
+                                        ...prev,
+                                        schema: { ...prev.schema, offers: newOffers }
+                                      }));
+                                    }}
+                                    placeholder="Descrição da oferta"
+                                    className="text-sm min-h-[60px]"
+                                  />
+                                  
+                                  {/* Seção de Recursos e Downloads */}
+                                  <div className="border-t pt-3 space-y-3">
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        checked={offer.show_in_resources || false}
+                                        onCheckedChange={(checked) => {
+                                          const newOffers = [...data.schema.offers];
+                                          newOffers[index] = { 
+                                            ...newOffers[index], 
+                                            show_in_resources: !!checked,
+                                            resource_cta1: newOffers[index].resource_cta1 || { label: '', url: '', visible: false },
+                                            resource_cta2: newOffers[index].resource_cta2 || { label: '', url: '', visible: false },
+                                            resource_cta3: newOffers[index].resource_cta3 || { label: '', url: '', visible: false }
+                                          };
+                                          setData(prev => ({
+                                            ...prev,
+                                            schema: { ...prev.schema, offers: newOffers }
+                                          }));
+                                        }}
+                                      />
+                                      <Label className="text-sm font-medium">Exibir em Recursos/Downloads</Label>
+                                    </div>
+                                    
+                                    {offer.show_in_resources && (
+                                      <div className="space-y-3 bg-muted/30 p-3 rounded-lg">
+                                        <p className="text-xs text-muted-foreground">Configure até 3 botões CTA para este produto na seção de recursos:</p>
+                                        
+                                        {/* CTA 1 */}
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                              checked={offer.resource_cta1?.visible || false}
+                                              onCheckedChange={(checked) => {
+                                                const newOffers = [...data.schema.offers];
+                                                newOffers[index] = { 
+                                                  ...newOffers[index], 
+                                                  resource_cta1: { 
+                                                    ...newOffers[index].resource_cta1, 
+                                                    visible: !!checked 
+                                                  }
+                                                };
+                                                setData(prev => ({
+                                                  ...prev,
+                                                  schema: { ...prev.schema, offers: newOffers }
+                                                }));
+                                              }}
+                                            />
+                                            <Label className="text-xs">CTA 1 Ativo</Label>
+                                          </div>
+                                          {offer.resource_cta1?.visible && (
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <Input
+                                                value={offer.resource_cta1?.label || ''}
+                                                onChange={(e) => {
+                                                  const newOffers = [...data.schema.offers];
+                                                  newOffers[index] = { 
+                                                    ...newOffers[index], 
+                                                    resource_cta1: { 
+                                                      ...newOffers[index].resource_cta1, 
+                                                      label: e.target.value 
+                                                    }
+                                                  };
+                                                  setData(prev => ({
+                                                    ...prev,
+                                                    schema: { ...prev.schema, offers: newOffers }
+                                                  }));
+                                                }}
+                                                placeholder="Ex: Baixar Catálogo"
+                                                className="text-xs h-7"
+                                              />
+                                              <Input
+                                                value={offer.resource_cta1?.url || ''}
+                                                onChange={(e) => {
+                                                  const newOffers = [...data.schema.offers];
+                                                  newOffers[index] = { 
+                                                    ...newOffers[index], 
+                                                    resource_cta1: { 
+                                                      ...newOffers[index].resource_cta1, 
+                                                      url: e.target.value 
+                                                    }
+                                                  };
+                                                  setData(prev => ({
+                                                    ...prev,
+                                                    schema: { ...prev.schema, offers: newOffers }
+                                                  }));
+                                                }}
+                                                placeholder="URL do link"
+                                                className="text-xs h-7"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* CTA 2 */}
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                              checked={offer.resource_cta2?.visible || false}
+                                              onCheckedChange={(checked) => {
+                                                const newOffers = [...data.schema.offers];
+                                                newOffers[index] = { 
+                                                  ...newOffers[index], 
+                                                  resource_cta2: { 
+                                                    ...newOffers[index].resource_cta2, 
+                                                    visible: !!checked 
+                                                  }
+                                                };
+                                                setData(prev => ({
+                                                  ...prev,
+                                                  schema: { ...prev.schema, offers: newOffers }
+                                                }));
+                                              }}
+                                            />
+                                            <Label className="text-xs">CTA 2 Ativo</Label>
+                                          </div>
+                                          {offer.resource_cta2?.visible && (
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <Input
+                                                value={offer.resource_cta2?.label || ''}
+                                                onChange={(e) => {
+                                                  const newOffers = [...data.schema.offers];
+                                                  newOffers[index] = { 
+                                                    ...newOffers[index], 
+                                                    resource_cta2: { 
+                                                      ...newOffers[index].resource_cta2, 
+                                                      label: e.target.value 
+                                                    }
+                                                  };
+                                                  setData(prev => ({
+                                                    ...prev,
+                                                    schema: { ...prev.schema, offers: newOffers }
+                                                  }));
+                                                }}
+                                                placeholder="Ex: Manual Técnico"
+                                                className="text-xs h-7"
+                                              />
+                                              <Input
+                                                value={offer.resource_cta2?.url || ''}
+                                                onChange={(e) => {
+                                                  const newOffers = [...data.schema.offers];
+                                                  newOffers[index] = { 
+                                                    ...newOffers[index], 
+                                                    resource_cta2: { 
+                                                      ...newOffers[index].resource_cta2, 
+                                                      url: e.target.value 
+                                                    }
+                                                  };
+                                                  setData(prev => ({
+                                                    ...prev,
+                                                    schema: { ...prev.schema, offers: newOffers }
+                                                  }));
+                                                }}
+                                                placeholder="URL do link"
+                                                className="text-xs h-7"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* CTA 3 */}
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                              checked={offer.resource_cta3?.visible || false}
+                                              onCheckedChange={(checked) => {
+                                                const newOffers = [...data.schema.offers];
+                                                newOffers[index] = { 
+                                                  ...newOffers[index], 
+                                                  resource_cta3: { 
+                                                    ...newOffers[index].resource_cta3, 
+                                                    visible: !!checked 
+                                                  }
+                                                };
+                                                setData(prev => ({
+                                                  ...prev,
+                                                  schema: { ...prev.schema, offers: newOffers }
+                                                }));
+                                              }}
+                                            />
+                                            <Label className="text-xs">CTA 3 Ativo</Label>
+                                          </div>
+                                          {offer.resource_cta3?.visible && (
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <Input
+                                                value={offer.resource_cta3?.label || ''}
+                                                onChange={(e) => {
+                                                  const newOffers = [...data.schema.offers];
+                                                  newOffers[index] = { 
+                                                    ...newOffers[index], 
+                                                    resource_cta3: { 
+                                                      ...newOffers[index].resource_cta3, 
+                                                      label: e.target.value 
+                                                    }
+                                                  };
+                                                  setData(prev => ({
+                                                    ...prev,
+                                                    schema: { ...prev.schema, offers: newOffers }
+                                                  }));
+                                                }}
+                                                placeholder="Ex: Ver Produto"
+                                                className="text-xs h-7"
+                                              />
+                                              <Input
+                                                value={offer.resource_cta3?.url || ''}
+                                                onChange={(e) => {
+                                                  const newOffers = [...data.schema.offers];
+                                                  newOffers[index] = { 
+                                                    ...newOffers[index], 
+                                                    resource_cta3: { 
+                                                      ...newOffers[index].resource_cta3, 
+                                                      url: e.target.value 
+                                                    }
+                                                  };
+                                                  setData(prev => ({
+                                                    ...prev,
+                                                    schema: { ...prev.schema, offers: newOffers }
+                                                  }));
+                                                }}
+                                                placeholder="URL do link"
+                                                className="text-xs h-7"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex justify-end gap-2">
                                    <Button
                                      variant="outline"
                                      size="sm"
