@@ -5,20 +5,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Trash2, Upload, CheckCircle, Youtube, Instagram, MapPin, Wand2 } from 'lucide-react';
+import { Trash2, Upload, CheckCircle, Youtube, Instagram } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ParsedTestimonial {
   id: string;
-  client_name: string;
-  profession?: string;
-  location?: string;
-  state?: string;
-  specialty?: string;
+  testimonial_text: string;
   youtube_url?: string;
   instagram_url?: string;
-  testimonial_text: string;
   approved: boolean;
 }
 
@@ -38,64 +33,6 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
   const [previewData, setPreviewData] = useState<ParsedTestimonial[]>([]);
   const { toast } = useToast();
 
-  const extractClientInfo = (transcription: string) => {
-    // Extrair nome (procura por emojis + texto, ou Dr./Dra.)
-    const nameMatch = transcription.match(/(?:🦷|👨‍⚕️|👩‍⚕️|🩺)\s*(Dr\.?\s*|Dra\.?\s*)?([\w\s]+?)(?:\s|$)/i) ||
-                      transcription.match(/(Dr\.?\s*|Dra\.?\s*)([\w\s]+?)(?:\s|Transforma|com|–|!)/i);
-    
-    const clientName = nameMatch ? `${nameMatch[1] || ''}${nameMatch[2]}`.trim() : 'Cliente';
-
-    // Extrair localização (procura por 📍 ou padrões de cidade)
-    const locationMatch = transcription.match(/📍\s*([^–\n]+)/i) ||
-                         transcription.match(/(?:em|de)\s*([A-ZÁÀÂÃÉÊÍÔÕÚÇ][a-záàâãéêíôõúç\s]+)(?:\s*[-–]?\s*([A-Z]{2}|Capital))?/i);
-    
-    let location = '';
-    let state = '';
-    if (locationMatch) {
-      const locationParts = locationMatch[1].trim().split(/\s*[-–]\s*/);
-      location = locationParts[0];
-      if (locationParts[1]) {
-        state = locationParts[1] === 'Capital' ? 'SP' : locationParts[1];
-      }
-    }
-
-    // Extrair especialidade
-    const specialtyPatterns = [
-      /especialista\s+em\s+([^,\n]+)/i,
-      /área\s+de\s+([^,\n]+)/i,
-      /(prótese|implante|ortodontia|endodontia|periodontia|cirurgia|estética|odontopediatria)/i
-    ];
-    
-    let specialty = '';
-    for (const pattern of specialtyPatterns) {
-      const match = transcription.match(pattern);
-      if (match) {
-        specialty = match[1].toLowerCase().trim();
-        break;
-      }
-    }
-
-    // Extrair profissão (geralmente "dentista", "cirurgião-dentista", etc.)
-    const professionMatch = transcription.match(/(cirurgião[^,\n]*dentista|dentista|odontólogo)/i);
-    const profession = professionMatch ? professionMatch[1] : 'Dentista';
-
-    // Limpar o texto do depoimento (remover emojis e metadados)
-    let cleanText = transcription
-      .replace(/^[🦷👨‍⚕️👩‍⚕️🩺📍].*/gm, '')
-      .replace(/^(Dr\.?\s*|Dra\.?\s*)[^\n]*/i, '')
-      .replace(/📍[^\n]*/g, '')
-      .replace(/^[\s\n]+|[\s\n]+$/g, '')
-      .trim();
-
-    return {
-      client_name: clientName,
-      profession,
-      location,
-      state,
-      specialty,
-      testimonial_text: cleanText
-    };
-  };
 
   const parseCSV = (csvText: string): ParsedTestimonial[] => {
     const lines = csvText.split('\n').filter(line => line.trim());
@@ -110,16 +47,14 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
       
       const parts = line.split(';');
       if (parts.length >= 1) {
-        const transcription = parts[0]?.trim();
+        const testimonialText = parts[0]?.trim();
         const youtubeUrl = parts[1]?.trim() || '';
         const instagramUrl = parts[2]?.trim() || '';
         
-        if (transcription) {
-          const extracted = extractClientInfo(transcription);
-          
+        if (testimonialText) {
           parsedTestimonials.push({
             id: `video_${Date.now()}_${i}`,
-            ...extracted,
+            testimonial_text: testimonialText,
             youtube_url: youtubeUrl,
             instagram_url: instagramUrl,
             approved: true
@@ -131,33 +66,6 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
     return parsedTestimonials;
   };
 
-  const processWithAI = async (testimonial: ParsedTestimonial) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
-        body: {
-          type: 'video_testimonial_analysis',
-          content: testimonial.testimonial_text,
-          context: {
-            client_name: testimonial.client_name,
-            profession: testimonial.profession,
-            location: testimonial.location,
-            specialty: testimonial.specialty
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      return {
-        ai_keywords: data.keywords || [],
-        ai_extracted_benefits: data.benefits || [],
-        sentiment_score: data.sentiment_score || 0.8
-      };
-    } catch (error) {
-      console.error('Error processing with AI:', error);
-      return null;
-    }
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -216,23 +124,15 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
       for (let i = 0; i < previewData.length; i++) {
         const testimonial = previewData[i];
         
-        // Processar com IA primeiro
-        const aiData = await processWithAI(testimonial);
-        
-        // Salvar no banco
+        // Salvar no banco (simplificado - sem processamento AI)
         const testimonialData = {
-          client_name: testimonial.client_name,
-          profession: testimonial.profession,
-          location: testimonial.location,
-          state: testimonial.state,
-          specialty: testimonial.specialty,
+          client_name: `Depoimento Vídeo #${i + 1}`,
+          testimonial_text: testimonial.testimonial_text,
           youtube_url: testimonial.youtube_url,
           instagram_url: testimonial.instagram_url,
-          testimonial_text: testimonial.testimonial_text,
           landing_page_id: landingPageId,
           approved: true,
-          display_order: i + 1,
-          ...(aiData || {})
+          display_order: i + 1
         };
 
         const { error } = await supabase
@@ -242,14 +142,11 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
         if (error) throw error;
 
         setProcessedCount(i + 1);
-        
-        // Pequena pausa para não sobrecarregar a API
-        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       toast({
         title: "✅ Importação concluída!",
-        description: `${previewData.length} depoimentos importados e processados com IA`,
+        description: `${previewData.length} depoimentos importados com sucesso`,
       });
       
       setPreviewData([]);
@@ -305,7 +202,7 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
           {isProcessing && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Processando com IA e importando...</span>
+                <span>Importando depoimentos...</span>
                 <span>{processedCount}/{totalCount}</span>
               </div>
               <Progress value={(processedCount / totalCount) * 100} />
@@ -321,8 +218,8 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
                     {previewData.length} encontrados
                   </Badge>
                   <Button onClick={importTestimonials} disabled={isProcessing}>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Importar com IA
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Importar Agora
                   </Button>
                 </div>
               </div>
@@ -333,29 +230,23 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{testimonial.client_name}</span>
-                          {testimonial.profession && (
-                            <Badge variant="outline" className="text-xs">{testimonial.profession}</Badge>
-                          )}
-                          {testimonial.location && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {testimonial.location}, {testimonial.state}
-                            </span>
-                          )}
+                          <span className="font-medium text-sm">Depoimento Vídeo #{index + 1}</span>
                         </div>
-                        {testimonial.specialty && (
-                          <Badge variant="secondary" className="text-xs mt-1">{testimonial.specialty}</Badge>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {testimonial.testimonial_text.substring(0, 100)}...
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
+                          {testimonial.testimonial_text.substring(0, 150)}...
                         </p>
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-2 mt-2">
                           {testimonial.youtube_url && (
-                            <Youtube className="h-3 w-3 text-red-500" />
+                            <Badge variant="secondary" className="text-xs">
+                              <Youtube className="h-3 w-3 mr-1 text-red-500" />
+                              YouTube
+                            </Badge>
                           )}
                           {testimonial.instagram_url && (
-                            <Instagram className="h-3 w-3 text-pink-500" />
+                            <Badge variant="secondary" className="text-xs">
+                              <Instagram className="h-3 w-3 mr-1 text-pink-500" />
+                              Instagram
+                            </Badge>
                           )}
                         </div>
                       </div>
