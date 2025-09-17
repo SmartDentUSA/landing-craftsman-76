@@ -220,6 +220,90 @@ export type Database = {
         }
         Relationships: []
       }
+      products_repository: {
+        Row: {
+          ai_generated_benefits: boolean | null
+          ai_generated_category: boolean | null
+          ai_generated_keywords: boolean | null
+          approved: boolean | null
+          benefits: Json | null
+          category: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          display_order: number | null
+          features: Json | null
+          id: string
+          image_url: string | null
+          keywords: Json | null
+          name: string
+          original_data: Json | null
+          price: number | null
+          product_url: string | null
+          source_landing_page_id: string | null
+          source_type: string
+          subcategory: string | null
+          tags: Json | null
+          target_audience: string | null
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          ai_generated_benefits?: boolean | null
+          ai_generated_category?: boolean | null
+          ai_generated_keywords?: boolean | null
+          approved?: boolean | null
+          benefits?: Json | null
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          image_url?: string | null
+          keywords?: Json | null
+          name: string
+          original_data?: Json | null
+          price?: number | null
+          product_url?: string | null
+          source_landing_page_id?: string | null
+          source_type: string
+          subcategory?: string | null
+          tags?: Json | null
+          target_audience?: string | null
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          ai_generated_benefits?: boolean | null
+          ai_generated_category?: boolean | null
+          ai_generated_keywords?: boolean | null
+          approved?: boolean | null
+          benefits?: Json | null
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          image_url?: string | null
+          keywords?: Json | null
+          name?: string
+          original_data?: Json | null
+          price?: number | null
+          product_url?: string | null
+          source_landing_page_id?: string | null
+          source_type?: string
+          subcategory?: string | null
+          tags?: Json | null
+          target_audience?: string | null
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

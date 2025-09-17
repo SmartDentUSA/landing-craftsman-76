@@ -1,5 +1,11 @@
 project_id = "pgfgripuanuwwolmtknn"
 
+[functions.ai-content-generator]
+verify_jwt = false
+
+[functions.migrate-products-to-repository]
+verify_jwt = false
+
 [functions.upload-image]
 verify_jwt = true
 

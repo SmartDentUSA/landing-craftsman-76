@@ -85,25 +85,18 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
 
     setIsGeneratingAds(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke('generate-ad-copies', {
+      console.log('Generating ad copies with unified AI generator for landing page:', landingPageId);
+      
+      // Use the new unified ai-content-generator function
+      const { data: result, error } = await supabase.functions.invoke('ai-content-generator', {
         body: {
+          type: 'google_ads',
+          landingPageId: landingPageId,
           seoTitle,
           seoDescription,
           primaryKeyword: data.seo?.keywords?.[0] || seoTitle,
           targetAudience: data.banner?.subtitle || 'público geral',
-          // Enriquecer contexto com dados da landing page
-          brandInfo: {
-            name: data.brand?.name || 'Sua Empresa',
-            description: data.brand?.description || data.seo.description
-          },
-          solutions: data.solutions?.map((s: any) => ({
-            title: s.title,
-            description: s.description
-          })) || [],
-          faqData: data.faq?.map((f: any) => ({
-            question: f.question,
-            answer: f.answer
-          })) || []
+          contentData: data // Pass the full landing page data for context
         }
       });
 

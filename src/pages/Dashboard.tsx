@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { generateHTML } from "@/lib/template-engine";
 import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 
 
 const DashboardContent = () => {
@@ -21,6 +22,7 @@ const DashboardContent = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -198,6 +200,15 @@ const DashboardContent = () => {
             <div className="flex items-center gap-3">
               <Button 
                 variant="outline" 
+                onClick={() => setMigrationModalOpen(true)}
+                className="border-accent/30 text-accent hover:bg-accent/10"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Migrar Produtos
+              </Button>
+              
+              <Button 
+                variant="outline" 
                 onClick={() => navigate('/publication-settings')}
                 className="border-primary/30 text-primary hover:bg-primary/10"
               >
@@ -355,6 +366,12 @@ const DashboardContent = () => {
           </CardContent>
         </Card>
       </main>
+      
+      {/* Product Migration Modal */}
+      <ProductMigrationModal 
+        open={migrationModalOpen} 
+        onOpenChange={setMigrationModalOpen} 
+      />
     </div>
   );
 };
