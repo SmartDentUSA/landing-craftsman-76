@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
+import { generateBlogHTML } from "@/lib/template-engine";
 import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link } from "lucide-react";
 
 interface BlogPost {
@@ -395,6 +396,61 @@ const saveBlogPost = async () => {
     }
   };
 
+  // Função para processar conteúdo aplicando intelligent_links
+  const processContentWithIntelligentLinks = (content: string) => {
+    if (!content || !blogPost.intelligent_links) return content;
+    
+    let processedContent = content;
+    
+    // Aplicar cada link inteligente
+    Object.entries(blogPost.intelligent_links).forEach(([keyword, url]) => {
+      if (keyword && url) {
+        // Criar regex para encontrar a palavra-chave (case insensitive, word boundary)
+        const regex = new RegExp(`\\b(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
+        
+        // Substituir apenas a primeira ocorrência para evitar links excessivos
+        let replaced = false;
+        processedContent = processedContent.replace(regex, (match) => {
+          if (!replaced) {
+            replaced = true;
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline;">${match}</a>`;
+          }
+          return match;
+        });
+      }
+    });
+    
+    return processedContent;
+  };
+
+  // Função para gerar HTML completo do preview (igual ao Editor)
+  const generateBlogPreviewHTML = () => {
+    if (!blogPost.title && !blogPost.content) {
+      return '<div style="padding: 2rem; text-align: center; color: #666; font-family: Inter, sans-serif;">Configure o título e conteúdo para visualizar o blog post</div>';
+    }
+
+    try {
+      // Processar conteúdo com links inteligentes
+      const processedContent = processContentWithIntelligentLinks(blogPost.content || '');
+      
+      // Criar objeto de dados do blog com conteúdo processado
+      const blogData = {
+        ...blogPost,
+        content: processedContent,
+        landing_page_title: landingPage?.content?.seo_title || "Nossa Solução",
+        landing_page_url: landingPage?.content?.seo?.canonical_url || "#",
+        created_at: new Date().toISOString(),
+        cover_image: landingPage?.content?.banner?.images?.[0] || null,
+        content_images: landingPage?.content?.solutions?.map((s: any) => s.image) || []
+      };
+
+      return generateBlogHTML(blogData, landingPage?.content);
+    } catch (error) {
+      console.error('Erro ao gerar preview do blog:', error);
+      return '<div style="padding: 2rem; text-align: center; color: #f00; font-family: Inter, sans-serif;">Erro ao gerar preview do blog</div>';
+    }
+  };
+
   const publishBlogPost = async () => {
     if (!blogPost.id) {
       await saveBlogPost();
@@ -698,34 +754,14 @@ const saveBlogPost = async () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {previewMode ? (
-                <div className="prose prose-sm max-w-none">
-                  <h1>{blogPost.title || "Título do blog post"}</h1>
-                  <p className="text-muted-foreground">
-                    {blogPost.meta_description}
-                  </p>
-                  {normalizeKeywords(blogPost.keywords).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {normalizeKeywords(blogPost.keywords).map((keyword, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {keyword}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <div 
-                    dangerouslySetInnerHTML={{ 
-                      __html: blogPost.content || "<p>Conteúdo aparecerá aqui...</p>" 
-                    }} 
+            {previewMode ? (
+                <div className="w-full h-full">
+                  <iframe
+                    srcDoc={generateBlogPreviewHTML()}
+                    className="w-full h-full border-0 bg-white rounded"
+                    style={{ minHeight: '600px' }}
+                    title="Blog Preview"
                   />
-                  {blogPost.youtube_video_url && (
-                    <div className="mt-4">
-                      <h3>Vídeo relacionado:</h3>
-                      <a href={blogPost.youtube_video_url} target="_blank" rel="noopener noreferrer">
-                        {blogPost.youtube_video_url}
-                      </a>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground py-8">
