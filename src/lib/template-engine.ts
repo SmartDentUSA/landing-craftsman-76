@@ -921,8 +921,31 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
             
             .resources-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 0.75rem;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.5rem;
+            }
+            
+            .resources-grid .offer-card {
+                min-width: 0;
+            }
+            
+            .resources-grid .offer-content {
+                padding: 0.5rem;
+            }
+            
+            .resources-grid .offer-name {
+                font-size: 0.8rem;
+                line-height: 1.2;
+            }
+            
+            .resources-grid .offer-description {
+                font-size: 0.7rem;
+                line-height: 1.3;
+            }
+            
+            .resources-grid .offer-cta {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.7rem;
             }
         }
         
@@ -944,8 +967,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
             
             .resources-grid {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.4rem;
+            }
+        }
+        
+        @media (max-width: 319px) {
+            .resources-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.3rem;
             }
         }
         
