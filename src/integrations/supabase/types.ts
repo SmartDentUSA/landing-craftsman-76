@@ -69,6 +69,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          intelligent_links: Json | null
           keywords: string[] | null
           landing_page_id: string
           meta_description: string | null
@@ -84,6 +85,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          intelligent_links?: Json | null
           keywords?: string[] | null
           landing_page_id: string
           meta_description?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          intelligent_links?: Json | null
           keywords?: string[] | null
           landing_page_id?: string
           meta_description?: string | null

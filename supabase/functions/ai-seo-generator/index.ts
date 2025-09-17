@@ -31,7 +31,7 @@ serve(async (req) => {
       );
     }
 
-    const { type, content, pageData, title, landingPageData, speed = 'detailed', contentType, fullLandingPageContent } = await req.json();
+    const { type, content, pageData, title, landingPageData, speed = 'detailed', contentType, fullLandingPageContent, intelligent_links = {} } = await req.json();
 
     if (!type || !content) {
       return new Response(
@@ -119,16 +119,40 @@ Retorne no formato JSON especificado.`;
         break;
 
       case 'blog_content':
-        systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.
+        // Construir estratégia de link building baseada nos links inteligentes fornecidos
+        const hasIntelligentLinks = Object.keys(intelligent_links).length > 0;
+        
+        let linkBuildingStrategy = '';
+        if (hasIntelligentLinks) {
+          linkBuildingStrategy = `
+LINK BUILDING INTELIGENTE PERSONALIZADO:
+${Object.entries(intelligent_links).map(([keyword, url]) => {
+  const fullUrl = url.startsWith('http') ? url : `https://smartdent.com.br${url}`;
+  return `• "${keyword}" → <a href="${fullUrl}" target="_blank">${keyword}</a>`;
+}).join('\n')}
 
-LINK BUILDING ESTRATÉGICO OBRIGATÓRIO - Sempre inclua links para smartdent.com.br quando mencionar:
+INSTRUÇÕES DE USO DOS LINKS:
+• Use APENAS os links fornecidos acima
+• Insira-os naturalmente quando as palavras-chave aparecem no contexto
+• Varie os anchor texts relacionados (sinônimos, variações da palavra-chave)
+• Distribua 3-5 links ao longo do artigo de forma estratégica
+• Priorize links que fazem sentido contextual no parágrafo
+• Não force links onde não se encaixam naturalmente`;
+        } else {
+          linkBuildingStrategy = `
+LINK BUILDING ESTRATÉGICO PADRÃO SMARTDENT:
 • "scanner intraoral", "BLZ Scanner", "scanner" → <a href="https://smartdent.com.br/scanners" target="_blank">scanner intraoral</a>
 • "fluxo digital", "odontologia digital" → <a href="https://smartdent.com.br/fluxo-digital" target="_blank">fluxo digital</a>
 • "Smartdent" → <a href="https://smartdent.com.br" target="_blank">Smartdent</a>
 • "treinamento", "capacitação", "curso" → <a href="https://smartdent.com.br/treinamentos" target="_blank">treinamento</a>
 • "implantodontia digital" → <a href="https://smartdent.com.br/implantes" target="_blank">implantodontia digital</a>
 • "prótese digital" → <a href="https://smartdent.com.br/proteses" target="_blank">prótese digital</a>
-• "tecnologia odontológica" → <a href="https://smartdent.com.br/tecnologia" target="_blank">tecnologia odontológica</a>
+• "tecnologia odontológica" → <a href="https://smartdent.com.br/tecnologia" target="_blank">tecnologia odontológica</a>`;
+        }
+
+        systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.
+
+${linkBuildingStrategy}
 
 IMPORTANTE: Use 3-5 links por artigo de forma natural. Varie os anchor texts para SEO.`;
         

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Eye, Send, ArrowLeft, Sparkles } from "lucide-react";
+import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link } from "lucide-react";
 
 interface BlogPost {
   id?: string;
@@ -20,6 +20,7 @@ interface BlogPost {
   youtube_video_url: string;
   status: string;
   published_domains: string[];
+  intelligent_links: Record<string, string>;
 }
 
 interface LandingPageData {
@@ -41,6 +42,7 @@ export default function BlogGenerator() {
     youtube_video_url: "",
     status: "draft",
     published_domains: [],
+    intelligent_links: {},
   });
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -103,6 +105,7 @@ export default function BlogGenerator() {
           youtube_video_url: data.youtube_video_url || "",
           status: data.status,
           published_domains: data.published_domains || [],
+          intelligent_links: (data.intelligent_links as Record<string, string>) || {},
         });
       }
     } catch (error) {
@@ -145,15 +148,14 @@ export default function BlogGenerator() {
           type: "blog_content",
           content: `Criar um artigo de blog baseado na landing page: ${landingPage.description}. 
           O artigo deve ter pelo menos 800 palavras, incluir subtítulos (h2, h3), 
-          ser otimizado para SEO e incluir links estratégicos para smartdent.com.br.
+          ser otimizado para SEO e incluir links estratégicos usando os links inteligentes fornecidos.
           
           CONTEXTO SMARTDENT: A Smartdent é líder em odontologia digital no Brasil, oferecendo:
           - Scanners intraorais BLZ Scanner
           - Treinamentos e capacitação completa
           - Fluxo digital integrado para consultórios
-          - Tecnologia para implantodontia e prótese digital
-          
-          Inclua naturalmente links para smartdent.com.br quando mencionar estes temas.`,
+          - Tecnologia para implantodontia e prótese digital`,
+          intelligent_links: blogPost.intelligent_links,
         },
       });
 
@@ -205,6 +207,7 @@ export default function BlogGenerator() {
         keywords: blogPost.keywords,
         youtube_video_url: blogPost.youtube_video_url,
         status: blogPost.status,
+        intelligent_links: blogPost.intelligent_links,
       };
 
       if (blogPost.id) {
@@ -404,6 +407,125 @@ export default function BlogGenerator() {
                   rows={20}
                   className="font-mono text-sm"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SEO Inteligente com IA */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link className="h-5 w-5" />
+                SEO Inteligente com IA
+              </CardTitle>
+              <CardDescription>
+                Configure links inteligentes que a IA usará contextualmente no conteúdo do blog
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Links Configurados</Label>
+                <Button
+                  onClick={() => {
+                    const newLinks = { ...blogPost.intelligent_links };
+                    newLinks[""] = "";
+                    setBlogPost(prev => ({ ...prev, intelligent_links: newLinks }));
+                  }}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Link
+                </Button>
+              </div>
+
+              <div className="space-y-3 max-h-48 overflow-y-auto">
+                {Object.entries(blogPost.intelligent_links).map(([keyword, url], index) => (
+                  <div key={index} className="flex gap-2 items-center p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Palavra-chave (ex: scanner intraoral)"
+                        value={keyword}
+                        onChange={(e) => {
+                          const newLinks = { ...blogPost.intelligent_links };
+                          delete newLinks[keyword];
+                          newLinks[e.target.value] = url;
+                          setBlogPost(prev => ({ ...prev, intelligent_links: newLinks }));
+                        }}
+                        className="mb-2"
+                      />
+                      <Input
+                        placeholder="URL (ex: /produtos/scanner)"
+                        value={url}
+                        onChange={(e) => {
+                          const newLinks = { ...blogPost.intelligent_links };
+                          newLinks[keyword] = e.target.value;
+                          setBlogPost(prev => ({ ...prev, intelligent_links: newLinks }));
+                        }}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => {
+                        const newLinks = { ...blogPost.intelligent_links };
+                        delete newLinks[keyword];
+                        setBlogPost(prev => ({ ...prev, intelligent_links: newLinks }));
+                      }}
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {Object.keys(blogPost.intelligent_links).length === 0 && (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Link className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhum link configurado</p>
+                    <p className="text-xs">Clique em "Adicionar Link" para começar</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Templates pré-definidos */}
+              <div className="border-t pt-4">
+                <Label className="text-sm font-medium mb-2 block">Templates Smartdent</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => {
+                      const smartdentLinks = {
+                        "scanner intraoral": "/produtos/scanner-intraoral",
+                        "odontologia digital": "/servicos/odontologia-digital",
+                        "fluxo digital": "/servicos/fluxo-digital",
+                        "implantodontia digital": "/servicos/implantodontia",
+                        "prótese digital": "/servicos/protese-digital",
+                        "treinamento": "/treinamentos",
+                        "capacitação": "/treinamentos/capacitacao",
+                        "BLZ Scanner": "/produtos/blz-scanner",
+                      };
+                      setBlogPost(prev => ({ 
+                        ...prev, 
+                        intelligent_links: { ...prev.intelligent_links, ...smartdentLinks }
+                      }));
+                    }}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Template Smartdent
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-blue-800 text-sm font-medium mb-1">
+                  <Sparkles className="h-4 w-4" />
+                  Como funciona o SEO Inteligente
+                </div>
+                <p className="text-blue-700 text-xs">
+                  A IA analisa o contexto do artigo e automaticamente insere os links quando as palavras-chave aparecem no texto, 
+                  variando os anchor texts naturalmente para um SEO mais eficaz.
+                </p>
               </div>
             </CardContent>
           </Card>
