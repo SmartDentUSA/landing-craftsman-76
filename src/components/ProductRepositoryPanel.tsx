@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Package, Star, DollarSign, Filter, Eye, EyeOff } from "lucide-react";
+import { Search, Package, Star, DollarSign, Filter, Eye, EyeOff, RefreshCw, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useProductSync } from "@/hooks/useProductSync";
+import useLandingPages from "@/hooks/useLandingPages";
 
 interface Product {
   id: string;
@@ -29,12 +31,14 @@ interface ProductRepositoryPanelProps {
   landingPageId: string;
   onProductSelectionChange: (selectedProducts: Product[]) => void;
   className?: string;
+  onSyncTriggered?: () => void;
 }
 
 export function ProductRepositoryPanel({ 
   landingPageId, 
   onProductSelectionChange, 
-  className 
+  className,
+  onSyncTriggered 
 }: ProductRepositoryPanelProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -43,7 +47,10 @@ export function ProductRepositoryPanel({
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
+  const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
+  const { getLandingPage } = useLandingPages();
 
   // Load products from repository
   useEffect(() => {
@@ -167,6 +174,32 @@ export function ProductRepositoryPanel({
     }).format(price);
   };
 
+  const handleSyncOffers = async () => {
+    if (!landingPageId) return;
+
+    setIsSyncing(true);
+    try {
+      // Get current landing page data
+      const landingPage = getLandingPage(landingPageId);
+      if (!landingPage?.data?.schema?.offers) {
+        // Try to migrate existing data first
+        await migrateExistingOffers(landingPageId);
+      } else {
+        // Sync current offers
+        await syncOffersToRepository(landingPageId, landingPage.data.schema.offers);
+      }
+      
+      // Reload products after sync
+      await loadProducts();
+      onSyncTriggered?.();
+      
+    } catch (error) {
+      console.error('Error syncing offers:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className={className}>
@@ -260,9 +293,26 @@ export function ProductRepositoryPanel({
               )}
             </Button>
             
-            <Badge variant="secondary">
-              {filteredProducts.length} produtos
-            </Badge>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncOffers}
+                disabled={isSyncing}
+                className="gap-2"
+              >
+                {isSyncing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+                Sincronizar
+              </Button>
+              
+              <Badge variant="secondary">
+                {filteredProducts.length} produtos
+              </Badge>
+            </div>
           </div>
         </div>
       </CardHeader>

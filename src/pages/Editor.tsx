@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -29,6 +29,7 @@ import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
+import { useProductSync } from "@/hooks/useProductSync";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { generateSafeHTML, generateSafeEmailHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import { supabase } from "@/integrations/supabase/client";
@@ -800,6 +801,7 @@ const EditorContent = () => {
   const { toast } = useToast();
   const { id } = useParams();
   const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
+  const { syncOffersToRepository } = useProductSync();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
   
@@ -852,6 +854,17 @@ const EditorContent = () => {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [generatingBlog, setGeneratingBlog] = useState(false);
   
+  // Auto-sync offers to repository when they change
+  const handleAutoSyncOffers = useCallback(async (newData: LandingPageData) => {
+    if (id && newData.schema?.offers) {
+      try {
+        await syncOffersToRepository(id, newData.schema.offers);
+      } catch (error) {
+        console.error('Auto-sync failed:', error);
+      }
+    }
+  }, [id, syncOffersToRepository]);
+
   // Função para aplicar valores automáticos aos campos principais
   const applyAutoSEOValues = () => {
     setData(prev => ({
@@ -5044,13 +5057,20 @@ const EditorContent = () => {
                         valid_through: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias
                       }));
                       
-                      setData(prev => ({
-                        ...prev,
-                        schema: {
-                          ...prev.schema,
-                          offers: [...prev.schema.offers, ...processedProducts]
-                        }
-                      }));
+                      setData(prev => {
+                        const updatedData = {
+                          ...prev,
+                          schema: {
+                            ...prev.schema,
+                            offers: [...prev.schema.offers, ...processedProducts]
+                          }
+                        };
+                        
+                        // Auto-sync to repository
+                        handleAutoSyncOffers(updatedData);
+                        
+                        return updatedData;
+                      });
                       toast({
                         title: "Produtos importados",
                         description: `${importedProducts.length} produto(s) adicionado(s) às ofertas`,
@@ -5073,11 +5093,15 @@ const EditorContent = () => {
                                variant="outline"
                                size="sm"
                                onClick={() => {
-                                 const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: true }));
-                                 setData(prev => ({
-                                   ...prev,
-                                   schema: { ...prev.schema, offers: newOffers }
-                                 }));
+                                  const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: true }));
+                                  setData(prev => {
+                                    const updatedData = {
+                                      ...prev,
+                                      schema: { ...prev.schema, offers: newOffers }
+                                    };
+                                    handleAutoSyncOffers(updatedData);
+                                    return updatedData;
+                                  });
                                }}
                                className="h-7 px-2 text-xs"
                              >
@@ -5087,11 +5111,15 @@ const EditorContent = () => {
                                variant="outline"
                                size="sm"
                                onClick={() => {
-                                 const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: false }));
-                                 setData(prev => ({
-                                   ...prev,
-                                   schema: { ...prev.schema, offers: newOffers }
-                                 }));
+                                  const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: false }));
+                                  setData(prev => {
+                                    const updatedData = {
+                                      ...prev,
+                                      schema: { ...prev.schema, offers: newOffers }
+                                    };
+                                    handleAutoSyncOffers(updatedData);
+                                    return updatedData;
+                                  });
                                }}
                                className="h-7 px-2 text-xs"
                              >
@@ -6925,6 +6953,10 @@ dataLayer = [{
                   <ProductRepositoryPanel
                     landingPageId={id || ''}
                     onProductSelectionChange={setSelectedProducts}
+                    onSyncTriggered={() => {
+                      // Reload data or trigger updates if needed
+                      console.log('Products synced successfully');
+                    }}
                     className="h-full border-0 rounded-none"
                   />
                 </TabsContent>
