@@ -70,14 +70,34 @@ export class VideoCollector {
 
   static collectFromProducts(landingPageData: any): VideoExtension[] {
     try {
-      if (!landingPageData?.editor_data?.products || !Array.isArray(landingPageData.editor_data.products)) {
-        return [];
-      }
-
       const videos: VideoExtension[] = [];
       const seenUrls = new Set<string>();
 
-      landingPageData.editor_data.products.forEach((product: any, index: number) => {
+      // Try to find products in multiple possible locations
+      let products: any[] = [];
+      
+      // Priority 1: schema.offers (current editor structure)
+      if (landingPageData?.schema?.offers && Array.isArray(landingPageData.schema.offers)) {
+        products = landingPageData.schema.offers;
+        console.log(`VideoCollector: Found ${products.length} products in schema.offers`);
+      }
+      // Priority 2: editor_data.products (legacy structure)
+      else if (landingPageData?.editor_data?.products && Array.isArray(landingPageData.editor_data.products)) {
+        products = landingPageData.editor_data.products;
+        console.log(`VideoCollector: Found ${products.length} products in editor_data.products`);
+      }
+      // Priority 3: Direct offers array
+      else if (landingPageData?.offers && Array.isArray(landingPageData.offers)) {
+        products = landingPageData.offers;
+        console.log(`VideoCollector: Found ${products.length} products in offers`);
+      }
+
+      if (products.length === 0) {
+        console.log('VideoCollector: No products found in any expected location');
+        return [];
+      }
+
+      products.forEach((product: any, index: number) => {
         // Process YouTube URLs
         if (product.youtube_url && !seenUrls.has(product.youtube_url)) {
           const youtubeId = this.extractYouTubeId(product.youtube_url);
@@ -87,6 +107,7 @@ export class VideoCollector {
               label: product.name ? `Produto: ${product.name}` : `Produto ${index + 1}`
             });
             seenUrls.add(product.youtube_url);
+            console.log(`VideoCollector: Added YouTube video for product "${product.name || `Produto ${index + 1}`}": ${youtubeId}`);
           }
         }
 
@@ -96,6 +117,7 @@ export class VideoCollector {
         }
       });
 
+      console.log(`VideoCollector: Collected ${videos.length} YouTube videos from products`);
       return videos;
     } catch (error) {
       console.error('Error collecting videos from products:', error);
