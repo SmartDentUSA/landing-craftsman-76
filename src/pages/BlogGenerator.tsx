@@ -232,6 +232,44 @@ export default function BlogGenerator() {
           - Fluxo digital integrado para consultórios
           - Tecnologia para implantodontia e prótese digital`,
           intelligent_links: blogPost.intelligent_links,
+          speed: "detailed",
+          fullLandingPageContent: {
+            banner: {
+              title: "Odontologia Digital SmartDent",
+              subtitle: "Tecnologia avançada para o futuro da odontologia"
+            },
+            solutions: {
+              title: "Nossas Soluções",
+              items: [
+                { text: "Scanner Intraoral BLZ - Precisão digital revolucionária" },
+                { text: "Fluxo Digital Completo - Da captura à entrega final" },
+                { text: "Treinamento Especializado - Capacitação completa da equipe" },
+                { text: "Suporte Técnico 24/7 - Assistência quando você precisar" },
+                { text: "Integração com Software - Conectividade total" }
+              ]
+            },
+            faq: {
+              title: "Perguntas Frequentes",
+              items: [
+                {
+                  question: "Como funciona o scanner intraoral?",
+                  answer: "O scanner captura imagens 3D precisas da boca do paciente em tempo real, eliminando a necessidade de moldagens tradicionais."
+                },
+                {
+                  question: "Qual o investimento necessário?",
+                  answer: "Oferecemos planos flexíveis de financiamento e locação para adequar ao seu orçamento."
+                },
+                {
+                  question: "Como é o treinamento da equipe?",
+                  answer: "Nosso programa de capacitação inclui treinamento presencial e online, com certificação ao final."
+                }
+              ]
+            },
+            seo: {
+              hidden_content: landingPage.description,
+              description: landingPage.description
+            }
+          }
         },
       });
 
