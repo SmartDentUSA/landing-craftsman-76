@@ -124,6 +124,7 @@ interface SchemaData {
     productUrl?: string;
     youtube_url?: string;
     instagram_url?: string;
+    image?: string;
     sourceType?: 'manual' | 'imported';
     lastUpdated?: string;
   }>;
@@ -1618,6 +1619,7 @@ const EditorContent = () => {
           name: productData.name || newOffers[index].name,
           price: productData.price || newOffers[index].price,
           description: productData.description || newOffers[index].description,
+          image: productData.image || newOffers[index].image,
           sourceType: 'imported',
           lastUpdated: new Date().toISOString()
         };
@@ -4690,34 +4692,47 @@ const EditorContent = () => {
                                       className="text-sm h-8"
                                     />
                                   </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                      value={offer.youtube_url || ''}
-                                      onChange={(e) => {
-                                        const newOffers = [...data.schema.offers];
-                                        newOffers[index] = { ...newOffers[index], youtube_url: e.target.value };
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: { ...prev.schema, offers: newOffers }
-                                        }));
-                                      }}
-                                      placeholder="Vídeo YouTube"
-                                      className="text-sm h-8"
-                                    />
-                                    <Input
-                                      value={offer.instagram_url || ''}
-                                      onChange={(e) => {
-                                        const newOffers = [...data.schema.offers];
-                                        newOffers[index] = { ...newOffers[index], instagram_url: e.target.value };
-                                        setData(prev => ({
-                                          ...prev,
-                                          schema: { ...prev.schema, offers: newOffers }
-                                        }));
-                                      }}
-                                      placeholder="Vídeo Instagram"
-                                      className="text-sm h-8"
-                                    />
-                                  </div>
+                                   <Input
+                                     value={offer.image || ''}
+                                     onChange={(e) => {
+                                       const newOffers = [...data.schema.offers];
+                                       newOffers[index] = { ...newOffers[index], image: e.target.value };
+                                       setData(prev => ({
+                                         ...prev,
+                                         schema: { ...prev.schema, offers: newOffers }
+                                       }));
+                                     }}
+                                     placeholder="URL da imagem"
+                                     className="text-sm h-8"
+                                   />
+                                   <div className="grid grid-cols-2 gap-2">
+                                     <Input
+                                       value={offer.youtube_url || ''}
+                                       onChange={(e) => {
+                                         const newOffers = [...data.schema.offers];
+                                         newOffers[index] = { ...newOffers[index], youtube_url: e.target.value };
+                                         setData(prev => ({
+                                           ...prev,
+                                           schema: { ...prev.schema, offers: newOffers }
+                                         }));
+                                       }}
+                                       placeholder="Vídeo YouTube"
+                                       className="text-sm h-8"
+                                     />
+                                     <Input
+                                       value={offer.instagram_url || ''}
+                                       onChange={(e) => {
+                                         const newOffers = [...data.schema.offers];
+                                         newOffers[index] = { ...newOffers[index], instagram_url: e.target.value };
+                                         setData(prev => ({
+                                           ...prev,
+                                           schema: { ...prev.schema, offers: newOffers }
+                                         }));
+                                       }}
+                                       placeholder="Vídeo Instagram"
+                                       className="text-sm h-8"
+                                     />
+                                   </div>
                                  <Textarea
                                    value={offer.description || ''}
                                    onChange={(e) => {
@@ -4749,13 +4764,25 @@ const EditorContent = () => {
                                  </div>
                                </div>
                              ) : (
-                               // View mode
-                               <div className="flex items-center justify-between gap-3">
-                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                   <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
-                                     {index + 1}
-                                   </div>
-                                   <div className="flex-1 min-w-0">
+                                // View mode
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
+                                      {index + 1}
+                                    </div>
+                                    {offer.image && (
+                                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                        <img 
+                                          src={offer.image} 
+                                          alt={offer.name || 'Produto'} 
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
                                      <div className="text-sm font-medium truncate">
                                        {offer.name || `Oferta ${index + 1}`}
                                      </div>
