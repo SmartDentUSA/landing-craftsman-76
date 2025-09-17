@@ -51,6 +51,10 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
       source: 'google',
       medium: 'cpc',
       campaign: `lp-${landingPageId}`
+    },
+    schedule: {
+      start: '',
+      end: ''
     }
   });
   
@@ -65,10 +69,14 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
   }, [campaignConfig, data]);
 
   const generateAdCopies = async () => {
-    if (!data?.seo?.title || !data?.seo?.description) {
+    // Use fallback data if SEO data is missing
+    const seoTitle = data?.seo?.title || data?.banner?.title || data?.brand?.name || 'Seu Serviço';
+    const seoDescription = data?.seo?.description || data?.banner?.subtitle || 'Serviços de qualidade para você';
+    
+    if (!seoTitle || !seoDescription) {
       toast({
         title: 'Dados insuficientes',
-        description: 'Preencha o título e descrição SEO antes de gerar anúncios.',
+        description: 'Dados básicos da landing page necessários para gerar anúncios.',
         variant: 'destructive'
       });
       return null;
@@ -78,9 +86,9 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
     try {
       const { data: result, error } = await supabase.functions.invoke('generate-ad-copies', {
         body: {
-          seoTitle: data.seo.title,
-          seoDescription: data.seo.description,
-          primaryKeyword: data.seo.keywords?.[0] || data.seo.title,
+          seoTitle,
+          seoDescription,
+          primaryKeyword: data.seo?.keywords?.[0] || seoTitle,
           targetAudience: data.banner?.subtitle || 'público geral',
           // Enriquecer contexto com dados da landing page
           brandInfo: {
@@ -141,6 +149,33 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
         message: 'Orçamento diário muito baixo (mínimo recomendado: R$ 10)',
         field: 'daily_budget_brl'
       });
+    }
+
+    // Date validation
+    if (campaignConfig.schedule?.start) {
+      const startDate = new Date(campaignConfig.schedule.start);
+      const now = new Date();
+      
+      if (startDate < now) {
+        newWarnings.push({
+          type: 'warning',
+          message: 'Data de início está no passado',
+          field: 'start_date'
+        });
+      }
+    }
+
+    if (campaignConfig.schedule?.start && campaignConfig.schedule?.end) {
+      const startDate = new Date(campaignConfig.schedule.start);
+      const endDate = new Date(campaignConfig.schedule.end);
+      
+      if (endDate <= startDate) {
+        newWarnings.push({
+          type: 'error',
+          message: 'Data de fim deve ser posterior à data de início',
+          field: 'end_date'
+        });
+      }
     }
     
     if (!data?.seo?.canonical_url?.startsWith('https://')) {
@@ -316,6 +351,34 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
                         onChange={(e) => setCampaignConfig(prev => ({
                           ...prev,
                           daily_budget_brl: Number(e.target.value)
+                        }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="start-date">Data de Início da Campanha</Label>
+                      <Input
+                        id="start-date"
+                        type="datetime-local"
+                        value={campaignConfig.schedule?.start || ''}
+                        onChange={(e) => setCampaignConfig(prev => ({
+                          ...prev,
+                          schedule: { ...prev.schedule, start: e.target.value }
+                        }))}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="end-date">Data de Fim da Campanha</Label>
+                      <Input
+                        id="end-date"
+                        type="datetime-local"
+                        value={campaignConfig.schedule?.end || ''}
+                        onChange={(e) => setCampaignConfig(prev => ({
+                          ...prev,
+                          schedule: { ...prev.schedule, end: e.target.value }
                         }))}
                       />
                     </div>
