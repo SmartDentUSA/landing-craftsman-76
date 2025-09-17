@@ -1951,12 +1951,15 @@ const EditorContent = () => {
           </Card>
 
           <Tabs defaultValue="landing-page" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className={`grid w-full ${data.status === 'approved' ? 'grid-cols-6' : 'grid-cols-5'}`}>
               <TabsTrigger value="landing-page">Conteúdo</TabsTrigger>
               <TabsTrigger value="seo-social">SEO & Social</TabsTrigger>
               <TabsTrigger value="schema-offers">Schema & Offers</TabsTrigger>
               <TabsTrigger value="brand-trust">Marca & Confiança</TabsTrigger>
               <TabsTrigger value="email">Email Marketing</TabsTrigger>
+              {data.status === 'approved' && (
+                <TabsTrigger value="google-ads">Google Ads</TabsTrigger>
+              )}
             </TabsList>
 
             {/* Aba Conteúdo (Landing Page) */}
@@ -6529,6 +6532,20 @@ const EditorContent = () => {
                 </AccordionItem>
               </Accordion>
             </TabsContent>
+
+            {/* Aba Google Ads */}
+            {data.status === 'approved' && (
+              <TabsContent value="google-ads" className="space-y-4">
+                <GoogleAdsTab 
+                  landingPageId={id!}
+                  data={data}
+                  onUpdate={(config) => {
+                    console.log('Google Ads config updated:', config);
+                    // Opcional: salvar config nas landing pages
+                  }}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
