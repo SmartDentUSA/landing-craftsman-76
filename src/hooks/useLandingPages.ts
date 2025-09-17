@@ -31,7 +31,7 @@ const useLandingPages = create<LandingPagesStore>()(
     (set, get) => ({
       landingPages: [
         {
-          id: '1',
+          id: 'lp_1758075930044',
           name: 'Smart Dent Campanha Q1',
           status: 'approved',
           lastModified: new Date('2024-01-15'),
@@ -43,7 +43,7 @@ const useLandingPages = create<LandingPagesStore>()(
           }
         },
         {
-          id: '2',
+          id: 'lp_1758075930045',
           name: 'Promoção Implantes Março',
           status: 'draft',
           lastModified: new Date('2024-01-14'),
@@ -55,7 +55,7 @@ const useLandingPages = create<LandingPagesStore>()(
           }
         },
         {
-          id: '3',
+          id: 'lp_1758075930046',
           name: 'Landing Ortodontia Premium',
           status: 'approved',
           lastModified: new Date('2024-01-10'),
