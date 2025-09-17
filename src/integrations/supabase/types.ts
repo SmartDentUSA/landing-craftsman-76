@@ -160,6 +160,33 @@ export type Database = {
         }
         Relationships: []
       }
+      google_ads_campaigns: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          landing_page_id: string
+          last_exported: string | null
+          updated_at: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          id?: string
+          landing_page_id: string
+          last_exported?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          landing_page_id?: string
+          last_exported?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_reviews: {
         Row: {
           approved: boolean
