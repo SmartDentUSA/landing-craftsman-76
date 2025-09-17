@@ -28,7 +28,11 @@ export const KeywordManager = ({ config, data, onChange }: KeywordManagerProps) 
 
     // Collect from AI keywords
     if (config.include_ai_keywords && data?.seo?.ai_keywords) {
-      keywords.push(...KeywordCollector.collectFromAI(data.seo.ai_keywords));
+      try {
+        keywords.push(...KeywordCollector.collectFromAI(data.seo.ai_keywords));
+      } catch (error) {
+        console.warn('Error collecting AI keywords:', error);
+      }
     }
 
     // Collect from FAQ
