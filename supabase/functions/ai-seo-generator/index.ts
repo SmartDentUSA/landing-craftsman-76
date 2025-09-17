@@ -76,9 +76,22 @@ Formato EXATO:
         userPrompt = `Baseado no conteúdo: "${content}"\n\nGere um texto contextual (50-100 palavras) que:\n1. Descreva o nicho/categoria da página\n2. Inclua termos semânticos relacionados\n3. Forneça contexto sobre o produto/serviço\n4. Use linguagem natural e relevante\n\nEste texto será usado apenas para SEO (invisível ao usuário). Responda APENAS com o texto contextual.`;
         break;
 
+      case 'blog_content':
+        systemPrompt = 'Você é um especialista em criação de conteúdo para blogs de odontologia. Crie artigos informativos, envolventes e otimizados para SEO.';
+        userPrompt = `Crie um artigo completo de blog (mínimo 800 palavras) sobre: ${content}. 
+        O artigo deve incluir:
+        - Introdução envolvente
+        - Subtítulos (h2, h3) bem estruturados
+        - Conteúdo informativo e útil
+        - Conclusão
+        - Links naturais para eodonto.com e dentala.com.br quando relevante
+        - Otimização para palavras-chave relacionadas à odontologia
+        Formato: HTML simples com tags h2, h3, p, ul, li, strong, em.`;
+        break;
+
       default:
         return new Response(
-          JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content' }),
+          JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content, blog_content' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
@@ -96,7 +109,7 @@ Formato EXATO:
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
-        max_tokens: type === 'keywords' ? 500 : 200,
+        max_tokens: type === 'blog_content' ? 2000 : (type === 'keywords' ? 500 : 200),
       }),
     });
 

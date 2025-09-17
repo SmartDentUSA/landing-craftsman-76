@@ -8,6 +8,8 @@ import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import CodeView from "./pages/CodeView";
 import CloudflareSettings from "./pages/CloudflareSettings";
+import PublicationSettings from "./pages/PublicationSettings";
+import BlogGenerator from "./pages/BlogGenerator";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/editor/:id" element={<ProtectedRoute requiredRole="admin"><Editor /></ProtectedRoute>} />
           <Route path="/code-view" element={<ProtectedRoute requiredRole="admin"><CodeView /></ProtectedRoute>} />
           <Route path="/cloudflare-settings" element={<ProtectedRoute requiredRole="admin"><CloudflareSettings /></ProtectedRoute>} />
+          <Route path="/publication-settings" element={<ProtectedRoute requiredRole="admin"><PublicationSettings /></ProtectedRoute>} />
+          <Route path="/blog-generator/:id" element={<ProtectedRoute requiredRole="admin"><BlogGenerator /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

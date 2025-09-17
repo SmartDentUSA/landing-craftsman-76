@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -191,10 +191,21 @@ const DashboardContent = () => {
                 Crie e gerencie suas landing pages com facilidade
               </p>
             </div>
-            <Button onClick={handleCreateNew} className="gradient-primary shadow-primary transition-smooth hover:scale-105">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Landing Page
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/publication-settings')}
+                className="border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Configurações de Publicação
+              </Button>
+              
+              <Button onClick={handleCreateNew} className="gradient-primary shadow-primary transition-smooth hover:scale-105">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Landing Page
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -293,15 +304,27 @@ const DashboardContent = () => {
                       Excluir
                     </Button>
                     {landingPage.status === 'approved' && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleCopyCode(landingPage)}
-                        className="bg-success hover:bg-success/90"
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copiar Código
-                      </Button>
+                      <>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleCopyCode(landingPage)}
+                          className="bg-success hover:bg-success/90"
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copiar Código
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/blog-generator/${landingPage.id}`)}
+                          className="border-primary/30 text-primary hover:bg-primary/10"
+                        >
+                          <PenTool className="h-4 w-4 mr-2" />
+                          Gerar Blog Post
+                        </Button>
+                      </>
                     )}
                     
                     <DropdownMenu>

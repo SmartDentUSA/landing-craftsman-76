@@ -64,6 +64,54 @@ export type Database = {
           },
         ]
       }
+      blog_posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          keywords: string[] | null
+          landing_page_id: string
+          meta_description: string | null
+          published_at: string | null
+          published_domains: string[] | null
+          schema_json_ld: Json | null
+          status: string
+          title: string
+          updated_at: string
+          youtube_video_url: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          keywords?: string[] | null
+          landing_page_id: string
+          meta_description?: string | null
+          published_at?: string | null
+          published_domains?: string[] | null
+          schema_json_ld?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+          youtube_video_url?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          keywords?: string[] | null
+          landing_page_id?: string
+          meta_description?: string | null
+          published_at?: string | null
+          published_domains?: string[] | null
+          schema_json_ld?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+          youtube_video_url?: string | null
+        }
+        Relationships: []
+      }
       extraction_jobs: {
         Row: {
           business_name: string | null
@@ -160,6 +208,45 @@ export type Database = {
           email?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      publication_settings: {
+        Row: {
+          created_at: string
+          ftp_host: string | null
+          ftp_password_encrypted: string | null
+          ftp_user: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          wordpress_app_password_encrypted: string | null
+          wordpress_url: string | null
+          wordpress_user: string | null
+        }
+        Insert: {
+          created_at?: string
+          ftp_host?: string | null
+          ftp_password_encrypted?: string | null
+          ftp_user?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          wordpress_app_password_encrypted?: string | null
+          wordpress_url?: string | null
+          wordpress_user?: string | null
+        }
+        Update: {
+          created_at?: string
+          ftp_host?: string | null
+          ftp_password_encrypted?: string | null
+          ftp_user?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          wordpress_app_password_encrypted?: string | null
+          wordpress_url?: string | null
+          wordpress_user?: string | null
         }
         Relationships: []
       }
