@@ -76,6 +76,27 @@ Formato EXATO:
         userPrompt = `Baseado no conteúdo: "${content}"\n\nGere um texto contextual (50-100 palavras) que:\n1. Descreva o nicho/categoria da página\n2. Inclua termos semânticos relacionados\n3. Forneça contexto sobre o produto/serviço\n4. Use linguagem natural e relevante\n\nEste texto será usado apenas para SEO (invisível ao usuário). Responda APENAS com o texto contextual.`;
         break;
 
+      case 'faq_keywords':
+        systemPrompt = 'Você é um especialista em SEO focado em intenção de busca. Analise FAQs para gerar keywords altamente relevantes baseadas nas dúvidas reais dos usuários.';
+        userPrompt = `Analise este FAQ e gere 8-12 palavras-chave que respondam às dúvidas dos usuários:
+
+FAQ CONTENT:
+${content}
+
+CONTEXTO: ${requestBody.context || ''}
+
+INSTRUÇÕES:
+1. Identifique as principais dúvidas (como, onde, quando, por que, quanto)
+2. Gere keywords long-tail baseadas nas perguntas
+3. Inclua variações das perguntas que pessoas fazem no Google
+4. Foque em keywords com intenção comercial e informacional
+5. Priorize termos que levam à conversão
+
+FORMATO: Responda APENAS com as keywords separadas por vírgula, sem numeração ou explicações.
+
+EXEMPLO: "como funciona [produto], melhor [categoria] para [necessidade], [produto] vale a pena, onde comprar [produto]"`;
+        break;
+
       case 'blog_content':
         systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.`;
         

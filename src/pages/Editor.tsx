@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { useToast } from "@/hooks/use-toast";
@@ -758,7 +758,7 @@ const EditorContent = () => {
   const [autoKeywords, setAutoKeywords] = useState<string[]>([]);
   const [autoMetaDesc, setAutoMetaDesc] = useState('');
   const [autoSeoTitle, setAutoSeoTitle] = useState('');
-  const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false });
+  const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false, faqKeywords: false, blog: false });
   
   const [previewTab, setPreviewTab] = useState('landing-preview');
   const [blogPostData, setBlogPostData] = useState<any>(null);
@@ -3176,613 +3176,214 @@ const EditorContent = () => {
                            {data.seo.ai_seo_enabled && (
                              <div className="space-y-4">
                                 {/* Conteúdo Oculto SEO com IA */}
-                               <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <Label className="text-xs font-medium text-purple-700">🎯 Conteúdo Oculto SEO</Label>
-                                    <div className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
-                                      Base para IA
-                                    </div>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={aiLoading.hidden}
-                                    onClick={async () => {
-                                      if (aiLoading.hidden) return;
-                                      setAiLoading(prev => ({ ...prev, hidden: true }));
-                                      try {
-                                        const contentRaw = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
-                                        const content = (contentRaw || '').trim();
-                                        if (!content) {
-                                          toast({ title: "Informe o contexto", description: "Adicione detalhes no campo 'Conteúdo Oculto SEO' para a IA trabalhar melhor.", variant: "destructive" });
-                                          return;
-                                        }
-                                        const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                          body: { type: 'hidden_content', content }
-                                        });
-                                        if (error) {
-                                          const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
-                                          const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
-                                          toast({ title: "Erro de IA", description: tip, variant: "destructive" });
-                                          return;
-                                        }
-                                        if ((fnData as any)?.error) {
-                                          const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar conteúdo.";
-                                          const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
-                                          toast({ title: "Erro de IA", description: hint, variant: "destructive" });
-                                          return;
-                                        }
-                                        if ((fnData as any)?.content) {
-                                          setData(prev => ({
-                                            ...prev,
-                                            seo: { ...prev.seo, seo_hidden_content: (fnData as any).content }
-                                          }));
-                                          toast({ title: "Conteúdo SEO gerado", description: "Conteúdo oculto gerado com IA." });
-                                        } else {
-                                          toast({ title: "Sem conteúdo", description: "A IA não retornou conteúdo. Tente novamente com mais detalhes.", variant: "destructive" });
-                                        }
-                                      } catch (error: any) {
-                                        const msg = error?.message || "Erro inesperado ao gerar conteúdo SEO.";
-                                        toast({ title: "Erro", description: msg, variant: "destructive" });
-                                      } finally {
-                                        setAiLoading(prev => ({ ...prev, hidden: false }));
-                                      }
-                                    }}
-                                    className="text-xs h-6 px-2 bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200"
-                                  >
-                                    {aiLoading.hidden ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "✨ Sugerir com IA"}
-                                  </Button>
-                                </div>
-                                
-                                <div className="mb-3 p-2 bg-purple-50 rounded border border-purple-200">
-                                  <p className="text-xs text-purple-700 font-medium mb-1">💡 Como usar:</p>
-                                  <p className="text-xs text-purple-600">
-                                    Este campo alimenta todas as funcionalidades de IA. Descreva detalhadamente seu negócio para obter resultados mais precisos nas palavras-chave, meta descriptions e conteúdo de blog.
-                                  </p>
-                                </div>
-                                
+                                <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                                 <div className="flex items-center justify-between mb-2">
+                                   <div className="flex items-center gap-2">
+                                     <Label className="text-xs font-medium text-purple-700">🎯 Conteúdo Oculto SEO</Label>
+                                     <div className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
+                                       Base para IA
+                                     </div>
+                                   </div>
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     disabled={aiLoading.hidden}
+                                     onClick={async () => {
+                                       if (aiLoading.hidden) return;
+                                       setAiLoading(prev => ({ ...prev, hidden: true }));
+                                       try {
+                                         const contentRaw = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
+                                         const content = (contentRaw || '').trim();
+                                         if (!content) {
+                                           toast({ title: "Informe o contexto", description: "Adicione detalhes no campo 'Conteúdo Oculto SEO' para a IA trabalhar melhor.", variant: "destructive" });
+                                           return;
+                                         }
+                                         
+                                         const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
+                                           body: { type: 'hidden_content', content }
+                                         });
+                                         
+                                         if (error) throw error;
+                                         if (result?.content) {
+                                           setData(prev => ({
+                                             ...prev,
+                                             seo: { ...prev.seo, seo_hidden_content: result.content }
+                                           }));
+                                           toast({ title: "✨ Conteúdo gerado!", description: "Conteúdo oculto SEO criado com sucesso." });
+                                         }
+                                       } catch (error) {
+                                         console.error('Erro ao gerar conteúdo oculto:', error);
+                                         toast({ title: "Erro", description: "Falha ao gerar conteúdo oculto", variant: "destructive" });
+                                       } finally {
+                                         setAiLoading(prev => ({ ...prev, hidden: false }));
+                                       }
+                                     }}
+                                   >
+                                     {aiLoading.hidden ? (
+                                       <>
+                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                         Gerando...
+                                       </>
+                                     ) : (
+                                       <>
+                                         <Wand2 className="w-3 h-3 mr-1" />
+                                         Gerar IA
+                                       </>
+                                     )}
+                                   </Button>
+                                 </div>
                                  <Textarea
-                                   value={data.seo.seo_hidden_content || ''}
+                                   placeholder="Ex: Nossa empresa oferece soluções digitais para e-commerce, marketing digital, SEO..."
+                                   value={data.seo.seo_hidden_content}
                                    onChange={(e) => setData(prev => ({
                                      ...prev,
                                      seo: { ...prev.seo, seo_hidden_content: e.target.value }
                                    }))}
-                                   placeholder="Exemplo: Somos uma empresa de marketing digital especializada em campanhas para e-commerce de moda. Nossos diferenciais incluem análise de dados avançada, gestão de redes sociais e criação de conteúdo visual. Atendemos principalmente PMEs que desejam aumentar vendas online..."
-                                   className="text-xs min-h-[120px] max-h-[400px] resize-y overflow-auto bg-white border-purple-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+                                   className="text-xs min-h-[60px] text-purple-700 bg-white/50"
                                  />
-                                 <div className="flex justify-between items-center mt-2">
-                                   <p className="text-xs text-purple-600">
-                                     {(data.seo.seo_hidden_content || '').length} caracteres • Recomendado: 200+ caracteres
-                                   </p>
-                                   {(data.seo.seo_hidden_content || '').length > 200 && (
-                                     <div className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                                       ✅ Conteúdo suficiente
+                               </div>
+
+                               {/* Geração de Keywords baseada no FAQ */}
+                               <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                                 <div className="flex items-center justify-between mb-2">
+                                   <div className="flex items-center gap-2">
+                                     <Label className="text-xs font-medium text-green-700">📋 Keywords do FAQ</Label>
+                                     <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
+                                       SEO Inteligente
                                      </div>
+                                   </div>
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     disabled={aiLoading.faqKeywords || !data.faq?.length}
+                                     onClick={async () => {
+                                       if (aiLoading.faqKeywords || !data.faq?.length) return;
+                                       setAiLoading(prev => ({ ...prev, faqKeywords: true }));
+                                       try {
+                                         // Extrair perguntas e respostas do FAQ
+                                         const faqContent = data.faq.map(item => 
+                                           `P: ${item.question}\nR: ${item.answer}`
+                                         ).join('\n\n');
+                                         
+                                         if (!faqContent.trim()) {
+                                           toast({ title: "FAQ vazio", description: "Adicione perguntas e respostas no FAQ primeiro.", variant: "destructive" });
+                                           return;
+                                         }
+                                         
+                                         const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
+                                           body: { 
+                                             type: 'faq_keywords', 
+                                             content: faqContent,
+                                             context: `${data.banner.title} ${data.banner.subtitle}`
+                                           }
+                                         });
+                                         
+                                         if (error) throw error;
+                                         if (result?.content) {
+                                            // Combinar keywords existentes com as novas do FAQ
+                                            const existingKeywords = data.seo.ai_keywords || '';
+                                            const newKeywords = existingKeywords ? 
+                                              `${existingKeywords}, ${result.content}` : 
+                                              result.content;
+                                            
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, ai_keywords: newKeywords }
+                                            }));
+                                           toast({ 
+                                             title: "✨ Keywords do FAQ geradas!", 
+                                             description: `${data.faq.length} perguntas analisadas com sucesso.` 
+                                           });
+                                         }
+                                       } catch (error) {
+                                         console.error('Erro ao gerar keywords do FAQ:', error);
+                                         toast({ title: "Erro", description: "Falha ao gerar keywords do FAQ", variant: "destructive" });
+                                       } finally {
+                                         setAiLoading(prev => ({ ...prev, faqKeywords: false }));
+                                       }
+                                     }}
+                                   >
+                                     {aiLoading.faqKeywords ? (
+                                       <>
+                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                         Analisando FAQ...
+                                       </>
+                                     ) : (
+                                       <>
+                                         <Lightbulb className="w-3 h-3 mr-1" />
+                                         Gerar Keywords
+                                       </>
+                                     )}
+                                   </Button>
+                                 </div>
+                                 <div className="text-xs text-green-700 bg-white/50 p-2 rounded border">
+                                   {data.faq?.length ? (
+                                     <span>✅ {data.faq.length} perguntas no FAQ prontas para análise</span>
+                                   ) : (
+                                     <span>⚠️ Adicione perguntas no FAQ primeiro</span>
                                    )}
                                  </div>
-                              </div>
+                               </div>
 
-                               {/* Palavras-chave editáveis com IA */}
-                               <div className="p-3 bg-white rounded-lg border">
+                               {/* Geração de Blog baseado no conteúdo */}
+                               <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-200">
                                  <div className="flex items-center justify-between mb-2">
-                                   <Label className="text-xs font-medium text-gray-700">🔑 Palavras-chave</Label>
-                                   <div className="flex gap-1">
-                                     <div className="relative">
-                                       <Button
-                                         size="sm"
-                                         variant="outline"
-                                         onClick={() => {
-                                           const { keywords } = analyzeContent(data);
-                                           setAutoKeywords(keywords.slice(0, 8));
-                                         }}
-                                         className="text-xs h-6 px-2 border-gray-300 text-gray-600 hover:bg-gray-50"
-                                         title="Análise simples baseada no conteúdo visível"
-                                       >
-                                         📝 Análise Básica
-                                       </Button>
+                                   <div className="flex items-center gap-2">
+                                     <Label className="text-xs font-medium text-orange-700">📰 Blog Post IA</Label>
+                                     <div className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">
+                                       Novo
                                      </div>
-                                     <div className="relative">
-                                       <Button
-                                         size="sm"
-                                         variant="outline"
-                                         disabled={aiLoading.keywords}
-                                         onClick={async () => {
-                                         if (aiLoading.keywords) return;
-                                         setAiLoading(prev => ({ ...prev, keywords: true }));
-                                         try {
-                                           // Usar conteúdo oculto SEO como fonte primária
-                                           const primaryContent = data.seo.seo_hidden_content?.trim();
-                                           const fallbackContent = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.trim();
-                                           
-                                            if (!primaryContent && !fallbackContent) {
-                                              toast({ 
-                                                title: "⚠️ Conteúdo necessário", 
-                                                description: "Preencha o 'Conteúdo Oculto SEO' acima para melhores resultados ou forneça pelo menos título/descrição básica.", 
-                                                variant: "destructive" 
-                                              });
-                                              return;
-                                            }
-
-                                           // Usar conteúdo oculto SEO (até 4000 chars) ou fallback básico
-                                           const content = primaryContent ? primaryContent.slice(0, 4000) : fallbackContent.slice(0, 1000);
-                                           
-                                           const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                             body: { type: 'keywords', content }
-                                           });
-                                           if (error) {
-                                             const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
-                                             const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
-                                             toast({ title: "Erro de IA", description: tip, variant: "destructive" });
-                                             return;
-                                           }
-                                           if ((fnData as any)?.error) {
-                                             const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar keywords.";
-                                             const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
-                                             toast({ title: "Erro de IA", description: hint, variant: "destructive" });
-                                             return;
-                                           }
-                                           const payload = (fnData as any)?.content;
-                                           if (payload && !payload.warning) {
-                                             // Verificar se há keywords válidas
-                                             const hasKeywords = (payload.primary?.length > 0) || 
-                                                               (payload.secondary?.length > 0) || 
-                                                               (payload.lsi?.length > 0) || 
-                                                               (payload.long_tail?.length > 0);
-                                             
-                                             if (!hasKeywords) {
-                                               toast({ 
-                                                 title: "Sem keywords", 
-                                                 description: primaryContent ? 
-                                                   "IA não conseguiu extrair palavras-chave. Tente reformular o conteúdo oculto SEO." :
-                                                   "Adicione mais detalhes no 'Conteúdo Oculto SEO' para melhores resultados.", 
-                                                 variant: "destructive" 
-                                               });
-                                               return;
-                                             }
-
-                                             const keywords = [
-                                               ...(payload.primary || []),
-                                               ...(payload.secondary || []).slice(0, 5),
-                                               ...(payload.lsi || []).slice(0, 3)
-                                             ];
-                                             setAutoKeywords(keywords);
-                                             setData(prev => ({
-                                               ...prev,
-                                               seo: { ...prev.seo, ai_keywords: payload }
-                                             }));
-                                              toast({ 
-                                                title: "🎯 Keywords geradas com IA!", 
-                                                description: primaryContent ? 
-                                                  `${keywords.length} palavras-chave geradas com base no seu conteúdo SEO detalhado!` : 
-                                                  "Keywords básicas geradas! 💡 Preencha 'Conteúdo Oculto SEO' para resultados mais precisos." 
-                                              });
-                                           } else {
-                                             const warningMsg = payload?.warning || "A IA não retornou keywords válidas.";
-                                             toast({ title: "Aviso", description: warningMsg, variant: "destructive" });
-                                           }
-                                         } catch (error: any) {
-                                           const msg = error?.message || "Erro inesperado ao gerar keywords.";
-                                           toast({ title: "Erro", description: msg, variant: "destructive" });
-                                         } finally {
-                                           setAiLoading(prev => ({ ...prev, keywords: false }));
+                                   </div>
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     disabled={aiLoading.blog}
+                                     onClick={async () => {
+                                       if (aiLoading.blog) return;
+                                       setAiLoading(prev => ({ ...prev, blog: true }));
+                                       try {
+                                         const contentRaw = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
+                                         const content = (contentRaw || '').trim();
+                                         if (!content) {
+                                           toast({ title: "Conteúdo insuficiente", description: "Preencha título, subtítulo e parágrafo principal.", variant: "destructive" });
+                                           return;
                                          }
-                                        }}
-                                       className={`text-xs h-6 px-2 ${
-                                         (data.seo.seo_hidden_content || '').length > 200 
-                                           ? 'bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200 shadow-sm' 
-                                           : 'border-purple-300 text-purple-700 hover:bg-purple-50'
-                                       }`}
-                                       title="Gera palavras-chave inteligentes usando o Conteúdo Oculto SEO"
-                                     >
-                                       {aiLoading.keywords ? (
-                                         <span className="inline-flex items-center gap-1">
-                                           <Loader2 className="h-3 w-3 animate-spin" /> Analisando...
-                                         </span>
-                                       ) : (
-                                         <span className="inline-flex items-center gap-1">
-                                           🤖 IA Avançada
-                                           {(data.seo.seo_hidden_content || '').length > 200 && (
-                                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                           )}
-                                         </span>
-                                       )}
-                                     </Button>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex flex-wrap gap-1">
-                                    {autoKeywords.length > 0 ? autoKeywords.map((keyword, idx) => (
-                                      <div key={idx} className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded px-2 py-1">
-                                        <span className="text-xs text-blue-800">{keyword}</span>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => setAutoKeywords(prev => prev.filter((_, i) => i !== idx))}
-                                          className="h-4 w-4 p-0 text-blue-600 hover:text-red-600"
-                                        >
-                                          ×
-                                        </Button>
-                                      </div>
-                                     )) : (
-                                       <div className="text-center py-4">
-                                         <p className="text-xs text-gray-500 mb-2">🎯 Nenhuma palavra-chave detectada</p>
-                                         <div className="flex flex-col gap-1">
-                                           <p className="text-xs text-gray-400">
-                                             • <strong>Análise Básica:</strong> palavras do conteúdo visível
-                                           </p>
-                                           <p className="text-xs text-gray-400">
-                                             • <strong>IA Avançada:</strong> análise semântica do conteúdo SEO
-                                           </p>
-                                         </div>
-                                       </div>
+                                         
+                                         const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
+                                           body: { type: 'blog_content', content }
+                                         });
+                                         
+                                         if (error) throw error;
+                                         if (result?.content) {
+                                           // Redirecionar para a página de blog com o conteúdo
+                                           navigate(`/blog-generator/${id}`, { 
+                                             state: { generatedContent: result.content }
+                                           });
+                                         }
+                                       } catch (error) {
+                                         console.error('Erro ao gerar blog:', error);
+                                         toast({ title: "Erro", description: "Falha ao gerar blog post", variant: "destructive" });
+                                       } finally {
+                                         setAiLoading(prev => ({ ...prev, blog: false }));
+                                       }
+                                     }}
+                                   >
+                                     {aiLoading.blog ? (
+                                       <>
+                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                         Criando...
+                                       </>
+                                     ) : (
+                                       <>
+                                         <FileText className="w-3 h-3 mr-1" />
+                                         Criar Blog
+                                       </>
                                      )}
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Input
-                                      placeholder="Adicionar palavra-chave"
-                                      className="text-xs h-8"
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          const value = (e.target as HTMLInputElement).value.trim();
-                                          if (value && !autoKeywords.includes(value)) {
-                                            setAutoKeywords(prev => [...prev, value]);
-                                            (e.target as HTMLInputElement).value = '';
-                                          }
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Meta Description editável */}
-                              <div className="p-3 bg-white rounded-lg border">
-                                <div className="flex items-center justify-between mb-2">
-                                  <Label className="text-xs font-medium text-gray-700">Meta Description:</Label>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setAutoMetaDesc(generateMetaDescription(data, autoKeywords))}
-                                      className="text-xs h-6 px-2"
-                                    >
-                                      Regenerar
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      disabled={aiLoading.meta}
-                                      onClick={async () => {
-                                        if (aiLoading.meta) return;
-                                        setAiLoading(prev => ({ ...prev, meta: true }));
-                                        try {
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000).trim();
-                                          if (!content) {
-                                            toast({ title: "Informe o conteúdo", description: "Forneça título/subtítulo/descrição para gerar meta description.", variant: "destructive" });
-                                            return;
-                                          }
-                                          const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                            body: { type: 'meta_description', content }
-                                          });
-                                          if (error) {
-                                            const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
-                                            const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
-                                            toast({ title: "Erro de IA", description: tip, variant: "destructive" });
-                                            return;
-                                          }
-                                          if ((fnData as any)?.error) {
-                                            const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar meta description.";
-                                            const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
-                                            toast({ title: "Erro de IA", description: hint, variant: "destructive" });
-                                            return;
-                                          }
-                                          if ((fnData as any)?.content) {
-                                            setAutoMetaDesc((fnData as any).content);
-                                            setData(prev => ({
-                                              ...prev,
-                                              seo: { ...prev.seo, seo_generated_by_ai: true }
-                                            }));
-                                            toast({ title: "Meta description gerada", description: "Descrição otimizada com IA." });
-                                          } else {
-                                            toast({ title: "Sem conteúdo", description: "A IA não retornou meta description.", variant: "destructive" });
-                                          }
-                                        } catch (error: any) {
-                                          const msg = error?.message || "Erro inesperado ao gerar meta description.";
-                                          toast({ title: "Erro", description: msg, variant: "destructive" });
-                                        } finally {
-                                          setAiLoading(prev => ({ ...prev, meta: false }));
-                                        }
-                                      }}
-                                      className="text-xs h-6 px-2 border-purple-300 text-purple-700"
-                                    >
-                                      {aiLoading.meta ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setData(prev => ({
-                                          ...prev,
-                                          seo_description: autoMetaDesc
-                                        }));
-                                        toast({
-                                          title: "Meta description aplicada",
-                                          description: "A meta description foi aplicada ao campo principal.",
-                                        });
-                                      }}
-                                      className="text-xs h-6 px-2"
-                                    >
-                                      Aplicar
-                                    </Button>
-                                  </div>
-                                </div>
-                                <Textarea
-                                  value={autoMetaDesc}
-                                  onChange={(e) => setAutoMetaDesc(e.target.value)}
-                                  placeholder="Clique em Regenerar para gerar automaticamente"
-                                  className="text-xs min-h-[60px] resize-none"
-                                  maxLength={160}
-                                />
-                                <div className="flex justify-between mt-1">
-                                  <span className="text-xs text-gray-500">Meta description para SEO</span>
-                                  <span className={`text-xs ${autoMetaDesc.length > 160 ? 'text-red-600' : autoMetaDesc.length > 140 ? 'text-yellow-600' : 'text-green-600'}`}>
-                                    {autoMetaDesc.length}/160 caracteres
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* SEO Title editável */}
-                              <div className="p-3 bg-white rounded-lg border">
-                                <div className="flex items-center justify-between mb-2">
-                                  <Label className="text-xs font-medium text-gray-700">SEO Title:</Label>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setAutoSeoTitle(generateSEOTitle(data, autoKeywords))}
-                                      className="text-xs h-6 px-2"
-                                    >
-                                      Regenerar
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      disabled={aiLoading.title}
-                                      onClick={async () => {
-                                        if (aiLoading.title) return;
-                                        setAiLoading(prev => ({ ...prev, title: true }));
-                                        try {
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.slice(0, 1000).trim();
-                                          if (!content) {
-                                            toast({ title: "Informe o conteúdo", description: "Forneça título/subtítulo/descrição para gerar título SEO.", variant: "destructive" });
-                                            return;
-                                          }
-                                          const { data: fnData, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                            body: { type: 'seo_title', content }
-                                          });
-                                          if (error) {
-                                            const msg = (error as any)?.message || "Falha ao chamar a função de IA.";
-                                            const tip = msg.includes("402") || msg.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : msg;
-                                            toast({ title: "Erro de IA", description: tip, variant: "destructive" });
-                                            return;
-                                          }
-                                          if ((fnData as any)?.error) {
-                                            const tip = (fnData as any)?.details || (fnData as any)?.error || "Falha ao gerar título SEO.";
-                                            const hint = `${tip}`.includes("402") || `${tip}`.toLowerCase().includes("insufficient") ? "Saldo insuficiente da IA (DeepSeek). Recarregue créditos ou atualize a chave nas Secrets do Supabase." : tip;
-                                            toast({ title: "Erro de IA", description: hint, variant: "destructive" });
-                                            return;
-                                          }
-                                          if ((fnData as any)?.content) {
-                                            setAutoSeoTitle((fnData as any).content);
-                                            setData(prev => ({
-                                              ...prev,
-                                              seo: { ...prev.seo, seo_generated_by_ai: true }
-                                            }));
-                                            toast({ title: "Título SEO gerado", description: "Título otimizado com IA." });
-                                          } else {
-                                            toast({ title: "Sem conteúdo", description: "A IA não retornou título.", variant: "destructive" });
-                                          }
-                                        } catch (error: any) {
-                                          const msg = error?.message || "Erro inesperado ao gerar título SEO.";
-                                          toast({ title: "Erro", description: msg, variant: "destructive" });
-                                        } finally {
-                                          setAiLoading(prev => ({ ...prev, title: false }));
-                                        }
-                                      }}
-                                      className="text-xs h-6 px-2 border-purple-300 text-purple-700"
-                                    >
-                                      {aiLoading.title ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setData(prev => ({
-                                          ...prev,
-                                          seo_title: autoSeoTitle
-                                        }));
-                                        toast({
-                                          title: "SEO title aplicado",
-                                          description: "O título SEO foi aplicado ao campo principal.",
-                                        });
-                                      }}
-                                      className="text-xs h-6 px-2"
-                                    >
-                                      Aplicar
-                                    </Button>
-                                  </div>
-                                </div>
-                                <Input
-                                  value={autoSeoTitle}
-                                  onChange={(e) => setAutoSeoTitle(e.target.value)}
-                                  placeholder="Clique em Regenerar para gerar automaticamente"
-                                  className="text-xs h-8"
-                                  maxLength={60}
-                                />
-                                <div className="flex justify-between mt-1">
-                                  <span className="text-xs text-gray-500">Título para resultados de busca</span>
-                                  <span className={`text-xs ${autoSeoTitle.length > 60 ? 'text-red-600' : autoSeoTitle.length > 50 ? 'text-yellow-600' : 'text-green-600'}`}>
-                                    {autoSeoTitle.length}/60 caracteres
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Botão para aplicar todos os valores */}
-                              <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <Label className="text-sm font-medium text-blue-900">Aplicar Automação Completa</Label>
-                                    <p className="text-xs text-blue-700 mt-1">
-                                      Aplicar todos os valores gerados aos campos principais de SEO
-                                    </p>
-                                  </div>
-                                  <Button
-                                    onClick={applyAutoSEOValues}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                  >
-                                    Aplicar Tudo
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Score SEO Avançado */}
-                              <div className="p-3 bg-white rounded-lg border space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-xs font-medium text-gray-700">Score SEO Avançado:</Label>
-                                  <div className="flex items-center gap-2">
-                                    {(() => {
-                                      const { score, percentage, breakdown } = computeSEOScore(data);
-                                      return (
-                                        <>
-                                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                                            <div 
-                                              className={`h-2 rounded-full ${percentage >= 75 ? 'bg-green-500' : percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                                              style={{ width: `${percentage}%` }}
-                                            ></div>
-                                          </div>
-                                          <span className={`text-xs font-medium ${percentage >= 75 ? 'text-green-600' : percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                                            {percentage}%
-                                          </span>
-                                        </>
-                                      );
-                                    })()}
-                                  </div>
-                                </div>
-                                
-                                {/* Checklist detalhado */}
-                                {(() => {
-                                  const { breakdown } = computeSEOScore(data);
-                                  const pendingItems = breakdown.filter(item => item.status === 'pending');
-                                  const okItems = breakdown.filter(item => item.status === 'ok');
-                                  
-                                  return (
-                                    <div className="space-y-2">
-                                      {/* Itens OK */}
-                                      {okItems.length > 0 && (
-                                        <div className="text-xs">
-                                          <p className="text-green-600 font-medium mb-1">✅ Completo ({okItems.length}/9):</p>
-                                          <div className="text-green-700 space-y-1">
-                                            {okItems.map((item, idx) => (
-                                              <p key={idx}>• {item.item} ({item.points}pts)</p>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Itens Pendentes */}
-                                      {pendingItems.length > 0 && (
-                                        <div className="text-xs">
-                                          <p className="text-amber-600 font-medium mb-1">⚠️ Pendente ({pendingItems.length}/9):</p>
-                                          <div className="text-amber-700 space-y-1">
-                                            {pendingItems.map((item, idx) => (
-                                              <p key={idx}>• {item.message} ({item.points}pts)</p>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Botões de correção rápida */}
-                                      <div className="flex flex-wrap gap-1 pt-2">
-                        {!data.seo.og_image.src && data.solutions.length > 0 && data.solutions[0].image.src && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-6 px-2"
-                            onClick={() => {
-                              setData(prev => ({
-                                ...prev,
-                                seo: {
-                                  ...prev.seo,
-                                  og_image: {
-                                    ...data.solutions[0].image,
-                                    alt: 'Imagem OG - ' + data.solutions[0].text.substring(0, 50)
-                                  }
-                                }
-                              }));
-                              toast({ title: "✅ Imagem da Soluções 1 definida como OG" });
-                            }}
-                          >
-                            📸 Usar Soluções 1 como OG
-                          </Button>
-                        )}
-                                        
-                                        {!data.seo.canonical_url && data.seo.domain && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-xs h-6 px-2"
-                                            onClick={() => {
-                                              const slug = (data.seo_title || data.name || 'home').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-                                              const canonical = generateCanonicalUrl(data.seo.domain, slug);
-                                              setData(prev => ({
-                                                ...prev,
-                                                seo: { ...prev.seo, canonical_url: canonical }
-                                              }));
-                                              toast({ title: "✅ URL canônica gerada" });
-                                            }}
-                                          >
-                                            🔗 Gerar Canonical
-                                          </Button>
-                                        )}
-                                        
-                                        {(!data.seo_title || data.seo_title === 'Smart Dent - Sistema de Gestão Odontológica') && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-xs h-6 px-2"
-                                            onClick={() => {
-                                              const newTitle = generateSEOTitle(data);
-                                              setData(prev => ({
-                                                ...prev,
-                                                seo_title: newTitle,
-                                                seo: { ...prev.seo, seo_title: newTitle }
-                                              }));
-                                              toast({ title: "✅ Título SEO gerado automaticamente" });
-                                            }}
-                                          >
-                                            📝 Gerar Título
-                                          </Button>
-                                        )}
-                                        
-                                        {(!data.seo_description || data.seo_description === 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.') && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-xs h-6 px-2"
-                                            onClick={() => {
-                                              const newDesc = generateMetaDescription(data);
-                                              setData(prev => ({ ...prev, seo_description: newDesc }));
-                                              toast({ title: "✅ Descrição SEO gerada automaticamente" });
-                                            }}
-                                          >
-                                            📄 Gerar Descrição
-                                          </Button>
-                                        )}
-                                       </div>
-                                     </div>
-                                   );
-                                 })()}
+                                   </Button>
+                                 </div>
+                                 <div className="text-xs text-orange-700 bg-white/50 p-2 rounded border">
+                                   Gera um blog post completo baseado no conteúdo da landing page
+                                 </div>
                                </div>
                              </div>
                            )}
