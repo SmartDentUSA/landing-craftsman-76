@@ -31,7 +31,7 @@ serve(async (req) => {
       );
     }
 
-    const { type, content, pageData, title, landingPageData, speed = 'detailed', contentType } = await req.json();
+    const { type, content, pageData, title, landingPageData, speed = 'detailed', contentType, fullLandingPageContent } = await req.json();
 
     if (!type || !content) {
       return new Response(
@@ -78,8 +78,6 @@ Formato EXATO:
 
       case 'blog_content':
         systemPrompt = `Você é um especialista em criação de conteúdo para blogs que utiliza todo o conteúdo da landing page para criar artigos ricos e envolventes.`;
-        
-        const { fullLandingPageContent } = body;
         
         if (speed === 'fast') {
           userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post conciso e direto de 400-600 palavras:
