@@ -239,6 +239,12 @@ interface LandingPageData {
     table_headers: string[];
     table_data: Array<{ [key: string]: string }>;
   };
+  offers_section: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+    title: string;
+    subtitle?: string;
+  };
   advisory: {
     title: string;
     paragraph: string;
@@ -970,6 +976,12 @@ const EditorContent = () => {
         { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
       ]
     },
+    offers_section: {
+      visible_desktop: true,
+      visible_mobile: true,
+      title: 'Ofertas Especiais',
+      subtitle: 'Produtos em destaque com preços promocionais'
+    },
     advisory: {
       title: 'Consultoria personalizada para o seu negócio',
       paragraph: 'Nossa equipe de especialistas oferece consultoria completa para implementação de odontologia digital em clínicas de todos os portes.',
@@ -1415,6 +1427,14 @@ const EditorContent = () => {
               ]
             };
           }
+          if (!loadedData.offers_section) {
+            loadedData.offers_section = {
+              visible_desktop: true,
+              visible_mobile: true,
+              title: 'Ofertas Especiais',
+              subtitle: 'Produtos em destaque com preços promocionais'
+            };
+          }
           
           // Garantir que todos os campos ImageData existem
           if (!loadedData.logo_url || typeof (loadedData.logo_url as any) === 'string') {
@@ -1508,6 +1528,14 @@ const EditorContent = () => {
                 { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
                 { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
               ]
+            };
+          }
+          if (!migratedData.offers_section) {
+            migratedData.offers_section = {
+              visible_desktop: true,
+              visible_mobile: true,
+              title: 'Ofertas Especiais',
+              subtitle: 'Produtos em destaque com preços promocionais'
             };
           }
           // Garantir bloco schema/google_reviews ao migrar
@@ -2607,10 +2635,92 @@ const EditorContent = () => {
                       </>
                     )}
                   </AccordionContent>
-                </AccordionItem>
+                 </AccordionItem>
 
-                {/* Consultoria */}
-                <AccordionItem value="advisory">
+                 {/* Ofertas na Landing Page */}
+                 {data.schema?.offers && data.schema.offers.length > 0 && (
+                   <AccordionItem value="offers-section">
+                     <AccordionTrigger>
+                       <div className="flex items-center gap-2">
+                         <Tag className="h-4 w-4" />
+                         Ofertas na Landing Page
+                         <Badge variant="secondary">{data.schema.offers.length}</Badge>
+                       </div>
+                     </AccordionTrigger>
+                     <AccordionContent className="space-y-4">
+                       <div className="space-y-3">
+                         <div className="flex items-center space-x-2">
+                           <Switch
+                             checked={data.offers_section?.visible_desktop ?? false}
+                             onCheckedChange={(checked) => setData(prev => ({
+                               ...prev,
+                               offers_section: { 
+                                 ...(prev.offers_section || { 
+                                   visible_desktop: false,
+                                   visible_mobile: false, 
+                                   title: 'Ofertas Especiais',
+                                   subtitle: 'Produtos em destaque com preços promocionais'
+                                 }), 
+                                 visible_desktop: checked 
+                               }
+                             }))}
+                           />
+                           <Label className="font-medium">Visível no desktop</Label>
+                         </div>
+                         
+                         <div className="flex items-center space-x-2">
+                           <Switch
+                             checked={data.offers_section?.visible_mobile ?? false}
+                             onCheckedChange={(checked) => setData(prev => ({
+                               ...prev,
+                               offers_section: { 
+                                 ...(prev.offers_section || { 
+                                   visible_desktop: false,
+                                   visible_mobile: false,
+                                   title: 'Ofertas Especiais',
+                                   subtitle: 'Produtos em destaque com preços promocionais'
+                                 }), 
+                                 visible_mobile: checked 
+                               }
+                             }))}
+                           />
+                           <Label className="font-medium">Visível no mobile</Label>
+                         </div>
+                       </div>
+                       
+                       {((data.offers_section?.visible_desktop ?? false) || (data.offers_section?.visible_mobile ?? false)) && (
+                         <>
+                           <div>
+                             <Label>Título da Seção</Label>
+                             <Input
+                               value={data.offers_section?.title ?? ''}
+                               onChange={(e) => setData(prev => ({
+                                 ...prev,
+                                 offers_section: { ...prev.offers_section!, title: e.target.value }
+                               }))}
+                               placeholder="Ex: Ofertas Especiais"
+                             />
+                           </div>
+                           
+                           <div>
+                             <Label>Subtítulo (opcional)</Label>
+                             <Input
+                               value={data.offers_section?.subtitle ?? ''}
+                               onChange={(e) => setData(prev => ({
+                                 ...prev,
+                                 offers_section: { ...prev.offers_section!, subtitle: e.target.value }
+                               }))}
+                               placeholder="Ex: Produtos em destaque com preços promocionais"
+                             />
+                           </div>
+                         </>
+                       )}
+                     </AccordionContent>
+                   </AccordionItem>
+                 )}
+
+                 {/* Consultoria */}
+                 <AccordionItem value="advisory">
                   <AccordionTrigger>Consultoria</AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>

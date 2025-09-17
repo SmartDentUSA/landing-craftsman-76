@@ -658,6 +658,113 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
         }
 
+        /* Ofertas Section */
+        .offers-section { 
+            background: var(--background-color); 
+            padding: 2.5rem 0; 
+        }
+        .offers-section h2 { 
+            text-align: center; 
+            margin-bottom: 0.5rem; 
+            color: var(--text-color);
+        }
+        .offers-section .subtitle {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+        }
+        .offers-grid { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 1.5rem; 
+            margin: 2rem 0;
+        }
+        @media (min-width: 768px) {
+            .offers-grid { 
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+                gap: 2rem;
+                max-width: 1000px;
+                margin: 2rem auto;
+            }
+        }
+        .offer-card {
+            background: var(--white);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+        .offer-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        .offer-image-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            position: relative;
+        }
+        .offer-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .offer-content {
+            padding: 1.5rem;
+        }
+        .offer-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+        .offer-description {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        .offer-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        .offer-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .offer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .offer-link.youtube {
+            background: #ff0000;
+            color: white;
+        }
+        .offer-link.instagram {
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+            color: white;
+        }
+        .offer-link.store {
+            background: var(--primary-color);
+            color: white;
+        }
+        .offer-link:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
         /* Consultoria */
         .personalized-service { background: var(--white); padding: 1.25rem 0 2.5rem 0; }
         .service-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center; }
@@ -950,6 +1057,59 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </section>
     {{/desktop_info.visible_any}}
+
+    <!-- Ofertas Section -->
+    {{#offers_section.visible_any}}
+    <section class="offers-section {{offers_section.visibility_class}}">
+        <div class="container">
+            <h2>{{offers_section.title}}</h2>
+            {{#offers_section.subtitle}}
+            <p class="subtitle">{{offers_section.subtitle}}</p>
+            {{/offers_section.subtitle}}
+            
+            <div class="offers-grid">
+                {{#offers}}
+                <div class="offer-card">
+                    {{#image}}
+                    <div class="offer-image-container">
+                        <img src="{{image}}" alt="{{name}}" class="offer-image">
+                    </div>
+                    {{/image}}
+                    <div class="offer-content">
+                        <h3 class="offer-name">{{name}}</h3>
+                        {{#description}}
+                        <p class="offer-description">{{description}}</p>
+                        {{/description}}
+                        {{#price}}
+                        <div class="offer-price">{{currency}} {{price}}</div>
+                        {{/price}}
+                        <div class="offer-links">
+                            {{#youtube_url}}
+                            <a href="{{youtube_url}}" target="_blank" class="offer-link youtube">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>
+                                YouTube
+                            </a>
+                            {{/youtube_url}}
+                            {{#instagram_url}}
+                            <a href="{{instagram_url}}" target="_blank" class="offer-link instagram">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.06 8H12a4 4 0 1 1 4 4z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                                Instagram
+                            </a>
+                            {{/instagram_url}}
+                            {{#productUrl}}
+                            <a href="{{productUrl}}" target="_blank" class="offer-link store">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 8L2 3H1m6 10v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
+                                Ver Produto
+                            </a>
+                            {{/productUrl}}
+                        </div>
+                    </div>
+                </div>
+                {{/offers}}
+            </div>
+        </div>
+    </section>
+    {{/offers_section.visible_any}}
 
     <!-- Consultoria -->
     <section class="personalized-service">
@@ -1632,6 +1792,40 @@ export const generateHTML = (data: any): string => {
       visibility_class: visibility_class,
       table_rows: table_rows
     };
+  }
+  
+  // Process offers section
+  if (data.offers_section && (data.offers_section.visible_desktop || data.offers_section.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.offers_section.visible_desktop && !data.offers_section.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.offers_section.visible_desktop && data.offers_section.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.offers_section = {
+      ...data.offers_section,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
+    
+    // Process offers data with image handling
+    processedData.offers = data.schema?.offers?.map((offer: any) => {
+      let processedOffer = { ...offer };
+      
+      // Handle image URL processing (Cloudflare support)
+      if (offer.image) {
+        if (offer.image.includes('ACCOUNT_HASH_PLACEHOLDER') && typeof window !== 'undefined') {
+          const accountHash = localStorage.getItem('cloudflareAccountHash');
+          if (accountHash) {
+            processedOffer.image = offer.image.replace('ACCOUNT_HASH_PLACEHOLDER', accountHash);
+          }
+        }
+      }
+      
+      return processedOffer;
+    }) || [];
   }
   
   // Calcular e adicionar variáveis CSS para larguras das colunas

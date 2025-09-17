@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
@@ -24,6 +25,7 @@ interface BlogPost {
   status: string;
   published_domains: string[];
   intelligent_links: Record<string, string>;
+  include_offers?: boolean;
 }
 
 interface LandingPageData {
@@ -55,6 +57,7 @@ export default function BlogGenerator() {
     status: "draft",
     published_domains: [],
     intelligent_links: {},
+    include_offers: false,
   });
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -360,6 +363,7 @@ const saveBlogPost = async () => {
         youtube_video_url: blogPost.youtube_video_url,
         status: blogPost.status,
         intelligent_links: blogPost.intelligent_links,
+        include_offers: blogPost.include_offers,
       };
 
       if (blogPost.id) {
@@ -602,6 +606,16 @@ const saveBlogPost = async () => {
                   placeholder="https://www.youtube.com/watch?v=..."
                 />
               </div>
+
+              {landingPage?.content?.schema?.offers && landingPage.content.schema.offers.length > 0 && (
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={blogPost.include_offers || false}
+                    onCheckedChange={(checked) => setBlogPost(prev => ({ ...prev, include_offers: checked }))}
+                  />
+                  <Label>Incluir ofertas no blog ({landingPage.content.schema.offers.length} disponíveis)</Label>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="content">Conteúdo</Label>
