@@ -24,6 +24,8 @@ import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { ProductCSVUploader } from "@/components/ProductCSVUploader";
 import { ImageDebugPreview } from "@/components/ImageDebugPreview";
+import { ProductRepositoryPanel } from "@/components/ProductRepositoryPanel";
+import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
@@ -846,6 +848,8 @@ const EditorContent = () => {
   
   const [previewTab, setPreviewTab] = useState('landing-preview');
   const [blogPostData, setBlogPostData] = useState<any>(null);
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [generatingBlog, setGeneratingBlog] = useState(false);
   
   // Função para aplicar valores automáticos aos campos principais
@@ -6758,11 +6762,11 @@ dataLayer = [{
           </div>
         )}
 
-        {/* Preview Panel */}
+        {/* Preview Panel with Repository */}
         <div className={`${data.seo.hreflang_auto ? 'w-1/2' : 'w-1/2'} bg-gray-100 flex flex-col`}>
           <div className="p-4 bg-white border-b">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Preview em Tempo Real</h2>
+              <h2 className="font-semibold">Preview em Tempo Real + Repositório</h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handlePreview}>
                   <Eye className="h-4 w-4 mr-2" />
@@ -6783,7 +6787,10 @@ dataLayer = [{
             </div>
           </div>
           
-          <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
+          <div className="flex-1 flex">
+            {/* Preview Area */}
+            <div className="w-2/3 flex flex-col">
+              <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
             <TabsList className="mx-4 mt-4 grid w-auto grid-cols-3">
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
@@ -6903,7 +6910,36 @@ dataLayer = [{
                 )}
               </div>
             </TabsContent>
-          </Tabs>
+              </Tabs>
+            </div>
+            
+            {/* Repository Sidebar */}
+            <div className="w-1/3 border-l bg-white flex flex-col">
+              <Tabs defaultValue="products" className="flex-1 flex flex-col">
+                <TabsList className="m-4 grid w-auto grid-cols-2">
+                  <TabsTrigger value="products">Produtos</TabsTrigger>
+                  <TabsTrigger value="company">Empresa</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="products" className="flex-1 p-0">
+                  <ProductRepositoryPanel
+                    landingPageId={id || ''}
+                    onProductSelectionChange={setSelectedProducts}
+                    className="h-full border-0 rounded-none"
+                  />
+                </TabsContent>
+                
+                <TabsContent value="company" className="flex-1 p-0">
+                  <div className="h-full overflow-auto">
+                    <CompanyProfileManager
+                      onProfileChange={setCompanyProfile}
+                      className="h-auto border-0 rounded-none"
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
       </div>
     </div>

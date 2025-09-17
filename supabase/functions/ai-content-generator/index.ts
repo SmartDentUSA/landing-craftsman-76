@@ -123,7 +123,7 @@ serve(async (req) => {
   }
 });
 
-function buildStrategicContext(request: ContentRequest, products: any[]): string {
+function buildStrategicContext(request: ContentRequest, products: any[], companyProfile?: any): string {
   const pageTitle = request.seoTitle || 'Título da página';
   const pageSubtitle = request.seoDescription || 'Subtítulo da página';
   const primaryKeyword = request.primaryKeyword || '';
@@ -151,10 +151,16 @@ function buildStrategicContext(request: ContentRequest, products: any[]): string
 - **Palavra-chave Principal**: ${primaryKeyword}
 - **Público-alvo**: ${targetAudience}
 
-## Soluções Oferecidas:
+${companyProfile ? `## Perfil da Empresa:
+- **Nome**: ${companyProfile.company_name}
+- **Descrição**: ${companyProfile.company_description || 'Não informado'}
+- **Metodologia**: ${companyProfile.working_methodology || 'Não informado'}
+- **Diferenciais**: ${companyProfile.differentiators || 'Não informado'}
+
+` : ''}## Soluções Oferecidas:
 ${solutions}
 
-## Repositório de Produtos (${products.length} produtos):
+## Repositório de Produtos (${products.filter(p => p.use_in_ai_generation !== false).length} produtos selecionados):
 ${productContext}
 
 ## Keywords Inteligentes (de FAQ e produtos):

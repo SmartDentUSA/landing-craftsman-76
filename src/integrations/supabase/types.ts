@@ -118,6 +118,87 @@ export type Database = {
         }
         Relationships: []
       }
+      company_profile: {
+        Row: {
+          brand_values: string | null
+          business_sector: string | null
+          company_culture: string | null
+          company_description: string | null
+          company_logo_url: string | null
+          company_name: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          delivery_approach: string | null
+          differentiators: string | null
+          founded_year: number | null
+          id: string
+          location: string | null
+          main_products_services: string | null
+          mission_statement: string | null
+          social_media_links: Json | null
+          target_audience: string | null
+          team_size: string | null
+          updated_at: string
+          user_id: string
+          vision_statement: string | null
+          website_url: string | null
+          working_methodology: string | null
+        }
+        Insert: {
+          brand_values?: string | null
+          business_sector?: string | null
+          company_culture?: string | null
+          company_description?: string | null
+          company_logo_url?: string | null
+          company_name: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          delivery_approach?: string | null
+          differentiators?: string | null
+          founded_year?: number | null
+          id?: string
+          location?: string | null
+          main_products_services?: string | null
+          mission_statement?: string | null
+          social_media_links?: Json | null
+          target_audience?: string | null
+          team_size?: string | null
+          updated_at?: string
+          user_id: string
+          vision_statement?: string | null
+          website_url?: string | null
+          working_methodology?: string | null
+        }
+        Update: {
+          brand_values?: string | null
+          business_sector?: string | null
+          company_culture?: string | null
+          company_description?: string | null
+          company_logo_url?: string | null
+          company_name?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          delivery_approach?: string | null
+          differentiators?: string | null
+          founded_year?: number | null
+          id?: string
+          location?: string | null
+          main_products_services?: string | null
+          mission_statement?: string | null
+          social_media_links?: Json | null
+          target_audience?: string | null
+          team_size?: string | null
+          updated_at?: string
+          user_id?: string
+          vision_statement?: string | null
+          website_url?: string | null
+          working_methodology?: string | null
+        }
+        Relationships: []
+      }
       extraction_jobs: {
         Row: {
           business_name: string | null
@@ -246,6 +327,7 @@ export type Database = {
           tags: Json | null
           target_audience: string | null
           updated_at: string
+          use_in_ai_generation: boolean | null
           youtube_url: string | null
         }
         Insert: {
@@ -273,6 +355,7 @@ export type Database = {
           tags?: Json | null
           target_audience?: string | null
           updated_at?: string
+          use_in_ai_generation?: boolean | null
           youtube_url?: string | null
         }
         Update: {
@@ -300,6 +383,7 @@ export type Database = {
           tags?: Json | null
           target_audience?: string | null
           updated_at?: string
+          use_in_ai_generation?: boolean | null
           youtube_url?: string | null
         }
         Relationships: []
