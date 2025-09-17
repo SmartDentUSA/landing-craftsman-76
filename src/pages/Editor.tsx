@@ -3317,13 +3317,40 @@ const EditorContent = () => {
                                      )}
                                    </Button>
                                  </div>
-                                 <div className="text-xs text-green-700 bg-white/50 p-2 rounded border">
-                                   {data.faq?.length ? (
-                                     <span>✅ {data.faq.length} perguntas no FAQ prontas para análise</span>
-                                   ) : (
-                                     <span>⚠️ Adicione perguntas no FAQ primeiro</span>
-                                   )}
-                                 </div>
+                                  <div className="text-xs text-green-700 bg-white/50 p-2 rounded border mb-2">
+                                    {data.faq?.length ? (
+                                      <span>✅ {data.faq.length} perguntas no FAQ prontas para análise</span>
+                                    ) : (
+                                      <span>⚠️ Adicione perguntas no FAQ primeiro</span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Campo para visualizar/editar keywords geradas */}
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <Label className="text-xs font-medium text-green-700">Keywords Geradas</Label>
+                                      <div className="flex items-center gap-1">
+                                        {data.seo.ai_keywords ? (
+                                          <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
+                                            {data.seo.ai_keywords.split(',').length} keywords
+                                          </div>
+                                        ) : (
+                                          <div className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                            Vazio
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Textarea
+                                      value={data.seo.ai_keywords || ''}
+                                      onChange={(e) => setData(prev => ({
+                                        ...prev,
+                                        seo: { ...prev.seo, ai_keywords: e.target.value }
+                                      }))}
+                                      placeholder="As keywords geradas pela IA aparecerão aqui. Você pode editá-las manualmente."
+                                      className="text-xs min-h-[60px] text-green-700 bg-white/50"
+                                    />
+                                  </div>
                                </div>
 
                                {/* Geração de Blog baseado no conteúdo */}
