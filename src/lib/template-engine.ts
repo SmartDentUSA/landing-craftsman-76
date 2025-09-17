@@ -895,7 +895,22 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             transition: all 0.2s ease;
         }
         
-        /* Responsive adjustments */
+        /* Resources Grid Layout */
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .resources-grid .offer-card {
+            flex: none;
+            width: 100%;
+            max-width: none;
+        }
+        
+        /* Responsive adjustments for offers carousel */
         @media (max-width: 768px) {
             .offer-card {
                 flex: 0 0 240px;
@@ -903,6 +918,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             
             .offers-container {
                 padding: 0 0.5rem;
+            }
+            
+            .resources-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 0.75rem;
             }
         }
         
@@ -921,6 +941,24 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             
             .offer-price {
                 font-size: 1rem;
+            }
+            
+            .resources-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+        }
+        
+        /* Responsive grid breakpoints */
+        @media (min-width: 1200px) {
+            .resources-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+        
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .resources-grid {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
         .offer-link.youtube {
@@ -1245,7 +1283,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
             <div class="offers-content">
                 <div class="desktop-carousel">
-                    <div class="offers-grid">
+                    <div class="resources-grid">
                         {{#resources_products}}
                         <div class="offer-card">
                             {{#image}}
