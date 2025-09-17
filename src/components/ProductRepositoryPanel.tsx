@@ -6,11 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Package, Star, DollarSign, Filter, Eye, EyeOff, RefreshCw, RotateCcw } from "lucide-react";
+import { Search, Package, Star, DollarSign, Filter, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSync } from "@/hooks/useProductSync";
 import useLandingPages from "@/hooks/useLandingPages";
+import { ProductEditModal } from "@/components/ProductEditModal";
 
 interface Product {
   id: string;
@@ -22,6 +23,7 @@ interface Product {
   image_url?: string;
   product_url?: string;
   use_in_ai_generation: boolean;
+  approved: boolean;
   keywords?: string[];
   benefits?: string[];
   features?: string[];
@@ -48,6 +50,8 @@ export function ProductRepositoryPanel({
   const [loading, setLoading] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
@@ -106,36 +110,33 @@ export function ProductRepositoryPanel({
 
       if (error) throw error;
 
-      const formattedProducts: Product[] = data.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        currency: item.currency || 'BRL',
-        category: item.category,
-        image_url: item.image_url,
-        product_url: item.product_url,
-        use_in_ai_generation: item.use_in_ai_generation ?? true,
-        keywords: Array.isArray(item.keywords) ? item.keywords.filter((k): k is string => typeof k === 'string') : [],
-        benefits: Array.isArray(item.benefits) ? item.benefits.filter((b): b is string => typeof b === 'string') : [],
-        features: Array.isArray(item.features) ? item.features.filter((f): f is string => typeof f === 'string') : []
+      const formattedProducts: Product[] = (data || []).map(data => ({
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        price: data.price || 0,
+        currency: data.currency || 'BRL',
+        category: data.category || '',
+        image_url: data.image_url || '',
+        product_url: data.product_url || '',
+        use_in_ai_generation: data.use_in_ai_generation ?? true,
+        approved: data.approved ?? true,
+        keywords: Array.isArray(data.keywords) ? data.keywords.map(k => String(k)) : [],
+        benefits: Array.isArray(data.benefits) ? data.benefits.map(b => String(b)) : [],
+        features: Array.isArray(data.features) ? data.features.map(f => String(f)) : []
       }));
-
-      setProducts(formattedProducts);
       
-      // Auto-select products that are enabled for AI generation
-      const autoSelected = new Set(
-        formattedProducts
-          .filter(p => p.use_in_ai_generation)
-          .map(p => p.id)
-      );
-      setSelectedProductIds(autoSelected);
+      setProducts(formattedProducts);
 
-    } catch (error: any) {
+      // Auto-select products marked for AI generation
+      const aiProducts = formattedProducts.filter(p => p.use_in_ai_generation);
+      setSelectedProductIds(new Set(aiProducts.map(p => p.id)));
+
+    } catch (error) {
       console.error('Error loading products:', error);
       toast({
-        title: "Erro ao carregar produtos",
-        description: error.message,
+        title: "Erro",
+        description: "Erro ao carregar produtos do repositório",
         variant: "destructive"
       });
     } finally {
@@ -144,13 +145,15 @@ export function ProductRepositoryPanel({
   };
 
   const toggleProductSelection = (productId: string) => {
-    const newSelection = new Set(selectedProductIds);
-    if (newSelection.has(productId)) {
-      newSelection.delete(productId);
-    } else {
-      newSelection.add(productId);
-    }
-    setSelectedProductIds(newSelection);
+    setSelectedProductIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
   };
 
   const toggleAllProducts = () => {
@@ -174,6 +177,36 @@ export function ProductRepositoryPanel({
     }).format(price);
   };
 
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveProduct = (savedProduct: Product) => {
+    setProducts(prev => {
+      const existing = prev.find(p => p.id === savedProduct.id);
+      if (existing) {
+        return prev.map(p => p.id === savedProduct.id ? savedProduct : p);
+      } else {
+        return [...prev, savedProduct];
+      }
+    });
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    setProducts(prev => prev.filter(p => p.id !== productId));
+    setSelectedProductIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(productId);
+      return newSet;
+    });
+  };
+
   const handleSyncOffers = async () => {
     if (!landingPageId) return;
 
@@ -195,6 +228,11 @@ export function ProductRepositoryPanel({
       
     } catch (error) {
       console.error('Error syncing offers:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao sincronizar ofertas",
+        variant: "destructive"
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -203,18 +241,10 @@ export function ProductRepositoryPanel({
   if (loading) {
     return (
       <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Repositório de Produtos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-8">
-            <div className="text-center space-y-2">
-              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
-              <p className="text-sm text-muted-foreground">Carregando produtos...</p>
-            </div>
+        <CardContent className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <span>Carregando produtos...</span>
           </div>
         </CardContent>
       </Card>
@@ -224,76 +254,70 @@ export function ProductRepositoryPanel({
   return (
     <Card className={className}>
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          Repositório de Produtos
-          <Badge variant="outline" className="ml-auto">
-            {selectedProductIds.size} de {products.length}
-          </Badge>
-        </CardTitle>
-        
-        {/* Search and Filters */}
-        <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar produtos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Repositório de Produtos
+            </CardTitle>
           </div>
           
-          <div className="flex gap-2">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas categorias</SelectItem>
-                {getUniqueCategories().map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             
-            <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Preço" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos preços</SelectItem>
-                <SelectItem value="free">Gratuito</SelectItem>
-                <SelectItem value="low">Até R$ 100</SelectItem>
-                <SelectItem value="medium">R$ 100 - R$ 500</SelectItem>
-                <SelectItem value="high">Acima de R$ 500</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleAllProducts}
-              className="gap-2"
-            >
-              {selectedProductIds.size === filteredProducts.length ? (
-                <>
-                  <EyeOff className="h-4 w-4" />
-                  Desmarcar todos
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4" />
-                  Marcar todos
-                </>
-              )}
-            </Button>
-            
+            {/* Filters */}
             <div className="flex gap-2">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {getUniqueCategories().map(category => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={priceFilter} onValueChange={setPriceFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Preço" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="free">Gratuito</SelectItem>
+                  <SelectItem value="low">Até R$ 100</SelectItem>
+                  <SelectItem value="medium">R$ 100-500</SelectItem>
+                  <SelectItem value="high">Acima R$ 500</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Actions */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleAllProducts}
+                className="gap-2"
+              >
+                {selectedProductIds.size === filteredProducts.length ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                {selectedProductIds.size === filteredProducts.length ? 'Desmarcar' : 'Marcar'} Todos
+              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
@@ -307,6 +331,16 @@ export function ProductRepositoryPanel({
                   <RotateCcw className="h-4 w-4" />
                 )}
                 Sincronizar
+              </Button>
+
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleAddProduct}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar
               </Button>
               
               <Badge variant="secondary">
@@ -333,64 +367,94 @@ export function ProductRepositoryPanel({
               filteredProducts.map((product) => (
                 <Card 
                   key={product.id} 
-                  className={`cursor-pointer transition-all duration-200 ${
+                  className={`transition-all duration-200 ${
                     selectedProductIds.has(product.id) 
                       ? 'ring-2 ring-primary bg-primary/5' 
                       : 'hover:bg-muted/50'
                   }`}
-                  onClick={() => toggleProductSelection(product.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <Checkbox
                         checked={selectedProductIds.has(product.id)}
-                        onChange={() => toggleProductSelection(product.id)}
+                        onCheckedChange={() => toggleProductSelection(product.id)}
                         className="mt-1"
                       />
                       
-                      {product.image_url && (
-                        <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                          <img 
-                            src={product.image_url} 
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm leading-5 truncate">
-                          {product.name}
-                        </h4>
-                        
-                        {product.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {product.description}
-                          </p>
-                        )}
-                        
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-2">
-                            {product.category && (
-                              <Badge variant="secondary" className="text-xs px-2 py-0">
-                                {product.category}
-                              </Badge>
+                      <div className="cursor-pointer flex-1 min-w-0" onClick={() => toggleProductSelection(product.id)}>
+                        <div className="flex items-start gap-3">
+                          {product.image_url && (
+                            <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm leading-5 truncate">
+                              {product.name}
+                            </h4>
+                            
+                            {product.description && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {product.description}
+                              </p>
                             )}
                             
-                            {product.price !== undefined && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <DollarSign className="h-3 w-3" />
-                                {formatPrice(product.price, product.currency)}
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-2">
+                                {product.category && (
+                                  <Badge variant="secondary" className="text-xs px-2 py-0">
+                                    {product.category}
+                                  </Badge>
+                                )}
+                                
+                                {product.price !== undefined && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <DollarSign className="h-3 w-3" />
+                                    {formatPrice(product.price, product.currency)}
+                                  </div>
+                                )}
                               </div>
-                            )}
+                              
+                              {selectedProductIds.has(product.id) && (
+                                <Badge variant="default" className="text-xs">
+                                  Ativo no preview
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          
-                          {selectedProductIds.has(product.id) && (
-                            <Badge variant="default" className="text-xs">
-                              Ativo no preview
-                            </Badge>
-                          )}
                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProduct(product);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Tem certeza que deseja excluir este produto?')) {
+                              handleDeleteProduct(product.id);
+                            }
+                          }}
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -400,6 +464,17 @@ export function ProductRepositoryPanel({
           </div>
         </ScrollArea>
       </CardContent>
+
+      <ProductEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
+        onSave={handleSaveProduct}
+        onDelete={handleDeleteProduct}
+      />
     </Card>
   );
 }

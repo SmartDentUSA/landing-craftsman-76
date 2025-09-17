@@ -6917,12 +6917,13 @@ dataLayer = [{
           
           <div className="flex-1 flex">
             {/* Preview Area */}
-            <div className="w-2/3 flex flex-col">
+            <div className="flex-1 flex flex-col">
               <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
-            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-3">
+            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-4">
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
               <TabsTrigger value="blog-preview">Blog Post</TabsTrigger>
+              <TabsTrigger value="repository">Repositório</TabsTrigger>
             </TabsList>
             
             <TabsContent value="landing-preview" className="flex-1 p-4">
@@ -7036,39 +7037,31 @@ dataLayer = [{
                     </div>
                   </div>
                 )}
-              </div>
-            </TabsContent>
-              </Tabs>
-            </div>
-            
-            {/* Repository Sidebar */}
-            <div className="w-1/3 border-l bg-white flex flex-col">
-              <Tabs defaultValue="products" className="flex-1 flex flex-col">
-                <TabsList className="m-4 grid w-auto grid-cols-2">
-                  <TabsTrigger value="products">Produtos</TabsTrigger>
-                  <TabsTrigger value="company">Empresa</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="products" className="flex-1 p-0">
-                  <ProductRepositoryPanel
-                    landingPageId={id || ''}
-                    onProductSelectionChange={setSelectedProducts}
-                    onSyncTriggered={() => {
-                      // Reload data or trigger updates if needed
-                      console.log('Products synced successfully');
-                    }}
-                    className="h-full border-0 rounded-none"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="company" className="flex-1 p-0">
-                  <div className="h-full overflow-auto">
-                    <CompanyProfileManager
-                      onProfileChange={setCompanyProfile}
-                      className="h-auto border-0 rounded-none"
-                    />
+
+                {/* Repository Tab */}
+                <TabsContent value="repository" className="flex-1 p-4">
+                  <div className="h-full flex flex-col">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold mb-2">Repositório de Produtos</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Gerencie todos os produtos disponíveis para suas landing pages
+                      </p>
+                    </div>
+                    
+                    <div className="flex-1">
+                      <ProductRepositoryPanel
+                        landingPageId={id || ''}
+                        onProductSelectionChange={setSelectedProducts}
+                        onSyncTriggered={() => {
+                          console.log('Products synced successfully');
+                        }}
+                        className="h-full border-0 rounded-none"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
+              </div>
+            </TabsContent>
               </Tabs>
             </div>
           </div>
