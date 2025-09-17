@@ -67,6 +67,41 @@ export class VideoCollector {
       })
       .filter((extension): extension is NonNullable<typeof extension> => extension !== null);
   }
+
+  static collectFromProducts(landingPageData: any): VideoExtension[] {
+    try {
+      if (!landingPageData?.editor_data?.products || !Array.isArray(landingPageData.editor_data.products)) {
+        return [];
+      }
+
+      const videos: VideoExtension[] = [];
+      const seenUrls = new Set<string>();
+
+      landingPageData.editor_data.products.forEach((product: any, index: number) => {
+        // Process YouTube URLs
+        if (product.youtube_url && !seenUrls.has(product.youtube_url)) {
+          const youtubeId = this.extractYouTubeId(product.youtube_url);
+          if (youtubeId) {
+            videos.push({
+              youtube_id: youtubeId,
+              label: product.name ? `Produto: ${product.name}` : `Produto ${index + 1}`
+            });
+            seenUrls.add(product.youtube_url);
+          }
+        }
+
+        // Instagram URLs are not supported by Google Ads, but we can log them for user awareness
+        if (product.instagram_url && console) {
+          console.info(`⚠️ Instagram URL encontrada no produto "${product.name || `Produto ${index + 1}`}": ${product.instagram_url}. URLs do Instagram não são suportadas pelo Google Ads.`);
+        }
+      });
+
+      return videos;
+    } catch (error) {
+      console.error('Error collecting videos from products:', error);
+      return [];
+    }
+  }
   
   static extractYouTubeId(url: string): string | null {
     if (!url) return null;
@@ -88,16 +123,17 @@ export class VideoCollector {
     return null;
   }
   
-  static async collectAll(landingPageId: string, manualVideos: { url: string; label?: string }[]): Promise<VideoExtension[]> {
+  static async collectAll(landingPageId: string, manualVideos: { url: string; label?: string }[], landingPageData?: any): Promise<VideoExtension[]> {
     const [blogVideos, testimonialVideos] = await Promise.all([
       this.collectFromBlogPosts(landingPageId),
       this.collectFromTestimonials(landingPageId)
     ]);
     
     const manualVideoExtensions = this.collectFromManualUrls(manualVideos);
+    const productVideos = landingPageData ? this.collectFromProducts(landingPageData) : [];
     
     // Combine all videos and remove duplicates by youtube_id
-    const allVideos = [...blogVideos, ...testimonialVideos, ...manualVideoExtensions];
+    const allVideos = [...blogVideos, ...testimonialVideos, ...productVideos, ...manualVideoExtensions];
     const uniqueVideos = allVideos.filter((video, index, arr) => 
       arr.findIndex(v => v.youtube_id === video.youtube_id) === index
     );

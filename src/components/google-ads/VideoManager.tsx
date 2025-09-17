@@ -27,7 +27,7 @@ export const VideoManager = ({ config, data, landingPageId, onChange }: VideoMan
   const collectAutoVideos = async () => {
     setIsLoading(true);
     try {
-      const videos = await VideoCollector.collectAll(landingPageId, []);
+      const videos = await VideoCollector.collectAll(landingPageId, [], data);
       setAutoVideos(videos);
     } catch (error) {
       console.error('Error collecting videos:', error);
@@ -76,7 +76,7 @@ export const VideoManager = ({ config, data, landingPageId, onChange }: VideoMan
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Coletados automaticamente dos blog posts e depoimentos da landing page.
+              Coletados automaticamente dos blog posts, depoimentos e produtos da landing page.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {autoVideos.map((video, index) => (
@@ -86,14 +86,16 @@ export const VideoManager = ({ config, data, landingPageId, onChange }: VideoMan
                     alt="YouTube thumbnail"
                     className="w-16 h-12 object-cover rounded"
                   />
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{video.label}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <ExternalLink className="w-3 h-3" />
-                      youtube.com/watch?v={video.youtube_id}
-                    </div>
-                  </div>
-                  <Badge variant="secondary">Auto</Badge>
+                   <div className="flex-1">
+                     <div className="font-medium text-sm">{video.label}</div>
+                     <div className="text-xs text-muted-foreground flex items-center gap-1">
+                       <ExternalLink className="w-3 h-3" />
+                       youtube.com/watch?v={video.youtube_id}
+                     </div>
+                   </div>
+                   <Badge variant={video.label?.includes('Produto:') ? 'default' : 'secondary'}>
+                     {video.label?.includes('Produto:') ? 'Produto' : 'Auto'}
+                   </Badge>
                 </div>
               ))}
             </div>
