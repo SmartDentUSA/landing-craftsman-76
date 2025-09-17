@@ -22,6 +22,9 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
   const [newInstitutionalLink, setNewInstitutionalLink] = useState({ label: '', url: '' });
   const [editingInstitutional, setEditingInstitutional] = useState<number | null>(null);
   const [editInstitutionalData, setEditInstitutionalData] = useState({ label: '', url: '' });
+  const [editingBrandLink, setEditingBrandLink] = useState<number | null>(null);
+  const [editBrandData, setEditBrandData] = useState({ label: '', url: '' });
+  const [editableBrandLinks, setEditableBrandLinks] = useState<any[]>([]);
 
   useEffect(() => {
     generateAutoSitelinks();
@@ -30,7 +33,11 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
     if (config.custom_institutional_links) {
       setCustomInstitutionalLinks(config.custom_institutional_links);
     }
-  }, [data, config.custom_institutional_links]);
+    // Initialize editable brand links from config
+    if (config.editable_brand_links) {
+      setEditableBrandLinks(config.editable_brand_links);
+    }
+  }, [data, config.custom_institutional_links, config.editable_brand_links]);
 
   const generateAutoSitelinks = () => {
     if (data?.intelligent_links) {
@@ -41,7 +48,10 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
 
   const generateBrandSitelinks = () => {
     if (data?.seo?.canonical_url) {
-      const sitelinks = SitelinksCollector.collectBrandPolicies(data.seo.canonical_url);
+      const sitelinks = SitelinksCollector.collectBrandPolicies(
+        data.seo.canonical_url, 
+        data.seo.canonical_url
+      );
       setBrandSitelinks(sitelinks);
     }
   };
@@ -109,12 +119,52 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
     setEditInstitutionalData({ label: '', url: '' });
   };
 
+  const convertBrandToEditable = (index: number, link: any) => {
+    const newEditableLinks = [...editableBrandLinks, { ...link, originalIndex: index }];
+    setEditableBrandLinks(newEditableLinks);
+    onChange({
+      editable_brand_links: newEditableLinks
+    });
+  };
+
+  const startEditingBrandLink = (index: number, link: any) => {
+    setEditingBrandLink(index);
+    setEditBrandData({ label: link.label, url: link.url });
+  };
+
+  const saveEditBrandLink = (index: number) => {
+    if (editBrandData.label && editBrandData.url) {
+      const newLinks = [...editableBrandLinks];
+      newLinks[index] = { ...newLinks[index], ...editBrandData };
+      setEditableBrandLinks(newLinks);
+      onChange({
+        editable_brand_links: newLinks
+      });
+      setEditingBrandLink(null);
+      setEditBrandData({ label: '', url: '' });
+    }
+  };
+
+  const cancelEditBrandLink = () => {
+    setEditingBrandLink(null);
+    setEditBrandData({ label: '', url: '' });
+  };
+
+  const removeBrandLink = (index: number) => {
+    const newLinks = editableBrandLinks.filter((_, i) => i !== index);
+    setEditableBrandLinks(newLinks);
+    onChange({
+      editable_brand_links: newLinks
+    });
+  };
+
   const getAllSitelinks = () => {
     const manual = config.ecommerce_links || [];
     const auto = autoSitelinks.length > 0 ? autoSitelinks : [];
     const brand = config.include_brand_policies ? brandSitelinks : [];
+    const editableBrand = config.editable_brand_links || [];
     const customInstitutional = config.custom_institutional_links || [];
-    return [...manual, ...auto, ...brand, ...customInstitutional];
+    return [...manual, ...auto, ...brand, ...editableBrand, ...customInstitutional];
   };
 
   const totalSitelinks = getAllSitelinks().length;
@@ -253,7 +303,9 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
           
           {config.include_brand_policies && (
             <div className="space-y-2">
-              {brandSitelinks.map((sitelink, index) => (
+              {brandSitelinks
+                .filter((_, index) => !editableBrandLinks.some(link => link.originalIndex === index))
+                .map((sitelink, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded bg-muted/30">
                   <div>
                     <div className="font-medium">{sitelink.label}</div>
@@ -262,7 +314,89 @@ export const SitelinksManager = ({ config, data, onChange }: SitelinksManagerPro
                       {sitelink.url}
                     </div>
                   </div>
-                  <Badge variant="outline">Institucional</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">Institucional</Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => convertBrandToEditable(index, sitelink)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Editable Brand Links */}
+              {editableBrandLinks.map((link, index) => (
+                <div key={`editable-${index}`} className="flex items-center justify-between p-3 border rounded">
+                  {editingBrandLink === index ? (
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <Input
+                        value={editBrandData.label}
+                        onChange={(e) => setEditBrandData(prev => ({ ...prev, label: e.target.value }))}
+                        placeholder="Texto do link"
+                        maxLength={25}
+                      />
+                      <Input
+                        value={editBrandData.url}
+                        onChange={(e) => setEditBrandData(prev => ({ ...prev, url: e.target.value }))}
+                        placeholder="URL"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="font-medium">{link.label}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3" />
+                        {link.url}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    {editingBrandLink === index ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => saveEditBrandLink(index)}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={cancelEditBrandLink}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="outline">Editado</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEditingBrandLink(index, link)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBrandLink(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

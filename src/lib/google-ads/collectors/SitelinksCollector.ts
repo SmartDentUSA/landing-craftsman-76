@@ -16,20 +16,50 @@ export class SitelinksCollector {
       .filter(sitelink => this.isValidSitelink(sitelink));
   }
   
-  static collectBrandPolicies(baseUrl: string): Sitelink[] {
+  static collectBrandPolicies(baseUrl: string, landingPageUrl?: string): Sitelink[] {
+    const extractedBaseUrl = this.extractBaseUrl(baseUrl);
+    const normalizedLandingUrl = landingPageUrl ? this.normalizeBaseUrl(landingPageUrl) : null;
+    
     const brandSitelinks = [
-      { label: 'Sobre Nós', path: '/sobre' },
-      { label: 'Contato', path: '/contato' },
-      { label: 'Política de Privacidade', path: '/privacidade' },
-      { label: 'Termos de Uso', path: '/termos' }
+      { 
+        label: 'Sobre Nós', 
+        path: '/sobre',
+        useCampaignPath: true // Mantém contexto da campanha
+      },
+      { 
+        label: 'Contato', 
+        path: '/contato',
+        useCampaignPath: false // Usa domínio base
+      },
+      { 
+        label: 'Política de Privacidade', 
+        path: '/privacidade',
+        useCampaignPath: false // Usa domínio base
+      },
+      { 
+        label: 'Termos de Uso', 
+        path: '/termos',
+        useCampaignPath: false // Usa domínio base
+      }
     ];
     
-    const normalizedBaseUrl = this.normalizeBaseUrl(baseUrl);
-    
-    return brandSitelinks.map(({ label, path }) => ({
-      label,
-      url: `${normalizedBaseUrl}${path}`
-    }));
+    return brandSitelinks.map(({ label, path, useCampaignPath }) => {
+      const baseUrlToUse = useCampaignPath && normalizedLandingUrl ? normalizedLandingUrl : extractedBaseUrl;
+      return {
+        label,
+        url: `${baseUrlToUse}${path}`
+      };
+    });
+  }
+  
+  private static extractBaseUrl(url: string): string {
+    try {
+      const urlObj = new URL(this.ensureHttps(url));
+      return `${urlObj.protocol}//${urlObj.hostname}`;
+    } catch {
+      // Fallback para normalização básica
+      return this.normalizeBaseUrl(url).split('/').slice(0, 3).join('/');
+    }
   }
   
   private static isEcommerceUrl(url: string, keywords: string[]): boolean {
