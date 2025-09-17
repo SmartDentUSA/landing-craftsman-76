@@ -875,7 +875,7 @@ const EditorContent = () => {
       if (repoProducts.length === 0) {
         toast({
           title: "Nenhum produto encontrado",
-          description: "Não há produtos aprovados no repositório para importar.",
+          description: "Não há produtos aprovados no repositório para importar. Verifique se existem produtos marcados para 'uso na geração de IA' no Repositório de Produtos.",
           variant: "destructive",
         });
         return;
