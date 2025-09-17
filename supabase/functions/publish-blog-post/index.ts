@@ -112,8 +112,14 @@ serve(async (req) => {
           if (wpResult.success) {
             publishedDomains.push(domain);
             console.log(`✅ Publicado com sucesso no ${domain}`);
+            if (wpResult.isDraft) {
+              errors.push(`WordPress (${domain}): Publicado como rascunho devido a permissões insuficientes`);
+            }
           } else {
-            errors.push(`WordPress (${domain}): ${wpResult.error}`);
+            const errorMsg = wpResult.errorType ? 
+              `${wpResult.errorType}:${wpResult.error}` : 
+              wpResult.error;
+            errors.push(`WordPress (${domain}): ${errorMsg}`);
           }
         }
       } catch (error) {
@@ -294,6 +300,8 @@ async function publishToWordPress(blogPost: any, settings: any) {
       body: JSON.stringify(postData),
     });
 
+    console.log(`📊 Status da resposta WordPress: ${response.status}`);
+    
     if (response.ok) {
       const result = await response.json();
       console.log(`✅ Post WordPress criado: ID ${result.id}`);
@@ -306,10 +314,60 @@ async function publishToWordPress(blogPost: any, settings: any) {
     } else {
       const errorText = await response.text();
       console.error(`❌ Erro WordPress: ${response.status} - ${errorText}`);
-      return { 
-        success: false, 
-        error: `Erro HTTP ${response.status}: ${errorText.substring(0, 200)}` 
-      };
+      
+      // Analisar erro específico
+      if (response.status === 401) {
+        // Verificar se é erro de permissões insuficientes
+        if (errorText.includes('rest_cannot_create') || errorText.includes('insufficient_permission')) {
+          console.log(`🔄 Tentando criar como rascunho...`);
+          
+          // Tentar criar como rascunho
+          const draftData = { ...postData, status: 'draft' };
+          const draftResponse = await fetch(wpApiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${btoa(`${settings.wordpress_user}:${settings.wordpress_app_password_encrypted}`)}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(draftData),
+          });
+          
+          if (draftResponse.ok) {
+            const draftResult = await draftResponse.json();
+            console.log(`✅ Post WordPress criado como rascunho: ID ${draftResult.id}`);
+            return { 
+              success: true, 
+              url: draftResult.link,
+              wp_id: draftResult.id,
+              isDraft: true
+            };
+          }
+          
+          return { 
+            success: false, 
+            errorType: 'insufficient_permissions',
+            error: 'Usuário não tem permissão para criar posts. Verifique se o usuário tem papel de Author/Editor/Administrator no WordPress.' 
+          };
+        } else {
+          return { 
+            success: false, 
+            errorType: 'invalid_credentials',
+            error: 'Credenciais inválidas. Verifique se está usando um Application Password e o username correto.' 
+          };
+        }
+      } else if (response.status === 403) {
+        return { 
+          success: false, 
+          errorType: 'auth_blocked',
+          error: 'Acesso negado. O servidor pode estar bloqueando headers de Authorization.' 
+        };
+      } else {
+        return { 
+          success: false, 
+          errorType: 'connection_error',
+          error: `Erro HTTP ${response.status}: ${errorText.substring(0, 200)}` 
+        };
+      }
     }
   } catch (error) {
     console.error(`❌ Erro na publicação WordPress:`, error);

@@ -518,7 +518,16 @@ const saveBlogPost = async () => {
         let successMessage = `✅ Publicado em ${data.published_domains.length} site(s): ${data.published_domains.join(', ')}`;
         
         if (data.errors && data.errors.length > 0) {
-          successMessage += `\n\n⚠️ Alguns problemas: ${data.errors.join('; ')}`;
+          // Verificar se tem posts criados como rascunho
+          const draftErrors = data.errors.filter((err: string) => err.includes('rascunho'));
+          const otherErrors = data.errors.filter((err: string) => !err.includes('rascunho'));
+          
+          if (draftErrors.length > 0) {
+            successMessage += `\n\n📝 Rascunhos: ${draftErrors.join('; ')}`;
+          }
+          if (otherErrors.length > 0) {
+            successMessage += `\n\n⚠️ Problemas: ${otherErrors.join('; ')}`;
+          }
         }
 
         // Log URLs para debug
@@ -533,13 +542,31 @@ const saveBlogPost = async () => {
         });
       } else {
         let errorMessage = data.message || data.error || "Falha na publicação";
+        let title = "Erro na publicação";
         
         if (data.errors && data.errors.length > 0) {
-          errorMessage += `\n\nDetalhes: ${data.errors.join('; ')}`;
+          // Analisar erros específicos
+          const errorDetails = data.errors.join('; ');
+          
+          if (errorDetails.includes('insufficient_permissions:')) {
+            title = "Permissões insuficientes";
+            errorMessage = "Usuário WordPress não tem permissão para criar posts. Verifique se o usuário tem papel de Author, Editor ou Administrator no WordPress.";
+          } else if (errorDetails.includes('invalid_credentials:')) {
+            title = "Credenciais inválidas";
+            errorMessage = "Use seu username do WordPress (não email) e gere um Application Password em: WP Admin → Users → Your Profile → Application Passwords";
+          } else if (errorDetails.includes('auth_blocked:')) {
+            title = "Authorization bloqueado";
+            errorMessage = "Seu servidor está bloqueando headers de Authorization. Contate seu provedor de hospedagem para habilitar Basic Authentication.";
+          } else if (errorDetails.includes('connection_error:')) {
+            title = "Erro de conexão";
+            errorMessage = "Verifique se a URL do WordPress está correta e se o site está acessível.";
+          } else {
+            errorMessage += `\n\nDetalhes: ${errorDetails}`;
+          }
         }
 
         toast({
-          title: "Erro na publicação",
+          title,
           description: errorMessage,
           variant: "destructive",
         });
