@@ -249,10 +249,21 @@ Foque em conversão, use palavras-chave naturalmente e respeite os limites de ca
   const content = data.choices[0].message.content;
   
   try {
-    const parsed = JSON.parse(content);
+    // Clean content to remove markdown formatting
+    let cleanContent = content.trim();
+    
+    // Remove markdown code blocks if present
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    const parsed = JSON.parse(cleanContent);
     return validateAndCleanAdCopies(parsed);
   } catch (error) {
     console.error('Failed to parse AI response as JSON:', content);
+    console.error('Parse error:', error);
     return getFallbackAdCopies();
   }
 }
