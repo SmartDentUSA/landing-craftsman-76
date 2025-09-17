@@ -3175,10 +3175,15 @@ const EditorContent = () => {
 
                            {data.seo.ai_seo_enabled && (
                             <div className="space-y-4">
-                              {/* Conteúdo Oculto SEO */}
-                              <div className="p-3 bg-white rounded-lg border border-purple-200">
+                               {/* Conteúdo Oculto SEO com IA */}
+                               <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
                                 <div className="flex items-center justify-between mb-2">
-                                  <Label className="text-xs font-medium text-purple-700">Conteúdo Oculto SEO:</Label>
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-xs font-medium text-purple-700">🎯 Conteúdo Oculto SEO</Label>
+                                    <div className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
+                                      Base para IA
+                                    </div>
+                                  </div>
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -3224,46 +3229,65 @@ const EditorContent = () => {
                                         setAiLoading(prev => ({ ...prev, hidden: false }));
                                       }
                                     }}
-                                    className="text-xs h-6 px-2 border-purple-300 text-purple-700"
+                                    className="text-xs h-6 px-2 bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200"
                                   >
-                                    {aiLoading.hidden ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 Gerar com IA"}
+                                    {aiLoading.hidden ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "✨ Sugerir com IA"}
                                   </Button>
                                 </div>
+                                
+                                <div className="mb-3 p-2 bg-purple-50 rounded border border-purple-200">
+                                  <p className="text-xs text-purple-700 font-medium mb-1">💡 Como usar:</p>
+                                  <p className="text-xs text-purple-600">
+                                    Este campo alimenta todas as funcionalidades de IA. Descreva detalhadamente seu negócio para obter resultados mais precisos nas palavras-chave, meta descriptions e conteúdo de blog.
+                                  </p>
+                                </div>
+                                
                                  <Textarea
                                    value={data.seo.seo_hidden_content || ''}
                                    onChange={(e) => setData(prev => ({
                                      ...prev,
                                      seo: { ...prev.seo, seo_hidden_content: e.target.value }
                                    }))}
-                                   placeholder="Descreva detalhadamente seu produto/serviço, características, benefícios, público-alvo, diferenciais competitivos e qualquer informação relevante. Quanto mais detalhes, melhor será o conteúdo SEO gerado pela IA..."
-                                   className="text-xs min-h-[120px] max-h-[400px] resize-y overflow-auto"
+                                   placeholder="Exemplo: Somos uma empresa de marketing digital especializada em campanhas para e-commerce de moda. Nossos diferenciais incluem análise de dados avançada, gestão de redes sociais e criação de conteúdo visual. Atendemos principalmente PMEs que desejam aumentar vendas online..."
+                                   className="text-xs min-h-[120px] max-h-[400px] resize-y overflow-auto bg-white border-purple-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
                                  />
-                                 <p className="text-xs text-purple-600 mt-1">
-                                   {(data.seo.seo_hidden_content || '').length} caracteres • Campo ilimitado para descrição completa
-                                 </p>
+                                 <div className="flex justify-between items-center mt-2">
+                                   <p className="text-xs text-purple-600">
+                                     {(data.seo.seo_hidden_content || '').length} caracteres • Recomendado: 200+ caracteres
+                                   </p>
+                                   {(data.seo.seo_hidden_content || '').length > 200 && (
+                                     <div className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                                       ✅ Conteúdo suficiente
+                                     </div>
+                                   )}
+                                 </div>
                               </div>
 
-                              {/* Palavras-chave editáveis com IA */}
-                              <div className="p-3 bg-white rounded-lg border">
-                                <div className="flex items-center justify-between mb-2">
-                                  <Label className="text-xs font-medium text-gray-700">Palavras-chave:</Label>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        const { keywords } = analyzeContent(data);
-                                        setAutoKeywords(keywords.slice(0, 8));
-                                      }}
-                                      className="text-xs h-6 px-2"
-                                    >
-                                      Detectar
-                                    </Button>
-                                     <Button
-                                       size="sm"
-                                       variant="outline"
-                                       disabled={aiLoading.keywords}
-                                       onClick={async () => {
+                               {/* Palavras-chave editáveis com IA */}
+                               <div className="p-3 bg-white rounded-lg border">
+                                 <div className="flex items-center justify-between mb-2">
+                                   <Label className="text-xs font-medium text-gray-700">🔑 Palavras-chave</Label>
+                                   <div className="flex gap-1">
+                                     <div className="relative">
+                                       <Button
+                                         size="sm"
+                                         variant="outline"
+                                         onClick={() => {
+                                           const { keywords } = analyzeContent(data);
+                                           setAutoKeywords(keywords.slice(0, 8));
+                                         }}
+                                         className="text-xs h-6 px-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                                         title="Análise simples baseada no conteúdo visível"
+                                       >
+                                         📝 Análise Básica
+                                       </Button>
+                                     </div>
+                                     <div className="relative">
+                                       <Button
+                                         size="sm"
+                                         variant="outline"
+                                         disabled={aiLoading.keywords}
+                                         onClick={async () => {
                                          if (aiLoading.keywords) return;
                                          setAiLoading(prev => ({ ...prev, keywords: true }));
                                          try {
@@ -3271,10 +3295,14 @@ const EditorContent = () => {
                                            const primaryContent = data.seo.seo_hidden_content?.trim();
                                            const fallbackContent = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`.trim();
                                            
-                                           if (!primaryContent && !fallbackContent) {
-                                             toast({ title: "Informe o conteúdo", description: "Adicione conteúdo no 'Conteúdo Oculto SEO' ou forneça título/subtítulo/descrição.", variant: "destructive" });
-                                             return;
-                                           }
+                                            if (!primaryContent && !fallbackContent) {
+                                              toast({ 
+                                                title: "⚠️ Conteúdo necessário", 
+                                                description: "Preencha o 'Conteúdo Oculto SEO' acima para melhores resultados ou forneça pelo menos título/descrição básica.", 
+                                                variant: "destructive" 
+                                              });
+                                              return;
+                                            }
 
                                            // Usar conteúdo oculto SEO (até 4000 chars) ou fallback básico
                                            const content = primaryContent ? primaryContent.slice(0, 4000) : fallbackContent.slice(0, 1000);
@@ -3323,12 +3351,12 @@ const EditorContent = () => {
                                                ...prev,
                                                seo: { ...prev.seo, ai_keywords: payload }
                                              }));
-                                             toast({ 
-                                               title: "Keywords geradas", 
-                                               description: primaryContent ? 
-                                                 "Palavras-chave geradas com base no seu conteúdo SEO!" : 
-                                                 "Keywords geradas! Para melhores resultados, use 'Conteúdo Oculto SEO'." 
-                                             });
+                                              toast({ 
+                                                title: "🎯 Keywords geradas com IA!", 
+                                                description: primaryContent ? 
+                                                  `${keywords.length} palavras-chave geradas com base no seu conteúdo SEO detalhado!` : 
+                                                  "Keywords básicas geradas! 💡 Preencha 'Conteúdo Oculto SEO' para resultados mais precisos." 
+                                              });
                                            } else {
                                              const warningMsg = payload?.warning || "A IA não retornou keywords válidas.";
                                              toast({ title: "Aviso", description: warningMsg, variant: "destructive" });
@@ -3339,11 +3367,27 @@ const EditorContent = () => {
                                          } finally {
                                            setAiLoading(prev => ({ ...prev, keywords: false }));
                                          }
-                                       }}
-                                      className="text-xs h-6 px-2 border-purple-300 text-purple-700"
-                                    >
-                                      {aiLoading.keywords ? (<span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</span>) : "🤖 IA"}
-                                    </Button>
+                                        }}
+                                       className={`text-xs h-6 px-2 ${
+                                         (data.seo.seo_hidden_content || '').length > 200 
+                                           ? 'bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200 shadow-sm' 
+                                           : 'border-purple-300 text-purple-700 hover:bg-purple-50'
+                                       }`}
+                                       title="Gera palavras-chave inteligentes usando o Conteúdo Oculto SEO"
+                                     >
+                                       {aiLoading.keywords ? (
+                                         <span className="inline-flex items-center gap-1">
+                                           <Loader2 className="h-3 w-3 animate-spin" /> Analisando...
+                                         </span>
+                                       ) : (
+                                         <span className="inline-flex items-center gap-1">
+                                           🤖 IA Avançada
+                                           {(data.seo.seo_hidden_content || '').length > 200 && (
+                                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                           )}
+                                         </span>
+                                       )}
+                                     </Button>
                                   </div>
                                 </div>
                                 <div className="space-y-2">
@@ -3360,9 +3404,19 @@ const EditorContent = () => {
                                           ×
                                         </Button>
                                       </div>
-                                    )) : (
-                                      <span className="text-xs text-gray-500">Clique em "Detectar" para análise automática</span>
-                                    )}
+                                     )) : (
+                                       <div className="text-center py-4">
+                                         <p className="text-xs text-gray-500 mb-2">🎯 Nenhuma palavra-chave detectada</p>
+                                         <div className="flex flex-col gap-1">
+                                           <p className="text-xs text-gray-400">
+                                             • <strong>Análise Básica:</strong> palavras do conteúdo visível
+                                           </p>
+                                           <p className="text-xs text-gray-400">
+                                             • <strong>IA Avançada:</strong> análise semântica do conteúdo SEO
+                                           </p>
+                                         </div>
+                                       </div>
+                                     )}
                                   </div>
                                   <div className="flex gap-2">
                                     <Input
@@ -3725,15 +3779,15 @@ const EditorContent = () => {
                                             📄 Gerar Descrição
                                           </Button>
                                         )}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </AccordionContent>
+                                       </div>
+                                     </div>
+                                   );
+                                 })()}
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       </AccordionContent>
                     </AccordionItem>
 
                     {/* Open Graph */}
