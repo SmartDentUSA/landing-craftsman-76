@@ -275,6 +275,10 @@ interface LandingPageData {
     visible_desktop: boolean;
     visible_mobile: boolean;
   };
+  faq_section: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+  };
   faq_title: string;
   faq: FAQ[];
   cta_final: {
@@ -1021,6 +1025,10 @@ const EditorContent = () => {
       image: createImageData('https://via.placeholder.com/400x300?text=Consultoria', 'Equipe de consultores especializados')
     },
     solutions_section: {
+      visible_desktop: true,
+      visible_mobile: true
+    },
+    faq_section: {
       visible_desktop: true,
       visible_mobile: true
     },
@@ -3034,6 +3042,47 @@ const EditorContent = () => {
                 <AccordionItem value="faq">
                   <AccordionTrigger>FAQ</AccordionTrigger>
                   <AccordionContent className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4" />
+                          Visibilidade da Seção
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.faq_section?.visible_desktop ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                faq_section: { 
+                                  ...prev.faq_section!, 
+                                  visible_desktop: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no desktop</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.faq_section?.visible_mobile ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                faq_section: { 
+                                  ...prev.faq_section!, 
+                                  visible_mobile: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no mobile</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    {((data.faq_section?.visible_desktop ?? false) || (data.faq_section?.visible_mobile ?? false)) && (
+                      <>
                     <div>
                       <Label>Título da Seção</Label>
                       <Input
@@ -3099,6 +3148,8 @@ const EditorContent = () => {
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar FAQ
                     </Button>
+                      </>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 

@@ -1413,7 +1413,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/advisory.visible_any}}
 
     <!-- FAQ -->
-    <section class="faq-section">
+    {{#faq_section.visible_any}}
+    <section class="faq-section {{faq_section.visibility_class}}">
         <div class="container">
             <h2>{{faq_title}}</h2>
             <div class="faq-accordion">
@@ -1431,6 +1432,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
         </div>
     </section>
+    {{/faq_section.visible_any}}
 
     <!-- Ofertas Section -->
     {{#offers_section.visible_any}}
@@ -2237,6 +2239,23 @@ export const generateHTML = (data: any): string => {
     
     processedData.solutions_section = {
       ...data.solutions_section,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
+  }
+  
+  // Process FAQ section
+  if (data.faq_section && (data.faq_section.visible_desktop || data.faq_section.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.faq_section.visible_desktop && !data.faq_section.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.faq_section.visible_desktop && data.faq_section.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.faq_section = {
+      ...data.faq_section,
       visible_any: true,
       visibility_class: visibility_class
     };
