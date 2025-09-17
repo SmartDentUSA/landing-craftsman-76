@@ -803,33 +803,52 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             min-height: 2.6em;
         }
         
-        /* Botão Comprar sobre a imagem */
+        /* Container dos botões */
+        .offer-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        /* Botão Loja Online */
         .offer-buy-button {
-            position: absolute;
-            bottom: 8px;
-            left: 50%;
-            transform: translateX(-50%);
+            flex: 1;
             background: var(--primary-color);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
             border-radius: 6px;
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        .offer-card:hover .offer-buy-button {
-            opacity: 1;
-            pointer-events: auto;
+            text-align: center;
         }
         
         .offer-buy-button:hover {
             background: #0056b3;
-            transform: translateX(-50%) translateY(-2px);
+            transform: translateY(-1px);
+        }
+        
+        /* Botão Ganhar Desconto */
+        .offer-discount-button {
+            flex: 1;
+            background: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .offer-discount-button:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-1px);
         }
         
         /* Price Section - Simplificada */
@@ -1214,50 +1233,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
     {{/desktop_info.visible_any}}
 
-    <!-- Ofertas Section -->
-    {{#offers_section.visible_any}}
-    <section class="offers-section {{offers_section.visibility_class}}">
-        <div class="container">
-            <h2>{{offers_section.title}}</h2>
-            {{#offers_section.subtitle}}
-            <p class="subtitle">{{offers_section.subtitle}}</p>
-            {{/offers_section.subtitle}}
-            
-            <div class="offers-grid">
-                {{#offers}}
-                <div class="offer-card">
-                    {{#discount_percentage}}
-                    <div class="offer-badge">-{{discount_percentage}}%</div>
-                    {{/discount_percentage}}
-                    {{#image}}
-                    <div class="offer-image-container">
-                        <img src="{{image}}" alt="{{name}}" class="offer-image">
-                        {{#productUrl}}
-                        <button class="offer-buy-button" onclick="window.open('{{productUrl}}', '_blank')">Comprar</button>
-                        {{/productUrl}}
-                    </div>
-                    {{/image}}
-                    <div class="offer-content">
-                        <h3 class="offer-name">{{name}}</h3>
-                        <div class="offer-prices">
-                            {{#original_price}}
-                            <span class="offer-price-original">R$ {{original_price}}</span>
-                            {{/original_price}}
-                            {{#price}}
-                            <div class="offer-price-current">R$ {{price}}</div>
-                            {{/price}}
-                            {{#installment_price}}
-                            <div class="offer-price-installment">{{installment_price}}</div>
-                            {{/installment_price}}
-                        </div>
-                    </div>
-                </div>
-                {{/offers}}
-            </div>
-        </div>
-    </section>
-    {{/offers_section.visible_any}}
-
     <!-- Consultoria -->
     <section class="personalized-service">
         <div class="container service-content">
@@ -1295,6 +1270,55 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             </div>
         </div>
     </section>
+
+    <!-- Ofertas Section -->
+    {{#offers_section.visible_any}}
+    <section class="offers-section {{offers_section.visibility_class}}">
+        <div class="container">
+            <h2>{{offers_section.title}}</h2>
+            {{#offers_section.subtitle}}
+            <p class="subtitle">{{offers_section.subtitle}}</p>
+            {{/offers_section.subtitle}}
+            
+            <div class="offers-grid">
+                {{#offers}}
+                <div class="offer-card">
+                    {{#discount_percentage}}
+                    <div class="offer-badge">-{{discount_percentage}}%</div>
+                    {{/discount_percentage}}
+                    {{#image}}
+                    <div class="offer-image-container">
+                        <img src="{{image}}" alt="{{name}}" class="offer-image">
+                    </div>
+                    {{/image}}
+                    <div class="offer-content">
+                        <h3 class="offer-name">{{name}}</h3>
+                        <div class="offer-prices">
+                            {{#original_price}}
+                            <span class="offer-price-original">R$ {{original_price}}</span>
+                            {{/original_price}}
+                            {{#price}}
+                            <div class="offer-price-current">R$ {{price}}</div>
+                            {{/price}}
+                            {{#installment_price}}
+                            <div class="offer-price-installment">{{installment_price}}</div>
+                            {{/installment_price}}
+                        </div>
+                        <div class="offer-buttons">
+                            {{#productUrl}}
+                            <button class="offer-buy-button" onclick="window.open('{{productUrl}}', '_blank')">Loja Online</button>
+                            {{/productUrl}}
+                            {{#banner.cta_primary.href}}
+                            <button class="offer-discount-button" onclick="window.open('{{banner.cta_primary.href}}', '_blank')">Ganhar Desconto</button>
+                            {{/banner.cta_primary.href}}
+                        </div>
+                    </div>
+                </div>
+                {{/offers}}
+            </div>
+        </div>
+    </section>
+    {{/offers_section.visible_any}}
 
     <!-- CTA final -->
     <section class="cta-section">
