@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Download, AlertTriangle, CheckCircle, Settings } from 'lucide-react';
+import { Download, AlertTriangle, CheckCircle, Settings, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { GoogleAdsCampaignConfig, ValidationWarning, AdPreview } from '@/types/google-ads';
 import { KeywordManager } from './KeywordManager';
 import { SitelinksManager } from './SitelinksManager';
@@ -25,6 +27,8 @@ interface GoogleAdsTabProps {
 export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingAds, setIsGeneratingAds] = useState(false);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<Date | null>(null);
   const [campaignConfig, setCampaignConfig] = useState<GoogleAdsCampaignConfig>({
     enabled: false,
     type: 'search',
@@ -57,6 +61,73 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
     }
   }, [campaignConfig, data]);
 
+  const generateAdCopies = async () => {
+    if (!data?.seo?.title || !data?.seo?.description) {
+      toast({
+        title: 'Dados insuficientes',
+        description: 'Preencha o título e descrição SEO antes de gerar anúncios.',
+        variant: 'destructive'
+      });
+      return null;
+    }
+
+    setIsGeneratingAds(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('generate-ad-copies', {
+        body: {
+          seoTitle: data.seo.title,
+          seoDescription: data.seo.description,
+          primaryKeyword: data.seo.keywords?.[0] || data.seo.title,
+          targetAudience: data.banner?.subtitle || 'público geral',
+          // Enriquecer contexto com dados da landing page
+          brandInfo: {
+            name: data.brand?.name || 'Sua Empresa',
+            description: data.brand?.description || data.seo.description
+          },
+          solutions: data.solutions?.map((s: any) => ({
+            title: s.title,
+            description: s.description
+          })) || [],
+          faqData: data.faq?.map((f: any) => ({
+            question: f.question,
+            answer: f.answer
+          })) || []
+        }
+      });
+
+      if (error) {
+        console.error('Error generating ad copies:', error);
+        throw error;
+      }
+
+      setLastGeneratedAt(new Date());
+      return result;
+    } catch (error) {
+      console.error('Error generating ad copies:', error);
+      toast({
+        title: 'Erro ao gerar anúncios',
+        description: 'Não foi possível gerar as cópias. Usando dados padrão.',
+        variant: 'destructive'
+      });
+      
+      // Fallback para dados básicos
+      return {
+        headlines: [
+          data.seo.title?.substring(0, 30) || 'Seu Serviço',
+          data.brand?.name || 'Empresa Confiável',
+          'Qualidade Garantida'
+        ],
+        descriptions: [
+          data.seo.description?.substring(0, 90) || 'Atendimento especializado para suas necessidades.',
+          'Entre em contato e saiba mais sobre nossos serviços.'
+        ],
+        paths: ['servicos', 'contato']
+      };
+    } finally {
+      setIsGeneratingAds(false);
+    }
+  };
+
   const validateAndPreview = async () => {
     const newWarnings: ValidationWarning[] = [];
     
@@ -79,18 +150,28 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
 
     setWarnings(newWarnings);
     
-    // Generate preview (simplified for now)
-    setPreviewData({
-      adCopies: {
-        headlines: ['Atendimento Especializado', 'Agende sua Consulta', 'Qualidade Garantida'],
-        descriptions: ['Atendimento personalizado para suas necessidades.', 'Entre em contato e agende.'],
-        paths: ['atendimento', 'consulta']
-      },
-      sitelinks: campaignConfig.ecommerce_links,
-      videos: [],
-      finalUrl: data?.seo?.canonical_url || '',
-      warnings: newWarnings
-    });
+    // Generate real ad copies with AI
+    const adCopies = await generateAdCopies();
+    
+    if (adCopies) {
+      setPreviewData({
+        adCopies,
+        sitelinks: campaignConfig.ecommerce_links,
+        videos: [],
+        finalUrl: data?.seo?.canonical_url || '',
+        warnings: newWarnings
+      });
+    }
+  };
+
+  const handleRegenerateAds = async () => {
+    const adCopies = await generateAdCopies();
+    if (adCopies && previewData) {
+      setPreviewData({
+        ...previewData,
+        adCopies
+      });
+    }
   };
 
   const handleExportCSV = async () => {
@@ -307,13 +388,46 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
 
           {/* Preview and Warnings */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {previewData && (
-              <AdPreviewCards
-                adCopies={previewData.adCopies}
-                finalUrl={previewData.finalUrl}
-                sitelinks={previewData.sitelinks}
-              />
-            )}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
+                <div className="flex items-center gap-2">
+                  {lastGeneratedAt && (
+                    <span className="text-xs text-muted-foreground">
+                      Gerado: {lastGeneratedAt.toLocaleTimeString()}
+                    </span>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerateAds}
+                    disabled={isGeneratingAds}
+                    className="gap-1"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
+                    Regenerar
+                  </Button>
+                </div>
+              </div>
+              
+              {isGeneratingAds ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : previewData ? (
+                <AdPreviewCards
+                  adCopies={previewData.adCopies}
+                  finalUrl={previewData.finalUrl}
+                  sitelinks={previewData.sitelinks}
+                />
+              ) : null}
+            </div>
             
             <WarningsPanel warnings={warnings} />
           </div>
