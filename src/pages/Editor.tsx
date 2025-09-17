@@ -4274,209 +4274,55 @@ const EditorContent = () => {
                   {data.schema.offers.length > 0 && (
                     <div className="space-y-4">
                       <h4 className="font-medium">Ofertas Configuradas</h4>
-                  {data.schema.offers.map((offer, index) => (
-                    <div key={index} className="p-4 border rounded-lg space-y-4 bg-card">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-sm">
-                            {index + 1}
+                      <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-4">
+                        {data.schema.offers.map((offer, index) => (
+                          <div key={index} className="flex items-center justify-between gap-3 p-3 border rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium truncate">
+                                  {offer.name || `Oferta ${index + 1}`}
+                                </div>
+                                <div className="text-xs text-muted-foreground line-clamp-2">
+                                  {offer.price && `Preço: R$ ${offer.price}`}
+                                  {offer.description && ` • ${offer.description}`}
+                                  {offer.productUrl && !offer.name && ` • ${new URL(offer.productUrl).hostname}`}
+                                </div>
+                                {offer.sourceType === 'imported' && (
+                                  <Badge variant="secondary" className="text-xs mt-1">
+                                    Importado {offer.lastUpdated && `• ${new Date(offer.lastUpdated).toLocaleDateString('pt-BR')}`}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {extractingProduct === index && (
+                                <Badge variant="outline" className="text-xs">
+                                  ⏳ Importando...
+                                </Badge>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newOffers = data.schema.offers.filter((_, i) => i !== index);
+                                  setData(prev => ({
+                                    ...prev,
+                                    schema: { ...prev.schema, offers: newOffers }
+                                  }));
+                                }}
+                                className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <Label className="font-medium">Oferta {index + 1}</Label>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const newOffers = data.schema.offers.filter((_, i) => i !== index);
-                            setData(prev => ({
-                              ...prev,
-                              schema: { ...prev.schema, offers: newOffers }
-                            }));
-                          }}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* URL do Produto */}
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Globe className="w-4 h-4" />
-                          URL do Produto (Loja Integrada)
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={offer.productUrl || ''}
-                            onChange={(e) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].productUrl = e.target.value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                            placeholder="https://minhaloja.lojaintegrada.com.br/produto/123"
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => extractProductData(index)}
-                            disabled={!offer.productUrl || extractingProduct === index}
-                            className="shrink-0"
-                          >
-                            {extractingProduct === index ? (
-                              <>⏳ Importando...</>
-                            ) : (
-                              <>🔗 Importar</>
-                            )}
-                          </Button>
-                        </div>
-                        {offer.sourceType === 'imported' && offer.lastUpdated && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Badge variant="secondary" className="text-xs">
-                              Importado
-                            </Badge>
-                            <span>Última atualização: {new Date(offer.lastUpdated).toLocaleString('pt-BR')}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => extractProductData(index)}
-                              disabled={extractingProduct === index}
-                              className="ml-auto text-xs h-6 px-2"
-                            >
-                              ↻ Atualizar
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <Tag className="w-4 h-4" />
-                            Nome da Oferta
-                          </Label>
-                          <Input
-                            value={offer.name}
-                            onChange={(e) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].name = e.target.value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                            placeholder="Nome da oferta"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Descrição</Label>
-                          <Textarea
-                            value={offer.description}
-                            onChange={(e) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].description = e.target.value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                            placeholder="Descrição da oferta"
-                            rows={2}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <DollarSign className="w-4 h-4 text-green-500" />
-                            Preço
-                          </Label>
-                          <Input
-                            value={offer.price}
-                            onChange={(e) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].price = e.target.value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                            placeholder="199.90"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Moeda</Label>
-                          <Select
-                            value={offer.currency}
-                            onValueChange={(value) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].currency = value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BRL">BRL</SelectItem>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Disponibilidade</Label>
-                          <Select
-                            value={offer.availability}
-                            onValueChange={(value) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].availability = value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="InStock">Em Estoque</SelectItem>
-                              <SelectItem value="OutOfStock">Fora de Estoque</SelectItem>
-                              <SelectItem value="PreOrder">Pré-venda</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Válido Até</Label>
-                          <Input
-                            type="date"
-                            value={offer.valid_through}
-                            onChange={(e) => {
-                              const newOffers = [...data.schema.offers];
-                              newOffers[index].valid_through = e.target.value;
-                              setData(prev => ({
-                                ...prev,
-                                schema: { ...prev.schema, offers: newOffers }
-                              }));
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                   ))}
-                    </div>
-                  )}
+                        ))}
+                       </div>
+                     </div>
+                   )}
                    
                    <Button
                     variant="outline"
