@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link } from "lucide-react";
 
 interface BlogPost {
@@ -294,6 +295,8 @@ export default function BlogGenerator() {
 
   return (
     <div className="container max-w-6xl mx-auto p-6 space-y-8">
+      <BreadcrumbNavigation />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">

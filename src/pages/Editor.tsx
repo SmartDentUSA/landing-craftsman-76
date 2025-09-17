@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -800,6 +802,8 @@ const EditorContent = () => {
       description: "Meta description e título SEO foram regenerados com base nas suas palavras-chave.",
     });
   };
+  
+  const { breadcrumbs } = useBreadcrumbs();
   const [data, setData] = useState<LandingPageData>({
     name: 'Smart Dent Campanha Q1',
     status: 'draft',
@@ -1706,6 +1710,11 @@ const EditorContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Breadcrumb Navigation */}
+      <div className="bg-white border-b border-gray-100 px-6 py-3">
+        <BreadcrumbNavigation />
+      </div>
+      
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-6 py-4">
@@ -4487,9 +4496,32 @@ const EditorContent = () => {
                         <p className="text-sm text-muted-foreground">Configure a navegação estruturada</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                      {data.schema.breadcrumb.length} itens
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                        {data.schema.breadcrumb.length} itens
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const autoBreadcrumb = breadcrumbs.map(item => ({
+                            name: item.label,
+                            url: item.href
+                          }));
+                          setData(prev => ({
+                            ...prev,
+                            schema: { ...prev.schema, breadcrumb: autoBreadcrumb }
+                          }));
+                          toast({
+                            title: "Breadcrumb automático gerado!",
+                            description: `${autoBreadcrumb.length} itens de navegação foram criados automaticamente.`,
+                          });
+                        }}
+                      >
+                        🤖 Gerar Automático
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

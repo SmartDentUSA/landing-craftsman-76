@@ -11,6 +11,7 @@ import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 import { generateHTML } from "@/lib/template-engine";
 import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 
 
 const DashboardContent = () => {
@@ -146,6 +147,9 @@ const DashboardContent = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6">
+        <BreadcrumbNavigation />
+      </div>
       {/* Admin Promotion Banner */}
       {userEmail === 'danilohen@gmail.com' && userRole !== 'admin' && (
         <div className="bg-gradient-to-r from-primary/10 to-accent/10 border-b border-primary/20">
