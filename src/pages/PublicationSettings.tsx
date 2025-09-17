@@ -12,6 +12,9 @@ interface PublicationSettings {
   ftp_host: string;
   ftp_user: string;
   ftp_password_encrypted: string;
+  ftp_protocol: string;
+  ftp_port: number;
+  ftp_remote_path: string;
   wordpress_url: string;
   wordpress_user: string;
   wordpress_app_password_encrypted: string;
@@ -22,6 +25,9 @@ export default function PublicationSettings() {
     ftp_host: "",
     ftp_user: "",
     ftp_password_encrypted: "",
+    ftp_protocol: "sftp",
+    ftp_port: 22,
+    ftp_remote_path: "public_html/blog",
     wordpress_url: "",
     wordpress_user: "",
     wordpress_app_password_encrypted: "",
@@ -58,6 +64,9 @@ export default function PublicationSettings() {
           ftp_host: data.ftp_host || "",
           ftp_user: data.ftp_user || "",
           ftp_password_encrypted: data.ftp_password_encrypted || "",
+          ftp_protocol: data.ftp_protocol || "sftp",
+          ftp_port: data.ftp_port || 22,
+          ftp_remote_path: data.ftp_remote_path || "public_html/blog",
           wordpress_url: data.wordpress_url || "",
           wordpress_user: data.wordpress_user || "",
           wordpress_app_password_encrypted: data.wordpress_app_password_encrypted || "",
@@ -135,6 +144,8 @@ export default function PublicationSettings() {
           host: settings.ftp_host,
           user: settings.ftp_user,
           password: settings.ftp_password_encrypted,
+          port: settings.ftp_port,
+          remotePath: settings.ftp_remote_path,
         },
       });
 
@@ -304,36 +315,39 @@ export default function PublicationSettings() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              FTP (eodonto.com)
+              SFTP (eodonto.com)
               {getStatusIcon(ftpStatus)}
             </CardTitle>
             <CardDescription>
-              Configurações para publicação via FTP no site eodonto.com
+              Configurações para publicação via SFTP no site eodonto.com
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="ftp_host">Host FTP</Label>
+              <Label htmlFor="ftp_host">Host SFTP</Label>
               <Input
                 id="ftp_host"
                 type="text"
-                placeholder="82.25.67.230"
+                placeholder="eodonto.com"
                 value={settings.ftp_host}
                 onChange={(e) => setSettings(prev => ({ ...prev, ftp_host: e.target.value }))}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Apenas o domínio ou IP do servidor
+              </p>
             </div>
             <div>
-              <Label htmlFor="ftp_user">Usuário FTP</Label>
+              <Label htmlFor="ftp_user">Usuário SFTP</Label>
               <Input
                 id="ftp_user"
                 type="text"
-                placeholder="u976305328.eodonto.com"
+                placeholder="u976305328"
                 value={settings.ftp_user}
                 onChange={(e) => setSettings(prev => ({ ...prev, ftp_user: e.target.value }))}
               />
             </div>
             <div>
-              <Label htmlFor="ftp_password">Senha FTP</Label>
+              <Label htmlFor="ftp_password">Senha SFTP</Label>
               <Input
                 id="ftp_password"
                 type="password"
@@ -341,6 +355,44 @@ export default function PublicationSettings() {
                 value={settings.ftp_password_encrypted}
                 onChange={(e) => setSettings(prev => ({ ...prev, ftp_password_encrypted: e.target.value }))}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="ftp_port">Porta</Label>
+                <Input
+                  id="ftp_port"
+                  type="number"
+                  placeholder="22"
+                  min="1"
+                  max="65535"
+                  value={settings.ftp_port}
+                  onChange={(e) => setSettings(prev => ({ ...prev, ftp_port: parseInt(e.target.value) || 22 }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="ftp_protocol">Protocolo</Label>
+                <Input
+                  id="ftp_protocol"
+                  type="text"
+                  placeholder="sftp"
+                  value={settings.ftp_protocol}
+                  onChange={(e) => setSettings(prev => ({ ...prev, ftp_protocol: e.target.value }))}
+                  disabled
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="ftp_remote_path">Caminho remoto</Label>
+              <Input
+                id="ftp_remote_path"
+                type="text"
+                placeholder="public_html/blog"
+                value={settings.ftp_remote_path}
+                onChange={(e) => setSettings(prev => ({ ...prev, ftp_remote_path: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Pasta onde os arquivos serão salvos no servidor
+              </p>
             </div>
             <Button
               onClick={testFtpConnection}
@@ -354,7 +406,7 @@ export default function PublicationSettings() {
                   Testando...
                 </>
               ) : (
-                "Testar Conexão FTP"
+                "Testar SFTP"
               )}
             </Button>
           </CardContent>

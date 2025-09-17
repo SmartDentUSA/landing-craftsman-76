@@ -222,6 +222,9 @@ export type Database = {
           created_at: string
           ftp_host: string | null
           ftp_password_encrypted: string | null
+          ftp_port: number | null
+          ftp_protocol: string | null
+          ftp_remote_path: string | null
           ftp_user: string | null
           id: string
           updated_at: string
@@ -234,6 +237,9 @@ export type Database = {
           created_at?: string
           ftp_host?: string | null
           ftp_password_encrypted?: string | null
+          ftp_port?: number | null
+          ftp_protocol?: string | null
+          ftp_remote_path?: string | null
           ftp_user?: string | null
           id?: string
           updated_at?: string
@@ -246,6 +252,9 @@ export type Database = {
           created_at?: string
           ftp_host?: string | null
           ftp_password_encrypted?: string | null
+          ftp_port?: number | null
+          ftp_protocol?: string | null
+          ftp_remote_path?: string | null
           ftp_user?: string | null
           id?: string
           updated_at?: string
