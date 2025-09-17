@@ -83,6 +83,7 @@ export default function BlogGenerator() {
           published_domains: Array.isArray(stateData.blogData.published_domains) 
             ? stateData.blogData.published_domains 
             : [],
+          intelligent_links: stateData.blogData.intelligent_links || {},
         });
         
         toast({
@@ -589,7 +590,7 @@ const saveBlogPost = async () => {
               </div>
 
               <div className="space-y-3 max-h-48 overflow-y-auto">
-                {Object.entries(blogPost.intelligent_links).map(([keyword, url], index) => (
+                {Object.entries(blogPost.intelligent_links || {}).map(([keyword, url], index) => (
                   <div key={index} className="flex gap-2 items-center p-3 border rounded-lg">
                     <div className="flex-1">
                       <Input
