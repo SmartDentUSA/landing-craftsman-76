@@ -457,7 +457,8 @@ const saveBlogPost = async () => {
         landing_page_url: landingPage?.content?.seo?.canonical_url || "#",
         created_at: new Date().toISOString(),
         cover_image: landingPage?.content?.banner?.images?.[0] || null,
-        content_images: landingPage?.content?.solutions?.map((s: any) => s.image) || []
+        content_images: landingPage?.content?.solutions?.map((s: any) => s.image) || [],
+        include_offers: blogPost.include_offers || false
       };
 
       return generateBlogHTML(blogData, landingPage?.content);

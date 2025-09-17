@@ -2775,6 +2775,47 @@ export const SAMPLE_DATA = {
 };
 
 // Função para gerar HTML do blog post
+// Função auxiliar para gerar seção de ofertas
+const generateOffersSection = (landingPageData: any) => {
+  if (!landingPageData?.editor_data?.products || !Array.isArray(landingPageData.editor_data.products)) {
+    return '';
+  }
+
+  const products = landingPageData.editor_data.products.filter(p => p.name && p.price);
+  
+  if (products.length === 0) {
+    return '';
+  }
+
+  const productsHtml = products.map(product => `
+    <div class="offer-card">
+      ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}" class="offer-image">` : ''}
+      <div class="offer-content">
+        <h4 class="offer-title">${product.name}</h4>
+        ${product.description ? `<p class="offer-description">${product.description.substring(0, 100)}...</p>` : ''}
+        <div class="offer-price">
+          ${product.discount_price && product.discount_price < product.price ? 
+            `<span class="offer-price-old">R$ ${product.price.toFixed(2)}</span>
+             <span class="offer-price-new">R$ ${product.discount_price.toFixed(2)}</span>` :
+            `<span class="offer-price-current">R$ ${product.price.toFixed(2)}</span>`
+          }
+        </div>
+        ${product.link ? `<a href="${product.link}" class="offer-button" target="_blank">Ver Oferta</a>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="offers-section">
+      <h2>🎯 Ofertas Especiais</h2>
+      <p>Confira nossas ofertas exclusivas relacionadas ao tema:</p>
+      <div class="offers-grid">
+        ${productsHtml}
+      </div>
+    </div>
+  `;
+};
+
 export const generateBlogHTML = (blogData: any, landingPageData: any) => {
   const {
     title,
@@ -2785,7 +2826,8 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     landing_page_url,
     created_at,
     cover_image,
-    content_images
+    content_images,
+    include_offers
   } = blogData;
 
   const publishDate = new Date(created_at).toLocaleDateString('pt-BR');
@@ -2811,6 +2853,14 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
         processedContent = processedContent.replace(placeholder, imageHtml);
       }
     });
+  }
+
+  // Adicionar seção de ofertas se habilitado
+  if (include_offers) {
+    const offersHtml = generateOffersSection(landingPageData);
+    if (offersHtml) {
+      processedContent += offersHtml;
+    }
   }
 
   const blogTemplate = `<!DOCTYPE html>
@@ -2951,6 +3001,198 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             display: block;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .offers-section {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            margin: 2rem 0;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .offers-section h2 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .offers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .offer-card {
+            background: white;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .offer-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .offer-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .offer-content {
+            padding: 1.25rem;
+        }
+        
+        .offer-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+        }
+        
+        .offer-description {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .offer-price {
+            margin-bottom: 1rem;
+        }
+        
+        .offer-price-old {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+        
+        .offer-price-new {
+            color: #dc2626;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .offer-price-current {
+            color: #059669;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .offer-button {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .offer-button:hover {
+            background: #2563eb;
+        }
+        
+        .offers-section {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            margin: 2rem 0;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .offers-section h2 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .offers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .offer-card {
+            background: white;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .offer-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .offer-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .offer-content {
+            padding: 1.25rem;
+        }
+        
+        .offer-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+        }
+        
+        .offer-description {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .offer-price {
+            margin-bottom: 1rem;
+        }
+        
+        .offer-price-old {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+        
+        .offer-price-new {
+            color: #dc2626;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .offer-price-current {
+            color: #059669;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .offer-button {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .offer-button:hover {
+            background: #2563eb;
         }
         
         @media (max-width: 768px) {

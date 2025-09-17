@@ -179,7 +179,7 @@ INSTRUÇÕES:
 
 Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
         } else {
-          userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post abrangente de 800-1100 palavras com LINKS ESTRATÉGICOS para smartdent.com.br:
+         userPrompt = `Com base no conteúdo completo da landing page abaixo, crie um blog post abrangente e COMPLETO de 1200-1500 palavras com LINKS ESTRATÉGICOS para smartdent.com.br:
 
 DADOS DA LANDING PAGE:
 Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
@@ -193,22 +193,23 @@ ${fullLandingPageContent?.faq?.items?.map(f => `P: ${f.question}\nR: ${f.answer}
 Conteúdo SEO: ${fullLandingPageContent?.seo?.hidden_content || fullLandingPageContent?.seo?.description || ''}
 
 INSTRUÇÕES DETALHADAS:
-1. Introdução envolvente baseada no banner (2-3 parágrafos)
+1. Introdução envolvente baseada no banner (3-4 parágrafos desenvolvidos)
 2. Imagem de capa: <!-- IMAGEM_CAPA --> (baseada na Solução 1)
-3. Crie uma seção para cada solução com subtítulo H2
+3. Crie uma seção robusta para cada solução com subtítulo H2 (2-3 parágrafos por seção)
 4. Insira imagens ao longo do conteúdo: <!-- IMAGEM_SOLUCAO_2 -->, <!-- IMAGEM_SOLUCAO_3 -->, <!-- IMAGEM_SOLUCAO_4 -->, <!-- IMAGEM_SOLUCAO_5 -->
-5. Transforme o FAQ em seção "Perguntas Frequentes" com H2
-6. Conclusão que reforce os benefícios das soluções
-7. Call-to-action conectando com a landing page
+5. Transforme o FAQ em seção "Perguntas Frequentes" com H2 (manter todas as perguntas)
+6. Conclusão extensa que reforce os benefícios das soluções (2-3 parágrafos)
+7. Call-to-action bem desenvolvido conectando com a landing page
 
 FORMATAÇÃO:
 - Use H2 para seções principais, H3 para subseções
 - Listas bullet points para benefícios
-- Parágrafos bem estruturados
+- Parágrafos bem estruturados e desenvolvidos
 - Tom profissional mas acessível
 - SEO otimizado com palavras-chave naturais
+- IMPORTANTE: NÃO TRUNCAR O CONTEÚDO - Escreva artigo completo sem cortes
 
-Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
+CRÍTICO: Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>. NÃO use markdown (##, **, etc.) - use apenas HTML puro (<h2>, <strong>, <p>, etc.).`;
         }
         break;
 
@@ -221,15 +222,18 @@ Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>.`;
 
     // Define token limits based on type and speed
     let maxTokens = 200;
+    let timeoutMs = 35000; // 35 segundos por padrão
+    
     if (type === 'blog_content') {
-      maxTokens = speed === 'fast' ? 800 : 1100;
+      maxTokens = speed === 'fast' ? 1200 : 2400; // Aumentado para evitar truncamento
+      timeoutMs = speed === 'fast' ? 50000 : 85000; // Mais tempo para conteúdo completo
     } else if (type === 'keywords') {
       maxTokens = 500;
     }
     
     // Create timeout controller
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 segundos
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     try {
       const response = await fetch(DEEPSEEK_API_URL, {

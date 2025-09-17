@@ -56,10 +56,12 @@ serve(async (req) => {
       );
     }
 
-    // Buscar configurações de publicação
+    // Buscar configurações de publicação mais recentes
     const { data: settings, error: settingsError } = await supabase
       .from('publication_settings')
       .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (settingsError || !settings) {
@@ -76,6 +78,17 @@ serve(async (req) => {
       );
     }
 
+    // Normalizar campos vazios para facilitar validação
+    const normalizedSettings = {
+      ...settings,
+      ftp_host: settings.ftp_host?.trim() || '',
+      ftp_user: settings.ftp_user?.trim() || '',
+      ftp_password_encrypted: settings.ftp_password_encrypted?.trim() || '',
+      wordpress_url: settings.wordpress_url?.trim() || '',
+      wordpress_user: settings.wordpress_user?.trim() || '',
+      wordpress_app_password_encrypted: settings.wordpress_app_password_encrypted?.trim() || ''
+    };
+
     const publishedDomains: string[] = [];
     const errors: string[] = [];
 
@@ -85,7 +98,7 @@ serve(async (req) => {
         if (domain === 'eodonto.com') {
           // Publicar via FTP
           console.log(`📤 Publicando no FTP (${domain})...`);
-          const ftpResult = await publishToFTP(blogPost, settings);
+          const ftpResult = await publishToFTP(blogPost, normalizedSettings);
           if (ftpResult.success) {
             publishedDomains.push(domain);
             console.log(`✅ Publicado com sucesso no ${domain}`);
@@ -95,7 +108,7 @@ serve(async (req) => {
         } else if (domain === 'dentala.com.br') {
           // Publicar via WordPress API
           console.log(`📤 Publicando no WordPress (${domain})...`);
-          const wpResult = await publishToWordPress(blogPost, settings);
+          const wpResult = await publishToWordPress(blogPost, normalizedSettings);
           if (wpResult.success) {
             publishedDomains.push(domain);
             console.log(`✅ Publicado com sucesso no ${domain}`);

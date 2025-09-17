@@ -25,10 +25,10 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.test-ftp-connection]
-verify_jwt = true
+verify_jwt = false
 
 [functions.test-wordpress-connection]
-verify_jwt = true
+verify_jwt = false
 
 [functions.publish-blog-post]
 verify_jwt = true
