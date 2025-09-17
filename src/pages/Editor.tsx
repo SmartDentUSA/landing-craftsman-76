@@ -3330,9 +3330,14 @@ const EditorContent = () => {
                                     <div className="flex items-center justify-between">
                                       <Label className="text-xs font-medium text-green-700">Keywords Geradas</Label>
                                       <div className="flex items-center gap-1">
-                                        {data.seo.ai_keywords ? (
+                                        {Array.isArray(data.seo.ai_keywords) || typeof data.seo.ai_keywords === 'string' ? (
                                           <div className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
-                                            {data.seo.ai_keywords.split(',').length} keywords
+                                            {Array.isArray(data.seo.ai_keywords)
+                                              ? data.seo.ai_keywords.length
+                                              : (data.seo.ai_keywords || '')
+                                                  .split(',')
+                                                  .map(k => k.trim())
+                                                  .filter(Boolean).length} keywords
                                           </div>
                                         ) : (
                                           <div className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
@@ -3342,7 +3347,7 @@ const EditorContent = () => {
                                       </div>
                                     </div>
                                     <Textarea
-                                      value={data.seo.ai_keywords || ''}
+                                      value={Array.isArray(data.seo.ai_keywords) ? data.seo.ai_keywords.join(', ') : (data.seo.ai_keywords || '')}
                                       onChange={(e) => setData(prev => ({
                                         ...prev,
                                         seo: { ...prev.seo, ai_keywords: e.target.value }
