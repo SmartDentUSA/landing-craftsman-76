@@ -55,16 +55,52 @@ export default function BlogGenerator() {
 
   useEffect(() => {
     if (id) {
-      loadLandingPage();
+      loadLandingPageFromEditor();
       loadExistingBlogPost();
     }
   }, [id]);
 
-  const loadLandingPage = async () => {
+  const loadLandingPageFromEditor = async () => {
     try {
-      console.log(`🔍 Buscando landing page com ID: "${id}"`);
+      console.log(`🔍 Carregando landing page do Editor com ID: "${id}"`);
       
-      // Primeira tentativa: buscar por ID exato
+      // Buscar dados do Editor (SEO Inteligente)
+      const editorLandingPage = getLandingPage(id || "");
+      
+      if (editorLandingPage && editorLandingPage.data) {
+        console.log(`✅ Landing page encontrada no Editor: "${editorLandingPage.name}"`);
+        
+        setLandingPage({
+          id: editorLandingPage.id,
+          title: editorLandingPage.name,
+          description: editorLandingPage.data.banner?.title || editorLandingPage.data.banner?.subtitle || "Landing page do Editor",
+          content: editorLandingPage.data,
+        });
+
+        // Pré-popular campos do blog com dados do SEO Inteligente
+        const seoData = editorLandingPage.data.seo || {};
+        
+        setBlogPost(prev => ({
+          ...prev,
+          title: seoData.seo_title || prev.title,
+          meta_description: seoData.seo_description || prev.meta_description,
+          keywords: seoData.ai_keywords || prev.keywords,
+          intelligent_links: seoData.intelligent_links || prev.intelligent_links,
+        }));
+
+        if (seoData.seo_title || seoData.seo_description || seoData.ai_keywords) {
+          toast({
+            title: "SEO Inteligente carregado!",
+            description: "Dados do SEO Inteligente importados com sucesso para o blog.",
+          });
+        }
+        
+        return;
+      }
+
+      // Fallback: buscar no Supabase como antes
+      console.log(`⚠️ Landing page não encontrada no Editor. Buscando no Supabase...`);
+      
       let { data, error } = await supabase
         .from("approved_reviews")
         .select("*")
@@ -73,29 +109,6 @@ export default function BlogGenerator() {
 
       if (error) throw error;
 
-      // Se não encontrou, tentar buscar qualquer landing page disponível
-      if (!data) {
-        console.log(`⚠️ Nenhuma landing page encontrada para ID "${id}". Buscando qualquer landing page disponível...`);
-        
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("approved_reviews")
-          .select("*")
-          .limit(1)
-          .maybeSingle();
-
-        if (fallbackError) throw fallbackError;
-        
-        if (fallbackData) {
-          console.log(`✅ Usando landing page de fallback: "${fallbackData.landing_page_id}"`);
-          data = fallbackData;
-          
-          toast({
-            title: "Landing page carregada",
-            description: `Usando dados da landing page "${fallbackData.landing_page_id}" como referência.`,
-          });
-        }
-      }
-
       if (data) {
         setLandingPage({
           id: data.landing_page_id,
@@ -103,9 +116,9 @@ export default function BlogGenerator() {
           description: data.notes || data.seo_hidden_content || "Landing page para geração de blog",
           content: data,
         });
-        console.log(`✅ Landing page carregada com sucesso: "${data.landing_page_id}"`);
+        console.log(`✅ Landing page carregada do Supabase: "${data.landing_page_id}"`);
       } else {
-        // Se ainda não encontrou, usar dados genéricos
+        // Fallback final: dados genéricos
         console.log("⚠️ Nenhuma landing page encontrada. Usando dados genéricos...");
         setLandingPage({
           id: id || "generic",
@@ -123,7 +136,6 @@ export default function BlogGenerator() {
     } catch (error) {
       console.error("Erro ao carregar landing page:", error);
       
-      // Fallback final: usar dados genéricos
       setLandingPage({
         id: id || "generic",
         title: "Landing Page Genérica",
@@ -224,48 +236,24 @@ export default function BlogGenerator() {
           type: "blog_content",
           content: `Criar um artigo de blog baseado na landing page: ${landingPage.description}. 
           O artigo deve ter pelo menos 800 palavras, incluir subtítulos (h2, h3), 
-          ser otimizado para SEO e incluir links estratégicos usando os links inteligentes fornecidos.
-          
-          CONTEXTO SMARTDENT: A Smartdent é líder em odontologia digital no Brasil, oferecendo:
-          - Scanners intraorais BLZ Scanner
-          - Treinamentos e capacitação completa
-          - Fluxo digital integrado para consultórios
-          - Tecnologia para implantodontia e prótese digital`,
+          ser otimizado para SEO e incluir links estratégicos usando os links inteligentes fornecidos.`,
+          title: blogPost.title || landingPage.title,
           intelligent_links: blogPost.intelligent_links,
           speed: "detailed",
-          fullLandingPageContent: {
+          fullLandingPageContent: landingPage.content || {
             banner: {
-              title: "Odontologia Digital SmartDent",
-              subtitle: "Tecnologia avançada para o futuro da odontologia"
+              title: landingPage.title,
+              subtitle: landingPage.description
             },
-            solutions: {
+            solutions: landingPage.content?.solutions || {
               title: "Nossas Soluções",
-              items: [
-                { text: "Scanner Intraoral BLZ - Precisão digital revolucionária" },
-                { text: "Fluxo Digital Completo - Da captura à entrega final" },
-                { text: "Treinamento Especializado - Capacitação completa da equipe" },
-                { text: "Suporte Técnico 24/7 - Assistência quando você precisar" },
-                { text: "Integração com Software - Conectividade total" }
-              ]
+              items: []
             },
-            faq: {
-              title: "Perguntas Frequentes",
-              items: [
-                {
-                  question: "Como funciona o scanner intraoral?",
-                  answer: "O scanner captura imagens 3D precisas da boca do paciente em tempo real, eliminando a necessidade de moldagens tradicionais."
-                },
-                {
-                  question: "Qual o investimento necessário?",
-                  answer: "Oferecemos planos flexíveis de financiamento e locação para adequar ao seu orçamento."
-                },
-                {
-                  question: "Como é o treinamento da equipe?",
-                  answer: "Nosso programa de capacitação inclui treinamento presencial e online, com certificação ao final."
-                }
-              ]
+            faq: landingPage.content?.faq || {
+              title: "Perguntas Frequentes", 
+              items: []
             },
-            seo: {
+            seo: landingPage.content?.seo || {
               hidden_content: landingPage.description,
               description: landingPage.description
             }
