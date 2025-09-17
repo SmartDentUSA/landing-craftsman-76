@@ -5491,6 +5491,56 @@ dataLayer = [{
                 >
                   📊 GTM Code
                 </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  onClick={async () => {
+                    try {
+                      const processedData = beforePreview(onSave(data));
+                      const html = generateHTML(processedData);
+                      
+                      const response = await supabase.functions.invoke('validate-schema', {
+                        body: { 
+                          html, 
+                          url: processedData.seo.canonical_url || 'https://seudominio.com' 
+                        }
+                      });
+                      
+                      if (response.error) {
+                        toast({ 
+                          title: "Erro na Validação", 
+                          description: "Falha ao validar schema markup",
+                          variant: "destructive" 
+                        });
+                        return;
+                      }
+                      
+                      const result = response.data;
+                      if (result.isValid) {
+                        toast({ 
+                          title: "✅ Schema Válido!", 
+                          description: `${result.warnings.join('. ')}` 
+                        });
+                      } else {
+                        toast({ 
+                          title: "⚠️ Problemas no Schema", 
+                          description: result.errors.slice(0, 2).join('. '),
+                          variant: "destructive" 
+                        });
+                      }
+                    } catch (error) {
+                      toast({ 
+                        title: "Erro", 
+                        description: "Falha ao validar schema",
+                        variant: "destructive" 
+                      });
+                    }
+                  }}
+                >
+                  🔍 Validar Schema
+                </Button>
               </div>
               
               {/* SEO Score Resumo Avançado */}

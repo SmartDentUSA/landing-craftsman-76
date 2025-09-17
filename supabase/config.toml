@@ -17,3 +17,9 @@ verify_jwt = true
 
 [functions.ai-seo-generator]
 verify_jwt = true
+
+[functions.generate-sitemap]
+verify_jwt = false
+
+[functions.validate-schema]
+verify_jwt = true
