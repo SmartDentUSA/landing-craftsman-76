@@ -256,15 +256,26 @@ export default function VideoTestimonialsSection({ landingPageId }: VideoTestimo
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <VideoIcon className="h-5 w-5" />
-          📺 Depoimentos em Vídeo
-          <Badge variant="outline" className="ml-auto">
+    <Card className="border-l-4 border-l-blue-500/50 bg-gradient-to-r from-blue-50/30 to-background dark:from-blue-950/20">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <VideoIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-foreground">
+                📺 Depoimentos em Vídeo
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Gerencie depoimentos do YouTube e Instagram para maximizar o SEO local
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
             {testimonials.length} depoimentos
           </Badge>
-        </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="manual" className="space-y-4">
@@ -274,10 +285,7 @@ export default function VideoTestimonialsSection({ landingPageId }: VideoTestimo
           </TabsList>
           
           <TabsContent value="manual" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">
-                Gerencie depoimentos do YouTube e Instagram para maximizar o SEO local
-              </p>
+            <div className="flex justify-end items-center">
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm}>
