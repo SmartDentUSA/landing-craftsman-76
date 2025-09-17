@@ -39,9 +39,13 @@ export default function PublicationSettings() {
 
   const loadSettings = async () => {
     try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
       const { data, error } = await supabase
         .from("publication_settings")
         .select("*")
+        .eq('user_id', user.user.id)
         .maybeSingle();
 
       if (error) throw error;
@@ -83,6 +87,8 @@ export default function PublicationSettings() {
         .upsert({
           user_id: user.user.id,
           ...settings,
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
@@ -104,6 +110,16 @@ export default function PublicationSettings() {
   };
 
   const testFtpConnection = async () => {
+    // Validate fields first
+    if (!settings.ftp_host.trim() || !settings.ftp_user.trim() || !settings.ftp_password_encrypted.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos do FTP antes de testar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setTestingFtp(true);
     setFtpStatus("idle");
     
@@ -156,12 +172,50 @@ export default function PublicationSettings() {
     }
   };
 
+  // Helper function to sanitize WordPress URL
+  const sanitizeWordPressUrl = (url: string): string => {
+    if (!url) return "";
+    
+    let sanitized = url.trim();
+    
+    // Add https if no protocol
+    if (!sanitized.startsWith('http://') && !sanitized.startsWith('https://')) {
+      sanitized = `https://${sanitized}`;
+    }
+    
+    // Remove paths like /wp-admin, /blog, etc. - keep only origin
+    try {
+      const urlObj = new URL(sanitized);
+      sanitized = `${urlObj.protocol}//${urlObj.host}`;
+    } catch {
+      // If URL parsing fails, just remove common paths manually
+      sanitized = sanitized.replace(/\/wp-admin.*$/, '');
+      sanitized = sanitized.replace(/\/blog.*$/, '');
+      sanitized = sanitized.replace(/\/+$/, '');
+    }
+    
+    return sanitized;
+  };
+
   const testWordPressConnection = async () => {
+    // Validate fields first
+    if (!settings.wordpress_url.trim() || !settings.wordpress_user.trim() || !settings.wordpress_app_password_encrypted.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos do WordPress antes de testar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setTestingWordPress(true);
     setWpStatus("idle");
     
+    const sanitizedUrl = sanitizeWordPressUrl(settings.wordpress_url);
+    
     console.log("🔄 Iniciando teste WordPress com dados:", {
-      url: settings.wordpress_url,
+      originalUrl: settings.wordpress_url,
+      sanitizedUrl: sanitizedUrl,
       user: settings.wordpress_user,
       password: settings.wordpress_app_password_encrypted ? "***" : "vazio"
     });
@@ -169,7 +223,7 @@ export default function PublicationSettings() {
     try {
       const { data, error } = await supabase.functions.invoke("test-wordpress-connection", {
         body: {
-          url: settings.wordpress_url,
+          url: sanitizedUrl,
           user: settings.wordpress_user,
           password: settings.wordpress_app_password_encrypted,
         },
@@ -274,7 +328,7 @@ export default function PublicationSettings() {
             </div>
             <Button
               onClick={testFtpConnection}
-              disabled={testingFtp || !settings.ftp_host.trim() || !settings.ftp_user.trim() || !settings.ftp_password_encrypted.trim()}
+              disabled={testingFtp}
               variant="outline"
               className="w-full"
             >
@@ -311,6 +365,9 @@ export default function PublicationSettings() {
                 value={settings.wordpress_url}
                 onChange={(e) => setSettings(prev => ({ ...prev, wordpress_url: e.target.value }))}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use apenas o domínio, sem /wp-admin. Ex.: https://dentala.com.br
+              </p>
             </div>
             <div>
               <Label htmlFor="wordpress_user">Usuário WordPress</Label>
@@ -334,7 +391,7 @@ export default function PublicationSettings() {
             </div>
             <Button
               onClick={testWordPressConnection}
-              disabled={testingWordPress || !settings.wordpress_url.trim() || !settings.wordpress_user.trim() || !settings.wordpress_app_password_encrypted.trim()}
+              disabled={testingWordPress}
               variant="outline"
               className="w-full"
             >
