@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -64,6 +64,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [newFeature, setNewFeature] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [generatingKeywords, setGeneratingKeywords] = useState(false);
   const { toast } = useToast();
 
   const isEditing = !!product;
@@ -133,6 +134,99 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     const updatedFeatures = features.filter((_, i) => i !== index);
     setFeatures(updatedFeatures);
     setFormData(prev => ({ ...prev, features: updatedFeatures }));
+  };
+
+  const generateKeywordsWithAI = async () => {
+    // Check if we have enough content to generate keywords
+    const hasContent = formData.description?.trim() || 
+                      benefits.length > 0 || 
+                      features.length > 0 || 
+                      formData.name?.trim();
+
+    if (!hasContent) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos nome, descrição, benefícios ou recursos para gerar keywords",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeneratingKeywords(true);
+    try {
+      // Prepare content for AI
+      const contentParts = [];
+      
+      if (formData.name?.trim()) {
+        contentParts.push(`Produto: ${formData.name}`);
+      }
+      
+      if (formData.description?.trim()) {
+        contentParts.push(`Descrição: ${formData.description}`);
+      }
+      
+      if (benefits.length > 0) {
+        contentParts.push(`Benefícios: ${benefits.join(', ')}`);
+      }
+      
+      if (features.length > 0) {
+        contentParts.push(`Recursos: ${features.join(', ')}`);
+      }
+
+      const content = contentParts.join('\n\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'keywords',
+          content: content
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.content) {
+        // Parse the keywords response
+        let newKeywords: string[] = [];
+        
+        if (typeof data.content === 'object') {
+          // Combine all keyword types
+          const keywordData = data.content;
+          newKeywords = [
+            ...(keywordData.primary || []),
+            ...(keywordData.secondary || []),
+            ...(keywordData.lsi || []),
+            ...(keywordData.long_tail || [])
+          ];
+        } else if (Array.isArray(data.content)) {
+          newKeywords = data.content;
+        }
+
+        // Filter out duplicates and merge with existing keywords
+        const existingKeywords = formData.keywords || [];
+        const uniqueNewKeywords = newKeywords.filter(
+          keyword => !existingKeywords.includes(keyword)
+        );
+
+        const updatedKeywords = [...existingKeywords, ...uniqueNewKeywords];
+        setFormData(prev => ({ ...prev, keywords: updatedKeywords }));
+
+        toast({
+          title: "Sucesso",
+          description: `${uniqueNewKeywords.length} novas keywords geradas com IA!`
+        });
+      } else {
+        throw new Error('Resposta inválida da IA');
+      }
+    } catch (error) {
+      console.error('Error generating keywords:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar keywords com IA. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingKeywords(false);
+    }
   };
 
   const handleSave = async () => {
@@ -373,7 +467,24 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           </div>
 
           <div className="space-y-2">
-            <Label>Keywords</Label>
+            <div className="flex items-center justify-between">
+              <Label>Keywords</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateKeywordsWithAI}
+                disabled={generatingKeywords}
+                className="gap-2"
+              >
+                {generatingKeywords ? (
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Gerar com IA
+              </Button>
+            </div>
             <TagInput
               value={formData.keywords || []}
               onChange={(keywords) => setFormData(prev => ({ ...prev, keywords }))}
