@@ -3472,6 +3472,59 @@ const EditorContent = () => {
                                         <FileText className="w-3 h-3 mr-1" />
                                         Gerador de Blog
                                       </Button>
+                                      
+                                      {/* Import FAQ Keywords Button */}
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={parseKeywords(data.seo.ai_keywords).length === 0}
+                                        onClick={() => {
+                                          const faqKeywords = parseKeywords(data.seo.ai_keywords);
+                                          if (faqKeywords.length === 0) {
+                                            toast({
+                                              title: "Nenhuma keyword encontrada",
+                                              description: "Gere keywords do FAQ primeiro.",
+                                              variant: "destructive"
+                                            });
+                                            return;
+                                          }
+                                          
+                                          const currentLinks = data.seo.intelligent_links || {};
+                                          const newLinks = { ...currentLinks };
+                                          let importedCount = 0;
+                                          
+                                          // Import each FAQ keyword as a new intelligent link with empty URL
+                                          faqKeywords.forEach(keyword => {
+                                            const trimmedKeyword = keyword.trim();
+                                            if (trimmedKeyword && !newLinks[trimmedKeyword]) {
+                                              newLinks[trimmedKeyword] = "";
+                                              importedCount++;
+                                            }
+                                          });
+                                          
+                                          if (importedCount > 0) {
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, intelligent_links: newLinks }
+                                            }));
+                                            toast({ 
+                                              title: `🔗 ${importedCount} keywords importadas!`, 
+                                              description: "Configure as URLs para cada palavra-chave importada." 
+                                            });
+                                          } else {
+                                            toast({ 
+                                              title: "Nenhuma keyword nova", 
+                                              description: "Todas as keywords do FAQ já estão nos Links Inteligentes." 
+                                            });
+                                          }
+                                        }}
+                                        className="text-xs bg-green-50 hover:bg-green-100 border-green-200 text-green-700 hover:text-green-800"
+                                        title={`Importar ${parseKeywords(data.seo.ai_keywords).length} keywords do FAQ`}
+                                      >
+                                        <Tag className="w-3 h-3 mr-1" />
+                                        Importar Keywords ({parseKeywords(data.seo.ai_keywords).length})
+                                      </Button>
+                                      
                                       <Button
                                         size="sm"
                                         variant="outline"
