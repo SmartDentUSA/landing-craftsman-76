@@ -1543,9 +1543,32 @@ export const generateHTML = (data: any): string => {
     }
   };
   
+  // Helper function to process AI keywords
+  const processAIKeywords = (keywords: any) => {
+    if (!keywords) return null;
+    
+    // Se for string, converter para array
+    if (typeof keywords === 'string') {
+      const keywordArray = keywords.split(',').map(k => k.trim()).filter(k => k);
+      return keywordArray.length > 0 ? { primary: keywordArray } : null;
+    }
+    
+    // Se já for array, usar diretamente
+    if (Array.isArray(keywords)) {
+      return keywords.length > 0 ? { primary: keywords } : null;
+    }
+    
+    return null;
+  };
+
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
+    // Mapear campos SEO para nível raiz onde o template espera
+    publish_date: data.seo?.publish_date,
+    lastmod: data.seo?.lastmod,
+    seo_hidden_content: data.seo?.seo_hidden_content,
+    ai_keywords: processAIKeywords(data.seo?.ai_keywords),
     solutions: data.solutions?.map((solution: any, index: number) => {
       // Define tamanhos para layout assimétrico
       let size, sizeType, gridColumn = '';
