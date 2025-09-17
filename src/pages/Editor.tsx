@@ -1124,20 +1124,26 @@ const EditorContent = () => {
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async () => {
-    if (!data.seo_description) {
-      toast({ title: "Erro", description: "Adicione uma descrição SEO primeiro para gerar o blog post" });
+    // Verificar se há conteúdo disponível (prioritizar conteúdo oculto SEO)
+    const contentSource = data.seo.seo_hidden_content?.trim() || data.seo_description?.trim();
+    if (!contentSource) {
+      toast({ 
+        title: "Erro", 
+        description: "Adicione um Conteúdo Oculto SEO ou uma descrição SEO primeiro para gerar o blog post" 
+      });
       return;
     }
 
     setGeneratingBlog(true);
     try {
-      // Gerar conteúdo do blog usando IA
+      // Gerar conteúdo do blog usando IA (priorizando conteúdo oculto SEO)
       const { data: blogContentResult, error: blogError } = await supabase.functions.invoke('ai-seo-generator', {
         body: {
           type: 'blog_content',
-          content: data.seo_description,
+          content: contentSource,
           title: data.seo_title || data.banner.title,
-          landingPageData: data
+          landingPageData: data,
+          contentType: data.seo.seo_hidden_content?.trim() ? 'hidden_content' : 'seo_description'
         }
       });
 
