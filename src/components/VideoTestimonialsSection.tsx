@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { VideoIcon, Instagram, Youtube, Plus, Edit, Trash2, Star, MapPin, Wand2 } from 'lucide-react';
+import { VideoIcon, Instagram, Youtube, Plus, Edit, Trash2, Star, MapPin, Wand2, Upload } from 'lucide-react';
+import { VideoTestimonialCSVUploader } from './VideoTestimonialCSVUploader';
 
 interface VideoTestimonial {
   id: string;
@@ -266,12 +267,18 @@ export default function VideoTestimonialsSection({ landingPageId }: VideoTestimo
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              Gerencie depoimentos do YouTube e Instagram para maximizar o SEO local
-            </p>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Tabs defaultValue="manual" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manual">✏️ Manual</TabsTrigger>
+            <TabsTrigger value="import">📥 Importação</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="manual" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Gerencie depoimentos do YouTube e Instagram para maximizar o SEO local
+              </p>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -350,99 +357,107 @@ export default function VideoTestimonialsSection({ landingPageId }: VideoTestimo
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-8">Carregando depoimentos...</div>
-          ) : testimonials.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum depoimento cadastrado ainda
             </div>
-          ) : (
-            <div className="grid gap-4">
-              {testimonials.map((testimonial) => (
-                <Card key={testimonial.id} className="relative">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h4 className="font-semibold">{testimonial.client_name}</h4>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {testimonial.profession && <span>{testimonial.profession}</span>}
-                          {testimonial.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {testimonial.location}, {testimonial.state}
-                            </span>
-                          )}
-                          {testimonial.sentiment_score && (
-                            <span className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                              {(testimonial.sentiment_score * 100).toFixed(0)}%
-                            </span>
-                          )}
+
+            {loading ? (
+              <div className="text-center py-8">Carregando depoimentos...</div>
+            ) : testimonials.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum depoimento cadastrado ainda
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {testimonials.map((testimonial) => (
+                  <Card key={testimonial.id} className="relative">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold">{testimonial.client_name}</h4>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {testimonial.profession && <span>{testimonial.profession}</span>}
+                            {testimonial.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {testimonial.location}, {testimonial.state}
+                              </span>
+                            )}
+                            {testimonial.sentiment_score && (
+                              <span className="flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                {(testimonial.sentiment_score * 100).toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => processWithAI(testimonial)}
+                            disabled={aiProcessing}
+                          >
+                            <Wand2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(testimonial)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteTestimonial(testimonial.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => processWithAI(testimonial)}
-                          disabled={aiProcessing}
-                        >
-                          <Wand2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(testimonial)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteTestimonial(testimonial.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
+                      <p className="text-sm mb-3 line-clamp-3">{testimonial.testimonial_text}</p>
+
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {testimonial.specialty && (
+                          <Badge variant="secondary">{testimonial.specialty}</Badge>
+                        )}
+                        {Array.isArray(testimonial.ai_keywords) && testimonial.ai_keywords.slice(0, 3).map((keyword: string, idx: number) => (
+                          <Badge key={idx} variant="outline">{keyword}</Badge>
+                        ))}
                       </div>
-                    </div>
 
-                    <p className="text-sm mb-3 line-clamp-3">{testimonial.testimonial_text}</p>
-
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {testimonial.specialty && (
-                        <Badge variant="secondary">{testimonial.specialty}</Badge>
-                      )}
-                      {Array.isArray(testimonial.ai_keywords) && testimonial.ai_keywords.slice(0, 3).map((keyword: string, idx: number) => (
-                        <Badge key={idx} variant="outline">{keyword}</Badge>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2">
-                      {testimonial.youtube_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={testimonial.youtube_url} target="_blank" rel="noopener noreferrer">
-                            <Youtube className="h-4 w-4 mr-1" />
-                            YouTube
-                          </a>
-                        </Button>
-                      )}
-                      {testimonial.instagram_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={testimonial.instagram_url} target="_blank" rel="noopener noreferrer">
-                            <Instagram className="h-4 w-4 mr-1" />
-                            Instagram
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                      <div className="flex gap-2">
+                        {testimonial.youtube_url && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={testimonial.youtube_url} target="_blank" rel="noopener noreferrer">
+                              <Youtube className="h-4 w-4 mr-1" />
+                              YouTube
+                            </a>
+                          </Button>
+                        )}
+                        {testimonial.instagram_url && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={testimonial.instagram_url} target="_blank" rel="noopener noreferrer">
+                              <Instagram className="h-4 w-4 mr-1" />
+                              Instagram
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="import">
+            <VideoTestimonialCSVUploader 
+              landingPageId={landingPageId}
+              onTestimonialsUpdate={loadTestimonials}
+            />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
