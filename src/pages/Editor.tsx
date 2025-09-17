@@ -4821,18 +4821,21 @@ const EditorContent = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                {offer.productUrl && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => extractProductData(index)}
-                                    disabled={extractingProduct === index}
-                                    className="h-8 w-8 p-0"
-                                    title="Importar dados da Loja Integrada"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                 {offer.productUrl && offer.productUrl.trim() && (
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={() => {
+                                       console.log('Clicando em importar para URL:', offer.productUrl);
+                                       extractProductData(index);
+                                     }}
+                                     disabled={extractingProduct === index}
+                                     className="h-8 w-8 p-0"
+                                     title="Importar dados da Loja Integrada"
+                                   >
+                                     <Download className="h-4 w-4" />
+                                   </Button>
+                                 )}
                                 <Button
                                   variant="ghost"
                                   size="sm"

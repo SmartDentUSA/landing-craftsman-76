@@ -22,6 +22,7 @@ interface ProductData {
 
 interface ParsedProduct {
   url: string;
+  image_url?: string;
   youtube_url?: string;
   instagram_url?: string;
   status: 'pending' | 'processing' | 'success' | 'error';
@@ -52,7 +53,7 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
   const [progress, setProgress] = useState(0);
 
   const downloadTemplate = () => {
-    const csvContent = 'Link da oferta loja integrada,Vídeo youtube,Video instagram\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-1,https://www.youtube.com/watch?v=exemplo1,https://www.instagram.com/p/exemplo1\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-2,https://www.youtube.com/watch?v=exemplo2,\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-3,,https://www.instagram.com/p/exemplo3';
+    const csvContent = 'Link da oferta loja integrada,URL da imagem,Vídeo youtube,Video instagram\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-1,https://minhaloja.lojaintegrada.com.br/imagem-produto-1.jpg,https://www.youtube.com/watch?v=exemplo1,https://www.instagram.com/p/exemplo1\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-2,https://minhaloja.lojaintegrada.com.br/imagem-produto-2.jpg,https://www.youtube.com/watch?v=exemplo2,\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-3,https://minhaloja.lojaintegrada.com.br/imagem-produto-3.jpg,,https://www.instagram.com/p/exemplo3';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -81,10 +82,12 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
       if (parsed.data) {
         parsed.data.forEach((row: Record<string, string>, index: number) => {
         const urlFields = ['Link da oferta loja integrada', 'URL do Produto', 'url_produto', 'url', 'link', 'product_url'];
+        const imageFields = ['URL da imagem', 'image_url', 'imagem', 'foto', 'picture'];
         const youtubeFields = ['Vídeo youtube', 'youtube', 'youtube_url', 'video_youtube'];
         const instagramFields = ['Video instagram', 'instagram', 'instagram_url', 'video_instagram'];
         
         let productUrl = '';
+        let imageUrl = '';
         let youtubeUrl = '';
         let instagramUrl = '';
         
@@ -92,6 +95,14 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
         for (const field of urlFields) {
           if (row[field] && typeof row[field] === 'string') {
             productUrl = row[field].trim();
+            break;
+          }
+        }
+
+        // Buscar URL da imagem
+        for (const field of imageFields) {
+          if (row[field] && typeof row[field] === 'string') {
+            imageUrl = row[field].trim();
             break;
           }
         }
@@ -125,6 +136,16 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
               url: productUrl,
               status: 'pending'
             };
+            
+            // Adicionar URL da imagem se válida
+            if (imageUrl) {
+              try {
+                new URL(imageUrl);
+                product.image_url = imageUrl;
+              } catch {
+                console.warn(`URL da imagem inválida na linha ${index + 2}:`, imageUrl);
+              }
+            }
             
             // Adicionar URLs de vídeo se válidas
             if (youtubeUrl) {
@@ -274,6 +295,15 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
               lastUpdated: new Date().toISOString()
             };
             
+            // Priorizar imagem do CSV sobre imagem extraída
+            if (product.image_url) {
+              productForImport.image = product.image_url;
+              console.log('Usando imagem do CSV:', product.image_url);
+            } else if (productData.image) {
+              productForImport.image = productData.image;
+              console.log('Usando imagem extraída:', productData.image);
+            }
+            
             // Adicionar URLs de vídeo se disponíveis
             if (product.youtube_url) {
               productForImport.youtube_url = product.youtube_url;
@@ -391,8 +421,8 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Faça upload de um arquivo CSV com as colunas: "Link da oferta loja integrada", "Vídeo youtube", "Video instagram".
-          As colunas de vídeo são opcionais e ajudam a melhorar o SEO dos produtos.
+          Faça upload de um arquivo CSV com as colunas: "Link da oferta loja integrada", "URL da imagem", "Vídeo youtube", "Video instagram".
+          As colunas de imagem e vídeo são opcionais e ajudam a melhorar o SEO dos produtos.
         </div>
 
         {isProcessing && (
@@ -440,14 +470,14 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
                 <div key={index} className="flex items-center justify-between gap-3 p-3 border rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {getStatusIcon(product.status)}
-                    {product.data?.image && (
-                      <ImageDebugPreview
-                        src={product.data.image}
-                        alt={product.data?.name || 'Produto'}
-                        size={40}
-                        debugLabel={`Pré ${index + 1}`}
-                      />
-                    )}
+                     {(product.image_url || product.data?.image) && (
+                       <ImageDebugPreview
+                         src={product.image_url || product.data?.image || ''}
+                         alt={product.data?.name || 'Produto'}
+                         size={40}
+                         debugLabel={`Pré ${index + 1}`}
+                       />
+                     )}
                      <div className="flex-1 min-w-0">
                        <div className="text-sm font-medium truncate">
                          {product.data?.name || new URL(product.url).hostname}
@@ -458,20 +488,25 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
                            {product.data.description && ` • ${product.data.description}`}
                          </div>
                        )}
-                       {(product.youtube_url || product.instagram_url) && (
-                         <div className="flex gap-2 mt-1">
-                           {product.youtube_url && (
-                             <Badge variant="outline" className="text-xs">
-                               YouTube
-                             </Badge>
-                           )}
-                           {product.instagram_url && (
-                             <Badge variant="outline" className="text-xs">
-                               Instagram
-                             </Badge>
-                           )}
-                         </div>
-                       )}
+                        {(product.image_url || product.youtube_url || product.instagram_url) && (
+                          <div className="flex gap-2 mt-1">
+                            {product.image_url && (
+                              <Badge variant="outline" className="text-xs">
+                                🖼️ Imagem CSV
+                              </Badge>
+                            )}
+                            {product.youtube_url && (
+                              <Badge variant="outline" className="text-xs">
+                                YouTube
+                              </Badge>
+                            )}
+                            {product.instagram_url && (
+                              <Badge variant="outline" className="text-xs">
+                                Instagram
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                        {product.error && (
                          <div className="text-xs text-destructive line-clamp-2">
                            {product.error}
