@@ -870,7 +870,9 @@ const EditorContent = () => {
   const handleImportFromRepository = useCallback(async () => {
     setIsImportingFromRepo(true);
     try {
+      console.log('🔍 Carregando produtos do repositório...');
       const repoProducts = await loadApprovedProductsForAI();
+      console.log('📦 Produtos encontrados:', repoProducts.length, repoProducts);
       
       if (repoProducts.length === 0) {
         toast({
