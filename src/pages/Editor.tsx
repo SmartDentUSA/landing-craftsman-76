@@ -1123,7 +1123,7 @@ const EditorContent = () => {
   }, [data]);
 
   // Função para gerar blog post usando IA
-  const generateBlogPost = async () => {
+  const generateBlogPost = async (fastMode = false) => {
     // Verificar se há conteúdo disponível (prioritizar conteúdo oculto SEO)
     const contentSource = data.seo.seo_hidden_content?.trim() || data.seo_description?.trim();
     if (!contentSource) {
@@ -1135,7 +1135,26 @@ const EditorContent = () => {
     }
 
     setGeneratingBlog(true);
+    
+    // Timeout controller
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      toast({
+        title: "Timeout",
+        description: "Geração demorou muito. Tente o modo rápido ou verifique sua conexão.",
+        variant: "destructive"
+      });
+      setGeneratingBlog(false);
+    }, 60000); // 60 segundos
+
     try {
+      // Mensagem de progresso
+      const progressToast = toast({
+        title: "Gerando blog...",
+        description: fastMode ? "Modo rápido ativado" : "Usando conteúdo detalhado",
+      });
+
       // Gerar conteúdo do blog usando IA (priorizando conteúdo oculto SEO)
       const { data: blogContentResult, error: blogError } = await supabase.functions.invoke('ai-seo-generator', {
         body: {
@@ -1143,8 +1162,9 @@ const EditorContent = () => {
           content: contentSource,
           title: data.seo_title || data.banner.title,
           landingPageData: data,
-          contentType: data.seo.seo_hidden_content?.trim() ? 'hidden_content' : 'seo_description'
-        }
+          contentType: data.seo.seo_hidden_content?.trim() ? 'hidden_content' : 'seo_description',
+          speed: fastMode ? 'fast' : 'detailed'
+        },
       });
 
       if (blogError) throw blogError;
@@ -5806,18 +5826,28 @@ dataLayer = [{
                       <p className="text-muted-foreground">
                         Gere um blog post baseado na sua landing page
                       </p>
-                      <Button 
-                        onClick={generateBlogPost} 
-                        disabled={generatingBlog}
-                        className="gap-2"
-                      >
-                        {generatingBlog ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          '🚀'
-                        )}
-                        {generatingBlog ? 'Gerando...' : 'Gerar Blog'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => generateBlogPost()} 
+                          disabled={generatingBlog}
+                          className="gap-2"
+                        >
+                          {generatingBlog ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            '🚀'
+                          )}
+                          {generatingBlog ? 'Gerando...' : 'Gerar Blog'}
+                        </Button>
+                        <Button 
+                          onClick={() => generateBlogPost(true)} 
+                          disabled={generatingBlog}
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          ⚡ Rápido
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -5826,20 +5856,31 @@ dataLayer = [{
                   <div className="h-full flex flex-col space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">Preview do Blog Post</h3>
-                      <Button 
-                        onClick={generateBlogPost} 
-                        disabled={generatingBlog}
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                      >
-                        {generatingBlog ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          '🔄'
-                        )}
-                        {generatingBlog ? 'Regenerando...' : 'Regenerar'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => generateBlogPost()} 
+                          disabled={generatingBlog}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          {generatingBlog ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            '🔄'
+                          )}
+                          Regenerar
+                        </Button>
+                        <Button 
+                          onClick={() => generateBlogPost(true)} 
+                          disabled={generatingBlog}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          ⚡ Rápido
+                        </Button>
+                       </div>
                     </div>
                     
                     <div className="flex-1 border rounded-lg overflow-hidden">

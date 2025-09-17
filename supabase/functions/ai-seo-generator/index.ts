@@ -31,7 +31,7 @@ serve(async (req) => {
       );
     }
 
-    const { type, content, pageData } = await req.json();
+    const { type, content, pageData, title, landingPageData, speed = 'detailed', contentType } = await req.json();
 
     if (!type || !content) {
       return new Response(
@@ -40,7 +40,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🤖 Gerando SEO com IA - Tipo: ${type}`);
+    console.log(`🤖 Gerando SEO com IA - Tipo: ${type}, Modo: ${speed}`);
 
     let systemPrompt = '';
     let userPrompt = '';
@@ -77,15 +77,16 @@ Formato EXATO:
         break;
 
       case 'blog_content':
-        systemPrompt = 'Você é um especialista em criação de conteúdo para blogs de odontologia. Crie artigos informativos, envolventes e otimizados para SEO.';
-        userPrompt = `Crie um artigo completo de blog (mínimo 800 palavras) sobre: ${content}. 
+        const isFastMode = speed === 'fast';
+        systemPrompt = `Você é um especialista em criação de conteúdo para blogs. Crie artigos ${isFastMode ? 'concisos e diretos' : 'informativos e completos'}, envolventes e otimizados para SEO.`;
+        userPrompt = `Crie um artigo ${isFastMode ? 'de 400-600 palavras' : 'completo (mínimo 800 palavras)'} sobre: ${content}${title ? ` com título: "${title}"` : ''}${landingPageData ? ` (contexto: ${JSON.stringify(landingPageData).substring(0, 300)})` : ''}. 
         O artigo deve incluir:
         - Introdução envolvente
-        - Subtítulos (h2, h3) bem estruturados
+        - ${isFastMode ? '3-4 seções principais' : 'Subtítulos (h2, h3) bem estruturados'}
         - Conteúdo informativo e útil
-        - Conclusão
-        - Links naturais para eodonto.com e dentala.com.br quando relevante
-        - Otimização para palavras-chave relacionadas à odontologia
+        - Conclusão${isFastMode ? '' : ' impactante'}
+        - Call-to-action natural
+        ${isFastMode ? 'Mantenha foco e objetividade.' : '- Otimização para palavras-chave relevantes'}
         Formato: HTML simples com tags h2, h3, p, ul, li, strong, em.`;
         break;
 
@@ -96,31 +97,47 @@ Formato EXATO:
         );
     }
 
-    const response = await fetch(DEEPSEEK_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: type === 'blog_content' ? 2000 : (type === 'keywords' ? 500 : 200),
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('❌ Erro na API DeepSeek:', errorData);
-      throw new Error(`DeepSeek API error: ${response.status}`);
+    // Define token limits based on type and speed
+    let maxTokens = 200;
+    if (type === 'blog_content') {
+      maxTokens = speed === 'fast' ? 800 : 1100;
+    } else if (type === 'keywords') {
+      maxTokens = 500;
     }
+    
+    // Create timeout controller
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 segundos
+    
+    try {
+      const response = await fetch(DEEPSEEK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: maxTokens,
+        }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
 
-    const data = await response.json();
-    let generatedContent = data.choices[0].message.content.trim();
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ Erro na API DeepSeek:', errorData);
+        throw new Error(`DeepSeek API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      let generatedContent = data.choices[0].message.content.trim();
 
     // Parse JSON para keywords com limpeza robusta
     if (type === 'keywords') {
@@ -167,20 +184,32 @@ Formato EXATO:
       }
     }
 
-    console.log(`✅ SEO gerado com sucesso - Tipo: ${type}`);
+      console.log(`✅ SEO gerado com sucesso - Tipo: ${type}, Modo: ${speed}`);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        type,
-        content: generatedContent,
-        generated_at: new Date().toISOString()
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          type,
+          content: generatedContent,
+          generated_at: new Date().toISOString()
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+      
+    } catch (timeoutError) {
+      clearTimeout(timeoutId);
+      if (timeoutError.name === 'AbortError') {
+        console.error('Timeout na API DeepSeek');
+        return new Response(
+          JSON.stringify({ error: 'Request timeout - try fast mode' }),
+          { status: 408, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    );
+      throw timeoutError;
+    }
 
   } catch (error) {
     console.error('❌ Erro na função ai-seo-generator:', error);
