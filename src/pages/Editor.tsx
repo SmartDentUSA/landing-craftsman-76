@@ -82,6 +82,7 @@ interface SEOData {
   ai_keywords?: any;
   seo_generated_by_ai?: boolean;
   ai_seo_enabled?: boolean;
+  export_panel_enabled?: boolean;
 }
 
 // Schema e Offers para JSON-LD
@@ -3176,13 +3177,25 @@ const EditorContent = () => {
                                 Use inteligência artificial para gerar conteúdo SEO otimizado automaticamente
                               </p>
                             </div>
-                            <Switch
-                              checked={data.seo.ai_seo_enabled || false}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                seo: { ...prev.seo, ai_seo_enabled: checked, hreflang_auto: checked }
-                              }))}
-                            />
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <Label className="text-xs text-gray-600">Exportação</Label>
+                                <Switch
+                                  checked={data.seo.export_panel_enabled || false}
+                                  onCheckedChange={(checked) => setData(prev => ({
+                                    ...prev,
+                                    seo: { ...prev.seo, export_panel_enabled: checked }
+                                  }))}
+                                />
+                              </div>
+                              <Switch
+                                checked={data.seo.ai_seo_enabled || false}
+                                onCheckedChange={(checked) => setData(prev => ({
+                                  ...prev,
+                                  seo: { ...prev.seo, ai_seo_enabled: checked }
+                                }))}
+                              />
+                            </div>
                           </div>
 
                            {data.seo.ai_seo_enabled && (
@@ -5313,7 +5326,7 @@ const EditorContent = () => {
         </div>
 
         {/* Export Professional Panel */}
-        {data.seo.hreflang_auto && (
+        {data.seo.export_panel_enabled && (
           <div className="w-1/2 bg-gradient-to-br from-green-50 to-blue-50 border-l">
             <div className="p-4 border-b bg-white">
               <h3 className="font-semibold text-green-800 mb-4">🚀 Exportação Profissional</h3>
