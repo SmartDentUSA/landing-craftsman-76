@@ -376,25 +376,27 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
               </div>
             </div>
 
-            <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-4">
+            <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-4">
               {previewData.map((product, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
-                  {getStatusIcon(product.status)}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {product.data?.name || product.url}
+                <div key={index} className="flex items-center justify-between gap-3 p-3 border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {getStatusIcon(product.status)}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {product.data?.name || new URL(product.url).hostname}
+                      </div>
+                      {product.data && (
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {product.data.price && `Preço: ${product.data.price}`}
+                          {product.data.description && ` • ${product.data.description}`}
+                        </div>
+                      )}
+                      {product.error && (
+                        <div className="text-xs text-destructive line-clamp-2">
+                          {product.error}
+                        </div>
+                      )}
                     </div>
-                    {product.data && (
-                      <div className="text-xs text-muted-foreground truncate">
-                        {product.data.price && `Preço: ${product.data.price}`}
-                        {product.data.description && ` • ${product.data.description.substring(0, 100)}...`}
-                      </div>
-                    )}
-                    {product.error && (
-                      <div className="text-xs text-destructive">
-                        {product.error}
-                      </div>
-                    )}
                   </div>
                   {getStatusBadge(product.status)}
                 </div>
