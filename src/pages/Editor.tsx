@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles } from "lucide-react";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
@@ -83,6 +83,7 @@ interface SEOData {
   seo_generated_by_ai?: boolean;
   ai_seo_enabled?: boolean;
   export_panel_enabled?: boolean;
+  intelligent_links?: { [keyword: string]: string };
 }
 
 // Schema e Offers para JSON-LD
@@ -844,7 +845,8 @@ const EditorContent = () => {
       hreflang_auto: false,
       publish_date: new Date().toISOString(),
       lastmod: new Date().toISOString(),
-      faq_enable: true
+      faq_enable: true,
+      intelligent_links: {}
     },
     
     // Schema & Offers
@@ -3382,9 +3384,149 @@ const EditorContent = () => {
                                       className="text-xs min-h-[60px] text-green-700 bg-white/50"
                                     />
                                   </div>
-                               </div>
+                                </div>
 
-                               {/* Geração de Blog baseado no conteúdo */}
+                                {/* Links Inteligentes (Palavras-chave → URL) */}
+                                <div className="p-3 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg border border-cyan-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs font-medium text-cyan-700">🔗 Links Inteligentes</Label>
+                                      <div className="text-xs bg-cyan-100 text-cyan-600 px-2 py-0.5 rounded-full font-medium">
+                                        SEO Contextual
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => navigate(`/blog-generator/${id}`)}
+                                        className="text-xs"
+                                      >
+                                        <FileText className="w-3 h-3 mr-1" />
+                                        Gerador de Blog
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const newLinks = { ...data.seo.intelligent_links };
+                                          newLinks[""] = "";
+                                          setData(prev => ({
+                                            ...prev,
+                                            seo: { ...prev.seo, intelligent_links: newLinks }
+                                          }));
+                                        }}
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Adicionar
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                                    {Object.entries(data.seo.intelligent_links || {}).map(([keyword, url], index) => (
+                                      <div key={index} className="flex gap-2 items-center p-2 border rounded bg-white/50">
+                                        <div className="flex-1 grid grid-cols-2 gap-2">
+                                          <Input
+                                            placeholder="Palavra-chave"
+                                            value={keyword}
+                                            onChange={(e) => {
+                                              const newLinks = { ...data.seo.intelligent_links };
+                                              delete newLinks[keyword];
+                                              newLinks[e.target.value] = url;
+                                              setData(prev => ({
+                                                ...prev,
+                                                seo: { ...prev.seo, intelligent_links: newLinks }
+                                              }));
+                                            }}
+                                            className="text-xs"
+                                          />
+                                          <Input
+                                            placeholder="URL (ex: /produtos/scanner)"
+                                            value={url}
+                                            onChange={(e) => {
+                                              const newLinks = { ...data.seo.intelligent_links };
+                                              newLinks[keyword] = e.target.value;
+                                              setData(prev => ({
+                                                ...prev,
+                                                seo: { ...prev.seo, intelligent_links: newLinks }
+                                              }));
+                                            }}
+                                            className="text-xs"
+                                          />
+                                        </div>
+                                        <Button
+                                          onClick={() => {
+                                            const newLinks = { ...data.seo.intelligent_links };
+                                            delete newLinks[keyword];
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, intelligent_links: newLinks }
+                                            }));
+                                          }}
+                                          size="sm"
+                                          variant="ghost"
+                                          className="text-red-500 hover:text-red-700 px-2"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+
+                                    {Object.keys(data.seo.intelligent_links || {}).length === 0 && (
+                                      <div className="text-center py-4 text-cyan-600 bg-white/50 rounded border">
+                                        <Link className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                                        <p className="text-xs">Nenhum link configurado</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Template Smartdent */}
+                                  <div className="mt-3 pt-2 border-t">
+                                    <Button
+                                      onClick={() => {
+                                        const smartdentLinks = {
+                                          "scanner intraoral": "/produtos/scanner-intraoral",
+                                          "odontologia digital": "/servicos/odontologia-digital",
+                                          "fluxo digital": "/servicos/fluxo-digital",
+                                          "implantodontia digital": "/servicos/implantodontia",
+                                          "prótese digital": "/servicos/protese-digital",
+                                          "treinamento": "/treinamentos",
+                                          "capacitação": "/treinamentos/capacitacao",
+                                          "BLZ Scanner": "/produtos/blz-scanner",
+                                        };
+                                        setData(prev => ({
+                                          ...prev,
+                                          seo: { 
+                                            ...prev.seo, 
+                                            intelligent_links: { ...(prev.seo.intelligent_links || {}), ...smartdentLinks }
+                                          }
+                                        }));
+                                        toast({ 
+                                          title: "Template aplicado!", 
+                                          description: "Links Smartdent adicionados com sucesso." 
+                                        });
+                                      }}
+                                      size="sm"
+                                      variant="outline"
+                                      className="w-full text-xs"
+                                    >
+                                      Template Smartdent
+                                    </Button>
+                                  </div>
+
+                                  <div className="bg-cyan-50 border border-cyan-200 rounded p-2 mt-2">
+                                    <div className="flex items-center gap-1 text-cyan-800 text-xs font-medium mb-1">
+                                      <Sparkles className="h-3 w-3" />
+                                      Como funciona
+                                    </div>
+                                    <p className="text-cyan-700 text-xs">
+                                      Links são sincronizados com o Gerador de Blog e usados contextualmente pela IA.
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Geração de Blog baseado no conteúdo */}
                                <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-200">
                                  <div className="flex items-center justify-between mb-2">
                                    <div className="flex items-center gap-2">

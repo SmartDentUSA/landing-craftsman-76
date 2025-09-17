@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import useLandingPages from "@/hooks/useLandingPages";
 import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link } from "lucide-react";
 
 interface BlogPost {
@@ -34,6 +35,7 @@ interface LandingPageData {
 export default function BlogGenerator() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { getLandingPage } = useLandingPages();
   const [landingPage, setLandingPage] = useState<LandingPageData | null>(null);
   const [blogPost, setBlogPost] = useState<BlogPost>({
     title: "",
@@ -97,6 +99,10 @@ export default function BlogGenerator() {
       if (error) throw error;
 
       if (data) {
+        // Get intelligent links from Editor data if available
+        const editorData = getLandingPage(id || "");
+        const editorIntelligentLinks = editorData?.data?.seo?.intelligent_links || {};
+        
         setBlogPost({
           id: data.id,
           title: data.title,
@@ -106,8 +112,26 @@ export default function BlogGenerator() {
           youtube_video_url: data.youtube_video_url || "",
           status: data.status,
           published_domains: data.published_domains || [],
-          intelligent_links: (data.intelligent_links as Record<string, string>) || {},
+          intelligent_links: {
+            ...editorIntelligentLinks,
+            ...(data.intelligent_links as Record<string, string> || {})
+          },
         });
+      } else {
+        // If no blog post exists, pre-load with Editor's intelligent links
+        const editorData = getLandingPage(id || "");
+        const editorIntelligentLinks = editorData?.data?.seo?.intelligent_links || {};
+        
+        if (Object.keys(editorIntelligentLinks).length > 0) {
+          setBlogPost(prev => ({
+            ...prev,
+            intelligent_links: { ...prev.intelligent_links, ...editorIntelligentLinks }
+          }));
+          toast({
+            title: "Links carregados!",
+            description: `${Object.keys(editorIntelligentLinks).length} links inteligentes importados do Editor.`
+          });
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar blog post:", error);
@@ -195,11 +219,25 @@ export default function BlogGenerator() {
     }
   };
 
-  const saveBlogPost = async () => {
+const saveBlogPost = async () => {
     if (!landingPage) return;
 
     setLoading(true);
     try {
+      // Also sync intelligent_links back to Editor data
+      const { updateLandingPage } = useLandingPages.getState();
+      const editorData = getLandingPage(id || "");
+      if (editorData && editorData.data) {
+        updateLandingPage(id || "", {
+          data: {
+            ...editorData.data,
+            seo: {
+              ...editorData.data.seo,
+              intelligent_links: blogPost.intelligent_links
+            }
+          }
+        });
+      }
       const blogData = {
         landing_page_id: landingPage.id,
         title: blogPost.title,
