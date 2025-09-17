@@ -3174,8 +3174,8 @@ const EditorContent = () => {
                           </div>
 
                            {data.seo.ai_seo_enabled && (
-                            <div className="space-y-4">
-                               {/* Conteúdo Oculto SEO com IA */}
+                             <div className="space-y-4">
+                                {/* Conteúdo Oculto SEO com IA */}
                                <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
@@ -3786,8 +3786,8 @@ const EditorContent = () => {
                                </div>
                              </div>
                            )}
-                         </div>
-                       </AccordionContent>
+                        </div>
+                      </AccordionContent>
                     </AccordionItem>
 
                     {/* Open Graph */}
