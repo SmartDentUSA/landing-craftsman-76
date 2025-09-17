@@ -7037,29 +7037,29 @@ dataLayer = [{
                     </div>
                   </div>
                 )}
+              </div>
+            </TabsContent>
 
-                {/* Repository Tab */}
-                <TabsContent value="repository" className="flex-1 p-4">
-                  <div className="h-full flex flex-col">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold mb-2">Repositório de Produtos</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Gerencie todos os produtos disponíveis para suas landing pages
-                      </p>
-                    </div>
-                    
-                    <div className="flex-1">
-                      <ProductRepositoryPanel
-                        landingPageId={id || ''}
-                        onProductSelectionChange={setSelectedProducts}
-                        onSyncTriggered={() => {
-                          console.log('Products synced successfully');
-                        }}
-                        className="h-full border-0 rounded-none"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
+            {/* Repository Tab - Fixed positioning */}
+            <TabsContent value="repository" className="flex-1 p-4">
+              <div className="h-full flex flex-col">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Repositório de Produtos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Gerencie todos os produtos disponíveis para suas landing pages
+                  </p>
+                </div>
+                
+                <div className="flex-1">
+                  <ProductRepositoryPanel
+                    landingPageId={id || ''}
+                    onProductSelectionChange={setSelectedProducts}
+                    onSyncTriggered={() => {
+                      console.log('Products synced successfully');
+                    }}
+                    className="h-full border-0 rounded-none"
+                  />
+                </div>
               </div>
             </TabsContent>
               </Tabs>
