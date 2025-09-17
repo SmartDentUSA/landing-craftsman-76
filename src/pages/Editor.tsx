@@ -1650,10 +1650,27 @@ const EditorContent = () => {
         const newOffers = [...data.schema.offers];
         
         // Atualizar dados extraídos
+        const originalPrice = productData.originalPrice;
+        const promoPrice = productData.promoPrice || productData.price;
+        const installmentText = productData.installmentText;
+        
+        // Calcular desconto automaticamente
+        let discountPercentage = newOffers[index].discount_percentage || '';
+        if (originalPrice && promoPrice) {
+          const original = parseFloat(originalPrice.replace(/[^\d,]/g, '').replace(',', '.'));
+          const promo = parseFloat(promoPrice.replace(/[^\d,]/g, '').replace(',', '.'));
+          if (original > promo) {
+            discountPercentage = Math.round(((original - promo) / original) * 100);
+          }
+        }
+        
         newOffers[index] = {
           ...newOffers[index],
           name: productData.name || newOffers[index].name,
-          price: productData.price || newOffers[index].price,
+          price: promoPrice || newOffers[index].price,
+          original_price: originalPrice || newOffers[index].original_price,
+          installment_price: installmentText || newOffers[index].installment_price,
+          discount_percentage: typeof discountPercentage === 'number' ? discountPercentage : (newOffers[index].discount_percentage || 0),
           description: productData.description || newOffers[index].description,
           image: productData.image || newOffers[index].image,
           sourceType: 'imported',
@@ -4835,20 +4852,46 @@ const EditorContent = () => {
                                      className="text-sm h-8"
                                    />
                                  </div>
-                                   <div className="grid grid-cols-2 gap-2">
-                                     <Input
-                                       value={offer.price || ''}
-                                       onChange={(e) => {
-                                         const newOffers = [...data.schema.offers];
-                                         newOffers[index] = { ...newOffers[index], price: e.target.value };
-                                         setData(prev => ({
-                                           ...prev,
-                                           schema: { ...prev.schema, offers: newOffers }
-                                         }));
-                                       }}
-                                       placeholder="Preço"
-                                       className="text-sm h-8"
-                                     />
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <Input
+                                        value={offer.price || ''}
+                                        onChange={(e) => {
+                                          const newOffers = [...data.schema.offers];
+                                          newOffers[index] = { ...newOffers[index], price: e.target.value };
+                                          setData(prev => ({
+                                            ...prev,
+                                            schema: { ...prev.schema, offers: newOffers }
+                                          }));
+                                        }}
+                                        placeholder="Preço Promocional"
+                                        className="text-sm h-8"
+                                      />
+                                      <Input
+                                        value={offer.original_price || ''}
+                                        onChange={(e) => {
+                                          const newOffers = [...data.schema.offers];
+                                          newOffers[index] = { ...newOffers[index], original_price: e.target.value };
+                                          setData(prev => ({
+                                            ...prev,
+                                            schema: { ...prev.schema, offers: newOffers }
+                                          }));
+                                        }}
+                                        placeholder="Preço Original"
+                                        className="text-sm h-8"
+                                      />
+                                      <Input
+                                        value={offer.installment_price || ''}
+                                        onChange={(e) => {
+                                          const newOffers = [...data.schema.offers];
+                                          newOffers[index] = { ...newOffers[index], installment_price: e.target.value };
+                                          setData(prev => ({
+                                            ...prev,
+                                            schema: { ...prev.schema, offers: newOffers }
+                                          }));
+                                        }}
+                                        placeholder="Parcelamento"
+                                        className="text-sm h-8"
+                                      />
                                      <div className="flex gap-1">
                                        <Input
                                          value={offer.productUrl || ''}
@@ -4997,17 +5040,36 @@ const EditorContent = () => {
                                      <div className="text-sm font-medium truncate">
                                        {offer.name || `Oferta ${index + 1}`}
                                      </div>
-                                      <div className="text-xs text-muted-foreground line-clamp-2">
-                                        {offer.price && `Preço: R$ ${offer.price}`}
-                                        {offer.description && ` • ${offer.description}`}
-                                        {offer.productUrl && !offer.name && ` • ${(() => {
-                                          try {
-                                            return new URL(offer.productUrl).hostname;
-                                          } catch {
-                                            return offer.productUrl.replace(/^https?:\/\//, '').split('/')[0];
-                                          }
-                                        })()}`}
-                                      </div>
+                                       <div className="text-xs text-muted-foreground line-clamp-2">
+                                         <div className="flex flex-wrap items-center gap-1">
+                                           {offer.price && (
+                                             <span className="font-medium text-foreground">R$ {offer.price}</span>
+                                           )}
+                                           {offer.original_price && offer.original_price !== offer.price && (
+                                             <span className="line-through text-muted-foreground">R$ {offer.original_price}</span>
+                                           )}
+                                           {offer.discount_percentage && (
+                                             <span className="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">-{offer.discount_percentage}%</span>
+                                           )}
+                                         </div>
+                                         {offer.installment_price && (
+                                           <div className="text-xs text-muted-foreground mt-1">{offer.installment_price}</div>
+                                         )}
+                                         {offer.description && (
+                                           <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{offer.description}</div>
+                                         )}
+                                         {offer.productUrl && !offer.name && (
+                                           <div className="text-xs text-muted-foreground mt-1">
+                                             {(() => {
+                                               try {
+                                                 return new URL(offer.productUrl).hostname;
+                                               } catch {
+                                                 return offer.productUrl.replace(/^https?:\/\//, '').split('/')[0];
+                                               }
+                                             })()}
+                                           </div>
+                                         )}
+                                       </div>
                                       <div className="flex gap-1 mt-1 flex-wrap">
                                         {offer.sourceType === 'imported' && (
                                           <Badge variant="secondary" className="text-xs">
