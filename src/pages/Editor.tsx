@@ -21,6 +21,7 @@ import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { ProductCSVUploader } from "@/components/ProductCSVUploader";
+import { ImageDebugPreview } from "@/components/ImageDebugPreview";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { ImageUploader } from "@/components/ImageUploader";
@@ -4771,16 +4772,12 @@ const EditorContent = () => {
                                       {index + 1}
                                     </div>
                                     {offer.image && (
-                                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                                        <img 
-                                          src={offer.image} 
-                                          alt={offer.name || 'Produto'} 
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                          }}
-                                        />
-                                      </div>
+                                      <ImageDebugPreview
+                                        src={offer.image}
+                                        alt={offer.name || 'Produto'}
+                                        size={48}
+                                        debugLabel={`Oferta ${index + 1}`}
+                                      />
                                     )}
                                     <div className="flex-1 min-w-0">
                                      <div className="text-sm font-medium truncate">

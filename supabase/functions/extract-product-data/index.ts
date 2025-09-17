@@ -56,6 +56,14 @@ serve(async (req) => {
           for (const item of items) {
             if (item['@type'] === 'Product' && item.name) {
               console.log('Found product in JSON-LD:', item);
+              const rawImage = Array.isArray(item.image) ? item.image?.[0] : item.image;
+              let normalizedImage = '';
+              try {
+                normalizedImage = rawImage ? new URL(rawImage, url).href : '';
+              } catch (_e) {
+                normalizedImage = rawImage || '';
+              }
+              console.log('JSON-LD image (normalized):', { rawImage, normalizedImage });
               return new Response(
                 JSON.stringify({
                   success: true,
@@ -63,7 +71,7 @@ serve(async (req) => {
                     name: item.name,
                     price: item.offers?.price || item.offers?.priceRange || '',
                     description: item.description || '',
-                    image: item.image?.[0] || item.image || '',
+                    image: normalizedImage,
                     available: item.offers?.availability !== 'OutOfStock'
                   },
                   extracted_at: new Date().toISOString()
@@ -111,9 +119,16 @@ serve(async (req) => {
 
     // Extrair imagem principal
     const imgMatch = html.match(/property="og:image"\s+content="([^"]+)"/i) ||
+                    html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
                     html.match(/<img[^>]*src="([^"]+)"[^>]*>/i);
     if (imgMatch) {
-      productData.image = imgMatch[1];
+      const rawImg = imgMatch[1];
+      try {
+        productData.image = new URL(rawImg, url).href;
+      } catch (_e) {
+        productData.image = rawImg;
+      }
+      console.log('Fallback image (normalized):', { rawImg, normalized: productData.image });
     }
 
     // Verificar disponibilidade

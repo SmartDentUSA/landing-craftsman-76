@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2, Download, Upload, Globe, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ImageDebugPreview } from '@/components/ImageDebugPreview';
 import Papa from 'papaparse';
 
 interface ProductData {
@@ -439,6 +440,14 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
                 <div key={index} className="flex items-center justify-between gap-3 p-3 border rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {getStatusIcon(product.status)}
+                    {product.data?.image && (
+                      <ImageDebugPreview
+                        src={product.data.image}
+                        alt={product.data?.name || 'Produto'}
+                        size={40}
+                        debugLabel={`Pré ${index + 1}`}
+                      />
+                    )}
                      <div className="flex-1 min-w-0">
                        <div className="text-sm font-medium truncate">
                          {product.data?.name || new URL(product.url).hostname}
