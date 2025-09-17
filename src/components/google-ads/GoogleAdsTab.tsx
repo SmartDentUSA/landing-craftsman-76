@@ -62,26 +62,27 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
   const [previewData, setPreviewData] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
 
-  // Real-time validation and preview
+  // Auto-generate preview when enabled or data changes
   useEffect(() => {
     if (campaignConfig.enabled) {
       validateAndPreview();
     }
   }, [campaignConfig, data]);
 
-  const generateAdCopies = async () => {
-    // Use fallback data if SEO data is missing
-    const seoTitle = data?.seo?.title || data?.banner?.title || data?.brand?.name || 'Seu Serviço';
-    const seoDescription = data?.seo?.description || data?.banner?.subtitle || 'Serviços de qualidade para você';
-    
-    if (!seoTitle || !seoDescription) {
-      toast({
-        title: 'Dados insuficientes',
-        description: 'Dados básicos da landing page necessários para gerar anúncios.',
-        variant: 'destructive'
-      });
-      return null;
+  // Auto-generate preview on component mount if enabled
+  useEffect(() => {
+    if (campaignConfig.enabled && data && !previewData) {
+      validateAndPreview();
     }
+  }, []);
+
+  const generateAdCopies = async () => {
+    // Enhanced fallback data with better coverage
+    const seoTitle = data?.seo?.title || data?.banner?.title || data?.brand?.name || 'Nossos Serviços Especializados';
+    const seoDescription = data?.seo?.description || data?.banner?.subtitle || data?.seo?.meta_description || 'Soluções de alta qualidade para suas necessidades. Entre em contato conosco.';
+    
+    // Always try to generate, even with basic fallback data
+    console.log('Generating ads with title:', seoTitle, 'description:', seoDescription);
 
     setIsGeneratingAds(true);
     try {
@@ -115,18 +116,21 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
         variant: 'destructive'
       });
       
-      // Fallback para dados básicos
+      // Enhanced fallback with better data coverage
       return {
         headlines: [
-          data.seo.title?.substring(0, 30) || 'Seu Serviço',
-          data.brand?.name || 'Empresa Confiável',
-          'Qualidade Garantida'
+          (seoTitle || 'Nossos Serviços').substring(0, 30),
+          (data?.brand?.name || data?.banner?.title || 'Empresa Confiável').substring(0, 30),
+          'Qualidade Garantida',
+          'Solicite Orçamento',
+          'Atendimento Especializado'
         ],
         descriptions: [
-          data.seo.description?.substring(0, 90) || 'Atendimento especializado para suas necessidades.',
-          'Entre em contato e saiba mais sobre nossos serviços.'
+          (seoDescription || 'Soluções personalizadas para suas necessidades.').substring(0, 90),
+          'Entre em contato e descubra como podemos ajudar você a alcançar seus objetivos.',
+          'Profissionais qualificados prontos para atender você com excelência.'
         ],
-        paths: ['servicos', 'contato']
+        paths: ['servicos', 'contato', 'orcamento']
       };
     } finally {
       setIsGeneratingAds(false);

@@ -101,6 +101,25 @@ export default function BlogGenerator() {
     }
   }, [id, location.state]);
 
+  // Auto-generate blog content when landing page is loaded but no blog content exists
+  useEffect(() => {
+    if (landingPage && !blogPost.content && !generating && !loading) {
+      console.log("🚀 Auto-gerando conteúdo do blog...");
+      generateBlogContent();
+    }
+  }, [landingPage]);
+
+  // Auto-save draft when blog post data changes
+  useEffect(() => {
+    if (landingPage && (blogPost.title || blogPost.content) && !loading && !generating && !publishing) {
+      const timeoutId = setTimeout(() => {
+        saveBlogDraft();
+      }, 2000); // Auto-save after 2 seconds of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [blogPost.title, blogPost.content, blogPost.meta_description, blogPost.keywords]);
+
   const loadLandingPageFromEditor = async () => {
     try {
       console.log(`🔍 Carregando landing page do Editor com ID: "${id}"`);
@@ -335,7 +354,62 @@ export default function BlogGenerator() {
     }
   };
 
-const saveBlogPost = async () => {
+  const saveBlogDraft = async () => {
+    if (!landingPage || loading || generating) return;
+    
+    try {
+      // Also sync intelligent_links back to Editor data
+      const { updateLandingPage } = useLandingPages.getState();
+      const editorData = getLandingPage(id || "");
+      if (editorData && editorData.data) {
+        updateLandingPage(id || "", {
+          data: {
+            ...editorData.data,
+            seo: {
+              ...editorData.data.seo,
+              intelligent_links: blogPost.intelligent_links
+            }
+          }
+        });
+      }
+      
+      console.log("💾 Auto-salvando rascunho...");
+      
+      const blogData = {
+        landing_page_id: landingPage.id,
+        title: blogPost.title || "",
+        content: blogPost.content || "",
+        meta_description: blogPost.meta_description || "",
+        keywords: blogPost.keywords || [],
+        youtube_video_url: blogPost.youtube_video_url || "",
+        status: "draft",
+        intelligent_links: blogPost.intelligent_links || {},
+        include_offers: blogPost.include_offers || false,
+      };
+
+      if (blogPost.id) {
+        const { error } = await supabase
+          .from("blog_posts")
+          .update(blogData)
+          .eq("id", blogPost.id);
+
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .insert(blogData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setBlogPost(prev => ({ ...prev, id: data.id }));
+      }
+    } catch (error) {
+      console.error("Erro ao salvar rascunho:", error);
+    }
+  };
+
+  const saveBlogPost = async () => {
     if (!landingPage) return;
 
     setLoading(true);
