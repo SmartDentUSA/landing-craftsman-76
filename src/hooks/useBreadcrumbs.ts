@@ -1,5 +1,6 @@
 import { useLocation, useParams } from 'react-router-dom';
 import { useMemo } from 'react';
+import useLandingPages from '@/hooks/useLandingPages';
 
 export interface BreadcrumbItem {
   label: string;
@@ -10,6 +11,7 @@ export interface BreadcrumbItem {
 export const useBreadcrumbs = () => {
   const location = useLocation();
   const params = useParams();
+  const { getLandingPage } = useLandingPages();
   
   const breadcrumbs = useMemo(() => {
     const path = location.pathname;
@@ -57,7 +59,13 @@ export const useBreadcrumbs = () => {
         default:
           // For dynamic segments like landing page IDs
           if (segment.startsWith('lp_')) {
-            label = 'Landing Page';
+            const landingPage = getLandingPage(segment);
+            if (landingPage) {
+              const statusBadge = landingPage.status === 'draft' ? ' (Rascunho)' : landingPage.status === 'approved' ? ' (Publicada)' : '';
+              label = `${landingPage.name}${statusBadge}`;
+            } else {
+              label = 'Landing Page';
+            }
           } else {
             label = segment.charAt(0).toUpperCase() + segment.slice(1);
           }
@@ -71,7 +79,7 @@ export const useBreadcrumbs = () => {
     });
     
     return items;
-  }, [location.pathname, params]);
+  }, [location.pathname, params, getLandingPage]);
   
   const generateSchemaMarkup = () => {
     if (breadcrumbs.length <= 1) return null;
