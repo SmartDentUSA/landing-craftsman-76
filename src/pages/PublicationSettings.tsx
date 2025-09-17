@@ -46,11 +46,29 @@ export default function PublicationSettings() {
 
       if (error) throw error;
 
+      console.log("📊 Dados carregados do Supabase:", data);
+
       if (data) {
-        setSettings(data);
+        // Limpar campos vazios para null
+        const cleanData = {
+          ftp_host: data.ftp_host || "",
+          ftp_user: data.ftp_user || "",
+          ftp_password_encrypted: data.ftp_password_encrypted || "",
+          wordpress_url: data.wordpress_url || "",
+          wordpress_user: data.wordpress_user || "",
+          wordpress_app_password_encrypted: data.wordpress_app_password_encrypted || "",
+        };
+        
+        console.log("🧹 Dados limpos:", cleanData);
+        setSettings(cleanData);
       }
     } catch (error) {
-      console.error("Erro ao carregar configurações:", error);
+      console.error("❌ Erro ao carregar configurações:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar configurações existentes.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -89,6 +107,12 @@ export default function PublicationSettings() {
     setTestingFtp(true);
     setFtpStatus("idle");
     
+    console.log("🔄 Iniciando teste FTP com dados:", {
+      host: settings.ftp_host,
+      user: settings.ftp_user,
+      password: settings.ftp_password_encrypted ? "***" : "vazio"
+    });
+    
     try {
       const { data, error } = await supabase.functions.invoke("test-ftp-connection", {
         body: {
@@ -98,9 +122,14 @@ export default function PublicationSettings() {
         },
       });
 
-      if (error) throw error;
+      console.log("📡 Resposta da função FTP:", { data, error });
 
-      if (data.success) {
+      if (error) {
+        console.error("❌ Erro na invocação da função:", error);
+        throw error;
+      }
+
+      if (data?.success) {
         setFtpStatus("success");
         toast({
           title: "Conexão FTP testada",
@@ -110,15 +139,16 @@ export default function PublicationSettings() {
         setFtpStatus("error");
         toast({
           title: "Erro na conexão FTP",
-          description: data.error || "Não foi possível conectar ao servidor FTP.",
+          description: data?.error || "Não foi possível conectar ao servidor FTP.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error("❌ Erro no teste FTP:", error);
       setFtpStatus("error");
       toast({
         title: "Erro no teste FTP",
-        description: "Erro ao testar a conexão FTP.",
+        description: `Erro ao testar a conexão FTP: ${error}`,
         variant: "destructive",
       });
     } finally {
@@ -130,6 +160,12 @@ export default function PublicationSettings() {
     setTestingWordPress(true);
     setWpStatus("idle");
     
+    console.log("🔄 Iniciando teste WordPress com dados:", {
+      url: settings.wordpress_url,
+      user: settings.wordpress_user,
+      password: settings.wordpress_app_password_encrypted ? "***" : "vazio"
+    });
+    
     try {
       const { data, error } = await supabase.functions.invoke("test-wordpress-connection", {
         body: {
@@ -139,9 +175,14 @@ export default function PublicationSettings() {
         },
       });
 
-      if (error) throw error;
+      console.log("📡 Resposta da função WordPress:", { data, error });
 
-      if (data.success) {
+      if (error) {
+        console.error("❌ Erro na invocação da função:", error);
+        throw error;
+      }
+
+      if (data?.success) {
         setWpStatus("success");
         toast({
           title: "Conexão WordPress testada",
@@ -151,15 +192,16 @@ export default function PublicationSettings() {
         setWpStatus("error");
         toast({
           title: "Erro na conexão WordPress",
-          description: data.error || "Não foi possível conectar ao WordPress.",
+          description: data?.error || "Não foi possível conectar ao WordPress.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error("❌ Erro no teste WordPress:", error);
       setWpStatus("error");
       toast({
         title: "Erro no teste WordPress",
-        description: "Erro ao testar a conexão WordPress.",
+        description: `Erro ao testar a conexão WordPress: ${error}`,
         variant: "destructive",
       });
     } finally {
@@ -232,7 +274,7 @@ export default function PublicationSettings() {
             </div>
             <Button
               onClick={testFtpConnection}
-              disabled={testingFtp || !settings.ftp_host || !settings.ftp_user || !settings.ftp_password_encrypted}
+              disabled={testingFtp || !settings.ftp_host.trim() || !settings.ftp_user.trim() || !settings.ftp_password_encrypted.trim()}
               variant="outline"
               className="w-full"
             >
@@ -292,7 +334,7 @@ export default function PublicationSettings() {
             </div>
             <Button
               onClick={testWordPressConnection}
-              disabled={testingWordPress || !settings.wordpress_url || !settings.wordpress_user || !settings.wordpress_app_password_encrypted}
+              disabled={testingWordPress || !settings.wordpress_url.trim() || !settings.wordpress_user.trim() || !settings.wordpress_app_password_encrypted.trim()}
               variant="outline"
               className="w-full"
             >

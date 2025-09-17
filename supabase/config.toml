@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.validate-schema]
 verify_jwt = true
+
+[functions.test-ftp-connection]
+verify_jwt = true
+
+[functions.test-wordpress-connection]
+verify_jwt = true
+
+[functions.publish-blog-post]
+verify_jwt = true
