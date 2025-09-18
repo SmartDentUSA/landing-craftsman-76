@@ -12,6 +12,12 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { Save, Trash2, Plus, X, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { VideoSection } from "@/components/VideoSection";
+
+interface Video {
+  url: string;
+  description: string;
+}
 
 interface Product {
   id: string;
@@ -24,12 +30,17 @@ interface Product {
   image_url?: string;
   product_url?: string;
   youtube_url?: string;
+  instagram_url?: string;
   target_audience?: string;
   use_in_ai_generation: boolean;
   approved: boolean;
   keywords?: string[];
   benefits?: string[];
   features?: string[];
+  instagram_videos?: Video[];
+  youtube_videos?: Video[];
+  testimonial_videos?: Video[];
+  technical_videos?: Video[];
 }
 
 interface ProductEditModalProps {
@@ -51,12 +62,17 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     image_url: '',
     product_url: '',
     youtube_url: '',
+    instagram_url: '',
     target_audience: '',
     use_in_ai_generation: true,
     approved: true,
     keywords: [],
     benefits: [],
-    features: []
+    features: [],
+    instagram_videos: [],
+    youtube_videos: [],
+    testimonial_videos: [],
+    technical_videos: []
   });
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
@@ -65,6 +81,13 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
+  
+  // Video states
+  const [instagramVideos, setInstagramVideos] = useState<Video[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<Video[]>([]);
+  const [testimonialVideos, setTestimonialVideos] = useState<Video[]>([]);
+  const [technicalVideos, setTechnicalVideos] = useState<Video[]>([]);
+  
   const { toast } = useToast();
 
   const isEditing = !!product;
@@ -75,10 +98,18 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         ...product,
         keywords: product.keywords || [],
         benefits: product.benefits || [],
-        features: product.features || []
+        features: product.features || [],
+        instagram_videos: product.instagram_videos || [],
+        youtube_videos: product.youtube_videos || [],
+        testimonial_videos: product.testimonial_videos || [],
+        technical_videos: product.technical_videos || []
       });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
+      setInstagramVideos(product.instagram_videos || []);
+      setYoutubeVideos(product.youtube_videos || []);
+      setTestimonialVideos(product.testimonial_videos || []);
+      setTechnicalVideos(product.technical_videos || []);
     } else {
       setFormData({
         name: '',
@@ -90,15 +121,24 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         image_url: '',
         product_url: '',
         youtube_url: '',
+        instagram_url: '',
         target_audience: '',
         use_in_ai_generation: true,
         approved: true,
         keywords: [],
         benefits: [],
-        features: []
+        features: [],
+        instagram_videos: [],
+        youtube_videos: [],
+        testimonial_videos: [],
+        technical_videos: []
       });
       setBenefits([]);
       setFeatures([]);
+      setInstagramVideos([]);
+      setYoutubeVideos([]);
+      setTestimonialVideos([]);
+      setTechnicalVideos([]);
     }
   }, [product]);
 
@@ -134,6 +174,99 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     const updatedFeatures = features.filter((_, i) => i !== index);
     setFeatures(updatedFeatures);
     setFormData(prev => ({ ...prev, features: updatedFeatures }));
+  };
+
+  // Video management functions
+  const addVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical', url: string, description: string) => {
+    if (!url.trim()) return;
+
+    const newVideo: Video = { url: url.trim(), description: description.trim() };
+    
+    switch (type) {
+      case 'instagram':
+        if (instagramVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos Instagram permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedInstagram = [...instagramVideos, newVideo];
+        setInstagramVideos(updatedInstagram);
+        setFormData(prev => ({ ...prev, instagram_videos: updatedInstagram }));
+        break;
+        
+      case 'youtube':
+        if (youtubeVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos YouTube permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedYoutube = [...youtubeVideos, newVideo];
+        setYoutubeVideos(updatedYoutube);
+        setFormData(prev => ({ ...prev, youtube_videos: updatedYoutube }));
+        break;
+        
+      case 'testimonial':
+        if (testimonialVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos de depoimento permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedTestimonial = [...testimonialVideos, newVideo];
+        setTestimonialVideos(updatedTestimonial);
+        setFormData(prev => ({ ...prev, testimonial_videos: updatedTestimonial }));
+        break;
+        
+      case 'technical':
+        if (technicalVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos técnicos permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedTechnical = [...technicalVideos, newVideo];
+        setTechnicalVideos(updatedTechnical);
+        setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
+        break;
+    }
+  };
+
+  const removeVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical', index: number) => {
+    switch (type) {
+      case 'instagram':
+        const updatedInstagram = instagramVideos.filter((_, i) => i !== index);
+        setInstagramVideos(updatedInstagram);
+        setFormData(prev => ({ ...prev, instagram_videos: updatedInstagram }));
+        break;
+        
+      case 'youtube':
+        const updatedYoutube = youtubeVideos.filter((_, i) => i !== index);
+        setYoutubeVideos(updatedYoutube);
+        setFormData(prev => ({ ...prev, youtube_videos: updatedYoutube }));
+        break;
+        
+      case 'testimonial':
+        const updatedTestimonial = testimonialVideos.filter((_, i) => i !== index);
+        setTestimonialVideos(updatedTestimonial);
+        setFormData(prev => ({ ...prev, testimonial_videos: updatedTestimonial }));
+        break;
+        
+      case 'technical':
+        const updatedTechnical = technicalVideos.filter((_, i) => i !== index);
+        setTechnicalVideos(updatedTechnical);
+        setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
+        break;
+    }
   };
 
   const generateKeywordsWithAI = async () => {
@@ -251,7 +384,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         image_url: formData.image_url,
         product_url: formData.product_url,
         youtube_url: formData.youtube_url,
+        instagram_url: formData.instagram_url,
         target_audience: formData.target_audience,
+        instagram_videos: instagramVideos as any,
+        youtube_videos: youtubeVideos as any,
+        testimonial_videos: testimonialVideos as any,
+        technical_videos: technicalVideos as any,
         use_in_ai_generation: formData.use_in_ai_generation,
         approved: formData.approved,
         keywords: formData.keywords || [],
@@ -454,6 +592,58 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 placeholder="https://youtube.com/..."
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="instagram_url">URL do Instagram</Label>
+            <Input
+              id="instagram_url"
+              type="url"
+              value={formData.instagram_url || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, instagram_url: e.target.value }))}
+              placeholder="https://instagram.com/..."
+            />
+          </div>
+
+          {/* Video Collections */}
+          <div className="space-y-6 border-t pt-6">
+            <h3 className="text-lg font-semibold">Coleções de Vídeos</h3>
+            
+            {/* Instagram Videos */}
+            <VideoSection
+              title="Vídeos Instagram"
+              videos={instagramVideos}
+              onAdd={(url, description) => addVideo('instagram', url, description)}
+              onRemove={(index) => removeVideo('instagram', index)}
+              maxVideos={5}
+            />
+
+            {/* YouTube Videos */}
+            <VideoSection
+              title="Vídeos YouTube"
+              videos={youtubeVideos}
+              onAdd={(url, description) => addVideo('youtube', url, description)}
+              onRemove={(index) => removeVideo('youtube', index)}
+              maxVideos={5}
+            />
+
+            {/* Testimonial Videos */}
+            <VideoSection
+              title="Vídeos Depoimentos"
+              videos={testimonialVideos}
+              onAdd={(url, description) => addVideo('testimonial', url, description)}
+              onRemove={(index) => removeVideo('testimonial', index)}
+              maxVideos={5}
+            />
+
+            {/* Technical Videos */}
+            <VideoSection
+              title="Explicações Técnicas"
+              videos={technicalVideos}
+              onAdd={(url, description) => addVideo('technical', url, description)}
+              onRemove={(index) => removeVideo('technical', index)}
+              maxVideos={5}
+            />
           </div>
 
           <div className="space-y-2">

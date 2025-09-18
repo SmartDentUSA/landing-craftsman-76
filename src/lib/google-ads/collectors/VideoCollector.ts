@@ -98,7 +98,7 @@ export class VideoCollector {
       }
 
       products.forEach((product: any, index: number) => {
-        // Process YouTube URLs
+        // Process main YouTube URL
         if (product.youtube_url && !seenUrls.has(product.youtube_url)) {
           const youtubeId = this.extractYouTubeId(product.youtube_url);
           if (youtubeId) {
@@ -110,10 +110,20 @@ export class VideoCollector {
             console.log(`VideoCollector: Added YouTube video for product "${product.name || `Produto ${index + 1}`}": ${youtubeId}`);
           }
         }
+        
+        // Process additional video collections
+        VideoCollector.processVideoCollection(product.youtube_videos, product.name || `Produto ${index + 1}`, 'YouTube', videos, seenUrls);
+        VideoCollector.processVideoCollection(product.testimonial_videos, product.name || `Produto ${index + 1}`, 'Depoimento', videos, seenUrls);
+        VideoCollector.processVideoCollection(product.technical_videos, product.name || `Produto ${index + 1}`, 'Técnico', videos, seenUrls);
 
         // Instagram URLs are not supported by Google Ads, but we can log them for user awareness
         if (product.instagram_url && console) {
           console.info(`⚠️ Instagram URL encontrada no produto "${product.name || `Produto ${index + 1}`}": ${product.instagram_url}. URLs do Instagram não são suportadas pelo Google Ads.`);
+        }
+        
+        // Log Instagram videos as not supported
+        if (product.instagram_videos && product.instagram_videos.length > 0) {
+          console.info(`⚠️ ${product.instagram_videos.length} vídeos do Instagram encontrados para "${product.name || `Produto ${index + 1}`}" mas não são suportados pelo Google Ads.`);
         }
       });
 
@@ -125,6 +135,27 @@ export class VideoCollector {
     }
   }
   
+  /**
+   * Process a collection of video objects and add YouTube videos to the collection
+   */
+  private static processVideoCollection(videos: any[], productName: string, type: string, collection: VideoExtension[], seenUrls: Set<string>): void {
+    if (!videos || !Array.isArray(videos)) return;
+    
+    videos.forEach((video: any, index: number) => {
+      if (video.url && VideoCollector.validateYouTubeUrl(video.url).valid && !seenUrls.has(video.url)) {
+        const id = VideoCollector.extractYouTubeId(video.url);
+        if (id) {
+          collection.push({
+            youtube_id: id,
+            label: `${productName} - ${type} ${index + 1}${video.description ? ` (${video.description.substring(0, 20)}...)` : ''}`
+          });
+          seenUrls.add(video.url);
+          console.log(`VideoCollector: Added ${type} video for "${productName}": ${id}`);
+        }
+      }
+    });
+  }
+
   static extractYouTubeId(url: string): string | null {
     if (!url) return null;
     

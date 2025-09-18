@@ -137,10 +137,35 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   const productBenefits = products.flatMap(p => p.benefits || []);
   const productFeatures = products.flatMap(p => p.features || []);
   
-  // Build product context
-  const productContext = products.map(p => 
-    `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`
-  ).join('\n');
+  // Build product context with video information
+  const productContext = products.map(p => {
+    let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
+    
+    // Add video content for SEO and AI context
+    const videoContent = [];
+    if (p.youtube_url) videoContent.push(`YouTube: ${p.youtube_url}`);
+    if (p.instagram_url) videoContent.push(`Instagram: ${p.instagram_url}`);
+    
+    // Additional video collections
+    if (p.youtube_videos && p.youtube_videos.length > 0) {
+      videoContent.push(`Vídeos YouTube: ${p.youtube_videos.map((v: any) => v.url).join(', ')}`);
+    }
+    if (p.instagram_videos && p.instagram_videos.length > 0) {
+      videoContent.push(`Vídeos Instagram: ${p.instagram_videos.map((v: any) => v.url).join(', ')}`);
+    }
+    if (p.testimonial_videos && p.testimonial_videos.length > 0) {
+      videoContent.push(`Depoimentos em vídeo: ${p.testimonial_videos.map((v: any) => v.url).join(', ')}`);
+    }
+    if (p.technical_videos && p.technical_videos.length > 0) {
+      videoContent.push(`Vídeos técnicos: ${p.technical_videos.map((v: any) => v.url).join(', ')}`);
+    }
+    
+    if (videoContent.length > 0) {
+      productInfo += `\n  Recursos de vídeo: ${videoContent.join(' | ')}`;
+    }
+    
+    return productInfo;
+  }).join('\n');
 
   return `
 # CONTEXTO ESTRATÉGICO PARA GERAÇÃO DE CONTEÚDO

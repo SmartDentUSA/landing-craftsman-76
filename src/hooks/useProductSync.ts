@@ -2,12 +2,23 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface Video {
+  url: string;
+  description: string;
+}
+
 interface ProductOffer {
   name: string;
   description: string;
   price: string;
   image?: string;
   link?: string;
+  youtube_url?: string;
+  instagram_url?: string;
+  instagram_videos?: Video[];
+  youtube_videos?: Video[];
+  testimonial_videos?: Video[];
+  technical_videos?: Video[];
 }
 
 export const useProductSync = () => {
@@ -43,6 +54,10 @@ export const useProductSync = () => {
           product_url: offer.link || null,
           youtube_url: (offer as any).youtube_url || null,
           instagram_url: (offer as any).instagram_url || null,
+          instagram_videos: offer.instagram_videos || [] as any,
+          youtube_videos: offer.youtube_videos || [] as any,
+          testimonial_videos: offer.testimonial_videos || [] as any,
+          technical_videos: offer.technical_videos || [] as any,
           source_type: 'landing_page_offer',
           source_landing_page_id: landingPageId,
           use_in_ai_generation: true,
@@ -106,6 +121,10 @@ export const useProductSync = () => {
         link: product.product_url || '',
         youtube_url: product.youtube_url || '',
         instagram_url: product.instagram_url || '',
+        instagram_videos: product.instagram_videos || [],
+        youtube_videos: product.youtube_videos || [],
+        testimonial_videos: product.testimonial_videos || [],
+        technical_videos: product.technical_videos || [],
       })) || [];
 
     } catch (error) {
@@ -157,6 +176,10 @@ export const useProductSync = () => {
         link: product.product_url || '',
         youtube_url: product.youtube_url || '',
         instagram_url: product.instagram_url || '',
+        instagram_videos: product.instagram_videos || [],
+        youtube_videos: product.youtube_videos || [],
+        testimonial_videos: product.testimonial_videos || [],
+        technical_videos: product.technical_videos || [],
       })) || [];
 
     } catch (error) {
