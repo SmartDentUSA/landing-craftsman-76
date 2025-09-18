@@ -11,6 +11,7 @@ import CloudflareSettings from "./pages/CloudflareSettings";
 import PublicationSettings from "./pages/PublicationSettings";
 import BlogGenerator from "./pages/BlogGenerator";
 import Auth from "./pages/Auth";
+import PasswordReset from "./pages/PasswordReset";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/cloudflare-settings" element={<ProtectedRoute requiredRole="admin"><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute requiredRole="admin"><PublicationSettings /></ProtectedRoute>} />
           <Route path="/blog-generator/:id" element={<ProtectedRoute requiredRole="admin"><BlogGenerator /></ProtectedRoute>} />
+          <Route path="/password-reset" element={<PasswordReset />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
