@@ -13,6 +13,7 @@ import { Save, Trash2, Plus, X, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
+import { CaptionExtractor } from "@/components/CaptionExtractor";
 
 interface Video {
   url: string;
@@ -41,6 +42,7 @@ interface Product {
   youtube_videos?: Video[];
   testimonial_videos?: Video[];
   technical_videos?: Video[];
+  video_captions?: any;
 }
 
 interface ProductEditModalProps {
@@ -88,6 +90,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [testimonialVideos, setTestimonialVideos] = useState<Video[]>([]);
   const [technicalVideos, setTechnicalVideos] = useState<Video[]>([]);
   
+  // Caption states
+  const [videoCaptions, setVideoCaptions] = useState<any>({});
+  
   const { toast } = useToast();
 
   const isEditing = !!product;
@@ -110,6 +115,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setYoutubeVideos(product.youtube_videos || []);
       setTestimonialVideos(product.testimonial_videos || []);
       setTechnicalVideos(product.technical_videos || []);
+      setVideoCaptions(product.video_captions || {});
     } else {
       setFormData({
         name: '',
@@ -139,6 +145,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setYoutubeVideos([]);
       setTestimonialVideos([]);
       setTechnicalVideos([]);
+      setVideoCaptions({});
     }
   }, [product]);
 
@@ -267,6 +274,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
         break;
     }
+  };
+
+  // Caption management function
+  const handleCaptionsExtracted = (videoType: string, captions: any[]) => {
+    const updatedCaptions = {
+      ...videoCaptions,
+      [videoType]: captions
+    };
+    setVideoCaptions(updatedCaptions);
   };
 
   const generateKeywordsWithAI = async () => {
@@ -619,31 +635,67 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             />
 
             {/* YouTube Videos */}
-            <VideoSection
-              title="Vídeos YouTube"
-              videos={youtubeVideos}
-              onAdd={(url, description) => addVideo('youtube', url, description)}
-              onRemove={(index) => removeVideo('youtube', index)}
-              maxVideos={5}
-            />
+            <div className="space-y-4">
+              <VideoSection
+                title="Vídeos YouTube"
+                videos={youtubeVideos}
+                onAdd={(url, description) => addVideo('youtube', url, description)}
+                onRemove={(index) => removeVideo('youtube', index)}
+                maxVideos={5}
+              />
+              
+              {isEditing && (
+                <CaptionExtractor
+                  productId={product!.id}
+                  videoType="youtube_videos"
+                  videos={youtubeVideos}
+                  existingCaptions={videoCaptions.youtube_videos || []}
+                  onCaptionsExtracted={(captions) => handleCaptionsExtracted('youtube_videos', captions)}
+                />
+              )}
+            </div>
 
             {/* Testimonial Videos */}
-            <VideoSection
-              title="Vídeos Depoimentos"
-              videos={testimonialVideos}
-              onAdd={(url, description) => addVideo('testimonial', url, description)}
-              onRemove={(index) => removeVideo('testimonial', index)}
-              maxVideos={5}
-            />
+            <div className="space-y-4">
+              <VideoSection
+                title="Vídeos Depoimentos"
+                videos={testimonialVideos}
+                onAdd={(url, description) => addVideo('testimonial', url, description)}
+                onRemove={(index) => removeVideo('testimonial', index)}
+                maxVideos={5}
+              />
+              
+              {isEditing && (
+                <CaptionExtractor
+                  productId={product!.id}
+                  videoType="testimonial_videos"
+                  videos={testimonialVideos}
+                  existingCaptions={videoCaptions.testimonial_videos || []}
+                  onCaptionsExtracted={(captions) => handleCaptionsExtracted('testimonial_videos', captions)}
+                />
+              )}
+            </div>
 
             {/* Technical Videos */}
-            <VideoSection
-              title="Explicações Técnicas"
-              videos={technicalVideos}
-              onAdd={(url, description) => addVideo('technical', url, description)}
-              onRemove={(index) => removeVideo('technical', index)}
-              maxVideos={5}
-            />
+            <div className="space-y-4">
+              <VideoSection
+                title="Explicações Técnicas"
+                videos={technicalVideos}
+                onAdd={(url, description) => addVideo('technical', url, description)}
+                onRemove={(index) => removeVideo('technical', index)}
+                maxVideos={5}
+              />
+              
+              {isEditing && (
+                <CaptionExtractor
+                  productId={product!.id}
+                  videoType="technical_videos"
+                  videos={technicalVideos}
+                  existingCaptions={videoCaptions.technical_videos || []}
+                  onCaptionsExtracted={(captions) => handleCaptionsExtracted('technical_videos', captions)}
+                />
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

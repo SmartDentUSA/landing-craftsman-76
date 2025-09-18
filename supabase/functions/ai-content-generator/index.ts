@@ -137,7 +137,7 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   const productBenefits = products.flatMap(p => p.benefits || []);
   const productFeatures = products.flatMap(p => p.features || []);
   
-  // Build product context with video information
+  // Build product context with video information and captions
   const productContext = products.map(p => {
     let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
     
@@ -162,6 +162,34 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
     
     if (videoContent.length > 0) {
       productInfo += `\n  Recursos de vídeo: ${videoContent.join(' | ')}`;
+    }
+
+    // Add extracted captions content
+    if (p.video_captions) {
+      const captionInsights = [];
+      
+      ['youtube_videos', 'testimonial_videos', 'technical_videos'].forEach(videoType => {
+        const captions = p.video_captions[videoType];
+        if (captions && Array.isArray(captions)) {
+          captions.forEach((caption: any) => {
+            if (caption.analysis) {
+              if (caption.analysis.summary) {
+                captionInsights.push(`${videoType}: ${caption.analysis.summary}`);
+              }
+              if (caption.analysis.keywords && caption.analysis.keywords.length > 0) {
+                captionInsights.push(`Keywords do vídeo: ${caption.analysis.keywords.slice(0, 5).join(', ')}`);
+              }
+            } else if (caption.captions && caption.captions.length > 100) {
+              // Use first 200 characters of captions if no analysis available
+              captionInsights.push(`Conteúdo do vídeo: ${caption.captions.slice(0, 200)}...`);
+            }
+          });
+        }
+      });
+      
+      if (captionInsights.length > 0) {
+        productInfo += `\n  Insights dos vídeos: ${captionInsights.join(' | ')}`;
+      }
     }
     
     return productInfo;

@@ -332,6 +332,7 @@ export type Database = {
           testimonial_videos: Json | null
           updated_at: string
           use_in_ai_generation: boolean | null
+          video_captions: Json | null
           youtube_url: string | null
           youtube_videos: Json | null
         }
@@ -365,6 +366,7 @@ export type Database = {
           testimonial_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
+          video_captions?: Json | null
           youtube_url?: string | null
           youtube_videos?: Json | null
         }
@@ -398,6 +400,7 @@ export type Database = {
           testimonial_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
+          video_captions?: Json | null
           youtube_url?: string | null
           youtube_videos?: Json | null
         }
