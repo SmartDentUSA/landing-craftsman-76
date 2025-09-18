@@ -6,14 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, X, Video, ExternalLink } from "lucide-react";
 
-interface Video {
+interface VideoItem {
   url: string;
   description: string;
 }
 
 interface VideoSectionProps {
   title: string;
-  videos: Video[];
+  videos: VideoItem[];
   onAdd: (url: string, description: string) => void;
   onRemove: (index: number) => void;
   maxVideos: number;
