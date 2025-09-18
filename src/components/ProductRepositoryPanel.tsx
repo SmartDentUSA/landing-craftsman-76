@@ -6,12 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Package, Star, DollarSign, Filter, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Package, Star, DollarSign, Filter, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSync } from "@/hooks/useProductSync";
 import useLandingPages from "@/hooks/useLandingPages";
 import { ProductEditModal } from "@/components/ProductEditModal";
+import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 
 interface Product {
   id: string;
@@ -36,13 +38,15 @@ interface ProductRepositoryPanelProps {
   onProductSelectionChange: (selectedProducts: Product[]) => void;
   className?: string;
   onSyncTriggered?: () => void;
+  onCompanyProfileChange?: (profile: any) => void;
 }
 
 export function ProductRepositoryPanel({ 
   landingPageId, 
   onProductSelectionChange, 
   className,
-  onSyncTriggered 
+  onSyncTriggered,
+  onCompanyProfileChange 
 }: ProductRepositoryPanelProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -262,6 +266,25 @@ export function ProductRepositoryPanel({
               <Package className="h-5 w-5" />
               Repositório de Produtos
             </CardTitle>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Perfil da Empresa
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Perfil da Empresa
+                  </DialogTitle>
+                </DialogHeader>
+                <CompanyProfileManager 
+                  onProfileChange={onCompanyProfileChange}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
           
           <div className="space-y-3">
