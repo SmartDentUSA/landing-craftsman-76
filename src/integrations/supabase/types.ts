@@ -316,6 +316,7 @@ export type Database = {
           features: Json | null
           id: string
           image_url: string | null
+          instagram_url: string | null
           keywords: Json | null
           name: string
           original_data: Json | null
@@ -344,6 +345,7 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
+          instagram_url?: string | null
           keywords?: Json | null
           name: string
           original_data?: Json | null
@@ -372,6 +374,7 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
+          instagram_url?: string | null
           keywords?: Json | null
           name?: string
           original_data?: Json | null

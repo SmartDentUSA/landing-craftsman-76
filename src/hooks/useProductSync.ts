@@ -41,6 +41,8 @@ export const useProductSync = () => {
           currency: 'BRL',
           image_url: offer.image || null,
           product_url: offer.link || null,
+          youtube_url: (offer as any).youtube_url || null,
+          instagram_url: (offer as any).instagram_url || null,
           source_type: 'landing_page_offer',
           source_landing_page_id: landingPageId,
           use_in_ai_generation: true,
@@ -102,6 +104,8 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
+        youtube_url: product.youtube_url || '',
+        instagram_url: product.instagram_url || '',
       })) || [];
 
     } catch (error) {
@@ -151,6 +155,8 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
+        youtube_url: product.youtube_url || '',
+        instagram_url: product.instagram_url || '',
       })) || [];
 
     } catch (error) {
