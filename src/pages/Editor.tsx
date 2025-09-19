@@ -4239,28 +4239,6 @@ const EditorContent = () => {
                                   </div>
                                 </div>
 
-                                 {/* Blog Preview Component */}
-                                 <BlogPreview 
-                                   landingPageId={id || ""}
-                                   landingPageData={data}
-                                   onEditBlog={() => navigate(`/blog/${id}`, { 
-                                     state: { 
-                                       fromEditor: true, 
-                                       landingPageData: data,
-                                       blogData: {
-                                         title: data.banner.title || "",
-                                         content: "",
-                                         meta_description: data.seo_description || "",
-                                         keywords: [],
-                                         youtube_video_url: "",
-                                         status: "draft",
-                                         published_domains: [],
-                                         intelligent_links: {},
-                                         include_offers: true
-                                       }
-                                     } 
-                                   })}
-                                 />
                              </div>
                            )}
                         </div>
@@ -6300,96 +6278,27 @@ dataLayer = [{
             </TabsContent>
 
             <TabsContent value="blog-preview" className="flex-1 p-4">
-              <div className="h-full flex flex-col">
-                {!blogPostData && (
-                  <div className="flex-1 flex items-center justify-center border rounded-lg">
-                    <div className="text-center space-y-4">
-                      <p className="text-muted-foreground">
-                        Gere um blog post baseado na sua landing page
-                      </p>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => generateBlogPost()} 
-                          disabled={generatingBlog}
-                          className="gap-2"
-                        >
-                          {generatingBlog ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            '🚀'
-                          )}
-                          {generatingBlog ? 'Gerando...' : 'Gerar Blog'}
-                        </Button>
-                        <Button 
-                          onClick={() => generateBlogPost(true)} 
-                          disabled={generatingBlog}
-                          variant="outline"
-                          className="gap-2"
-                        >
-                          ⚡ Rápido
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {blogPostData && (
-                  <div className="h-full flex flex-col space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">Preview do Blog Post</h3>
-                       <div className="flex gap-2">
-                        <Button 
-                          onClick={() => generateBlogPost()} 
-                          disabled={generatingBlog}
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          {generatingBlog ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            '🔄'
-                          )}
-                          Regenerar
-                        </Button>
-                        <Button 
-                          onClick={() => generateBlogPost(true)} 
-                          disabled={generatingBlog}
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          ⚡ Rápido
-                        </Button>
-                        <Button 
-                          onClick={() => navigate(`/blog-generator/${id}`, { 
-                            state: { 
-                              blogData: blogPostData, 
-                              landingPageData: data,
-                              fromEditor: true 
-                            } 
-                          })} 
-                          variant="default"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
-                       </div>
-                    </div>
-                    
-                    <div className="flex-1 border rounded-lg overflow-hidden">
-                      <iframe
-                        key={`blog-${Date.now()}`}
-                        srcDoc={generatedBlogHTML}
-                        className="w-full h-full"
-                        title="Blog Post Preview"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <BlogPreview 
+                landingPageId={id || ""}
+                landingPageData={data}
+                onEditBlog={() => navigate(`/blog/${id}`, { 
+                  state: { 
+                    fromEditor: true, 
+                    landingPageData: data,
+                    blogData: {
+                      title: data.banner.title || "",
+                      content: "",
+                      meta_description: data.seo_description || "",
+                      keywords: [],
+                      youtube_video_url: "",
+                      status: "draft",
+                      published_domains: [],
+                      intelligent_links: {},
+                      include_offers: true
+                    }
+                  } 
+                })}
+              />
             </TabsContent>
 
             {/* Repository Tab - Fixed positioning */}
