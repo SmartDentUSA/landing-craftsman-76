@@ -25,6 +25,8 @@ const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader
 import { ProductCSVUploader } from "@/components/ProductCSVUploader";
 import { ImageDebugPreview } from "@/components/ImageDebugPreview";
 import { ProductRepositoryPanel } from "@/components/ProductRepositoryPanel";
+import { ProductSelector } from "@/components/ProductSelector";
+import { SelectedProductsPanel } from "@/components/SelectedProductsPanel";
 import { VideoMigrationTester } from "@/components/VideoMigrationTester";
 import { ProductAIGenerator } from "@/components/ProductAIGenerator";
 import { SystemDataStatus } from "@/components/SystemDataStatus";
@@ -34,6 +36,7 @@ import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { cn } from "@/lib/utils";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useProductSync } from "@/hooks/useProductSync";
+import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { generateSafeHTML, generateSafeEmailHTML, getEmbedConfig } from "@/lib/selflux-engine";
@@ -805,7 +808,7 @@ const EditorContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
-  const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPages();
+  const { getLandingPage, updateLandingPage, addLandingPage, updateSelectedProducts, getSelectedProducts } = useLandingPages();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
@@ -859,6 +862,10 @@ const EditorContent = () => {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [generatingBlog, setGeneratingBlog] = useState(false);
   const [isImportingFromRepo, setIsImportingFromRepo] = useState(false);
+  
+  // Novo sistema centralizado de produtos
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const { getProductsForTemplate } = useSelectedProducts();
   
   // Auto-sync offers to repository when they change (debounced)
   const handleAutoSyncOffers = useCallback(async (newData: LandingPageData) => {
@@ -1559,6 +1566,9 @@ const EditorContent = () => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
+        // Carregar produtos selecionados
+        const selectedIds = getSelectedProducts(id);
+        setSelectedProductIds(selectedIds);
         // Se há dados estruturados, usar direto mas garantir campos obrigatórios
         if (landingPage.data && typeof landingPage.data === 'object') {
           const loadedData = { ...landingPage.data, template: landingPage.template } as LandingPageData;
@@ -4693,8 +4703,38 @@ const EditorContent = () => {
               </Card>
             </TabsContent>
 
-            {/* Aba Schema & Offers */}
+            {/* Aba Produtos & Ofertas */}
             <TabsContent value="schema-offers" className="space-y-6">
+              
+              {/* Novo Sistema Centralizado de Produtos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Seletor de Produtos */}
+                <ProductSelector
+                  landingPageId={id || ''}
+                  selectedProductIds={selectedProductIds}
+                  onSelectionChange={(newIds) => {
+                    setSelectedProductIds(newIds);
+                    if (id) {
+                      updateSelectedProducts(id, newIds);
+                    }
+                  }}
+                />
+                
+                {/* Produtos Selecionados */}
+                <SelectedProductsPanel
+                  landingPageId={id || ''}
+                  selectedProductIds={selectedProductIds}
+                  onOrderChange={(newOrder) => {
+                    setSelectedProductIds(newOrder);
+                    if (id) {
+                      updateSelectedProducts(id, newOrder);
+                    }
+                  }}
+                  onEditInRepository={(productId) => {
+                    setPreviewTab('repository');
+                  }}
+                />
+              </div>
               
               {/* Schema Software Application Card */}
               {false && (

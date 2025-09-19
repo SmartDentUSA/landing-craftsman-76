@@ -14,6 +14,8 @@ export interface LandingPage {
     mode: 'default' | 'selflux';
     namespace: string;
   };
+  // Novos campos para o sistema centralizado de produtos
+  selectedProductIds?: string[];
 }
 
 interface LandingPagesStore {
@@ -24,6 +26,9 @@ interface LandingPagesStore {
   deleteLandingPage: (id: string) => void;
   saveManualReviews: (landingPageId: string, reviews: any[]) => Promise<void>;
   loadManualReviews: (landingPageId: string) => Promise<any[]>;
+  // Novos métodos para gerenciar produtos selecionados
+  updateSelectedProducts: (landingPageId: string, productIds: string[]) => void;
+  getSelectedProducts: (landingPageId: string) => string[];
 }
 
 const useLandingPages = create<LandingPagesStore>()(
@@ -158,7 +163,28 @@ const useLandingPages = create<LandingPagesStore>()(
           console.error('Error loading manual reviews:', error);
           return [];
         }
-      }
+      },
+
+      // Novos métodos para gerenciar produtos selecionados
+      updateSelectedProducts: (landingPageId: string, productIds: string[]) => {
+        set((state) => ({
+          landingPages: state.landingPages.map(lp =>
+            lp.id === landingPageId
+              ? { 
+                  ...lp, 
+                  selectedProductIds: productIds,
+                  lastModified: new Date(),
+                  version: lp.version + 1
+                }
+              : lp
+          )
+        }));
+      },
+
+      getSelectedProducts: (landingPageId: string) => {
+        const landingPage = get().landingPages.find(lp => lp.id === landingPageId);
+        return landingPage?.selectedProductIds || [];
+      },
     }),
     {
       name: 'landing-pages-storage',
