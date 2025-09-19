@@ -62,6 +62,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
   
   const [previewData, setPreviewData] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  const [previewKey, setPreviewKey] = useState<number>(0);
 
   // Always auto-generate preview when data changes, regardless of enabled status
   useEffect(() => {
@@ -235,12 +236,34 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
   };
 
   const handleRegenerateAds = async () => {
+    console.log('🔄 Manual regeneration triggered');
+    
+    // Clear current preview to force re-render
+    setPreviewData(null);
+    
+    // Force new key to re-render AdPreviewCards component
+    setPreviewKey(prev => prev + 1);
+    
+    // Generate new ad copies
     const adCopies = await generateAdCopies();
+    
     if (adCopies && previewData) {
-      setPreviewData({
+      const newPreviewData = {
         ...previewData,
         adCopies
+      };
+      
+      console.log('✅ Preview updated with new ads:', {
+        headlines: adCopies.headlines?.length || 0,
+        descriptions: adCopies.descriptions?.length || 0,
+        paths: adCopies.paths?.length || 0,
+        timestamp: new Date().toISOString()
       });
+      
+      setPreviewData(newPreviewData);
+    } else if (adCopies) {
+      // If no previous preview data, regenerate complete preview
+      await validateAndPreview();
     }
   };
 
@@ -545,6 +568,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
           </Card>
         ) : previewData ? (
           <AdPreviewCards
+            key={previewKey}
             adCopies={previewData.adCopies}
             finalUrl={previewData.finalUrl}
             sitelinks={previewData.sitelinks}
