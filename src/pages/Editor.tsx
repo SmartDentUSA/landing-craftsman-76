@@ -4261,11 +4261,6 @@ const EditorContent = () => {
                                      } 
                                    })}
                                  />
-                                 </div>
-                                 <div className="text-xs text-orange-700 bg-white/50 p-2 rounded border">
-                                   Gera um blog post completo baseado no conteúdo da landing page
-                                 </div>
-                               </div>
                              </div>
                            )}
                         </div>
