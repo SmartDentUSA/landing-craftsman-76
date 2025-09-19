@@ -700,6 +700,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: none;
         }
         
+        /* Offer details */
+        .offer-sales-pitch { margin-top: 0.5rem; color: var(--text-color); font-weight: 500; }
+        .offer-benefits, .offer-features { margin: 0.5rem 0 0; padding-left: 1.25rem; color: var(--secondary-color); }
+        .offer-benefits li, .offer-features li { margin: 0.25rem 0; line-height: 1.4; }
+        
         /* Navigation Arrows */
         .offers-nav {
             position: absolute;
@@ -1467,6 +1472,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             <div class="offer-price-installment">{{installment_price}}</div>
                             {{/installment_price}}
                         </div>
+                        {{#sales_pitch}}
+                        <p class="offer-sales-pitch">{{sales_pitch}}</p>
+                        {{/sales_pitch}}
+                        {{#has_benefits}}
+                        <ul class="offer-benefits">
+                            {{#benefits}}
+                            <li>{{.}}</li>
+                            {{/benefits}}
+                        </ul>
+                        {{/has_benefits}}
+                        {{#has_features}}
+                        <ul class="offer-features">
+                            {{#features}}
+                            <li>{{.}}</li>
+                            {{/features}}
+                        </ul>
+                        {{/has_features}}
                         <div class="offer-buttons">
                             {{#productUrl}}
                             <button class="offer-buy-button" onclick="window.open('{{productUrl}}', '_blank')">Loja Online</button>

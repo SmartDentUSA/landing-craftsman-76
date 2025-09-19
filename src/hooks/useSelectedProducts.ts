@@ -7,6 +7,8 @@ interface Product {
   name: string;
   description?: string;
   sales_pitch?: string;
+  benefits?: string[];
+  features?: string[];
   price?: number;
   currency?: string;
   category?: string;
@@ -17,6 +19,7 @@ interface Product {
   testimonial_videos?: any[];
   technical_videos?: any[];
 }
+
 
 export const useSelectedProducts = () => {
   const { toast } = useToast();
@@ -40,7 +43,9 @@ export const useSelectedProducts = () => {
           id: product.id,
           name: product.name,
           description: product.description || '',
-          sales_pitch: product.sales_pitch || '',
+          sales_pitch: (product as any).sales_pitch || '',
+          benefits: (product as any).benefits || [],
+          features: (product as any).features || [],
           price: product.price || undefined,
           currency: product.currency || 'BRL',
           category: product.category || '',
@@ -75,9 +80,12 @@ export const useSelectedProducts = () => {
       price: product.price?.toString() || '',
       currency: 'BRL',
       availability: 'InStock',
-      valid_through: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
+      valid_through: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       productUrl: product.product_url,
       image: product.image_url,
+      sales_pitch: product.sales_pitch,
+      benefits: product.benefits,
+      features: product.features,
       sourceType: 'repository' as const,
       lastUpdated: new Date().toISOString(),
       selected: true,
