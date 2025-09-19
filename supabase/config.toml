@@ -3,6 +3,9 @@ project_id = "pgfgripuanuwwolmtknn"
 [functions.ai-content-generator]
 verify_jwt = false
 
+[functions.generate-product-ai-content]
+verify_jwt = false
+
 [functions.migrate-products-to-repository]
 verify_jwt = false
 
@@ -38,3 +41,18 @@ verify_jwt = false
 
 [functions.publish-blog-post]
 verify_jwt = true
+
+[functions.migrate-video-data]
+verify_jwt = false
+
+[functions.extract-youtube-captions]
+verify_jwt = false
+
+[functions.export-google-ads-csv]
+verify_jwt = false
+
+[functions.generate-ad-copies]
+verify_jwt = false
+
+[functions.cloudflare-direct-upload]
+verify_jwt = false

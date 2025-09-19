@@ -67,7 +67,18 @@ serve(async (req) => {
       console.log(`No videos found in ${request.videoType} for product ${request.productId}`);
       console.log('Available video types:', Object.keys(product).filter(key => key.endsWith('_videos')));
       console.log('Video array content:', videoArray);
-      throw new Error(`No videos found to process in ${request.videoType}. Available videos: ${JSON.stringify(videoArray)}`);
+      
+      return new Response(JSON.stringify({
+        success: false,
+        error: `No videos found to process in ${request.videoType}`,
+        extracted: 0,
+        availableVideos: Object.keys(product).filter(key => key.endsWith('_videos')).reduce((acc, key) => {
+          acc[key] = product[key]?.length || 0;
+          return acc;
+        }, {} as any)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const extractedCaptions: VideoCaption[] = [];

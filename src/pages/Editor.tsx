@@ -26,6 +26,8 @@ import { ProductCSVUploader } from "@/components/ProductCSVUploader";
 import { ImageDebugPreview } from "@/components/ImageDebugPreview";
 import { ProductRepositoryPanel } from "@/components/ProductRepositoryPanel";
 import { VideoMigrationTester } from "@/components/VideoMigrationTester";
+import { ProductAIGenerator } from "@/components/ProductAIGenerator";
+import { SystemDataStatus } from "@/components/SystemDataStatus";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
@@ -7099,8 +7101,10 @@ dataLayer = [{
                   </p>
                 </div>
                 
-                <div className="mb-4">
+                <div className="mb-4 space-y-4">
+                  <SystemDataStatus />
                   <VideoMigrationTester />
+                  <ProductAIGenerator />
                 </div>
 
                 <div className="flex-1">
