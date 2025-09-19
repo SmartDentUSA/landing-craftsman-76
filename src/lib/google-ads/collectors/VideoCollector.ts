@@ -68,51 +68,38 @@ export class VideoCollector {
       .filter((extension): extension is NonNullable<typeof extension> => extension !== null);
   }
 
-  static collectFromProducts(landingPageData: any): VideoExtension[] {
+  static async collectFromCompanyProfile(userId?: string): Promise<VideoExtension[]> {
     try {
-      const videos: VideoExtension[] = [];
-      const seenUrls = new Set<string>();
+      if (!userId) return [];
 
-      // Try to find products in multiple possible locations
-      let products: any[] = [];
+      const { data: profile, error } = await supabase
+        .from('company_profile')
+        .select('company_videos')
+        .eq('user_id', userId)
+        .single();
       
-      // Priority 1: schema.offers (current editor structure)
-      if (landingPageData?.schema?.offers && Array.isArray(landingPageData.schema.offers)) {
-        products = landingPageData.schema.offers;
-        console.log(`VideoCollector: Found ${products.length} products in schema.offers`);
-      }
-      // Priority 2: editor_data.products (legacy structure)
-      else if (landingPageData?.editor_data?.products && Array.isArray(landingPageData.editor_data.products)) {
-        products = landingPageData.editor_data.products;
-        console.log(`VideoCollector: Found ${products.length} products in editor_data.products`);
-      }
-      // Priority 3: Direct offers array
-      else if (landingPageData?.offers && Array.isArray(landingPageData.offers)) {
-        products = landingPageData.offers;
-        console.log(`VideoCollector: Found ${products.length} products in offers`);
-      }
-
-      if (products.length === 0) {
-        console.log('VideoCollector: No products found in any expected location');
+      if (error || !profile?.company_videos) {
         return [];
       }
 
-      products.forEach((product: any, index: number) => {
-        // Process video collections
-        VideoCollector.processVideoCollection(product.youtube_videos, product.name || `Produto ${index + 1}`, 'YouTube', videos, seenUrls);
-        VideoCollector.processVideoCollection(product.testimonial_videos, product.name || `Produto ${index + 1}`, 'Depoimento', videos, seenUrls);
-        VideoCollector.processVideoCollection(product.technical_videos, product.name || `Produto ${index + 1}`, 'Técnico', videos, seenUrls);
-        
-        // Log Instagram videos as not supported
-        if (product.instagram_videos && product.instagram_videos.length > 0) {
-          console.info(`⚠️ ${product.instagram_videos.length} vídeos do Instagram encontrados para "${product.name || `Produto ${index + 1}`}" mas não são suportados pelo Google Ads.`);
-        }
-      });
+      const videos: VideoExtension[] = [];
+      const seenUrls = new Set<string>();
+      const companyVideos = profile.company_videos as any;
 
-      console.log(`VideoCollector: Collected ${videos.length} YouTube videos from products`);
+      // Process company video collections
+      this.processVideoCollection(companyVideos.youtube_videos, 'Empresa', 'YouTube', videos, seenUrls);
+      this.processVideoCollection(companyVideos.testimonial_videos, 'Empresa', 'Depoimento', videos, seenUrls);
+      this.processVideoCollection(companyVideos.technical_videos, 'Empresa', 'Técnico', videos, seenUrls);
+
+      // Log Instagram videos as not supported
+      if (companyVideos.instagram_videos && companyVideos.instagram_videos.length > 0) {
+        console.info(`⚠️ ${companyVideos.instagram_videos.length} vídeos do Instagram da empresa encontrados mas não são suportados pelo Google Ads.`);
+      }
+
+      console.log(`VideoCollector: Collected ${videos.length} YouTube videos from company profile`);
       return videos;
     } catch (error) {
-      console.error('Error collecting videos from products:', error);
+      console.error('Error collecting videos from company profile:', error);
       return [];
     }
   }
@@ -158,17 +145,17 @@ export class VideoCollector {
     return null;
   }
   
-  static async collectAll(landingPageId: string, manualVideos: { url: string; label?: string }[], landingPageData?: any): Promise<VideoExtension[]> {
-    const [blogVideos, testimonialVideos] = await Promise.all([
+  static async collectAll(landingPageId: string, manualVideos: { url: string; label?: string }[], userId?: string): Promise<VideoExtension[]> {
+    const [blogVideos, testimonialVideos, companyVideos] = await Promise.all([
       this.collectFromBlogPosts(landingPageId),
-      this.collectFromTestimonials(landingPageId)
+      this.collectFromTestimonials(landingPageId),
+      this.collectFromCompanyProfile(userId)
     ]);
     
     const manualVideoExtensions = this.collectFromManualUrls(manualVideos);
-    const productVideos = landingPageData ? this.collectFromProducts(landingPageData) : [];
     
     // Combine all videos and remove duplicates by youtube_id
-    const allVideos = [...blogVideos, ...testimonialVideos, ...productVideos, ...manualVideoExtensions];
+    const allVideos = [...blogVideos, ...testimonialVideos, ...companyVideos, ...manualVideoExtensions];
     const uniqueVideos = allVideos.filter((video, index, arr) => 
       arr.findIndex(v => v.youtube_id === video.youtube_id) === index
     );

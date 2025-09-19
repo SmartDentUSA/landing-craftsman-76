@@ -126,6 +126,7 @@ export type Database = {
           company_description: string | null
           company_logo_url: string | null
           company_name: string
+          company_videos: Json | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -133,6 +134,7 @@ export type Database = {
           differentiators: string | null
           founded_year: number | null
           id: string
+          instagram_profile: string | null
           location: string | null
           main_products_services: string | null
           mission_statement: string | null
@@ -144,6 +146,7 @@ export type Database = {
           vision_statement: string | null
           website_url: string | null
           working_methodology: string | null
+          youtube_channel: string | null
         }
         Insert: {
           brand_values?: string | null
@@ -152,6 +155,7 @@ export type Database = {
           company_description?: string | null
           company_logo_url?: string | null
           company_name: string
+          company_videos?: Json | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -159,6 +163,7 @@ export type Database = {
           differentiators?: string | null
           founded_year?: number | null
           id?: string
+          instagram_profile?: string | null
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
@@ -170,6 +175,7 @@ export type Database = {
           vision_statement?: string | null
           website_url?: string | null
           working_methodology?: string | null
+          youtube_channel?: string | null
         }
         Update: {
           brand_values?: string | null
@@ -178,6 +184,7 @@ export type Database = {
           company_description?: string | null
           company_logo_url?: string | null
           company_name?: string
+          company_videos?: Json | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -185,6 +192,7 @@ export type Database = {
           differentiators?: string | null
           founded_year?: number | null
           id?: string
+          instagram_profile?: string | null
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
@@ -196,6 +204,7 @@ export type Database = {
           vision_statement?: string | null
           website_url?: string | null
           working_methodology?: string | null
+          youtube_channel?: string | null
         }
         Relationships: []
       }
@@ -316,7 +325,6 @@ export type Database = {
           features: Json | null
           id: string
           image_url: string | null
-          instagram_videos: Json | null
           keywords: Json | null
           name: string
           original_data: Json | null
@@ -327,12 +335,8 @@ export type Database = {
           subcategory: string | null
           tags: Json | null
           target_audience: string | null
-          technical_videos: Json | null
-          testimonial_videos: Json | null
           updated_at: string
           use_in_ai_generation: boolean | null
-          video_captions: Json | null
-          youtube_videos: Json | null
         }
         Insert: {
           ai_generated_benefits?: boolean | null
@@ -348,7 +352,6 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
-          instagram_videos?: Json | null
           keywords?: Json | null
           name: string
           original_data?: Json | null
@@ -359,12 +362,8 @@ export type Database = {
           subcategory?: string | null
           tags?: Json | null
           target_audience?: string | null
-          technical_videos?: Json | null
-          testimonial_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
-          video_captions?: Json | null
-          youtube_videos?: Json | null
         }
         Update: {
           ai_generated_benefits?: boolean | null
@@ -380,7 +379,6 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
-          instagram_videos?: Json | null
           keywords?: Json | null
           name?: string
           original_data?: Json | null
@@ -391,12 +389,8 @@ export type Database = {
           subcategory?: string | null
           tags?: Json | null
           target_audience?: string | null
-          technical_videos?: Json | null
-          testimonial_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
-          video_captions?: Json | null
-          youtube_videos?: Json | null
         }
         Relationships: []
       }

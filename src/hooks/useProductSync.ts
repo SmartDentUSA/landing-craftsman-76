@@ -13,8 +13,9 @@ interface ProductOffer {
   price: string;
   image?: string;
   link?: string;
-  instagram_videos?: Video[];
+  // Coleções de vídeos movidas para company_profile
   youtube_videos?: Video[];
+  instagram_videos?: Video[];
   testimonial_videos?: Video[];
   technical_videos?: Video[];
 }
@@ -50,10 +51,6 @@ export const useProductSync = () => {
           currency: 'BRL',
           image_url: offer.image || null,
           product_url: offer.link || null,
-          instagram_videos: offer.instagram_videos || [] as any,
-          youtube_videos: offer.youtube_videos || [] as any,
-          testimonial_videos: offer.testimonial_videos || [] as any,
-          technical_videos: offer.technical_videos || [] as any,
           source_type: 'landing_page_offer',
           source_landing_page_id: landingPageId,
           use_in_ai_generation: true,
@@ -115,10 +112,11 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
-        instagram_videos: product.instagram_videos || [],
-        youtube_videos: product.youtube_videos || [],
-        testimonial_videos: product.testimonial_videos || [],
-        technical_videos: product.technical_videos || [],
+        // Vídeos agora são da empresa, não por produto
+        youtube_videos: [],
+        instagram_videos: [],
+        testimonial_videos: [],
+        technical_videos: [],
       })) || [];
 
     } catch (error) {
@@ -168,10 +166,11 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
-        instagram_videos: product.instagram_videos || [],
-        youtube_videos: product.youtube_videos || [],
-        testimonial_videos: product.testimonial_videos || [],
-        technical_videos: product.technical_videos || [],
+        // Vídeos agora são da empresa, não por produto
+        youtube_videos: [],
+        instagram_videos: [],
+        testimonial_videos: [],
+        technical_videos: [],
       })) || [];
 
     } catch (error) {
