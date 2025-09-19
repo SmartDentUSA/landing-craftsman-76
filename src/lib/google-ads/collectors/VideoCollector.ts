@@ -145,17 +145,66 @@ export class VideoCollector {
     return null;
   }
   
+  static async collectFromSelectedProducts(landingPageId: string): Promise<VideoExtension[]> {
+    try {
+      // Get selected products for this landing page that are approved and marked for AI use
+      const { data: products, error } = await supabase
+        .from('products_repository')
+        .select('youtube_videos, testimonial_videos, technical_videos')
+        .eq('source_landing_page_id', landingPageId)
+        .eq('approved', true)
+        .eq('use_in_ai_generation', true);
+
+      if (error) {
+        console.error('Error fetching products for video collection:', error);
+        return [];
+      }
+
+      if (!products || products.length === 0) {
+        return [];
+      }
+
+      const videoExtensions: VideoExtension[] = [];
+      const seenUrls = new Set<string>();
+
+      // Process each product's video collections
+      products.forEach((product, productIndex) => {
+        const productName = `Produto ${productIndex + 1}`;
+        
+        // YouTube videos
+        if (product.youtube_videos && Array.isArray(product.youtube_videos)) {
+          this.processVideoCollection(product.youtube_videos, productName, 'YouTube', videoExtensions, seenUrls);
+        }
+        
+        // Testimonial videos
+        if (product.testimonial_videos && Array.isArray(product.testimonial_videos)) {
+          this.processVideoCollection(product.testimonial_videos, productName, 'Depoimento', videoExtensions, seenUrls);
+        }
+        
+        // Technical videos
+        if (product.technical_videos && Array.isArray(product.technical_videos)) {
+          this.processVideoCollection(product.technical_videos, productName, 'Técnico', videoExtensions, seenUrls);
+        }
+      });
+
+      return videoExtensions;
+    } catch (error) {
+      console.error('Error in collectFromSelectedProducts:', error);
+      return [];
+    }
+  }
+
   static async collectAll(landingPageId: string, manualVideos: { url: string; label?: string }[], userId?: string): Promise<VideoExtension[]> {
-    const [blogVideos, testimonialVideos, companyVideos] = await Promise.all([
+    const [blogVideos, testimonialVideos, productVideos] = await Promise.all([
       this.collectFromBlogPosts(landingPageId),
       this.collectFromTestimonials(landingPageId),
-      this.collectFromCompanyProfile(userId)
+      this.collectFromSelectedProducts(landingPageId)
     ]);
     
     const manualVideoExtensions = this.collectFromManualUrls(manualVideos);
     
     // Combine all videos and remove duplicates by youtube_id
-    const allVideos = [...blogVideos, ...testimonialVideos, ...companyVideos, ...manualVideoExtensions];
+    const allVideos = [...blogVideos, ...testimonialVideos, ...productVideos, ...manualVideoExtensions];
     const uniqueVideos = allVideos.filter((video, index, arr) => 
       arr.findIndex(v => v.youtube_id === video.youtube_id) === index
     );

@@ -13,7 +13,7 @@ interface ProductOffer {
   price: string;
   image?: string;
   link?: string;
-  // Coleções de vídeos movidas para company_profile
+  // Coleções de vídeos nos produtos
   youtube_videos?: Video[];
   instagram_videos?: Video[];
   testimonial_videos?: Video[];
@@ -51,6 +51,11 @@ export const useProductSync = () => {
           currency: 'BRL',
           image_url: offer.image || null,
           product_url: offer.link || null,
+          instagram_videos: (offer.instagram_videos || []) as any,
+          youtube_videos: (offer.youtube_videos || []) as any,
+          testimonial_videos: (offer.testimonial_videos || []) as any,
+          technical_videos: (offer.technical_videos || []) as any,
+          video_captions: {} as any,
           source_type: 'landing_page_offer',
           source_landing_page_id: landingPageId,
           use_in_ai_generation: true,
@@ -112,11 +117,10 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
-        // Vídeos agora são da empresa, não por produto
-        youtube_videos: [],
-        instagram_videos: [],
-        testimonial_videos: [],
-        technical_videos: [],
+        youtube_videos: (product.youtube_videos as unknown as Video[]) || [],
+        instagram_videos: (product.instagram_videos as unknown as Video[]) || [],
+        testimonial_videos: (product.testimonial_videos as unknown as Video[]) || [],
+        technical_videos: (product.technical_videos as unknown as Video[]) || [],
       })) || [];
 
     } catch (error) {
@@ -166,11 +170,10 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
-        // Vídeos agora são da empresa, não por produto
-        youtube_videos: [],
-        instagram_videos: [],
-        testimonial_videos: [],
-        technical_videos: [],
+        youtube_videos: (product.youtube_videos as unknown as Video[]) || [],
+        instagram_videos: (product.instagram_videos as unknown as Video[]) || [],
+        testimonial_videos: (product.testimonial_videos as unknown as Video[]) || [],
+        technical_videos: (product.technical_videos as unknown as Video[]) || [],
       })) || [];
 
     } catch (error) {

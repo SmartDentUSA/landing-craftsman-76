@@ -59,7 +59,7 @@ serve(async (req) => {
     // Fetch products from repository related to this landing page
     const { data: products, error: productsError } = await supabase
       .from('products_repository')
-      .select('*')
+      .select('name, description, keywords, benefits, features, category, subcategory, target_audience, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation')
       .eq('source_landing_page_id', request.landingPageId)
       .eq('approved', true)
       .order('display_order', { ascending: true });

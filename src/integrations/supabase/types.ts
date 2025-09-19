@@ -325,6 +325,7 @@ export type Database = {
           features: Json | null
           id: string
           image_url: string | null
+          instagram_videos: Json | null
           keywords: Json | null
           name: string
           original_data: Json | null
@@ -335,8 +336,12 @@ export type Database = {
           subcategory: string | null
           tags: Json | null
           target_audience: string | null
+          technical_videos: Json | null
+          testimonial_videos: Json | null
           updated_at: string
           use_in_ai_generation: boolean | null
+          video_captions: Json | null
+          youtube_videos: Json | null
         }
         Insert: {
           ai_generated_benefits?: boolean | null
@@ -352,6 +357,7 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
+          instagram_videos?: Json | null
           keywords?: Json | null
           name: string
           original_data?: Json | null
@@ -362,8 +368,12 @@ export type Database = {
           subcategory?: string | null
           tags?: Json | null
           target_audience?: string | null
+          technical_videos?: Json | null
+          testimonial_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
+          video_captions?: Json | null
+          youtube_videos?: Json | null
         }
         Update: {
           ai_generated_benefits?: boolean | null
@@ -379,6 +389,7 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
+          instagram_videos?: Json | null
           keywords?: Json | null
           name?: string
           original_data?: Json | null
@@ -389,8 +400,12 @@ export type Database = {
           subcategory?: string | null
           tags?: Json | null
           target_audience?: string | null
+          technical_videos?: Json | null
+          testimonial_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
+          video_captions?: Json | null
+          youtube_videos?: Json | null
         }
         Relationships: []
       }
