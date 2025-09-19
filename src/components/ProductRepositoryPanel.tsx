@@ -24,8 +24,6 @@ interface Product {
   category?: string;
   image_url?: string;
   product_url?: string;
-  youtube_url?: string;
-  instagram_url?: string;
   use_in_ai_generation: boolean;
   approved: boolean;
   keywords?: string[];
@@ -437,17 +435,6 @@ export function ProductRepositoryPanel({
                                    </Badge>
                                  )}
                                  
-                                 {product.youtube_url && (
-                                   <Badge variant="outline" className="text-xs px-2 py-0 text-red-600 border-red-200">
-                                     📺 YouTube
-                                   </Badge>
-                                 )}
-                                 
-                                 {product.instagram_url && (
-                                   <Badge variant="outline" className="text-xs px-2 py-0 text-purple-600 border-purple-200">
-                                     📱 Instagram
-                                   </Badge>
-                                 )}
                                  
                                  {product.price !== undefined && (
                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">

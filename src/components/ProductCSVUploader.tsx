@@ -19,15 +19,11 @@ interface ProductData {
   description: string;
   image?: string;
   available?: boolean;
-  youtube_url?: string;
-  instagram_url?: string;
 }
 
 interface ParsedProduct {
   url: string;
   image_url?: string;
-  youtube_url?: string;
-  instagram_url?: string;
   status: 'pending' | 'processing' | 'success' | 'error';
   data?: ProductData;
   error?: string;
@@ -45,8 +41,6 @@ interface ProductCSVUploaderProps {
     availability: string;
     valid_through: string;
     productUrl: string;
-    youtube_url?: string;
-    instagram_url?: string;
     available?: boolean;
     sourceType: 'imported';
     lastUpdated: string;
@@ -60,7 +54,7 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
   const [progress, setProgress] = useState(0);
 
   const downloadTemplate = () => {
-    const csvContent = 'Link da oferta loja integrada,URL da imagem,Vídeo youtube,Video instagram\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-1,https://minhaloja.lojaintegrada.com.br/imagem-produto-1.jpg,https://www.youtube.com/watch?v=exemplo1,https://www.instagram.com/p/exemplo1\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-2,https://minhaloja.lojaintegrada.com.br/imagem-produto-2.jpg,https://www.youtube.com/watch?v=exemplo2,\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-3,https://minhaloja.lojaintegrada.com.br/imagem-produto-3.jpg,,https://www.instagram.com/p/exemplo3';
+    const csvContent = 'Link da oferta loja integrada,URL da imagem\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-1,https://minhaloja.lojaintegrada.com.br/imagem-produto-1.jpg\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-2,https://minhaloja.lojaintegrada.com.br/imagem-produto-2.jpg\nhttps://minhaloja.lojaintegrada.com.br/produto/produto-exemplo-3,https://minhaloja.lojaintegrada.com.br/imagem-produto-3.jpg';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -90,13 +84,9 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
         parsed.data.forEach((row: Record<string, string>, index: number) => {
         const urlFields = ['Link da oferta loja integrada', 'URL do Produto', 'url_produto', 'url', 'link', 'product_url'];
         const imageFields = ['URL da imagem', 'image_url', 'imagem', 'foto', 'picture'];
-        const youtubeFields = ['Vídeo youtube', 'youtube', 'youtube_url', 'video_youtube'];
-        const instagramFields = ['Video instagram', 'instagram', 'instagram_url', 'video_instagram'];
         
         let productUrl = '';
         let imageUrl = '';
-        let youtubeUrl = '';
-        let instagramUrl = '';
         
         // Buscar URL do produto em diferentes campos possíveis
         for (const field of urlFields) {
@@ -110,22 +100,6 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
         for (const field of imageFields) {
           if (row[field] && typeof row[field] === 'string') {
             imageUrl = row[field].trim();
-            break;
-          }
-        }
-
-        // Buscar URL do YouTube
-        for (const field of youtubeFields) {
-          if (row[field] && typeof row[field] === 'string') {
-            youtubeUrl = row[field].trim();
-            break;
-          }
-        }
-
-        // Buscar URL do Instagram
-        for (const field of instagramFields) {
-          if (row[field] && typeof row[field] === 'string') {
-            instagramUrl = row[field].trim();
             break;
           }
         }
@@ -151,25 +125,6 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
                 product.image_url = imageUrl;
               } catch {
                 console.warn(`URL da imagem inválida na linha ${index + 2}:`, imageUrl);
-              }
-            }
-            
-            // Adicionar URLs de vídeo se válidas
-            if (youtubeUrl) {
-              try {
-                new URL(youtubeUrl);
-                product.youtube_url = youtubeUrl;
-              } catch {
-                console.warn(`URL do YouTube inválida na linha ${index + 2}:`, youtubeUrl);
-              }
-            }
-            
-            if (instagramUrl) {
-              try {
-                new URL(instagramUrl);
-                product.instagram_url = instagramUrl;
-              } catch {
-                console.warn(`URL do Instagram inválida na linha ${index + 2}:`, instagramUrl);
               }
             }
             
@@ -315,14 +270,6 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
               console.log('Usando imagem extraída:', productData.image);
             }
             
-            // Adicionar URLs de vídeo se disponíveis
-            if (product.youtube_url) {
-              productForImport.youtube_url = product.youtube_url;
-            }
-            if (product.instagram_url) {
-              productForImport.instagram_url = product.instagram_url;
-            }
-            
             successfulProducts.push(productForImport);
           } else {
             updatedProducts[i] = {
@@ -432,8 +379,8 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Faça upload de um arquivo CSV com as colunas: "Link da oferta loja integrada", "URL da imagem", "Vídeo youtube", "Video instagram".
-          As colunas de imagem e vídeo são opcionais e ajudam a melhorar o SEO dos produtos.
+          Faça upload de um arquivo CSV com as colunas: "Link da oferta loja integrada", "URL da imagem".
+          A coluna de imagem é opcional e ajuda a melhorar o SEO dos produtos.
         </div>
 
         {isProcessing && (
@@ -500,25 +447,13 @@ export const ProductCSVUploader: React.FC<ProductCSVUploaderProps> = ({ onProduc
                             {product.data.installmentText && ` • ${product.data.installmentText}`}
                           </div>
                         )}
-                        {(product.image_url || product.youtube_url || product.instagram_url) && (
-                          <div className="flex gap-2 mt-1">
-                            {product.image_url && (
-                              <Badge variant="outline" className="text-xs">
-                                🖼️ Imagem CSV
-                              </Badge>
-                            )}
-                            {product.youtube_url && (
-                              <Badge variant="outline" className="text-xs">
-                                YouTube
-                              </Badge>
-                            )}
-                            {product.instagram_url && (
-                              <Badge variant="outline" className="text-xs">
-                                Instagram
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                         {product.image_url && (
+                           <div className="flex gap-2 mt-1">
+                             <Badge variant="outline" className="text-xs">
+                               🖼️ Imagem CSV
+                             </Badge>
+                           </div>
+                         )}
                        {product.error && (
                          <div className="text-xs text-destructive line-clamp-2">
                            {product.error}

@@ -30,8 +30,6 @@ interface Product {
   subcategory?: string;
   image_url?: string;
   product_url?: string;
-  youtube_url?: string;
-  instagram_url?: string;
   target_audience?: string;
   use_in_ai_generation: boolean;
   approved: boolean;
@@ -63,8 +61,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     subcategory: '',
     image_url: '',
     product_url: '',
-    youtube_url: '',
-    instagram_url: '',
     target_audience: '',
     use_in_ai_generation: true,
     approved: true,
@@ -126,8 +122,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         subcategory: '',
         image_url: '',
         product_url: '',
-        youtube_url: '',
-        instagram_url: '',
         target_audience: '',
         use_in_ai_generation: true,
         approved: true,
@@ -399,8 +393,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         subcategory: formData.subcategory,
         image_url: formData.image_url,
         product_url: formData.product_url,
-        youtube_url: formData.youtube_url,
-        instagram_url: formData.instagram_url,
         target_audience: formData.target_audience,
         instagram_videos: instagramVideos as any,
         youtube_videos: youtubeVideos as any,
@@ -586,38 +578,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="product_url">URL do Produto</Label>
-              <Input
-                id="product_url"
-                type="url"
-                value={formData.product_url || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, product_url: e.target.value }))}
-                placeholder="https://..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="youtube_url">URL do YouTube</Label>
-              <Input
-                id="youtube_url"
-                type="url"
-                value={formData.youtube_url || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, youtube_url: e.target.value }))}
-                placeholder="https://youtube.com/..."
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="instagram_url">URL do Instagram</Label>
+            <Label htmlFor="product_url">URL do Produto</Label>
             <Input
-              id="instagram_url"
+              id="product_url"
               type="url"
-              value={formData.instagram_url || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, instagram_url: e.target.value }))}
-              placeholder="https://instagram.com/..."
+              value={formData.product_url || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, product_url: e.target.value }))}
+              placeholder="https://..."
             />
           </div>
 
