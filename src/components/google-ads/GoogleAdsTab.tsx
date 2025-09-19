@@ -97,7 +97,8 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
           seoDescription,
           primaryKeyword: data.seo?.keywords?.[0] || seoTitle,
           targetAudience: data.banner?.subtitle || 'público geral',
-          contentData: data // Pass the full landing page data for context
+          contentData: data, // Pass the full landing page data for context
+          selectedProductIds: data.selectedProductIds || [] // Pass selected product IDs
         }
       });
 

@@ -15,6 +15,7 @@ interface ContentRequest {
   primaryKeyword?: string;
   targetAudience?: string;
   contentData?: any; // Additional context from the landing page
+  selectedProductIds?: string[]; // Specific product IDs to use
 }
 
 interface AdCopies {
@@ -56,13 +57,34 @@ serve(async (req) => {
 
     console.log(`Generating ${request.type} content for landing page: ${request.landingPageId}`);
 
-    // Fetch products from repository related to this landing page
-    const { data: products, error: productsError } = await supabase
-      .from('products_repository')
-      .select('name, description, keywords, benefits, features, category, subcategory, target_audience, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation')
-      .eq('source_landing_page_id', request.landingPageId)
-      .eq('approved', true)
-      .order('display_order', { ascending: true });
+    // Fetch products from repository - prioritize selected products
+    let products: any[] = [];
+    let productsError = null;
+
+    if (request.selectedProductIds && request.selectedProductIds.length > 0) {
+      console.log(`🎯 Using ${request.selectedProductIds.length} selected products:`, request.selectedProductIds);
+      
+      // Fetch specifically selected products
+      const { data: selectedProducts, error: selectedError } = await supabase
+        .from('products_repository')
+        .select('name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation')
+        .in('id', request.selectedProductIds)
+        .eq('approved', true);
+      
+      products = selectedProducts || [];
+      productsError = selectedError;
+    } else {
+      // Fallback: Fetch products from repository related to this landing page
+      const { data: landingPageProducts, error: landingError } = await supabase
+        .from('products_repository')
+        .select('name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation')
+        .eq('source_landing_page_id', request.landingPageId)
+        .eq('approved', true)
+        .order('display_order', { ascending: true });
+      
+      products = landingPageProducts || [];
+      productsError = landingError;
+    }
 
     if (productsError) {
       console.error('Error fetching products:', productsError);
@@ -157,15 +179,26 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   console.log(`  Page Title: "${pageTitle}"`);
   console.log(`  Page Subtitle: "${pageSubtitle}"`);
   console.log(`  Company Profile: ${companyProfile ? 'Available' : 'Not available'}`);
-  console.log(`  FAQ Keywords: ${faqKeywords.length} - [${faqKeywords.slice(0, 3).join(', ')}...]`);
-  console.log(`  Product Keywords: ${productKeywords.length} - [${productKeywords.slice(0, 3).join(', ')}...]`);
-  console.log(`  Primary Keyword escolhida: "${primaryKeyword}"`);
   console.log(`  Products: ${products.length} available`);
+  console.log(`  Primary Keyword escolhida: "${primaryKeyword}"`);
+  console.log(`  FAQ Keywords: ${faqKeywords.length} - [${faqKeywords.slice(0, 2).join(', ')}...]`);
+  console.log(`  Product Keywords: ${productKeywords.length} - [${productKeywords.slice(0, 3).join(', ')}...]`);
   
-  // Build product context - even if empty, provide fallback
+  // Log selected products for debugging
+  if (products.length > 0) {
+    console.log(`📦 Products being used in AI generation:`);
+    products.forEach((p, i) => {
+      console.log(`  ${i + 1}. ${p.name}${p.sales_pitch ? ' (com discurso comercial)' : ''}`);
+    });
+  }
+  
+  // Build product context - include sales pitch if available
   const productContext = products.length > 0 
     ? products.map(p => {
         let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
+        if (p.sales_pitch) {
+          productInfo += `\n  💰 Discurso Comercial: ${p.sales_pitch}`;
+        }
         return productInfo;
       }).join('\n')
     : '• Soluções personalizadas de alta qualidade\n• Atendimento especializado\n• Garantia de resultados';
@@ -208,17 +241,22 @@ ${[...new Set(productBenefits)].length > 0 ? [...new Set(productBenefits)].join(
 ## Características dos Produtos/Serviços:
 ${[...new Set(productFeatures)].length > 0 ? [...new Set(productFeatures)].join(', ') : 'alta qualidade, tecnologia avançada, fácil utilização'}
 
+## Discursos Comerciais (Sales Pitch):
+${products.filter(p => p.sales_pitch).length > 0 ? products.filter(p => p.sales_pitch).map(p => `• ${p.name}: ${p.sales_pitch}`).join('\n') : '• Foque na qualidade e diferenciais competitivos'}
+
 ---
 
 INSTRUÇÕES PARA GERAÇÃO PROGRESSIVA:
 Você é um redator de marketing digital especialista. Mesmo com informações limitadas, sempre gere conteúdo de qualidade:
 
-1. Use TODOS os dados disponíveis, mesmo que sejam poucos
-2. Crie conteúdo persuasivo baseado no que está disponível
-3. Use palavras-chave de forma natural
-4. Foque nos benefícios para o público-alvo
-5. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
-6. SEMPRE gere algo útil, mesmo com dados mínimos
+1. **PRIORIZE OS DISCURSOS COMERCIAIS**: Use os sales pitch fornecidos para criar headlines e descrições mais persuasivas
+2. Use TODOS os dados disponíveis, mesmo que sejam poucos
+3. Crie conteúdo persuasivo baseado no que está disponível
+4. Use palavras-chave de forma natural
+5. Foque nos benefícios para o público-alvo
+6. Integre os discursos comerciais de forma natural no texto
+7. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
+8. SEMPRE gere algo útil, mesmo com dados mínimos
 
 NUNCA retorne erro por falta de dados - sempre adapte e gere conteúdo adequado!
 `;
