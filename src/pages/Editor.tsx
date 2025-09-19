@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -99,6 +99,8 @@ interface SEOData {
   ai_seo_enabled?: boolean;
   export_panel_enabled?: boolean;
   intelligent_links?: { [keyword: string]: string };
+  manual_reviews_enabled?: boolean;
+  video_testimonials_enabled?: boolean;
 }
 
 // Schema e Offers para JSON-LD
@@ -5169,29 +5171,29 @@ const EditorContent = () => {
                         <Users className="w-5 h-5 text-purple-500" />
                       </div>
                       <div>
-                      <CardTitle className="text-lg">Reviews Manuais</CardTitle>
-                      <p className="text-sm text-muted-foreground">Adicione reviews personalizadas via CSV</p>
+                        <CardTitle className="text-lg">Configuração SEO - Reviews Manuais</CardTitle>
+                        <p className="text-sm text-muted-foreground">Configure se reviews manuais aparecem no SEO</p>
+                      </div>
                     </div>
-                    {data.schema.manual_reviews && data.schema.manual_reviews.length > 0 && (
-                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                        {data.schema.manual_reviews.length} reviews
-                      </Badge>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={data.seo.manual_reviews_enabled || false}
+                        onCheckedChange={(checked) => setData(prev => ({
+                          ...prev,
+                          seo: { ...prev.seo, manual_reviews_enabled: !!checked }
+                        }))}
+                      />
+                      <Label className="font-medium">Utilizar no SEO</Label>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando uploader…</div>}>
-                    <CSVReviewUploader
-                      reviews={data.schema.manual_reviews || []}
-                      onReviewsUpdate={(reviews) => setData(prev => ({
-                        ...prev,
-                        schema: {
-                          ...prev.schema,
-                          manual_reviews: reviews
-                        }
-                      }))}
-                    />
-                  </Suspense>
+                  <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span className="text-sm text-purple-700">
+                      Reviews manuais agora são gerenciadas no <strong>Repositório Central</strong>
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -5213,7 +5215,7 @@ const EditorContent = () => {
                         checked={data.seo.video_testimonials_enabled || false}
                         onCheckedChange={(checked) => setData(prev => ({
                           ...prev,
-                          seo: { ...prev.seo, video_testimonials_enabled: checked }
+                          seo: { ...prev.seo, video_testimonials_enabled: !!checked }
                         }))}
                       />
                       <Label className="font-medium">Utilizar no SEO</Label>
