@@ -64,7 +64,10 @@ serve(async (req) => {
       : videoArray;
 
     if (videosToProcess.length === 0) {
-      throw new Error('No videos found to process');
+      console.log(`No videos found in ${request.videoType} for product ${request.productId}`);
+      console.log('Available video types:', Object.keys(product).filter(key => key.endsWith('_videos')));
+      console.log('Video array content:', videoArray);
+      throw new Error(`No videos found to process in ${request.videoType}. Available videos: ${JSON.stringify(videoArray)}`);
     }
 
     const extractedCaptions: VideoCaption[] = [];

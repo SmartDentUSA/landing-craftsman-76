@@ -25,6 +25,7 @@ const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader
 import { ProductCSVUploader } from "@/components/ProductCSVUploader";
 import { ImageDebugPreview } from "@/components/ImageDebugPreview";
 import { ProductRepositoryPanel } from "@/components/ProductRepositoryPanel";
+import { VideoMigrationTester } from "@/components/VideoMigrationTester";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
@@ -7098,6 +7099,10 @@ dataLayer = [{
                   </p>
                 </div>
                 
+                <div className="mb-4">
+                  <VideoMigrationTester />
+                </div>
+
                 <div className="flex-1">
                   <ProductRepositoryPanel
                     landingPageId={id || ''}

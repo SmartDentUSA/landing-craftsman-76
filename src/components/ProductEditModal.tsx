@@ -607,7 +607,10 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               <VideoSection
                 title="Vídeos YouTube"
                 videos={youtubeVideos}
-                onAdd={(url, description) => addVideo('youtube', url, description)}
+                onAdd={(url, description) => {
+                  console.log('Adding YouTube video:', { url, description });
+                  addVideo('youtube', url, description);
+                }}
                 onRemove={(index) => removeVideo('youtube', index)}
                 maxVideos={5}
               />
