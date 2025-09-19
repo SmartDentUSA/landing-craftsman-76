@@ -31,6 +31,7 @@ import useLandingPages from "@/hooks/useLandingPages"; // Default export
 import { cn } from "@/lib/utils";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useProductSync } from "@/hooks/useProductSync";
+import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { generateSafeHTML, generateSafeEmailHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import { supabase } from "@/integrations/supabase/client";
@@ -856,7 +857,7 @@ const EditorContent = () => {
   const [generatingBlog, setGeneratingBlog] = useState(false);
   const [isImportingFromRepo, setIsImportingFromRepo] = useState(false);
   
-  // Auto-sync offers to repository when they change
+  // Auto-sync offers to repository when they change (debounced)
   const handleAutoSyncOffers = useCallback(async (newData: LandingPageData) => {
     if (id && newData.schema?.offers) {
       try {
@@ -866,6 +867,9 @@ const EditorContent = () => {
       }
     }
   }, [id, syncOffersToRepository]);
+
+  // Debounced version for real-time updates
+  const debouncedAutoSync = useDebounce(handleAutoSyncOffers, 2000);
 
   // Import products from repository
   const handleImportFromRepository = useCallback(async () => {
@@ -5288,86 +5292,98 @@ const EditorContent = () => {
                                    <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
                                      {index + 1}
                                    </div>
-                                   <Input
-                                     value={offer.name || ''}
-                                     onChange={(e) => {
-                                       const newOffers = [...data.schema.offers];
-                                       newOffers[index] = { ...newOffers[index], name: e.target.value };
-                                       setData(prev => ({
-                                         ...prev,
-                                         schema: { ...prev.schema, offers: newOffers }
-                                       }));
-                                     }}
-                                     placeholder="Nome da oferta"
-                                     className="text-sm h-8"
-                                   />
+                                    <Input
+                                      value={offer.name || ''}
+                                      onChange={(e) => {
+                                        const newOffers = [...data.schema.offers];
+                                        newOffers[index] = { ...newOffers[index], name: e.target.value };
+                                        const updatedData = {
+                                          ...data,
+                                          schema: { ...data.schema, offers: newOffers }
+                                        };
+                                        setData(updatedData);
+                                        debouncedAutoSync(updatedData);
+                                      }}
+                                      placeholder="Nome da oferta"
+                                      className="text-sm h-8"
+                                    />
                                  </div>
                                     <div className="grid grid-cols-3 gap-2">
-                                      <Input
-                                        value={offer.price || ''}
-                                        onChange={(e) => {
-                                          const newOffers = [...data.schema.offers];
-                                          newOffers[index] = { ...newOffers[index], price: e.target.value };
-                                          setData(prev => ({
-                                            ...prev,
-                                            schema: { ...prev.schema, offers: newOffers }
-                                          }));
-                                        }}
-                                        placeholder="Preço Promocional"
-                                        className="text-sm h-8"
-                                      />
-                                      <Input
-                                        value={offer.original_price || ''}
-                                        onChange={(e) => {
-                                          const newOffers = [...data.schema.offers];
-                                          newOffers[index] = { ...newOffers[index], original_price: e.target.value };
-                                          setData(prev => ({
-                                            ...prev,
-                                            schema: { ...prev.schema, offers: newOffers }
-                                          }));
-                                        }}
-                                        placeholder="Preço Original"
-                                        className="text-sm h-8"
-                                      />
-                                      <Input
-                                        value={offer.installment_price || ''}
-                                        onChange={(e) => {
-                                          const newOffers = [...data.schema.offers];
-                                          newOffers[index] = { ...newOffers[index], installment_price: e.target.value };
-                                          setData(prev => ({
-                                            ...prev,
-                                            schema: { ...prev.schema, offers: newOffers }
-                                          }));
-                                        }}
-                                        placeholder="Parcelamento"
-                                        className="text-sm h-8"
-                                      />
-                                     <div className="flex gap-1">
                                        <Input
-                                         value={offer.productUrl || ''}
+                                         value={offer.price || ''}
                                          onChange={(e) => {
                                            const newOffers = [...data.schema.offers];
-                                           newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
-                                           setData(prev => ({
-                                             ...prev,
-                                             schema: { ...prev.schema, offers: newOffers }
-                                           }));
+                                           newOffers[index] = { ...newOffers[index], price: e.target.value };
+                                           const updatedData = {
+                                             ...data,
+                                             schema: { ...data.schema, offers: newOffers }
+                                           };
+                                           setData(updatedData);
+                                           debouncedAutoSync(updatedData);
                                          }}
-                                         onBlur={(e) => {
-                                           const url = e.target.value.trim();
-                                           if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-                                             const normalizedUrl = `https://${url}`;
-                                             const newOffers = [...data.schema.offers];
-                                             newOffers[index] = { ...newOffers[index], productUrl: normalizedUrl };
-                                             setData(prev => ({
-                                               ...prev,
-                                               schema: { ...prev.schema, offers: newOffers }
-                                             }));
-                                           }
-                                         }}
-                                         placeholder="URL do produto"
+                                         placeholder="Preço Promocional"
                                          className="text-sm h-8"
                                        />
+                                       <Input
+                                         value={offer.original_price || ''}
+                                         onChange={(e) => {
+                                           const newOffers = [...data.schema.offers];
+                                           newOffers[index] = { ...newOffers[index], original_price: e.target.value };
+                                           const updatedData = {
+                                             ...data,
+                                             schema: { ...data.schema, offers: newOffers }
+                                           };
+                                           setData(updatedData);
+                                           debouncedAutoSync(updatedData);
+                                         }}
+                                         placeholder="Preço Original"
+                                         className="text-sm h-8"
+                                       />
+                                       <Input
+                                         value={offer.installment_price || ''}
+                                         onChange={(e) => {
+                                           const newOffers = [...data.schema.offers];
+                                           newOffers[index] = { ...newOffers[index], installment_price: e.target.value };
+                                           const updatedData = {
+                                             ...data,
+                                             schema: { ...data.schema, offers: newOffers }
+                                           };
+                                           setData(updatedData);
+                                           debouncedAutoSync(updatedData);
+                                         }}
+                                         placeholder="Parcelamento"
+                                         className="text-sm h-8"
+                                       />
+                                     <div className="flex gap-1">
+                                        <Input
+                                          value={offer.productUrl || ''}
+                                          onChange={(e) => {
+                                            const newOffers = [...data.schema.offers];
+                                            newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
+                                            const updatedData = {
+                                              ...data,
+                                              schema: { ...data.schema, offers: newOffers }
+                                            };
+                                            setData(updatedData);
+                                            debouncedAutoSync(updatedData);
+                                          }}
+                                          onBlur={(e) => {
+                                            const url = e.target.value.trim();
+                                            if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                                              const normalizedUrl = `https://${url}`;
+                                              const newOffers = [...data.schema.offers];
+                                              newOffers[index] = { ...newOffers[index], productUrl: normalizedUrl };
+                                              const updatedData = {
+                                                ...data,
+                                                schema: { ...data.schema, offers: newOffers }
+                                              };
+                                              setData(updatedData);
+                                              debouncedAutoSync(updatedData);
+                                            }
+                                          }}
+                                          placeholder="URL do produto"
+                                          className="text-sm h-8"
+                                        />
                                        {offer.productUrl && offer.productUrl.trim() && (
                                          <Button
                                            variant="outline"
@@ -5386,60 +5402,42 @@ const EditorContent = () => {
                                        )}
                                      </div>
                                    </div>
-                                   <Input
-                                     value={offer.image || ''}
+                                    <Input
+                                      value={offer.image || ''}
+                                      onChange={(e) => {
+                                        const newOffers = [...data.schema.offers];
+                                        newOffers[index] = { ...newOffers[index], image: e.target.value };
+                                        const updatedData = {
+                                          ...data,
+                                          schema: { ...data.schema, offers: newOffers }
+                                        };
+                                        setData(updatedData);
+                                        debouncedAutoSync(updatedData);
+                                      }}
+                                      placeholder="URL da imagem"
+                                      className="text-sm h-8"
+                                    />
+                                    <div className="space-y-2">
+                                      <div className="text-sm font-medium text-muted-foreground">Vídeos do Produto</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Use as seções "Vídeos YouTube", "Vídeos Instagram", etc. nas abas laterais para gerenciar vídeos deste produto.
+                                      </div>
+                                    </div>
+                                   <Textarea
+                                     value={offer.description || ''}
                                      onChange={(e) => {
                                        const newOffers = [...data.schema.offers];
-                                       newOffers[index] = { ...newOffers[index], image: e.target.value };
-                                       setData(prev => ({
-                                         ...prev,
-                                         schema: { ...prev.schema, offers: newOffers }
-                                       }));
+                                       newOffers[index] = { ...newOffers[index], description: e.target.value };
+                                       const updatedData = {
+                                         ...data,
+                                         schema: { ...data.schema, offers: newOffers }
+                                       };
+                                       setData(updatedData);
+                                       debouncedAutoSync(updatedData);
                                      }}
-                                     placeholder="URL da imagem"
-                                     className="text-sm h-8"
+                                     placeholder="Descrição da oferta"
+                                     className="text-sm min-h-[60px]"
                                    />
-                                   <div className="grid grid-cols-2 gap-2">
-                                     <Input
-                                       value={offer.youtube_url || ''}
-                                       onChange={(e) => {
-                                         const newOffers = [...data.schema.offers];
-                                         newOffers[index] = { ...newOffers[index], youtube_url: e.target.value };
-                                         setData(prev => ({
-                                           ...prev,
-                                           schema: { ...prev.schema, offers: newOffers }
-                                         }));
-                                       }}
-                                       placeholder="Vídeo YouTube"
-                                       className="text-sm h-8"
-                                     />
-                                     <Input
-                                       value={offer.instagram_url || ''}
-                                       onChange={(e) => {
-                                         const newOffers = [...data.schema.offers];
-                                         newOffers[index] = { ...newOffers[index], instagram_url: e.target.value };
-                                         setData(prev => ({
-                                           ...prev,
-                                           schema: { ...prev.schema, offers: newOffers }
-                                         }));
-                                       }}
-                                       placeholder="Vídeo Instagram"
-                                       className="text-sm h-8"
-                                     />
-                                   </div>
-                                  <Textarea
-                                    value={offer.description || ''}
-                                    onChange={(e) => {
-                                      const newOffers = [...data.schema.offers];
-                                      newOffers[index] = { ...newOffers[index], description: e.target.value };
-                                      setData(prev => ({
-                                        ...prev,
-                                        schema: { ...prev.schema, offers: newOffers }
-                                      }));
-                                    }}
-                                    placeholder="Descrição da oferta"
-                                    className="text-sm min-h-[60px]"
-                                  />
                                   
                                   {/* Seção de Recursos e Downloads */}
                                   <div className="border-t pt-3 space-y-3">

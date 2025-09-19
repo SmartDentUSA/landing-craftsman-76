@@ -13,8 +13,6 @@ interface ProductOffer {
   price: string;
   image?: string;
   link?: string;
-  youtube_url?: string;
-  instagram_url?: string;
   instagram_videos?: Video[];
   youtube_videos?: Video[];
   testimonial_videos?: Video[];
@@ -52,8 +50,6 @@ export const useProductSync = () => {
           currency: 'BRL',
           image_url: offer.image || null,
           product_url: offer.link || null,
-          youtube_url: (offer as any).youtube_url || null,
-          instagram_url: (offer as any).instagram_url || null,
           instagram_videos: offer.instagram_videos || [] as any,
           youtube_videos: offer.youtube_videos || [] as any,
           testimonial_videos: offer.testimonial_videos || [] as any,
@@ -119,8 +115,6 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
-        youtube_url: product.youtube_url || '',
-        instagram_url: product.instagram_url || '',
         instagram_videos: product.instagram_videos || [],
         youtube_videos: product.youtube_videos || [],
         testimonial_videos: product.testimonial_videos || [],
@@ -174,8 +168,6 @@ export const useProductSync = () => {
         price: product.price ? product.price.toString() : '',
         image: product.image_url || '',
         link: product.product_url || '',
-        youtube_url: product.youtube_url || '',
-        instagram_url: product.instagram_url || '',
         instagram_videos: product.instagram_videos || [],
         youtube_videos: product.youtube_videos || [],
         testimonial_videos: product.testimonial_videos || [],

@@ -98,28 +98,10 @@ export class VideoCollector {
       }
 
       products.forEach((product: any, index: number) => {
-        // Process main YouTube URL
-        if (product.youtube_url && !seenUrls.has(product.youtube_url)) {
-          const youtubeId = this.extractYouTubeId(product.youtube_url);
-          if (youtubeId) {
-            videos.push({
-              youtube_id: youtubeId,
-              label: product.name ? `Produto: ${product.name}` : `Produto ${index + 1}`
-            });
-            seenUrls.add(product.youtube_url);
-            console.log(`VideoCollector: Added YouTube video for product "${product.name || `Produto ${index + 1}`}": ${youtubeId}`);
-          }
-        }
-        
-        // Process additional video collections
+        // Process video collections
         VideoCollector.processVideoCollection(product.youtube_videos, product.name || `Produto ${index + 1}`, 'YouTube', videos, seenUrls);
         VideoCollector.processVideoCollection(product.testimonial_videos, product.name || `Produto ${index + 1}`, 'Depoimento', videos, seenUrls);
         VideoCollector.processVideoCollection(product.technical_videos, product.name || `Produto ${index + 1}`, 'Técnico', videos, seenUrls);
-
-        // Instagram URLs are not supported by Google Ads, but we can log them for user awareness
-        if (product.instagram_url && console) {
-          console.info(`⚠️ Instagram URL encontrada no produto "${product.name || `Produto ${index + 1}`}": ${product.instagram_url}. URLs do Instagram não são suportadas pelo Google Ads.`);
-        }
         
         // Log Instagram videos as not supported
         if (product.instagram_videos && product.instagram_videos.length > 0) {

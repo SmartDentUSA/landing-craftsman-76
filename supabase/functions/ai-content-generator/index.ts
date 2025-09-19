@@ -143,10 +143,8 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
     
     // Add video content for SEO and AI context
     const videoContent = [];
-    if (p.youtube_url) videoContent.push(`YouTube: ${p.youtube_url}`);
-    if (p.instagram_url) videoContent.push(`Instagram: ${p.instagram_url}`);
     
-    // Additional video collections
+    // Process video collections
     if (p.youtube_videos && p.youtube_videos.length > 0) {
       videoContent.push(`Vídeos YouTube: ${p.youtube_videos.map((v: any) => v.url).join(', ')}`);
     }

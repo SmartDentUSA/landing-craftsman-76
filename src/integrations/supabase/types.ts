@@ -316,7 +316,6 @@ export type Database = {
           features: Json | null
           id: string
           image_url: string | null
-          instagram_url: string | null
           instagram_videos: Json | null
           keywords: Json | null
           name: string
@@ -333,7 +332,6 @@ export type Database = {
           updated_at: string
           use_in_ai_generation: boolean | null
           video_captions: Json | null
-          youtube_url: string | null
           youtube_videos: Json | null
         }
         Insert: {
@@ -350,7 +348,6 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
-          instagram_url?: string | null
           instagram_videos?: Json | null
           keywords?: Json | null
           name: string
@@ -367,7 +364,6 @@ export type Database = {
           updated_at?: string
           use_in_ai_generation?: boolean | null
           video_captions?: Json | null
-          youtube_url?: string | null
           youtube_videos?: Json | null
         }
         Update: {
@@ -384,7 +380,6 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
-          instagram_url?: string | null
           instagram_videos?: Json | null
           keywords?: Json | null
           name?: string
@@ -401,7 +396,6 @@ export type Database = {
           updated_at?: string
           use_in_ai_generation?: boolean | null
           video_captions?: Json | null
-          youtube_url?: string | null
           youtube_videos?: Json | null
         }
         Relationships: []

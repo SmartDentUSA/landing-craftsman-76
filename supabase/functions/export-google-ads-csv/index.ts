@@ -168,6 +168,56 @@ async function collectVideos(supabase: any, landingPageId: string, config: any) 
     }
   }
 
+  // Collect from products repository (video collections)
+  const { data: products } = await supabase
+    .from('products_repository')
+    .select('youtube_videos, testimonial_videos, technical_videos, name')
+    .eq('source_landing_page_id', landingPageId)
+    .eq('approved', true);
+
+  if (products) {
+    for (const product of products) {
+      // Process YouTube videos
+      if (product.youtube_videos && Array.isArray(product.youtube_videos)) {
+        product.youtube_videos.forEach((video: any, index: number) => {
+          const youtubeId = extractYouTubeId(video.url);
+          if (youtubeId) {
+            videos.push({ 
+              youtube_id: youtubeId, 
+              label: `${product.name || 'Produto'} - YouTube ${index + 1}` 
+            });
+          }
+        });
+      }
+
+      // Process testimonial videos
+      if (product.testimonial_videos && Array.isArray(product.testimonial_videos)) {
+        product.testimonial_videos.forEach((video: any, index: number) => {
+          const youtubeId = extractYouTubeId(video.url);
+          if (youtubeId) {
+            videos.push({ 
+              youtube_id: youtubeId, 
+              label: `${product.name || 'Produto'} - Depoimento ${index + 1}` 
+            });
+          }
+        });
+      }
+
+      // Process technical videos
+      if (product.technical_videos && Array.isArray(product.technical_videos)) {
+        product.technical_videos.forEach((video: any, index: number) => {
+          const youtubeId = extractYouTubeId(video.url);
+          if (youtubeId) {
+            videos.push({ 
+              youtube_id: youtubeId, 
+              label: `${product.name || 'Produto'} - Técnico ${index + 1}` 
+            });
+          }
+        });
+      }
+    }
+  }
+
   return videos.slice(0, 20); // Google Ads limit
 }
 
