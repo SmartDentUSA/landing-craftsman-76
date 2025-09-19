@@ -171,6 +171,11 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   const productBenefits = products.flatMap(p => p.benefits || []);
   const productFeatures = products.flatMap(p => p.features || []);
   
+  // Extract categories and subcategories as keywords (CRITICAL for SEO/ADS)
+  const categoryKeywords = products.flatMap(p => [p.category, p.subcategory].filter(Boolean));
+  const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const uniqueSubcategories = [...new Set(products.map(p => p.subcategory).filter(Boolean))];
+  
   // FASE 2: Improve Primary Keyword detection with intelligent fallback
   const primaryKeyword = determinePrimaryKeyword(request.primaryKeyword, faqKeywords, productKeywords, pageTitle);
   
@@ -226,11 +231,16 @@ ${companyProfile ? `## Perfil da Empresa:
 `}## Soluções Oferecidas:
 ${solutions}
 
+## Categorias de Produtos/Serviços (ESSENCIAL para SEO/ADS):
+${uniqueCategories.length > 0 ? `**Categorias**: ${uniqueCategories.join(', ')}` : '**Categorias**: Não especificadas'}
+${uniqueSubcategories.length > 0 ? `**Subcategorias**: ${uniqueSubcategories.join(', ')}` : ''}
+${categoryKeywords.length > 0 ? `**Keywords por Categoria**: ${categoryKeywords.join(', ')}` : ''}
+
 ## Repositório de Produtos/Serviços (${products.filter(p => p.use_in_ai_generation !== false).length} disponíveis):
 ${productContext}
 
-## Keywords Inteligentes:
-${[...new Set([...faqKeywords, ...productKeywords, primaryKeyword].filter(Boolean))].join(', ') || 'soluções, qualidade, atendimento'}
+## Keywords Inteligentes (incluindo categorias para SEO/ADS):
+${[...new Set([...faqKeywords, ...productKeywords, ...categoryKeywords, primaryKeyword].filter(Boolean))].join(', ') || 'soluções, qualidade, atendimento'}
 
 ## FAQ - Perguntas e Respostas:
 ${extractFAQSection(request.contentData)}
@@ -250,13 +260,16 @@ INSTRUÇÕES PARA GERAÇÃO PROGRESSIVA:
 Você é um redator de marketing digital especialista. Mesmo com informações limitadas, sempre gere conteúdo de qualidade:
 
 1. **PRIORIZE OS DISCURSOS COMERCIAIS**: Use os sales pitch fornecidos para criar headlines e descrições mais persuasivas
-2. Use TODOS os dados disponíveis, mesmo que sejam poucos
-3. Crie conteúdo persuasivo baseado no que está disponível
-4. Use palavras-chave de forma natural
-5. Foque nos benefícios para o público-alvo
-6. Integre os discursos comerciais de forma natural no texto
-7. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
-8. SEMPRE gere algo útil, mesmo com dados mínimos
+2. **USE CATEGORIAS COMO KEYWORDS PRINCIPAIS**: Integre categorias e subcategorias nas palavras-chave para SEO e Google Ads
+3. **SEGMENTAÇÃO POR CATEGORIA**: Use categorias para criar ad groups temáticos no Google Ads
+4. Use TODOS os dados disponíveis, mesmo que sejam poucos
+5. Crie conteúdo persuasivo baseado no que está disponível
+6. Use palavras-chave de forma natural, priorizando categorias
+7. Foque nos benefícios para o público-alvo
+8. Integre os discursos comerciais de forma natural no texto
+9. **TAXONOMIA SEO**: Inclua categorias em títulos H2/H3 e meta descriptions
+10. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
+11. SEMPRE gere algo útil, mesmo com dados mínimos
 
 NUNCA retorne erro por falta de dados - sempre adapte e gere conteúdo adequado!
 `;

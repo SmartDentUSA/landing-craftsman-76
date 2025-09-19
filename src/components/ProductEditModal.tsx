@@ -9,11 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
 import { CaptionExtractor } from "@/components/CaptionExtractor";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { useProductCategories } from '@/hooks/useProductCategories';
 
 interface Video {
   url: string;
@@ -53,6 +57,9 @@ interface ProductEditModalProps {
 }
 
 export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }: ProductEditModalProps) {
+  const { categories, getSubcategoriesForCategory, refreshCategories } = useProductCategories();
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     description: '',
@@ -579,12 +586,57 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
             <div className="space-y-2">
               <Label htmlFor="category">Categoria</Label>
-              <Input
-                id="category"
-                value={formData.category || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                placeholder="Categoria"
-              />
+              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={categoryOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.category || "Selecione ou digite nova categoria..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Digite para buscar ou criar categoria..." 
+                      value={formData.category || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                    />
+                    <CommandEmpty>
+                      <div className="p-2 text-sm">
+                        Pressione Enter para criar "{formData.category}"
+                      </div>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {categories.map((category) => (
+                        <CommandItem
+                          key={category}
+                          value={category}
+                          onSelect={(currentValue) => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              category: currentValue,
+                              subcategory: '' // Reset subcategoria quando mudar categoria
+                            }));
+                            setCategoryOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.category === category ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {category}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -642,12 +694,57 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
             <div className="space-y-2">
               <Label htmlFor="subcategory">Subcategoria</Label>
-              <Input
-                id="subcategory"
-                value={formData.subcategory || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, subcategory: e.target.value }))}
-                placeholder="Subcategoria"
-              />
+              <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={subcategoryOpen}
+                    className="w-full justify-between"
+                    disabled={!formData.category}
+                  >
+                    {formData.subcategory || "Selecione ou digite nova subcategoria..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Digite para buscar ou criar subcategoria..." 
+                      value={formData.subcategory || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                    />
+                    <CommandEmpty>
+                      <div className="p-2 text-sm">
+                        Pressione Enter para criar "{formData.subcategory}"
+                      </div>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {formData.category && getSubcategoriesForCategory(formData.category).map((subcategory) => (
+                        <CommandItem
+                          key={subcategory}
+                          value={subcategory}
+                          onSelect={(currentValue) => {
+                            setFormData(prev => ({ ...prev, subcategory: currentValue }));
+                            setSubcategoryOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.subcategory === subcategory ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {subcategory}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {!formData.category && (
+                <p className="text-sm text-muted-foreground">Selecione uma categoria primeiro</p>
+              )}
             </div>
           </div>
 
