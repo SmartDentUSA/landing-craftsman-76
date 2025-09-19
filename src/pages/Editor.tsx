@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon } from "lucide-react";
+import { BlogPreview } from "@/components/BlogPreview";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -4238,127 +4239,28 @@ const EditorContent = () => {
                                   </div>
                                 </div>
 
-                                {/* Geração de Blog baseado no conteúdo */}
-                               <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-200">
-                                 <div className="flex items-center justify-between mb-2">
-                                   <div className="flex items-center gap-2">
-                                     <Label className="text-xs font-medium text-orange-700">📰 Blog Post IA</Label>
-                                     <div className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">
-                                       Novo
-                                     </div>
-                                   </div>
-                                   <Button
-                                     size="sm"
-                                     variant="outline"
-                                     disabled={aiLoading.blog}
-                                      onClick={async () => {
-                                        if (aiLoading.blog) return;
-                                        setAiLoading(prev => ({ ...prev, blog: true }));
-                                        try {
-                                          // Validar dados básicos
-                                          if (!data.banner.title?.trim()) {
-                                            toast({ title: "Conteúdo insuficiente", description: "Preencha o título principal do banner.", variant: "destructive" });
-                                            return;
-                                          }
-                                          if (!data.banner.subtitle?.trim()) {
-                                            toast({ title: "Conteúdo insuficiente", description: "Preencha o subtítulo do banner.", variant: "destructive" });
-                                            return;
-                                          }
-                                          if (!data.advisory.paragraph?.trim()) {
-                                            toast({ title: "Conteúdo insuficiente", description: "Preencha o parágrafo da seção consultoria.", variant: "destructive" });
-                                            return;
-                                          }
-
-                                          // Preparar conteúdo completo da landing page
-                                          const fullLandingPageContent = {
-                                            banner: {
-                                              title: data.banner.title,
-                                              subtitle: data.banner.subtitle
-                                            },
-                                            solutions: {
-                                              title: data.solutions_title,
-                                              items: data.solutions.map(solution => ({
-                                                text: solution.text,
-                                                image: solution.image,
-                                                isFirstSolution: data.solutions.indexOf(solution) === 0
-                                              }))
-                                            },
-                                            faq: {
-                                              title: data.faq_title,
-                                              items: data.faq.map(faq => ({
-                                                question: faq.question,
-                                                answer: faq.answer
-                                              }))
-                                            }
-                                          };
-
-                                          // Preparar conteúdo simplificado
-                                          const content = `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
-                                          
-                                          console.log('🤖 Enviando dados para IA:', {
-                                            type: 'blog_content',
-                                            content,
-                                            title: data.banner.title,
-                                            fullLandingPageContent
-                                          });
-
-                                          const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
-                                            body: { 
-                                              type: 'blog_content', 
-                                              content,
-                                              title: data.banner.title,
-                                              fullLandingPageContent
-                                            }
-                                          });
-                                          
-                                          console.log('🤖 Resposta da IA:', { result, error });
-                                          
-                                          if (error) {
-                                            console.error('Erro na function:', error);
-                                            throw new Error(`Erro da function: ${error.message || 'Erro desconhecido'}`);
-                                          }
-                                          
-                                          if (!result) {
-                                            throw new Error('Nenhum resultado retornado pela IA');
-                                          }
-                                          
-                                          if (!result.success) {
-                                            throw new Error(result.error || 'Falha na geração do conteúdo');
-                                          }
-                                          
-                                          if (result?.content) {
-                                            // Redirecionar para a página de blog com o conteúdo
-                                            navigate(`/blog-generator/${id}`, { 
-                                              state: { generatedContent: result.content }
-                                            });
-                                          } else {
-                                            throw new Error('Conteúdo não gerado pela IA');
-                                          }
-                                        } catch (error) {
-                                          console.error('❌ Erro ao gerar blog:', error);
-                                          const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-                                          toast({ 
-                                            title: "Erro na geração do blog", 
-                                            description: errorMessage, 
-                                            variant: "destructive" 
-                                          });
-                                        } finally {
-                                          setAiLoading(prev => ({ ...prev, blog: false }));
-                                        }
-                                      }}
-                                   >
-                                     {aiLoading.blog ? (
-                                       <>
-                                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                         Criando...
-                                       </>
-                                     ) : (
-                                       <>
-                                         <FileText className="w-3 h-3 mr-1" />
-                                         Criar Blog
-                                       </>
-                                     )}
-                                   </Button>
+                                 {/* Blog Preview Component */}
+                                 <BlogPreview 
+                                   landingPageId={id || ""}
+                                   landingPageData={data}
+                                   onEditBlog={() => navigate(`/blog/${id}`, { 
+                                     state: { 
+                                       fromEditor: true, 
+                                       landingPageData: data,
+                                       blogData: {
+                                         title: data.banner.title || "",
+                                         content: "",
+                                         meta_description: data.seo_description || "",
+                                         keywords: [],
+                                         youtube_video_url: "",
+                                         status: "draft",
+                                         published_domains: [],
+                                         intelligent_links: {},
+                                         include_offers: true
+                                       }
+                                     } 
+                                   })}
+                                 />
                                  </div>
                                  <div className="text-xs text-orange-700 bg-white/50 p-2 rounded border">
                                    Gera um blog post completo baseado no conteúdo da landing page
