@@ -24,10 +24,11 @@ import { useToast } from '@/hooks/use-toast';
 interface GoogleAdsTabProps {
   landingPageId: string;
   data: any; // LandingPageData
+  selectedProductIds?: string[];
   onUpdate?: (config: GoogleAdsCampaignConfig) => void;
 }
 
-export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProps) => {
+export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate }: GoogleAdsTabProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAds, setIsGeneratingAds] = useState(false);
@@ -98,7 +99,7 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
           primaryKeyword: data.seo?.keywords?.[0] || seoTitle,
           targetAudience: data.banner?.subtitle || 'público geral',
           contentData: data, // Pass the full landing page data for context
-          selectedProductIds: data.selectedProductIds || [] // Pass selected product IDs
+          selectedProductIds: selectedProductIds || [] // Pass selected product IDs
         }
       });
 

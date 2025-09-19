@@ -6001,6 +6001,7 @@ const EditorContent = () => {
                 <GoogleAdsTab 
                   landingPageId={id!}
                   data={data}
+                  selectedProductIds={selectedProductIds}
                   onUpdate={(config) => {
                     console.log('Google Ads config updated:', config);
                     // Opcional: salvar config nas landing pages
