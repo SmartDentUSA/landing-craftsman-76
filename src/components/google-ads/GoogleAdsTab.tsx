@@ -494,6 +494,11 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
               </div>
             </div>
             
+            {/* Warnings Panel - Always show if there are warnings */}
+            {warnings.length > 0 && (
+              <WarningsPanel warnings={warnings} />
+            )}
+            
             {isGeneratingAds ? (
               <Card>
                 <CardContent className="pt-6">
@@ -504,13 +509,25 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
                   </div>
                 </CardContent>
               </Card>
-            ) : previewData ? (
+            ) : previewData && !hasErrors ? (
               <AdPreviewCards
                 adCopies={previewData.adCopies}
                 finalUrl={previewData.finalUrl}
                 sitelinks={previewData.sitelinks}
                 videos={previewData.videos}
               />
+            ) : hasErrors ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <AlertTriangle className="w-12 h-12 mx-auto text-destructive mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Corrija os Erros Primeiro</h3>
+                    <p className="text-muted-foreground">
+                      O preview dos anúncios será exibido após resolver todos os erros listados acima.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             ) : null}
             
             {/* Export Button */}
