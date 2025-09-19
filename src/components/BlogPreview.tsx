@@ -49,7 +49,7 @@ export function BlogPreview({ landingPageId, landingPageData, onEditBlog }: Blog
 
       const { data, error } = await supabase.functions.invoke('ai-content-generator', {
         body: {
-          type: 'blog',
+          type: 'blog_content',
           landingPageId,
           landingPage: landingPageData,
           include_offers: true

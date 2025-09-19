@@ -105,7 +105,8 @@ serve(async (req) => {
         result = await generateSEOMeta(deepSeekApiKey, strategicContext);
         break;
       default:
-        throw new Error(`Unsupported content type: ${request.type}`);
+        console.error(`❌ Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta`);
+        throw new Error(`Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta`);
     }
 
     console.log(`Successfully generated ${request.type} content`);
