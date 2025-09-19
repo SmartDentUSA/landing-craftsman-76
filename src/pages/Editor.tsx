@@ -6282,6 +6282,7 @@ dataLayer = [{
               <BlogPreview 
                 landingPageId={id || ""}
                 landingPageData={data}
+                selectedProductIds={selectedProductIds}
                 onEditBlog={() => navigate(`/blog/${id}`, { 
                   state: { 
                     fromEditor: true, 

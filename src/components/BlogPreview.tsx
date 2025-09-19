@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 interface BlogPreviewProps {
   landingPageId: string;
   landingPageData: any;
+  selectedProductIds?: string[];
   onEditBlog?: () => void;
 }
 
@@ -21,7 +22,7 @@ interface BlogPost {
   status: string;
 }
 
-export function BlogPreview({ landingPageId, landingPageData, onEditBlog }: BlogPreviewProps) {
+export function BlogPreview({ landingPageId, landingPageData, selectedProductIds, onEditBlog }: BlogPreviewProps) {
   const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export function BlogPreview({ landingPageId, landingPageData, onEditBlog }: Blog
           type: 'blog_content',
           landingPageId,
           landingPage: landingPageData,
+          selectedProductIds: selectedProductIds || [],
           include_offers: true
         }
       });
