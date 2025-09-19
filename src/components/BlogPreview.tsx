@@ -109,7 +109,7 @@ Para mais informações, entre em contato conosco.
       onEditBlog();
     } else {
       // Navigate to BlogGenerator with current data
-      navigate(`/blog/${landingPageId}`, {
+      navigate(`/blog-generator/${landingPageId}`, {
         state: {
           fromEditor: true,
           blogData: blogPost,
