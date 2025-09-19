@@ -463,7 +463,10 @@ Crie um artigo completo (mínimo 800 palavras) com:
 - Título otimizado para SEO (máx. 60 caracteres)
 - Estrutura com H2 e H3
 - Incorporação natural das palavras-chave
-- Menção aos produtos quando relevante
+- **OBRIGATÓRIO: Menção de TODOS os produtos selecionados por nome completo**
+- **OBRIGATÓRIO: Benefícios específicos de cada produto selecionado**
+- **OBRIGATÓRIO: Características técnicas dos produtos selecionados**
+- **OBRIGATÓRIO: Sales pitch quando disponível**
 - CTA forte no final
 - Meta description (máx. 160 caracteres)
 
@@ -473,6 +476,14 @@ Crie um artigo completo (mínimo 800 palavras) com:
 3. **Título deve incluir categoria principal quando relevante**
 4. **Organize conteúdo seguindo taxonomia das categorias**
 5. **Priorize categorias/subcategorias no array de keywords**
+
+**INSTRUÇÕES OBRIGATÓRIAS PARA PRODUTOS SELECIONADOS:**
+6. **MENCIONE TODOS OS PRODUTOS POR NOME**: Use os nomes EXATOS de TODOS os produtos selecionados do repositório
+7. **DETALHE BENEFÍCIOS ESPECÍFICOS**: Inclua pelo menos 2-3 benefícios específicos de CADA produto selecionado
+8. **USE CARACTERÍSTICAS TÉCNICAS**: Incorpore features e características técnicas de CADA produto no texto
+9. **INTEGRE SALES PITCH**: Use os discursos comerciais (sales_pitch) quando disponíveis para cada produto
+10. **CRIE SEÇÕES ESPECÍFICAS**: Dedique H3 para cada produto principal selecionado
+11. **FORÇA A MENÇÃO**: NUNCA ignore os produtos selecionados - eles DEVEM aparecer no conteúdo por nome
 
 Retorne APENAS um JSON válido:
 {

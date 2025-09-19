@@ -33,6 +33,7 @@ const App = () => (
           <Route path="/cloudflare-settings" element={<ProtectedRoute requiredRole="admin"><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute requiredRole="admin"><PublicationSettings /></ProtectedRoute>} />
           <Route path="/blog-generator/:id" element={<ProtectedRoute requiredRole="admin"><BlogGenerator /></ProtectedRoute>} />
+          <Route path="/blog/:id" element={<ProtectedRoute requiredRole="admin"><BlogGenerator /></ProtectedRoute>} />
           <Route path="/password-reset" element={<PasswordReset />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
