@@ -24,6 +24,7 @@ interface Product {
   id: string;
   name: string;
   description?: string;
+  sales_pitch?: string;
   price?: number;
   currency?: string;
   category?: string;
@@ -55,6 +56,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     description: '',
+    sales_pitch: '',
     price: 0,
     currency: 'BRL',
     category: '',
@@ -116,6 +118,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setFormData({
         name: '',
         description: '',
+        sales_pitch: '',
         price: 0,
         currency: 'BRL',
         category: '',
@@ -387,6 +390,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       const dataToSave = {
         name: formData.name!,
         description: formData.description,
+        sales_pitch: formData.sales_pitch,
         price: formData.price,
         currency: formData.currency,
         category: formData.category,
@@ -516,6 +520,20 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               placeholder="Descrição do produto"
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sales_pitch">Discurso Comercial / Pitch de Vendas</Label>
+            <Textarea
+              id="sales_pitch"
+              value={formData.sales_pitch || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, sales_pitch: e.target.value }))}
+              placeholder="Descreva os pontos de venda únicos, benefícios principais, abordagem comercial, diferenciais competitivos..."
+              rows={4}
+            />
+            <p className="text-sm text-muted-foreground">
+              Este texto será usado pela IA para gerar conteúdo mais comercial e persuasivo em blogs, SEO e anúncios.
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

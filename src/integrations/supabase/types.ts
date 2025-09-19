@@ -331,6 +331,7 @@ export type Database = {
           original_data: Json | null
           price: number | null
           product_url: string | null
+          sales_pitch: string | null
           source_landing_page_id: string | null
           source_type: string
           subcategory: string | null
@@ -363,6 +364,7 @@ export type Database = {
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
+          sales_pitch?: string | null
           source_landing_page_id?: string | null
           source_type: string
           subcategory?: string | null
@@ -395,6 +397,7 @@ export type Database = {
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
+          sales_pitch?: string | null
           source_landing_page_id?: string | null
           source_type?: string
           subcategory?: string | null

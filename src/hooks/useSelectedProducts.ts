@@ -6,6 +6,7 @@ interface Product {
   id: string;
   name: string;
   description?: string;
+  sales_pitch?: string;
   price?: number;
   currency?: string;
   category?: string;
@@ -39,6 +40,7 @@ export const useSelectedProducts = () => {
           id: product.id,
           name: product.name,
           description: product.description || '',
+          sales_pitch: product.sales_pitch || '',
           price: product.price || undefined,
           currency: product.currency || 'BRL',
           category: product.category || '',
