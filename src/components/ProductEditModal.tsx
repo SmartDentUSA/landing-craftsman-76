@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -81,6 +81,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
+  const [importing, setImporting] = useState(false);
   
   // Video states
   const [instagramVideos, setInstagramVideos] = useState<Video[]>([]);
@@ -375,6 +376,82 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     }
   };
 
+  const extractProductDataFromUrl = async () => {
+    if (!formData.product_url?.trim()) {
+      toast({
+        title: "Erro",
+        description: "Digite uma URL válida para importar os dados",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-product-data', {
+        body: {
+          url: formData.product_url
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.data) {
+        const extractedData = data.data;
+        
+        // Mapear dados extraídos para o formulário
+        const updates: Partial<Product> = {};
+        
+        if (extractedData.name && !formData.name?.trim()) {
+          updates.name = extractedData.name;
+        }
+        
+        if (extractedData.description && !formData.description?.trim()) {
+          updates.description = extractedData.description;
+        }
+        
+        if (extractedData.price) {
+          const priceValue = parseFloat(extractedData.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (!isNaN(priceValue) && priceValue > 0) {
+            updates.price = priceValue;
+          }
+        }
+        
+        if (extractedData.image && !formData.image_url?.trim()) {
+          updates.image_url = extractedData.image;
+        }
+        
+        // Combinar installmentText com sales_pitch existente
+        if (extractedData.installmentText) {
+          const currentSalesPitch = formData.sales_pitch || '';
+          const newSalesPitch = currentSalesPitch ? 
+            `${currentSalesPitch}\n\n${extractedData.installmentText}` : 
+            extractedData.installmentText;
+          updates.sales_pitch = newSalesPitch;
+        }
+
+        // Aplicar atualizações
+        setFormData(prev => ({ ...prev, ...updates }));
+
+        toast({
+          title: "Sucesso",
+          description: "Dados da loja integrada importados com sucesso!"
+        });
+      } else {
+        throw new Error(data?.error || 'Erro ao extrair dados do produto');
+      }
+    } catch (error) {
+      console.error('Error extracting product data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao importar dados. Verifique a URL e tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.name?.trim()) {
       toast({
@@ -598,13 +675,36 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
           <div className="space-y-2">
             <Label htmlFor="product_url">URL do Produto</Label>
-            <Input
-              id="product_url"
-              type="url"
-              value={formData.product_url || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, product_url: e.target.value }))}
-              placeholder="https://..."
-            />
+            <div className="flex gap-2">
+              <Input
+                id="product_url"
+                type="url"
+                value={formData.product_url || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, product_url: e.target.value }))}
+                placeholder="https://..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={extractProductDataFromUrl}
+                disabled={importing || !formData.product_url?.trim()}
+                className="shrink-0"
+              >
+                {importing ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Importar dados da loja integrada
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Video Collections */}

@@ -193,15 +193,17 @@ serve(async (req) => {
       }
     }
     
-    // 6. Definir preço principal (usar promocional se existir, senão o preço normal)
-    if (productData.promoPrice && !productData.price) {
-      productData.price = productData.promoPrice;
-    } else if (productData.price && productData.promoPrice && productData.price !== productData.promoPrice) {
-      // Se temos ambos e são diferentes, o price vira originalPrice se ainda não temos um
-      if (!productData.originalPrice) {
+    // 6. Definir preço principal - CORRIGIDO: usar preço promocional como principal se existir
+    if (productData.promoPrice) {
+      // Se temos preço promocional, ele é o preço principal
+      if (!productData.originalPrice && productData.price && productData.price !== productData.promoPrice) {
+        // O preço atual vira o preço original se for diferente do promocional
         productData.originalPrice = productData.price;
-        productData.price = productData.promoPrice;
       }
+      productData.price = productData.promoPrice;
+    } else if (!productData.price && productData.originalPrice) {
+      // Se só temos preço original, ele vira o preço principal
+      productData.price = productData.originalPrice;
     }
 
     // Extrair descrição
