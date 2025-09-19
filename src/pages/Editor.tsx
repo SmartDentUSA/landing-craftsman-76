@@ -28,6 +28,7 @@ import { ProductRepositoryPanel } from "@/components/ProductRepositoryPanel";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { useToast } from "@/hooks/use-toast";
 import useLandingPages from "@/hooks/useLandingPages"; // Default export
+import { cn } from "@/lib/utils";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useProductSync } from "@/hooks/useProductSync";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
@@ -3692,15 +3693,62 @@ const EditorContent = () => {
                         </div>
                         
                         <div>
-                          <Label>URL Canônica</Label>
-                          <Input
-                            value={data.seo.canonical_url}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              seo: { ...prev.seo, canonical_url: e.target.value }
-                            }))}
-                            placeholder="https://exemplo.com/pagina"
-                          />
+                          <Label className="flex items-center gap-2">
+                            URL Canônica
+                            {data.seo.canonical_url && data.seo.canonical_url.startsWith('https://') ? (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                ✓ HTTPS
+                              </Badge>
+                            ) : data.seo.canonical_url ? (
+                              <Badge variant="destructive" className="text-xs">
+                                ⚠ Requer HTTPS
+                              </Badge>
+                            ) : null}
+                          </Label>
+                          <div className="space-y-2">
+                            <Input
+                              value={data.seo.canonical_url}
+                              onChange={(e) => setData(prev => ({
+                                ...prev,
+                                seo: { ...prev.seo, canonical_url: e.target.value }
+                              }))}
+                              placeholder="https://exemplo.com/pagina"
+                              className={cn(
+                                data.seo.canonical_url && !data.seo.canonical_url.startsWith('https://') 
+                                  ? "border-destructive focus-visible:ring-destructive" 
+                                  : ""
+                              )}
+                            />
+                            {data.seo.domain && data.seo.seo_title && !data.seo.canonical_url && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-xs"
+                                onClick={() => {
+                                  const slug = data.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                                  const suggested = `https://${data.seo.domain}/${slug}`;
+                                  setData(prev => ({
+                                    ...prev,
+                                    seo: { ...prev.seo, canonical_url: suggested }
+                                  }));
+                                }}
+                              >
+                                <span className="mr-1">✨</span>
+                                Gerar URL: https://{data.seo.domain}/{data.seo.seo_title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pagina'}
+                              </Button>
+                            )}
+                            {data.seo.canonical_url && !data.seo.canonical_url.startsWith('https://') && (
+                              <div className="text-xs text-destructive p-2 bg-destructive/10 rounded">
+                                <strong>Google Ads requer HTTPS:</strong> URLs devem começar com https:// para campanhas publicitárias.
+                              </div>
+                            )}
+                            {data.seo.canonical_url && data.seo.canonical_url.startsWith('https://') && (
+                              <div className="text-xs text-green-600 p-2 bg-green-50 rounded">
+                                <strong>✓ URL válida:</strong> Esta URL será usada no Google Ads como destino final.
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
                         <div>
