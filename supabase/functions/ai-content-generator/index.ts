@@ -442,9 +442,29 @@ Retorne APENAS um JSON válido:
   const content = data.choices[0].message.content;
   
   try {
-    return JSON.parse(content);
+    // Clean content to remove markdown formatting
+    let cleanContent = content.trim();
+    
+    // Remove markdown code blocks if present
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    console.log('📝 Cleaned blog content for parsing:', cleanContent.substring(0, 200) + '...');
+    
+    const parsed = JSON.parse(cleanContent);
+    
+    // Validate required fields
+    if (!parsed.title || !parsed.content || !parsed.metaDescription || !parsed.keywords) {
+      throw new Error('Missing required fields in blog content response');
+    }
+    
+    return parsed;
   } catch (error) {
     console.error('Failed to parse AI response as JSON:', content);
+    console.error('Parse error:', error);
     throw new Error('Failed to generate valid blog content');
   }
 }
