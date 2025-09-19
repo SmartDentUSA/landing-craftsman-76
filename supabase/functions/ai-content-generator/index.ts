@@ -126,18 +126,29 @@ serve(async (req) => {
 function buildStrategicContext(request: ContentRequest, products: any[], companyProfile?: any): string {
   const pageTitle = request.seoTitle || 'Título da página';
   const pageSubtitle = request.seoDescription || 'Subtítulo da página';
-  const primaryKeyword = request.primaryKeyword || '';
   const targetAudience = request.targetAudience || 'público geral';
   
   // Extract solutions from content data
   const solutions = extractSolutions(request.contentData);
+  
+  // FASE 1: Extract keywords from FAQ using KeywordCollector logic
+  const faqKeywords = extractFAQKeywords(request.contentData);
   
   // Extract keywords from products
   const productKeywords = products.flatMap(p => p.keywords || []);
   const productBenefits = products.flatMap(p => p.benefits || []);
   const productFeatures = products.flatMap(p => p.features || []);
   
-  // Build product context (sem vídeos individuais pois agora são da empresa)
+  // FASE 2: Improve Primary Keyword detection with intelligent fallback
+  const primaryKeyword = determinePrimaryKeyword(request.primaryKeyword, faqKeywords, productKeywords, pageTitle);
+  
+  // FASE 3: Debug logging for context generation
+  console.log(`🔍 DEBUG - Keywords coletadas:`);
+  console.log(`  FAQ Keywords: ${faqKeywords.length} - [${faqKeywords.slice(0, 3).join(', ')}...]`);
+  console.log(`  Product Keywords: ${productKeywords.length} - [${productKeywords.slice(0, 3).join(', ')}...]`);
+  console.log(`  Primary Keyword escolhida: "${primaryKeyword}"`);
+  
+  // Build product context
   const productContext = products.map(p => {
     let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
     return productInfo;
@@ -164,8 +175,11 @@ ${solutions}
 ## Repositório de Produtos (${products.filter(p => p.use_in_ai_generation !== false).length} produtos selecionados):
 ${productContext}
 
-## Keywords Inteligentes (de FAQ e produtos):
-${[...new Set([...productKeywords, primaryKeyword].filter(Boolean))].join(', ')}
+## Keywords Inteligentes (FAQ + Produtos):
+${[...new Set([...faqKeywords, ...productKeywords, primaryKeyword].filter(Boolean))].join(', ')}
+
+## FAQ - Perguntas e Respostas:
+${extractFAQSection(request.contentData)}
 
 ## Benefícios Identificados:
 ${[...new Set(productBenefits)].join(', ')}
@@ -185,6 +199,79 @@ Utilize contextualmente todas as informações acima para:
 4. Focar nos benefícios para o público-alvo
 5. Manter consistência com nossa marca e soluções
 `;
+}
+
+// FASE 1: Extract FAQ Keywords using KeywordCollector logic
+function extractFAQKeywords(contentData: any): string[] {
+  if (!contentData?.faq || !Array.isArray(contentData.faq)) {
+    return [];
+  }
+  
+  // Use the same logic as KeywordCollector.collectFromFAQ
+  return contentData.faq
+    .map((item: any) => extractLongTailFromQuestion(item.question || ''))
+    .flat()
+    .filter((keyword: string) => keyword.length > 0);
+}
+
+function extractLongTailFromQuestion(question: string): string[] {
+  // Extract meaningful phrases from FAQ questions (same logic as KeywordCollector)
+  const cleaned = question
+    .toLowerCase()
+    .replace(/[?!.,]/g, '')
+    .replace(/^(como|qual|onde|quando|por que|o que|quais)/, '');
+  
+  // Split into phrases and filter meaningful ones
+  const phrases = cleaned
+    .split(' ')
+    .filter(word => word.length > 3)
+    .join(' ')
+    .trim();
+  
+  if (phrases.length > 10) {
+    return [phrases];
+  }
+  
+  return [];
+}
+
+// FASE 2: Improve Primary Keyword detection
+function determinePrimaryKeyword(providedKeyword: string | undefined, faqKeywords: string[], productKeywords: string[], pageTitle: string): string {
+  // 1. Use provided keyword if available
+  if (providedKeyword && providedKeyword.trim()) {
+    return providedKeyword.trim();
+  }
+  
+  // 2. Use first FAQ keyword as fallback
+  if (faqKeywords.length > 0) {
+    console.log(`🎯 Using FAQ keyword as primary: "${faqKeywords[0]}"`);
+    return faqKeywords[0];
+  }
+  
+  // 3. Use first product keyword as fallback
+  if (productKeywords.length > 0) {
+    console.log(`🎯 Using Product keyword as primary: "${productKeywords[0]}"`);
+    return productKeywords[0];
+  }
+  
+  // 4. Extract from page title as last resort
+  const titleKeyword = pageTitle.toLowerCase().split(' ').filter(word => word.length > 4)[0] || '';
+  console.log(`🎯 Using title-based keyword as primary: "${titleKeyword}"`);
+  return titleKeyword;
+}
+
+// FASE 1: Extract FAQ Section for context
+function extractFAQSection(contentData: any): string {
+  if (!contentData?.faq || !Array.isArray(contentData.faq)) {
+    return '• Nenhuma pergunta frequente disponível';
+  }
+  
+  return contentData.faq
+    .slice(0, 5) // Limit to 5 FAQs to avoid huge context
+    .map((item: any, i: number) => 
+      `• **P${i + 1}**: ${item.question}\n  **R**: ${item.answer || 'Resposta não disponível'}`
+    )
+    .join('\n\n');
 }
 
 function extractSolutions(contentData: any): string {
