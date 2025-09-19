@@ -80,8 +80,16 @@ serve(async (req) => {
       allProducts = fallbackProducts || [];
     }
 
-    // Build strategic context
-    const strategicContext = buildStrategicContext(request, allProducts);
+    // Fetch company profile for additional context
+    const { data: companyProfiles } = await supabase
+      .from('company_profile')
+      .select('company_name, company_description, working_methodology, differentiators')
+      .limit(1);
+    
+    const companyProfile = companyProfiles?.[0] || null;
+
+    // Build strategic context with progressive data
+    const strategicContext = buildStrategicContext(request, allProducts, companyProfile);
     
     // Generate content based on type
     let result: any;
@@ -124,11 +132,12 @@ serve(async (req) => {
 });
 
 function buildStrategicContext(request: ContentRequest, products: any[], companyProfile?: any): string {
-  const pageTitle = request.seoTitle || 'Título da página';
-  const pageSubtitle = request.seoDescription || 'Subtítulo da página';
-  const targetAudience = request.targetAudience || 'público geral';
+  // PROGRESSIVE GENERATION: Always use available data, even if partial
+  const pageTitle = request.seoTitle || request.contentData?.banner?.title || request.contentData?.brand?.name || 'Nossos Serviços';
+  const pageSubtitle = request.seoDescription || request.contentData?.banner?.subtitle || request.contentData?.seo?.meta_description || 'Soluções de qualidade para você';
+  const targetAudience = request.targetAudience || request.contentData?.banner?.subtitle || 'público geral';
   
-  // Extract solutions from content data
+  // Extract solutions from content data - always try to extract something useful
   const solutions = extractSolutions(request.contentData);
   
   // FASE 1: Extract keywords from FAQ using KeywordCollector logic
@@ -143,19 +152,26 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   const primaryKeyword = determinePrimaryKeyword(request.primaryKeyword, faqKeywords, productKeywords, pageTitle);
   
   // FASE 3: Debug logging for context generation
-  console.log(`🔍 DEBUG - Keywords coletadas:`);
+  console.log(`🔍 DEBUG - Progressive Context Generation:`);
+  console.log(`  Page Title: "${pageTitle}"`);
+  console.log(`  Page Subtitle: "${pageSubtitle}"`);
+  console.log(`  Company Profile: ${companyProfile ? 'Available' : 'Not available'}`);
   console.log(`  FAQ Keywords: ${faqKeywords.length} - [${faqKeywords.slice(0, 3).join(', ')}...]`);
   console.log(`  Product Keywords: ${productKeywords.length} - [${productKeywords.slice(0, 3).join(', ')}...]`);
   console.log(`  Primary Keyword escolhida: "${primaryKeyword}"`);
+  console.log(`  Products: ${products.length} available`);
   
-  // Build product context
-  const productContext = products.map(p => {
-    let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
-    return productInfo;
-  }).join('\n');
+  // Build product context - even if empty, provide fallback
+  const productContext = products.length > 0 
+    ? products.map(p => {
+        let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
+        return productInfo;
+      }).join('\n')
+    : '• Soluções personalizadas de alta qualidade\n• Atendimento especializado\n• Garantia de resultados';
 
+  // Always provide meaningful context, even with minimal data
   return `
-# CONTEXTO ESTRATÉGICO PARA GERAÇÃO DE CONTEÚDO
+# CONTEXTO ESTRATÉGICO PARA GERAÇÃO DE CONTEÚDO (GERAÇÃO PROGRESSIVA)
 
 ## Informações da Página:
 - **Título**: ${pageTitle}
@@ -164,40 +180,46 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
 - **Público-alvo**: ${targetAudience}
 
 ${companyProfile ? `## Perfil da Empresa:
-- **Nome**: ${companyProfile.company_name}
-- **Descrição**: ${companyProfile.company_description || 'Não informado'}
-- **Metodologia**: ${companyProfile.working_methodology || 'Não informado'}
-- **Diferenciais**: ${companyProfile.differentiators || 'Não informado'}
+- **Nome**: ${companyProfile.company_name || 'Nossa Empresa'}
+- **Descrição**: ${companyProfile.company_description || 'Empresa especializada em soluções de qualidade'}
+- **Metodologia**: ${companyProfile.working_methodology || 'Atendimento personalizado e resultados comprovados'}
+- **Diferenciais**: ${companyProfile.differentiators || 'Qualidade, confiabilidade e excelência no atendimento'}
 
-` : ''}## Soluções Oferecidas:
+` : `## Informações da Empresa:
+- **Nome**: ${pageTitle.split(' ')[0] || 'Nossa Empresa'}
+- **Especialidade**: Soluções personalizadas e atendimento de qualidade
+
+`}## Soluções Oferecidas:
 ${solutions}
 
-## Repositório de Produtos (${products.filter(p => p.use_in_ai_generation !== false).length} produtos selecionados):
+## Repositório de Produtos/Serviços (${products.filter(p => p.use_in_ai_generation !== false).length} disponíveis):
 ${productContext}
 
-## Keywords Inteligentes (FAQ + Produtos):
-${[...new Set([...faqKeywords, ...productKeywords, primaryKeyword].filter(Boolean))].join(', ')}
+## Keywords Inteligentes:
+${[...new Set([...faqKeywords, ...productKeywords, primaryKeyword].filter(Boolean))].join(', ') || 'soluções, qualidade, atendimento'}
 
 ## FAQ - Perguntas e Respostas:
 ${extractFAQSection(request.contentData)}
 
 ## Benefícios Identificados:
-${[...new Set(productBenefits)].join(', ')}
+${[...new Set(productBenefits)].length > 0 ? [...new Set(productBenefits)].join(', ') : 'qualidade garantida, atendimento especializado, resultados comprovados'}
 
-## Características dos Produtos:
-${[...new Set(productFeatures)].join(', ')}
+## Características dos Produtos/Serviços:
+${[...new Set(productFeatures)].length > 0 ? [...new Set(productFeatures)].join(', ') : 'alta qualidade, tecnologia avançada, fácil utilização'}
 
 ---
 
-Você é um redator de marketing digital especialista em nossos produtos e soluções.
-Sua função é criar textos persuasivos, claros e com alta taxa de conversão.
+INSTRUÇÕES PARA GERAÇÃO PROGRESSIVA:
+Você é um redator de marketing digital especialista. Mesmo com informações limitadas, sempre gere conteúdo de qualidade:
 
-Utilize contextualmente todas as informações acima para:
-1. Criar conteúdo altamente relevante e específico
-2. Mencionar produtos quando apropriado
-3. Usar palavras-chave de forma natural
-4. Focar nos benefícios para o público-alvo
-5. Manter consistência com nossa marca e soluções
+1. Use TODOS os dados disponíveis, mesmo que sejam poucos
+2. Crie conteúdo persuasivo baseado no que está disponível
+3. Use palavras-chave de forma natural
+4. Foque nos benefícios para o público-alvo
+5. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
+6. SEMPRE gere algo útil, mesmo com dados mínimos
+
+NUNCA retorne erro por falta de dados - sempre adapte e gere conteúdo adequado!
 `;
 }
 
@@ -235,29 +257,40 @@ function extractLongTailFromQuestion(question: string): string[] {
   return [];
 }
 
-// FASE 2: Improve Primary Keyword detection
+// FASE 2: Improve Primary Keyword detection with progressive fallbacks
 function determinePrimaryKeyword(providedKeyword: string | undefined, faqKeywords: string[], productKeywords: string[], pageTitle: string): string {
-  // 1. Use provided keyword if available
-  if (providedKeyword && providedKeyword.trim()) {
+  // 1. Use provided keyword if available and valid
+  if (providedKeyword && providedKeyword.trim() && providedKeyword.trim().length > 2) {
+    console.log(`🎯 Using provided keyword as primary: "${providedKeyword.trim()}"`);
     return providedKeyword.trim();
   }
   
-  // 2. Use first FAQ keyword as fallback
-  if (faqKeywords.length > 0) {
+  // 2. Use first FAQ keyword as fallback (intelligent source)
+  if (faqKeywords.length > 0 && faqKeywords[0].length > 2) {
     console.log(`🎯 Using FAQ keyword as primary: "${faqKeywords[0]}"`);
     return faqKeywords[0];
   }
   
-  // 3. Use first product keyword as fallback
-  if (productKeywords.length > 0) {
+  // 3. Use first product keyword as fallback (product-specific)
+  if (productKeywords.length > 0 && productKeywords[0].length > 2) {
     console.log(`🎯 Using Product keyword as primary: "${productKeywords[0]}"`);
     return productKeywords[0];
   }
   
-  // 4. Extract from page title as last resort
-  const titleKeyword = pageTitle.toLowerCase().split(' ').filter(word => word.length > 4)[0] || '';
-  console.log(`🎯 Using title-based keyword as primary: "${titleKeyword}"`);
-  return titleKeyword;
+  // 4. Extract meaningful words from page title
+  const titleWords = pageTitle.toLowerCase().split(' ').filter(word => 
+    word.length > 3 && !['para', 'com', 'uma', 'dos', 'das', 'seu', 'sua'].includes(word)
+  );
+  
+  if (titleWords.length > 0) {
+    console.log(`🎯 Using title-based keyword as primary: "${titleWords[0]}"`);
+    return titleWords[0];
+  }
+  
+  // 5. Ultimate fallback - ensure we always have something
+  const fallbackKeyword = 'soluções especializadas';
+  console.log(`🎯 Using ultimate fallback keyword: "${fallbackKeyword}"`);
+  return fallbackKeyword;
 }
 
 // FASE 1: Extract FAQ Section for context

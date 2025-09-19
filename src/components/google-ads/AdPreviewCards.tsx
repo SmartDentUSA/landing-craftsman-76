@@ -59,14 +59,16 @@ export const AdPreviewCards = ({ adCopies, finalUrl, sitelinks, videos = [] }: A
 
           <div className="space-y-3">
             {/* Primary combinations */}
-            {adCopies?.headlines?.slice(0, 3).map((headline, index) => (
-              <AdCard
-                key={index}
-                headline={headline}
-                description={adCopies.descriptions?.[index % adCopies.descriptions.length] || ''}
-                paths={adCopies.paths || []}
-              />
-            )) || (
+            {adCopies?.headlines?.length > 0 ? (
+              adCopies.headlines.slice(0, 3).map((headline, index) => (
+                <AdCard
+                  key={index}
+                  headline={headline}
+                  description={adCopies.descriptions?.[index % adCopies.descriptions.length] || ''}
+                  paths={adCopies.paths || []}
+                />
+              ))
+            ) : (
               <div className="text-center py-4 text-muted-foreground">
                 Nenhum anúncio disponível para preview
               </div>

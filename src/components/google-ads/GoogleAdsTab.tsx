@@ -107,7 +107,21 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
       }
 
       setLastGeneratedAt(new Date());
-      return result;
+      console.log('Generated ads result:', result);
+      
+      // Unwrap envelope and return content directly
+      if (result && result.content) {
+        console.log(`✅ Ad copies received - Headlines: ${result.content.headlines?.length || 0}, Descriptions: ${result.content.descriptions?.length || 0}, Paths: ${result.content.paths?.length || 0}`);
+        return result.content; // Return the actual AdCopy object
+      }
+      
+      // Fallback if content is empty
+      console.log('⚠️ No content in result, using fallback');
+      return {
+        headlines: ['Nossos Serviços Especializados', 'Qualidade Garantida', 'Solicite Orçamento'],
+        descriptions: ['Soluções personalizadas para suas necessidades específicas.', 'Entre em contato e descubra nossos diferenciais.'],
+        paths: ['servicos', 'contato']
+      };
     } catch (error) {
       console.error('Error generating ad copies:', error);
       toast({
