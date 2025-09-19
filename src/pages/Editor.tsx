@@ -24,7 +24,7 @@ import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 const CSVReviewUploader: any = lazy(() => import("@/components/CSVReviewUploader").then(m => ({ default: (m as any).CSVReviewUploader ?? (m as any).default })));
 import { ProductCSVUploader } from "@/components/ProductCSVUploader";
 import { ImageDebugPreview } from "@/components/ImageDebugPreview";
-import { ProductRepositoryPanel } from "@/components/ProductRepositoryPanel";
+import { RepositoryPanel } from "@/components/RepositoryPanel";
 import { ProductSelector } from "@/components/ProductSelector";
 import { SelectedProductsPanel } from "@/components/SelectedProductsPanel";
 import { VideoMigrationTester } from "@/components/VideoMigrationTester";
@@ -5160,14 +5160,15 @@ const EditorContent = () => {
               </Card>
               )}
 
-              {/* Manual Reviews Upload Card */}
+              {/* SEO Configuration - Reviews Manuais */}
               <Card className="border-l-4 border-l-purple-500/50">
                 <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-500/10 rounded-lg">
-                      <Users className="w-5 h-5 text-purple-500" />
-                    </div>
-                    <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-500/10 rounded-lg">
+                        <Users className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <div>
                       <CardTitle className="text-lg">Reviews Manuais</CardTitle>
                       <p className="text-sm text-muted-foreground">Adicione reviews personalizadas via CSV</p>
                     </div>
@@ -5194,702 +5195,63 @@ const EditorContent = () => {
                 </CardContent>
               </Card>
 
-              {/* Video Testimonials Section */}
-              <VideoTestimonialsSection landingPageId={id || 'default'} />
-
-              {/* Ofertas Card */}
-              <Card className="border-l-4 border-l-orange-500/50">
+              {/* SEO Configuration - Depoimentos em Vídeo */}
+              <Card className="border-l-4 border-l-green-500/50">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <DollarSign className="w-5 h-5 text-orange-500" />
+                      <div className="p-2 bg-green-500/10 rounded-lg">
+                        <VideoIcon className="w-5 h-5 text-green-500" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">Ofertas de Produtos</CardTitle>
-                        <p className="text-sm text-muted-foreground">Configure ofertas estruturadas para SEO</p>
+                        <CardTitle className="text-lg">Configuração SEO - Depoimentos em Vídeo</CardTitle>
+                        <p className="text-sm text-muted-foreground">Configure se depoimentos em vídeo aparecem no SEO</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                      {data.schema.offers.length} ofertas
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={data.seo.video_testimonials_enabled || false}
+                        onCheckedChange={(checked) => setData(prev => ({
+                          ...prev,
+                          seo: { ...prev.seo, video_testimonials_enabled: checked }
+                        }))}
+                      />
+                      <Label className="font-medium">Utilizar no SEO</Label>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Importação em Massa via CSV */}
-                  <ProductCSVUploader 
-                    onProductsUpdate={(importedProducts) => {
-                      // Processar dados dos produtos importados para incluir estrutura de preços
-                      const processedProducts = importedProducts.map(product => ({
-                        ...product,
-                        selected: true,
-                        original_price: product.originalPrice || '',
-                        installment_price: product.installmentText || '',
-                        discount_percentage: product.originalPrice && product.price 
-                          ? Math.round(((parseFloat(product.originalPrice) - parseFloat(product.price)) / parseFloat(product.originalPrice)) * 100)
-                          : 0,
-                        sourceType: 'imported' as const,
-                        lastUpdated: new Date().toISOString(),
-                        currency: 'R$',
-                        availability: product.available ? 'InStock' : 'OutOfStock',
-                        valid_through: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias
-                      }));
-                      
-                      setData(prev => {
-                        const updatedData = {
-                          ...prev,
-                          schema: {
-                            ...prev.schema,
-                            offers: [...prev.schema.offers, ...processedProducts]
-                          }
-                        };
-                        
-                        // Auto-sync to repository
-                        handleAutoSyncOffers(updatedData);
-                        
-                        return updatedData;
-                      });
-                      toast({
-                        title: "Produtos importados",
-                        description: `${importedProducts.length} produto(s) adicionado(s) às ofertas`,
-                      });
-                    }}
-                  />
-                  
-                  <Separator />
-                  
-                   {data.schema.offers.length > 0 && (
-                     <div className="space-y-4">
-                       <div className="flex items-center justify-between">
-                         <h4 className="font-medium">Ofertas Configuradas</h4>
-                          <div className="flex items-center gap-3">
-                            <Badge variant="secondary" className="text-xs">
-                              {data.schema.offers.filter(offer => offer.selected !== false).length} de {data.schema.offers.length} selecionadas
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleImportFromRepository}
-                              disabled={isImportingFromRepo}
-                              className="text-xs"
-                            >
-                              {isImportingFromRepo ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Importando...
-                                </>
-                              ) : (
-                                <>
-                                  <Wand2 className="w-4 h-4 mr-2" />
-                                  Capturar do Repositório
-                                </>
-                              )}
-                            </Button>
-                           <div className="flex gap-1">
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => {
-                                  const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: true }));
-                                  setData(prev => {
-                                    const updatedData = {
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    };
-                                    handleAutoSyncOffers(updatedData);
-                                    return updatedData;
-                                  });
-                               }}
-                               className="h-7 px-2 text-xs"
-                             >
-                               Todas
-                             </Button>
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => {
-                                  const newOffers = data.schema.offers.map(offer => ({ ...offer, selected: false }));
-                                  setData(prev => {
-                                    const updatedData = {
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    };
-                                    handleAutoSyncOffers(updatedData);
-                                    return updatedData;
-                                  });
-                               }}
-                               className="h-7 px-2 text-xs"
-                             >
-                               Nenhuma
-                             </Button>
-                           </div>
-                         </div>
-                       </div>
-                       <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-4">
-                          {data.schema.offers.map((offer, index) => (
-                           <div key={index} className="p-3 border rounded-lg bg-muted/50 space-y-3">
-                             {editingOffer === index ? (
-                               // Edit mode
-                               <div className="space-y-3">
-                                 <div className="flex items-center gap-2">
-                                   <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
-                                     {index + 1}
-                                   </div>
-                                    <Input
-                                      value={offer.name || ''}
-                                      onChange={(e) => {
-                                        const newOffers = [...data.schema.offers];
-                                        newOffers[index] = { ...newOffers[index], name: e.target.value };
-                                        const updatedData = {
-                                          ...data,
-                                          schema: { ...data.schema, offers: newOffers }
-                                        };
-                                        setData(updatedData);
-                                        debouncedAutoSync(updatedData);
-                                      }}
-                                      placeholder="Nome da oferta"
-                                      className="text-sm h-8"
-                                    />
-                                 </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                       <Input
-                                         value={offer.price || ''}
-                                         onChange={(e) => {
-                                           const newOffers = [...data.schema.offers];
-                                           newOffers[index] = { ...newOffers[index], price: e.target.value };
-                                           const updatedData = {
-                                             ...data,
-                                             schema: { ...data.schema, offers: newOffers }
-                                           };
-                                           setData(updatedData);
-                                           debouncedAutoSync(updatedData);
-                                         }}
-                                         placeholder="Preço Promocional"
-                                         className="text-sm h-8"
-                                       />
-                                       <Input
-                                         value={offer.original_price || ''}
-                                         onChange={(e) => {
-                                           const newOffers = [...data.schema.offers];
-                                           newOffers[index] = { ...newOffers[index], original_price: e.target.value };
-                                           const updatedData = {
-                                             ...data,
-                                             schema: { ...data.schema, offers: newOffers }
-                                           };
-                                           setData(updatedData);
-                                           debouncedAutoSync(updatedData);
-                                         }}
-                                         placeholder="Preço Original"
-                                         className="text-sm h-8"
-                                       />
-                                       <Input
-                                         value={offer.installment_price || ''}
-                                         onChange={(e) => {
-                                           const newOffers = [...data.schema.offers];
-                                           newOffers[index] = { ...newOffers[index], installment_price: e.target.value };
-                                           const updatedData = {
-                                             ...data,
-                                             schema: { ...data.schema, offers: newOffers }
-                                           };
-                                           setData(updatedData);
-                                           debouncedAutoSync(updatedData);
-                                         }}
-                                         placeholder="Parcelamento"
-                                         className="text-sm h-8"
-                                       />
-                                     <div className="flex gap-1">
-                                        <Input
-                                          value={offer.productUrl || ''}
-                                          onChange={(e) => {
-                                            const newOffers = [...data.schema.offers];
-                                            newOffers[index] = { ...newOffers[index], productUrl: e.target.value };
-                                            const updatedData = {
-                                              ...data,
-                                              schema: { ...data.schema, offers: newOffers }
-                                            };
-                                            setData(updatedData);
-                                            debouncedAutoSync(updatedData);
-                                          }}
-                                          onBlur={(e) => {
-                                            const url = e.target.value.trim();
-                                            if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-                                              const normalizedUrl = `https://${url}`;
-                                              const newOffers = [...data.schema.offers];
-                                              newOffers[index] = { ...newOffers[index], productUrl: normalizedUrl };
-                                              const updatedData = {
-                                                ...data,
-                                                schema: { ...data.schema, offers: newOffers }
-                                              };
-                                              setData(updatedData);
-                                              debouncedAutoSync(updatedData);
-                                            }
-                                          }}
-                                          placeholder="URL do produto"
-                                          className="text-sm h-8"
-                                        />
-                                       {offer.productUrl && offer.productUrl.trim() && (
-                                         <Button
-                                           variant="outline"
-                                           size="sm"
-                                           onClick={() => extractProductData(index)}
-                                           disabled={extractingProduct === index}
-                                           className="h-8 px-2 text-xs"
-                                           title="Importar dados da Loja Integrada"
-                                         >
-                                           {extractingProduct === index ? (
-                                             <Loader2 className="h-3 w-3 animate-spin" />
-                                           ) : (
-                                             <Download className="h-3 w-3" />
-                                           )}
-                                         </Button>
-                                       )}
-                                     </div>
-                                   </div>
-                                    <Input
-                                      value={offer.image || ''}
-                                      onChange={(e) => {
-                                        const newOffers = [...data.schema.offers];
-                                        newOffers[index] = { ...newOffers[index], image: e.target.value };
-                                        const updatedData = {
-                                          ...data,
-                                          schema: { ...data.schema, offers: newOffers }
-                                        };
-                                        setData(updatedData);
-                                        debouncedAutoSync(updatedData);
-                                      }}
-                                      placeholder="URL da imagem"
-                                      className="text-sm h-8"
-                                    />
-                                    <div className="space-y-2">
-                                      <div className="text-sm font-medium text-muted-foreground">Vídeos do Produto</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        Use as seções "Vídeos YouTube", "Vídeos Instagram", etc. nas abas laterais para gerenciar vídeos deste produto.
-                                      </div>
-                                    </div>
-                                   <Textarea
-                                     value={offer.description || ''}
-                                     onChange={(e) => {
-                                       const newOffers = [...data.schema.offers];
-                                       newOffers[index] = { ...newOffers[index], description: e.target.value };
-                                       const updatedData = {
-                                         ...data,
-                                         schema: { ...data.schema, offers: newOffers }
-                                       };
-                                       setData(updatedData);
-                                       debouncedAutoSync(updatedData);
-                                     }}
-                                     placeholder="Descrição da oferta"
-                                     className="text-sm min-h-[60px]"
-                                   />
-                                  
-                                  {/* Seção de Recursos e Downloads */}
-                                  <div className="border-t pt-3 space-y-3">
-                                    <div className="flex items-center space-x-2">
-                                      <Checkbox
-                                        checked={offer.show_in_resources || false}
-                                        onCheckedChange={(checked) => {
-                                          const newOffers = [...data.schema.offers];
-                                          newOffers[index] = { 
-                                            ...newOffers[index], 
-                                            show_in_resources: !!checked,
-                                            resource_cta1: newOffers[index].resource_cta1 || { label: '', url: '', visible: false },
-                                            resource_cta2: newOffers[index].resource_cta2 || { label: '', url: '', visible: false },
-                                            resource_cta3: newOffers[index].resource_cta3 || { label: '', url: '', visible: false }
-                                          };
-                                          setData(prev => ({
-                                            ...prev,
-                                            schema: { ...prev.schema, offers: newOffers }
-                                          }));
-                                        }}
-                                      />
-                                      <Label className="text-sm font-medium">Exibir em Recursos/Downloads</Label>
-                                    </div>
-                                    
-                                    {offer.show_in_resources && (
-                                      <div className="space-y-3 bg-muted/30 p-3 rounded-lg">
-                                        <p className="text-xs text-muted-foreground">Configure até 3 botões CTA para este produto na seção de recursos:</p>
-                                        
-                                        {/* CTA 1 */}
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                              checked={offer.resource_cta1?.visible || false}
-                                              onCheckedChange={(checked) => {
-                                                const newOffers = [...data.schema.offers];
-                                                newOffers[index] = { 
-                                                  ...newOffers[index], 
-                                                  resource_cta1: { 
-                                                    ...newOffers[index].resource_cta1, 
-                                                    visible: !!checked 
-                                                  }
-                                                };
-                                                setData(prev => ({
-                                                  ...prev,
-                                                  schema: { ...prev.schema, offers: newOffers }
-                                                }));
-                                              }}
-                                            />
-                                            <Label className="text-xs">CTA 1 Ativo</Label>
-                                          </div>
-                                          {offer.resource_cta1?.visible && (
-                                            <div className="grid grid-cols-2 gap-2">
-                                              <Input
-                                                value={offer.resource_cta1?.label || ''}
-                                                onChange={(e) => {
-                                                  const newOffers = [...data.schema.offers];
-                                                  newOffers[index] = { 
-                                                    ...newOffers[index], 
-                                                    resource_cta1: { 
-                                                      ...newOffers[index].resource_cta1, 
-                                                      label: e.target.value 
-                                                    }
-                                                  };
-                                                  setData(prev => ({
-                                                    ...prev,
-                                                    schema: { ...prev.schema, offers: newOffers }
-                                                  }));
-                                                }}
-                                                placeholder="Ex: Baixar Catálogo"
-                                                className="text-xs h-7"
-                                              />
-                                              <Input
-                                                value={offer.resource_cta1?.url || ''}
-                                                onChange={(e) => {
-                                                  const newOffers = [...data.schema.offers];
-                                                  newOffers[index] = { 
-                                                    ...newOffers[index], 
-                                                    resource_cta1: { 
-                                                      ...newOffers[index].resource_cta1, 
-                                                      url: e.target.value 
-                                                    }
-                                                  };
-                                                  setData(prev => ({
-                                                    ...prev,
-                                                    schema: { ...prev.schema, offers: newOffers }
-                                                  }));
-                                                }}
-                                                placeholder="URL do link"
-                                                className="text-xs h-7"
-                                              />
-                                            </div>
-                                          )}
-                                        </div>
+                <CardContent>
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-green-700">
+                      Depoimentos em vídeo agora são gerenciados no <strong>Repositório Central</strong>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
 
-                                        {/* CTA 2 */}
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                              checked={offer.resource_cta2?.visible || false}
-                                              onCheckedChange={(checked) => {
-                                                const newOffers = [...data.schema.offers];
-                                                newOffers[index] = { 
-                                                  ...newOffers[index], 
-                                                  resource_cta2: { 
-                                                    ...newOffers[index].resource_cta2, 
-                                                    visible: !!checked 
-                                                  }
-                                                };
-                                                setData(prev => ({
-                                                  ...prev,
-                                                  schema: { ...prev.schema, offers: newOffers }
-                                                }));
-                                              }}
-                                            />
-                                            <Label className="text-xs">CTA 2 Ativo</Label>
-                                          </div>
-                                          {offer.resource_cta2?.visible && (
-                                            <div className="grid grid-cols-2 gap-2">
-                                              <Input
-                                                value={offer.resource_cta2?.label || ''}
-                                                onChange={(e) => {
-                                                  const newOffers = [...data.schema.offers];
-                                                  newOffers[index] = { 
-                                                    ...newOffers[index], 
-                                                    resource_cta2: { 
-                                                      ...newOffers[index].resource_cta2, 
-                                                      label: e.target.value 
-                                                    }
-                                                  };
-                                                  setData(prev => ({
-                                                    ...prev,
-                                                    schema: { ...prev.schema, offers: newOffers }
-                                                  }));
-                                                }}
-                                                placeholder="Ex: Manual Técnico"
-                                                className="text-xs h-7"
-                                              />
-                                              <Input
-                                                value={offer.resource_cta2?.url || ''}
-                                                onChange={(e) => {
-                                                  const newOffers = [...data.schema.offers];
-                                                  newOffers[index] = { 
-                                                    ...newOffers[index], 
-                                                    resource_cta2: { 
-                                                      ...newOffers[index].resource_cta2, 
-                                                      url: e.target.value 
-                                                    }
-                                                  };
-                                                  setData(prev => ({
-                                                    ...prev,
-                                                    schema: { ...prev.schema, offers: newOffers }
-                                                  }));
-                                                }}
-                                                placeholder="URL do link"
-                                                className="text-xs h-7"
-                                              />
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* CTA 3 */}
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                              checked={offer.resource_cta3?.visible || false}
-                                              onCheckedChange={(checked) => {
-                                                const newOffers = [...data.schema.offers];
-                                                newOffers[index] = { 
-                                                  ...newOffers[index], 
-                                                  resource_cta3: { 
-                                                    ...newOffers[index].resource_cta3, 
-                                                    visible: !!checked 
-                                                  }
-                                                };
-                                                setData(prev => ({
-                                                  ...prev,
-                                                  schema: { ...prev.schema, offers: newOffers }
-                                                }));
-                                              }}
-                                            />
-                                            <Label className="text-xs">CTA 3 Ativo</Label>
-                                          </div>
-                                          {offer.resource_cta3?.visible && (
-                                            <div className="grid grid-cols-2 gap-2">
-                                              <Input
-                                                value={offer.resource_cta3?.label || ''}
-                                                onChange={(e) => {
-                                                  const newOffers = [...data.schema.offers];
-                                                  newOffers[index] = { 
-                                                    ...newOffers[index], 
-                                                    resource_cta3: { 
-                                                      ...newOffers[index].resource_cta3, 
-                                                      label: e.target.value 
-                                                    }
-                                                  };
-                                                  setData(prev => ({
-                                                    ...prev,
-                                                    schema: { ...prev.schema, offers: newOffers }
-                                                  }));
-                                                }}
-                                                placeholder="Ex: Ver Produto"
-                                                className="text-xs h-7"
-                                              />
-                                              <Input
-                                                value={offer.resource_cta3?.url || ''}
-                                                onChange={(e) => {
-                                                  const newOffers = [...data.schema.offers];
-                                                  newOffers[index] = { 
-                                                    ...newOffers[index], 
-                                                    resource_cta3: { 
-                                                      ...newOffers[index].resource_cta3, 
-                                                      url: e.target.value 
-                                                    }
-                                                  };
-                                                  setData(prev => ({
-                                                    ...prev,
-                                                    schema: { ...prev.schema, offers: newOffers }
-                                                  }));
-                                                }}
-                                                placeholder="URL do link"
-                                                className="text-xs h-7"
-                                              />
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="flex justify-end gap-2">
-                                   <Button
-                                     variant="outline"
-                                     size="sm"
-                                     onClick={() => setEditingOffer(null)}
-                                   >
-                                     Cancelar
-                                   </Button>
-                                   <Button
-                                     variant="default"
-                                     size="sm"
-                                     onClick={() => setEditingOffer(null)}
-                                   >
-                                     Salvar
-                                   </Button>
-                                 </div>
-                               </div>
-                             ) : (
-                                 // View mode
-                                 <div className="flex items-center justify-between gap-3">
-                                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                                     <div className="flex items-center gap-2">
-                                       <Checkbox
-                                         checked={offer.selected !== false}
-                                         onCheckedChange={(checked) => {
-                                           const newOffers = [...data.schema.offers];
-                                           newOffers[index] = { ...newOffers[index], selected: !!checked };
-                                           setData(prev => ({
-                                             ...prev,
-                                             schema: { ...prev.schema, offers: newOffers }
-                                           }));
-                                         }}
-                                         className="w-4 h-4"
-                                       />
-                                       <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-semibold text-xs">
-                                         {index + 1}
-                                       </div>
-                                     </div>
-                                    {offer.image && (
-                                      <ImageDebugPreview
-                                        src={offer.image}
-                                        alt={offer.name || 'Produto'}
-                                        size={48}
-                                        debugLabel={`Oferta ${index + 1}`}
-                                      />
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                     <div className="text-sm font-medium truncate">
-                                       {offer.name || `Oferta ${index + 1}`}
-                                     </div>
-                                       <div className="text-xs text-muted-foreground line-clamp-2">
-                                         <div className="flex flex-wrap items-center gap-1">
-                                           {offer.price && (
-                                             <span className="font-medium text-foreground">R$ {offer.price}</span>
-                                           )}
-                                           {offer.original_price && offer.original_price !== offer.price && (
-                                             <span className="line-through text-muted-foreground">R$ {offer.original_price}</span>
-                                           )}
-                                           {offer.discount_percentage && (
-                                             <span className="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">-{offer.discount_percentage}%</span>
-                                           )}
-                                         </div>
-                                         {offer.installment_price && (
-                                           <div className="text-xs text-muted-foreground mt-1">{offer.installment_price}</div>
-                                         )}
-                                         {offer.description && (
-                                           <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{offer.description}</div>
-                                         )}
-                                         {offer.productUrl && !offer.name && (
-                                           <div className="text-xs text-muted-foreground mt-1">
-                                             {(() => {
-                                               try {
-                                                 return new URL(offer.productUrl).hostname;
-                                               } catch {
-                                                 return offer.productUrl.replace(/^https?:\/\//, '').split('/')[0];
-                                               }
-                                             })()}
-                                           </div>
-                                         )}
-                                       </div>
-                                      <div className="flex gap-1 mt-1 flex-wrap">
-                                        {offer.sourceType === 'imported' && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            Importado {offer.lastUpdated && `• ${new Date(offer.lastUpdated).toLocaleDateString('pt-BR')}`}
-                                          </Badge>
-                                        )}
-                                        {offer.youtube_url && (
-                                          <Badge variant="outline" className="text-xs">
-                                            📺 YouTube
-                                          </Badge>
-                                        )}
-                                        {offer.instagram_url && (
-                                          <Badge variant="outline" className="text-xs">
-                                            📱 Instagram
-                                          </Badge>
-                                        )}
-                                      </div>
-                                   </div>
-                                 </div>
-                             <div className="flex items-center gap-2">
-                               {extractingProduct === index && (
-                                 <Badge variant="outline" className="text-xs">
-                                   ⏳ Importando...
-                                 </Badge>
-                               )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingOffer(index)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                 {offer.productUrl && offer.productUrl.trim() && (
-                                   <Button
-                                     variant="ghost"
-                                     size="sm"
-                                     onClick={() => {
-                                       console.log('Clicando em importar para URL:', offer.productUrl);
-                                       extractProductData(index);
-                                     }}
-                                     disabled={extractingProduct === index}
-                                     className="h-8 w-8 p-0"
-                                     title="Importar dados da Loja Integrada"
-                                   >
-                                     <Download className="h-4 w-4" />
-                                   </Button>
-                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const newOffers = data.schema.offers.filter((_, i) => i !== index);
-                                    setData(prev => ({
-                                      ...prev,
-                                      schema: { ...prev.schema, offers: newOffers }
-                                    }));
-                                  }}
-                                  className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                         ))}
-                        </div>
+              {/* Ofertas Estruturadas - Agora vem do sistema "Selecionar Produtos" */}
+              <Card className="border-l-4 border-l-blue-500/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <DollarSign className="w-5 h-5 text-blue-500" />
                       </div>
-                    )}
-                   
-                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setData(prev => ({
-                        ...prev,
-                        schema: {
-                          ...prev.schema,
-                           offers: [...prev.schema.offers, {
-                             name: '',
-                             description: '',
-                             price: '',
-                             currency: 'BRL',
-                             availability: 'InStock',
-                             valid_through: '',
-                             productUrl: '',
-                             youtube_url: '',
-                             instagram_url: '',
-                             sourceType: 'manual' as const,
-                             lastUpdated: undefined
-                           }]
-                        }
-                      }));
-                    }}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Nova Oferta
-                  </Button>
+                      <div>
+                        <CardTitle className="text-lg">Ofertas Estruturadas para SEO</CardTitle>
+                        <p className="text-sm text-muted-foreground">As ofertas são automaticamente geradas a partir dos produtos selecionados</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-blue-700">
+                      Use a seção <strong>"Selecionar Produtos para Ofertas"</strong> para configurar quais produtos aparecem como ofertas estruturadas no SEO
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -7148,16 +6510,16 @@ dataLayer = [{
                 </div>
 
                 <div className="flex-1">
-                  <ProductRepositoryPanel
-                    landingPageId={id || ''}
-                    onProductSelectionChange={setSelectedProducts}
-                    onSyncTriggered={() => {
-                      console.log('Products synced successfully');
-                    }}
-                    onCompanyProfileChange={(profile) => {
-                      console.log('Company profile updated:', profile);
-                    }}
-                    className="h-full border-0 rounded-none"
+                <RepositoryPanel
+                  landingPageId={id || ''}
+                  onProductSelectionChange={setSelectedProducts}
+                  onSyncTriggered={() => {
+                    console.log('Products synced successfully');
+                  }}
+                  onCompanyProfileChange={(profile) => {
+                    console.log('Company profile updated:', profile);
+                  }}
+                  className="h-full border-0 rounded-none"
                   />
                 </div>
               </div>
