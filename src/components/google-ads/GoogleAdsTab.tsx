@@ -62,16 +62,16 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
   const [previewData, setPreviewData] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
 
-  // Auto-generate preview when enabled or data changes
+  // Always auto-generate preview when data changes, regardless of enabled status
   useEffect(() => {
-    if (campaignConfig.enabled) {
+    if (data) {
       validateAndPreview();
     }
   }, [campaignConfig, data]);
 
-  // Auto-generate preview on component mount if enabled
+  // Auto-generate preview on component mount
   useEffect(() => {
-    if (campaignConfig.enabled && data && !previewData) {
+    if (data && !previewData) {
       validateAndPreview();
     }
   }, []);
@@ -315,241 +315,259 @@ export const GoogleAdsTab = ({ landingPageId, data, onUpdate }: GoogleAdsTabProp
         </div>
       </div>
 
-      {!campaignConfig.enabled ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Google Ads Desativado</h3>
-              <p className="text-muted-foreground mb-4">
-                Ative o toggle acima para configurar sua campanha Google Ads
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Configuration Tabs */}
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="general">Geral</TabsTrigger>
-              <TabsTrigger value="keywords">Keywords</TabsTrigger>
-              <TabsTrigger value="sitelinks">Sitelinks</TabsTrigger>
-              <TabsTrigger value="videos">Vídeos</TabsTrigger>
-              <TabsTrigger value="utm">UTM</TabsTrigger>
-            </TabsList>
+      {/* Configuration Tabs - Always show for configuration */}
+      {campaignConfig.enabled && (
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="general">Geral</TabsTrigger>
+            <TabsTrigger value="keywords">Keywords</TabsTrigger>
+            <TabsTrigger value="sitelinks">Sitelinks</TabsTrigger>
+            <TabsTrigger value="videos">Vídeos</TabsTrigger>
+            <TabsTrigger value="utm">UTM</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="general" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configuração Geral</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="objective">Objetivo</Label>
-                      <select
-                        id="objective"
-                        className="w-full p-2 border rounded"
-                        value={campaignConfig.objective}
-                        onChange={(e) => setCampaignConfig(prev => ({
-                          ...prev,
-                          objective: e.target.value as any
-                        }))}
-                      >
-                        <option value="leads">Gerar Leads</option>
-                        <option value="sales">Vendas</option>
-                        <option value="traffic">Tráfego</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="budget">Orçamento Diário (R$)</Label>
-                      <Input
-                        id="budget"
-                        type="number"
-                        value={campaignConfig.daily_budget_brl}
-                        onChange={(e) => setCampaignConfig(prev => ({
-                          ...prev,
-                          daily_budget_brl: Number(e.target.value)
-                        }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="start-date">Data de Início da Campanha</Label>
-                      <Input
-                        id="start-date"
-                        type="datetime-local"
-                        value={campaignConfig.schedule?.start || ''}
-                        onChange={(e) => setCampaignConfig(prev => ({
-                          ...prev,
-                          schedule: { ...prev.schedule, start: e.target.value }
-                        }))}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="end-date">Data de Fim da Campanha</Label>
-                      <Input
-                        id="end-date"
-                        type="datetime-local"
-                        value={campaignConfig.schedule?.end || ''}
-                        onChange={(e) => setCampaignConfig(prev => ({
-                          ...prev,
-                          schedule: { ...prev.schedule, end: e.target.value }
-                        }))}
-                      />
-                    </div>
-                  </div>
-
+          <TabsContent value="general" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuração Geral</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="locations">Localizações</Label>
-                    <Input
-                      id="locations"
-                      value={campaignConfig.locations.join(', ')}
-                      onChange={(e) => setCampaignConfig(prev => ({
-                        ...prev,
-                        locations: e.target.value.split(',').map(l => l.trim())
-                      }))}
-                      placeholder="Brazil, São Paulo, Rio de Janeiro"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="strategy">Estratégia de Lance</Label>
+                    <Label htmlFor="objective">Objetivo</Label>
                     <select
-                      id="strategy"
+                      id="objective"
                       className="w-full p-2 border rounded"
-                      value={campaignConfig.bidding.strategy}
+                      value={campaignConfig.objective}
                       onChange={(e) => setCampaignConfig(prev => ({
                         ...prev,
-                        bidding: { ...prev.bidding, strategy: e.target.value as any }
+                        objective: e.target.value as any
                       }))}
                     >
-                      <option value="MAX_CONV">Maximizar Conversões</option>
-                      <option value="tCPA">CPA Alvo</option>
-                      <option value="MANUAL_CPC">CPC Manual</option>
+                      <option value="leads">Gerar Leads</option>
+                      <option value="sales">Vendas</option>
+                      <option value="traffic">Tráfego</option>
                     </select>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="keywords">
-              <KeywordManager
-                config={campaignConfig}
-                data={data}
-                onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
-              />
-            </TabsContent>
-
-            <TabsContent value="sitelinks">
-              <SitelinksManager
-                config={campaignConfig}
-                data={data}
-                onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
-              />
-            </TabsContent>
-
-            <TabsContent value="videos">
-              <VideoManager
-                config={campaignConfig}
-                data={data}
-                landingPageId={landingPageId}
-                onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
-              />
-            </TabsContent>
-
-            <TabsContent value="utm">
-              <UTMBuilder
-                utm={campaignConfig.utm}
-                onChange={(utm) => setCampaignConfig(prev => ({ ...prev, utm }))}
-              />
-            </TabsContent>
-          </Tabs>
-
-          {/* Preview */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
-              <div className="flex items-center gap-2">
-                {lastGeneratedAt && (
-                  <span className="text-xs text-muted-foreground">
-                    Gerado: {lastGeneratedAt.toLocaleTimeString()}
-                  </span>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRegenerateAds}
-                  disabled={isGeneratingAds}
-                  className="gap-1"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
-                  Regenerar
-                </Button>
-              </div>
-            </div>
-            
-            {/* Warnings Panel - Always show if there are warnings */}
-            {warnings.length > 0 && (
-              <WarningsPanel warnings={warnings} />
-            )}
-            
-            {isGeneratingAds ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-4 w-2/3" />
+                  
+                  <div>
+                    <Label htmlFor="budget">Orçamento Diário (R$)</Label>
+                    <Input
+                      id="budget"
+                      type="number"
+                      value={campaignConfig.daily_budget_brl}
+                      onChange={(e) => setCampaignConfig(prev => ({
+                        ...prev,
+                        daily_budget_brl: Number(e.target.value)
+                      }))}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            ) : previewData && !hasErrors ? (
-              <AdPreviewCards
-                adCopies={previewData.adCopies}
-                finalUrl={previewData.finalUrl}
-                sitelinks={previewData.sitelinks}
-                videos={previewData.videos}
-              />
-            ) : hasErrors ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <AlertTriangle className="w-12 h-12 mx-auto text-destructive mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Corrija os Erros Primeiro</h3>
-                    <p className="text-muted-foreground">
-                      O preview dos anúncios será exibido após resolver todos os erros listados acima.
-                    </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="start-date">Data de Início da Campanha</Label>
+                    <Input
+                      id="start-date"
+                      type="datetime-local"
+                      value={campaignConfig.schedule?.start || ''}
+                      onChange={(e) => setCampaignConfig(prev => ({
+                        ...prev,
+                        schedule: { ...prev.schedule, start: e.target.value }
+                      }))}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            ) : null}
-            
-            {/* Export Button */}
-            <div className="flex justify-end">
-              <Button
-                onClick={handleExportCSV}
-                disabled={isLoading || hasErrors}
-                size="lg"
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                {isLoading ? 'Gerando CSV...' : 'Exportar CSV'}
-                {hasErrors && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (Corrija os erros primeiro)
-                  </span>
-                )}
-              </Button>
-            </div>
-          </div>
-        </>
+                  
+                  <div>
+                    <Label htmlFor="end-date">Data de Fim da Campanha</Label>
+                    <Input
+                      id="end-date"
+                      type="datetime-local"
+                      value={campaignConfig.schedule?.end || ''}
+                      onChange={(e) => setCampaignConfig(prev => ({
+                        ...prev,
+                        schedule: { ...prev.schedule, end: e.target.value }
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="locations">Localizações</Label>
+                  <Input
+                    id="locations"
+                    value={campaignConfig.locations.join(', ')}
+                    onChange={(e) => setCampaignConfig(prev => ({
+                      ...prev,
+                      locations: e.target.value.split(',').map(l => l.trim())
+                    }))}
+                    placeholder="Brazil, São Paulo, Rio de Janeiro"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="strategy">Estratégia de Lance</Label>
+                  <select
+                    id="strategy"
+                    className="w-full p-2 border rounded"
+                    value={campaignConfig.bidding.strategy}
+                    onChange={(e) => setCampaignConfig(prev => ({
+                      ...prev,
+                      bidding: { ...prev.bidding, strategy: e.target.value as any }
+                    }))}
+                  >
+                    <option value="MAX_CONV">Maximizar Conversões</option>
+                    <option value="tCPA">CPA Alvo</option>
+                    <option value="MANUAL_CPC">CPC Manual</option>
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="keywords">
+            <KeywordManager
+              config={campaignConfig}
+              data={data}
+              onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="sitelinks">
+            <SitelinksManager
+              config={campaignConfig}
+              data={data}
+              onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="videos">
+            <VideoManager
+              config={campaignConfig}
+              data={data}
+              landingPageId={landingPageId}
+              onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="utm">
+            <UTMBuilder
+              utm={campaignConfig.utm}
+              onChange={(utm) => setCampaignConfig(prev => ({ ...prev, utm }))}
+            />
+          </TabsContent>
+        </Tabs>
       )}
+
+      {/* Preview - Always show regardless of enabled status */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Preview dos Anúncios</h3>
+            {!campaignConfig.enabled && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Preview gerado com dados disponíveis • Ative a campanha acima para configurar
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {lastGeneratedAt && (
+              <span className="text-xs text-muted-foreground">
+                Gerado: {lastGeneratedAt.toLocaleTimeString()}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerateAds}
+              disabled={isGeneratingAds}
+              className="gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${isGeneratingAds ? 'animate-spin' : ''}`} />
+              Regenerar
+            </Button>
+          </div>
+        </div>
+        
+        {/* Data Sources Info */}
+        {!campaignConfig.enabled && (
+          <Card className="border-dashed">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <Settings className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Dados utilizados pela IA:</h4>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div>• <strong>Título:</strong> {data?.seo?.title || data?.banner?.title || data?.brand?.name || 'Não encontrado'}</div>
+                    <div>• <strong>Descrição:</strong> {(data?.seo?.description || data?.banner?.subtitle || 'Não encontrada').substring(0, 80)}...</div>
+                    <div>• <strong>Palavra-chave:</strong> {data?.seo?.keywords?.[0] || 'Não definida'}</div>
+                    <div>• <strong>URL final:</strong> {data?.seo?.canonical_url || 'Não definida'}</div>
+                  </div>
+                  <p className="text-xs text-muted-foreground pt-2">
+                    💡 <strong>Dica:</strong> Melhore estes dados nos produtos/ofertas para anúncios mais precisos
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Warnings Panel - Always show if there are warnings */}
+        {warnings.length > 0 && (
+          <WarningsPanel warnings={warnings} />
+        )}
+        
+        {isGeneratingAds ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </CardContent>
+          </Card>
+        ) : previewData ? (
+          <AdPreviewCards
+            adCopies={previewData.adCopies}
+            finalUrl={previewData.finalUrl}
+            sitelinks={previewData.sitelinks}
+            videos={previewData.videos}
+          />
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Carregando Preview...</h3>
+                <p className="text-muted-foreground">
+                  Aguarde enquanto geramos o preview dos anúncios
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Export Button - Only show when campaign is enabled */}
+        {campaignConfig.enabled && (
+          <div className="flex justify-end">
+            <Button
+              onClick={handleExportCSV}
+              disabled={isLoading || hasErrors}
+              size="lg"
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {isLoading ? 'Gerando CSV...' : 'Exportar CSV'}
+              {hasErrors && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Corrija os erros primeiro)
+                </span>
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
