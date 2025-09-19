@@ -36,7 +36,7 @@ serve(async (req) => {
     }
 
     const prompt = `
-Você é um especialista em copywriting para Google Ads com foco em campanhas para ${targetAudience}.
+Você é um especialista em copywriting para Google Ads com foco em campanhas para ${targetAudience}, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
 
 Gere cópias para um Responsive Search Ad (RSA) baseadas nas seguintes informações:
 - SEO Title: ${seoTitle}
@@ -44,15 +44,21 @@ Gere cópias para um Responsive Search Ad (RSA) baseadas nas seguintes informaç
 - Keyword Principal: ${primaryKeyword}
 - Público-alvo: ${targetAudience}
 
+INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
+1. **PRIORIZE categoria e subcategoria nos títulos quando identificáveis**
+2. **Use categorias para criar paths relevantes**
+3. **Incorpore taxonomia de categorias nas descrições**
+
 REGRAS OBRIGATÓRIAS:
 1. Headlines: 6-10 variações, máximo 30 caracteres cada
 2. Descriptions: 2-4 variações, máximo 90 caracteres cada
-3. Paths: 2 caminhos, máximo 15 caracteres cada
+3. Paths: 2 caminhos, máximo 15 caracteres cada (use categorias se possível)
 4. Linguagem: português brasileiro
 5. Tom: profissional, confiável, sem sensacionalismo
 6. Incluir keyword principal em pelo menos 2 headlines
-7. EVITAR: alegações médicas proibidas, CAPSLOCK, termos como "cura", "milagre", "garantido"
-8. INCLUIR: benefícios claros, chamadas para ação sutis
+7. Se categoria/subcategoria identificáveis no conteúdo, use nos headlines
+8. EVITAR: alegações médicas proibidas, CAPSLOCK, termos como "cura", "milagre", "garantido"
+9. INCLUIR: benefícios claros, chamadas para ação sutis
 
 Retorne APENAS um JSON válido no formato:
 {

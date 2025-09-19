@@ -158,23 +158,29 @@ serve(async (req) => {
 });
 
 async function generateProductBenefits(apiKey: string, product: any): Promise<string[]> {
-  const prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos:
+  const prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
+Subcategoria: ${product.subcategory || 'Não informada'}
 Preço: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado'}
 
 Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:
 
 ["benefício 1", "benefício 2", "benefício 3"]
 
+INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
+1. **Destaque benefícios específicos da categoria/subcategoria**
+2. **Conecte benefícios com a taxonomia do produto**
+3. **Use categoria como contexto principal dos benefícios**
+
 Foque em:
-- Resultados práticos que o cliente obtém
-- Soluções para problemas específicos
-- Vantagens competitivas do produto
-- Economia de tempo/dinheiro
-- Qualidade e confiabilidade`;
+- Resultados práticos específicos da categoria/subcategoria
+- Soluções para problemas da categoria
+- Vantagens competitivas dentro da categoria
+- Economia de tempo/dinheiro específica da categoria
+- Qualidade e confiabilidade da categoria`;
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -194,24 +200,30 @@ Foque em:
 }
 
 async function generateProductKeywords(apiKey: string, product: any): Promise<string[]> {
-  const prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing:
+  const prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
+Subcategoria: ${product.subcategory || 'Não informada'}
 Público-alvo: ${product.target_audience || 'Não informado'}
 
 Gere APENAS um array JSON com 8-12 palavras-chave relevantes:
 
 ["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]
 
-Inclua:
-- Palavras-chave principais do produto
-- Termos de busca relacionados
-- Variações e sinônimos
-- Palavras de cauda longa
-- Termos técnicos relevantes
-- Palavras relacionadas à categoria`;
+INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
+1. **PRIORIZE categoria e subcategoria como palavras-chave primárias**
+2. **Gere variações da categoria (plural, singular, sinônimos)**
+3. **Combine categoria + subcategoria + nome do produto**
+
+Inclua NESTA ORDEM DE PRIORIDADE:
+1. Categoria e subcategoria (primárias)
+2. Variações e sinônimos das categorias
+3. Categoria + subcategoria + benefícios
+4. Palavras-chave long-tail com categorias
+5. Termos técnicos da categoria
+6. Categoria + público-alvo`;
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -231,23 +243,28 @@ Inclua:
 }
 
 async function generateProductFeatures(apiKey: string, product: any): Promise<string[]> {
-  const prompt = `Analise o seguinte produto e gere características técnicas e funcionais:
+  const prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
+Subcategoria: ${product.subcategory || 'Não informada'}
 
 Gere APENAS um array JSON com 4-6 características específicas:
 
 ["característica 1", "característica 2", "característica 3"]
 
+INSTRUÇÕES PARA CATEGORIAS:
+1. **Mencione características relevantes da categoria**
+2. **Contextualize recursos dentro da subcategoria**
+
 Foque em:
-- Especificações técnicas
-- Funcionalidades principais
-- Materiais e componentes
-- Dimensões ou capacidades
-- Compatibilidades
-- Certificações ou padrões`;
+- Especificações técnicas da categoria
+- Funcionalidades específicas da subcategoria
+- Materiais e componentes típicos da categoria
+- Dimensões ou capacidades padrão da categoria
+- Compatibilidades dentro da categoria
+- Certificações ou padrões da categoria/subcategoria`;
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',

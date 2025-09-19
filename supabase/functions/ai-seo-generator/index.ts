@@ -57,9 +57,11 @@ serve(async (req) => {
         break;
 
       case 'keywords':
-        systemPrompt = `Você é um especialista em SEO. Analise EXCLUSIVAMENTE o conteúdo do produto fornecido e gere palavras-chave relevantes organizadas em categorias.
+        systemPrompt = `Você é um especialista em SEO. Analise EXCLUSIVAMENTE o conteúdo do produto fornecido e gere palavras-chave relevantes organizadas em categorias, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
 
 RESTRIÇÃO CRÍTICA: Use APENAS as informações fornecidas no conteúdo do produto. NÃO adicione conhecimento externo, dados não mencionados, ou inferências sobre mercado/categoria/uso que não estejam explicitamente descritos.
+
+PRIORIDADE ABSOLUTA PARA CATEGORIAS: Se categoria/subcategoria estiverem presentes no conteúdo, elas DEVEM ser as palavras-chave primárias.
 
 IMPORTANTE: Retorne APENAS um objeto JSON válido, sem explicações, sem markdown, sem \`\`\`json, sem texto adicional.
 
@@ -70,18 +72,23 @@ Formato EXATO:
   "lsi": ["palavra5", "palavra6"],
   "long_tail": ["frase longa 1", "frase longa 2"]
 }`;
-        userPrompt = `Analise EXCLUSIVAMENTE este conteúdo do produto e gere palavras-chave baseadas SOMENTE nas informações fornecidas:
+        userPrompt = `Analise EXCLUSIVAMENTE este conteúdo do produto e gere palavras-chave baseadas SOMENTE nas informações fornecidas, PRIORIZANDO CATEGORIAS:
 
 ${content}
 
+INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
+1. **PRIORIZE categoria e subcategoria como palavras primárias se presentes**
+2. **Gere long-tail combinando categoria + subcategoria + benefícios**
+3. **Use variações das categorias (plural, singular, sinônimos)**
+
 INSTRUÇÕES RESTRITIVAS:
-- Gere APENAS palavras-chave derivadas do texto fornecido (nome, descrição, benefícios, recursos)
-- NÃO adicione palavras relacionadas ao mercado/categoria/uso que não estão mencionadas
+- Gere APENAS palavras-chave derivadas do texto fornecido (nome, descrição, benefícios, recursos, CATEGORIA, SUBCATEGORIA)
+- Se categoria/subcategoria estão presentes, elas são OBRIGATÓRIAS nas palavras primárias
+- NÃO adicione palavras relacionadas ao mercado que não estão mencionadas
 - NÃO use conhecimento externo sobre o produto ou setor
-- Se o produto for "Resina 3D", use apenas "resina", "3D" e termos dos benefícios/recursos listados
 - Foque exclusivamente no que está escrito nos campos do produto
 
-Gere: 3-5 primárias, 4-6 secundárias, 4-6 LSI, 3-5 long-tail baseadas SOMENTE no conteúdo fornecido.`;
+Gere: 3-5 primárias (incluindo categorias se presentes), 4-6 secundárias, 4-6 LSI, 3-5 long-tail baseadas SOMENTE no conteúdo fornecido.`;
         break;
 
       case 'hidden_content':

@@ -387,12 +387,19 @@ function extractSolutions(contentData: any): string {
 async function generateGoogleAds(apiKey: string, context: string): Promise<AdCopies> {
   const prompt = `${context}
 
-## TAREFA: Criar anúncios Google Ads
+## TAREFA: Criar anúncios Google Ads PRIORIZANDO CATEGORIAS/SUBCATEGORIAS
 
 Crie 8 variações de anúncios Google Ads com:
 - **Títulos**: máximo 30 caracteres cada
 - **Descrições**: máximo 90 caracteres cada  
 - **Paths**: máximo 15 caracteres, apenas letras e números
+
+INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
+1. **PRIORIZE categorias e subcategorias dos produtos como palavras-chave principais nos títulos**
+2. **Use categorias para criar paths relevantes (ex: categoria/subcategoria)**
+3. **Incorpore hierarquia de categorias nas descrições**
+4. **Crie ad groups temáticos baseados nas categorias identificadas**
+5. **Integre categorias naturalmente para SEO e segmentação**
 
 Retorne APENAS um JSON válido no formato:
 {
@@ -401,7 +408,7 @@ Retorne APENAS um JSON válido no formato:
   "paths": ["path1", "path2"]
 }
 
-Foque em conversão, use palavras-chave naturalmente e respeite os limites de caracteres.`;
+Foque em conversão, use categorias como palavras-chave principais e respeite os limites de caracteres.`;
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -450,7 +457,7 @@ Foque em conversão, use palavras-chave naturalmente e respeite os limites de ca
 async function generateBlogContent(apiKey: string, context: string): Promise<BlogContent> {
   const prompt = `${context}
 
-## TAREFA: Criar artigo de blog SEO-otimizado
+## TAREFA: Criar artigo de blog SEO-otimizado PRIORIZANDO CATEGORIAS/SUBCATEGORIAS
 
 Crie um artigo completo (mínimo 800 palavras) com:
 - Título otimizado para SEO (máx. 60 caracteres)
@@ -459,6 +466,13 @@ Crie um artigo completo (mínimo 800 palavras) com:
 - Menção aos produtos quando relevante
 - CTA forte no final
 - Meta description (máx. 160 caracteres)
+
+**INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:**
+1. **Use categorias dos produtos como base para estrutura H2/H3 (ex: ## Nossa Linha de [Categoria])**
+2. **Incorpore categorias e subcategorias naturalmente nas keywords do JSON**
+3. **Título deve incluir categoria principal quando relevante**
+4. **Organize conteúdo seguindo taxonomia das categorias**
+5. **Priorize categorias/subcategorias no array de keywords**
 
 Retorne APENAS um JSON válido:
 {
@@ -523,17 +537,24 @@ Retorne APENAS um JSON válido:
 async function generateSEOMeta(apiKey: string, context: string): Promise<SEOMeta> {
   const prompt = `${context}
 
-## TAREFA: Criar meta dados SEO
+## TAREFA: Criar meta dados SEO PRIORIZANDO CATEGORIAS/SUBCATEGORIAS
 
 Crie meta dados otimizados:
 - Title tag (máx. 60 caracteres)
 - Meta description (máx. 160 caracteres)
 - Keywords relevantes
 
+**INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:**
+1. **Title tag deve incluir categoria principal dos produtos selecionados**
+2. **Meta description deve mencionar categorias naturalmente**
+3. **Keywords array deve priorizar categorias/subcategorias como termos de maior peso**
+4. **Use taxonomia de categorias para estruturar as meta tags**
+5. **Integre categorias de forma natural e SEO-friendly**
+
 Retorne APENAS um JSON válido:
 {
   "title": "title tag",
-  "description": "meta description", 
+  "description": "meta description",
   "keywords": ["palavra1", "palavra2", ...]
 }`;
 
