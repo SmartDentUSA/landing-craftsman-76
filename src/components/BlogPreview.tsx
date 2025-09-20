@@ -6,6 +6,7 @@ import { Loader2, Eye, Edit3, Sparkles, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { DualBlogGenerator } from "./DualBlogGenerator";
 
 interface BlogPreviewProps {
   landingPageId: string;
@@ -133,8 +134,9 @@ Para mais informações, entre em contato conosco.
   const dataQuality = getDataQuality();
 
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-4">
+    <div className="space-y-6">
+      <Card className="w-full">
+        <CardHeader className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -247,5 +249,12 @@ Para mais informações, entre em contato conosco.
         )}
       </CardContent>
     </Card>
+
+    <DualBlogGenerator 
+      landingPageId={landingPageId}
+      landingPageData={landingPageData}
+      selectedProductIds={selectedProductIds}
+    />
+  </div>
   );
 }

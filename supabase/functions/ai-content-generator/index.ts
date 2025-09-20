@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ContentRequest {
-  type: 'google_ads' | 'blog_content' | 'seo_meta';
+  type: 'google_ads' | 'blog_content' | 'seo_meta' | 'dual_blog_versions';
   landingPageId: string;
   seoTitle?: string;
   seoDescription?: string;
@@ -16,6 +16,8 @@ interface ContentRequest {
   targetAudience?: string;
   contentData?: any; // Additional context from the landing page
   selectedProductIds?: string[]; // Specific product IDs to use
+  landingPage?: any;
+  include_offers?: boolean;
 }
 
 interface AdCopies {
@@ -35,6 +37,11 @@ interface SEOMeta {
   title: string;
   description: string;
   keywords: string[];
+}
+
+interface DualBlogVersions {
+  dentala: BlogContent;
+  eodonto: BlogContent;
 }
 
 serve(async (req) => {
@@ -126,9 +133,12 @@ serve(async (req) => {
       case 'seo_meta':
         result = await generateSEOMeta(deepSeekApiKey, strategicContext);
         break;
+      case 'dual_blog_versions':
+        result = await generateDualBlogVersions(deepSeekApiKey, strategicContext);
+        break;
       default:
-        console.error(`❌ Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta`);
-        throw new Error(`Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta`);
+        console.error(`❌ Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta, dual_blog_versions`);
+        throw new Error(`Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta, dual_blog_versions`);
     }
 
     console.log(`Successfully generated ${request.type} content`);
@@ -679,4 +689,109 @@ function getFallbackAdCopies(): AdCopies {
     ],
     paths: ["solucoes", "qualidade"]
   };
+}
+
+async function generateDualBlogVersions(apiKey: string, context: string): Promise<DualBlogVersions> {
+  console.log('🎯 Generating dual blog versions (Dentala + Eodonto)');
+  
+  const prompt = `${context}
+
+**OBJETIVO: Gere 2 versões de blog com focos distintos:**
+
+**VERSÃO 1 - DENTALA.COM (Foco Técnico para Dentistas):**
+- Tom: Técnico, científico, baseado em evidências
+- Público: Cirurgiões-dentistas, especialistas
+- Foco: Técnicas, procedimentos, estudos clínicos
+- CTA: "Agende uma demonstração técnica"
+- Keywords técnicas prioritárias
+
+**VERSÃO 2 - EODONTO.COM (Foco Comercial para Laboratórios):**
+- Tom: Comercial, prático, orientado a negócios
+- Público: Laboratórios de prótese, empresários
+- Foco: Produtividade, custo-benefício, facilidade de uso
+- CTA: "Solicite orçamento personalizado"
+- Keywords comerciais prioritárias
+
+**FORMATO DE RESPOSTA JSON:**
+{
+  "dentala": {
+    "title": "Título técnico para dentistas",
+    "content": "Conteúdo HTML técnico com foco científico",
+    "metaDescription": "Meta description técnica",
+    "keywords": ["keyword1", "keyword2"]
+  },
+  "eodonto": {
+    "title": "Título comercial para laboratórios", 
+    "content": "Conteúdo HTML comercial com foco em negócios",
+    "metaDescription": "Meta description comercial",
+    "keywords": ["keyword1", "keyword2"]
+  }
+}
+
+**INSTRUÇÕES COMUNS:**
+- Use a imagem da Solução 1 como capa em ambas versões
+- Inclua todos os produtos selecionados
+- Mínimo 800 palavras cada versão
+- SEO otimizado para públicos distintos
+- HTML bem estruturado com tags semânticas`;
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 8000,
+    }),
+  });
+
+  return parseAIDualResponse(response);
+}
+
+async function parseAIDualResponse(response: Response): Promise<DualBlogVersions> {
+  if (!response.ok) {
+    throw new Error(`DeepSeek API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  let content = data.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error('No content returned from AI');
+  }
+
+  // Clean content - remove markdown code blocks
+  content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  
+  console.log('📝 Cleaned dual blog content for parsing:', content.substring(0, 200) + '...');
+  
+  try {
+    const parsed = JSON.parse(content);
+    
+    if (!parsed.dentala || !parsed.eodonto) {
+      throw new Error('Missing required versions in response');
+    }
+    
+    return {
+      dentala: {
+        title: parsed.dentala.title || 'Blog Técnico - Dentala',
+        content: parsed.dentala.content || 'Conteúdo técnico em desenvolvimento...',
+        metaDescription: parsed.dentala.metaDescription || '',
+        keywords: parsed.dentala.keywords || []
+      },
+      eodonto: {
+        title: parsed.eodonto.title || 'Blog Comercial - Eodonto', 
+        content: parsed.eodonto.content || 'Conteúdo comercial em desenvolvimento...',
+        metaDescription: parsed.eodonto.metaDescription || '',
+        keywords: parsed.eodonto.keywords || []
+      }
+    };
+  } catch (e) {
+    console.error('❌ Error parsing dual blog response:', e);
+    throw new Error('Failed to parse dual blog content from AI response');
+  }
 }
