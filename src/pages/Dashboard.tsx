@@ -60,9 +60,14 @@ const DashboardContent = () => {
 
   const fetchBlogPosts = async () => {
     try {
+      // Buscar blogs apenas de landing pages aprovadas
       const { data: blogs, error } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select(`
+          *,
+          products_repository!inner(approved, source_landing_page_id)
+        `)
+        .eq('products_repository.approved', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -178,7 +183,8 @@ const DashboardContent = () => {
   // Function to generate consolidated HTML (main content only, no header/footer)
   const generateConsolidatedHTML = (blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-    const approvedBlogs = blogs.filter(blog => blog.landing_page_id && landingPages.find(lp => lp.id === blog.landing_page_id && lp.status === 'approved'));
+    // Blogs já vêm filtrados apenas de landing pages aprovadas
+    const approvedBlogs = blogs;
     
     const featuredBlog = approvedBlogs[0];
     const recentBlogs = approvedBlogs.slice(1, 4);
@@ -458,10 +464,8 @@ const DashboardContent = () => {
   };
 
   const getApprovedBlogsCount = (domain: string) => {
-    return blogPosts.filter(blog => 
-      blog.landing_page_id && 
-      landingPages.find(lp => lp.id === blog.landing_page_id && lp.status === 'approved')
-    ).length;
+    // Blogs já vêm filtrados apenas de landing pages aprovadas
+    return blogPosts.length;
   };
 
   return (
