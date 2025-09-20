@@ -222,7 +222,10 @@ const DashboardContent = () => {
     const approvedBlogs = blogs;
     
     const featuredBlog = approvedBlogs[0];
-    const recentBlogs = approvedBlogs.slice(1, 4);
+    // Mostrar mais blogs na seção principal - até 6 blogs recentes
+    const recentBlogs = approvedBlogs.slice(1, 7);
+    // Calcular quantos blogs restam para a sidebar
+    const sidebarBlogs = approvedBlogs.slice(7);
 
     if (!featuredBlog) {
       return `<style>
@@ -356,10 +359,15 @@ const DashboardContent = () => {
             gap: 2rem;
         }
         
-        .posts-grid,
-        .sidebar-posts {
+        .posts-grid {
             display: grid;
             gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        .sidebar-posts {
+            display: grid;
+            gap: 1.5rem;
         }
 
         .sidebar-posts .post-card img {
@@ -383,13 +391,14 @@ const DashboardContent = () => {
         }
 
         .full-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease;
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--light-gray);
         }
         
         .full-content.expanded {
-            max-height: 1000px;
+            display: block;
         }
         
         .main-content {
@@ -413,7 +422,7 @@ const DashboardContent = () => {
                     <p class="post-meta">${domainName} | ${new Date(featuredBlog.created_at).toLocaleDateString('pt-BR')}</p>
                     <h2>${featuredBlog.title}</h2>
                     <p>${featuredBlog.meta_description || 'Conteúdo sobre odontologia digital'}</p>
-                    <div class="full-content">
+                    <div class="full-content" style="display: none;">
                         ${featuredBlog.content || 'Conteúdo do blog gerado pela IA'}
                     </div>
                     <button class="read-more-btn">Leia mais &rarr;</button>
@@ -428,7 +437,7 @@ const DashboardContent = () => {
                         <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
                         <h3>${blog.title}</h3>
                         <p>${blog.meta_description || 'Descrição do blog'}</p>
-                        <div class="full-content">
+                        <div class="full-content" style="display: none;">
                             ${blog.content || 'Conteúdo do blog'}
                         </div>
                         <button class="read-more-btn">Leia mais &rarr;</button>
@@ -440,15 +449,16 @@ const DashboardContent = () => {
 
         <aside class="sidebar">
             <div class="sidebar-posts">
-                <h3>Postagens Recentes</h3>
-                ${approvedBlogs.slice(4, 7).map(blog => `
+                <h3>Mais Postagens (${sidebarBlogs.length})</h3>
+                ${sidebarBlogs.map(blog => `
                 <article class="post-card">
                     <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 20))}" alt="Imagem do post">
                     <div class="post-card-content">
                         <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
                         <h3>${blog.title}</h3>
-                        <div class="full-content">
-                            <p>${blog.meta_description || 'Descrição do blog'}</p>
+                        <p>${blog.meta_description || 'Descrição do blog'}</p>
+                        <div class="full-content" style="display: none;">
+                            ${blog.content || 'Conteúdo do blog'}
                         </div>
                         <button class="read-more-btn">Leia mais &rarr;</button>
                     </div>
@@ -464,15 +474,20 @@ const DashboardContent = () => {
 
             readMoreButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    const fullContent = this.previousElementSibling;
-                    const isExpanded = fullContent.classList.contains('expanded');
+                    // Encontrar o elemento .full-content no mesmo container
+                    const cardContent = this.closest('.featured-post-content, .post-card-content');
+                    const fullContent = cardContent.querySelector('.full-content');
+                    
+                    if (fullContent) {
+                        const isExpanded = fullContent.classList.contains('expanded');
 
-                    if (isExpanded) {
-                        fullContent.classList.remove('expanded');
-                        this.textContent = 'Leia mais →';
-                    } else {
-                        fullContent.classList.add('expanded');
-                        this.textContent = 'Fechar ↑';
+                        if (isExpanded) {
+                            fullContent.classList.remove('expanded');
+                            this.textContent = 'Leia mais →';
+                        } else {
+                            fullContent.classList.add('expanded');
+                            this.textContent = 'Fechar ↑';
+                        }
                     }
                 });
             });
@@ -739,15 +754,26 @@ const DashboardContent = () => {
                   <CardTitle className="text-lg">Preview Consolidado Eodonto.com</CardTitle>
                 </div>
                 <CardDescription>
-                  {getApprovedBlogsCount('eodonto')} posts consolidados de landing pages aprovadas
+                  {getApprovedBlogsCount('eodonto')} blogs de {landingPages.filter(lp => lp.status === 'approved').length} landing pages aprovadas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-muted rounded-lg p-4 mb-4 h-64 overflow-hidden">
+                <div className="space-y-2 mb-4">
+                  <div className="text-sm text-muted-foreground">
+                    📝 Total de blogs: <strong>{blogPosts.length}</strong>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    ✅ Blogs na seção principal: <strong>{Math.min(7, blogPosts.length)}</strong>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    📌 Blogs na sidebar: <strong>{Math.max(0, blogPosts.length - 7)}</strong>
+                  </div>
+                </div>
+                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-hidden">
                   <div 
                     className="text-xs leading-relaxed"
                     dangerouslySetInnerHTML={{ 
-                      __html: generateConsolidatedHTML(blogPosts, 'eodonto').substring(0, 800) + '...' 
+                      __html: generateConsolidatedHTML(blogPosts, 'eodonto').substring(0, 600) + '...' 
                     }}
                   />
                 </div>
@@ -770,15 +796,26 @@ const DashboardContent = () => {
                   <CardTitle className="text-lg">Preview Consolidado Dentala.com</CardTitle>
                 </div>
                 <CardDescription>
-                  {getApprovedBlogsCount('dentala')} posts consolidados de landing pages aprovadas
+                  {getApprovedBlogsCount('dentala')} blogs de {landingPages.filter(lp => lp.status === 'approved').length} landing pages aprovadas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-muted rounded-lg p-4 mb-4 h-64 overflow-hidden">
+                <div className="space-y-2 mb-4">
+                  <div className="text-sm text-muted-foreground">
+                    📝 Total de blogs: <strong>{blogPosts.length}</strong>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    ✅ Blogs na seção principal: <strong>{Math.min(7, blogPosts.length)}</strong>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    📌 Blogs na sidebar: <strong>{Math.max(0, blogPosts.length - 7)}</strong>
+                  </div>
+                </div>
+                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-hidden">
                   <div 
                     className="text-xs leading-relaxed"
                     dangerouslySetInnerHTML={{ 
-                      __html: generateConsolidatedHTML(blogPosts, 'dentala').substring(0, 800) + '...' 
+                      __html: generateConsolidatedHTML(blogPosts, 'dentala').substring(0, 600) + '...' 
                     }}
                   />
                 </div>
