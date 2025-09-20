@@ -93,6 +93,25 @@ const DashboardContent = () => {
     }
   };
 
+  // Realtime subscriptions to keep consolidated previews in sync
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-blog-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_posts' }, () => {
+        console.debug('[Realtime] blog_posts changed, refetching...');
+        fetchBlogPosts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products_repository' }, () => {
+        console.debug('[Realtime] products_repository changed, refetching blogs...');
+        fetchBlogPosts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handlePromoteToAdmin = async () => {
     if (!userEmail) return;
     
