@@ -175,36 +175,68 @@ const DashboardContent = () => {
     return status === 'approved' ? 'Aprovado' : 'Rascunho';
   };
 
-  // Function to generate complete HTML for blog posts
-  const generateCompleteHTML = (blog: BlogPost, domain: string) => {
-    const currentDate = new Date(blog.created_at).toLocaleDateString('pt-BR', {
+  // Function to generate consolidated HTML (main content only, no header/footer)
+  const generateConsolidatedHTML = (blogs: BlogPost[], domain: string) => {
+    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
+    const approvedBlogs = blogs.filter(blog => blog.landing_page_id && landingPages.find(lp => lp.id === blog.landing_page_id && lp.status === 'approved'));
+    
+    const featuredBlog = approvedBlogs[0];
+    const recentBlogs = approvedBlogs.slice(1, 4);
+
+    if (!featuredBlog) {
+      return `<style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --text-color: #333;
+            --background-color: #f8f9fa;
+            --white: #fff;
+            --light-gray: #e9ecef;
+            --dark-gray: #495057;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding: 2rem 0;
+        }
+        .no-content {
+            text-align: center;
+            padding: 3rem;
+            color: var(--secondary-color);
+        }
+    </style>
+
+    <main class="container main-content">
+        <div class="no-content">
+            <h2>Nenhum blog aprovado encontrado para ${domainName}</h2>
+            <p>Aguarde a aprovação de landing pages para visualizar o conteúdo.</p>
+        </div>
+    </main>`;
+    }
+
+    const currentDate = new Date().toLocaleDateString('pt-BR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
 
-    const domainUrl = domain === 'dentala' ? 'https://dentala.com.br' : 'https://eodonto.com.br';
-    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-
-    return `<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${blog.title}</title>
-    
-    <meta name="description" content="${blog.meta_description || 'Blog sobre odontologia digital'}">
-    <meta name="keywords" content="${blog.keywords?.join(', ') || 'odontologia, tecnologia'}">
-    <link rel="canonical" href="${domainUrl}/blog">
-    
-    <meta property="og:title" content="${blog.title}">
-    <meta property="og:description" content="${blog.meta_description || 'Blog sobre odontologia digital'}">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <style>
+    return `<style>
         :root {
             --primary-color: #007bff;
             --secondary-color: #6c757d;
@@ -233,7 +265,6 @@ const DashboardContent = () => {
         }
         img { max-width: 100%; height: auto; display: block; }
         
-        /* Postagens */
         .posts-section {
             display: grid;
             gap: 2rem;
@@ -278,14 +309,12 @@ const DashboardContent = () => {
             font-size: 0.875rem;
         }
         
-        /* Sidebar */
         .sidebar {
             display: flex;
             flex-direction: column;
             gap: 2rem;
         }
         
-        /* CORREÇÃO DO ESPAÇAMENTO */
         .posts-grid,
         .sidebar-posts {
             display: grid;
@@ -293,14 +322,13 @@ const DashboardContent = () => {
         }
 
         .sidebar-posts .post-card img {
-            height: 150px; /* Tamanho menor para a barra lateral */
+            height: 150px;
         }
         
         .sidebar-posts .post-card-content h3 {
             font-size: 1rem;
         }
 
-        /* Acordeão */
         .read-more-btn {
             background: none;
             border: none;
@@ -320,10 +348,9 @@ const DashboardContent = () => {
         }
         
         .full-content.expanded {
-            max-height: 1000px; /* Valor alto para acomodar qualquer tamanho de texto */
+            max-height: 1000px;
         }
         
-        /* Main Content Grid */
         .main-content {
             display: grid;
             grid-template-columns: 1fr;
@@ -336,106 +363,56 @@ const DashboardContent = () => {
             }
         }
     </style>
-</head>
-<body>
 
     <main class="container main-content">
         <section class="posts-section">
-            
             <article class="featured-post">
-                <img src="https://via.placeholder.com/1200x600?text=${encodeURIComponent(blog.title.substring(0, 50))}" alt="Imagem do post de destaque">
+                <img src="https://via.placeholder.com/1200x600?text=${encodeURIComponent(featuredBlog.title.substring(0, 50))}" alt="Imagem do post de destaque">
                 <div class="featured-post-content">
-                    <p class="post-meta">${domainName} | ${currentDate}</p>
-                    <h2>${blog.title}</h2>
-                    <p>${blog.meta_description || 'Conteúdo sobre odontologia digital'}</p>
+                    <p class="post-meta">${domainName} | ${new Date(featuredBlog.created_at).toLocaleDateString('pt-BR')}</p>
+                    <h2>${featuredBlog.title}</h2>
+                    <p>${featuredBlog.meta_description || 'Conteúdo sobre odontologia digital'}</p>
                     <div class="full-content">
-                        ${blog.content || 'Conteúdo do blog gerado pela IA'}
+                        ${featuredBlog.content || 'Conteúdo do blog gerado pela IA'}
                     </div>
                     <button class="read-more-btn">Leia mais &rarr;</button>
                 </div>
             </article>
 
             <div class="posts-grid">
+                ${recentBlogs.map(blog => `
                 <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Tecnologia+Odontologica" alt="Imagem sobre tecnologia odontológica">
+                    <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 30))}" alt="Imagem do post">
                     <div class="post-card-content">
-                        <p class="post-meta">Tecnologia | ${currentDate}</p>
-                        <h3>Inovações em Tecnologia Odontológica</h3>
-                        <p>Descubra as últimas tendências e equipamentos que estão transformando a odontologia moderna.</p>
+                        <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
+                        <h3>${blog.title}</h3>
+                        <p>${blog.meta_description || 'Descrição do blog'}</p>
                         <div class="full-content">
-                            <p>Conteúdo completo sobre as inovações tecnológicas na odontologia, incluindo scanners, impressoras 3D e softwares especializados.</p>
+                            ${blog.content || 'Conteúdo do blog'}
                         </div>
                         <button class="read-more-btn">Leia mais &rarr;</button>
                     </div>
                 </article>
-                
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Materiais+Dentarios" alt="Imagem sobre materiais dentários">
-                    <div class="post-card-content">
-                        <p class="post-meta">Materiais | ${currentDate}</p>
-                        <h3>Novos Materiais para Restaurações</h3>
-                        <p>Conheça os materiais mais avançados para garantir durabilidade e estética em seus tratamentos.</p>
-                        <div class="full-content">
-                            <p>Informações detalhadas sobre resinas, cerâmicas e outros materiais de última geração para restaurações dentárias.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Equipamentos+Dentarios" alt="Imagem sobre equipamentos dentários">
-                    <div class="post-card-content">
-                        <p class="post-meta">Equipamentos | ${currentDate}</p>
-                        <h3>Guia de Equipamentos Essenciais</h3>
-                        <p>Saiba quais equipamentos são fundamentais para modernizar seu consultório ou laboratório.</p>
-                        <div class="full-content">
-                            <p>Análise completa dos equipamentos mais importantes para profissionais da odontologia digital.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
+                `).join('')}
             </div>
         </section>
 
         <aside class="sidebar">
             <div class="sidebar-posts">
                 <h3>Postagens Recentes</h3>
-                
+                ${approvedBlogs.slice(4, 7).map(blog => `
                 <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Diagnostico+Digital" alt="Imagem sobre diagnóstico digital">
+                    <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 20))}" alt="Imagem do post">
                     <div class="post-card-content">
-                        <p class="post-meta">Diagnóstico | ${currentDate}</p>
-                        <h3>Revolução no Diagnóstico Digital</h3>
+                        <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
+                        <h3>${blog.title}</h3>
                         <div class="full-content">
-                            <p>Como as novas tecnologias estão melhorando a precisão dos diagnósticos odontológicos.</p>
+                            <p>${blog.meta_description || 'Descrição do blog'}</p>
                         </div>
                         <button class="read-more-btn">Leia mais &rarr;</button>
                     </div>
                 </article>
-                
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Workflow+Digital" alt="Imagem sobre workflow digital">
-                    <div class="post-card-content">
-                        <p class="post-meta">Workflow | ${currentDate}</p>
-                        <h3>Otimização do Workflow Digital</h3>
-                        <div class="full-content">
-                            <p>Estratégias para implementar um fluxo de trabalho digital eficiente no seu consultório.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Proteses+3D" alt="Imagem sobre próteses 3D">
-                    <div class="post-card-content">
-                        <p class="post-meta">Próteses | ${currentDate}</p>
-                        <h3>Próteses Impressas em 3D</h3>
-                        <div class="full-content">
-                            <p>Vantagens e aplicações das próteses produzidas com impressão 3D na odontologia.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
+                `).join('')}
             </div>
         </aside>
     </main>
@@ -447,8 +424,6 @@ const DashboardContent = () => {
             readMoreButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const fullContent = this.previousElementSibling;
-                    
-                    // Verifica se o conteúdo está expandido ou não
                     const isExpanded = fullContent.classList.contains('expanded');
 
                     if (isExpanded) {
@@ -461,27 +436,32 @@ const DashboardContent = () => {
                 });
             });
         });
-    </script>
-</body>
-</html>`;
+    </script>`;
   };
 
-  const copyBlogHTML = async (blog: BlogPost, domain: string) => {
-    const html = generateCompleteHTML(blog, domain);
+  const copyConsolidatedHTML = async (domain: string) => {
+    const html = generateConsolidatedHTML(blogPosts, domain);
     
     try {
       await navigator.clipboard.writeText(html);
       toast({
-        title: "HTML Copiado!",
-        description: `Versão ${domain.toUpperCase()} copiada para área de transferência`,
+        title: "HTML consolidado copiado!",
+        description: `HTML consolidado do ${domain === 'dentala' ? 'Dentala' : 'Eodonto'} copiado para a área de transferência.`,
       });
     } catch (err) {
       toast({
-        title: "Erro ao Copiar",
-        description: "Não foi possível copiar o HTML",
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o HTML. Tente novamente.",
         variant: "destructive",
       });
     }
+  };
+
+  const getApprovedBlogsCount = (domain: string) => {
+    return blogPosts.filter(blog => 
+      blog.landing_page_id && 
+      landingPages.find(lp => lp.id === blog.landing_page_id && lp.status === 'approved')
+    ).length;
   };
 
   return (
@@ -704,77 +684,77 @@ const DashboardContent = () => {
         </Card>
 
         {/* HTML Blogs Copy & Paste Section */}
-        <Card className="shadow-large mt-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              HTML Blogs Copy & Paste
-            </CardTitle>
-            <CardDescription>
-              Copie o HTML dos blogs para Dentala.com e Eodonto.com
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {blogPosts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <div className="flex justify-center gap-4 mb-4">
-                  <Building2 className="h-8 w-8 text-blue-500" />
-                  <Globe className="h-8 w-8 text-green-500" />
+        {/* HTML Blogs Copy & Paste - 2 Consolidated Preview Cards */}
+        <div className="mt-8 mb-8">
+          <div className="flex items-center gap-2 mb-6">
+            <FileText className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold">HTML Blogs Copy & Paste</h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Eodonto Card */}
+            <Card className="bg-card">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Preview Consolidado Eodonto.com</CardTitle>
                 </div>
-                <p className="text-sm mb-2">Nenhum blog encontrado</p>
-                <p className="text-xs text-gray-500">
-                  Gere blogs nas landing pages para visualizá-los aqui
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {blogPosts.map((blog) => (
-                  <div
-                    key={blog.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-smooth"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">{blog.title}</h3>
-                        <Badge variant={blog.status === 'published' ? 'success' : 'secondary'}>
-                          {blog.status === 'published' ? 'Publicado' : 'Rascunho'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>LP: {blog.landing_page_id}</span>
-                        <span>
-                          Criado em: {new Date(blog.created_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyBlogHTML(blog, 'dentala')}
-                        className="border-blue-500/30 text-blue-600 hover:bg-blue-50"
-                      >
-                        <Building2 className="h-4 w-4 mr-2" />
-                        Copiar HTML Dentala
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyBlogHTML(blog, 'eodonto')}
-                        className="border-green-500/30 text-green-600 hover:bg-green-50"
-                      >
-                        <Globe className="h-4 w-4 mr-2" />
-                        Copiar HTML Eodonto
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                <CardDescription>
+                  {getApprovedBlogsCount('eodonto')} posts consolidados de landing pages aprovadas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted rounded-lg p-4 mb-4 h-64 overflow-hidden">
+                  <div 
+                    className="text-xs leading-relaxed"
+                    dangerouslySetInnerHTML={{ 
+                      __html: generateConsolidatedHTML(blogPosts, 'eodonto').substring(0, 800) + '...' 
+                    }}
+                  />
+                </div>
+                <Button 
+                  onClick={() => copyConsolidatedHTML('eodonto')}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar HTML Eodonto
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Dentala Card */}
+            <Card className="bg-card">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Preview Consolidado Dentala.com</CardTitle>
+                </div>
+                <CardDescription>
+                  {getApprovedBlogsCount('dentala')} posts consolidados de landing pages aprovadas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted rounded-lg p-4 mb-4 h-64 overflow-hidden">
+                  <div 
+                    className="text-xs leading-relaxed"
+                    dangerouslySetInnerHTML={{ 
+                      __html: generateConsolidatedHTML(blogPosts, 'dentala').substring(0, 800) + '...' 
+                    }}
+                  />
+                </div>
+                <Button 
+                  onClick={() => copyConsolidatedHTML('dentala')}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar HTML Dentala
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
       
       {/* Product Migration Modal */}
