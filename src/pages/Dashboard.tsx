@@ -60,20 +60,36 @@ const DashboardContent = () => {
 
   const fetchBlogPosts = async () => {
     try {
-      // Buscar blogs apenas de landing pages aprovadas
-      const { data: blogs, error } = await supabase
+      // Buscar todos os blogs
+      const { data: blogs, error: blogsError } = await supabase
         .from('blog_posts')
-        .select(`
-          *,
-          products_repository!inner(approved, source_landing_page_id)
-        `)
-        .eq('products_repository.approved', true)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setBlogPosts(blogs || []);
-    } catch (error) {
+      if (blogsError) throw blogsError;
+
+      // Buscar landing pages aprovadas
+      const { data: approvedLPs, error: lpsError } = await supabase
+        .from('products_repository')
+        .select('source_landing_page_id')
+        .eq('approved', true);
+
+      if (lpsError) throw lpsError;
+
+      // Filtrar blogs que pertencem a landing pages aprovadas
+      const approvedLandingPageIds = approvedLPs?.map(lp => lp.source_landing_page_id) || [];
+      const filteredBlogs = blogs?.filter(blog => 
+        blog.landing_page_id && approvedLandingPageIds.includes(blog.landing_page_id)
+      ) || [];
+
+      setBlogPosts(filteredBlogs);
+    } catch (error: any) {
       console.error('Erro ao buscar blogs:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar blogs",
+        description: error.message
+      });
     }
   };
 
