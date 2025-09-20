@@ -367,10 +367,20 @@ function extractSolutions(contentData: any): string {
   
   if (contentData.solutions) {
     if (Array.isArray(contentData.solutions)) {
-      solutions.push(...contentData.solutions.map((s: any, i: number) => `• Solução ${i + 1}: ${s.title || s.name || s}`));
+      solutions.push(...contentData.solutions.map((s: any, i: number) => {
+        let solution = `• Solução ${i + 1}: ${s.title || s.name || s}`;
+        if (s.image?.src) {
+          solution += `\n  🖼️ Imagem da Solução ${i + 1}: ${s.image.src}`;
+        }
+        return solution;
+      }));
     } else if (typeof contentData.solutions === 'object') {
       Object.values(contentData.solutions).forEach((s: any, i) => {
-        solutions.push(`• Solução ${i + 1}: ${s.title || s.name || s}`);
+        let solution = `• Solução ${i + 1}: ${s.title || s.name || s}`;
+        if (s.image?.src) {
+          solution += `\n  🖼️ Imagem da Solução ${i + 1}: ${s.image.src}`;
+        }
+        solutions.push(solution);
       });
     }
   }
@@ -467,6 +477,8 @@ Crie um artigo completo (mínimo 800 palavras) com:
 - **OBRIGATÓRIO: Benefícios específicos de cada produto selecionado**
 - **OBRIGATÓRIO: Características técnicas dos produtos selecionados**
 - **OBRIGATÓRIO: Sales pitch quando disponível**
+- **OBRIGATÓRIO: Use a imagem da Solução 1 como imagem de capa do blog**
+- **OBRIGATÓRIO: Inclua URLs de imagens das soluções no conteúdo quando disponíveis**
 - CTA forte no final
 - Meta description (máx. 160 caracteres)
 
@@ -476,6 +488,11 @@ Crie um artigo completo (mínimo 800 palavras) com:
 3. **Título deve incluir categoria principal quando relevante**
 4. **Organize conteúdo seguindo taxonomia das categorias**
 5. **Priorize categorias/subcategorias no array de keywords**
+
+**INSTRUÇÕES PARA IMAGENS:**
+1. **Quando houver imagem da Solução 1, inclua como capa: <img src="URL_IMAGEM" alt="Descrição detalhada">**
+2. **Use URLs das imagens das soluções fornecidas no contexto**
+3. **Inclua imagens relevantes ao longo do conteúdo quando disponíveis**
 
 **INSTRUÇÕES OBRIGATÓRIAS PARA PRODUTOS SELECIONADOS:**
 6. **MENCIONE TODOS OS PRODUTOS POR NOME**: Use os nomes EXATOS de TODOS os produtos selecionados do repositório
