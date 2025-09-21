@@ -1901,67 +1901,123 @@ const EditorContent = () => {
     try {
       const selectedProductIds = getSelectedProducts(landingPageId);
       
-      const response = await supabase.functions.invoke('ai-content-generator', {
-        body: {
-          type: 'blog_content',
-          landingPageId: landingPageId,
-          selectedProductIds: selectedProductIds,
-          include_offers: true,
-          landingPageData: processedData
-        }
+      console.log('🚀 Iniciando geração automática de blog para landing page:', landingPageId);
+      console.log('📦 Produtos selecionados:', selectedProductIds);
+      console.log('📄 Dados da landing page:', {
+        name: processedData.name,
+        seo_title: processedData.seo_title,
+        seo_description: processedData.seo_description,
+        hasProducts: selectedProductIds && selectedProductIds.length > 0
       });
 
-      if (response.data?.content) {
+      const requestBody = {
+        type: 'blog_content',
+        landingPageId: landingPageId,
+        selectedProductIds: selectedProductIds,
+        include_offers: true,
+        landingPageData: processedData
+      };
+
+      console.log('📡 Enviando request para ai-content-generator:', requestBody);
+
+      const response = await supabase.functions.invoke('ai-content-generator', {
+        body: requestBody
+      });
+
+      console.log('📥 Response da AI:', response);
+
+      if (response.error) {
+        console.error('❌ Erro na chamada da função AI:', response.error);
+        throw new Error(`AI Function Error: ${response.error.message || 'Unknown error'}`);
+      }
+
+      if (response.data?.content && response.data.content.title && response.data.content.content) {
+        console.log('✅ Conteúdo gerado pela AI:', {
+          title: response.data.content.title,
+          contentLength: response.data.content.content?.length || 0,
+          hasKeywords: response.data.content.keywords?.length > 0,
+          hasMetaDescription: !!response.data.content.meta_description
+        });
+
         // Upsert blog post in database
+        const blogData = {
+          landing_page_id: landingPageId,
+          title: response.data.content.title,
+          content: response.data.content.content,
+          meta_description: response.data.content.meta_description || '',
+          keywords: response.data.content.keywords || [],
+          status: 'published',
+          published_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('💾 Salvando blog no banco:', blogData);
+
         const { error: upsertError } = await supabase
           .from('blog_posts')
-          .upsert({
-            landing_page_id: landingPageId,
-            title: response.data.content.title,
-            content: response.data.content.content,
-            meta_description: response.data.content.meta_description,
-            keywords: response.data.content.keywords,
-            status: 'published',
-            updated_at: new Date().toISOString()
-          }, {
+          .upsert(blogData, {
             onConflict: 'landing_page_id',
             ignoreDuplicates: false
           });
 
         if (upsertError) {
-          console.error('Error saving blog:', upsertError);
+          console.error('❌ Erro salvando blog:', upsertError);
+          throw new Error(`Database Error: ${upsertError.message}`);
         } else {
-          console.log('✅ Blog automatically published for landing page:', landingPageId);
+          console.log('✅ Blog automaticamente publicado para landing page:', landingPageId);
+          toast({
+            title: "Blog publicado",
+            description: "Blog SEO gerado e publicado automaticamente!",
+          });
         }
       } else {
+        console.warn('⚠️ Resposta da AI inválida ou vazia:', response.data);
+        
         // Fallback: create basic blog post if AI generation fails
+        const fallbackData = {
+          landing_page_id: landingPageId,
+          title: processedData.seo_title || processedData.name || 'Novo Blog',
+          content: `# ${processedData.seo_title || processedData.name}\n\n${processedData.seo_description || 'Conteúdo em desenvolvimento.'}`,
+          meta_description: processedData.seo_description || '',
+          keywords: [],
+          status: 'published',
+          published_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('📝 Criando blog fallback:', fallbackData);
+
         const { error: fallbackError } = await supabase
           .from('blog_posts')
-          .upsert({
-            landing_page_id: landingPageId,
-            title: processedData.seo_title || processedData.name,
-            content: `# ${processedData.seo_title || processedData.name}\n\n${processedData.seo_description || 'Conteúdo em desenvolvimento.'}`,
-            meta_description: processedData.seo_description || '',
-            keywords: [],
-            status: 'published',
-            updated_at: new Date().toISOString()
-          }, {
+          .upsert(fallbackData, {
             onConflict: 'landing_page_id',
             ignoreDuplicates: false
           });
 
         if (fallbackError) {
-          console.error('Error saving fallback blog:', fallbackError);
+          console.error('❌ Erro salvando blog fallback:', fallbackError);
+        } else {
+          console.log('📝 Blog fallback criado com sucesso');
+          toast({
+            title: "Blog criado",
+            description: "Blog básico criado. Use 'Regenerar Blog' para melhorar o conteúdo.",
+            variant: "destructive"
+          });
         }
       }
     } catch (error) {
-      console.error('Error generating/publishing blog:', error);
+      console.error('💥 Erro completo na geração/publicação do blog:', error);
+      toast({
+        title: "Erro na geração do blog",
+        description: `Falha ao gerar blog: ${error.message || 'Erro desconhecido'}`,
+        variant: "destructive"
+      });
       // Continue with approval even if blog publication fails
     }
     
     toast({
       title: "Landing page aprovada",
-      description: "Status alterado para aprovado e blog publicado automaticamente!",
+      description: "Status alterado para aprovado!",
     });
   };
 
