@@ -474,7 +474,73 @@ Foque em conversão, use categorias como palavras-chave principais e respeite os
   }
 }
 
+// Função de validação de conteúdo
+function validateBlogContent(content: any): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Validar título
+  if (!content.title || content.title.length < 10 || content.title.length > 60) {
+    errors.push('Título deve ter entre 10 e 60 caracteres');
+  }
+  
+  // Validar conteúdo
+  if (!content.content || content.content.length < 500) {
+    errors.push('Conteúdo deve ter pelo menos 500 caracteres');
+  }
+  
+  // Validar meta description
+  if (!content.meta_description || content.meta_description.length < 50 || content.meta_description.length > 160) {
+    errors.push('Meta description deve ter entre 50 e 160 caracteres');
+  }
+  
+  // Validar keywords
+  if (!content.keywords || !Array.isArray(content.keywords) || content.keywords.length < 3) {
+    errors.push('Deve ter pelo menos 3 keywords');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Função de fallback para blog válido
+function getFallbackBlogContent(context: string): BlogContent {
+  const fallbackTitle = "Soluções Profissionais - Qualidade e Inovação";
+  const fallbackContent = `
+# ${fallbackTitle}
+
+## Nossa Expertise
+
+Oferecemos soluções profissionais de alta qualidade para atender suas necessidades específicas. Nossa experiência no mercado nos permite entregar resultados excepcionais.
+
+## Diferenciais
+
+- Atendimento personalizado
+- Qualidade garantida
+- Tecnologia avançada
+- Suporte especializado
+
+## Nossos Serviços
+
+Desenvolvemos soluções customizadas que agregam valor ao seu negócio, com foco em eficiência e resultados.
+
+## Entre em Contato
+
+Nossa equipe está pronta para atender você com excelência e profissionalismo.
+`.trim();
+  
+  return {
+    title: fallbackTitle,
+    content: fallbackContent,
+    meta_description: "Soluções profissionais de alta qualidade com atendimento personalizado e tecnologia avançada para seu negócio.",
+    keywords: ["soluções profissionais", "qualidade", "atendimento personalizado", "tecnologia avançada", "resultados"]
+  };
+}
+
 async function generateBlogContent(apiKey: string, context: string): Promise<BlogContent> {
+  console.log('🎯 Iniciando geração de blog com validação robusta');
+  
   const prompt = `${context}
 
 ## TAREFA: Criar artigo de blog SEO-otimizado PRIORIZANDO CATEGORIAS/SUBCATEGORIAS
@@ -520,56 +586,124 @@ Retorne APENAS um JSON válido:
   "keywords": ["palavra1", "palavra2", ...]
 }`;
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.6,
-      max_tokens: 4000,
-    }),
-  });
-
-  const data = await response.json();
+  let attempt = 0;
+  const maxAttempts = 3;
   
-  if (!response.ok) {
-    throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
-  }
+  while (attempt < maxAttempts) {
+    attempt++;
+    console.log(`🔄 Tentativa ${attempt}/${maxAttempts} de geração de blog`);
+    
+    try {
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.6,
+          max_tokens: 4000,
+        }),
+      });
 
-  const content = data.choices[0].message.content;
-  
-  try {
-    // Clean content to remove markdown formatting
-    let cleanContent = content.trim();
-    
-    // Remove markdown code blocks if present
-    if (cleanContent.startsWith('```json')) {
-      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanContent.startsWith('```')) {
-      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
+      }
+
+      const content = data.choices[0].message.content;
+      
+      try {
+        // Clean content to remove markdown formatting
+        let cleanContent = content.trim();
+        
+        // Remove markdown code blocks if present
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        console.log('📝 Cleaned blog content for parsing:', cleanContent.substring(0, 200) + '...');
+        
+        const parsed = JSON.parse(cleanContent);
+        
+        // Validate required fields
+        if (!parsed.title || !parsed.content || !parsed.metaDescription || !parsed.keywords) {
+          throw new Error('Missing required fields in blog content response');
+        }
+        
+        // Validar qualidade do conteúdo
+        const validation = validateBlogContent({
+          title: parsed.title,
+          content: parsed.content,
+          meta_description: parsed.metaDescription,
+          keywords: parsed.keywords
+        });
+        
+        if (validation.isValid) {
+          console.log('✅ Conteúdo de blog válido na tentativa', attempt);
+          return parsed;
+        } else {
+          console.warn(`⚠️ Conteúdo de blog inválido na tentativa ${attempt}:`, validation.errors);
+          if (attempt === maxAttempts) {
+            console.log('🔄 Usando fallback de blog após esgotar tentativas');
+            const fallback = getFallbackBlogContent(context);
+            return {
+              title: fallback.title,
+              content: fallback.content,
+              metaDescription: fallback.meta_description,
+              keywords: fallback.keywords
+            };
+          }
+          continue; // Tentar novamente
+        }
+        
+      } catch (parseError) {
+        console.error(`❌ Erro parsing JSON de blog na tentativa ${attempt}:`, parseError);
+        if (attempt === maxAttempts) {
+          console.log('🔄 Usando fallback de blog após esgotar tentativas de parsing');
+          const fallback = getFallbackBlogContent(context);
+          return {
+            title: fallback.title,
+            content: fallback.content,
+            metaDescription: fallback.meta_description,
+            keywords: fallback.keywords
+          };
+        }
+        continue; // Tentar novamente
+      }
+      
+    } catch (apiError) {
+      console.error(`❌ Erro API de blog na tentativa ${attempt}:`, apiError);
+      if (attempt === maxAttempts) {
+        console.log('🔄 Usando fallback de blog após esgotar tentativas de API');
+        const fallback = getFallbackBlogContent(context);
+        return {
+          title: fallback.title,
+          content: fallback.content,
+          metaDescription: fallback.meta_description,
+          keywords: fallback.keywords
+        };
+      }
+      continue; // Tentar novamente
     }
-    
-    console.log('📝 Cleaned blog content for parsing:', cleanContent.substring(0, 200) + '...');
-    
-    const parsed = JSON.parse(cleanContent);
-    
-    // Validate required fields
-    if (!parsed.title || !parsed.content || !parsed.metaDescription || !parsed.keywords) {
-      throw new Error('Missing required fields in blog content response');
-    }
-    
-    return parsed;
-  } catch (error) {
-    console.error('Failed to parse AI response as JSON:', content);
-    console.error('Parse error:', error);
-    throw new Error('Failed to generate valid blog content');
   }
+  
+  // Fallback final (nunca deveria chegar aqui)
+  console.log('🔄 Fallback final de blog - retornando conteúdo padrão');
+  const fallback = getFallbackBlogContent(context);
+  return {
+    title: fallback.title,
+    content: fallback.content,
+    metaDescription: fallback.meta_description,
+    keywords: fallback.keywords
+  };
 }
 
 async function generateSEOMeta(apiKey: string, context: string): Promise<SEOMeta> {

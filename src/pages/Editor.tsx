@@ -1939,19 +1939,49 @@ const EditorContent = () => {
           hasMetaDescription: !!response.data.content.meta_description
         });
 
+        // Validar conteúdo antes de salvar
+        const content = response.data.content;
+        const validationErrors: string[] = [];
+        
+        if (!content.title || content.title.length < 10 || content.title.length > 60) {
+          validationErrors.push('Título deve ter entre 10 e 60 caracteres');
+        }
+        
+        if (!content.content || content.content.length < 500) {
+          validationErrors.push('Conteúdo deve ter pelo menos 500 caracteres');
+        }
+        
+        if (!content.meta_description || content.meta_description.length < 50 || content.meta_description.length > 160) {
+          validationErrors.push('Meta description deve ter entre 50 e 160 caracteres');
+        }
+        
+        if (!content.keywords || !Array.isArray(content.keywords) || content.keywords.length < 3) {
+          validationErrors.push('Deve ter pelo menos 3 keywords');
+        }
+        
+        if (validationErrors.length > 0) {
+          console.warn('⚠️ Conteúdo gerado não atende critérios de qualidade:', validationErrors);
+          throw new Error(`Conteúdo inválido: ${validationErrors.join(', ')}`);
+        }
+
         // Upsert blog post in database with proper status
         const blogData = {
           landing_page_id: landingPageId,
-          title: response.data.content.title,
-          content: response.data.content.content,
-          meta_description: response.data.content.meta_description || '',
-          keywords: response.data.content.keywords || [],
+          title: content.title,
+          content: content.content,
+          meta_description: content.meta_description,
+          keywords: content.keywords,
           status: 'published',
           published_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
 
-        console.log('💾 Salvando blog como PUBLISHED no banco:', blogData);
+        console.log('💾 Salvando blog validado como PUBLISHED:', {
+          landingPageId,
+          title: content.title,
+          contentLength: content.content.length,
+          keywordsCount: content.keywords?.length
+        });
 
         const { data: upsertResult, error: upsertError } = await supabase
           .from('blog_posts')
@@ -1965,10 +1995,12 @@ const EditorContent = () => {
           console.error('❌ Erro salvando blog:', upsertError);
           throw new Error(`Database Error: ${upsertError.message}`);
         } else {
-          console.log('✅ Blog automaticamente publicado:', {
+          console.log('✅ Blog validado e publicado:', {
             landingPageId,
             status: upsertResult?.[0]?.status,
-            id: upsertResult?.[0]?.id
+            id: upsertResult?.[0]?.id,
+            titleLength: upsertResult?.[0]?.title?.length,
+            contentLength: upsertResult?.[0]?.content?.length
           });
           toast({
             title: "Blog publicado",
