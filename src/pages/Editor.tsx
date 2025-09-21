@@ -1876,7 +1876,7 @@ const EditorContent = () => {
     }
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     const processedData = onApprove(onSave(data));
     processedData.status = 'approved';
     
@@ -1887,17 +1887,81 @@ const EditorContent = () => {
       data: processedData
     };
     
+    let landingPageId = id;
     if (id) {
       updateLandingPage(id, storeData);
     } else {
-      const newId = addLandingPage(storeData);
-      navigate(`/editor/${newId}`);
+      landingPageId = addLandingPage(storeData);
+      navigate(`/editor/${landingPageId}`);
     }
     
     setData(processedData);
+    
+    // Automatically publish blog when landing page is approved
+    try {
+      const selectedProductIds = getSelectedProducts(landingPageId);
+      
+      const response = await supabase.functions.invoke('ai-content-generator', {
+        body: {
+          type: 'blog_content',
+          landingPageId: landingPageId,
+          selectedProductIds: selectedProductIds,
+          include_offers: true,
+          landingPageData: processedData
+        }
+      });
+
+      if (response.data?.content) {
+        // Upsert blog post in database
+        const { error: upsertError } = await supabase
+          .from('blog_posts')
+          .upsert({
+            landing_page_id: landingPageId,
+            title: response.data.content.title,
+            content: response.data.content.content,
+            meta_description: response.data.content.meta_description,
+            keywords: response.data.content.keywords,
+            status: 'published',
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'landing_page_id',
+            ignoreDuplicates: false
+          });
+
+        if (upsertError) {
+          console.error('Error saving blog:', upsertError);
+        } else {
+          console.log('✅ Blog automatically published for landing page:', landingPageId);
+        }
+      } else {
+        // Fallback: create basic blog post if AI generation fails
+        const { error: fallbackError } = await supabase
+          .from('blog_posts')
+          .upsert({
+            landing_page_id: landingPageId,
+            title: processedData.seo_title || processedData.name,
+            content: `# ${processedData.seo_title || processedData.name}\n\n${processedData.seo_description || 'Conteúdo em desenvolvimento.'}`,
+            meta_description: processedData.seo_description || '',
+            keywords: [],
+            status: 'published',
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'landing_page_id',
+            ignoreDuplicates: false
+          });
+
+        if (fallbackError) {
+          console.error('Error saving fallback blog:', fallbackError);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating/publishing blog:', error);
+      // Continue with approval even if blog publication fails
+    }
+    
     toast({
       title: "Landing page aprovada",
-      description: "Status alterado para aprovado e lastmod atualizado!",
+      description: "Status alterado para aprovado e blog publicado automaticamente!",
     });
   };
 

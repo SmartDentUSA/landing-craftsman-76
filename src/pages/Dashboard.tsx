@@ -68,12 +68,13 @@ const DashboardContent = () => {
         return;
       }
 
-      // Buscar apenas 1 blog por landing page aprovada (o mais recente)
+      // Buscar apenas 1 blog PUBLICADO por landing page aprovada (o mais recente)
       const blogsPromises = approvedLandingPages.map(async (lp) => {
         const { data: blogs, error } = await supabase
           .from('blog_posts')
           .select('*')
           .eq('landing_page_id', lp.id)
+          .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(1);
 
