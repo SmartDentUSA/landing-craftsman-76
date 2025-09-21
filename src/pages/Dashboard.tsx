@@ -60,29 +60,31 @@ const DashboardContent = () => {
 
   const fetchBlogPosts = async () => {
     try {
-      // Buscar todos os blogs
-      const { data: blogs, error: blogsError } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Buscar landing pages aprovadas do Zustand
+      const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
+      
+      if (approvedLandingPages.length === 0) {
+        setBlogPosts([]);
+        return;
+      }
 
-      if (blogsError) throw blogsError;
+      // Buscar apenas 1 blog por landing page aprovada (o mais recente)
+      const blogsPromises = approvedLandingPages.map(async (lp) => {
+        const { data: blogs, error } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('landing_page_id', lp.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-      // Buscar landing pages aprovadas
-      const { data: approvedLPs, error: lpsError } = await supabase
-        .from('products_repository')
-        .select('source_landing_page_id')
-        .eq('approved', true);
+        if (error) throw error;
+        return blogs || [];
+      });
 
-      if (lpsError) throw lpsError;
+      const blogArrays = await Promise.all(blogsPromises);
+      const allBlogs = blogArrays.flat();
 
-      // Filtrar blogs que pertencem a landing pages aprovadas
-      const approvedLandingPageIds = approvedLPs?.map(lp => lp.source_landing_page_id) || [];
-      const filteredBlogs = blogs?.filter(blog => 
-        blog.landing_page_id && approvedLandingPageIds.includes(blog.landing_page_id)
-      ) || [];
-
-      setBlogPosts(filteredBlogs);
+      setBlogPosts(allBlogs);
     } catch (error: any) {
       console.error('Erro ao buscar blogs:', error);
       toast({
@@ -101,16 +103,17 @@ const DashboardContent = () => {
         console.debug('[Realtime] blog_posts changed, refetching...');
         fetchBlogPosts();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products_repository' }, () => {
-        console.debug('[Realtime] products_repository changed, refetching blogs...');
-        fetchBlogPosts();
-      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Listen to landing page status changes to refetch blogs
+  useEffect(() => {
+    fetchBlogPosts();
+  }, [landingPages]);
 
   const handlePromoteToAdmin = async () => {
     if (!userEmail) return;
