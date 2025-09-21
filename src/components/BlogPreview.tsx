@@ -58,6 +58,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
         .from('blog_posts')
         .select('*')
         .eq('landing_page_id', landingPageId)
+        .eq('status', 'published')
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -65,6 +66,13 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
       
       if (data && data.length > 0) {
         setPublishedBlog(data[0]);
+        console.log('📖 Blog publicado encontrado:', {
+          id: data[0].id,
+          title: data[0].title,
+          status: data[0].status
+        });
+      } else {
+        console.log('📭 Nenhum blog publicado encontrado para:', landingPageId);
       }
     } catch (error) {
       console.error('Erro ao buscar blog publicado:', error);

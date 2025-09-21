@@ -1939,7 +1939,7 @@ const EditorContent = () => {
           hasMetaDescription: !!response.data.content.meta_description
         });
 
-        // Upsert blog post in database
+        // Upsert blog post in database with proper status
         const blogData = {
           landing_page_id: landingPageId,
           title: response.data.content.title,
@@ -1951,20 +1951,25 @@ const EditorContent = () => {
           updated_at: new Date().toISOString()
         };
 
-        console.log('💾 Salvando blog no banco:', blogData);
+        console.log('💾 Salvando blog como PUBLISHED no banco:', blogData);
 
-        const { error: upsertError } = await supabase
+        const { data: upsertResult, error: upsertError } = await supabase
           .from('blog_posts')
           .upsert(blogData, {
             onConflict: 'landing_page_id',
             ignoreDuplicates: false
-          });
+          })
+          .select();
 
         if (upsertError) {
           console.error('❌ Erro salvando blog:', upsertError);
           throw new Error(`Database Error: ${upsertError.message}`);
         } else {
-          console.log('✅ Blog automaticamente publicado para landing page:', landingPageId);
+          console.log('✅ Blog automaticamente publicado:', {
+            landingPageId,
+            status: upsertResult?.[0]?.status,
+            id: upsertResult?.[0]?.id
+          });
           toast({
             title: "Blog publicado",
             description: "Blog SEO gerado e publicado automaticamente!",
@@ -1987,17 +1992,21 @@ const EditorContent = () => {
 
         console.log('📝 Criando blog fallback:', fallbackData);
 
-        const { error: fallbackError } = await supabase
+        const { data: fallbackResult, error: fallbackError } = await supabase
           .from('blog_posts')
           .upsert(fallbackData, {
             onConflict: 'landing_page_id',
             ignoreDuplicates: false
-          });
+          })
+          .select();
 
         if (fallbackError) {
           console.error('❌ Erro salvando blog fallback:', fallbackError);
         } else {
-          console.log('📝 Blog fallback criado com sucesso');
+          console.log('📝 Blog fallback PUBLISHED criado:', {
+            id: fallbackResult?.[0]?.id,
+            status: fallbackResult?.[0]?.status
+          });
           toast({
             title: "Blog criado",
             description: "Blog básico criado. Use 'Regenerar Blog' para melhorar o conteúdo.",
