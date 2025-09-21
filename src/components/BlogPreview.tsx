@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Eye, Edit3, Sparkles, FileText } from "lucide-react";
+import { Loader2, Eye, Edit3, Sparkles, FileText, RefreshCw, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -27,8 +27,16 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
   const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [publishedBlog, setPublishedBlog] = useState<any>(null);
+  const [isOutOfSync, setIsOutOfSync] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch published blog and check sync status
+  useEffect(() => {
+    fetchPublishedBlog();
+  }, [landingPageId]);
 
   // Generate blog preview automatically when component mounts or data changes
   useEffect(() => {
@@ -36,6 +44,49 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
       generateBlogPreview();
     }
   }, [landingPageData]);
+
+  // Check sync status when both preview and published blogs are available
+  useEffect(() => {
+    if (blogPost && publishedBlog && landingPageData) {
+      checkSyncStatus();
+    }
+  }, [blogPost, publishedBlog, landingPageData]);
+
+  const fetchPublishedBlog = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('landing_page_id', landingPageId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setPublishedBlog(data[0]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar blog publicado:', error);
+    }
+  };
+
+  const checkSyncStatus = () => {
+    if (!blogPost || !publishedBlog || !landingPageData) return;
+
+    // Compare key data points to determine if out of sync
+    const currentTitle = landingPageData?.banner?.title || landingPageData?.seo_title;
+    const publishedTitle = publishedBlog.title;
+    
+    const currentDescription = landingPageData?.seo_description;
+    const publishedDescription = publishedBlog.meta_description;
+
+    // Simple check - if titles or descriptions are different, consider out of sync
+    const titlesDifferent = currentTitle && publishedTitle && currentTitle !== publishedTitle;
+    const descriptionsDifferent = currentDescription && publishedDescription && currentDescription !== publishedDescription;
+    
+    setIsOutOfSync(titlesDifferent || descriptionsDifferent);
+  };
 
   const shouldRegenerate = () => {
     // Simple check to see if we should regenerate based on data freshness
@@ -107,6 +158,70 @@ Para mais informações, entre em contato conosco.
     }
   };
 
+  const syncPublishedBlog = async () => {
+    if (!publishedBlog) {
+      toast({
+        title: "Erro",
+        description: "Nenhum blog publicado encontrado para sincronizar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSyncing(true);
+    
+    try {
+      // Generate new content with current landing page data
+      const { data, error } = await supabase.functions.invoke('ai-content-generator', {
+        body: {
+          type: 'blog_content',
+          landingPageId,
+          landingPage: landingPageData,
+          selectedProductIds: selectedProductIds || [],
+          include_offers: true
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.content) {
+        // Update the published blog with new content
+        const { error: updateError } = await supabase
+          .from('blog_posts')
+          .update({
+            title: data.content.title,
+            content: data.content.content,
+            meta_description: data.content.meta_description,
+            keywords: data.content.keywords,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', publishedBlog.id);
+
+        if (updateError) throw updateError;
+
+        // Refresh published blog data
+        await fetchPublishedBlog();
+        
+        // Regenerate preview to match
+        await generateBlogPreview();
+
+        toast({
+          title: "Sincronizado",
+          description: "Blog publicado atualizado com sucesso!"
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao sincronizar blog:', error);
+      toast({
+        title: "Erro na sincronização",
+        description: error.message || "Erro ao atualizar blog publicado",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleEditBlog = () => {
     if (onEditBlog) {
       onEditBlog();
@@ -142,8 +257,20 @@ Para mais informações, entre em contato conosco.
             <FileText className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">Preview do Blog IA</CardTitle>
             {generating && <Loader2 className="h-4 w-4 animate-spin" />}
+            {syncing && <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />}
           </div>
           <div className="flex items-center gap-2">
+            {isOutOfSync && publishedBlog && (
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Desatualizado
+              </Badge>
+            )}
+            {publishedBlog && !isOutOfSync && (
+              <Badge variant="default" className="text-xs">
+                Sincronizado
+              </Badge>
+            )}
             {dataQuality < 100 && (
               <Badge variant="secondary" className="text-xs">
                 Dados: {dataQuality}%
@@ -161,6 +288,14 @@ Para mais informações, entre em contato conosco.
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
             <p className="text-sm text-orange-700">
               ⚠️ {error} - Usando preview básico
+            </p>
+          </div>
+        )}
+
+        {isOutOfSync && publishedBlog && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-sm text-yellow-700">
+              ⚠️ <strong>Blog desatualizado:</strong> O blog publicado está diferente dos dados atuais da landing page
             </p>
           </div>
         )}
@@ -226,6 +361,21 @@ Para mais informações, entre em contato conosco.
                 <Edit3 className="h-4 w-4 mr-2" />
                 Editar Blog Completo
               </Button>
+
+              {isOutOfSync && publishedBlog && (
+                <Button 
+                  onClick={syncPublishedBlog}
+                  disabled={syncing}
+                  size="sm"
+                  variant="default"
+                >
+                  {syncing ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
 
               <Button 
                 onClick={generateBlogPreview}
