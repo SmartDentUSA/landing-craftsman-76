@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -786,14 +787,21 @@ export default function BlogGenerator() {
 
               <div>
                 <Label htmlFor="content">Conteúdo</Label>
-                <Textarea
-                  id="content"
-                  value={blogPost.content}
-                  onChange={(e) => setBlogPost(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Conteúdo do blog post em HTML ou Markdown"
-                  rows={20}
-                  className="font-mono text-sm"
-                />
+                <ProductLinkModal onInsertLink={(link) => {
+                  const currentContent = blogPost.content;
+                  const newContent = currentContent + ` ${link}`;
+                  setBlogPost(prev => ({ ...prev, content: newContent }));
+                }}>
+                  <div>
+                    <RichTextEditor
+                      content={blogPost.content}
+                      onChange={(content) => setBlogPost(prev => ({ ...prev, content }))}
+                      placeholder="Conteúdo do blog post com formatação rica..."
+                      onInsertProductLink={() => {}}
+                      className="min-h-[400px]"
+                    />
+                  </div>
+                </ProductLinkModal>
               </div>
             </CardContent>
           </Card>
