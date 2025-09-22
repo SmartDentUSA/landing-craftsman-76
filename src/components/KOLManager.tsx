@@ -100,6 +100,39 @@ export const KOLManager = () => {
     setIsDialogOpen(true);
   };
 
+  const normalizeUrl = (url: string, platform?: 'instagram' | 'youtube') => {
+    if (!url) return '';
+    
+    // Handle Instagram specific formats
+    if (platform === 'instagram') {
+      if (url.startsWith('@')) {
+        return `https://instagram.com/${url.substring(1)}`;
+      }
+      if (url.includes('instagram.com')) {
+        return url.startsWith('http') ? url : `https://${url}`;
+      }
+      if (!url.includes('.')) {
+        return `https://instagram.com/${url}`;
+      }
+    }
+    
+    // Handle YouTube specific formats
+    if (platform === 'youtube') {
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        return url.startsWith('http') ? url : `https://${url}`;
+      }
+      if (!url.includes('.')) {
+        return `https://youtube.com/c/${url}`;
+      }
+    }
+    
+    // Default URL normalization
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
   const handleSave = async () => {
     try {
       if (!formData.full_name.trim()) {
@@ -108,17 +141,33 @@ export const KOLManager = () => {
       }
 
       if (editingKOL) {
+        const normalizedFormData = {
+          ...formData,
+          lattes_url: normalizeUrl(formData.lattes_url),
+          website_url: normalizeUrl(formData.website_url),
+          instagram_url: normalizeUrl(formData.instagram_url, 'instagram'),
+          youtube_url: normalizeUrl(formData.youtube_url, 'youtube'),
+        };
+
         const { error } = await supabase
           .from('key_opinion_leaders')
-          .update(formData)
+          .update(normalizedFormData)
           .eq('id', editingKOL.id);
 
         if (error) throw error;
         toast.success('Especialista atualizado com sucesso');
       } else {
+        const normalizedFormData = {
+          ...formData,
+          lattes_url: normalizeUrl(formData.lattes_url),
+          website_url: normalizeUrl(formData.website_url),
+          instagram_url: normalizeUrl(formData.instagram_url, 'instagram'),
+          youtube_url: normalizeUrl(formData.youtube_url, 'youtube'),
+        };
+
         const { error } = await supabase
           .from('key_opinion_leaders')
-          .insert([formData]);
+          .insert([normalizedFormData]);
 
         if (error) throw error;
         toast.success('Especialista criado com sucesso');
@@ -250,7 +299,7 @@ export const KOLManager = () => {
                   id="instagram_url"
                   value={formData.instagram_url}
                   onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
-                  placeholder="https://instagram.com/usuario"
+                  placeholder="https://instagram.com/usuario ou @usuario"
                 />
               </div>
               <div className="space-y-2">

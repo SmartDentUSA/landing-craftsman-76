@@ -126,6 +126,39 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
     }
   };
 
+  const normalizeUrl = (url: string, platform?: 'instagram' | 'youtube') => {
+    if (!url) return '';
+    
+    // Handle Instagram specific formats
+    if (platform === 'instagram') {
+      if (url.startsWith('@')) {
+        return `https://instagram.com/${url.substring(1)}`;
+      }
+      if (url.includes('instagram.com')) {
+        return url.startsWith('http') ? url : `https://${url}`;
+      }
+      if (!url.includes('.')) {
+        return `https://instagram.com/${url}`;
+      }
+    }
+    
+    // Handle YouTube specific formats
+    if (platform === 'youtube') {
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        return url.startsWith('http') ? url : `https://${url}`;
+      }
+      if (!url.includes('.')) {
+        return `https://youtube.com/c/${url}`;
+      }
+    }
+    
+    // Default URL normalization
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
   const generateCompleteHTML = async (blogVersion: BlogVersion, domain: string) => {
     const processedContent = processContentWithIntelligentLinks(blogVersion.content);
     
@@ -151,10 +184,10 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
               </div>
               ${author.mini_cv ? `<p style="margin: 0 0 15px 0; color: #555; font-size: 14px; line-height: 1.5;">${author.mini_cv}</p>` : ''}
               <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                ${author.lattes_url ? `<a href="${author.lattes_url}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Currículo Lattes</a>` : ''}
-                ${author.website_url ? `<a href="${author.website_url}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Website</a>` : ''}
-                ${author.instagram_url ? `<a href="${author.instagram_url}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #e4405f; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Instagram</a>` : ''}
-                ${author.youtube_url ? `<a href="${author.youtube_url}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #ff0000; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">YouTube</a>` : ''}
+                ${author.lattes_url ? `<a href="${normalizeUrl(author.lattes_url)}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Currículo Lattes</a>` : ''}
+                ${author.website_url ? `<a href="${normalizeUrl(author.website_url)}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Website</a>` : ''}
+                ${author.instagram_url ? `<a href="${normalizeUrl(author.instagram_url, 'instagram')}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #e4405f; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Instagram</a>` : ''}
+                ${author.youtube_url ? `<a href="${normalizeUrl(author.youtube_url, 'youtube')}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #ff0000; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">YouTube</a>` : ''}
               </div>
             </div>
           `;
