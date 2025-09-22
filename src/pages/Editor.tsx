@@ -6439,11 +6439,10 @@ dataLayer = [{
                   />
                  </div>
                </div>
-             </TabsContent>
-               </Tabs>
-             </div>
-           </div>
-         </div>
+              </TabsContent>
+            </Tabs>
+            </div>
+          </div>
         </div>
       </div>
     </div>
