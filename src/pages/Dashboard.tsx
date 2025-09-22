@@ -41,9 +41,12 @@ const DashboardContent = () => {
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
+      console.log('🔄 Fetching blog posts - Landing pages count:', landingPages.length);
       const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
+      console.log('✅ Approved landing pages:', approvedLandingPages.length);
       
       if (approvedLandingPages.length === 0) {
+        console.log('📭 No approved landing pages found');
         setBlogPosts([]);
         return;
       }
@@ -63,10 +66,11 @@ const DashboardContent = () => {
 
       const blogArrays = await Promise.all(blogsPromises);
       const allBlogs = blogArrays.flat();
+      console.log('📚 Total blogs found:', allBlogs.length);
 
       setBlogPosts(allBlogs);
     } catch (error: any) {
-      console.error('Erro ao buscar blogs:', error);
+      console.error('❌ Erro ao buscar blogs:', error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar blogs",
@@ -75,9 +79,19 @@ const DashboardContent = () => {
     }
   }, 300);
 
+  // Memoize approved landing pages to detect changes
+  const approvedLandingPagesIds = useMemo(() => {
+    return landingPages
+      .filter(lp => lp.status === 'approved')
+      .map(lp => lp.id)
+      .sort()
+      .join(',');
+  }, [landingPages]);
+
   const fetchBlogPosts = useCallback(() => {
+    console.log('🚀 Triggering blog posts fetch due to changes');
     debouncedFetchBlogPosts();
-  }, [debouncedFetchBlogPosts, landingPages]);
+  }, [debouncedFetchBlogPosts]);
 
   const getCurrentUser = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -96,8 +110,13 @@ const DashboardContent = () => {
 
   useEffect(() => {
     getCurrentUser();
+  }, [getCurrentUser]);
+
+  // Separate effect to react to landing page approval/disapproval changes
+  useEffect(() => {
+    console.log('📊 Landing pages changed, approved IDs:', approvedLandingPagesIds);
     fetchBlogPosts();
-  }, [getCurrentUser, fetchBlogPosts]);
+  }, [approvedLandingPagesIds, fetchBlogPosts]);
 
   useEffect(() => {
     const channel = supabase
