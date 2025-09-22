@@ -15,86 +15,53 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Simple role cache to avoid excessive RPC calls
+  const [roleCache, setRoleCache] = useState<{role: 'admin' | 'user', timestamp: number} | null>(null);
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('🔐 Starting authentication check...');
-        
-        // Force session refresh first to ensure fresh token
-        await supabase.auth.refreshSession();
-        
-        // Get current session after refresh
+        // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        console.log('📝 Session data:', { 
-          hasSession: !!session, 
-          hasUser: !!session?.user, 
-          userId: session?.user?.id,
-          email: session?.user?.email,
-          sessionError 
-        });
         
         if (!session?.user) {
-          console.log('❌ No valid session found, redirecting to auth');
           navigate("/auth");
           return;
         }
 
         setUser(session.user);
-        console.log('✅ User session validated:', session.user.email);
 
-        // Check if user has admin role using RPC function with retry
-        console.log('🔍 Checking admin role for user:', session.user.id);
-        
-        let roleCheckAttempts = 0;
-        let isAdmin = false;
-        let roleError = null;
-        
-        // Retry role check up to 3 times
-        while (roleCheckAttempts < 3) {
-          const { data, error } = await supabase
-            .rpc('has_role', { 
-              _user_id: session.user.id, 
-              _role: 'admin' 
-            });
-          
-          roleCheckAttempts++;
-          
-          if (!error && data !== null) {
-            isAdmin = data;
-            break;
-          }
-          
-          roleError = error;
-          console.warn(`🔄 Role check attempt ${roleCheckAttempts} failed:`, error);
-          
-          if (roleCheckAttempts < 3) {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
-          }
+        // Check cached role first (5 minute cache)
+        const now = Date.now();
+        if (roleCache && (now - roleCache.timestamp) < 300000) {
+          setUserRole(roleCache.role);
+          setLoading(false);
+          return;
         }
 
-        console.log('📋 Final role check result:', { isAdmin, roleError, attempts: roleCheckAttempts });
+        // Check if user has admin role
+        const { data: isAdmin, error: roleError } = await supabase
+          .rpc('has_role', { 
+            _user_id: session.user.id, 
+            _role: 'admin' 
+          });
 
-        // Handle role assignment with improved fallback logic
+        let role: 'admin' | 'user';
+        
         if (roleError) {
-          console.error('❌ All role check attempts failed:', roleError);
-          // For authenticated users, assume admin if email is from known admin domains
-          // This is a temporary fallback until auth issues are resolved
-          const isKnownAdmin = session.user.email?.includes('@') && 
-                               (session.user.email.includes('admin') || 
-                                session.user.email.includes('danilohen@gmail.com'));
-          
-          const fallbackRole = isKnownAdmin ? 'admin' : 'user';
-          setUserRole(fallbackRole);
-          console.log('⚠️ Using fallback role assignment:', fallbackRole);
+          // Fallback for known admin emails
+          const isKnownAdmin = session.user.email === 'danilohen@gmail.com' || 
+                               session.user.email?.includes('admin');
+          role = isKnownAdmin ? 'admin' : 'user';
         } else {
-          const role = isAdmin ? 'admin' : 'user';
-          setUserRole(role);
-          console.log('✅ Role assigned:', role);
+          role = isAdmin ? 'admin' : 'user';
         }
 
+        setUserRole(role);
+        setRoleCache({ role, timestamp: now });
         setLoading(false);
       } catch (error) {
-        console.error('❌ Authentication check failed:', error);
+        console.error('Authentication check failed:', error);
         setLoading(false);
       }
     };
