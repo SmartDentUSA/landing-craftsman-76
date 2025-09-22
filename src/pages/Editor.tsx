@@ -6380,7 +6380,7 @@ dataLayer = [{
 
                 <div className="flex-1">
                 <RepositoryPanel
-                  landingPageId={id || ''}
+                  landingPageId="repository"
                   onProductSelectionChange={setSelectedProducts}
                   onSyncTriggered={() => {
                     console.log('Products synced successfully');
