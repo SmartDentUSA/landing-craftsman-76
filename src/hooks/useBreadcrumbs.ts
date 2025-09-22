@@ -47,6 +47,9 @@ export const useBreadcrumbs = () => {
         case 'publication-settings':
           label = 'Publication Settings';
           break;
+        case 'repository':
+          label = 'Repositório de Dados';
+          break;
         case 'cloudflare-settings':
           label = 'Cloudflare Settings';
           break;

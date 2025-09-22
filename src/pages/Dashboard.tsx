@@ -658,11 +658,11 @@ const DashboardContent = () => {
               {userRole === 'admin' && (
                 <Button 
                   variant="outline" 
-                  onClick={() => navigate('/publication-settings')}
+                  onClick={() => navigate('/repository')}
                   className="border-primary/30 text-primary hover:bg-primary/10"
                 >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Configurações de Publicação
+                  <Database className="h-4 w-4 mr-2" />
+                  Repositório de Dados
                 </Button>
               )}
               

@@ -10,6 +10,7 @@ import CodeView from "./pages/CodeView";
 import CloudflareSettings from "./pages/CloudflareSettings";
 import PublicationSettings from "./pages/PublicationSettings";
 import BlogGenerator from "./pages/BlogGenerator";
+import Repository from "./pages/Repository";
 import Auth from "./pages/Auth";
 import PasswordReset from "./pages/PasswordReset";
 import NotFound from "./pages/NotFound";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/code-view" element={<ProtectedRoute><CodeView /></ProtectedRoute>} />
           <Route path="/cloudflare-settings" element={<ProtectedRoute><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute><PublicationSettings /></ProtectedRoute>} />
+          <Route path="/repository" element={<ProtectedRoute><Repository /></ProtectedRoute>} />
           <Route path="/blog-generator/:id" element={<ProtectedRoute><BlogGenerator /></ProtectedRoute>} />
           <Route path="/blog/:id" element={<ProtectedRoute><BlogGenerator /></ProtectedRoute>} />
           <Route path="/password-reset" element={<PasswordReset />} />
