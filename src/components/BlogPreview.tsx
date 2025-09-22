@@ -30,6 +30,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
   const [publishedBlog, setPublishedBlog] = useState<any>(null);
   const [isOutOfSync, setIsOutOfSync] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -329,9 +330,9 @@ Para mais informações, entre em contato conosco.
                 </p>
               )}
 
-              <div className="prose prose-sm max-w-none">
+              <div className="space-y-4">
                 <div 
-                  className="text-sm text-gray-700 line-clamp-6"
+                  className={`prose prose-sm max-w-none transition-all duration-300 ${expanded ? '' : 'line-clamp-6'}`}
                   dangerouslySetInnerHTML={{ 
                     __html: blogPost.content
                       .replace(/#{1,6}\s/g, '')
@@ -341,6 +342,14 @@ Para mais informações, entre em contato conosco.
                       .replace(/$/, '</p>')
                   }}
                 />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-primary hover:text-primary-foreground"
+                  onClick={() => setExpanded(!expanded)}
+                >
+                  {expanded ? 'Ler menos' : 'Ler mais'}
+                </Button>
               </div>
 
               {blogPost.keywords && blogPost.keywords.length > 0 && (

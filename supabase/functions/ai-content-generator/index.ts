@@ -117,8 +117,24 @@ serve(async (req) => {
     
     const companyProfile = companyProfiles?.[0] || null;
 
+    // Fetch manual reviews for SEO enrichment
+    const { data: manualReviews } = await supabase
+      .from('manual_reviews')
+      .select('*')
+      .eq('landing_page_id', request.landingPageId || '')
+      .eq('approved', true)
+      .order('rating', { ascending: false });
+
+    // Fetch video testimonials for SEO enrichment
+    const { data: videoTestimonials } = await supabase
+      .from('video_testimonials')
+      .select('*')
+      .eq('landing_page_id', request.landingPageId || '')
+      .eq('approved', true)
+      .order('sentiment_score', { ascending: false });
+
     // Build strategic context with progressive data
-    const strategicContext = buildStrategicContext(request, allProducts, companyProfile);
+    const strategicContext = buildStrategicContext(request, allProducts, companyProfile, manualReviews || [], videoTestimonials || []);
     
     // Generate content based on type
     let result: any;
@@ -164,7 +180,7 @@ serve(async (req) => {
   }
 });
 
-function buildStrategicContext(request: ContentRequest, products: any[], companyProfile?: any): string {
+function buildStrategicContext(request: ContentRequest, products: any[], companyProfile?: any, manualReviews: any[] = [], videoTestimonials: any[] = []): string {
   // PROGRESSIVE GENERATION: Always use available data, even if partial
   const pageTitle = request.seoTitle || request.contentData?.banner?.title || request.contentData?.brand?.name || 'Nossos Serviços';
   const pageSubtitle = request.seoDescription || request.contentData?.banner?.subtitle || request.contentData?.seo?.meta_description || 'Soluções de qualidade para você';
@@ -263,6 +279,23 @@ ${[...new Set(productFeatures)].length > 0 ? [...new Set(productFeatures)].join(
 
 ## Discursos Comerciais (Sales Pitch):
 ${products.filter(p => p.sales_pitch).length > 0 ? products.filter(p => p.sales_pitch).map(p => `• ${p.name}: ${p.sales_pitch}`).join('\n') : '• Foque na qualidade e diferenciais competitivos'}
+
+## Reviews Manuais para SEO (${manualReviews.length} aprovados):
+${manualReviews.length > 0 ? manualReviews.slice(0, 10).map((review, index) => 
+  `**Review ${index + 1}:** ${review.author_name} (${review.rating}⭐)\n"${review.review_text || 'Review positivo'}"\n`
+).join('\n') : '• Nenhum review manual disponível'}
+
+## Depoimentos em Vídeo para SEO (${videoTestimonials.length} aprovados):
+${videoTestimonials.length > 0 ? videoTestimonials.slice(0, 10).map((testimonial, index) => {
+  let text = `**Depoimento ${index + 1}:** ${testimonial.client_name}`;
+  if (testimonial.profession) text += ` - ${testimonial.profession}`;
+  if (testimonial.location) text += ` (${testimonial.location})`;
+  text += `\n"${testimonial.testimonial_text}"\n`;
+  if (testimonial.ai_extracted_benefits && Array.isArray(testimonial.ai_extracted_benefits) && testimonial.ai_extracted_benefits.length > 0) {
+    text += `Benefícios extraídos: ${testimonial.ai_extracted_benefits.join(', ')}\n`;
+  }
+  return text;
+}).join('\n') : '• Nenhum depoimento em vídeo disponível'}
 
 ---
 
@@ -570,13 +603,14 @@ Crie um artigo completo (mínimo 800 palavras) com:
 2. **Use URLs das imagens das soluções fornecidas no contexto**
 3. **Inclua imagens relevantes ao longo do conteúdo quando disponíveis**
 
-**INSTRUÇÕES OBRIGATÓRIAS PARA PRODUTOS SELECIONADOS:**
-6. **MENCIONE TODOS OS PRODUTOS POR NOME**: Use os nomes EXATOS de TODOS os produtos selecionados do repositório
-7. **DETALHE BENEFÍCIOS ESPECÍFICOS**: Inclua pelo menos 2-3 benefícios específicos de CADA produto selecionado
-8. **USE CARACTERÍSTICAS TÉCNICAS**: Incorpore features e características técnicas de CADA produto no texto
-9. **INTEGRE SALES PITCH**: Use os discursos comerciais (sales_pitch) quando disponíveis para cada produto
-10. **CRIE SEÇÕES ESPECÍFICAS**: Dedique H3 para cada produto principal selecionado
-11. **FORÇA A MENÇÃO**: NUNCA ignore os produtos selecionados - eles DEVEM aparecer no conteúdo por nome
+**REGRAS CRÍTICAS ANTI-CONTEÚDO FALSO:**
+6. **USE EXCLUSIVAMENTE DADOS REAIS**: JAMAIS invente especificações técnicas, preços ou características não fornecidas
+7. **BASEIE-SE NOS REVIEWS/DEPOIMENTOS**: Use os reviews manuais e depoimentos em vídeo fornecidos como fonte de credibilidade
+8. **MENCIONE PRODUTOS REAIS**: Use APENAS os nomes EXATOS dos produtos do repositório - NUNCA invente variações
+9. **DADOS VERIFICÁVEIS**: Se uma característica não estiver no contexto, use termos genéricos ("alta qualidade", "tecnologia avançada")
+10. **BENEFITS DOS DEPOIMENTOS**: Priorize benefícios extraídos dos depoimentos reais dos clientes
+11. **REVIEWS COMO PROVA SOCIAL**: Incorpore trechos dos reviews manuais como evidência social
+12. **NÃO INVENTE NÚMEROS**: Jamais crie estatísticas, porcentagens ou dados quantitativos não fornecidos
 
 Retorne APENAS um JSON válido:
 {
