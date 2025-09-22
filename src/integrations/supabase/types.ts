@@ -66,6 +66,7 @@ export type Database = {
       }
       blog_posts: {
         Row: {
+          author_kol_id: string | null
           content: string
           created_at: string
           id: string
@@ -83,6 +84,7 @@ export type Database = {
           youtube_video_url: string | null
         }
         Insert: {
+          author_kol_id?: string | null
           content: string
           created_at?: string
           id?: string
@@ -100,6 +102,7 @@ export type Database = {
           youtube_video_url?: string | null
         }
         Update: {
+          author_kol_id?: string | null
           content?: string
           created_at?: string
           id?: string
@@ -116,7 +119,15 @@ export type Database = {
           updated_at?: string
           youtube_video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_author_kol_id_fkey"
+            columns: ["author_kol_id"]
+            isOneToOne: false
+            referencedRelation: "key_opinion_leaders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_profile: {
         Row: {
@@ -274,6 +285,54 @@ export type Database = {
           landing_page_id?: string
           last_exported?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      key_opinion_leaders: {
+        Row: {
+          approved: boolean
+          created_at: string
+          display_order: number | null
+          full_name: string
+          id: string
+          instagram_url: string | null
+          lattes_url: string | null
+          mini_cv: string | null
+          photo_url: string | null
+          specialty: string | null
+          updated_at: string
+          website_url: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          display_order?: number | null
+          full_name: string
+          id?: string
+          instagram_url?: string | null
+          lattes_url?: string | null
+          mini_cv?: string | null
+          photo_url?: string | null
+          specialty?: string | null
+          updated_at?: string
+          website_url?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          display_order?: number | null
+          full_name?: string
+          id?: string
+          instagram_url?: string | null
+          lattes_url?: string | null
+          mini_cv?: string | null
+          photo_url?: string | null
+          specialty?: string | null
+          updated_at?: string
+          website_url?: string | null
+          youtube_url?: string | null
         }
         Relationships: []
       }

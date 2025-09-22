@@ -17,6 +17,7 @@ import { ProductEditModal } from "@/components/ProductEditModal";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
+import { KOLManager } from "@/components/KOLManager";
 
 interface Product {
   id: string;
@@ -472,7 +473,7 @@ export function RepositoryPanel({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Produtos
@@ -484,6 +485,10 @@ export function RepositoryPanel({
             <TabsTrigger value="testimonials" className="flex items-center gap-2">
               <VideoIcon className="h-4 w-4" />
               Depoimentos Vídeo
+            </TabsTrigger>
+            <TabsTrigger value="kols" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              KOLs
             </TabsTrigger>
           </TabsList>
 
@@ -633,6 +638,12 @@ export function RepositoryPanel({
           <TabsContent value="testimonials" className="mt-0">
             <div className="p-4">
               <VideoTestimonialsSection landingPageId={landingPageId} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="kols" className="mt-0">
+            <div className="p-4">
+              <KOLManager />
             </div>
           </TabsContent>
         </Tabs>
