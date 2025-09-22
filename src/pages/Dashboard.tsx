@@ -13,6 +13,7 @@ import { generateHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 
 // Interface for blog posts
@@ -33,6 +34,12 @@ const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { landingPages, deleteLandingPage, addLandingPage } = useLandingPages();
+  const { 
+    approvedBlogsCount, 
+    generatedBlogsCount, 
+    publishedBlogsCount,
+    approvedLandingPagesWithBlogs
+  } = useBlogStatusMonitor();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
@@ -117,6 +124,16 @@ const DashboardContent = () => {
     console.log('📊 Landing pages changed, approved IDs:', approvedLandingPagesIds);
     fetchBlogPosts();
   }, [approvedLandingPagesIds, fetchBlogPosts]);
+
+  // React to changes in blog generation status from useBlogStatusMonitor
+  useEffect(() => {
+    console.log('🎯 Blog monitor data changed:', {
+      approvedBlogsCount,
+      generatedBlogsCount,
+      publishedBlogsCount,
+      approvedLandingPagesCount: approvedLandingPagesWithBlogs.length
+    });
+  }, [approvedBlogsCount, generatedBlogsCount, publishedBlogsCount, approvedLandingPagesWithBlogs]);
 
   useEffect(() => {
     const channel = supabase
@@ -605,8 +622,14 @@ const DashboardContent = () => {
   }, [eodontoHTML, dentalaHTML, toast]);
 
   const getApprovedBlogsCount = (domain: string) => {
-    // Blogs já vêm filtrados apenas de landing pages aprovadas
-    return blogPosts.length;
+    // Use dados consolidados do useBlogStatusMonitor
+    console.log(`🔍 Getting approved blogs count for ${domain}:`, {
+      approvedBlogsCount,
+      generatedBlogsCount,
+      publishedBlogsCount,
+      blogPostsLength: blogPosts.length
+    });
+    return approvedBlogsCount;
   };
 
   return (
@@ -875,6 +898,10 @@ const DashboardContent = () => {
                 </div>
                 <CardDescription>
                   {getApprovedBlogsCount('eodonto')} blogs de {landingPages.filter(lp => lp.status === 'approved').length} landing pages aprovadas
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    ({generatedBlogsCount} gerados + {publishedBlogsCount} publicados)
+                  </span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -917,6 +944,10 @@ const DashboardContent = () => {
                 </div>
                 <CardDescription>
                   {getApprovedBlogsCount('dentala')} blogs de {landingPages.filter(lp => lp.status === 'approved').length} landing pages aprovadas
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    ({generatedBlogsCount} gerados + {publishedBlogsCount} publicados)
+                  </span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
