@@ -91,7 +91,12 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             background: var(--background-color);
         }
         a { text-decoration: none; color: inherit; }
-        img { max-width: 100%; display: block; }
+        img { 
+            max-width: 100%; 
+            display: block; 
+            loading: lazy; 
+            decoding: async;
+        }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 
         /* Header */
@@ -229,6 +234,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             object-fit: cover; 
             border-radius: 8px;
             transition: transform 0.3s ease, opacity 0.3s ease;
+            loading: lazy;
+            decoding: async;
         }
         .banner-images a {
             display: block;
@@ -465,6 +472,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             object-fit: cover;
             display: block;
             transition: transform 0.3s ease;
+            loading: lazy;
+            decoding: async;
         }
         @media (min-width: 768px) {
             .banner-content { flex-direction: row; align-items: center; }

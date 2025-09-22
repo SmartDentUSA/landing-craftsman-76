@@ -336,6 +336,57 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_pages: {
+        Row: {
+          blog_generated: boolean | null
+          blog_generated_at: string | null
+          created_at: string
+          data: Json | null
+          embed: string | null
+          id: string
+          last_modified: string
+          name: string
+          selected_product_ids: string[] | null
+          status: string
+          template: string
+          updated_at: string
+          user_id: string | null
+          version: number
+        }
+        Insert: {
+          blog_generated?: boolean | null
+          blog_generated_at?: string | null
+          created_at?: string
+          data?: Json | null
+          embed?: string | null
+          id: string
+          last_modified?: string
+          name: string
+          selected_product_ids?: string[] | null
+          status?: string
+          template: string
+          updated_at?: string
+          user_id?: string | null
+          version?: number
+        }
+        Update: {
+          blog_generated?: boolean | null
+          blog_generated_at?: string | null
+          created_at?: string
+          data?: Json | null
+          embed?: string | null
+          id?: string
+          last_modified?: string
+          name?: string
+          selected_product_ids?: string[] | null
+          status?: string
+          template?: string
+          updated_at?: string
+          user_id?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       manual_reviews: {
         Row: {
           approved: boolean
