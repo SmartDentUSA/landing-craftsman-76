@@ -40,8 +40,9 @@ export const useBlogStatusMonitor = () => {
     }
   };
 
-  const getConsolidatedBlogs = () => {
-    const consolidatedBlogs = landingPages.filter(lp => {
+  // Memoize consolidated blogs calculation
+  const consolidatedBlogs = useMemo(() => {
+    const consolidated = landingPages.filter(lp => {
       const hasPublishedBlog = publishedBlogs.some(blog => blog.landing_page_id === lp.id);
       const isApprovedWithBlog = lp.status === 'approved' && (lp.blogGenerated || hasPublishedBlog);
       
@@ -56,39 +57,40 @@ export const useBlogStatusMonitor = () => {
       return isApprovedWithBlog;
     });
     
-    console.log('📊 Total consolidated blogs:', consolidatedBlogs.length);
-    return consolidatedBlogs;
-  };
+    console.log('📊 Total consolidated blogs:', consolidated.length);
+    return consolidated;
+  }, [landingPages, publishedBlogs]);
 
-  const getApprovedBlogsCount = () => {
-    const count = getConsolidatedBlogs().length;
+  // Memoize counts for performance
+  const approvedBlogsCount = useMemo(() => {
+    const count = consolidatedBlogs.length;
     console.log('🔢 Approved blogs count:', count);
     return count;
-  };
+  }, [consolidatedBlogs]);
 
-  const getGeneratedBlogsCount = () => {
+  const generatedBlogsCount = useMemo(() => {
     const generatedCount = landingPages.filter(lp => 
       lp.status === 'approved' && lp.blogGenerated
     ).length;
     console.log('🎯 Generated blogs count:', generatedCount);
     return generatedCount;
-  };
+  }, [landingPages]);
 
-  const getPublishedBlogsCount = () => {
+  const publishedBlogsCount = useMemo(() => {
     const publishedCount = publishedBlogs.length;
     console.log('📤 Published blogs count:', publishedCount);
     return publishedCount;
-  };
+  }, [publishedBlogs]);
 
   const getBlogsByLandingPage = (landingPageId: string) => {
     return publishedBlogs.filter(blog => blog.landing_page_id === landingPageId);
   };
 
   return {
-    consolidatedBlogs: getConsolidatedBlogs(),
-    approvedBlogsCount: getApprovedBlogsCount(),
-    generatedBlogsCount: getGeneratedBlogsCount(),
-    publishedBlogsCount: getPublishedBlogsCount(),
+    consolidatedBlogs,
+    approvedBlogsCount,
+    generatedBlogsCount,
+    publishedBlogsCount,
     publishedBlogs,
     getBlogsByLandingPage,
     refreshBlogs: fetchPublishedBlogs,
