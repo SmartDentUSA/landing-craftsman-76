@@ -18,6 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon } from "lucide-react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogPreview } from "@/components/BlogPreview";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
@@ -811,6 +813,10 @@ const EditorContent = () => {
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
+  
+  // Estados para modal de link de produto no FAQ
+  const [productLinkModalOpen, setProductLinkModalOpen] = useState(false);
+  const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(null);
   
   // Estados para campos editáveis da Automação SEO
   const [autoKeywords, setAutoKeywords] = useState<string[]>([]);
@@ -3305,15 +3311,18 @@ const EditorContent = () => {
                         </div>
                         <div>
                           <Label>Resposta</Label>
-                          <Textarea
-                            value={faqItem.answer}
-                            onChange={(e) => {
+                          <RichTextEditor
+                            content={faqItem.answer}
+                            onChange={(content) => {
                               const newFaq = [...data.faq];
-                              newFaq[index].answer = e.target.value;
+                              newFaq[index].answer = content;
                               setData(prev => ({ ...prev, faq: newFaq }));
                             }}
-                            placeholder="Resposta"
-                            rows={3}
+                            placeholder="Digite a resposta com formatação rica..."
+                            onInsertProductLink={() => {
+                              setProductLinkModalOpen(true);
+                              setActiveFaqIndex(index);
+                            }}
                           />
                         </div>
                       </div>
@@ -6428,12 +6437,13 @@ dataLayer = [{
                   }}
                   className="h-full border-0 rounded-none"
                   />
-                </div>
-              </div>
-            </TabsContent>
-              </Tabs>
-            </div>
-          </div>
+                 </div>
+               </div>
+             </TabsContent>
+               </Tabs>
+             </div>
+           </div>
+         </div>
         </div>
       </div>
     </div>
