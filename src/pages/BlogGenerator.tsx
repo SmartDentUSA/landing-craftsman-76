@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { ProductLinkModal } from "@/components/ProductLinkModal";
+import { SelectedProductLinkModal } from "@/components/SelectedProductLinkModal";
+import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -74,7 +75,10 @@ export default function BlogGenerator() {
   const [dualVersions, setDualVersions] = useState<DualBlogVersions | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<'dentala' | 'eodonto'>('dentala');
   const [isDualMode, setIsDualMode] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [productModalOpen, setProductModalOpen] = useState(false);
   const { toast } = useToast();
+  const { loadProductsByIds } = useSelectedProducts();
 
   useEffect(() => {
     if (id) {
@@ -119,6 +123,24 @@ export default function BlogGenerator() {
       generateBlogContent();
     }
   }, [landingPage]);
+
+  // Load selected products from landing page
+  useEffect(() => {
+    const loadSelectedProductsData = async () => {
+      if (landingPage?.content?.selectedProductIds?.length > 0) {
+        try {
+          const products = await loadProductsByIds(landingPage.content.selectedProductIds);
+          setSelectedProducts(products);
+        } catch (error) {
+          console.error('Error loading selected products:', error);
+        }
+      } else {
+        setSelectedProducts([]);
+      }
+    };
+
+    loadSelectedProductsData();
+  }, [landingPage?.content?.selectedProductIds, loadProductsByIds]);
 
   // Auto-save draft when blog post data changes
   useEffect(() => {
@@ -787,21 +809,13 @@ export default function BlogGenerator() {
 
               <div>
                 <Label htmlFor="content">Conteúdo</Label>
-                <ProductLinkModal onInsertLink={(link) => {
-                  const currentContent = blogPost.content;
-                  const newContent = currentContent + ` ${link}`;
-                  setBlogPost(prev => ({ ...prev, content: newContent }));
-                }}>
-                  <div>
-                    <RichTextEditor
-                      content={blogPost.content}
-                      onChange={(content) => setBlogPost(prev => ({ ...prev, content }))}
-                      placeholder="Conteúdo do blog post com formatação rica..."
-                      onInsertProductLink={() => {}}
-                      className="min-h-[400px]"
-                    />
-                  </div>
-                </ProductLinkModal>
+                <RichTextEditor
+                  content={blogPost.content}
+                  onChange={(content) => setBlogPost(prev => ({ ...prev, content }))}
+                  placeholder="Conteúdo do blog post com formatação rica..."
+                  onInsertProductLink={() => setProductModalOpen(true)}
+                  className="min-h-[400px]"
+                />
               </div>
             </CardContent>
           </Card>
@@ -1001,6 +1015,21 @@ export default function BlogGenerator() {
           )}
         </Button>
       </div>
+
+      {/* Product Link Modal */}
+      <SelectedProductLinkModal 
+        open={productModalOpen}
+        onOpenChange={setProductModalOpen}
+        selectedProducts={selectedProducts}
+        onInsertLink={(url: string, text: string) => {
+          // Insert link at the cursor position in the editor
+          setBlogPost(prev => ({ 
+            ...prev, 
+            content: prev.content + ` <a href="${url}">${text}</a>` 
+          }));
+          setProductModalOpen(false);
+        }}
+      />
     </div>
   );
 }
@@ -1048,6 +1077,7 @@ function PreviewContent({ blogData }: { blogData: BlogPost }) {
           )}
         </div>
       </div>
+
     </div>
   );
 }
