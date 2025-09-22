@@ -311,6 +311,25 @@ export default function BlogGenerator() {
   const generateBlogContent = async () => {
     if (!landingPage) return;
 
+    // Ensure selected products are loaded before generating content
+    const selectedProductIds = getSelectedProducts(landingPage.id) || [];
+    
+    if (selectedProductIds.length > 0 && selectedProducts.length === 0) {
+      console.log('⏳ Aguardando carregamento dos produtos antes de gerar conteúdo...');
+      toast({
+        title: "Carregando produtos",
+        description: "Aguarde enquanto carregamos os produtos selecionados...",
+        variant: "default"
+      });
+      return;
+    }
+
+    console.log('🚀 Gerando conteúdo de blog com produtos:', {
+      selectedProductIds,
+      selectedProductsLoaded: selectedProducts.length,
+      isDualMode
+    });
+
     setGenerating(true);
     try {
       if (isDualMode) {

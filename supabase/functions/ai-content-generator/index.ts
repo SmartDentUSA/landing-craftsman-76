@@ -135,7 +135,7 @@ serve(async (req) => {
         result = await generateGoogleAds(deepSeekApiKey, strategicContext);
         break;
       case 'blog_content':
-        result = await generateBlogContent(deepSeekApiKey, strategicContext);
+        result = await generateBlogContent(deepSeekApiKey, strategicContext, allProducts);
         break;
       case 'seo_meta':
         result = await generateSEOMeta(deepSeekApiKey, strategicContext);
@@ -737,7 +737,7 @@ Nossa equipe está pronta para atender você com excelência e profissionalismo.
   };
 }
 
-async function generateBlogContent(apiKey: string, context: string): Promise<BlogContent> {
+async function generateBlogContent(apiKey: string, context: string, products: any[] = []): Promise<BlogContent> {
   console.log('🎯 Iniciando geração de blog com validação robusta');
   
   const prompt = `${context}
@@ -770,7 +770,8 @@ async function generateBlogContent(apiKey: string, context: string): Promise<Blo
 - Artigo mínimo 800 palavras usando APENAS dados fornecidos
 - Estrutura com H2 e H3
 - Use discurso comercial quando fornecido
-- Incorpore reviews e depoimentos quando disponíveis  
+- Incorpore reviews e depoimentos quando disponíveis
+- SE HÁ PRODUTOS SELECIONADOS: inclua seção "## Produtos em Destaque" ou "## Nossas Soluções"
 - CTA forte no final
 - Meta description (50-160 caracteres)
 
