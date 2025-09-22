@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
 import { generateBlogHTML } from "@/lib/template-engine";
+import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link } from "lucide-react";
 
 interface BlogPost {
@@ -486,32 +487,6 @@ export default function BlogGenerator() {
     }
   };
 
-  // Função para processar conteúdo aplicando intelligent_links
-  const processContentWithIntelligentLinks = (content: string) => {
-    if (!content || !blogPost.intelligent_links) return content;
-    
-    let processedContent = content;
-    
-    // Aplicar cada link inteligente
-    Object.entries(blogPost.intelligent_links).forEach(([keyword, url]) => {
-      if (keyword && url) {
-        // Criar regex para encontrar a palavra-chave (case insensitive, word boundary)
-        const regex = new RegExp(`\\b(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
-        
-        // Substituir apenas a primeira ocorrência para evitar links excessivos
-        let replaced = false;
-        processedContent = processedContent.replace(regex, (match) => {
-          if (!replaced) {
-            replaced = true;
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline;">${match}</a>`;
-          }
-          return match;
-        });
-      }
-    });
-    
-    return processedContent;
-  };
 
   // Função para gerar HTML completo do preview
   const generateBlogPreviewHTML = (domain?: 'dentala' | 'eodonto') => {
@@ -523,7 +498,7 @@ export default function BlogGenerator() {
 
     try {
       // Processar conteúdo com links inteligentes
-      const processedContent = processContentWithIntelligentLinks(currentPost.content || '');
+      const processedContent = processContentWithIntelligentLinks(currentPost.content || '', currentPost.intelligent_links || {});
       
       // Criar objeto de dados do blog com conteúdo processado
       const blogData = {

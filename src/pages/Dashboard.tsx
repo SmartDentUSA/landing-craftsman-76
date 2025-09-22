@@ -11,6 +11,7 @@ import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML } from "@/lib/template-engine";
 import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
+import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
@@ -25,6 +26,7 @@ interface BlogPost {
   content: string;
   meta_description: string;
   keywords: string[];
+  intelligent_links?: any; // Handle Json type from Supabase
 }
 
 
@@ -479,8 +481,8 @@ const DashboardContent = () => {
                     <p class="post-meta">${domainName} | ${new Date(featuredBlog.created_at).toLocaleDateString('pt-BR')}</p>
                     <h2>${featuredBlog.title}</h2>
                     <p>${featuredBlog.meta_description || 'Conteúdo sobre odontologia digital'}</p>
-                    <div class="full-content" style="display: none;">
-                        ${featuredBlog.content || 'Conteúdo do blog gerado pela IA'}
+                     <div class="full-content" style="display: none;">
+                        ${processContentWithIntelligentLinks(featuredBlog.content || 'Conteúdo do blog gerado pela IA', featuredBlog.intelligent_links || {})}
                     </div>
                     <button class="read-more-btn">Leia mais &rarr;</button>
                 </div>
@@ -495,7 +497,7 @@ const DashboardContent = () => {
                         <h3>${blog.title}</h3>
                         <p>${blog.meta_description || 'Descrição do blog'}</p>
                         <div class="full-content" style="display: none;">
-                            ${blog.content || 'Conteúdo do blog'}
+                            ${processContentWithIntelligentLinks(blog.content || 'Conteúdo do blog', blog.intelligent_links || {})}
                         </div>
                         <button class="read-more-btn">Leia mais &rarr;</button>
                     </div>
@@ -515,7 +517,7 @@ const DashboardContent = () => {
                         <h3>${blog.title}</h3>
                         <p>${blog.meta_description || 'Descrição do blog'}</p>
                         <div class="full-content" style="display: none;">
-                            ${blog.content || 'Conteúdo do blog'}
+                            ${processContentWithIntelligentLinks(blog.content || 'Conteúdo do blog', blog.intelligent_links || {})}
                         </div>
                         <button class="read-more-btn">Leia mais &rarr;</button>
                     </div>

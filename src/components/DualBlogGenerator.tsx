@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Copy, FileText, Globe, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 
 interface DualBlogGeneratorProps {
   landingPageId: string;
@@ -85,6 +86,12 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
     const domainUrl = domain === 'dentala' ? 'https://dentala.com.br' : 'https://eodonto.com.br';
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
 
+    // Get intelligent links from landing page data
+    const intelligentLinks = landingPageData?.seo?.intelligent_links || {};
+    
+    // Process content with intelligent links
+    const processedContent = processContentWithIntelligentLinks(version.content, intelligentLinks);
+
     return `<!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -132,96 +139,6 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
         }
         img { max-width: 100%; height: auto; display: block; }
         
-        /* Postagens */
-        .posts-section {
-            display: grid;
-            gap: 2rem;
-        }
-        .featured-post {
-            background-color: var(--white);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        .featured-post-content {
-            padding: 1.5rem;
-        }
-        .featured-post-content h2 {
-            margin-top: 0;
-            font-size: 1.75rem;
-        }
-        .post-card {
-            background-color: var(--white);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-        }
-        .post-card:hover {
-            transform: translateY(-5px);
-        }
-        .post-card img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
-        .post-card-content {
-            padding: 1.5rem;
-        }
-        .post-card-content h3 {
-            margin-top: 0;
-            font-size: 1.25rem;
-        }
-        .post-meta {
-            color: var(--secondary-color);
-            font-size: 0.875rem;
-        }
-        
-        /* Sidebar */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-        
-        /* CORREÇÃO DO ESPAÇAMENTO */
-        .posts-grid,
-        .sidebar-posts {
-            display: grid;
-            gap: 2rem;
-        }
-
-        .sidebar-posts .post-card img {
-            height: 150px; /* Tamanho menor para a barra lateral */
-        }
-        
-        .sidebar-posts .post-card-content h3 {
-            font-size: 1rem;
-        }
-
-        /* Acordeão */
-        .read-more-btn {
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-            color: var(--primary-color);
-            font-weight: 600;
-            font-family: inherit;
-            font-size: 1rem;
-            margin-top: 0.5rem;
-        }
-
-        .full-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease;
-        }
-        
-        .full-content.expanded {
-            max-height: 1000px; /* Valor alto para acomodar qualquer tamanho de texto */
-        }
-        
         /* Main Content Grid */
         .main-content {
             display: grid;
@@ -229,138 +146,87 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
             gap: 2rem;
             padding: 2rem 0;
         }
+        
+        /* Featured Post Styles */
+        .featured-post {
+            background-color: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .featured-post-content {
+            padding: 2rem;
+        }
+        .featured-post-content h1 {
+            margin-top: 0;
+            font-size: 2rem;
+            line-height: 1.3;
+        }
+        .post-meta {
+            color: var(--secondary-color);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        .post-description {
+            font-size: 1.1rem;
+            color: var(--dark-gray);
+            margin-bottom: 1.5rem;
+        }
+        .post-content {
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+        .post-content h2, .post-content h3 {
+            color: var(--primary-color);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        .post-content p {
+            margin-bottom: 1.2rem;
+        }
+        .post-content ul, .post-content ol {
+            margin-bottom: 1.2rem;
+            padding-left: 2rem;
+        }
+        .post-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Intelligent Links Styling */
+        .post-content a[href] {
+            color: var(--primary-color);
+            text-decoration: underline;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .post-content a[href]:hover {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        
         @media (min-width: 768px) {
-            .main-content {
-                grid-template-columns: 2fr 1fr;
+            .featured-post-content {
+                padding: 3rem;
+            }
+            .featured-post-content h1 {
+                font-size: 2.5rem;
             }
         }
     </style>
 </head>
 <body>
-
     <main class="container main-content">
-        <section class="posts-section">
-            
-            <article class="featured-post">
-                <img src="https://via.placeholder.com/1200x600?text=${encodeURIComponent(version.title.substring(0, 50))}" alt="Imagem do post de destaque">
-                <div class="featured-post-content">
-                    <p class="post-meta">${domainName} | ${currentDate}</p>
-                    <h2>${version.title}</h2>
-                    <p>${version.metaDescription}</p>
-                    <div class="full-content">
-                        ${version.content}
-                    </div>
-                    <button class="read-more-btn">Leia mais &rarr;</button>
+        <article class="featured-post">
+            <div class="featured-post-content">
+                <p class="post-meta">${domainName} | ${currentDate}</p>
+                <h1>${version.title}</h1>
+                <p class="post-description">${version.metaDescription}</p>
+                <div class="post-content">
+                    ${processedContent}
                 </div>
-            </article>
-
-            <div class="posts-grid">
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Tecnologia+Odontologica" alt="Imagem sobre tecnologia odontológica">
-                    <div class="post-card-content">
-                        <p class="post-meta">Tecnologia | ${currentDate}</p>
-                        <h3>Inovações em Tecnologia Odontológica</h3>
-                        <p>Descubra as últimas tendências e equipamentos que estão transformando a odontologia moderna.</p>
-                        <div class="full-content">
-                            <p>Conteúdo completo sobre as inovações tecnológicas na odontologia, incluindo scanners, impressoras 3D e softwares especializados.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-                
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Materiais+Dentarios" alt="Imagem sobre materiais dentários">
-                    <div class="post-card-content">
-                        <p class="post-meta">Materiais | ${currentDate}</p>
-                        <h3>Novos Materiais para Restaurações</h3>
-                        <p>Conheça os materiais mais avançados para garantir durabilidade e estética em seus tratamentos.</p>
-                        <div class="full-content">
-                            <p>Informações detalhadas sobre resinas, cerâmicas e outros materiais de última geração para restaurações dentárias.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Equipamentos+Dentarios" alt="Imagem sobre equipamentos dentários">
-                    <div class="post-card-content">
-                        <p class="post-meta">Equipamentos | ${currentDate}</p>
-                        <h3>Guia de Equipamentos Essenciais</h3>
-                        <p>Saiba quais equipamentos são fundamentais para modernizar seu consultório ou laboratório.</p>
-                        <div class="full-content">
-                            <p>Análise completa dos equipamentos mais importantes para profissionais da odontologia digital.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
             </div>
-        </section>
-
-        <aside class="sidebar">
-            <div class="sidebar-posts">
-                <h3>Postagens Recentes</h3>
-                
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Diagnostico+Digital" alt="Imagem sobre diagnóstico digital">
-                    <div class="post-card-content">
-                        <p class="post-meta">Diagnóstico | ${currentDate}</p>
-                        <h3>Revolução no Diagnóstico Digital</h3>
-                        <div class="full-content">
-                            <p>Como as novas tecnologias estão melhorando a precisão dos diagnósticos odontológicos.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-                
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Workflow+Digital" alt="Imagem sobre workflow digital">
-                    <div class="post-card-content">
-                        <p class="post-meta">Workflow | ${currentDate}</p>
-                        <h3>Otimização do Workflow Digital</h3>
-                        <div class="full-content">
-                            <p>Estratégias para implementar um fluxo de trabalho digital eficiente no seu consultório.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-
-                <article class="post-card">
-                    <img src="https://via.placeholder.com/600x400?text=Proteses+3D" alt="Imagem sobre próteses 3D">
-                    <div class="post-card-content">
-                        <p class="post-meta">Próteses | ${currentDate}</p>
-                        <h3>Próteses Impressas em 3D</h3>
-                        <div class="full-content">
-                            <p>Vantagens e aplicações das próteses produzidas com impressão 3D na odontologia.</p>
-                        </div>
-                        <button class="read-more-btn">Leia mais &rarr;</button>
-                    </div>
-                </article>
-            </div>
-        </aside>
+        </article>
     </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const readMoreButtons = document.querySelectorAll('.read-more-btn');
-
-            readMoreButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const fullContent = this.previousElementSibling;
-                    
-                    // Verifica se o conteúdo está expandido ou não
-                    const isExpanded = fullContent.classList.contains('expanded');
-
-                    if (isExpanded) {
-                        fullContent.classList.remove('expanded');
-                        this.textContent = 'Leia mais →';
-                    } else {
-                        fullContent.classList.add('expanded');
-                        this.textContent = 'Fechar ↑';
-                    }
-                });
-            });
-        });
-    </script>
 </body>
 </html>`;
   };
