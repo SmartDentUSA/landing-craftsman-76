@@ -9,6 +9,9 @@ interface Product {
   sales_pitch?: string;
   benefits?: string[];
   features?: string[];
+  keywords?: string[];
+  market_keywords?: string[];
+  search_intent_keywords?: string[];
   price?: number;
   currency?: string;
   category?: string;
@@ -47,6 +50,9 @@ export const useSelectedProducts = () => {
           sales_pitch: (product as any).sales_pitch || '',
           benefits: (product as any).benefits || [],
           features: (product as any).features || [],
+          keywords: (product as any).keywords || [],
+          market_keywords: (product as any).market_keywords || [],
+          search_intent_keywords: (product as any).search_intent_keywords || [],
           price: product.price || undefined,
           currency: product.currency || 'BRL',
           category: product.category || '',
@@ -88,6 +94,9 @@ export const useSelectedProducts = () => {
       sales_pitch: product.sales_pitch,
       benefits: product.benefits,
       features: product.features,
+      keywords: product.keywords,
+      market_keywords: product.market_keywords,
+      search_intent_keywords: product.search_intent_keywords,
       sourceType: 'repository' as const,
       lastUpdated: new Date().toISOString(),
       selected: true,

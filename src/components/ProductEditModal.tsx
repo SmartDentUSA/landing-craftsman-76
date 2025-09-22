@@ -39,6 +39,8 @@ interface Product {
   use_in_ai_generation: boolean;
   approved: boolean;
   keywords?: string[];
+  market_keywords?: string[];
+  search_intent_keywords?: string[];
   benefits?: string[];
   features?: string[];
   instagram_videos?: Video[];
@@ -74,6 +76,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     use_in_ai_generation: true,
     approved: true,
     keywords: [],
+    market_keywords: [],
+    search_intent_keywords: [],
     benefits: [],
     features: [],
     instagram_videos: [],
@@ -84,6 +88,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
   const [targetAudience, setTargetAudience] = useState<string[]>([]);
+  const [marketKeywords, setMarketKeywords] = useState<string[]>([]);
+  const [searchIntentKeywords, setSearchIntentKeywords] = useState<string[]>([]);
   const [newBenefit, setNewBenefit] = useState('');
   const [newFeature, setNewFeature] = useState('');
   const [saving, setSaving] = useState(false);
@@ -109,6 +115,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setFormData({
         ...product,
         keywords: product.keywords || [],
+        market_keywords: product.market_keywords || [],
+        search_intent_keywords: product.search_intent_keywords || [],
         benefits: product.benefits || [],
         features: product.features || [],
         instagram_videos: product.instagram_videos || [],
@@ -119,6 +127,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
       setTargetAudience(product.target_audience || []);
+      setMarketKeywords(product.market_keywords || []);
+      setSearchIntentKeywords(product.search_intent_keywords || []);
       setInstagramVideos(product.instagram_videos || []);
       setYoutubeVideos(product.youtube_videos || []);
       setTestimonialVideos(product.testimonial_videos || []);
@@ -139,6 +149,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         use_in_ai_generation: true,
         approved: true,
         keywords: [],
+        market_keywords: [],
+        search_intent_keywords: [],
         benefits: [],
         features: [],
         instagram_videos: [],
@@ -149,6 +161,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setBenefits([]);
       setFeatures([]);
       setTargetAudience([]);
+      setMarketKeywords([]);
+      setSearchIntentKeywords([]);
       setInstagramVideos([]);
       setYoutubeVideos([]);
       setTestimonialVideos([]);
@@ -492,6 +506,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         use_in_ai_generation: formData.use_in_ai_generation,
         approved: formData.approved,
         keywords: formData.keywords || [],
+        market_keywords: marketKeywords,
+        search_intent_keywords: searchIntentKeywords,
         benefits: benefits,
         features: features,
         source_type: 'manual',
@@ -919,6 +935,30 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               value={formData.keywords || []}
               onChange={(keywords) => setFormData(prev => ({ ...prev, keywords }))}
               placeholder="Adicione keywords"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Keywords de Mercado</Label>
+            <p className="text-xs text-muted-foreground">
+              Termos relacionados ao seu nicho e concorrência para melhorar relevância SEO
+            </p>
+            <TagInput
+              value={marketKeywords}
+              onChange={setMarketKeywords}
+              placeholder="Ex: odontologia estética, clareamento dental, implantes"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Keywords de Intenção de Busca</Label>
+            <p className="text-xs text-muted-foreground">
+              Termos que seus clientes pesquisam quando têm intenção de compra
+            </p>
+            <TagInput
+              value={searchIntentKeywords}
+              onChange={setSearchIntentKeywords}
+              placeholder="Ex: preço de implante, melhor dentista, tratamento ortodôntico"
             />
           </div>
 

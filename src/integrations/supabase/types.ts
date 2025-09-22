@@ -386,11 +386,13 @@ export type Database = {
           image_url: string | null
           instagram_videos: Json | null
           keywords: Json | null
+          market_keywords: Json | null
           name: string
           original_data: Json | null
           price: number | null
           product_url: string | null
           sales_pitch: string | null
+          search_intent_keywords: Json | null
           source_landing_page_id: string | null
           source_type: string
           subcategory: string | null
@@ -419,11 +421,13 @@ export type Database = {
           image_url?: string | null
           instagram_videos?: Json | null
           keywords?: Json | null
+          market_keywords?: Json | null
           name: string
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
           sales_pitch?: string | null
+          search_intent_keywords?: Json | null
           source_landing_page_id?: string | null
           source_type: string
           subcategory?: string | null
@@ -452,11 +456,13 @@ export type Database = {
           image_url?: string | null
           instagram_videos?: Json | null
           keywords?: Json | null
+          market_keywords?: Json | null
           name?: string
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
           sales_pitch?: string | null
+          search_intent_keywords?: Json | null
           source_landing_page_id?: string | null
           source_type?: string
           subcategory?: string | null
