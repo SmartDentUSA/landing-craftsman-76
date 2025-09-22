@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -36,8 +36,14 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
       const role = isAdmin ? 'admin' : 'user';
       setUserRole(role);
 
-      // Check if user has required role
-      if (requiredRole === 'admin' && role !== 'admin') {
+      // Admin users have access to everything - no role restrictions
+      if (role === 'admin') {
+        setLoading(false);
+        return;
+      }
+
+      // Check if user has required role (only applies to non-admin users)
+      if (requiredRole === 'admin' && role === 'user') {
         // Show better message for access denied
         setLoading(false);
         return;
@@ -74,8 +80,8 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
     return null;
   }
 
-  // Show access denied message for admin-only routes
-  if (requiredRole === 'admin' && userRole !== 'admin') {
+  // Show access denied message for admin-only routes (only for non-admin users)
+  if (requiredRole === 'admin' && userRole === 'user') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="max-w-md mx-auto text-center p-8">

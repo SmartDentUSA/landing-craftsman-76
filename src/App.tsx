@@ -27,13 +27,13 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/editor" element={<ProtectedRoute requiredRole="admin"><Editor /></ProtectedRoute>} />
-          <Route path="/editor/:id" element={<ProtectedRoute requiredRole="admin"><Editor /></ProtectedRoute>} />
-          <Route path="/code-view" element={<ProtectedRoute requiredRole="admin"><CodeView /></ProtectedRoute>} />
-          <Route path="/cloudflare-settings" element={<ProtectedRoute requiredRole="admin"><CloudflareSettings /></ProtectedRoute>} />
-          <Route path="/publication-settings" element={<ProtectedRoute requiredRole="admin"><PublicationSettings /></ProtectedRoute>} />
-          <Route path="/blog-generator/:id" element={<ProtectedRoute requiredRole="admin"><BlogGenerator /></ProtectedRoute>} />
-          <Route path="/blog/:id" element={<ProtectedRoute requiredRole="admin"><BlogGenerator /></ProtectedRoute>} />
+          <Route path="/editor" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+          <Route path="/editor/:id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+          <Route path="/code-view" element={<ProtectedRoute><CodeView /></ProtectedRoute>} />
+          <Route path="/cloudflare-settings" element={<ProtectedRoute><CloudflareSettings /></ProtectedRoute>} />
+          <Route path="/publication-settings" element={<ProtectedRoute><PublicationSettings /></ProtectedRoute>} />
+          <Route path="/blog-generator/:id" element={<ProtectedRoute><BlogGenerator /></ProtectedRoute>} />
+          <Route path="/blog/:id" element={<ProtectedRoute><BlogGenerator /></ProtectedRoute>} />
           <Route path="/password-reset" element={<PasswordReset />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -543,7 +543,7 @@ const DashboardContent = () => {
         <BreadcrumbNavigation />
       </div>
       {/* Admin Promotion Banner */}
-      {userEmail === 'danilohen@gmail.com' && userRole !== 'admin' && (
+      {userRole !== 'admin' && (
         <div className="bg-gradient-to-r from-primary/10 to-accent/10 border-b border-primary/20">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
@@ -579,10 +579,15 @@ const DashboardContent = () => {
       <header className="border-b bg-card shadow-soft">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Landing Page Generator
               </h1>
+              {userRole === 'admin' && (
+                <Badge variant="default" className="bg-gradient-primary text-primary-foreground">
+                  ADMIN
+                </Badge>
+              )}
               <p className="text-muted-foreground mt-1">
                 Crie e gerencie suas landing pages com facilidade
               </p>
@@ -596,6 +601,28 @@ const DashboardContent = () => {
                 <Database className="h-4 w-4 mr-2" />
                 Migrar Produtos
               </Button>
+              
+              {userRole === 'admin' && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/publication-settings')}
+                  className="border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Configurações de Publicação
+                </Button>
+              )}
+              
+              {userRole === 'admin' && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/cloudflare-settings')}
+                  className="border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  Configurações Cloudflare
+                </Button>
+              )}
               
               {/* DESABILITADO: Configurações de Publicação removidas temporariamente
               <Button 
@@ -865,7 +892,7 @@ const DashboardContent = () => {
 
 const Dashboard = () => {
   return (
-    <ProtectedRoute requiredRole="user">
+    <ProtectedRoute>
       <DashboardContent />
     </ProtectedRoute>
   );
