@@ -98,8 +98,11 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
   };
 
   const shouldRegenerate = () => {
-    // Simple check to see if we should regenerate based on data freshness
-    return !blogPost || !blogPost.title;
+    // Don't regenerate if we already have a blog and published blog exists
+    if (blogPost && publishedBlog) return false;
+    
+    // Only regenerate if we have no preview or published blog
+    return !blogPost || (!publishedBlog && !blogPost.title);
   };
 
   const generateBlogPreview = async () => {

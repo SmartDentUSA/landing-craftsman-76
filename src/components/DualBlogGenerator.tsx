@@ -7,6 +7,7 @@ import { Loader2, Copy, FileText, Globe, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
+import useLandingPages from "@/hooks/useLandingPages";
 
 interface DualBlogGeneratorProps {
   landingPageId: string;
@@ -31,6 +32,7 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { markBlogGenerated } = useLandingPages();
 
   const generateDualVersions = async () => {
     setGenerating(true);
@@ -54,6 +56,12 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
       if (data?.success && data?.content) {
         setBlogVersions(data.content);
         console.log("✅ Versões duplas geradas com sucesso");
+        
+        // Save both blog versions to Supabase
+        await saveBlogVersions(data.content);
+        
+        // Mark landing page as having generated blog
+        markBlogGenerated(landingPageId);
         
         toast({
           title: "Versões Geradas!",
@@ -229,6 +237,55 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
     </main>
 </body>
 </html>`;
+  };
+
+  const saveBlogVersions = async (versions: DualBlogVersions) => {
+    try {
+      // Save Dentala version
+      const { error: dentalaError } = await supabase
+        .from('blog_posts')
+        .upsert({
+          landing_page_id: landingPageId,
+          title: versions.dentala.title,
+          content: versions.dentala.content,
+          meta_description: versions.dentala.metaDescription,
+          keywords: versions.dentala.keywords,
+          status: 'published',
+          published_domains: ['dentala.com.br']
+        }, {
+          onConflict: 'landing_page_id,published_domains',
+          ignoreDuplicates: false
+        });
+
+      if (dentalaError) throw dentalaError;
+
+      // Save Eodonto version
+      const { error: eodontoError } = await supabase
+        .from('blog_posts')
+        .upsert({
+          landing_page_id: landingPageId,
+          title: versions.eodonto.title,
+          content: versions.eodonto.content,
+          meta_description: versions.eodonto.metaDescription,
+          keywords: versions.eodonto.keywords,
+          status: 'published',
+          published_domains: ['eodonto.com.br']
+        }, {
+          onConflict: 'landing_page_id,published_domains',
+          ignoreDuplicates: false
+        });
+
+      if (eodontoError) throw eodontoError;
+
+      console.log('💾 Blog versions saved to Supabase successfully');
+    } catch (error) {
+      console.error('Error saving blog versions:', error);
+      toast({
+        title: "Erro ao Salvar",
+        description: "Blogs gerados mas não foram salvos automaticamente",
+        variant: "destructive"
+      });
+    }
   };
 
   const copyToClipboard = async (version: BlogVersion, domain: string) => {

@@ -16,6 +16,9 @@ export interface LandingPage {
   };
   // Novos campos para o sistema centralizado de produtos
   selectedProductIds?: string[];
+  // Campo para status do blog
+  blogGenerated?: boolean;
+  blogGeneratedAt?: Date;
 }
 
 interface LandingPagesStore {
@@ -29,6 +32,8 @@ interface LandingPagesStore {
   // Novos métodos para gerenciar produtos selecionados
   updateSelectedProducts: (landingPageId: string, productIds: string[]) => void;
   getSelectedProducts: (landingPageId: string) => string[];
+  // Método para marcar blog como gerado
+  markBlogGenerated: (landingPageId: string) => void;
 }
 
 const useLandingPages = create<LandingPagesStore>()(
@@ -184,6 +189,21 @@ const useLandingPages = create<LandingPagesStore>()(
       getSelectedProducts: (landingPageId: string) => {
         const landingPage = get().landingPages.find(lp => lp.id === landingPageId);
         return landingPage?.selectedProductIds || [];
+      },
+
+      markBlogGenerated: (landingPageId: string) => {
+        set((state) => ({
+          landingPages: state.landingPages.map(lp =>
+            lp.id === landingPageId
+              ? { 
+                  ...lp, 
+                  blogGenerated: true,
+                  blogGeneratedAt: new Date(),
+                  lastModified: new Date()
+                }
+              : lp
+          )
+        }));
       },
     }),
     {
