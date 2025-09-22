@@ -42,6 +42,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 
+// SelFlux mode completely removed - using only standard template engine
+
 // Interface de dados de imagem para o novo sistema
 interface ImageData {
   mode: 'url' | 'cloudflare';
