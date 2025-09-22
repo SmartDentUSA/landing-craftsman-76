@@ -582,6 +582,7 @@ const DashboardContent = () => {
                 Migrar Produtos
               </Button>
               
+              {/* DESABILITADO: Configurações de Publicação removidas temporariamente
               <Button 
                 variant="outline" 
                 onClick={() => navigate('/publication-settings')}
@@ -590,6 +591,7 @@ const DashboardContent = () => {
                 <Shield className="h-4 w-4 mr-2" />
                 Configurações de Publicação
               </Button>
+              */}
               
               <Button onClick={handleCreateNew} className="gradient-primary shadow-primary transition-smooth hover:scale-105">
                 <Plus className="h-4 w-4 mr-2" />

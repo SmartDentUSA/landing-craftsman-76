@@ -2210,6 +2210,7 @@ const EditorContent = () => {
       <div className="flex h-[calc(100vh-80px)]">
         {/* Editor Panel */}
         <div className="w-1/2 overflow-y-auto p-6 space-y-6">
+          {/* DESABILITADO: Configurações Globais do Cloudflare removidas temporariamente
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -2231,6 +2232,7 @@ const EditorContent = () => {
               </Button>
             </CardContent>
           </Card>
+          */}
 
           <Tabs defaultValue="landing-page" className="w-full">
             <TabsList className={`grid w-full ${data.status === 'approved' ? 'grid-cols-6' : 'grid-cols-5'}`}>
