@@ -17,39 +17,56 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-
-      // Check if user has admin role using RPC function
-      const { data: isAdmin } = await supabase
-        .rpc('has_role', { 
-          _user_id: session.user.id, 
-          _role: 'admin' 
+      try {
+        console.log('🔐 Starting authentication check...');
+        
+        // Get current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log('📝 Session data:', { 
+          hasSession: !!session, 
+          hasUser: !!session?.user, 
+          userId: session?.user?.id,
+          email: session?.user?.email,
+          sessionError 
         });
+        
+        if (!session?.user) {
+          console.log('❌ No valid session found, redirecting to auth');
+          navigate("/auth");
+          return;
+        }
 
-      const role = isAdmin ? 'admin' : 'user';
-      setUserRole(role);
+        setUser(session.user);
+        console.log('✅ User session validated:', session.user.email);
 
-      // Admin users have access to everything - no role restrictions
-      if (role === 'admin') {
+        // Check if user has admin role using RPC function
+        console.log('🔍 Checking admin role for user:', session.user.id);
+        const { data: isAdmin, error: roleError } = await supabase
+          .rpc('has_role', { 
+            _user_id: session.user.id, 
+            _role: 'admin' 
+          });
+
+        console.log('📋 Role check result:', { isAdmin, roleError });
+
+        // Handle role check errors gracefully
+        if (roleError) {
+          console.error('❌ Role check failed:', roleError);
+          // Fallback: treat as regular user if role check fails
+          setUserRole('user');
+        } else {
+          const role = isAdmin ? 'admin' : 'user';
+          setUserRole(role);
+          console.log('✅ Role assigned:', role);
+        }
+
         setLoading(false);
-        return;
-      }
-
-      // Check if user has required role (only applies to non-admin users)
-      if (requiredRole === 'admin' && role === 'user') {
-        // Show better message for access denied
+      } catch (error) {
+        console.error('❌ Authentication check failed:', error);
+        // Force refresh of auth state
+        await supabase.auth.refreshSession();
         setLoading(false);
-        return;
       }
-
-      setLoading(false);
     };
 
     checkAuth();
