@@ -36,7 +36,7 @@ const Repository = () => {
           </div>
           
           <RepositoryPanel 
-            landingPageId=""
+            landingPageId="repository"
             onProductSelectionChange={() => {}}
             onCompanyProfileChange={() => {}}
           />

@@ -76,7 +76,18 @@ export function RepositoryPanel({
   // Load products from repository
   useEffect(() => {
     loadProducts();
+    loadManualReviews();
   }, []);
+
+  const loadManualReviews = async () => {
+    try {
+      const { loadManualReviews: loadReviews } = useLandingPages.getState();
+      const reviews = await loadReviews(landingPageId);
+      setManualReviews(reviews);
+    } catch (error) {
+      console.error('Erro ao carregar reviews manuais:', error);
+    }
+  };
 
   // Apply filters
   useEffect(() => {
