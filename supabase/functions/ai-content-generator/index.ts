@@ -141,7 +141,7 @@ serve(async (req) => {
         result = await generateSEOMeta(deepSeekApiKey, strategicContext);
         break;
       case 'dual_blog_versions':
-        result = await generateDualBlogVersions(deepSeekApiKey, strategicContext);
+        result = await generateDualBlogVersions(deepSeekApiKey, strategicContext, allProducts);
         break;
       default:
         console.error(`❌ Unsupported content type: ${request.type}. Supported types: google_ads, blog_content, seo_meta, dual_blog_versions`);
@@ -206,50 +206,71 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   console.log(`  FAQ Keywords: ${faqKeywords.length} - [${faqKeywords.slice(0, 2).join(', ')}...]`);
   console.log(`  Product Keywords: ${productKeywords.length} - [${productKeywords.slice(0, 3).join(', ')}...]`);
   
-  // Log selected products for debugging
+  // Log selected products for debugging e análise de qualidade dos dados
   if (products.length > 0) {
     console.log(`📦 Products being used in AI generation:`);
     products.forEach((p, i) => {
-      console.log(`  ${i + 1}. ${p.name}${p.sales_pitch ? ' (com discurso comercial)' : ''}`);
+      const dataQuality = calculateProductDataQuality(p);
+      console.log(`  ${i + 1}. ${p.name}${p.sales_pitch ? ' (com discurso comercial)' : ''} - Qualidade: ${dataQuality}%`);
+      
+      if (dataQuality < 50) {
+        console.warn(`    ⚠️ DADOS INSUFICIENTES para ${p.name} - risco de alucinação`);
+      }
     });
+  } else {
+    console.warn('🚨 NENHUM PRODUTO DISPONÍVEL - usando fallback genérico');
   }
   
-  // Build complete product context with ALL repository fields
-  const productContext = products.length > 0 
-    ? products.map(p => {
-        let productInfo = `• **${p.name}**${p.price ? ` (${p.currency || 'BRL'} ${p.price})` : ''}`;
-        
-        if (p.description) {
-          productInfo += `\n  📋 Descrição: ${p.description}`;
-        }
-        
-        if (p.sales_pitch) {
-          productInfo += `\n  💰 Discurso Comercial: ${p.sales_pitch}`;
-        }
-        
-        if (p.category) {
-          productInfo += `\n  🏷️ Categoria: ${p.category}${p.subcategory ? ` > ${p.subcategory}` : ''}`;
-        }
-        
-        if (p.benefits && Array.isArray(p.benefits) && p.benefits.length > 0) {
-          productInfo += `\n  ✅ Benefícios: ${p.benefits.join(', ')}`;
-        }
-        
-        if (p.features && Array.isArray(p.features) && p.features.length > 0) {
-          productInfo += `\n  🔧 Características: ${p.features.join(', ')}`;
-        }
-        
-        if (p.keywords && Array.isArray(p.keywords) && p.keywords.length > 0) {
-          productInfo += `\n  🔍 Palavras-chave: ${p.keywords.join(', ')}`;
-        }
-        
-        if (p.target_audience && Array.isArray(p.target_audience) && p.target_audience.length > 0) {
-          productInfo += `\n  👥 Público-alvo: ${p.target_audience.join(', ')}`;
-        }
-        
-        return productInfo;
-      }).join('\n\n')
-    : '• Soluções personalizadas de alta qualidade\n• Atendimento especializado\n• Garantia de resultados';
+        // Build complete product context with STRICT data validation
+        const productContext = products.length > 0 
+          ? products.map(p => {
+              let productInfo = `• **${p.name}**${p.price ? ` (${p.currency || 'BRL'} ${p.price})` : ''}`;
+              
+              if (p.description) {
+                productInfo += `\n  📋 DESCRIÇÃO DISPONÍVEL: ${p.description}`;
+              } else {
+                productInfo += `\n  📋 DESCRIÇÃO: Não fornecida`;
+              }
+              
+              if (p.sales_pitch) {
+                productInfo += `\n  💰 DISCURSO COMERCIAL DISPONÍVEL: ${p.sales_pitch}`;
+              } else {
+                productInfo += `\n  💰 DISCURSO COMERCIAL: Não fornecido`;
+              }
+              
+              if (p.category) {
+                productInfo += `\n  🏷️ CATEGORIA DISPONÍVEL: ${p.category}${p.subcategory ? ` > ${p.subcategory}` : ''}`;
+              } else {
+                productInfo += `\n  🏷️ CATEGORIA: Não especificada`;
+              }
+              
+              if (p.benefits && Array.isArray(p.benefits) && p.benefits.length > 0) {
+                productInfo += `\n  ✅ BENEFÍCIOS DISPONÍVEIS: ${p.benefits.join(', ')}`;
+              } else {
+                productInfo += `\n  ✅ BENEFÍCIOS: Não especificados - NÃO INVENTE`;
+              }
+              
+              if (p.features && Array.isArray(p.features) && p.features.length > 0) {
+                productInfo += `\n  🔧 CARACTERÍSTICAS DISPONÍVEIS: ${p.features.join(', ')}`;
+              } else {
+                productInfo += `\n  🔧 CARACTERÍSTICAS: Não especificadas - NÃO INVENTE`;
+              }
+              
+              if (p.keywords && Array.isArray(p.keywords) && p.keywords.length > 0) {
+                productInfo += `\n  🔍 PALAVRAS-CHAVE DISPONÍVEIS: ${p.keywords.join(', ')}`;
+              } else {
+                productInfo += `\n  🔍 PALAVRAS-CHAVE: Não especificadas`;
+              }
+              
+              if (p.target_audience && Array.isArray(p.target_audience) && p.target_audience.length > 0) {
+                productInfo += `\n  👥 PÚBLICO-ALVO DISPONÍVEL: ${p.target_audience.join(', ')}`;
+              } else {
+                productInfo += `\n  👥 PÚBLICO-ALVO: Não especificado`;
+              }
+              
+              return productInfo;
+            }).join('\n\n')
+          : '• DADOS INSUFICIENTES - Use apenas informações genéricas sobre soluções de qualidade';
 
   // Always provide meaningful context, even with minimal data
   return `
@@ -316,23 +337,36 @@ ${videoTestimonials.length > 0 ? videoTestimonials.slice(0, 10).map((testimonial
 
 ---
 
-INSTRUÇÕES PARA GERAÇÃO PROGRESSIVA:
-Você é um redator de marketing digital especialista. Mesmo com informações limitadas, sempre gere conteúdo de qualidade:
+⚠️ **INSTRUÇÕES RIGOROSAS ANTI-ALUCINAÇÃO** ⚠️
 
-1. **PRIORIZE OS DISCURSOS COMERCIAIS**: Use os sales pitch fornecidos para criar headlines e descrições mais persuasivas
-2. **USE CATEGORIAS COMO KEYWORDS PRINCIPAIS**: Integre categorias e subcategorias nas palavras-chave para SEO e Google Ads
-3. **SEGMENTAÇÃO POR CATEGORIA**: Use categorias para criar ad groups temáticos no Google Ads
-4. Use TODOS os dados disponíveis, mesmo que sejam poucos
-5. Crie conteúdo persuasivo baseado no que está disponível
-6. Use palavras-chave de forma natural, priorizando categorias
-7. Foque nos benefícios para o público-alvo
-8. Integre os discursos comerciais de forma natural no texto
-9. **TAXONOMIA SEO**: Inclua categorias em títulos H2/H3 e meta descriptions
-10. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
-11. SEMPRE gere algo útil, mesmo com dados mínimos
-12. **CRÍTICO - PÚBLICO-ALVO ESPECÍFICO**: Use APENAS os públicos-alvo definidos nos produtos. NÃO invente frases genéricas como "produto para..." - use exatamente os públicos-alvo cadastrados
+**REGRAS FUNDAMENTAIS:**
+1. **USE SOMENTE DADOS FORNECIDOS**: Se um campo está marcado como "Não especificado" ou "Não fornecido", NÃO invente conteúdo para ele
+2. **VALIDAÇÃO OBRIGATÓRIA**: Antes de mencionar qualquer característica ou benefício, confirme que está explicitamente listado nos dados
+3. **FALLBACK GENÉRICO**: Quando dados insuficientes, use linguagem genérica mas NÃO invente especificações
+4. **NOMES EXATOS**: Use os nomes dos produtos EXATAMENTE como fornecidos
+5. **DISCURSOS COMERCIAIS**: Use sales pitch quando disponível, caso contrário seja genérico
+6. **CATEGORIAS REAIS**: Use apenas categorias/subcategorias explicitamente fornecidas
+7. **PÚBLICO-ALVO REAL**: Use APENAS públicos-alvo listados nos dados, NÃO invente
+8. **BENEFÍCIOS REAIS**: Mencione APENAS benefícios que estão na seção "BENEFÍCIOS DISPONÍVEIS"
+9. **CARACTERÍSTICAS REAIS**: Mencione APENAS características que estão na seção "CARACTERÍSTICAS DISPONÍVEIS"
+10. **KEYWORDS REAIS**: Use APENAS palavras-chave que estão na seção "PALAVRAS-CHAVE DISPONÍVEIS"
 
-NUNCA retorne erro por falta de dados - sempre adapte e gere conteúdo adequado!
+**LISTA NEGRA DE INVENÇÕES PROIBIDAS:**
+❌ "biocompatível", "precisão milimétrica", "alta resistência", "acabamento superior"
+❌ "scanner intraoral", "material avançado", "tecnologia de ponta"
+❌ Qualquer especificação técnica não listada explicitamente
+❌ Qualquer benefício não listado explicitamente
+❌ Qualquer característica não listada explicitamente
+
+**EM CASO DE DADOS LIMITADOS:**
+✅ Use: "soluções de qualidade", "atendimento especializado", "produtos profissionais"
+✅ Seja genérico mas preciso com os dados disponíveis
+✅ Foque no que está disponível, não no que falta
+
+**VALIDAÇÃO FINAL:**
+Antes de enviar resposta, confirme que CADA característica, benefício e especificação mencionada está explicitamente listada nos dados fornecidos.
+
+NUNCA retorne erro por falta de dados - sempre adapte usando APENAS informações disponíveis!
 `;
 }
 
@@ -404,6 +438,56 @@ function determinePrimaryKeyword(providedKeyword: string | undefined, faqKeyword
   const fallbackKeyword = 'soluções especializadas';
   console.log(`🎯 Using ultimate fallback keyword: "${fallbackKeyword}"`);
   return fallbackKeyword;
+}
+
+// Função para calcular qualidade dos dados do produto (para detectar risco de alucinação)
+function calculateProductDataQuality(product: any): number {
+  let score = 0;
+  let maxScore = 0;
+  
+  // Nome do produto (obrigatório)
+  if (product.name && product.name.trim()) {
+    score += 20;
+  }
+  maxScore += 20;
+  
+  // Descrição
+  if (product.description && product.description.trim().length > 10) {
+    score += 15;
+  }
+  maxScore += 15;
+  
+  // Benefícios
+  if (product.benefits && Array.isArray(product.benefits) && product.benefits.length > 0) {
+    score += 20;
+  }
+  maxScore += 20;
+  
+  // Características/Features
+  if (product.features && Array.isArray(product.features) && product.features.length > 0) {
+    score += 20;
+  }
+  maxScore += 20;
+  
+  // Keywords
+  if (product.keywords && Array.isArray(product.keywords) && product.keywords.length > 0) {
+    score += 10;
+  }
+  maxScore += 10;
+  
+  // Sales pitch
+  if (product.sales_pitch && product.sales_pitch.trim()) {
+    score += 10;
+  }
+  maxScore += 10;
+  
+  // Categoria
+  if (product.category && product.category.trim()) {
+    score += 5;
+  }
+  maxScore += 5;
+  
+  return Math.round((score / maxScore) * 100);
 }
 
 // FASE 1: Extract FAQ Section for context
@@ -555,6 +639,70 @@ function validateBlogContent(content: any): { isValid: boolean; errors: string[]
   };
 }
 
+// Função anti-alucinação para validar conteúdo contra dados reais dos produtos
+function validateContentAgainstProducts(content: string, products: any[]): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const contentLower = content.toLowerCase();
+  
+  // Lista negra de termos que indicam alucinação comum
+  const hallucinationTerms = [
+    'biocompatível', 'biocompatibilidade',
+    'precisão milimétrica', 'precisão micrométrica',
+    'scanner intraoral', 'scanner digital',
+    'alta resistência', 'resistência superior',
+    'acabamento superior', 'acabamento premium',
+    'material avançado', 'tecnologia avançada',
+    'resistência mecânica', 'durabilidade excepcional',
+    'propriedades físicas', 'características físicas',
+    'resinas 3d', 'material fotopolimerizável'
+  ];
+  
+  // Verificar se conteúdo contém termos de alucinação
+  for (const term of hallucinationTerms) {
+    if (contentLower.includes(term.toLowerCase())) {
+      // Verificar se o termo está nos dados reais dos produtos
+      const termFoundInData = products.some(p => {
+        const productData = [
+          p.description || '',
+          ...(Array.isArray(p.benefits) ? p.benefits : []),
+          ...(Array.isArray(p.features) ? p.features : []),
+          ...(Array.isArray(p.keywords) ? p.keywords : []),
+          p.sales_pitch || ''
+        ].join(' ').toLowerCase();
+        
+        return productData.includes(term.toLowerCase());
+      });
+      
+      if (!termFoundInData) {
+        errors.push(`ALUCINAÇÃO DETECTADA: "${term}" não está nos dados dos produtos`);
+      }
+    }
+  }
+  
+  // Verificar nomes de produtos inventados
+  const commonInventedProducts = [
+    'scanner', 'impressora 3d', 'equipamento digital',
+    'sistema avançado', 'tecnologia de ponta'
+  ];
+  
+  for (const inventedProduct of commonInventedProducts) {
+    if (contentLower.includes(inventedProduct.toLowerCase())) {
+      const productFound = products.some(p => 
+        p.name.toLowerCase().includes(inventedProduct.toLowerCase())
+      );
+      
+      if (!productFound && !contentLower.includes('como') && !contentLower.includes('para')) {
+        errors.push(`PRODUTO INVENTADO: "${inventedProduct}" não existe nos dados`);
+      }
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
 // Função de fallback para blog válido
 function getFallbackBlogContent(context: string): BlogContent {
   const fallbackTitle = "Soluções Profissionais - Qualidade e Inovação";
@@ -596,18 +744,40 @@ async function generateBlogContent(apiKey: string, context: string): Promise<Blo
 
 ## TAREFA: Criar artigo de blog baseado EXCLUSIVAMENTE nos dados fornecidos
 
-Crie um artigo completo (mínimo 800 palavras) usando APENAS as informações fornecidas no contexto acima:
-- Título otimizado para SEO (máx. 60 caracteres)
-- Estrutura com H2 e H3
-- Use os nomes EXATOS dos produtos conforme listados
-- Use os benefícios EXATOS listados para cada produto
-- Use as características EXATAS listadas para cada produto
-- Use o discurso comercial quando fornecido
-- Incorpore reviews e depoimentos quando disponíveis
-- CTA forte no final
-- Meta description (máx. 160 caracteres)
+⚠️ **REGRAS RIGOROSAS ANTI-ALUCINAÇÃO** ⚠️
 
-**REGRA FUNDAMENTAL**: Use APENAS as informações fornecidas no contexto. Não invente características, especificações ou benefícios que não estejam explicitamente listados nos dados dos produtos.
+**PROIBIÇÕES ABSOLUTAS:**
+❌ JAMAIS invente características que não estão listadas
+❌ JAMAIS invente benefícios que não estão explicitamente mencionados
+❌ JAMAIS invente especificações técnicas (biocompatibilidade, precisão milimétrica, etc.)
+❌ JAMAIS invente produtos adicionais (scanners, equipamentos, etc.)
+❌ JAMAIS invente materiais ou propriedades não listadas nos dados
+
+**OBRIGATÓRIO:**
+✅ Use SOMENTE nomes de produtos EXATOS conforme listados
+✅ Use SOMENTE benefícios EXATOS da seção "Benefícios:" de cada produto
+✅ Use SOMENTE características EXATAS da seção "Características:" de cada produto
+✅ Se um produto não tem benefícios/características listados, use apenas o nome e descrição geral
+✅ Quando não há dados suficientes, seja genérico mas NÃO invente
+
+**VALIDAÇÃO OBRIGATÓRIA:**
+- Se você mencionar alguma característica específica, ela DEVE estar na seção "Características:" do produto
+- Se você mencionar algum benefício específico, ele DEVE estar na seção "Benefícios:" do produto
+- Todos os nomes de produtos devem ser IDÊNTICOS aos listados no contexto
+
+**ESTRUTURA DO BLOG:**
+- Título otimizado para SEO (10-60 caracteres)
+- Artigo mínimo 800 palavras usando APENAS dados fornecidos
+- Estrutura com H2 e H3
+- Use discurso comercial quando fornecido
+- Incorpore reviews e depoimentos quando disponíveis  
+- CTA forte no final
+- Meta description (50-160 caracteres)
+
+**EXEMPLO DO QUE NÃO FAZER:**
+- "Resinas 3D com material biocompatível" (se biocompatibilidade não está listada)
+- "Scanner intraoral com precisão milimétrica" (se scanner não está nos produtos)
+- "Alta resistência e acabamento superior" (se não está nas características)
 
 Retorne APENAS um JSON válido:
 {
@@ -677,11 +847,15 @@ Retorne APENAS um JSON válido:
           keywords: parsed.keywords
         });
         
-        if (validation.isValid) {
+        // Validação anti-alucinação
+        const hallucinationCheck = validateContentAgainstProducts(parsed.content, products);
+        
+        if (validation.isValid && hallucinationCheck.isValid) {
           console.log('✅ Conteúdo de blog válido na tentativa', attempt);
           return parsed;
         } else {
-          console.warn(`⚠️ Conteúdo de blog inválido na tentativa ${attempt}:`, validation.errors);
+          const allErrors = [...validation.errors, ...hallucinationCheck.errors];
+          console.warn(`⚠️ Conteúdo de blog inválido na tentativa ${attempt}:`, allErrors);
           if (attempt === maxAttempts) {
             console.log('🔄 Usando fallback de blog após esgotar tentativas');
             const fallback = getFallbackBlogContent(context);
@@ -856,38 +1030,57 @@ function getFallbackAdCopies(): AdCopies {
   };
 }
 
-async function generateDualBlogVersions(apiKey: string, context: string): Promise<DualBlogVersions> {
+async function generateDualBlogVersions(apiKey: string, context: string, products: any[] = []): Promise<DualBlogVersions> {
   console.log('🎯 Generating dual blog versions (Dentala + Eodonto)');
   
   const prompt = `${context}
 
-**OBJETIVO: Gere 2 versões de blog usando EXCLUSIVAMENTE os dados fornecidos:**
+⚠️ **REGRAS RIGOROSAS ANTI-ALUCINAÇÃO PARA BLOGS DUPLOS** ⚠️
+
+**PROIBIÇÕES ABSOLUTAS:**
+❌ JAMAIS invente características que não estão listadas nos dados dos produtos
+❌ JAMAIS invente benefícios que não estão explicitamente mencionados
+❌ JAMAIS invente especificações técnicas (biocompatibilidade, precisão, resistência, etc.)
+❌ JAMAIS invente produtos adicionais (scanners, equipamentos, materiais não listados)
+❌ JAMAIS invente propriedades ou funcionalidades não documentadas
+
+**VALIDAÇÃO OBRIGATÓRIA ANTES DE ESCREVER:**
+✅ Cada característica mencionada DEVE estar na seção "Características:" do produto específico
+✅ Cada benefício mencionado DEVE estar na seção "Benefícios:" do produto específico
+✅ Nomes de produtos devem ser IDÊNTICOS aos listados no contexto
+✅ Se dados insuficientes, seja genérico mas NÃO invente detalhes
 
 **VERSÃO 1 - DENTALA.COM (Foco Técnico para Dentistas):**
-- Tom: Técnico, baseado nos dados fornecidos
+- Tom: Técnico, mas baseado SOMENTE nos dados fornecidos
 - Público: Cirurgiões-dentistas, especialistas
-- Use as características técnicas EXATAS dos produtos listados
+- Use SOMENTE características técnicas LISTADAS nos produtos
+- Se não há características técnicas específicas, use apenas informações gerais disponíveis
 - CTA: "Agende uma demonstração técnica"
 
 **VERSÃO 2 - EODONTO.COM (Foco Comercial para Laboratórios):**
 - Tom: Comercial, prático
-- Público: Laboratórios de prótese, empresários
-- Use os benefícios EXATOS dos produtos listados
+- Público: Laboratórios de prótese, empresários  
+- Use SOMENTE benefícios LISTADOS nos produtos
+- Se não há benefícios específicos, use apenas informações comerciais disponíveis
 - CTA: "Solicite orçamento personalizado"
 
-**REGRA FUNDAMENTAL**: Use APENAS as informações fornecidas no contexto. Não invente características, especificações ou benefícios que não estejam explicitamente listados.
+**EXEMPLO DO QUE NÃO FAZER:**
+- "Material biocompatível" (se não listado nas características)
+- "Precisão milimétrica" (se não listado nas especificações)
+- "Scanner intraoral" (se não existe nos produtos listados)
+- "Alta resistência" (se não está nas características)
 
 **FORMATO DE RESPOSTA JSON:**
 {
   "dentala": {
     "title": "Título técnico para dentistas",
-    "content": "Conteúdo HTML técnico com foco científico",
+    "content": "Conteúdo HTML técnico SOMENTE com dados fornecidos",
     "metaDescription": "Meta description técnica",
     "keywords": ["keyword1", "keyword2"]
   },
   "eodonto": {
     "title": "Título comercial para laboratórios", 
-    "content": "Conteúdo HTML comercial com foco em negócios",
+    "content": "Conteúdo HTML comercial SOMENTE com dados fornecidos",
     "metaDescription": "Meta description comercial",
     "keywords": ["keyword1", "keyword2"]
   }
@@ -907,10 +1100,10 @@ async function generateDualBlogVersions(apiKey: string, context: string): Promis
     }),
   });
 
-  return parseAIDualResponse(response);
+  return parseAIDualResponse(response, products);
 }
 
-async function parseAIDualResponse(response: Response): Promise<DualBlogVersions> {
+async function parseAIDualResponse(response: Response, products: any[] = []): Promise<DualBlogVersions> {
   if (!response.ok) {
     throw new Error(`DeepSeek API error: ${response.status}`);
   }
@@ -932,6 +1125,18 @@ async function parseAIDualResponse(response: Response): Promise<DualBlogVersions
     
     if (!parsed.dentala || !parsed.eodonto) {
       throw new Error('Missing required versions in response');
+    }
+    
+    // Validação anti-alucinação para ambas as versões
+    const dentalaHallucinationCheck = validateContentAgainstProducts(parsed.dentala.content || '', products);
+    const eodontoHallucinationCheck = validateContentAgainstProducts(parsed.eodonto.content || '', products);
+    
+    if (!dentalaHallucinationCheck.isValid) {
+      console.warn('🚨 ALUCINAÇÃO DETECTADA na versão Dentala:', dentalaHallucinationCheck.errors);
+    }
+    
+    if (!eodontoHallucinationCheck.isValid) {
+      console.warn('🚨 ALUCINAÇÃO DETECTADA na versão Eodonto:', eodontoHallucinationCheck.errors);
     }
     
     return {
