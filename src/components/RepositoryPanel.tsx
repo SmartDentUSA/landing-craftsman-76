@@ -73,21 +73,76 @@ export function RepositoryPanel({
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
 
-  // Load products from repository
-  useEffect(() => {
-    loadProducts();
-    loadManualReviews();
-  }, []);
-
+  // Function to load manual reviews
   const loadManualReviews = async () => {
     try {
+      console.log(`[DEBUG] Carregando reviews manuais para landingPageId: ${landingPageId}`);
       const { loadManualReviews: loadReviews } = useLandingPages.getState();
       const reviews = await loadReviews(landingPageId);
+      console.log(`[DEBUG] Reviews carregadas:`, reviews);
       setManualReviews(reviews);
     } catch (error) {
       console.error('Erro ao carregar reviews manuais:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar reviews manuais",
+        variant: "destructive"
+      });
     }
   };
+
+  // Function to load company profile data
+  const loadCompanyProfile = async () => {
+    try {
+      console.log(`[DEBUG] Carregando perfil da empresa`);
+      const { data, error } = await supabase
+        .from('company_profile')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao carregar perfil da empresa:', error);
+      } else if (data) {
+        console.log(`[DEBUG] Perfil da empresa carregado:`, data);
+        onCompanyProfileChange?.(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar perfil da empresa:', error);
+    }
+  };
+
+  // Function to refresh all data
+  const refreshAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadProducts(),
+        loadManualReviews(),
+        loadCompanyProfile()
+      ]);
+      toast({
+        title: "Sucesso",
+        description: "Dados atualizados com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar dados:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar dados",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load all data on component mount and when landingPageId changes
+  useEffect(() => {
+    if (landingPageId) {
+      refreshAllData();
+    }
+  }, [landingPageId]);
 
   // Apply filters
   useEffect(() => {
@@ -382,6 +437,21 @@ export function RepositoryPanel({
                 </Button>
 
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshAllData}
+                  disabled={loading}
+                  className="gap-2"
+                >
+                  {loading ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Atualizar
+                </Button>
+
+                <Button
                   variant="default"
                   size="sm"
                   onClick={handleAddProduct}
@@ -409,7 +479,7 @@ export function RepositoryPanel({
             </TabsTrigger>
             <TabsTrigger value="reviews" className="flex items-center gap-2">
               <Star className="h-4 w-4" />
-              Reviews Manuais
+              Reviews Manuais ({manualReviews.length})
             </TabsTrigger>
             <TabsTrigger value="testimonials" className="flex items-center gap-2">
               <VideoIcon className="h-4 w-4" />
