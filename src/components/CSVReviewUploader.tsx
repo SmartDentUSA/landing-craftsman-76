@@ -38,17 +38,48 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
       const line = lines[i].trim();
       if (!line) continue;
       
-      const parts = line.split(';');
+      // Try to parse CSV properly handling quotes and commas/semicolons
+      let parts: string[] = [];
+      
+      // Check if the line contains quoted values (CSV with commas inside quotes)
+      if (line.includes('"')) {
+        // Parse CSV with quotes properly
+        const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+        parts = line.split(regex).map(part => 
+          part.replace(/^"/, '').replace(/"$/, '').trim()
+        );
+      } else {
+        // Try comma first, then semicolon
+        if (line.includes(',')) {
+          parts = line.split(',');
+        } else if (line.includes(';')) {
+          parts = line.split(';');
+        } else {
+          continue; // Skip lines without proper separators
+        }
+      }
+      
       if (parts.length >= 3) {
-        const [name, rating, comment] = parts;
-        const numericRating = rating.includes('/') ? parseInt(rating.split('/')[0]) : parseInt(rating);
+        const [name, rating, comment] = parts.map(part => part.trim());
         
-        if (name && !isNaN(numericRating) && comment) {
+        // Extract numeric rating from various formats (5/5, 5, etc.)
+        let numericRating = 5; // Default to 5
+        if (rating.includes('/')) {
+          numericRating = parseInt(rating.split('/')[0]);
+        } else {
+          numericRating = parseInt(rating);
+        }
+        
+        // Ensure rating is between 1 and 5
+        if (isNaN(numericRating) || numericRating < 1) numericRating = 1;
+        if (numericRating > 5) numericRating = 5;
+        
+        if (name && comment) {
           parsedReviews.push({
             id: `manual_${Date.now()}_${i}`,
-            author_name: name.trim(),
+            author_name: name,
             rating: numericRating,
-            review_text: comment.trim(),
+            review_text: comment,
             approved: true // Auto-approve manual reviews
           });
         }
@@ -194,7 +225,7 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
               />
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Formato: Nome;Nota;Comentário (ex: João Silva;5/5;Excelente serviço)
+              Formato: Nome,Nota,Comentário ou Nome;Nota;Comentário (ex: João Silva,5/5,Excelente serviço)
               <br />
               <a 
                 href="/template-reviews.csv" 
