@@ -97,17 +97,8 @@ serve(async (req) => {
       console.error('Error fetching products:', productsError);
     }
 
-    // Fetch all approved products if no specific ones found
+    // Use only the selected/landing page products - no fallback products
     let allProducts = products || [];
-    if (!allProducts.length) {
-      const { data: fallbackProducts } = await supabase
-        .from('products_repository')
-        .select('*')
-        .eq('approved', true)
-        .limit(10);
-      
-      allProducts = fallbackProducts || [];
-    }
 
     // Fetch company profile for additional context
     const { data: companyProfiles } = await supabase
@@ -223,15 +214,41 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
     });
   }
   
-  // Build product context - include sales pitch if available
+  // Build complete product context with ALL repository fields
   const productContext = products.length > 0 
     ? products.map(p => {
-        let productInfo = `• ${p.name}${p.price ? ` (R$ ${p.price})` : ''}: ${p.description || 'Produto de qualidade'}`;
+        let productInfo = `• **${p.name}**${p.price ? ` (${p.currency || 'BRL'} ${p.price})` : ''}`;
+        
+        if (p.description) {
+          productInfo += `\n  📋 Descrição: ${p.description}`;
+        }
+        
         if (p.sales_pitch) {
           productInfo += `\n  💰 Discurso Comercial: ${p.sales_pitch}`;
         }
+        
+        if (p.category) {
+          productInfo += `\n  🏷️ Categoria: ${p.category}${p.subcategory ? ` > ${p.subcategory}` : ''}`;
+        }
+        
+        if (p.benefits && Array.isArray(p.benefits) && p.benefits.length > 0) {
+          productInfo += `\n  ✅ Benefícios: ${p.benefits.join(', ')}`;
+        }
+        
+        if (p.features && Array.isArray(p.features) && p.features.length > 0) {
+          productInfo += `\n  🔧 Características: ${p.features.join(', ')}`;
+        }
+        
+        if (p.keywords && Array.isArray(p.keywords) && p.keywords.length > 0) {
+          productInfo += `\n  🔍 Palavras-chave: ${p.keywords.join(', ')}`;
+        }
+        
+        if (p.target_audience) {
+          productInfo += `\n  👥 Público-alvo: ${p.target_audience}`;
+        }
+        
         return productInfo;
-      }).join('\n')
+      }).join('\n\n')
     : '• Soluções personalizadas de alta qualidade\n• Atendimento especializado\n• Garantia de resultados';
 
   // Always provide meaningful context, even with minimal data
@@ -576,41 +593,20 @@ async function generateBlogContent(apiKey: string, context: string): Promise<Blo
   
   const prompt = `${context}
 
-## TAREFA: Criar artigo de blog SEO-otimizado PRIORIZANDO CATEGORIAS/SUBCATEGORIAS
+## TAREFA: Criar artigo de blog baseado EXCLUSIVAMENTE nos dados fornecidos
 
-Crie um artigo completo (mínimo 800 palavras) com:
+Crie um artigo completo (mínimo 800 palavras) usando APENAS as informações fornecidas no contexto acima:
 - Título otimizado para SEO (máx. 60 caracteres)
 - Estrutura com H2 e H3
-- Incorporação natural das palavras-chave
-- **OBRIGATÓRIO: Menção de TODOS os produtos selecionados por nome completo**
-- **OBRIGATÓRIO: Benefícios específicos de cada produto selecionado**
-- **OBRIGATÓRIO: Características técnicas dos produtos selecionados**
-- **OBRIGATÓRIO: Sales pitch quando disponível**
-- **OBRIGATÓRIO: Use a imagem da Solução 1 como imagem de capa do blog**
-- **OBRIGATÓRIO: Inclua URLs de imagens das soluções no conteúdo quando disponíveis**
+- Use os nomes EXATOS dos produtos conforme listados
+- Use os benefícios EXATOS listados para cada produto
+- Use as características EXATAS listadas para cada produto
+- Use o discurso comercial quando fornecido
+- Incorpore reviews e depoimentos quando disponíveis
 - CTA forte no final
 - Meta description (máx. 160 caracteres)
 
-**INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:**
-1. **Use categorias dos produtos como base para estrutura H2/H3 (ex: ## Nossa Linha de [Categoria])**
-2. **Incorpore categorias e subcategorias naturalmente nas keywords do JSON**
-3. **Título deve incluir categoria principal quando relevante**
-4. **Organize conteúdo seguindo taxonomia das categorias**
-5. **Priorize categorias/subcategorias no array de keywords**
-
-**INSTRUÇÕES PARA IMAGENS:**
-1. **Quando houver imagem da Solução 1, inclua como capa: <img src="URL_IMAGEM" alt="Descrição detalhada">**
-2. **Use URLs das imagens das soluções fornecidas no contexto**
-3. **Inclua imagens relevantes ao longo do conteúdo quando disponíveis**
-
-**REGRAS CRÍTICAS ANTI-CONTEÚDO FALSO:**
-6. **USE EXCLUSIVAMENTE DADOS REAIS**: JAMAIS invente especificações técnicas, preços ou características não fornecidas
-7. **BASEIE-SE NOS REVIEWS/DEPOIMENTOS**: Use os reviews manuais e depoimentos em vídeo fornecidos como fonte de credibilidade
-8. **MENCIONE PRODUTOS REAIS**: Use APENAS os nomes EXATOS dos produtos do repositório - NUNCA invente variações
-9. **DADOS VERIFICÁVEIS**: Se uma característica não estiver no contexto, use termos genéricos ("alta qualidade", "tecnologia avançada")
-10. **BENEFITS DOS DEPOIMENTOS**: Priorize benefícios extraídos dos depoimentos reais dos clientes
-11. **REVIEWS COMO PROVA SOCIAL**: Incorpore trechos dos reviews manuais como evidência social
-12. **NÃO INVENTE NÚMEROS**: Jamais crie estatísticas, porcentagens ou dados quantitativos não fornecidos
+**REGRA FUNDAMENTAL**: Use APENAS as informações fornecidas no contexto. Não invente características, especificações ou benefícios que não estejam explicitamente listados nos dados dos produtos.
 
 Retorne APENAS um JSON válido:
 {
@@ -864,21 +860,21 @@ async function generateDualBlogVersions(apiKey: string, context: string): Promis
   
   const prompt = `${context}
 
-**OBJETIVO: Gere 2 versões de blog com focos distintos:**
+**OBJETIVO: Gere 2 versões de blog usando EXCLUSIVAMENTE os dados fornecidos:**
 
 **VERSÃO 1 - DENTALA.COM (Foco Técnico para Dentistas):**
-- Tom: Técnico, científico, baseado em evidências
+- Tom: Técnico, baseado nos dados fornecidos
 - Público: Cirurgiões-dentistas, especialistas
-- Foco: Técnicas, procedimentos, estudos clínicos
+- Use as características técnicas EXATAS dos produtos listados
 - CTA: "Agende uma demonstração técnica"
-- Keywords técnicas prioritárias
 
 **VERSÃO 2 - EODONTO.COM (Foco Comercial para Laboratórios):**
-- Tom: Comercial, prático, orientado a negócios
+- Tom: Comercial, prático
 - Público: Laboratórios de prótese, empresários
-- Foco: Produtividade, custo-benefício, facilidade de uso
+- Use os benefícios EXATOS dos produtos listados
 - CTA: "Solicite orçamento personalizado"
-- Keywords comerciais prioritárias
+
+**REGRA FUNDAMENTAL**: Use APENAS as informações fornecidas no contexto. Não invente características, especificações ou benefícios que não estejam explicitamente listados.
 
 **FORMATO DE RESPOSTA JSON:**
 {
@@ -894,14 +890,7 @@ async function generateDualBlogVersions(apiKey: string, context: string): Promis
     "metaDescription": "Meta description comercial",
     "keywords": ["keyword1", "keyword2"]
   }
-}
-
-**INSTRUÇÕES COMUNS:**
-- Use a imagem da Solução 1 como capa em ambas versões
-- Inclua todos os produtos selecionados
-- Mínimo 800 palavras cada versão
-- SEO otimizado para públicos distintos
-- HTML bem estruturado com tags semânticas`;
+}`;
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
