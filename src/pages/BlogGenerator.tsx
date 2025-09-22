@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
@@ -26,6 +27,11 @@ interface BlogPost {
   published_domains: string[];
   intelligent_links: Record<string, string>;
   include_offers?: boolean;
+}
+
+interface DualBlogVersions {
+  dentala: BlogPost;
+  eodonto: BlogPost;
 }
 
 interface LandingPageData {
@@ -63,6 +69,9 @@ export default function BlogGenerator() {
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [dualVersions, setDualVersions] = useState<DualBlogVersions | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<'dentala' | 'eodonto'>('dentala');
+  const [isDualMode, setIsDualMode] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -266,81 +275,72 @@ export default function BlogGenerator() {
 
     setGenerating(true);
     try {
-      // Gerar título com AI
-      const titleResponse = await supabase.functions.invoke("ai-seo-generator", {
-        body: {
-          type: "seo_title",
-          content: `Landing page sobre: ${landingPage.description}`,
-        },
-      });
+      if (isDualMode) {
+        // Gerar versões duplas
+        const dualResponse = await supabase.functions.invoke("ai-content-generator", {
+          body: {
+            type: "dual_blog_versions",
+            landingPageId: landingPage.id,
+            selectedProductIds: landingPage.content?.selectedProductIds || [],
+            landingPageData: landingPage.content || {},
+            primaryKeyword: blogPost.keywords?.[0] || landingPage.title,
+          },
+        });
 
-      // Gerar meta description
-      const metaResponse = await supabase.functions.invoke("ai-seo-generator", {
-        body: {
-          type: "meta_description",
-          content: `Landing page sobre: ${landingPage.description}`,
-        },
-      });
-
-      // Gerar keywords
-      const keywordsResponse = await supabase.functions.invoke("ai-seo-generator", {
-        body: {
-          type: "keywords",
-          content: `Landing page sobre: ${landingPage.description}`,
-        },
-      });
-
-      // Gerar conteúdo do blog
-      const contentResponse = await supabase.functions.invoke("ai-seo-generator", {
-        body: {
-          type: "blog_content",
-          content: `Criar um artigo de blog baseado na landing page: ${landingPage.description}. 
-          O artigo deve ter pelo menos 800 palavras, incluir subtítulos (h2, h3), 
-          ser otimizado para SEO e incluir links estratégicos usando os links inteligentes fornecidos.`,
-          title: blogPost.title || landingPage.title,
-          intelligent_links: blogPost.intelligent_links,
-          speed: "detailed",
-          fullLandingPageContent: landingPage.content || {
-            banner: {
-              title: landingPage.title,
-              subtitle: landingPage.description
+        if (dualResponse.data?.dentala && dualResponse.data?.eodonto) {
+          setDualVersions({
+            dentala: {
+              ...blogPost,
+              title: dualResponse.data.dentala.title,
+              content: dualResponse.data.dentala.content,
+              meta_description: dualResponse.data.dentala.meta_description,
+              keywords: normalizeKeywords(dualResponse.data.dentala.keywords || []),
             },
-            solutions: landingPage.content?.solutions || {
-              title: "Nossas Soluções",
-              items: []
-            },
-            faq: landingPage.content?.faq || {
-              title: "Perguntas Frequentes", 
-              items: []
-            },
-            seo: landingPage.content?.seo || {
-              hidden_content: landingPage.description,
-              description: landingPage.description
+            eodonto: {
+              ...blogPost,
+              title: dualResponse.data.eodonto.title,
+              content: dualResponse.data.eodonto.content,
+              meta_description: dualResponse.data.eodonto.meta_description,
+              keywords: normalizeKeywords(dualResponse.data.eodonto.keywords || []),
             }
-          }
-        },
-      });
+          });
+          
+          // Atualizar o blog post atual com a versão selecionada
+          const selectedVersion = selectedDomain === 'dentala' ? dualResponse.data.dentala : dualResponse.data.eodonto;
+          setBlogPost(prev => ({
+            ...prev,
+            title: selectedVersion.title,
+            content: selectedVersion.content,
+            meta_description: selectedVersion.meta_description,
+            keywords: normalizeKeywords(selectedVersion.keywords || []),
+          }));
+        }
+      } else {
+        // Gerar conteúdo único
+        const contentResponse = await supabase.functions.invoke("ai-content-generator", {
+          body: {
+            type: "blog_content",
+            landingPageId: landingPage.id,
+            selectedProductIds: landingPage.content?.selectedProductIds || [],
+            landingPageData: landingPage.content || {},
+            primaryKeyword: blogPost.keywords?.[0] || landingPage.title,
+          },
+        });
 
-      if (titleResponse.data?.content) {
-        setBlogPost(prev => ({ ...prev, title: titleResponse.data.content }));
-      }
-
-      if (metaResponse.data?.content) {
-        setBlogPost(prev => ({ ...prev, meta_description: metaResponse.data.content }));
-      }
-
-      if (keywordsResponse.data?.content) {
-        const keywords = normalizeKeywords(keywordsResponse.data.content);
-        setBlogPost(prev => ({ ...prev, keywords }));
-      }
-
-      if (contentResponse.data?.content) {
-        setBlogPost(prev => ({ ...prev, content: contentResponse.data.content }));
+        if (contentResponse.data?.title && contentResponse.data?.content) {
+          setBlogPost(prev => ({
+            ...prev,
+            title: contentResponse.data.title,
+            content: contentResponse.data.content,
+            meta_description: contentResponse.data.meta_description || prev.meta_description,
+            keywords: normalizeKeywords(contentResponse.data.keywords || prev.keywords),
+          }));
+        }
       }
 
       toast({
         title: "Conteúdo gerado",
-        description: "O conteúdo do blog foi gerado com sucesso pela AI.",
+        description: isDualMode ? "Versões duplas geradas com sucesso!" : "O conteúdo do blog foi gerado com sucesso pela AI.",
       });
     } catch (error) {
       console.error("Erro ao gerar conteúdo:", error);
@@ -513,26 +513,28 @@ export default function BlogGenerator() {
     return processedContent;
   };
 
-  // Função para gerar HTML completo do preview (igual ao Editor)
-  const generateBlogPreviewHTML = () => {
-    if (!blogPost.title && !blogPost.content) {
+  // Função para gerar HTML completo do preview
+  const generateBlogPreviewHTML = (domain?: 'dentala' | 'eodonto') => {
+    const currentPost = isDualMode && dualVersions && domain ? dualVersions[domain] : blogPost;
+    
+    if (!currentPost.title && !currentPost.content) {
       return '<div style="padding: 2rem; text-align: center; color: #666; font-family: Inter, sans-serif;">Configure o título e conteúdo para visualizar o blog post</div>';
     }
 
     try {
       // Processar conteúdo com links inteligentes
-      const processedContent = processContentWithIntelligentLinks(blogPost.content || '');
+      const processedContent = processContentWithIntelligentLinks(currentPost.content || '');
       
       // Criar objeto de dados do blog com conteúdo processado
       const blogData = {
-        ...blogPost,
+        ...currentPost,
         content: processedContent,
         landing_page_title: landingPage?.content?.seo_title || "Nossa Solução",
         landing_page_url: landingPage?.content?.seo?.canonical_url || "#",
         created_at: new Date().toISOString(),
         cover_image: landingPage?.content?.banner?.images?.[0] || null,
         content_images: landingPage?.content?.solutions?.map((s: any) => s.image) || [],
-        include_offers: blogPost.include_offers || false
+        include_offers: currentPost.include_offers || false
       };
 
       return generateBlogHTML(blogData, landingPage?.content);
@@ -691,6 +693,11 @@ export default function BlogGenerator() {
         </div>
         
         <div className="flex items-center space-x-2">
+          <Switch
+            checked={isDualMode}
+            onCheckedChange={setIsDualMode}
+          />
+          <Label>Modo Dual (Dentala + Eodonto)</Label>
           <Badge variant={blogPost.status === "published" ? "default" : "secondary"}>
             {blogPost.status === "published" ? "Publicado" : "Rascunho"}
           </Badge>
@@ -1010,6 +1017,53 @@ export default function BlogGenerator() {
             </>
           )}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+// Componente auxiliar para preview de conteúdo
+function PreviewContent({ blogData }: { blogData: BlogPost }) {
+  const normalizeKeywords = (keywords: any): string[] => {
+    if (Array.isArray(keywords)) return keywords;
+    if (typeof keywords === 'string') return keywords.split(',').map(k => k.trim()).filter(Boolean);
+    return [];
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="text-sm font-medium">Título</Label>
+        <p className="text-lg font-semibold">{blogData.title || "Sem título"}</p>
+      </div>
+      
+      <div>
+        <Label className="text-sm font-medium">Meta Description</Label>
+        <p className="text-sm text-muted-foreground">{blogData.meta_description || "Sem descrição"}</p>
+      </div>
+      
+      <div>
+        <Label className="text-sm font-medium">Keywords</Label>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {normalizeKeywords(blogData.keywords).map((keyword, index) => (
+            <Badge key={index} variant="outline" className="text-xs">
+              {keyword}
+            </Badge>
+          ))}
+        </div>
+      </div>
+      
+      <div>
+        <Label className="text-sm font-medium">Conteúdo</Label>
+        <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto border rounded p-2">
+          {blogData.content ? (
+            <div dangerouslySetInnerHTML={{ 
+              __html: blogData.content.substring(0, 500) + (blogData.content.length > 500 ? '...' : '') 
+            }} />
+          ) : (
+            "Sem conteúdo"
+          )}
+        </div>
       </div>
     </div>
   );
