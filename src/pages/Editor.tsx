@@ -3883,15 +3883,32 @@ const EditorContent = () => {
 
                            {data.seo.ai_seo_enabled && (
                              <div className="space-y-4">
-                                {/* Conteúdo Oculto SEO com IA */}
-                                <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-                                 <div className="flex items-center justify-between mb-2">
-                                   <div className="flex items-center gap-2">
-                                     <Label className="text-xs font-medium text-purple-700">🎯 Conteúdo Oculto SEO</Label>
-                                     <div className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
-                                       Base para IA
-                                     </div>
-                                   </div>
+                                 {/* Contexto Adicional SEO com IA */}
+                                 <div className="p-3 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg border border-emerald-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs font-medium text-emerald-700">📝 Contexto Adicional SEO</Label>
+                                      <div className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
+                                        Contexto para IA
+                                      </div>
+                                    </div>
+                                    <div className="relative group">
+                                      <svg className="w-4 h-4 text-emerald-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <div className="absolute bottom-full right-0 mb-2 w-72 p-3 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs text-gray-700 z-50">
+                                        <div className="font-medium mb-1">Como usar este campo:</div>
+                                        <ul className="space-y-1 text-xs">
+                                          <li>• Descreva produtos/serviços específicos</li>
+                                          <li>• Mencione benefícios únicos da empresa</li>
+                                          <li>• Inclua termos técnicos relevantes</li>
+                                          <li>• <strong>NÃO</strong> use apenas keywords repetidas</li>
+                                        </ul>
+                                        <div className="text-emerald-600 font-medium mt-2">
+                                          Este contexto ajuda a IA a gerar conteúdo mais preciso e relevante.
+                                        </div>
+                                      </div>
+                                    </div>
                                    <Button
                                      size="sm"
                                      variant="outline"
@@ -3902,10 +3919,10 @@ const EditorContent = () => {
                                        try {
                                          const contentRaw = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
                                          const content = (contentRaw || '').trim();
-                                         if (!content) {
-                                           toast({ title: "Informe o contexto", description: "Adicione detalhes no campo 'Conteúdo Oculto SEO' para a IA trabalhar melhor.", variant: "destructive" });
-                                           return;
-                                         }
+                                          if (!content) {
+                                            toast({ title: "Informe o contexto", description: "Adicione informações no campo 'Contexto Adicional SEO' para a IA trabalhar melhor.", variant: "destructive" });
+                                            return;
+                                          }
                                          
                                          const { data: result, error } = await supabase.functions.invoke('ai-seo-generator', {
                                            body: { type: 'hidden_content', content }
@@ -3917,11 +3934,11 @@ const EditorContent = () => {
                                              ...prev,
                                              seo: { ...prev.seo, seo_hidden_content: result.content }
                                            }));
-                                           toast({ title: "✨ Conteúdo gerado!", description: "Conteúdo oculto SEO criado com sucesso." });
+                                           toast({ title: "✨ Contexto gerado!", description: "Contexto adicional SEO criado com sucesso." });
                                          }
                                        } catch (error) {
-                                         console.error('Erro ao gerar conteúdo oculto:', error);
-                                         toast({ title: "Erro", description: "Falha ao gerar conteúdo oculto", variant: "destructive" });
+                                          console.error('Erro ao gerar contexto adicional:', error);
+                                          toast({ title: "Erro", description: "Falha ao gerar contexto adicional", variant: "destructive" });
                                        } finally {
                                          setAiLoading(prev => ({ ...prev, hidden: false }));
                                        }
@@ -3940,15 +3957,36 @@ const EditorContent = () => {
                                      )}
                                    </Button>
                                  </div>
-                                 <Textarea
-                                   placeholder="Ex: Nossa empresa oferece soluções digitais para e-commerce, marketing digital, SEO..."
-                                   value={data.seo.seo_hidden_content}
-                                   onChange={(e) => setData(prev => ({
-                                     ...prev,
-                                     seo: { ...prev.seo, seo_hidden_content: e.target.value }
-                                   }))}
-                                   className="text-xs min-h-[60px] text-purple-700 bg-white/50"
-                                 />
+                                  <Textarea
+                                    placeholder="Ex: Somos especialistas em implantes dentários, ortodontia invisível e harmonização orofacial. Atendemos pacientes com foco em excelência técnica e atendimento humanizado."
+                                    value={data.seo.seo_hidden_content}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      // Validação básica para evitar keyword stuffing
+                                      if (value.length > 500) {
+                                        toast({ 
+                                          title: "Contexto muito longo", 
+                                          description: "Mantenha o contexto focado e objetivo (máx. 500 caracteres).", 
+                                          variant: "destructive" 
+                                        });
+                                        return;
+                                      }
+                                      setData(prev => ({
+                                        ...prev,
+                                        seo: { ...prev.seo, seo_hidden_content: value }
+                                      }));
+                                    }}
+                                    className="text-xs min-h-[80px] text-emerald-700 bg-white/50"
+                                    maxLength={500}
+                                  />
+                                  <div className="flex justify-between items-center mt-1">
+                                    <div className="text-xs text-emerald-600">
+                                      ✅ Contexto natural e descritivo
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {data.seo.seo_hidden_content?.length || 0}/500
+                                    </div>
+                                  </div>
                                </div>
 
                                {/* Geração de Keywords baseada no FAQ */}

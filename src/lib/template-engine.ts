@@ -53,10 +53,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{#primary}}<meta name="keywords" content="{{.}}">{{/primary}}
     {{/ai_keywords}}
     
-    <!-- SEO Hidden Content for Search Engines -->
+    <!-- SEO Context Information -->
     {{#seo_hidden_content}}
     <meta name="theme-color" content="#007bff">
-    <meta name="category" content="{{seo_hidden_content}}">
+    <!-- SEO Context: {{seo_hidden_content}} -->
     {{/seo_hidden_content}}
     
     <!-- Schema Markup JSON-LD -->
@@ -2639,7 +2639,7 @@ export const generateHTML = (data: any): string => {
     }
 
     // Adicionar WebPage Schema
-    schemaGraph.push({
+    const webPageSchema: any = {
       "@type": "WebPage",
       "name": data.seo_title,
       "description": data.seo_description,
@@ -2651,7 +2651,22 @@ export const generateHTML = (data: any): string => {
         "name": data.seo?.og_site_name || "Smart Dent",
         "url": `https://${sanitizeDomain(data.seo?.domain || 'www.smartdent.com.br')}`
       }
-    });
+    };
+
+    // Adicionar contexto adicional ao schema de forma semântica
+    if (data.seo?.seo_hidden_content && data.seo.seo_hidden_content.trim()) {
+      webPageSchema.about = {
+        "@type": "Thing",
+        "description": data.seo.seo_hidden_content.trim()
+      };
+      
+      // Adicionar palavras-chave contextuais se disponíveis
+      if (data.seo?.ai_keywords) {
+        webPageSchema.keywords = data.seo.ai_keywords;
+      }
+    }
+
+    schemaGraph.push(webPageSchema);
 
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
