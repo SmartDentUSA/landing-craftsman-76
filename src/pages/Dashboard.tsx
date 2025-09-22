@@ -161,13 +161,24 @@ const DashboardContent = () => {
 
   const handleCreateNew = () => {
     try {
-      console.log('🚀 Navigating to editor for new landing page');
-      navigate('/editor');
+      console.log('🚀 Creating new landing page');
+      
+      // Criar nova landing page com dados mínimos padrão
+      const newId = addLandingPage({
+        name: "Nova Landing Page",
+        status: "draft",
+        template: "default"
+      });
+      
+      console.log('✅ Landing page created with ID:', newId);
+      
+      // Navegar para o editor com o ID da nova landing page
+      navigate(`/editor/${newId}`);
     } catch (error) {
-      console.error('❌ Navigation failed:', error);
+      console.error('❌ Failed to create landing page:', error);
       toast({
-        title: "Erro de navegação",
-        description: "Não foi possível abrir o editor. Tente novamente.",
+        title: "Erro ao criar landing page",
+        description: "Não foi possível criar a landing page. Tente novamente.",
         variant: "destructive",
       });
     }
