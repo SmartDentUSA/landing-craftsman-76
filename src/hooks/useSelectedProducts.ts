@@ -14,6 +14,7 @@ interface Product {
   category?: string;
   image_url?: string;
   product_url?: string;
+  target_audience?: string[];
   youtube_videos?: any[];
   instagram_videos?: any[];
   testimonial_videos?: any[];
@@ -51,6 +52,7 @@ export const useSelectedProducts = () => {
           category: product.category || '',
           image_url: product.image_url || '',
           product_url: product.product_url || '',
+          target_audience: (product.target_audience as unknown as string[]) || [],
           youtube_videos: (product.youtube_videos as unknown as any[]) || [],
           instagram_videos: (product.instagram_videos as unknown as any[]) || [],
           testimonial_videos: (product.testimonial_videos as unknown as any[]) || [],

@@ -35,7 +35,7 @@ interface Product {
   subcategory?: string;
   image_url?: string;
   product_url?: string;
-  target_audience?: string;
+  target_audience?: string[];
   use_in_ai_generation: boolean;
   approved: boolean;
   keywords?: string[];
@@ -70,7 +70,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     subcategory: '',
     image_url: '',
     product_url: '',
-    target_audience: '',
+    target_audience: [],
     use_in_ai_generation: true,
     approved: true,
     keywords: [],
@@ -83,6 +83,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   });
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
+  const [targetAudience, setTargetAudience] = useState<string[]>([]);
   const [newBenefit, setNewBenefit] = useState('');
   const [newFeature, setNewFeature] = useState('');
   const [saving, setSaving] = useState(false);
@@ -117,6 +118,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
+      setTargetAudience(product.target_audience || []);
       setInstagramVideos(product.instagram_videos || []);
       setYoutubeVideos(product.youtube_videos || []);
       setTestimonialVideos(product.testimonial_videos || []);
@@ -133,7 +135,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         subcategory: '',
         image_url: '',
         product_url: '',
-        target_audience: '',
+        target_audience: [],
         use_in_ai_generation: true,
         approved: true,
         keywords: [],
@@ -146,6 +148,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       });
       setBenefits([]);
       setFeatures([]);
+      setTargetAudience([]);
       setInstagramVideos([]);
       setYoutubeVideos([]);
       setTestimonialVideos([]);
@@ -481,7 +484,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         subcategory: formData.subcategory,
         image_url: formData.image_url,
         product_url: formData.product_url,
-        target_audience: formData.target_audience,
+        target_audience: targetAudience,
         instagram_videos: instagramVideos as any,
         youtube_videos: youtubeVideos as any,
         testimonial_videos: testimonialVideos as any,
@@ -886,11 +889,10 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
           <div className="space-y-2">
             <Label htmlFor="target_audience">Público-Alvo</Label>
-            <Input
-              id="target_audience"
-              value={formData.target_audience || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, target_audience: e.target.value }))}
-              placeholder="Descreva o público-alvo"
+            <TagInput
+              value={targetAudience}
+              onChange={setTargetAudience}
+              placeholder="Digite um público-alvo e pressione Enter"
             />
           </div>
 

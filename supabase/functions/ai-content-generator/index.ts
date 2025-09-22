@@ -243,8 +243,8 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
           productInfo += `\n  🔍 Palavras-chave: ${p.keywords.join(', ')}`;
         }
         
-        if (p.target_audience) {
-          productInfo += `\n  👥 Público-alvo: ${p.target_audience}`;
+        if (p.target_audience && Array.isArray(p.target_audience) && p.target_audience.length > 0) {
+          productInfo += `\n  👥 Público-alvo: ${p.target_audience.join(', ')}`;
         }
         
         return productInfo;
@@ -330,6 +330,7 @@ Você é um redator de marketing digital especialista. Mesmo com informações l
 9. **TAXONOMIA SEO**: Inclua categorias em títulos H2/H3 e meta descriptions
 10. Seja criativo para preencher lacunas com conteúdo genérico mas relevante
 11. SEMPRE gere algo útil, mesmo com dados mínimos
+12. **CRÍTICO - PÚBLICO-ALVO ESPECÍFICO**: Use APENAS os públicos-alvo definidos nos produtos. NÃO invente frases genéricas como "produto para..." - use exatamente os públicos-alvo cadastrados
 
 NUNCA retorne erro por falta de dados - sempre adapte e gere conteúdo adequado!
 `;

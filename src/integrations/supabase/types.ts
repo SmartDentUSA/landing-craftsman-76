@@ -336,7 +336,7 @@ export type Database = {
           source_type: string
           subcategory: string | null
           tags: Json | null
-          target_audience: string | null
+          target_audience: Json | null
           technical_videos: Json | null
           testimonial_videos: Json | null
           updated_at: string
@@ -369,7 +369,7 @@ export type Database = {
           source_type: string
           subcategory?: string | null
           tags?: Json | null
-          target_audience?: string | null
+          target_audience?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
           updated_at?: string
@@ -402,7 +402,7 @@ export type Database = {
           source_type?: string
           subcategory?: string | null
           tags?: Json | null
-          target_audience?: string | null
+          target_audience?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
           updated_at?: string
