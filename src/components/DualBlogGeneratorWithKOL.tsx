@@ -35,7 +35,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
   const [blogVersions, setBlogVersions] = useState<DualBlogVersions | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAuthorId, setSelectedAuthorId] = useState<string>("");
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string>("none");
   
   const { toast } = useToast();
   const { markBlogGenerated } = useLandingPages();
@@ -96,7 +96,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
           keywords: versions.dentala.keywords,
           published_domains: ['dentala.com.br'],
           status: 'generated',
-          author_kol_id: selectedAuthorId || null
+          author_kol_id: selectedAuthorId === "none" ? null : selectedAuthorId
         }, {
           onConflict: 'landing_page_id,published_domains'
         });
@@ -114,7 +114,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
           keywords: versions.eodonto.keywords,
           published_domains: ['eodonto.com'],
           status: 'generated',
-          author_kol_id: selectedAuthorId || null
+          author_kol_id: selectedAuthorId === "none" ? null : selectedAuthorId
         }, {
           onConflict: 'landing_page_id,published_domains'
         });
@@ -164,7 +164,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
     
     // Get author information if selected
     let authorSection = '';
-    if (selectedAuthorId) {
+    if (selectedAuthorId && selectedAuthorId !== "none") {
       try {
         const { data: author } = await supabase
           .from('key_opinion_leaders')
@@ -258,7 +258,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
     }
   };
 
-  const selectedAuthor = kols.find(kol => kol.id === selectedAuthorId);
+  const selectedAuthor = kols.find(kol => kol.id === selectedAuthorId && selectedAuthorId !== "none");
 
   return (
     <Card className="w-full">
@@ -276,8 +276,8 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
               <SelectTrigger>
                 <SelectValue placeholder="Escolha um especialista..." />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Sem autor</SelectItem>
+              <SelectContent className="bg-background border shadow-md z-50">
+                <SelectItem value="none">Sem autor</SelectItem>
                 {kols.map((kol) => (
                   <SelectItem key={kol.id} value={kol.id}>
                     <div className="flex items-center space-x-2">
