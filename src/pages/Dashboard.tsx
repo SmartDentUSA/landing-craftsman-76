@@ -10,7 +10,6 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML } from "@/lib/template-engine";
-import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
@@ -230,14 +229,7 @@ const DashboardContent = () => {
         let htmlCode: string;
         
         if (landingPage.data) {
-          const embedConfig = getEmbedConfig(landingPage);
-          
-          // Se for modo SelFlux, usar generateSafeHTML
-          if (embedConfig.mode === 'selflux') {
-            htmlCode = generateSafeHTML(landingPage.data, embedConfig);
-          } else {
-            htmlCode = generateHTML(landingPage.data);
-          }
+          htmlCode = generateHTML(landingPage.data);
         } else {
           htmlCode = '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1><p>Dados não encontrados.</p></body></html>';
         }

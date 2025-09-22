@@ -40,7 +40,6 @@ import { useProductSync } from "@/hooks/useProductSync";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
-import { generateSafeHTML, generateSafeEmailHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface de dados de imagem para o novo sistema
@@ -225,11 +224,6 @@ interface LandingPageData {
   status: 'draft' | 'approved';
   template: string;
   
-  // Configuração de incorporação SelFlux
-  embed?: {
-    mode: 'default' | 'selflux';
-    namespace: string;
-  };
   
   // SEO & Social
   seo: SEOData;
@@ -1010,11 +1004,6 @@ const EditorContent = () => {
     seo_title: 'Smart Dent - Sistema de Gestão Odontológica',
     seo_description: 'Odontologia digital simples, eficiente e lucrativa. Resinas 3D, scanners intraorais, impressoras 3D e consultoria especializada.',
     
-    // Configuração de incorporação
-    embed: {
-      mode: 'selflux',
-      namespace: 'sd'
-    },
     
     // SEO & Social
     seo: {
@@ -1235,24 +1224,19 @@ const EditorContent = () => {
   // Gerar HTML baseado nos dados processados
   const generatedHTML = useMemo(() => {
     const processedData = beforePreview(data);
-    const embedConfig = getEmbedConfig(data);
     
-    console.log('🎯 Current embed config:', data.embed);
-    console.log('🎯 Processed embed config:', embedConfig);
+    console.log('🎯 Using standard HTML generation');
     
-    // Usar generateSafeHTML se for modo SelFlux
-    if (embedConfig.mode === 'selflux') {
-      console.log('🚀 Editor: Using SelFlux mode with config:', embedConfig);
-      return generateSafeHTML({
-        ...processedData,
-        // Converter ImageData para formato compatível com template
-        logo_url: processedData.logo_url.src,
-        banner: {
-          ...processedData.banner,
-          images: processedData.banner.images.map(img => ({
-            image: {
-              src: img.src,
-              alt: img.alt,
+    return generateHTML({
+      ...processedData,
+      // Converter ImageData para formato compatível com template
+      logo_url: processedData.logo_url.src,
+      banner: {
+        ...processedData.banner,
+        images: processedData.banner.images.map(img => ({
+          image: {
+            src: img.src,
+            alt: img.alt,
               scale: img.scale,
               href: img.href
             }
@@ -1293,11 +1277,9 @@ const EditorContent = () => {
             scale: processedData.advisory.image.scale
           }
         }
-      }, embedConfig);
-    }
+      });
     
-    // Modo padrão
-    console.log('🚀 Editor: Using default mode');
+    console.log('🚀 Editor: Using standard HTML generation');
     return generateHTML({
       ...processedData,
       // Converter ImageData para formato compatível com template
@@ -1439,7 +1421,6 @@ const EditorContent = () => {
 
   const generatedEmailHTML = useMemo(() => {
     const processedData = beforePreview(data);
-    const embedConfig = getEmbedConfig({ embed: data.embed });
     
     console.log("🔄 Regenerando email HTML...", {
       timestamp: Date.now(),
@@ -1451,16 +1432,6 @@ const EditorContent = () => {
     // Validar soluções quando habilitadas
     if (processedData.email.show_solutions_in_email && (!processedData.solutions || processedData.solutions.length === 0)) {
       console.warn("⚠️ Soluções habilitadas no email mas nenhuma solução encontrada");
-    }
-    
-    // Usar generateSafeEmailHTML se for modo SelFlux
-    if (embedConfig.mode === 'selflux') {
-      return generateSafeEmailHTML({
-        ...processedData.email,
-        logo_src: processedData.email.logo_src.src,
-        imagem_src: processedData.email.imagem_src.src,
-        imagem_alt: processedData.email.imagem_src.alt
-      }, embedConfig);
     }
     
     // Corrigir mapeamento das soluções para o email
@@ -1534,8 +1505,7 @@ const EditorContent = () => {
     JSON.stringify(data.solutions),
     // Outros campos relevantes
     data.brand.legal_name,
-    data.seo.domain,
-    data.embed?.mode
+    data.seo.domain
   ]);
 
   // Gerar HTML do blog post
@@ -2101,8 +2071,7 @@ const EditorContent = () => {
       state: { 
         html: htmlToPass,
         landingName: nameToPass, 
-        editorId: id,
-        embedConfig: data.embed // Passa config de embed para CodeView
+        editorId: id
       } 
     });
   };
@@ -2129,27 +2098,15 @@ const EditorContent = () => {
   };
 
   // Debug function - temporary
-  const handleTestSelFlux = () => {
-    console.log('🧪 Testing SelFlux generation...');
-    console.log('🧪 Current data.embed:', data.embed);
+  const handleTestHTML = () => {
+    console.log('🧪 Testing HTML generation...');
     
-    if (!data.embed || data.embed.mode !== 'selflux') {
-      console.log('❌ SelFlux mode not active!');
-      toast({
-        title: "Atenção!",
-        description: "Modo SelFlux não está ativo. Ative em 'Modo de Incorporação'.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const testConfig = { mode: 'selflux' as const, namespace: data.embed.namespace || 'sd' };
-    const testHTML = generateSafeHTML(data, testConfig);
-    console.log('🧪 Generated SelFlux HTML:', testHTML.substring(0, 1000));
+    const testHTML = generateHTML(data);
+    console.log('🧪 Generated standard HTML:', testHTML.substring(0, 1000));
     
     toast({
-      title: "Teste SelFlux",
-      description: "HTML SelFlux gerado. Verifique o console para detalhes.",
+      title: "Teste HTML",
+      description: "HTML padrão gerado. Verifique o console para detalhes.",
     });
   };
 
@@ -2298,72 +2255,6 @@ const EditorContent = () => {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Modo de Incorporação SelFlux */}
-                <AccordionItem value="embed">
-                  <AccordionTrigger>Modo de Incorporação</AccordionTrigger>
-                  <AccordionContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="embed-mode">Modo de Incorporação</Label>
-                      <Select
-                        value={data.embed?.mode || 'default'}
-                        onValueChange={(value: 'default' | 'selflux') => setData({
-                          ...data,
-                          embed: {
-                            ...data.embed,
-                            mode: value,
-                            namespace: data.embed?.namespace || 'sd'
-                          }
-                        })}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="default">Padrão (Web normal)</SelectItem>
-                          <SelectItem value="selflux">SelFlux (CSS isolado)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Escolha "SelFlux" se for colar o HTML dentro de outro sistema como SelFlux
-                      </p>
-                    </div>
-                    
-                    {data.embed?.mode === 'selflux' && (
-                      <div>
-                        <Label htmlFor="namespace">Namespace (Prefixo das Classes)</Label>
-                        <Input
-                          id="namespace"
-                          value={data.embed?.namespace || 'sd'}
-                          onChange={(e) => setData({
-                            ...data,
-                            embed: {
-                              ...data.embed,
-                              mode: 'selflux',
-                              namespace: e.target.value || 'sd'
-                            }
-                          })}
-                          className="mt-1"
-                          placeholder="sd"
-                        />
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Prefixo para todas as classes CSS (ex: "sd" gera classes como "sd-c", "sd-btn")
-                        </p>
-                      </div>
-                    )}
-                    
-                    {data.embed?.mode === 'selflux' && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-medium text-blue-900 mb-2">Modo SelFlux Ativo</h4>
-                        <ul className="text-sm text-blue-800 space-y-1">
-                          <li>• CSS será isolado com wrapper .{data.embed?.namespace || 'sd'}-root</li>
-                          <li>• Classes genéricas renomeadas para evitar conflitos</li>
-                          <li>• Imagens Cloudflare resolvidas automaticamente</li>
-                          <li>• HTML pronto para colar no SelFlux</li>
-                        </ul>
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
 
                 {/* Header */}
                 <AccordionItem value="header">
@@ -6402,8 +6293,8 @@ dataLayer = [{
                   <Copy className="h-4 w-4 mr-2" />
                   Copiar
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleTestSelFlux} className="bg-orange-100 hover:bg-orange-200">
-                  🧪 Test SelFlux
+                <Button variant="outline" size="sm" onClick={handleTestHTML} className="bg-orange-100 hover:bg-orange-200">
+                  🧪 Test HTML
                 </Button>
               </div>
             </div>
