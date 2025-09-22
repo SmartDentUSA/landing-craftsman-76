@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 
 interface PublicationSettings {
   ftp_host: string;
@@ -21,6 +22,7 @@ interface PublicationSettings {
 }
 
 export default function PublicationSettings() {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<PublicationSettings>({
     ftp_host: "",
     ftp_user: "",
@@ -303,11 +305,23 @@ export default function PublicationSettings() {
 
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Configurações de Publicação</h1>
-        <p className="text-muted-foreground mt-2">
-          Configure as credenciais para publicação automática em FTP e WordPress.
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Configurações de Publicação</h1>
+            <p className="text-muted-foreground mt-2">
+              Configure as credenciais para publicação automática em FTP e WordPress.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
