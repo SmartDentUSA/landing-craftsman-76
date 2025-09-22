@@ -6,8 +6,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
+import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML } from "@/lib/template-engine";
 import { generateSafeHTML, getEmbedConfig } from "@/lib/selflux-engine";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -37,30 +38,8 @@ const DashboardContent = () => {
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
 
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUserEmail(session.user.email);
-        
-        // Get user role
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        setUserRole(roleData?.role || 'user');
-      }
-    };
-
-    getCurrentUser();
-    fetchBlogPosts();
-  }, []);
-
-  const fetchBlogPosts = async () => {
+  const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
-      // Buscar landing pages aprovadas do Zustand
       const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
       
       if (approvedLandingPages.length === 0) {
@@ -68,7 +47,6 @@ const DashboardContent = () => {
         return;
       }
 
-      // Buscar apenas 1 blog PUBLICADO por landing page aprovada (o mais recente)
       const blogsPromises = approvedLandingPages.map(async (lp) => {
         const { data: blogs, error } = await supabase
           .from('blog_posts')
@@ -94,14 +72,47 @@ const DashboardContent = () => {
         description: error.message
       });
     }
-  };
+  }, 300);
 
-  // Realtime subscriptions to keep consolidated previews in sync
+  const fetchBlogPosts = useCallback(() => {
+    debouncedFetchBlogPosts();
+  }, [debouncedFetchBlogPosts, landingPages]);
+
+  const getCurrentUser = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setUserEmail(session.user.email);
+      
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      setUserRole(roleData?.role || 'user');
+    }
+  }, []);
+
+  useEffect(() => {
+    getCurrentUser();
+    fetchBlogPosts();
+  }, [getCurrentUser, fetchBlogPosts]);
+
   useEffect(() => {
     const channel = supabase
       .channel('dashboard-blog-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_posts' }, () => {
-        console.debug('[Realtime] blog_posts changed, refetching...');
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'blog_posts' 
+      }, () => {
+        fetchBlogPosts();
+      })
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'blog_posts' 
+      }, () => {
         fetchBlogPosts();
       })
       .subscribe();
@@ -109,12 +120,7 @@ const DashboardContent = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  // Listen to landing page status changes to refetch blogs
-  useEffect(() => {
-    fetchBlogPosts();
-  }, [landingPages]);
+  }, [fetchBlogPosts]);
 
   const handlePromoteToAdmin = async () => {
     if (!userEmail) return;
@@ -219,8 +225,7 @@ const DashboardContent = () => {
     return status === 'approved' ? 'Aprovado' : 'Rascunho';
   };
 
-  // Function to generate consolidated HTML (main content only, no header/footer)
-  const generateConsolidatedHTML = (blogs: BlogPost[], domain: string) => {
+  const generateConsolidatedHTML = useCallback((blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
     // Blogs já vêm filtrados apenas de landing pages aprovadas
     const approvedBlogs = blogs;
@@ -497,10 +502,20 @@ const DashboardContent = () => {
             });
         });
     </script>`;
-  };
+  }, []);
 
-  const copyConsolidatedHTML = async (domain: string) => {
-    const html = generateConsolidatedHTML(blogPosts, domain);
+  const eodontoHTML = useMemo(() => 
+    generateConsolidatedHTML(blogPosts, 'eodonto'), 
+    [blogPosts, generateConsolidatedHTML]
+  );
+
+  const dentalaHTML = useMemo(() => 
+    generateConsolidatedHTML(blogPosts, 'dentala'), 
+    [blogPosts, generateConsolidatedHTML]
+  );
+
+  const copyConsolidatedHTML = useCallback(async (domain: string) => {
+    const html = domain === 'eodonto' ? eodontoHTML : dentalaHTML;
     
     try {
       await navigator.clipboard.writeText(html);
@@ -515,7 +530,7 @@ const DashboardContent = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [eodontoHTML, dentalaHTML, toast]);
 
   const getApprovedBlogsCount = (domain: string) => {
     // Blogs já vêm filtrados apenas de landing pages aprovadas
@@ -779,7 +794,7 @@ const DashboardContent = () => {
                   <div 
                     className="text-xs leading-relaxed"
                     dangerouslySetInnerHTML={{ 
-                      __html: generateConsolidatedHTML(blogPosts, 'eodonto').substring(0, 600) + '...' 
+                      __html: eodontoHTML.substring(0, 600) + '...' 
                     }}
                   />
                 </div>
@@ -821,7 +836,7 @@ const DashboardContent = () => {
                   <div 
                     className="text-xs leading-relaxed"
                     dangerouslySetInnerHTML={{ 
-                      __html: generateConsolidatedHTML(blogPosts, 'dentala').substring(0, 600) + '...' 
+                      __html: dentalaHTML.substring(0, 600) + '...' 
                     }}
                   />
                 </div>
