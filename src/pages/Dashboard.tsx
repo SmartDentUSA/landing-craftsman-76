@@ -31,7 +31,7 @@ interface BlogPost {
 const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { landingPages, deleteLandingPage } = useLandingPages();
+  const { landingPages, deleteLandingPage, addLandingPage } = useLandingPages();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
@@ -159,18 +159,66 @@ const DashboardContent = () => {
   };
 
   const handleCreateNew = () => {
-    navigate('/editor');
+    try {
+      console.log('🚀 Navigating to editor for new landing page');
+      navigate('/editor');
+    } catch (error) {
+      console.error('❌ Navigation failed:', error);
+      toast({
+        title: "Erro de navegação",
+        description: "Não foi possível abrir o editor. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEdit = (id: string) => {
-    navigate(`/editor/${id}`);
+    try {
+      console.log('✏️ Navigating to editor for landing page:', id);
+      navigate(`/editor/${id}`);
+    } catch (error) {
+      console.error('❌ Navigation failed:', error);
+      toast({
+        title: "Erro de navegação",
+        description: "Não foi possível abrir o editor. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDuplicate = (landingPage: LandingPage) => {
-    toast({
-      title: "Landing duplicada",
-      description: `"${landingPage.name}" foi duplicada como rascunho.`,
-    });
+    try {
+      console.log('📋 Duplicating landing page:', landingPage.name);
+      
+      // Create duplicate with modified data
+      const duplicateData = {
+        name: `${landingPage.name} - Cópia`,
+        status: 'draft' as const,
+        template: landingPage.template,
+        data: landingPage.data,
+        embed: landingPage.embed,
+        selectedProductIds: landingPage.selectedProductIds
+      };
+      
+      // Add the duplicate to the store
+      const newId = addLandingPage(duplicateData);
+      console.log('✅ Landing page duplicated with ID:', newId);
+      
+      toast({
+        title: "Landing duplicada",
+        description: `"${landingPage.name}" foi duplicada como rascunho.`,
+      });
+      
+      // Optionally navigate to edit the new duplicate
+      // navigate(`/editor/${newId}`);
+    } catch (error) {
+      console.error('❌ Duplication failed:', error);
+      toast({
+        title: "Erro na duplicação",
+        description: "Não foi possível duplicar a landing page. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCopyCode = async (landingPage: LandingPage) => {
