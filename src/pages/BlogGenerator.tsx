@@ -79,6 +79,7 @@ export default function BlogGenerator() {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const { toast } = useToast();
   const { loadProductsByIds } = useSelectedProducts();
+  const { getSelectedProducts } = useLandingPages();
 
   useEffect(() => {
     if (id) {
@@ -127,20 +128,33 @@ export default function BlogGenerator() {
   // Load selected products from landing page
   useEffect(() => {
     const loadSelectedProductsData = async () => {
-      if (landingPage?.content?.selectedProductIds?.length > 0) {
-        try {
-          const products = await loadProductsByIds(landingPage.content.selectedProductIds);
-          setSelectedProducts(products);
-        } catch (error) {
-          console.error('Error loading selected products:', error);
+      if (id) {
+        const selectedProductIds = getSelectedProducts(id);
+        console.log('🔍 BlogGenerator - Verificando produtos selecionados:', {
+          landingPageId: id,
+          selectedProductIds,
+          selectedProductIdsLength: selectedProductIds?.length
+        });
+
+        if (selectedProductIds?.length > 0) {
+          console.log('📦 BlogGenerator - Carregando produtos:', selectedProductIds);
+          try {
+            const products = await loadProductsByIds(selectedProductIds);
+            console.log('✅ BlogGenerator - Produtos carregados:', products);
+            setSelectedProducts(products);
+          } catch (error) {
+            console.error('❌ BlogGenerator - Erro ao carregar produtos:', error);
+            setSelectedProducts([]);
+          }
+        } else {
+          console.log('⚠️ BlogGenerator - Nenhum produto selecionado ou array vazio');
+          setSelectedProducts([]);
         }
-      } else {
-        setSelectedProducts([]);
       }
     };
 
     loadSelectedProductsData();
-  }, [landingPage?.content?.selectedProductIds, loadProductsByIds]);
+  }, [id, getSelectedProducts, loadProductsByIds]);
 
   // Auto-save draft when blog post data changes
   useEffect(() => {
@@ -305,7 +319,7 @@ export default function BlogGenerator() {
           body: {
             type: "dual_blog_versions",
             landingPageId: landingPage.id,
-            selectedProductIds: landingPage.content?.selectedProductIds || [],
+            selectedProductIds: getSelectedProducts(landingPage.id) || [],
             landingPageData: landingPage.content || {},
             primaryKeyword: blogPost.keywords?.[0] || landingPage.title,
           },
@@ -345,7 +359,7 @@ export default function BlogGenerator() {
           body: {
             type: "blog_content",
             landingPageId: landingPage.id,
-            selectedProductIds: landingPage.content?.selectedProductIds || [],
+            selectedProductIds: getSelectedProducts(landingPage.id) || [],
             landingPageData: landingPage.content || {},
             primaryKeyword: blogPost.keywords?.[0] || landingPage.title,
           },

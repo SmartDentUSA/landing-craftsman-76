@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,16 @@ export const SelectedProductLinkModal: React.FC<SelectedProductLinkModalProps> =
   const [searchTerm, setSearchTerm] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
   const [externalText, setExternalText] = useState('');
+
+  // Debug dos produtos recebidos
+  useEffect(() => {
+    if (open) {
+      console.log('🔗 SelectedProductLinkModal - Modal aberto com produtos:', {
+        selectedProducts,
+        totalProdutos: selectedProducts?.length || 0
+      });
+    }
+  }, [open, selectedProducts]);
 
   const filteredProducts = selectedProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
