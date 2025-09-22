@@ -35,6 +35,7 @@ const DashboardContent = () => {
   const { toast } = useToast();
   const { landingPages, deleteLandingPage, addLandingPage } = useLandingPages();
   const { 
+    consolidatedBlogs,
     approvedBlogsCount, 
     generatedBlogsCount, 
     publishedBlogsCount,
@@ -316,8 +317,22 @@ const DashboardContent = () => {
 
   const generateConsolidatedHTML = useCallback((blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-    // Blogs já vêm filtrados apenas de landing pages aprovadas
-    const approvedBlogs = blogs;
+    console.log(`🎨 Generating ${domainName} HTML with ${blogs.length} blogs`);
+    
+    // If no published blogs, create fallback from consolidatedBlogs
+    const approvedBlogs = blogs.length > 0 ? blogs : consolidatedBlogs.map(lp => ({
+      id: lp.id,
+      title: lp.name,
+      created_at: new Date().toISOString(),
+      status: 'draft',
+      landing_page_id: lp.id,
+      content: 'Conteúdo será gerado após a publicação do blog.',
+      meta_description: `Conteúdo sobre ${lp.name}`,
+      keywords: [],
+      intelligent_links: {}
+    } as BlogPost));
+    
+    console.log(`📊 Using ${approvedBlogs.length} blogs for ${domainName} (${blogs.length > 0 ? 'published' : 'fallback'})`);
     
     const featuredBlog = approvedBlogs[0];
     // Mostrar mais blogs na seção principal - até 6 blogs recentes
@@ -595,12 +610,12 @@ const DashboardContent = () => {
 
   const eodontoHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'eodonto'), 
-    [blogPosts, generateConsolidatedHTML]
+    [blogPosts, generateConsolidatedHTML, consolidatedBlogs]
   );
 
   const dentalaHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'dentala'), 
-    [blogPosts, generateConsolidatedHTML]
+    [blogPosts, generateConsolidatedHTML, consolidatedBlogs]
   );
 
   const copyConsolidatedHTML = useCallback(async (domain: string) => {
@@ -624,12 +639,13 @@ const DashboardContent = () => {
   const getApprovedBlogsCount = (domain: string) => {
     // Use dados consolidados do useBlogStatusMonitor
     console.log(`🔍 Getting approved blogs count for ${domain}:`, {
+      consolidatedBlogsCount: consolidatedBlogs.length,
       approvedBlogsCount,
       generatedBlogsCount,
       publishedBlogsCount,
       blogPostsLength: blogPosts.length
     });
-    return approvedBlogsCount;
+    return consolidatedBlogs.length;
   };
 
   return (
@@ -907,14 +923,19 @@ const DashboardContent = () => {
               <CardContent>
                 <div className="space-y-2 mb-4">
                   <div className="text-sm text-muted-foreground">
-                    📝 Total de blogs: <strong>{blogPosts.length}</strong>
+                    📝 Total de blogs: <strong>{consolidatedBlogs.length}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    ✅ Blogs na seção principal: <strong>{Math.min(7, blogPosts.length)}</strong>
+                    ✅ Blogs na seção principal: <strong>{Math.min(7, consolidatedBlogs.length)}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    📌 Blogs na sidebar: <strong>{Math.max(0, blogPosts.length - 7)}</strong>
+                    📌 Blogs na sidebar: <strong>{Math.max(0, consolidatedBlogs.length - 7)}</strong>
                   </div>
+                  {blogPosts.length === 0 && consolidatedBlogs.length > 0 && (
+                    <div className="text-xs text-warning bg-warning/10 p-2 rounded">
+                      ⚠️ Prévia com rascunhos gerados; publique para ver o conteúdo final
+                    </div>
+                  )}
                 </div>
                 <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-hidden">
                   <div 
@@ -953,14 +974,19 @@ const DashboardContent = () => {
               <CardContent>
                 <div className="space-y-2 mb-4">
                   <div className="text-sm text-muted-foreground">
-                    📝 Total de blogs: <strong>{blogPosts.length}</strong>
+                    📝 Total de blogs: <strong>{consolidatedBlogs.length}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    ✅ Blogs na seção principal: <strong>{Math.min(7, blogPosts.length)}</strong>
+                    ✅ Blogs na seção principal: <strong>{Math.min(7, consolidatedBlogs.length)}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    📌 Blogs na sidebar: <strong>{Math.max(0, blogPosts.length - 7)}</strong>
+                    📌 Blogs na sidebar: <strong>{Math.max(0, consolidatedBlogs.length - 7)}</strong>
                   </div>
+                  {blogPosts.length === 0 && consolidatedBlogs.length > 0 && (
+                    <div className="text-xs text-warning bg-warning/10 p-2 rounded">
+                      ⚠️ Prévia com rascunhos gerados; publique para ver o conteúdo final
+                    </div>
+                  )}
                 </div>
                 <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-hidden">
                   <div 

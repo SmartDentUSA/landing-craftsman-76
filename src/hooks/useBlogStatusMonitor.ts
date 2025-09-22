@@ -16,6 +16,41 @@ export const useBlogStatusMonitor = () => {
     fetchPublishedBlogs();
   }, []);
 
+  // Add real-time subscription to blog_posts table
+  useEffect(() => {
+    const channel = supabase
+      .channel('blog-posts-monitor')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'blog_posts' 
+      }, () => {
+        console.log('📢 Blog post inserted, refreshing published blogs');
+        fetchPublishedBlogs();
+      })
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'blog_posts' 
+      }, () => {
+        console.log('📢 Blog post updated, refreshing published blogs');
+        fetchPublishedBlogs();
+      })
+      .on('postgres_changes', { 
+        event: 'DELETE', 
+        schema: 'public', 
+        table: 'blog_posts' 
+      }, () => {
+        console.log('📢 Blog post deleted, refreshing published blogs');
+        fetchPublishedBlogs();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // React to changes in approved landing pages
   useEffect(() => {
     console.log('🔄 Blog monitor detected landing page changes:', {
