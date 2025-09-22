@@ -1743,6 +1743,9 @@ const EditorContent = () => {
           });
         }
       }
+    } else {
+      // Caso seja nova landing page (sem ID), usar dados padrão do estado inicial
+      console.log('Nova landing page - usando dados padrão do estado inicial');
     }
   }, [id, getLandingPage]);
 

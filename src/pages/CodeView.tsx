@@ -207,7 +207,7 @@ const CodeView = () => {
                       3
                     </Badge>
                      <p className="text-sm">
-                       <strong>Publique</strong> {embedConfig?.mode === 'selflux' ? 'colando no container do SelFlux' : 'em seu servidor web ou hospedagem'}
+                       <strong>Publique</strong> em seu servidor web ou hospedagem
                      </p>
                   </div>
                 </div>
@@ -241,22 +241,6 @@ const CodeView = () => {
                      <div className="w-2 h-2 bg-success rounded-full"></div>
                      <span>CSS inline (sem dependências)</span>
                    </div>
-                   {embedConfig?.mode === 'selflux' && (
-                     <>
-                       <div className="flex items-center gap-2 text-sm">
-                         <div className="w-2 h-2 bg-primary rounded-full"></div>
-                         <span>CSS isolado com namespace ".{embedConfig.namespace}-root"</span>
-                       </div>
-                       <div className="flex items-center gap-2 text-sm">
-                         <div className="w-2 h-2 bg-primary rounded-full"></div>
-                         <span>Classes renomeadas para evitar conflitos</span>
-                       </div>
-                       <div className="flex items-center gap-2 text-sm">
-                         <div className="w-2 h-2 bg-primary rounded-full"></div>
-                         <span>Imagens Cloudflare resolvidas automaticamente</span>
-                       </div>
-                     </>
-                   )}
                 </div>
               </CardContent>
             </Card>

@@ -11,7 +11,7 @@ export interface LandingPage {
   template: string;
   data?: any;
   embed?: {
-    mode: 'default' | 'selflux';
+    mode: 'default';
     namespace: string;
   };
   // Novos campos para o sistema centralizado de produtos
