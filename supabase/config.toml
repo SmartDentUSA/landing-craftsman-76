@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.cloudflare-direct-upload]
 verify_jwt = false
+
+[functions.import-repository-csv]
+verify_jwt = true

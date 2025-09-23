@@ -139,26 +139,14 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
   const parseCSV = (csvText: string): ImportPreviewProduct[] => {
     console.log('🔍 Iniciando parse do CSV...');
     
-    // Limpar o CSV de colunas vazias extras
-    const lines = csvText.split('\n');
-    const cleanedLines = lines.map(line => {
-      // Remove colunas vazias extras no final
-      const columns = line.split(',');
-      let lastNonEmptyIndex = -1;
-      for (let i = columns.length - 1; i >= 0; i--) {
-        if (columns[i].trim() !== '') {
-          lastNonEmptyIndex = i;
-          break;
-        }
-      }
-      return lastNonEmptyIndex >= 0 ? columns.slice(0, lastNonEmptyIndex + 1).join(',') : line;
-    });
-    const cleanedCsvText = cleanedLines.join('\n');
-
-    const result = Papa.parse(cleanedCsvText, {
+    // Usar Papa.parse diretamente para preservar campos com vírgulas e quebras de linha entre aspas
+    const result = Papa.parse(csvText, {
       header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.trim()
+      skipEmptyLines: 'greedy',
+      transformHeader: (header) => header.trim(),
+      quoteChar: '"',
+      escapeChar: '"',
+      delimitersToGuess: [',', ';', '\t', '|']
     });
 
     console.log('📊 Resultado do parse:', result);
@@ -233,7 +221,7 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         ai_generated_benefits: row.ai_generated_benefits === 'Sim' || row.ai_generated_benefits === 'true' || row.ai_generated_benefits === true,
         use_in_ai_generation: row.use_in_ai_generation !== 'Não' && row.use_in_ai_generation !== 'false' && row.use_in_ai_generation !== false,
         approved: row.approved !== 'Não' && row.approved !== 'false' && row.approved !== false,
-        display_order: row.display_order ? parseInt(row.display_order.toString()) : undefined,
+        display_order: (row.display_order !== undefined && row.display_order !== null && !isNaN(Number(row.display_order))) ? Number(row.display_order) : undefined,
         source_type: row.source_type || 'csv_import',
         source_landing_page_id: row.source_landing_page_id,
         original_data: parseJsonField(row.original_data),
