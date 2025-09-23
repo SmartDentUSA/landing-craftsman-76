@@ -513,8 +513,6 @@ export function RepositoryPanel({
                   Exportar Produtos
                 </Button>
 
-                <ProductRepositoryCSVImporter onImportComplete={refreshAllData} />
-
                 <Button
                   variant="default"
                   size="sm"
@@ -679,8 +677,10 @@ export function RepositoryPanel({
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                        </div>
+              </div>
+
+              <ProductRepositoryCSVImporter onImportComplete={refreshAllData} />
+            </div>
                       </CardContent>
                     </Card>
                   ))

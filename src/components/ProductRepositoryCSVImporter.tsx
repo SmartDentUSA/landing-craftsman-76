@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Upload, AlertCircle, CheckCircle, Download, FileText } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
@@ -70,7 +69,6 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
       return [];
     }
 
-    // Validar headers
     const csvHeaders = Object.keys(result.data[0] || {});
     const missingHeaders = expectedHeaders.filter(header => !csvHeaders.includes(header));
     
@@ -180,111 +178,108 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
 
   const getStatusIcon = (action: 'create' | 'update') => {
     if (action === 'create') {
-      return <Badge variant="default" className="gap-1"><Upload className="h-3 w-3" />Criar</Badge>;
+      return <Badge variant="default" className="text-xs px-1 py-0"><Upload className="h-2 w-2 mr-1" />Criar</Badge>;
     }
-    return <Badge variant="secondary" className="gap-1"><CheckCircle className="h-3 w-3" />Atualizar</Badge>;
+    return <Badge variant="secondary" className="text-xs px-1 py-0"><CheckCircle className="h-2 w-2 mr-1" />Atualizar</Badge>;
   };
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Importar Produtos CSV
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadTemplate}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Template
-          </Button>
+    <div className="space-y-3 bg-muted/30 p-3 rounded-lg border">
+      <div className="flex items-center gap-2">
+        <Upload className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">Importar CSV</span>
+      </div>
+      
+      <div className="flex gap-2 items-center">
+        <div className="flex-1">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+            className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-medium file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/80"
+          />
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={downloadTemplate}
+          className="gap-1 text-xs px-2 py-1 h-7"
+        >
+          <Download className="h-3 w-3" />
+          Template
+        </Button>
+      </div>
 
-        {importing && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Importando produtos...</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="w-full" />
+      {importing && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Importando...</span>
+            <span>{Math.round(progress)}%</span>
           </div>
-        )}
+          <Progress value={progress} className="w-full h-1" />
+        </div>
+      )}
 
-        {previewData.length > 0 && !importing && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h4 className="font-medium">Preview da Importação</h4>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearPreview}
-                >
-                  Limpar
-                </Button>
-                <Button
-                  onClick={importProducts}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Importar {previewData.length} Produtos
-                </Button>
-              </div>
-            </div>
-
-            <div className="max-h-60 overflow-y-auto border rounded-md">
-              <div className="space-y-2 p-3">
-                {previewData.slice(0, 10).map((product, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 border rounded-sm bg-muted/30"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{product.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {product.category} • {product.price ? `R$ ${product.price}` : 'Sem preço'}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(product.action)}
-                    </div>
-                  </div>
-                ))}
-                {previewData.length > 10 && (
-                  <div className="text-center text-sm text-muted-foreground py-2">
-                    ... e mais {previewData.length - 10} produtos
-                  </div>
-                )}
-              </div>
+      {previewData.length > 0 && !importing && (
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium">{previewData.length} produtos</span>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearPreview}
+                className="text-xs px-2 py-1 h-6"
+              >
+                Limpar
+              </Button>
+              <Button
+                onClick={importProducts}
+                size="sm"
+                className="gap-1 text-xs px-2 py-1 h-6"
+              >
+                <Upload className="h-3 w-3" />
+                Importar
+              </Button>
             </div>
           </div>
-        )}
+          
+          <div className="max-h-24 overflow-y-auto space-y-1">
+            {previewData.slice(0, 3).map((product, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-2 border rounded bg-background text-xs"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{product.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {product.category} • {product.price ? `R$ ${product.price}` : 'Sem preço'}
+                  </div>
+                </div>
+                <div className="ml-2">
+                  {getStatusIcon(product.action)}
+                </div>
+              </div>
+            ))}
+            {previewData.length > 3 && (
+              <div className="text-center text-xs text-muted-foreground py-1">
+                ... e mais {previewData.length - 3} produtos
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-        <div className="text-xs text-muted-foreground space-y-1">
-          <div className="flex items-center gap-1">
+      {previewData.length === 0 && (
+        <div className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 mb-1">
             <AlertCircle className="h-3 w-3" />
-            Use o template para garantir o formato correto
+            Use o template para formato correto
           </div>
-          <div>• Produtos com ID serão atualizados, sem ID serão criados</div>
-          <div>• Arrays JSON devem estar no formato: ["item1","item2"]</div>
+          <div>• Com ID: atualiza | Sem ID: cria novo</div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 
