@@ -477,6 +477,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   };
 
   const handleSave = async () => {
+    console.log('[DEBUG] Iniciando salvamento do produto...');
+    console.log('[DEBUG] Dados do formulário:', formData);
+    
     if (!formData.name?.trim()) {
       toast({
         title: "Erro",
@@ -493,11 +496,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         description: formData.description,
         sales_pitch: formData.sales_pitch,
         price: formData.price,
-        currency: formData.currency,
+        currency: formData.currency || 'BRL',
         category: formData.category,
         subcategory: formData.subcategory,
         image_url: formData.image_url,
         product_url: formData.product_url,
+        source_type: 'manual', // Garantir que source_type seja definido
         target_audience: targetAudience,
         instagram_videos: instagramVideos as any,
         youtube_videos: youtubeVideos as any,
@@ -510,7 +514,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         search_intent_keywords: searchIntentKeywords,
         benefits: benefits,
         features: features,
-        source_type: 'manual',
         updated_at: new Date().toISOString()
       };
 
@@ -530,8 +533,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           .single();
       }
 
-      if (result.error) throw result.error;
+      console.log('[DEBUG] Resultado da operação no Supabase:', result);
+      
+      if (result.error) {
+        console.error('[DEBUG] Erro no Supabase:', result.error);
+        throw result.error;
+      }
 
+      console.log('[DEBUG] Produto salvo com sucesso:', result.data);
       onSave(result.data);
       onClose();
       
@@ -540,12 +549,22 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso!`
       });
     } catch (error) {
-      console.error('Error saving product:', error);
-      toast({
-        title: "Erro",
-        description: `Erro ao ${isEditing ? 'atualizar' : 'criar'} produto`,
-        variant: "destructive"
-      });
+      console.error('[DEBUG] Error saving product:', error);
+      
+      // Verificar se é um erro de permissão RLS
+      if (error.message?.includes('new row violates row-level security')) {
+        toast({
+          title: "Erro de Permissão",
+          description: "Você precisa estar logado como administrador para salvar produtos",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: `Erro ao ${isEditing ? 'atualizar' : 'criar'} produto: ${error.message}`,
+          variant: "destructive"
+        });
+      }
     } finally {
       setSaving(false);
     }

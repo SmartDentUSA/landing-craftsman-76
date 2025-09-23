@@ -188,13 +188,19 @@ export function RepositoryPanel({
 
   const loadProducts = async () => {
     try {
+      console.log('[DEBUG] Carregando produtos do repositório...');
       const { data, error } = await supabase
         .from('products_repository')
         .select('*')
         .eq('approved', true)
         .order('display_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[DEBUG] Erro ao carregar produtos:', error);
+        throw error;
+      }
+
+      console.log('[DEBUG] Produtos carregados:', data);
 
       const formattedProducts: Product[] = (data || []).map(data => ({
         id: data.id,
@@ -274,6 +280,7 @@ export function RepositoryPanel({
   };
 
   const handleSaveProduct = (savedProduct: Product) => {
+    console.log('[DEBUG] Produto salvo no modal, atualizando lista...');
     setProducts(prev => {
       const existing = prev.find(p => p.id === savedProduct.id);
       if (existing) {
@@ -282,15 +289,42 @@ export function RepositoryPanel({
         return [...prev, savedProduct];
       }
     });
+    // Recarregar produtos para garantir dados atualizados
+    loadProducts();
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
-    setSelectedProductIds(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(productId);
-      return newSet;
-    });
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      console.log('[DEBUG] Deletando produto:', productId);
+      const { error } = await supabase
+        .from('products_repository')
+        .delete()
+        .eq('id', productId);
+
+      if (error) {
+        console.error('[DEBUG] Erro ao deletar produto:', error);
+        throw error;
+      }
+
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      setSelectedProductIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Produto deletado com sucesso",
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao deletar produto",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSyncOffers = async () => {
@@ -497,200 +531,160 @@ export function RepositoryPanel({
                   Atualizar
                 </Button>
 
-
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleExportCSV('products')}
+                  onClick={() => handleExportCSV('all')}
                   disabled={exportingData}
                   className="gap-2"
                 >
                   {exportingData ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                    <Download className="h-4 w-4 animate-spin" />
                   ) : (
                     <FileDown className="h-4 w-4" />
                   )}
-                  Exportar Produtos
+                  Exportar
                 </Button>
-
+                
                 <Button
-                  variant="default"
-                  size="sm"
                   onClick={handleAddProduct}
+                  size="sm"
                   className="gap-2"
                 >
                   <Plus className="h-4 w-4" />
                   Adicionar
                 </Button>
-                
-                <Badge variant="secondary">
-                  {filteredProducts.length} produtos
-                </Badge>
+              </div>
+
+              {/* Summary */}
+              <div className="flex items-center justify-between text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                <div>
+                  {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
+                </div>
+                <div>
+                  {selectedProductIds.size} selecionado{selectedProductIds.size !== 1 ? 's' : ''}
+                </div>
               </div>
             </div>
           )}
         </div>
       </CardHeader>
-      
-      <CardContent className="p-0">
+
+      <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="products" className="flex items-center gap-2">
+            <TabsTrigger value="products" className="gap-2">
               <Package className="h-4 w-4" />
               Produtos
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex items-center gap-2">
+            <TabsTrigger value="reviews" className="gap-2">
               <Star className="h-4 w-4" />
-              Reviews Manuais ({manualReviews.length})
+              Avaliações
             </TabsTrigger>
-            <TabsTrigger value="testimonials" className="flex items-center gap-2">
+            <TabsTrigger value="testimonials" className="gap-2">
               <VideoIcon className="h-4 w-4" />
-              Depoimentos Vídeo
+              Depoimentos
             </TabsTrigger>
-            <TabsTrigger value="kols" className="flex items-center gap-2">
+            <TabsTrigger value="kols" className="gap-2">
               <Building2 className="h-4 w-4" />
               KOLs
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="products" className="mt-0">
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-3 p-4">
-                {filteredProducts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      {searchTerm || categoryFilter !== "all" || priceFilter !== "all"
-                        ? "Nenhum produto encontrado com os filtros aplicados"
-                        : "Nenhum produto no repositório"}
-                    </p>
-                  </div>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <Card 
-                      key={product.id} 
-                      className={`transition-all duration-200 ${
-                        selectedProductIds.has(product.id) 
-                          ? 'ring-2 ring-primary bg-primary/5' 
-                          : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={selectedProductIds.has(product.id)}
-                            onCheckedChange={() => toggleProductSelection(product.id)}
-                            className="mt-1"
+          <TabsContent value="products" className="mt-4">
+            <div className="space-y-4">
+              {/* CSV Importer */}
+              <div className="mb-4">
+                <ProductRepositoryCSVImporter 
+                  onImportComplete={loadProducts}
+                />
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum produto encontrado</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-2">
+                    {filteredProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedProductIds.has(product.id)}
+                          onCheckedChange={() => toggleProductSelection(product.id)}
+                        />
+                        
+                        {product.image_url && (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded"
                           />
-                          
-                          <div className="cursor-pointer flex-1 min-w-0" onClick={() => toggleProductSelection(product.id)}>
-                            <div className="flex items-start gap-3">
-                              {product.image_url && (
-                                <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                                  <img 
-                                    src={product.image_url} 
-                                    alt={product.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              )}
-                              
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-sm leading-5 truncate">
-                                  {product.name}
-                                </h4>
-                                
-                                {product.description && (
-                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                    {product.description}
-                                  </p>
-                                )}
-                                
-                                <div className="flex items-center justify-between mt-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    {product.category && (
-                                      <Badge variant="secondary" className="text-xs px-2 py-0">
-                                        {product.category}
-                                      </Badge>
-                                    )}
-                                    
-                                    {product.price !== undefined && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <DollarSign className="h-3 w-3" />
-                                        {formatPrice(product.price, product.currency)}
-                                      </div>
-                                    )}
-                                  </div>
-                                 
-                                  {selectedProductIds.has(product.id) && (
-                                    <Badge variant="default" className="text-xs">
-                                      Ativo no preview
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium truncate">{product.name}</h4>
+                            {product.category && (
+                              <Badge variant="secondary" className="text-xs">
+                                {product.category}
+                              </Badge>
+                            )}
                           </div>
-
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditProduct(product);
-                              }}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (confirm('Tem certeza que deseja deletar este produto?')) {
-                                  try {
-                                    const { error } = await supabase
-                                      .from('products_repository')
-                                      .delete()
-                                      .eq('id', product.id);
-
-                                    if (error) throw error;
-
-                                    handleDeleteProduct(product.id);
-                                    toast({
-                                      title: "Produto deletado",
-                                      description: "Produto removido do repositório"
-                                    });
-                                  } catch (error) {
-                                    console.error('Error deleting product:', error);
-                                    toast({
-                                      title: "Erro",
-                                      description: "Erro ao deletar produto",
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }
-                              }}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-              </div>
-
-              <ProductRepositoryCSVImporter onImportComplete={refreshAllData} />
+                          
+                          {product.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {product.description}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm font-medium text-primary">
+                              {formatPrice(product.price, product.currency)}
+                            </span>
+                            
+                            {product.use_in_ai_generation && (
+                              <Badge variant="outline" className="text-xs">
+                                IA
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm('Tem certeza que deseja deletar este produto?')) {
+                                handleDeleteProduct(product.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="reviews" className="mt-0">
-            <div className="p-4 space-y-4">
+          <TabsContent value="reviews" className="mt-4">
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Reviews Manuais</h3>
                 <Button
@@ -701,23 +695,22 @@ export function RepositoryPanel({
                   className="gap-2"
                 >
                   {exportingData ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                    <Download className="h-4 w-4 animate-spin" />
                   ) : (
                     <FileDown className="h-4 w-4" />
                   )}
                   Exportar Reviews
                 </Button>
               </div>
-              
               <CSVReviewUploader 
                 reviews={manualReviews}
-                onReviewsUpdate={setManualReviews}
+                onReviewsUpdate={loadManualReviews}
               />
             </div>
           </TabsContent>
 
-          <TabsContent value="testimonials" className="mt-0">
-            <div className="p-4 space-y-4">
+          <TabsContent value="testimonials" className="mt-4">
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Depoimentos em Vídeo</h3>
                 <Button
@@ -728,22 +721,21 @@ export function RepositoryPanel({
                   className="gap-2"
                 >
                   {exportingData ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                    <Download className="h-4 w-4 animate-spin" />
                   ) : (
                     <FileDown className="h-4 w-4" />
                   )}
                   Exportar Depoimentos
                 </Button>
               </div>
-              
               <VideoTestimonialsSection landingPageId={landingPageId} />
             </div>
           </TabsContent>
 
-          <TabsContent value="kols" className="mt-0">
-            <div className="p-4 space-y-4">
+          <TabsContent value="kols" className="mt-4">
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Especialistas (KOLs)</h3>
+                <h3 className="text-lg font-semibold">Key Opinion Leaders</h3>
                 <Button
                   variant="outline"
                   size="sm"
@@ -752,14 +744,13 @@ export function RepositoryPanel({
                   className="gap-2"
                 >
                   {exportingData ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                    <Download className="h-4 w-4 animate-spin" />
                   ) : (
                     <FileDown className="h-4 w-4" />
                   )}
                   Exportar KOLs
                 </Button>
               </div>
-              
               <KOLManager />
             </div>
           </TabsContent>
