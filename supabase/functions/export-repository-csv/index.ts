@@ -91,8 +91,9 @@ async function exportProducts(supabase: any): Promise<string> {
     'URL Produto', 'URL Imagem', 'Tags', 'Keywords', 'Benefits', 'Features',
     'Público Alvo', 'Search Intent Keywords', 'Market Keywords', 'Sales Pitch',
     'YouTube Videos', 'Instagram Videos', 'Technical Videos', 'Testimonial Videos',
-    'Aprovado', 'Usar na IA', 'Ordem Exibição', 'Tipo Fonte', 'Landing Page Origem',
-    'Data Criação', 'Data Atualização'
+    'Video Captions', 'Dados Originais', 'IA Categoria Gerada', 'IA Keywords Geradas', 
+    'IA Benefits Gerados', 'Aprovado', 'Usar na IA', 'Ordem Exibição', 'Tipo Fonte', 
+    'Landing Page Origem', 'Data Criação', 'Data Atualização'
   ]
 
   const rows = products.map((product: any) => [
@@ -117,6 +118,11 @@ async function exportProducts(supabase: any): Promise<string> {
     formatArray(product.instagram_videos),
     formatArray(product.technical_videos),
     formatArray(product.testimonial_videos),
+    formatObject(product.video_captions),
+    formatObject(product.original_data),
+    product.ai_generated_category ? 'Sim' : 'Não',
+    product.ai_generated_keywords ? 'Sim' : 'Não',
+    product.ai_generated_benefits ? 'Sim' : 'Não',
     product.approved ? 'Sim' : 'Não',
     product.use_in_ai_generation ? 'Sim' : 'Não',
     product.display_order || '',
@@ -287,6 +293,12 @@ function escapeCSV(value: any): string {
 function formatArray(arr: any): string {
   if (!arr || !Array.isArray(arr)) return ''
   return escapeCSV(arr.join('; '))
+}
+
+function formatObject(obj: any): string {
+  if (!obj || typeof obj !== 'object') return ''
+  if (Array.isArray(obj)) return formatArray(obj)
+  return escapeCSV(JSON.stringify(obj, null, 0))
 }
 
 function formatDate(dateStr: string): string {
