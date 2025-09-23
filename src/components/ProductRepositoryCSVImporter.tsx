@@ -50,6 +50,7 @@ interface ImportOperationLog {
   action: 'insert' | 'update';
   status: 'success' | 'error';
   error?: string;
+  matched_by?: string;
 }
 
 interface ImportResult {
@@ -474,7 +475,91 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         </div>
       )}
 
-      {previewData.length === 0 && (
+      {importLogs.length > 0 && (
+        <div className="space-y-2 mt-3 border-t pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">Resultado da Importação</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setImportLogs([])}
+              className="text-xs px-2 py-1 h-6"
+            >
+              Limpar
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="text-center p-2 bg-green-50 rounded border">
+              <div className="font-medium text-green-700">
+                {importLogs.filter(log => log.action === 'insert' && log.status === 'success').length}
+              </div>
+              <div className="text-green-600">Criados</div>
+            </div>
+            <div className="text-center p-2 bg-blue-50 rounded border">
+              <div className="font-medium text-blue-700">
+                {importLogs.filter(log => log.action === 'update' && log.status === 'success').length}
+              </div>
+              <div className="text-blue-600">Atualizados</div>
+            </div>
+            <div className="text-center p-2 bg-red-50 rounded border">
+              <div className="font-medium text-red-700">
+                {importLogs.filter(log => log.status === 'error').length}
+              </div>
+              <div className="text-red-600">Erros</div>
+            </div>
+          </div>
+          
+          <div className="max-h-32 overflow-y-auto space-y-1">
+            {importLogs.slice(0, 10).map((log, index) => (
+              <div
+                key={index}
+                className={`flex items-center justify-between p-2 rounded text-xs border ${
+                  log.status === 'success' 
+                    ? log.action === 'insert' 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-blue-50 border-blue-200'
+                    : 'bg-red-50 border-red-200'
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{log.name}</div>
+                  {log.matched_by && (
+                    <div className="text-xs text-muted-foreground">
+                      Localizado por: {log.matched_by === 'id' ? 'ID' : log.matched_by === 'product_url' ? 'URL' : 'Nome'}
+                    </div>
+                  )}
+                  {log.error && (
+                    <div className="text-xs text-red-600 truncate">{log.error}</div>
+                  )}
+                </div>
+                <div className="ml-2">
+                  {log.status === 'success' ? (
+                    <Badge 
+                      variant={log.action === 'insert' ? 'default' : 'secondary'} 
+                      className="text-xs px-1 py-0"
+                    >
+                      {log.action === 'insert' ? 'Criado' : 'Atualizado'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-xs px-1 py-0">
+                      <AlertCircle className="h-2 w-2 mr-1" />
+                      Erro
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+            {importLogs.length > 10 && (
+              <div className="text-center text-xs text-muted-foreground py-1">
+                ... e mais {importLogs.length - 10} resultados
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {previewData.length === 0 && importLogs.length === 0 && (
         <div className="text-xs text-muted-foreground space-y-1">
           <div className="flex items-center gap-1 mb-1">
             <AlertCircle className="h-3 w-3" />

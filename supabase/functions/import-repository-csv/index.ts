@@ -158,7 +158,7 @@ serve(async (req) => {
     let updated = 0;
     let errors = 0;
     const errorDetails: string[] = [];
-    const logs: Array<{ name: string; id?: string; action: 'insert' | 'update'; status: 'success' | 'error'; error?: string }> = [];
+    const logs: Array<{ name: string; id?: string; action: 'insert' | 'update'; status: 'success' | 'error'; error?: string; matched_by?: string }> = [];
 
     for (const product of products) {
       try {
@@ -166,10 +166,13 @@ serve(async (req) => {
         const sanitizedProduct = sanitizeProduct(product);
         console.log('✨ Produto sanitizado:', sanitizedProduct);
         
+        let matchedBy: string | undefined;
+        let productId: string | undefined;
+
         if (sanitizedProduct.id) {
           console.log(`📝 Tentando atualizar produto com ID: ${sanitizedProduct.id}`);
           
-          // Tentar atualizar produto existente
+          // Tentar atualizar produto existente por ID
           const { data: updateData, error: updateError } = await supabaseClient
             .from('products_repository')
             .update({
@@ -179,56 +182,192 @@ serve(async (req) => {
             .eq('id', sanitizedProduct.id)
             .select();
 
-          console.log('📊 Resultado da atualização:', { updateData, updateError, rowsAffected: updateData?.length });
+          console.log('📊 Resultado da atualização por ID:', { updateData, updateError, rowsAffected: updateData?.length });
 
           if (updateError) {
-            console.log('⚠️ Erro na atualização:', updateError.message);
+            console.log('⚠️ Erro na atualização por ID:', updateError.message);
             throw updateError;
           }
           
-          // Verificar se realmente atualizou alguma linha
-          if (!updateData || updateData.length === 0) {
-            console.log('⚠️ Nenhuma linha atualizada - ID não encontrado, tentando criar novo produto');
-            // Se não encontrou o ID, criar como novo produto
-            const { id, ...newProduct } = sanitizedProduct;
-            const { data: insertData, error: insertError } = await supabaseClient
+          if (updateData && updateData.length > 0) {
+            updated++;
+            productId = updateData[0].id;
+            matchedBy = 'id';
+            logs.push({ 
+              name: sanitizedProduct.name, 
+              id: productId, 
+              action: 'update', 
+              status: 'success',
+              matched_by: matchedBy
+            });
+            console.log('✅ Produto atualizado com sucesso por ID');
+          } else {
+            console.log('⚠️ ID não encontrado, tentando outras estratégias...');
+            // Remover ID para tentar outras estratégias
+            const { id, ...productWithoutId } = sanitizedProduct;
+            
+            // Tentar encontrar por product_url
+            let existingProduct = null;
+            if (productWithoutId.product_url) {
+              console.log(`🔍 Procurando por product_url: ${productWithoutId.product_url}`);
+              const { data: foundByUrl } = await supabaseClient
+                .from('products_repository')
+                .select('id')
+                .eq('product_url', productWithoutId.product_url)
+                .limit(1);
+              
+              if (foundByUrl && foundByUrl.length > 0) {
+                existingProduct = foundByUrl[0];
+                matchedBy = 'product_url';
+                console.log(`✅ Produto encontrado por URL: ${existingProduct.id}`);
+              }
+            }
+            
+            // Se não encontrou por URL, tentar por nome
+            if (!existingProduct && productWithoutId.name) {
+              console.log(`🔍 Procurando por nome: ${productWithoutId.name}`);
+              const { data: foundByName } = await supabaseClient
+                .from('products_repository')
+                .select('id')
+                .ilike('name', productWithoutId.name)
+                .limit(1);
+              
+              if (foundByName && foundByName.length > 0) {
+                existingProduct = foundByName[0];
+                matchedBy = 'name';
+                console.log(`✅ Produto encontrado por nome: ${existingProduct.id}`);
+              }
+            }
+            
+            if (existingProduct) {
+              // Atualizar produto encontrado
+              const { data: updateExistingData, error: updateExistingError } = await supabaseClient
+                .from('products_repository')
+                .update({
+                  ...productWithoutId,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingProduct.id)
+                .select();
+
+              if (updateExistingError) {
+                throw updateExistingError;
+              }
+              
+              updated++;
+              productId = existingProduct.id;
+              logs.push({ 
+                name: sanitizedProduct.name, 
+                id: productId, 
+                action: 'update', 
+                status: 'success',
+                matched_by: matchedBy
+              });
+              console.log(`✅ Produto atualizado com sucesso por ${matchedBy}`);
+            } else {
+              // Criar novo produto
+              const { data: insertData, error: insertError } = await supabaseClient
+                .from('products_repository')
+                .insert(productWithoutId)
+                .select();
+
+              if (insertError) {
+                throw insertError;
+              }
+              
+              imported++;
+              productId = insertData?.[0]?.id;
+              logs.push({ 
+                name: sanitizedProduct.name, 
+                id: productId, 
+                action: 'insert', 
+                status: 'success'
+              });
+              console.log('✅ Produto criado com sucesso (ID original não encontrado)');
+            }
+          }
+        } else {
+          console.log('➕ Produto sem ID fornecido');
+          
+          // Tentar encontrar produto existente por product_url
+          let existingProduct = null;
+          if (sanitizedProduct.product_url) {
+            console.log(`🔍 Procurando por product_url: ${sanitizedProduct.product_url}`);
+            const { data: foundByUrl } = await supabaseClient
               .from('products_repository')
-              .insert(newProduct)
+              .select('id')
+              .eq('product_url', sanitizedProduct.product_url)
+              .limit(1);
+            
+            if (foundByUrl && foundByUrl.length > 0) {
+              existingProduct = foundByUrl[0];
+              matchedBy = 'product_url';
+              console.log(`✅ Produto encontrado por URL: ${existingProduct.id}`);
+            }
+          }
+          
+          // Se não encontrou por URL, tentar por nome
+          if (!existingProduct && sanitizedProduct.name) {
+            console.log(`🔍 Procurando por nome: ${sanitizedProduct.name}`);
+            const { data: foundByName } = await supabaseClient
+              .from('products_repository')
+              .select('id')
+              .ilike('name', sanitizedProduct.name)
+              .limit(1);
+            
+            if (foundByName && foundByName.length > 0) {
+              existingProduct = foundByName[0];
+              matchedBy = 'name';
+              console.log(`✅ Produto encontrado por nome: ${existingProduct.id}`);
+            }
+          }
+          
+          if (existingProduct) {
+            // Atualizar produto encontrado
+            const { data: updateData, error: updateError } = await supabaseClient
+              .from('products_repository')
+              .update({
+                ...sanitizedProduct,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingProduct.id)
               .select();
 
-            console.log('📊 Resultado da inserção (ID não encontrado):', { insertData, insertError });
+            if (updateError) {
+              throw updateError;
+            }
+            
+            updated++;
+            productId = existingProduct.id;
+            logs.push({ 
+              name: sanitizedProduct.name, 
+              id: productId, 
+              action: 'update', 
+              status: 'success',
+              matched_by: matchedBy
+            });
+            console.log(`✅ Produto atualizado com sucesso por ${matchedBy}`);
+          } else {
+            // Criar novo produto
+            const { data: insertData, error: insertError } = await supabaseClient
+              .from('products_repository')
+              .insert(sanitizedProduct)
+              .select();
 
             if (insertError) {
               throw insertError;
             }
+            
             imported++;
-            const insertedId = insertData?.[0]?.id as string | undefined;
-            logs.push({ name: sanitizedProduct.name, id: insertedId, action: 'insert', status: 'success' });
-            console.log('✅ Produto criado com sucesso (ID original não encontrado)');
-          } else {
-            updated++;
-            const updatedId = updateData?.[0]?.id as string | undefined;
-            logs.push({ name: sanitizedProduct.name, id: updatedId ?? sanitizedProduct.id, action: 'update', status: 'success' });
-            console.log('✅ Produto atualizado com sucesso');
+            productId = insertData?.[0]?.id;
+            logs.push({ 
+              name: sanitizedProduct.name, 
+              id: productId, 
+              action: 'insert', 
+              status: 'success'
+            });
+            console.log('✅ Produto criado com sucesso');
           }
-        } else {
-          console.log('➕ Criando novo produto');
-          
-          // Criar novo produto
-          const { data: insertData, error: insertError } = await supabaseClient
-            .from('products_repository')
-            .insert(sanitizedProduct)
-            .select();
-
-          console.log('📊 Resultado da inserção:', { insertData, insertError });
-
-          if (insertError) {
-            throw insertError;
-          }
-          imported++;
-          const insertedId = insertData?.[0]?.id as string | undefined;
-          logs.push({ name: sanitizedProduct.name, id: insertedId, action: 'insert', status: 'success' });
-          console.log('✅ Produto criado com sucesso');
         }
 
       } catch (error) {

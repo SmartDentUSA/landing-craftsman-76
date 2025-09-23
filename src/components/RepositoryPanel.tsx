@@ -27,13 +27,18 @@ interface Product {
   price?: number;
   currency?: string;
   category?: string;
+  subcategory?: string;
   image_url?: string;
   product_url?: string;
+  sales_pitch?: string;
   use_in_ai_generation: boolean;
   approved: boolean;
   keywords?: string[];
   benefits?: string[];
   features?: string[];
+  target_audience?: string[];
+  search_intent_keywords?: string[];
+  market_keywords?: string[];
 }
 
 interface ManualReview {
@@ -72,6 +77,7 @@ export function RepositoryPanel({
   const [activeTab, setActiveTab] = useState("products");
   const [manualReviews, setManualReviews] = useState<ManualReview[]>([]);
   const [exportingData, setExportingData] = useState(false);
+  const [showUnapproved, setShowUnapproved] = useState(false);
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
@@ -192,7 +198,7 @@ export function RepositoryPanel({
       const { data, error } = await supabase
         .from('products_repository')
         .select('*')
-        .eq('approved', true)
+        .eq('approved', showUnapproved ? false : true)
         .order('display_order', { ascending: true });
 
       if (error) {
@@ -209,13 +215,18 @@ export function RepositoryPanel({
         price: data.price || 0,
         currency: data.currency || 'BRL',
         category: data.category || '',
+        subcategory: data.subcategory || '',
         image_url: data.image_url || '',
         product_url: data.product_url || '',
+        sales_pitch: data.sales_pitch || '',
         use_in_ai_generation: data.use_in_ai_generation ?? true,
         approved: data.approved ?? true,
         keywords: Array.isArray(data.keywords) ? data.keywords.map(k => String(k)) : [],
         benefits: Array.isArray(data.benefits) ? data.benefits.map(b => String(b)) : [],
-        features: Array.isArray(data.features) ? data.features.map(f => String(f)) : []
+        features: Array.isArray(data.features) ? data.features.map(f => String(f)) : [],
+        target_audience: Array.isArray(data.target_audience) ? data.target_audience.map(t => String(t)) : [],
+        search_intent_keywords: Array.isArray(data.search_intent_keywords) ? data.search_intent_keywords.map(s => String(s)) : [],
+        market_keywords: Array.isArray(data.market_keywords) ? data.market_keywords.map(m => String(m)) : []
       }));
       
       setProducts(formattedProducts);
@@ -485,75 +496,87 @@ export function RepositoryPanel({
                 </Select>
               </div>
               
-              {/* Actions */}
+              {/* Toggle and Actions */}
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleAllProducts}
-                  className="gap-2"
-                >
-                  {selectedProductIds.size === filteredProducts.length ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                  {selectedProductIds.size === filteredProducts.length ? 'Desmarcar' : 'Marcar'} Todos
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSyncOffers}
-                  disabled={isSyncing}
-                  className="gap-2"
-                >
-                  {isSyncing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCcw className="h-4 w-4" />
-                  )}
-                  Sincronizar
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshAllData}
-                  disabled={loading}
-                  className="gap-2"
-                >
-                  {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Atualizar
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExportCSV('all')}
-                  disabled={exportingData}
-                  className="gap-2"
-                >
-                  {exportingData ? (
-                    <Download className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4" />
-                  )}
-                  Exportar
-                </Button>
-                
-                <Button
-                  onClick={handleAddProduct}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Checkbox
+                      checked={showUnapproved}
+                      onCheckedChange={(checked) => {
+                        setShowUnapproved(checked as boolean);
+                        loadProducts();
+                      }}
+                      className="h-3 w-3"
+                    />
+                    Mostrar não aprovados
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleAllProducts}
+                    className="gap-2"
+                  >
+                    {selectedProductIds.size === filteredProducts.length ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                    {selectedProductIds.size === filteredProducts.length ? 'Desmarcar' : 'Selecionar'} Todos
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={refreshAllData}
+                    disabled={loading}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    Atualizar
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSyncOffers}
+                    disabled={isSyncing}
+                    className="gap-2"
+                  >
+                    <RotateCcw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportCSV('products')}
+                    disabled={exportingData}
+                    className="gap-2"
+                  >
+                    {exportingData ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        Exportando...
+                      </>
+                    ) : (
+                      <>
+                        <FileDown className="h-4 w-4" />
+                        Exportar
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    onClick={handleAddProduct}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Adicionar
+                  </Button>
+                </div>
               </div>
 
               {/* Summary */}
@@ -573,199 +596,115 @@ export function RepositoryPanel({
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="products" className="gap-2">
-              <Package className="h-4 w-4" />
-              Produtos
-            </TabsTrigger>
-            <TabsTrigger value="reviews" className="gap-2">
-              <Star className="h-4 w-4" />
-              Avaliações
-            </TabsTrigger>
-            <TabsTrigger value="testimonials" className="gap-2">
-              <VideoIcon className="h-4 w-4" />
-              Depoimentos
-            </TabsTrigger>
-            <TabsTrigger value="kols" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              KOLs
-            </TabsTrigger>
+            <TabsTrigger value="products">Produtos</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
+            <TabsTrigger value="kols">KOLs</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="mt-4">
             <div className="space-y-4">
-              {/* CSV Importer */}
-              <div className="mb-4">
-                <ProductRepositoryCSVImporter 
-                  onImportComplete={loadProducts}
-                />
-              </div>
-
-              {filteredProducts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum produto encontrado</p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-2">
-                    {filteredProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
+              <ProductRepositoryCSVImporter onImportComplete={() => loadProducts()} />
+              
+              <ScrollArea className="h-96 w-full rounded-md border">
+                <div className="p-4 space-y-3">
+                  {filteredProducts.map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
                         <Checkbox
                           checked={selectedProductIds.has(product.id)}
                           onCheckedChange={() => toggleProductSelection(product.id)}
                         />
                         
                         {product.image_url && (
-                          <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
+                          <div className="w-12 h-12 rounded-md overflow-hidden bg-muted">
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
                         )}
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium truncate">{product.name}</h4>
-                            {product.category && (
-                              <Badge variant="secondary" className="text-xs">
-                                {product.category}
-                              </Badge>
-                            )}
+                          <div className="font-medium text-sm truncate">{product.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {product.category} • {formatPrice(product.price, product.currency)}
                           </div>
-                          
-                          {product.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {product.description}
-                            </p>
+                          {product.sales_pitch && (
+                            <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {product.sales_pitch}
+                            </div>
                           )}
-                          
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm font-medium text-primary">
-                              {formatPrice(product.price, product.currency)}
-                            </span>
-                            
-                            {product.use_in_ai_generation && (
-                              <Badge variant="outline" className="text-xs">
-                                IA
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditProduct(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (window.confirm('Tem certeza que deseja deletar este produto?')) {
-                                handleDeleteProduct(product.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
+                      
+                      <div className="flex items-center gap-2">
+                        {product.use_in_ai_generation && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Star className="h-3 w-3 mr-1" />
+                            IA
+                          </Badge>
+                        )}
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteProduct(product.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {filteredProducts.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhum produto encontrado</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-4">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Reviews Manuais</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExportCSV('reviews')}
-                  disabled={exportingData}
-                  className="gap-2"
-                >
-                  {exportingData ? (
-                    <Download className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4" />
-                  )}
-                  Exportar Reviews
-                </Button>
-              </div>
-              <CSVReviewUploader 
-                reviews={manualReviews}
-                onReviewsUpdate={loadManualReviews}
-              />
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Reviews management functionality</p>
             </div>
           </TabsContent>
 
           <TabsContent value="testimonials" className="mt-4">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Depoimentos em Vídeo</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExportCSV('testimonials')}
-                  disabled={exportingData}
-                  className="gap-2"
-                >
-                  {exportingData ? (
-                    <Download className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4" />
-                  )}
-                  Exportar Depoimentos
-                </Button>
-              </div>
-              <VideoTestimonialsSection landingPageId={landingPageId} />
-            </div>
+            <VideoTestimonialsSection landingPageId={landingPageId} />
           </TabsContent>
 
           <TabsContent value="kols" className="mt-4">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Key Opinion Leaders</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExportCSV('kols')}
-                  disabled={exportingData}
-                  className="gap-2"
-                >
-                  {exportingData ? (
-                    <Download className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4" />
-                  )}
-                  Exportar KOLs
-                </Button>
-              </div>
-              <KOLManager />
-            </div>
+            <KOLManager />
           </TabsContent>
         </Tabs>
       </CardContent>
 
+      {/* Product Edit Modal */}
       <ProductEditModal
         isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingProduct(null);
-        }}
+        onClose={() => setIsEditModalOpen(false)}
         product={editingProduct}
         onSave={handleSaveProduct}
-        onDelete={handleDeleteProduct}
       />
     </Card>
   );
