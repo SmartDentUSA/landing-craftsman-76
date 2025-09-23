@@ -552,10 +552,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       console.error('[DEBUG] Error saving product:', error);
       
       // Verificar se é um erro de permissão RLS
-      if (error.message?.includes('new row violates row-level security')) {
+      if (error.message?.includes('new row violates row-level security') || 
+          error.message?.includes('permission denied') ||
+          error.message?.includes('insufficient privilege') ||
+          error.code === 'PGRST301' || 
+          error.code === '42501') {
         toast({
           title: "Erro de Permissão",
-          description: "Você precisa estar logado como administrador para salvar produtos",
+          description: `Você precisa estar logado como administrador para ${isEditing ? 'atualizar' : 'criar'} produtos. Faça login em /auth com privilégios de admin.`,
           variant: "destructive"
         });
       } else {
