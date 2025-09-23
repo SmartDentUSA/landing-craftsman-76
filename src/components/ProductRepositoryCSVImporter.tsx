@@ -44,8 +44,20 @@ interface ImportPreviewProduct {
   errorMessage?: string;
 }
 
+interface ImportOperationLog {
+  name: string;
+  id?: string;
+  action: 'insert' | 'update';
+  status: 'success' | 'error';
+  error?: string;
+}
+
+interface ImportResult {
+  logs: ImportOperationLog[];
+}
+
 interface ProductRepositoryCSVImporterProps {
-  onImportComplete: () => void;
+  onImportComplete: (result?: ImportResult) => void;
 }
 
 const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> = ({
@@ -54,6 +66,7 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
   const [previewData, setPreviewData] = useState<ImportPreviewProduct[]>([]);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [importLogs, setImportLogs] = useState<ImportOperationLog[]>([]);
   const { toast } = useToast();
 
   const expectedHeaders = [
@@ -335,11 +348,12 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         });
       }
 
-      // Forçar reload da lista de produtos
-      setTimeout(() => {
-        onImportComplete();
-      }, 500);
-      
+      // Exibir log visível e atualizar lista
+      if (data.logs) {
+        setImportLogs(data.logs as ImportOperationLog[]);
+      }
+
+      onImportComplete({ logs: (data.logs as ImportOperationLog[]) || [] });
       clearPreview();
     } catch (error) {
       console.error('❌ Erro na importação:', error);
@@ -389,6 +403,14 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         >
           <Download className="h-3 w-3" />
           Template
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onImportComplete()}
+          className="gap-1 text-xs px-2 py-1 h-7"
+        >
+          Atualizar lista
         </Button>
       </div>
 

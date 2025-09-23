@@ -41,32 +41,53 @@ interface ProductData {
 }
 
 const parseJsonField = (value: any): any => {
-  if (!value || value === '' || value === '[object Object]') return null;
-  
+  if (value === undefined || value === null || value === '' || value === '[object Object]') return null;
+
   if (typeof value === 'string') {
+    const trimmed = value.trim();
     try {
-      return JSON.parse(value);
+      return JSON.parse(trimmed);
     } catch {
-      // Se não conseguir parsear como JSON, tentar como array separado por ponto e vírgula
-      if (value.includes(';')) {
-        return value.split(';').map((item: string) => item.trim()).filter(Boolean);
+      // Try common list delimiters
+      if (!trimmed.startsWith('[') && (trimmed.includes(';') || trimmed.includes(','))) {
+        const delimiter = trimmed.includes(';') ? ';' : ',';
+        return trimmed
+          .split(delimiter)
+          .map((item: string) => item.trim())
+          .filter(Boolean);
       }
-      // Se não conseguir parsear como JSON, tentar como array simples
-      if (value.startsWith('[') && value.endsWith(']')) {
-        try {
-          return JSON.parse(value);
-        } catch {
-          return [];
-        }
-      }
-      return value;
+      return trimmed;
     }
   }
-  
+
   return value;
 };
 
 const sanitizeProduct = (product: ProductData): any => {
+  // Normalize booleans including pt-BR strings
+  const toBool = (v: any, defaultTrue = false) => {
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'string') {
+      const val = v.trim().toLowerCase();
+      if (['true', 'sim', 'yes', '1'].includes(val)) return true;
+      if (['false', 'nao', 'não', 'no', '0'].includes(val)) return false;
+    }
+    return defaultTrue;
+  };
+
+  let image_url = product.image_url || null;
+  let product_url = product.product_url || null;
+
+  // URL swap heuristics: if product_url looks like an image and image_url doesn't, swap
+  const looksLikeImage = (url?: string | null) => !!url && /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+  const looksLikeHttp = (url?: string | null) => !!url && /^https?:\/\//i.test(url);
+
+  if (looksLikeImage(product_url) || (!looksLikeHttp(image_url) && looksLikeHttp(product_url))) {
+    const tmp = image_url;
+    image_url = product_url;
+    product_url = tmp;
+  }
+
   const sanitized: any = {
     name: product.name || 'Produto sem nome',
     description: product.description || null,
@@ -74,14 +95,14 @@ const sanitizeProduct = (product: ProductData): any => {
     currency: product.currency || 'BRL',
     category: product.category || null,
     subcategory: product.subcategory || null,
-    image_url: product.image_url || null,
-    product_url: product.product_url || null,
+    image_url,
+    product_url,
     sales_pitch: product.sales_pitch || null,
-    ai_generated_category: product.ai_generated_category === true || product.ai_generated_category === 'true',
-    ai_generated_keywords: product.ai_generated_keywords === true || product.ai_generated_keywords === 'true',
-    ai_generated_benefits: product.ai_generated_benefits === true || product.ai_generated_benefits === 'true',
-    use_in_ai_generation: product.use_in_ai_generation !== false && product.use_in_ai_generation !== 'false',
-    approved: product.approved !== false && product.approved !== 'false',
+    ai_generated_category: toBool(product.ai_generated_category, false),
+    ai_generated_keywords: toBool(product.ai_generated_keywords, false),
+    ai_generated_benefits: toBool(product.ai_generated_benefits, false),
+    use_in_ai_generation: toBool(product.use_in_ai_generation, true),
+    approved: toBool(product.approved, true),
     display_order: product.display_order ? parseInt(product.display_order.toString()) : null,
     source_type: product.source_type || 'csv_import',
     source_landing_page_id: product.source_landing_page_id || null,
@@ -95,7 +116,7 @@ const sanitizeProduct = (product: ProductData): any => {
   ];
 
   jsonFields.forEach(field => {
-    sanitized[field] = parseJsonField(product[field as keyof ProductData]) || [];
+    sanitized[field] = parseJsonField((product as any)[field]) || [];
   });
 
   // Campos especiais
@@ -137,6 +158,7 @@ serve(async (req) => {
     let updated = 0;
     let errors = 0;
     const errorDetails: string[] = [];
+    const logs: Array<{ name: string; id?: string; action: 'insert' | 'update'; status: 'success' | 'error'; error?: string }> = [];
 
     for (const product of products) {
       try {
@@ -180,9 +202,13 @@ serve(async (req) => {
               throw insertError;
             }
             imported++;
+            const insertedId = insertData?.[0]?.id as string | undefined;
+            logs.push({ name: sanitizedProduct.name, id: insertedId, action: 'insert', status: 'success' });
             console.log('✅ Produto criado com sucesso (ID original não encontrado)');
           } else {
             updated++;
+            const updatedId = updateData?.[0]?.id as string | undefined;
+            logs.push({ name: sanitizedProduct.name, id: updatedId ?? sanitizedProduct.id, action: 'update', status: 'success' });
             console.log('✅ Produto atualizado com sucesso');
           }
         } else {
@@ -200,13 +226,15 @@ serve(async (req) => {
             throw insertError;
           }
           imported++;
+          const insertedId = insertData?.[0]?.id as string | undefined;
+          logs.push({ name: sanitizedProduct.name, id: insertedId, action: 'insert', status: 'success' });
           console.log('✅ Produto criado com sucesso');
         }
 
       } catch (error) {
         console.error('❌ Erro ao processar produto:', product.name, error);
         errors++;
-        const errorMsg = error.message || error.toString();
+        const errorMsg = (error as any).message || (error as any).toString();
         
         // Mensagens de erro mais específicas
         let friendlyError = errorMsg;
@@ -219,6 +247,7 @@ serve(async (req) => {
         }
         
         errorDetails.push(`${product.name || 'Produto sem nome'}: ${friendlyError}`);
+        logs.push({ name: product.name || 'Produto sem nome', id: product.id, action: product.id ? 'update' : 'insert', status: 'error', error: friendlyError });
       }
     }
 
@@ -231,7 +260,8 @@ serve(async (req) => {
         updated: updated,
         errors: errors,
         errorDetails: errorDetails.slice(0, 10), // Máximo 10 detalhes de erro
-        total: products.length
+        total: products.length,
+        logs
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
