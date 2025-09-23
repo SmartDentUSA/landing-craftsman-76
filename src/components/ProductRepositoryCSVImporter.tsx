@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, AlertCircle, CheckCircle, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import Papa from 'papaparse';
+import * as Papa from 'papaparse';
 
 interface ImportPreviewProduct {
   id?: string;
