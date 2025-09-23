@@ -86,15 +86,54 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
       try {
         return JSON.parse(value);
       } catch {
-        // Se não conseguir parsear como JSON, tentar como array simples
+        // Tentar como array separado por ponto e vírgula primeiro
         if (value.includes(';')) {
           return value.split(';').map((item: string) => item.trim()).filter(Boolean);
+        }
+        // Se não tiver ponto e vírgula, tentar vírgula (mais flexível)
+        if (value.includes(',') && !value.startsWith('[')) {
+          return value.split(',').map((item: string) => item.trim()).filter(Boolean);
         }
         return value;
       }
     }
     
     return value;
+  };
+
+  const validateAndFixData = (parsedData: any[]): { data: any[], warnings: string[] } => {
+    const warnings: string[] = [];
+    const fixedData = parsedData.map((row, index) => {
+      const fixed = { ...row };
+      
+      // Detectar URLs trocadas (image_url com https e product_url sem)
+      if (fixed.image_url && fixed.product_url) {
+        const imageIsUrl = fixed.image_url.startsWith('http');
+        const productIsUrl = fixed.product_url.startsWith('http');
+        
+        // Se image_url não é URL mas product_url é, provavelmente estão trocados
+        if (!imageIsUrl && productIsUrl && fixed.image_url.length > 10) {
+          warnings.push(`Linha ${index + 1}: URLs possivelmente trocadas - corrigindo automaticamente`);
+          const temp = fixed.image_url;
+          fixed.image_url = fixed.product_url;
+          fixed.product_url = temp;
+        }
+      }
+      
+      // Ignorar campos de timestamp problemáticos
+      if (fixed.created_at && (fixed.created_at.includes(',') || fixed.created_at === '[object Object]')) {
+        delete fixed.created_at;
+        warnings.push(`Linha ${index + 1}: Campo created_at inválido removido`);
+      }
+      if (fixed.updated_at && (fixed.updated_at.includes(',') || fixed.updated_at === '[object Object]')) {
+        delete fixed.updated_at;
+        warnings.push(`Linha ${index + 1}: Campo updated_at inválido removido`);
+      }
+      
+      return fixed;
+    });
+    
+    return { data: fixedData, warnings };
   };
 
   const parseCSV = (csvText: string): ImportPreviewProduct[] => {
@@ -150,7 +189,20 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
       return [];
     }
 
-    return result.data.map((row: any, index: number) => {
+    // Validar e corrigir dados
+    const { data: validatedData, warnings } = validateAndFixData(result.data);
+    
+    // Mostrar avisos se houver
+    if (warnings.length > 0) {
+      toast({
+        title: "Correções automáticas aplicadas",
+        description: `${warnings.length} problema(s) corrigido(s). Verifique o preview.`,
+        variant: "default"
+      });
+      console.log('⚠️ Avisos de validação:', warnings);
+    }
+
+    return validatedData.map((row: any, index: number) => {
       console.log(`🔄 Processando linha ${index + 1}:`, row);
       
       const processedRow = {
@@ -261,21 +313,45 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
 
       setProgress(100);
       
-      const resultMessage = data.errors > 0 
-        ? `${data.imported} importados, ${data.updated} atualizados, ${data.errors} erros`
-        : `${data.imported} importados, ${data.updated} atualizados com sucesso`;
+      // Mensagens mais detalhadas
+      let resultMessage = '';
+      let toastVariant: "default" | "destructive" = "default";
+      
+      if (data.errors > 0) {
+        resultMessage = `⚠️ ${data.imported} criados, ${data.updated} atualizados, ${data.errors} erros`;
+        toastVariant = "destructive";
+      } else if (data.imported > 0 && data.updated > 0) {
+        resultMessage = `✅ ${data.imported} criados, ${data.updated} atualizados`;
+      } else if (data.imported > 0) {
+        resultMessage = `✅ ${data.imported} produtos criados`;
+      } else if (data.updated > 0) {
+        resultMessage = `✅ ${data.updated} produtos atualizados`;
+      } else {
+        resultMessage = '⚠️ Nenhum produto foi processado';
+        toastVariant = "destructive";
+      }
 
       toast({
         title: "Importação concluída",
         description: resultMessage,
-        variant: data.errors > 0 ? "destructive" : "default"
+        variant: toastVariant
       });
 
+      // Mostrar detalhes dos erros se houver
       if (data.errorDetails && data.errorDetails.length > 0) {
         console.error('❌ Detalhes dos erros:', data.errorDetails);
+        toast({
+          title: `${data.errors} erros encontrados`,
+          description: data.errorDetails.slice(0, 3).join('; ') + (data.errorDetails.length > 3 ? '...' : ''),
+          variant: "destructive"
+        });
       }
 
-      onImportComplete();
+      // Forçar reload da lista de produtos
+      setTimeout(() => {
+        onImportComplete();
+      }, 500);
+      
       clearPreview();
     } catch (error) {
       console.error('❌ Erro na importação:', error);
@@ -389,12 +465,16 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
       )}
 
       {previewData.length === 0 && (
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground space-y-1">
           <div className="flex items-center gap-1 mb-1">
             <AlertCircle className="h-3 w-3" />
-            Use o template para formato correto
+            Guia de Importação CSV
           </div>
-          <div>• Com ID: atualiza | Sem ID: cria novo</div>
+          <div>• <strong>Com ID:</strong> atualiza produto existente</div>
+          <div>• <strong>Sem ID:</strong> cria novo produto</div>
+          <div>• <strong>URLs trocadas:</strong> corrigidas automaticamente</div>
+          <div>• <strong>Arrays:</strong> separe por ";" ou ","</div>
+          <div>• <strong>Workflow:</strong> Export CSV → Editar → Import</div>
         </div>
       )}
     </div>

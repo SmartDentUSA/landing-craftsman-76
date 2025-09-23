@@ -157,24 +157,30 @@ serve(async (req) => {
             .eq('id', sanitizedProduct.id)
             .select();
 
-          console.log('📊 Resultado da atualização:', { updateData, updateError });
+          console.log('📊 Resultado da atualização:', { updateData, updateError, rowsAffected: updateData?.length });
 
           if (updateError) {
-            console.log('⚠️ Erro na atualização, tentando criar novo produto');
-            // Se não conseguir atualizar, criar como novo
+            console.log('⚠️ Erro na atualização:', updateError.message);
+            throw updateError;
+          }
+          
+          // Verificar se realmente atualizou alguma linha
+          if (!updateData || updateData.length === 0) {
+            console.log('⚠️ Nenhuma linha atualizada - ID não encontrado, tentando criar novo produto');
+            // Se não encontrou o ID, criar como novo produto
             const { id, ...newProduct } = sanitizedProduct;
             const { data: insertData, error: insertError } = await supabaseClient
               .from('products_repository')
               .insert(newProduct)
               .select();
 
-            console.log('📊 Resultado da inserção:', { insertData, insertError });
+            console.log('📊 Resultado da inserção (ID não encontrado):', { insertData, insertError });
 
             if (insertError) {
               throw insertError;
             }
             imported++;
-            console.log('✅ Produto criado com sucesso');
+            console.log('✅ Produto criado com sucesso (ID original não encontrado)');
           } else {
             updated++;
             console.log('✅ Produto atualizado com sucesso');
@@ -200,7 +206,19 @@ serve(async (req) => {
       } catch (error) {
         console.error('❌ Erro ao processar produto:', product.name, error);
         errors++;
-        errorDetails.push(`${product.name || 'Produto sem nome'}: ${error.message}`);
+        const errorMsg = error.message || error.toString();
+        
+        // Mensagens de erro mais específicas
+        let friendlyError = errorMsg;
+        if (errorMsg.includes('permission denied') || errorMsg.includes('RLS')) {
+          friendlyError = 'Permissão negada - verifique se está logado como admin';
+        } else if (errorMsg.includes('duplicate key')) {
+          friendlyError = 'Produto duplicado';
+        } else if (errorMsg.includes('violates check constraint')) {
+          friendlyError = 'Dados inválidos (verifique preço, categoria, etc.)';
+        }
+        
+        errorDetails.push(`${product.name || 'Produto sem nome'}: ${friendlyError}`);
       }
     }
 
