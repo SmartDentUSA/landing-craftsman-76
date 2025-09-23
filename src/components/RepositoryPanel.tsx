@@ -388,22 +388,6 @@ export function RepositoryPanel({
               <Package className="h-5 w-5" />
               Repositório Central de Dados
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExportCSV('all')}
-                disabled={exportingData}
-                className="gap-2"
-              >
-                {exportingData ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                Exportar CSV Completo
-              </Button>
-            </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -512,6 +496,21 @@ export function RepositoryPanel({
                   Atualizar
                 </Button>
 
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('products')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar Produtos
+                </Button>
 
                 <Button
                   variant="default"
@@ -691,6 +690,20 @@ export function RepositoryPanel({
             <div className="p-4 space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Reviews Manuais</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('reviews')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar Reviews
+                </Button>
               </div>
               
               <CSVReviewUploader 
@@ -704,6 +717,20 @@ export function RepositoryPanel({
             <div className="p-4 space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Depoimentos em Vídeo</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('testimonials')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar Depoimentos
+                </Button>
               </div>
               
               <VideoTestimonialsSection landingPageId={landingPageId} />
@@ -714,6 +741,20 @@ export function RepositoryPanel({
             <div className="p-4 space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Especialistas (KOLs)</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('kols')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar KOLs
+                </Button>
               </div>
               
               <KOLManager />
