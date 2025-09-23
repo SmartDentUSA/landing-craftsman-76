@@ -18,6 +18,7 @@ import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
+import ProductRepositoryCSVImporter from "@/components/ProductRepositoryCSVImporter";
 
 interface Product {
   id: string;
@@ -511,6 +512,8 @@ export function RepositoryPanel({
                   )}
                   Exportar Produtos
                 </Button>
+
+                <ProductRepositoryCSVImporter onImportComplete={refreshAllData} />
 
                 <Button
                   variant="default"
