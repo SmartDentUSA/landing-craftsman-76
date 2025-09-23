@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon } from "lucide-react";
+import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSync } from "@/hooks/useProductSync";
@@ -70,6 +70,7 @@ export function RepositoryPanel({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
   const [manualReviews, setManualReviews] = useState<ManualReview[]>([]);
+  const [exportingData, setExportingData] = useState(false);
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
@@ -322,6 +323,49 @@ export function RepositoryPanel({
     }
   };
 
+  const handleExportCSV = async (type: 'products' | 'reviews' | 'testimonials' | 'kols' | 'all') => {
+    setExportingData(true);
+    try {
+      console.log(`📊 Iniciando exportação CSV: ${type}`);
+      
+      const { data, error } = await supabase.functions.invoke('export-repository-csv', {
+        body: { 
+          type, 
+          landingPageId: landingPageId === 'repository' ? undefined : landingPageId 
+        }
+      });
+
+      if (error) throw error;
+
+      // Create and download the file
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${type}_repository_${timestamp}.csv`;
+      const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Sucesso",
+        description: `CSV ${type} exportado com sucesso!`,
+      });
+    } catch (error) {
+      console.error('❌ Erro na exportação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao exportar CSV. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setExportingData(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className={className}>
@@ -344,6 +388,22 @@ export function RepositoryPanel({
               <Package className="h-5 w-5" />
               Repositório Central de Dados
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExportCSV('all')}
+                disabled={exportingData}
+                className="gap-2"
+              >
+                {exportingData ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Exportar Tudo
+              </Button>
+            </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -450,6 +510,21 @@ export function RepositoryPanel({
                     <RefreshCw className="h-4 w-4" />
                   )}
                   Atualizar
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('products')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar
                 </Button>
 
                 <Button
@@ -627,7 +702,25 @@ export function RepositoryPanel({
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-0">
-            <div className="p-4">
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Reviews Manuais</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('reviews')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar
+                </Button>
+              </div>
+              
               <CSVReviewUploader 
                 reviews={manualReviews}
                 onReviewsUpdate={setManualReviews}
@@ -636,13 +729,49 @@ export function RepositoryPanel({
           </TabsContent>
 
           <TabsContent value="testimonials" className="mt-0">
-            <div className="p-4">
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Depoimentos em Vídeo</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('testimonials')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar
+                </Button>
+              </div>
+              
               <VideoTestimonialsSection landingPageId={landingPageId} />
             </div>
           </TabsContent>
 
           <TabsContent value="kols" className="mt-0">
-            <div className="p-4">
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Especialistas (KOLs)</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCSV('kols')}
+                  disabled={exportingData}
+                  className="gap-2"
+                >
+                  {exportingData ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Exportar
+                </Button>
+              </div>
+              
               <KOLManager />
             </div>
           </TabsContent>
