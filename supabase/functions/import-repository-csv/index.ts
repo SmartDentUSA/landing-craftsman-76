@@ -41,12 +41,16 @@ interface ProductData {
 }
 
 const parseJsonField = (value: any): any => {
-  if (!value || value === '') return null;
+  if (!value || value === '' || value === '[object Object]') return null;
   
   if (typeof value === 'string') {
     try {
       return JSON.parse(value);
     } catch {
+      // Se não conseguir parsear como JSON, tentar como array separado por ponto e vírgula
+      if (value.includes(';')) {
+        return value.split(';').map((item: string) => item.trim()).filter(Boolean);
+      }
       // Se não conseguir parsear como JSON, tentar como array simples
       if (value.startsWith('[') && value.endsWith(']')) {
         try {
@@ -136,46 +140,65 @@ serve(async (req) => {
 
     for (const product of products) {
       try {
+        console.log('🔄 Processando produto:', product.name);
         const sanitizedProduct = sanitizeProduct(product);
+        console.log('✨ Produto sanitizado:', sanitizedProduct);
         
         if (sanitizedProduct.id) {
+          console.log(`📝 Tentando atualizar produto com ID: ${sanitizedProduct.id}`);
+          
           // Tentar atualizar produto existente
-          const { error: updateError } = await supabaseClient
+          const { data: updateData, error: updateError } = await supabaseClient
             .from('products_repository')
             .update({
               ...sanitizedProduct,
               updated_at: new Date().toISOString()
             })
-            .eq('id', sanitizedProduct.id);
+            .eq('id', sanitizedProduct.id)
+            .select();
+
+          console.log('📊 Resultado da atualização:', { updateData, updateError });
 
           if (updateError) {
+            console.log('⚠️ Erro na atualização, tentando criar novo produto');
             // Se não conseguir atualizar, criar como novo
             const { id, ...newProduct } = sanitizedProduct;
-            const { error: insertError } = await supabaseClient
+            const { data: insertData, error: insertError } = await supabaseClient
               .from('products_repository')
-              .insert(newProduct);
+              .insert(newProduct)
+              .select();
+
+            console.log('📊 Resultado da inserção:', { insertData, insertError });
 
             if (insertError) {
               throw insertError;
             }
             imported++;
+            console.log('✅ Produto criado com sucesso');
           } else {
             updated++;
+            console.log('✅ Produto atualizado com sucesso');
           }
         } else {
+          console.log('➕ Criando novo produto');
+          
           // Criar novo produto
-          const { error: insertError } = await supabaseClient
+          const { data: insertData, error: insertError } = await supabaseClient
             .from('products_repository')
-            .insert(sanitizedProduct);
+            .insert(sanitizedProduct)
+            .select();
+
+          console.log('📊 Resultado da inserção:', { insertData, insertError });
 
           if (insertError) {
             throw insertError;
           }
           imported++;
+          console.log('✅ Produto criado com sucesso');
         }
 
       } catch (error) {
-        console.error('Erro ao processar produto:', product.name, error);
+        console.error('❌ Erro ao processar produto:', product.name, error);
         errors++;
         errorDetails.push(`${product.name || 'Produto sem nome'}: ${error.message}`);
       }

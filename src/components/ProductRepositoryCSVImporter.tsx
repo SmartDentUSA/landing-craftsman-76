@@ -12,7 +12,33 @@ interface ImportPreviewProduct {
   name: string;
   description?: string;
   price?: number;
+  currency?: string;
   category?: string;
+  subcategory?: string;
+  image_url?: string;
+  product_url?: string;
+  tags?: any[];
+  keywords?: any[];
+  features?: any[];
+  benefits?: any[];
+  search_intent_keywords?: any[];
+  market_keywords?: any[];
+  target_audience?: any[];
+  sales_pitch?: string;
+  youtube_videos?: any[];
+  instagram_videos?: any[];
+  technical_videos?: any[];
+  testimonial_videos?: any[];
+  video_captions?: any;
+  ai_generated_category?: boolean;
+  ai_generated_keywords?: boolean;
+  ai_generated_benefits?: boolean;
+  use_in_ai_generation?: boolean;
+  approved?: boolean;
+  display_order?: number;
+  source_type?: string;
+  source_landing_page_id?: string;
+  original_data?: any;
   action: 'create' | 'update';
   status: 'pending' | 'success' | 'error';
   errorMessage?: string;
@@ -53,14 +79,53 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
     document.body.removeChild(link);
   };
 
+  const parseJsonField = (value: any): any => {
+    if (!value || value === '' || value === '[object Object]') return null;
+    
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        // Se não conseguir parsear como JSON, tentar como array simples
+        if (value.includes(';')) {
+          return value.split(';').map((item: string) => item.trim()).filter(Boolean);
+        }
+        return value;
+      }
+    }
+    
+    return value;
+  };
+
   const parseCSV = (csvText: string): ImportPreviewProduct[] => {
-    const result = Papa.parse(csvText, {
+    console.log('🔍 Iniciando parse do CSV...');
+    
+    // Limpar o CSV de colunas vazias extras
+    const lines = csvText.split('\n');
+    const cleanedLines = lines.map(line => {
+      // Remove colunas vazias extras no final
+      const columns = line.split(',');
+      let lastNonEmptyIndex = -1;
+      for (let i = columns.length - 1; i >= 0; i--) {
+        if (columns[i].trim() !== '') {
+          lastNonEmptyIndex = i;
+          break;
+        }
+      }
+      return lastNonEmptyIndex >= 0 ? columns.slice(0, lastNonEmptyIndex + 1).join(',') : line;
+    });
+    const cleanedCsvText = cleanedLines.join('\n');
+
+    const result = Papa.parse(cleanedCsvText, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (header) => header.trim()
     });
 
+    console.log('📊 Resultado do parse:', result);
+
     if (result.errors.length > 0) {
+      console.error('❌ Erros no parse:', result.errors);
       toast({
         title: "Erro ao processar CSV",
         description: `Erro: ${result.errors[0].message}`,
@@ -70,26 +135,63 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
     }
 
     const csvHeaders = Object.keys(result.data[0] || {});
-    const missingHeaders = expectedHeaders.filter(header => !csvHeaders.includes(header));
+    console.log('📋 Headers encontrados:', csvHeaders);
     
-    if (missingHeaders.length > 0) {
+    // Verificar headers essenciais (flexível)
+    const essentialHeaders = ['name'];
+    const missingEssential = essentialHeaders.filter(header => !csvHeaders.includes(header));
+    
+    if (missingEssential.length > 0) {
       toast({
-        title: "Headers incorretos",
-        description: `Headers obrigatórios ausentes: ${missingHeaders.slice(0, 3).join(', ')}${missingHeaders.length > 3 ? '...' : ''}`,
+        title: "Headers obrigatórios ausentes",
+        description: `Headers obrigatórios: ${missingEssential.join(', ')}`,
         variant: "destructive"
       });
       return [];
     }
 
-    return result.data.map((row: any) => ({
-      id: row.id,
-      name: row.name || 'Sem nome',
-      description: row.description,
-      price: row.price ? parseFloat(row.price) : undefined,
-      category: row.category,
-      action: row.id ? 'update' : 'create',
-      status: 'pending'
-    }));
+    return result.data.map((row: any, index: number) => {
+      console.log(`🔄 Processando linha ${index + 1}:`, row);
+      
+      const processedRow = {
+        id: row.id && row.id.trim() !== '' ? row.id.trim() : undefined,
+        name: row.name || 'Sem nome',
+        description: row.description && row.description !== '[object Object]' ? row.description : undefined,
+        price: row.price ? parseFloat(row.price.toString()) : undefined,
+        currency: row.currency || 'BRL',
+        category: row.category,
+        subcategory: row.subcategory,
+        image_url: row.image_url,
+        product_url: row.product_url,
+        tags: parseJsonField(row.tags) || [],
+        keywords: parseJsonField(row.keywords) || [],
+        features: parseJsonField(row.features) || [],
+        benefits: parseJsonField(row.benefits) || [],
+        search_intent_keywords: parseJsonField(row.search_intent_keywords) || [],
+        market_keywords: parseJsonField(row.market_keywords) || [],
+        target_audience: parseJsonField(row.target_audience) || [],
+        sales_pitch: row.sales_pitch,
+        youtube_videos: parseJsonField(row.youtube_videos) || [],
+        instagram_videos: parseJsonField(row.instagram_videos) || [],
+        technical_videos: parseJsonField(row.technical_videos) || [],
+        testimonial_videos: parseJsonField(row.testimonial_videos) || [],
+        video_captions: parseJsonField(row.video_captions) || {},
+        ai_generated_category: row.ai_generated_category === 'Sim' || row.ai_generated_category === 'true' || row.ai_generated_category === true,
+        ai_generated_keywords: row.ai_generated_keywords === 'Sim' || row.ai_generated_keywords === 'true' || row.ai_generated_keywords === true,
+        ai_generated_benefits: row.ai_generated_benefits === 'Sim' || row.ai_generated_benefits === 'true' || row.ai_generated_benefits === true,
+        use_in_ai_generation: row.use_in_ai_generation !== 'Não' && row.use_in_ai_generation !== 'false' && row.use_in_ai_generation !== false,
+        approved: row.approved !== 'Não' && row.approved !== 'false' && row.approved !== false,
+        display_order: row.display_order ? parseInt(row.display_order.toString()) : undefined,
+        source_type: row.source_type || 'csv_import',
+        source_landing_page_id: row.source_landing_page_id,
+        original_data: parseJsonField(row.original_data),
+        action: (row.id && row.id.trim() !== '') ? 'update' as const : 'create' as const,
+        status: 'pending' as const
+      };
+
+      console.log(`✅ Linha processada ${index + 1}:`, processedRow);
+      return processedRow;
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,14 +235,18 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
   const importProducts = async () => {
     if (previewData.length === 0) return;
 
+    console.log('🚀 Iniciando importação de', previewData.length, 'produtos');
     setImporting(true);
     setProgress(0);
 
     try {
       const csvData = previewData.map(product => {
         const { action, status, errorMessage, ...productData } = product;
+        console.log('📦 Produto para importação:', productData);
         return productData;
       });
+
+      console.log('📤 Enviando dados para edge function:', { products: csvData, type: 'products' });
 
       const { data, error } = await supabase.functions.invoke('import-repository-csv', {
         body: { 
@@ -149,18 +255,30 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         }
       });
 
+      console.log('📥 Resposta da edge function:', { data, error });
+
       if (error) throw error;
 
       setProgress(100);
+      
+      const resultMessage = data.errors > 0 
+        ? `${data.imported} importados, ${data.updated} atualizados, ${data.errors} erros`
+        : `${data.imported} importados, ${data.updated} atualizados com sucesso`;
+
       toast({
         title: "Importação concluída",
-        description: `${data.imported} produtos importados com sucesso.`
+        description: resultMessage,
+        variant: data.errors > 0 ? "destructive" : "default"
       });
+
+      if (data.errorDetails && data.errorDetails.length > 0) {
+        console.error('❌ Detalhes dos erros:', data.errorDetails);
+      }
 
       onImportComplete();
       clearPreview();
     } catch (error) {
-      console.error('Erro na importação:', error);
+      console.error('❌ Erro na importação:', error);
       toast({
         title: "Erro na importação",
         description: error instanceof Error ? error.message : "Erro desconhecido",
