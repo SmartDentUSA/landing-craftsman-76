@@ -490,51 +490,6 @@ const CategoryManager = () => {
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-3">
-                {config.target_audience?.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Público-Alvo:</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {config.target_audience.map((item, index) => (
-                        <Badge key={index} variant="secondary">{item}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {config.keywords?.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Keywords:</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {config.keywords.map((item, index) => (
-                        <Badge key={index} variant="outline">{item}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {config.market_keywords?.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Keywords de Mercado:</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {config.market_keywords.map((item, index) => (
-                        <Badge key={index} variant="outline">{item}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {config.search_intent_keywords?.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Keywords de Intenção:</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {config.search_intent_keywords.map((item, index) => (
-                        <Badge key={index} variant="outline">{item}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
             </Card>
           ))
         )}
