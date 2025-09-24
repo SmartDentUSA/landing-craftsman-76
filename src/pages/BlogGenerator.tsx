@@ -104,14 +104,21 @@ export default function BlogGenerator() {
         });
         
         // Set blog data from Editor
-        setBlogPost({
+        const newBlogPost = {
           ...stateData.blogData,
           keywords: normalizeKeywords(stateData.blogData.keywords || []),
           published_domains: Array.isArray(stateData.blogData.published_domains) 
             ? stateData.blogData.published_domains 
             : [],
           intelligent_links: stateData.blogData.intelligent_links || {},
-        });
+        };
+        
+        setBlogPost(newBlogPost);
+        
+        // Ativar preview se tiver conteúdo
+        if (newBlogPost.title && newBlogPost.content) {
+          setPreviewMode(true);
+        }
         
         toast({
           title: "Dados carregados do Editor!",
@@ -276,11 +283,13 @@ export default function BlogGenerator() {
       if (error) throw error;
 
       if (data) {
+        console.log("📝 Blog post existente encontrado:", data);
+        
         // Get intelligent links from Editor data if available
         const editorData = getLandingPage(id || "");
         const editorIntelligentLinks = editorData?.data?.seo?.intelligent_links || {};
         
-        setBlogPost({
+        const loadedBlogPost = {
           id: data.id,
           title: data.title,
           content: data.content,
@@ -293,8 +302,23 @@ export default function BlogGenerator() {
             ...editorIntelligentLinks,
             ...(data.intelligent_links as Record<string, string> || {})
           },
+        };
+        
+        setBlogPost(loadedBlogPost);
+        
+        // Ativar preview se tiver conteúdo
+        if (loadedBlogPost.title && loadedBlogPost.content) {
+          setPreviewMode(true);
+        }
+        
+        console.log("✅ Blog post carregado com preview:", {
+          hasTitle: !!loadedBlogPost.title,
+          hasContent: !!loadedBlogPost.content,
+          previewActivated: !!(loadedBlogPost.title && loadedBlogPost.content)
         });
       } else {
+        console.log("📝 Nenhum blog post existente encontrado");
+        
         // If no blog post exists, pre-load with Editor's intelligent links
         const editorData = getLandingPage(id || "");
         const editorIntelligentLinks = editorData?.data?.seo?.intelligent_links || {};
@@ -311,7 +335,7 @@ export default function BlogGenerator() {
         }
       }
     } catch (error) {
-      console.error("Erro ao carregar blog post:", error);
+      console.error("❌ Erro ao carregar blog post:", error);
     }
   };
 
@@ -402,6 +426,9 @@ export default function BlogGenerator() {
         }
       }
 
+      // Ativar preview automaticamente após gerar conteúdo
+      setPreviewMode(true);
+      
       toast({
         title: "Conteúdo gerado",
         description: isDualMode ? "Versões duplas geradas com sucesso!" : "O conteúdo do blog foi gerado com sucesso pela AI.",
@@ -661,6 +688,7 @@ export default function BlogGenerator() {
   const generateBlogPreviewHTML = (domain?: 'dentala' | 'eodonto') => {
     const currentPost = isDualMode && dualVersions && domain ? dualVersions[domain] : blogPost;
     
+    // Mostrar preview mesmo com conteúdo parcial
     if (!currentPost.title && !currentPost.content) {
       return '<div style="padding: 2rem; text-align: center; color: #666; font-family: Inter, sans-serif;">Configure o título e conteúdo para visualizar o blog post</div>';
     }
@@ -1160,7 +1188,7 @@ export default function BlogGenerator() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-            {previewMode ? (
+              {previewMode || (blogPost.title || blogPost.content) ? (
                 <div className="w-full h-full">
                   <iframe
                     srcDoc={generateBlogPreviewHTML()}
@@ -1172,9 +1200,9 @@ export default function BlogGenerator() {
               ) : (
                 <div className="text-center text-muted-foreground py-8">
                   <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Clique em "Preview" para visualizar o blog post</p>
+                  <p>Gere conteúdo ou clique em "Preview" para visualizar</p>
                 </div>
-                  )}
+              )}
                   
                   {showLinkPreview && linkMappings.length > 0 && (
                     <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
