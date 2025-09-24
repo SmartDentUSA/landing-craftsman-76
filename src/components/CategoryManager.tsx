@@ -9,10 +9,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
-import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle, Folder, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface CategoryFormData {
   category: string;
@@ -217,9 +218,9 @@ const CategoryManager = () => {
 
   // Função para obter cor baseada na completude
   const getCompletenessColor = (percentage: number) => {
-    if (percentage >= 90) return 'success';
-    if (percentage >= 70) return 'warning';
-    if (percentage >= 50) return 'secondary';
+    if (percentage >= 90) return 'default';
+    if (percentage >= 70) return 'secondary';
+    if (percentage >= 50) return 'outline';
     return 'destructive';
   };
 
@@ -535,7 +536,7 @@ const CategoryManager = () => {
         </div>
       )}
 
-      <div className="grid gap-6">
+      <div className="space-y-4">
         {configs.length === 0 ? (
           <Card className="bg-gradient-to-br from-muted/30 to-muted/10">
             <CardContent className="p-8 text-center">
@@ -561,225 +562,138 @@ const CategoryManager = () => {
             const completenessLabel = getCompletenessLabel(completeness.percentage);
             
             return (
-              <Card key={config.id} className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-card to-card/80">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                          <Target className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                            {config.category}
-                          </CardTitle>
-                          <p className="text-lg text-muted-foreground font-medium">
-                            → {config.subcategory}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 mb-2">
-                        <Badge variant={completenessColor} className="px-3 py-1 font-semibold">
+              <Card 
+                key={config.id} 
+                className={cn(
+                  "group relative transition-all duration-200 hover:shadow-md p-4",
+                  completeness.percentage < 50 && "border-destructive/20",
+                  completeness.percentage >= 90 && "border-success/20"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  {/* Ícone da categoria */}
+                  <div className="w-12 h-12 rounded-md bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center flex-shrink-0">
+                    <Folder className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+
+                  {/* Conteúdo principal */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-sm leading-tight truncate">
+                      {config.category}
+                    </h3>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {config.subcategory}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      Criada em {new Date(config.created_at).toLocaleDateString('pt-BR')}
+                    </p>
+                    
+                    <div className="mt-2 space-y-1">
+                      {/* Status badges compactos */}
+                      <div className="flex flex-wrap gap-1">
+                        <Badge 
+                          variant={completenessColor as any}
+                          className="text-xs px-1.5 py-0.5 h-5"
+                        >
                           {completenessLabel} • {completeness.percentage}%
                         </Badge>
-                        <div className="flex-1 bg-muted/30 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-500 ${
-                              completeness.percentage >= 90 ? 'bg-green-500' :
-                              completeness.percentage >= 70 ? 'bg-yellow-500' :
-                              completeness.percentage >= 50 ? 'bg-orange-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${completeness.percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <CardDescription className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4" />
-                        Criada em {new Date(config.created_at).toLocaleDateString('pt-BR')}
-                        {config.updated_at !== config.created_at && (
-                          <span className="text-muted-foreground">
-                            • Atualizada em {new Date(config.updated_at).toLocaleDateString('pt-BR')}
-                          </span>
-                        )}
-                      </CardDescription>
-                    </div>
-                    
-                    <div className="flex space-x-2 opacity-70 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(config)}
-                        className="hover:bg-primary hover:text-primary-foreground"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="hover:bg-destructive hover:text-destructive-foreground">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir a configuração para "{config.category} → {config.subcategory}"?
-                              Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(config.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        
+                        {/* Indicadores de campos preenchidos */}
+                        {completeness.fields.map((field) => {
+                          if (!field.filled) return null;
+                          return (
+                            <Badge 
+                              key={field.name}
+                              variant="secondary" 
+                              className="text-xs px-1.5 py-0.5 h-5"
                             >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              {field.name === 'target_audience' && (
+                                <>
+                                  <User className="h-3 w-3 mr-1" />
+                                  {field.count}
+                                </>
+                              )}
+                              {field.name === 'keywords' && (
+                                <>
+                                  <Hash className="h-3 w-3 mr-1" />
+                                  {field.count}
+                                </>
+                              )}
+                              {field.name === 'market_keywords' && (
+                                <>
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  {field.count}
+                                </>
+                              )}
+                              {field.name === 'search_intent_keywords' && (
+                                <>
+                                  <Search className="h-3 w-3 mr-1" />
+                                  {field.count}
+                                </>
+                              )}
+                            </Badge>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </CardHeader>
 
-                <CardContent className="pt-0 space-y-6">
-                  {/* Status dos campos */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    {completeness.fields.map((field) => {
-                      const IconComponent = field.icon;
-                      return (
-                        <div 
-                          key={field.name}
-                          className={`relative overflow-hidden rounded-xl border p-4 transition-all duration-300 hover:scale-105 ${
-                            field.filled 
-                              ? 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800' 
-                              : 'border-muted bg-gradient-to-br from-muted/20 to-muted/5'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${
-                              field.filled 
-                                ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                                : 'bg-muted text-muted-foreground'
-                            }`}>
-                              <IconComponent className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className={`text-sm font-semibold truncate ${
-                                field.filled ? 'text-green-800 dark:text-green-200' : 'text-muted-foreground'
-                              }`}>
-                                {field.name === 'target_audience' && 'Público-Alvo'}
-                                {field.name === 'keywords' && 'Keywords'}
-                                {field.name === 'market_keywords' && 'Mercado'}
-                                {field.name === 'search_intent_keywords' && 'Busca'}
-                              </div>
-                              <div className={`text-xs font-medium ${
-                                field.filled ? 'text-green-700 dark:text-green-300' : 'text-muted-foreground'
-                              }`}>
-                                {field.count} {field.count === 1 ? 'item' : 'itens'}
-                              </div>
-                            </div>
-                          </div>
-                          {field.filled && (
-                            <div className="absolute top-1 right-1">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                  {/* Score compacto */}
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center gap-1">
+                      {completeness.percentage >= 90 ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : completeness.percentage >= 50 ? (
+                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                      <span className="font-bold text-sm">{completeness.percentage}%</span>
+                    </div>
                   </div>
 
-                  {/* Preview expandido dos dados */}
-                  <div className="space-y-4">
-                    {config.target_audience && config.target_audience.length > 0 && (
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">Público-Alvo ({config.target_audience.length})</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {config.target_audience.slice(0, 6).map((audience: string, index: number) => (
-                            <Badge key={index} variant="outline" className="bg-white/50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200">
-                              {audience}
-                            </Badge>
-                          ))}
-                          {config.target_audience.length > 6 && (
-                            <Badge variant="outline" className="bg-white/50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200">
-                              +{config.target_audience.length - 6} mais
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                  {/* Ações */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(config)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     
-                    {config.keywords && config.keywords.length > 0 && (
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Hash className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          <span className="text-sm font-semibold text-purple-800 dark:text-purple-200">Keywords ({config.keywords.length})</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {config.keywords.slice(0, 8).map((keyword: string, index: number) => (
-                            <Badge key={index} variant="secondary" className="bg-white/50 dark:bg-purple-950/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200">
-                              {keyword}
-                            </Badge>
-                          ))}
-                          {config.keywords.length > 8 && (
-                            <Badge variant="secondary" className="bg-white/50 dark:bg-purple-950/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200">
-                              +{config.keywords.length - 8} mais
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {config.market_keywords && config.market_keywords.length > 0 && (
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <TrendingUp className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                          <span className="text-sm font-semibold text-orange-800 dark:text-orange-200">Keywords de Mercado ({config.market_keywords.length})</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {config.market_keywords.slice(0, 6).map((keyword: string, index: number) => (
-                            <Badge key={index} variant="outline" className="bg-white/50 dark:bg-orange-950/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200">
-                              {keyword}
-                            </Badge>
-                          ))}
-                          {config.market_keywords.length > 6 && (
-                            <Badge variant="outline" className="bg-white/50 dark:bg-orange-950/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200">
-                              +{config.market_keywords.length - 6} mais
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {config.search_intent_keywords && config.search_intent_keywords.length > 0 && (
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20 border border-teal-200 dark:border-teal-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Search className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                          <span className="text-sm font-semibold text-teal-800 dark:text-teal-200">Keywords de Intenção de Busca ({config.search_intent_keywords.length})</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {config.search_intent_keywords.slice(0, 6).map((keyword: string, index: number) => (
-                            <Badge key={index} variant="outline" className="bg-white/50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200">
-                              {keyword}
-                            </Badge>
-                          ))}
-                          {config.search_intent_keywords.length > 6 && (
-                            <Badge variant="outline" className="bg-white/50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200">
-                              +{config.search_intent_keywords.length - 6} mais
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir a configuração para "{config.category} → {config.subcategory}"?
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(config.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                </CardContent>
+                </div>
               </Card>
             );
           })
