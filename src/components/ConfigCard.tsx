@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit, Trash2, Target, Hash } from "lucide-react";
+import { Edit, Trash2, Target, Hash, TrendingUp, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,10 @@ interface CategoryFormData {
   categoria: string;
   subcategoria: string;
   publico_alvo: string;
-  palavras_chave: string[];
+  palavras_chave: string[]; // Deprecated - mantido para compatibilidade
+  keywords?: string[];
+  market_keywords?: string[];
+  search_intent_keywords?: string[];
 }
 
 interface ConfigCardProps {
@@ -100,15 +103,42 @@ export function ConfigCard({
                 </span>
               </div>
 
-              {/* Keywords counter */}
-              {config.palavras_chave?.length > 0 && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Hash className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground">
-                    {config.palavras_chave.length}
-                  </span>
-                </div>
-              )}
+              {/* Keywords counters */}
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                {(config.keywords?.length > 0) && (
+                  <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">
+                      {config.keywords.length}
+                    </span>
+                  </div>
+                )}
+                {(config.market_keywords?.length > 0) && (
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">
+                      {config.market_keywords.length}
+                    </span>
+                  </div>
+                )}
+                {(config.search_intent_keywords?.length > 0) && (
+                  <div className="flex items-center gap-1">
+                    <Search className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">
+                      {config.search_intent_keywords.length}
+                    </span>
+                  </div>
+                )}
+                {/* Fallback para palavras_chave quando os outros campos não existem */}
+                {(!config.keywords && !config.market_keywords && !config.search_intent_keywords && config.palavras_chave?.length > 0) && (
+                  <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">
+                      {config.palavras_chave.length}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Completeness indicator */}

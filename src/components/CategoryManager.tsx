@@ -652,7 +652,10 @@ const CategoryManager = () => {
                                   categoria: config.category,
                                   subcategoria: config.subcategory,
                                   publico_alvo: config.target_audience?.join(', ') || '',
-                                  palavras_chave: [...(config.keywords || []), ...(config.market_keywords || []), ...(config.search_intent_keywords || [])]
+                                  palavras_chave: [...(config.keywords || []), ...(config.market_keywords || []), ...(config.search_intent_keywords || [])],
+                                  keywords: config.keywords || [],
+                                  market_keywords: config.market_keywords || [],
+                                  search_intent_keywords: config.search_intent_keywords || []
                                 }}
                                 isSelected={isSelected}
                                 completenessPercentage={completeness.percentage}
