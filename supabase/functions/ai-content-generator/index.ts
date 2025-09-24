@@ -735,21 +735,19 @@ function validateContentAgainstProducts(content: string, products: any[]): { isV
   const errors: string[] = [];
   const contentLower = content.toLowerCase();
   
-  // Lista negra de termos que indicam alucinação comum
-  const hallucinationTerms = [
+  // Lista restrita de termos técnicos específicos que requerem documentação
+  const technicalClaimsRequiringDocumentation = [
     'biocompatível', 'biocompatibilidade',
-    'precisão milimétrica', 'precisão micrométrica',
+    'precisão milimétrica', 'precisão micrométrica', 
     'scanner intraoral', 'scanner digital',
-    'alta resistência', 'resistência superior',
-    'acabamento superior', 'acabamento premium',
-    'material avançado', 'tecnologia avançada',
-    'resistência mecânica', 'durabilidade excepcional',
-    'propriedades físicas', 'características físicas',
-    'resinas 3d', 'material fotopolimerizável'
+    'resistência mecânica superior', 'durabilidade excepcional comprovada',
+    'propriedades físicas específicas', 'características físicas medidas',
+    'resinas 3d certificadas', 'material fotopolimerizável aprovado',
+    'certificação iso', 'aprovação anvisa específica'
   ];
   
-  // Verificar se conteúdo contém termos de alucinação
-  for (const term of hallucinationTerms) {
+  // Verificar apenas claims técnicos específicos que requerem documentação
+  for (const term of technicalClaimsRequiringDocumentation) {
     if (contentLower.includes(term.toLowerCase())) {
       // Verificar se o termo está nos dados reais dos produtos
       const termFoundInData = products.some(p => {
@@ -765,7 +763,7 @@ function validateContentAgainstProducts(content: string, products: any[]): { isV
       });
       
       if (!termFoundInData) {
-        errors.push(`ALUCINAÇÃO DETECTADA: "${term}" não está nos dados dos produtos`);
+        errors.push(`CLAIM TÉCNICO NÃO DOCUMENTADO: "${term}" não está nos dados dos produtos`);
       }
     }
   }
@@ -802,18 +800,18 @@ function getFallbackBlogContent(context: string): BlogContent {
 
 ## Nossa Expertise
 
-Oferecemos soluções profissionais de alta qualidade para atender suas necessidades específicas. Nossa experiência no mercado nos permite entregar resultados excepcionais.
+Oferecemos soluções especializadas com foco na qualidade e no atendimento personalizado. Nossa experiência nos permite atender às suas necessidades de forma eficiente.
 
 ## Diferenciais
 
 - Atendimento personalizado
 - Qualidade garantida
-- Tecnologia avançada
+- Soluções eficientes
 - Suporte especializado
 
 ## Nossos Serviços
 
-Desenvolvemos soluções customizadas que agregam valor ao seu negócio, com foco em eficiência e resultados.
+Desenvolvemos soluções que agregam valor ao seu negócio, com foco em eficiência e resultados.
 
 ## Entre em Contato
 
@@ -823,15 +821,110 @@ Nossa equipe está pronta para atender você com excelência e profissionalismo.
   return {
     title: fallbackTitle,
     content: fallbackContent,
-    metaDescription: "Soluções profissionais de alta qualidade com atendimento personalizado e tecnologia avançada para seu negócio.",
-    keywords: ["soluções profissionais", "qualidade", "atendimento personalizado", "tecnologia avançada", "resultados"]
+    metaDescription: "Soluções especializadas com qualidade, atendimento personalizado e suporte especializado para seu negócio.",
+    keywords: ["soluções especializadas", "qualidade", "atendimento personalizado", "suporte especializado", "resultados"]
   };
+}
+
+function generateContentFromAvailableData(products: any[], context: string): BlogContent {
+  console.log('📝 Gerando conteúdo baseado em dados disponíveis...');
+  
+  // Extrair dados reais dos produtos para gerar conteúdo
+  const productNames = products.map(p => p.name).filter(Boolean);
+  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const realBenefits = [...new Set(products.flatMap(p => p.benefits || []))];
+  const realFeatures = [...new Set(products.flatMap(p => p.features || []))];
+  const descriptions = products.map(p => p.description).filter(Boolean);
+  const salesPitches = products.map(p => p.sales_pitch).filter(Boolean);
+  
+  // Gerar título baseado em dados reais
+  const title = categories.length > 0 
+    ? `${categories[0]}: Soluções Especializadas para Suas Necessidades`
+    : "Nossas Soluções Especializadas";
+  
+  // Gerar conteúdo baseado em dados disponíveis
+  let content = `# ${title}\n\n`;
+  
+  if (descriptions.length > 0) {
+    content += `${descriptions[0]}\n\n`;
+  }
+  
+  content += `Oferecemos soluções especializadas com foco na qualidade e no atendimento personalizado. Nossa experiência nos permite atender às suas necessidades de forma eficiente e profissional.\n\n`;
+  
+  if (categories.length > 0) {
+    content += `## Nossas Especialidades\n\n`;
+    content += `Trabalhamos principalmente com ${categories.join(', ')}, oferecendo soluções completas para cada área.\n\n`;
+  }
+  
+  if (realBenefits.length > 0) {
+    content += `## Benefícios dos Nossos Serviços\n\n`;
+    realBenefits.slice(0, 5).forEach(benefit => {
+      content += `- **${benefit}**\n`;
+    });
+    content += `\n`;
+  }
+  
+  if (realFeatures.length > 0) {
+    content += `## Características Diferenciais\n\n`;
+    realFeatures.slice(0, 5).forEach(feature => {
+      content += `- ${feature}\n`;
+    });
+    content += `\n`;
+  }
+  
+  if (salesPitches.length > 0) {
+    content += `## Por Que Escolher Nossos Serviços?\n\n`;
+    content += `${salesPitches[0]}\n\n`;
+  }
+  
+  content += `## Entre em Contato\n\nEstá interessado em conhecer mais sobre nossas soluções? Entre em contato conosco e descubra como podemos ajudar você a alcançar seus objetivos com qualidade e profissionalismo.`;
+  
+  // Gerar keywords baseadas em dados reais
+  const keywords = [
+    ...categories.slice(0, 3),
+    ...productNames.slice(0, 2),
+    "soluções", "qualidade", "atendimento"
+  ].filter(Boolean);
+  
+  return {
+    title,
+    content,
+    metaDescription: `Conheça nossas soluções especializadas${categories.length > 0 ? ` em ${categories[0]}` : ''}. Qualidade, atendimento personalizado e resultados garantidos.`,
+    keywords
+  };
+}
+
+function enrichPromptWithProductData(context: string, products: any[], errors: string[]): string {
+  const productData = products.map(p => `
+**${p.name}:**
+- Descrição: ${p.description || 'Não especificada'}
+- Benefícios: ${Array.isArray(p.benefits) ? p.benefits.join(', ') : 'Não especificados'}
+- Características: ${Array.isArray(p.features) ? p.features.join(', ') : 'Não especificadas'}
+- Sales Pitch: ${p.sales_pitch || 'Não especificado'}
+- Categoria: ${p.category || 'Não especificada'}
+- Público-alvo: ${Array.isArray(p.target_audience) ? p.target_audience.join(', ') : 'Não especificado'}
+`).join('\n');
+
+  return context + `
+
+## INSTRUÇÕES ESPECÍFICAS PARA RE-GERAÇÃO:
+### DADOS REAIS DOS PRODUTOS SELECIONADOS:
+${productData}
+
+### ERRO ANTERIOR DETECTADO:
+${errors.join(', ')}
+
+### INSTRUÇÕES CRÍTICAS:
+- Use APENAS as informações específicas dos produtos listadas acima
+- NÃO invente características técnicas não documentadas
+- Termos genéricos de marketing são permitidos quando baseados em dados reais
+- Foque nas informações disponíveis e nos benefícios reais dos produtos`;
 }
 
 async function generateBlogContent(apiKey: string, context: string, products: any[] = []): Promise<BlogContent> {
   console.log('🎯 Iniciando geração de blog');
   
-  const prompt = `${context}
+  let prompt = `${context}
 
 ## TAREFA: Criar artigo de blog baseado EXCLUSIVAMENTE nos dados fornecidos
 
@@ -948,17 +1041,15 @@ Retorne APENAS um JSON válido:
         } else {
           const allErrors = [...validation.errors, ...hallucinationCheck.errors];
           console.warn(`⚠️ Conteúdo de blog inválido na tentativa ${attempt}:`, allErrors);
+          
           if (attempt === maxAttempts) {
-            console.log('🔄 Usando fallback de blog após esgotar tentativas');
-            const fallback = getFallbackBlogContent(context);
-            return {
-              title: fallback.title,
-              content: fallback.content,
-              metaDescription: fallback.metaDescription,
-              keywords: fallback.keywords
-            };
+            console.log('🔄 Gerando conteúdo baseado em dados disponíveis...');
+            return generateContentFromAvailableData(products, context);
           }
-          continue; // Tentar novamente
+          
+          // Para próxima tentativa, enriquecer prompt com dados específicos
+          prompt = enrichPromptWithProductData(context, products, allErrors);
+          continue; // Tentar novamente com prompt enriquecido
         }
         
       } catch (parseError) {
