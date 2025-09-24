@@ -28,7 +28,7 @@ export function useLandingPageKeywordsExtractor() {
       const mappings: KeywordMapping[] = [];
       const landingPageUrl = `${window.location.origin}/lp/${landingPageData.id}`;
       
-      // 1. Extract from banner/title
+      // 1. Extract from banner/title - EXPANDIDO
       if (landingPageData.data?.banner?.title) {
         const bannerKeywords = extractRelevantKeywords(landingPageData.data.banner.title);
         bannerKeywords.forEach(keyword => {
@@ -41,14 +41,40 @@ export function useLandingPageKeywordsExtractor() {
         });
       }
 
-      // 2. Extract from solutions
+      // Extrair também do subtitle do banner
+      if (landingPageData.data?.banner?.subtitle) {
+        const subtitleKeywords = extractRelevantKeywords(landingPageData.data.banner.subtitle);
+        subtitleKeywords.forEach(keyword => {
+          mappings.push({
+            keyword,
+            url: landingPageUrl,
+            source: 'banner',
+            anchorText: keyword
+          });
+        });
+      }
+
+      // 2. Extract from solutions - MELHORADO
       if (landingPageData.data?.solutions) {
-        // Handle both array and object structures
         const solutions = Array.isArray(landingPageData.data.solutions) 
           ? landingPageData.data.solutions 
           : landingPageData.data.solutions.items || [];
           
         solutions.forEach((solution: any, index: number) => {
+          // Extrair do título da solução
+          if (solution.title) {
+            const titleKeywords = extractRelevantKeywords(solution.title);
+            titleKeywords.forEach(keyword => {
+              mappings.push({
+                keyword,
+                url: `${landingPageUrl}#solucao-${index}`,
+                source: 'solution',
+                anchorText: keyword
+              });
+            });
+          }
+          
+          // Extrair do texto da solução
           if (solution.text) {
             const solutionKeywords = extractRelevantKeywords(solution.text);
             solutionKeywords.forEach(keyword => {
@@ -63,14 +89,14 @@ export function useLandingPageKeywordsExtractor() {
         });
       }
 
-      // 3. Extract from FAQ
+      // 3. Extract from FAQ - MELHORADO com respostas
       if (landingPageData.data?.faq) {
-        // Handle both array and object structures
         const faqs = Array.isArray(landingPageData.data.faq) 
           ? landingPageData.data.faq 
           : landingPageData.data.faq.items || [];
           
         faqs.forEach((faq: any, index: number) => {
+          // Keywords das perguntas
           if (faq.question) {
             const faqKeywords = extractRelevantKeywords(faq.question);
             faqKeywords.forEach(keyword => {
@@ -82,24 +108,89 @@ export function useLandingPageKeywordsExtractor() {
               });
             });
           }
+          
+          // Keywords das respostas (menos relevantes)
+          if (faq.answer) {
+            const answerKeywords = extractRelevantKeywords(faq.answer);
+            answerKeywords.slice(0, 3).forEach(keyword => { // Máximo 3 por resposta
+              mappings.push({
+                keyword,
+                url: `${landingPageUrl}#faq-${index}`,
+                source: 'faq',
+                anchorText: keyword
+              });
+            });
+          }
         });
       }
 
-      // 4. Extract from products (if available)
-      if (selectedProductIds.length > 0) {
-        // Import the product keywords aggregator
-        const { useProductKeywordsAggregator } = await import('./useProductKeywordsAggregator');
-        // This would need to be called differently since it's a hook
-        // For now, we'll handle this in the BlogGenerator component
+      // 4. Extract from SEO fields - EXPANDIDO
+      if (landingPageData.data?.seo) {
+        const seoData = landingPageData.data.seo;
+        
+        // SEO Title
+        if (seoData.seo_title) {
+          const titleKeywords = extractRelevantKeywords(seoData.seo_title);
+          titleKeywords.forEach(keyword => {
+            mappings.push({
+              keyword,
+              url: landingPageUrl,
+              source: 'category',
+              anchorText: keyword
+            });
+          });
+        }
+        
+        // SEO Description
+        if (seoData.seo_description) {
+          const descKeywords = extractRelevantKeywords(seoData.seo_description);
+          descKeywords.forEach(keyword => {
+            mappings.push({
+              keyword,
+              url: landingPageUrl,
+              source: 'category',
+              anchorText: keyword
+            });
+          });
+        }
+        
+        // AI Keywords já existentes
+        if (seoData.ai_keywords && Array.isArray(seoData.ai_keywords)) {
+          seoData.ai_keywords.forEach((keyword: string) => {
+            if (keyword && keyword.length > 2) {
+              mappings.push({
+                keyword: keyword.toLowerCase(),
+                url: landingPageUrl,
+                source: 'category',
+                anchorText: keyword
+              });
+            }
+          });
+        }
       }
 
-      // 5. Extract from categories and SEO content
-      if (landingPageData.data?.seo?.description) {
-        const seoKeywords = extractRelevantKeywords(landingPageData.data.seo.description);
-        seoKeywords.forEach(keyword => {
+      // 5. Extract from brand/company data
+      if (landingPageData.data?.brand) {
+        if (landingPageData.data.brand.name) {
+          const brandKeywords = extractRelevantKeywords(landingPageData.data.brand.name);
+          brandKeywords.forEach(keyword => {
+            mappings.push({
+              keyword,
+              url: landingPageUrl,
+              source: 'banner',
+              anchorText: keyword
+            });
+          });
+        }
+      }
+
+      // 6. Extract from about section
+      if (landingPageData.data?.about?.text) {
+        const aboutKeywords = extractRelevantKeywords(landingPageData.data.about.text);
+        aboutKeywords.slice(0, 5).forEach(keyword => { // Máximo 5 do about
           mappings.push({
             keyword,
-            url: landingPageUrl,
+            url: `${landingPageUrl}#about`,
             source: 'category',
             anchorText: keyword
           });

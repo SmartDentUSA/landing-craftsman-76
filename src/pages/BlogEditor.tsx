@@ -19,8 +19,10 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
 import { generateBlogHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
-import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
-import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag } from "lucide-react";
+  import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
+  import { useProductSchemaGenerator } from "@/hooks/useProductSchemaGenerator";
+  import { KeywordsDashboard } from "@/components/KeywordsDashboard";
+  import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag, BarChart3 } from "lucide-react";
 
 interface BlogPost {
   id?: string;
@@ -83,6 +85,9 @@ export default function BlogGenerator() {
   const { getSelectedProducts } = useLandingPages();
   const { aggregateKeywordsFromProducts, enrichKeywordsWithCategories } = useProductKeywordsAggregator();
   const { extractKeywordsFromLandingPage, extracting: extractingKeywords } = useLandingPageKeywordsExtractor();
+  const { generateProductSchema, generateFAQSchema, validateSchema } = useProductSchemaGenerator();
+  const [showKeywordsDashboard, setShowKeywordsDashboard] = useState(false);
+  const [generatedSchema, setGeneratedSchema] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -545,22 +550,12 @@ export default function BlogGenerator() {
     }
   };
 
-  const handleCaptureProductKeywords = async () => {
-    if (!landingPage?.id) {
+  // FASE 1: Capturar Keywords dos Produtos + Landing Page
+  const captureAllKeywords = async () => {
+    if (!selectedProducts.length && !landingPage) {
       toast({
-        title: "Erro",
-        description: "Landing page não encontrada",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const selectedProductIds = getSelectedProducts(landingPage.id);
-    
-    if (selectedProductIds.length === 0) {
-      toast({
-        title: "Nenhum produto selecionado",
-        description: "Selecione produtos no Editor para capturar suas keywords",
+        title: "Sem dados para capturar",
+        description: "Selecione produtos ou certifique-se de que há dados da landing page",
         variant: "destructive"
       });
       return;
@@ -568,46 +563,114 @@ export default function BlogGenerator() {
 
     setGenerating(true);
     try {
-      console.log('🔄 Capturando keywords dos produtos:', selectedProductIds);
-      
-      const keywordAggregation = await aggregateKeywordsFromProducts(selectedProductIds);
-      
-      if (keywordAggregation.allKeywords.length > 0) {
-        // Enriquecer com keywords das configurações de categoria
-        const enrichedKeywords = await enrichKeywordsWithCategories(keywordAggregation);
+      console.log('🎯 Capturando keywords de todas as fontes...');
+      const compiledKeywords: string[] = [];
+
+      // 1. Keywords dos produtos selecionados
+      if (selectedProducts.length > 0) {
+        const productIds = selectedProducts.map(p => p.id);
+        const productKeywords = await aggregateKeywordsFromProducts(productIds);
+        compiledKeywords.push(...productKeywords.allKeywords);
         
-        // Atualizar as keywords do blog post
-        setBlogPost(prev => ({
-          ...prev,
-          keywords: enrichedKeywords
-        }));
-
-        toast({
-          title: "Keywords capturadas!",
-          description: `${enrichedKeywords.length} keywords coletadas de ${keywordAggregation.productCount} produtos`,
-        });
-
-        console.log('✅ Keywords capturadas e aplicadas:', {
-          totalKeywords: enrichedKeywords.length,
-          productCount: keywordAggregation.productCount,
-          sampleKeywords: enrichedKeywords.slice(0, 10)
-        });
-      } else {
-        toast({
-          title: "Nenhuma keyword encontrada",
-          description: "Os produtos selecionados não possuem keywords válidas",
-          variant: "destructive"
-        });
+        console.log('📦 Keywords dos produtos:', productKeywords.allKeywords.length);
       }
+
+      // 2. Keywords da landing page (FAQ, Solutions, Banner)
+      if (landingPage?.content) {
+        const landingPageExtraction = await extractKeywordsFromLandingPage(landingPage.content, selectedProducts.map(p => p.id));
+        const landingKeywords = landingPageExtraction.mappings.map(m => m.keyword);
+        compiledKeywords.push(...landingKeywords);
+        
+        console.log('🏁 Keywords da landing page:', landingKeywords.length);
+      }
+
+      // 3. Remover duplicatas e ordenar
+      const uniqueKeywords = [...new Set(compiledKeywords)]
+        .filter(k => k && k.length > 2)
+        .sort();
+
+      // 4. Atualizar o blog post
+      setBlogPost(prev => ({
+        ...prev,
+        keywords: [...new Set([...prev.keywords, ...uniqueKeywords])]
+      }));
+
+      toast({
+        title: "Keywords capturadas!",
+        description: `${uniqueKeywords.length} keywords únicas adicionadas de produtos e landing page.`
+      });
+
     } catch (error) {
-      console.error('❌ Erro ao capturar keywords:', error);
+      console.error('Erro ao capturar keywords:', error);
       toast({
         title: "Erro na captura",
-        description: "Erro ao capturar keywords dos produtos",
+        description: "Não foi possível capturar as keywords. Tente novamente.",
         variant: "destructive"
       });
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // FASE 2: Gerar Schema JSON-LD Automático
+  const generateAutoSchema = async () => {
+    if (!selectedProducts.length) {
+      toast({
+        title: "Produtos necessários",
+        description: "Selecione produtos para gerar o schema JSON-LD",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Gerar schema dos produtos
+      const productSchema = generateProductSchema(
+        selectedProducts,
+        blogPost.title || landingPage?.title || "Nossos Produtos",
+        blogPost.meta_description || landingPage?.description || "Produtos e serviços de qualidade"
+      );
+
+      // Gerar schema do FAQ se disponível
+      let faqSchema = null;
+      if (landingPage?.content?.data?.faq) {
+        const faqs = Array.isArray(landingPage.content.data.faq) 
+          ? landingPage.content.data.faq 
+          : landingPage.content.data.faq.items || [];
+        
+        if (faqs.length > 0) {
+          faqSchema = generateFAQSchema(faqs);
+        }
+      }
+
+      // Combinar schemas se necessário
+      const schemas = [productSchema.jsonLD];
+      if (faqSchema && Object.keys(faqSchema.jsonLD).length > 0) {
+        schemas.push(faqSchema.jsonLD);
+      }
+
+      const finalSchema = schemas.length === 1 ? schemas[0] : schemas;
+      
+      setGeneratedSchema(finalSchema);
+      
+      // Adicionar ao blog post
+      setBlogPost(prev => ({
+        ...prev,
+        schema_json_ld: finalSchema
+      }));
+
+      toast({
+        title: "Schema gerado!",
+        description: `Schema JSON-LD criado automaticamente com ${selectedProducts.length} produtos.`
+      });
+
+    } catch (error) {
+      console.error('Erro ao gerar schema:', error);
+      toast({
+        title: "Erro no schema",
+        description: "Não foi possível gerar o schema JSON-LD. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1023,25 +1086,46 @@ export default function BlogGenerator() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-muted-foreground">Keywords:</span>
-                    <Button
-                      onClick={handleCaptureProductKeywords}
-                      disabled={generating || !selectedProducts.length}
-                      size="sm"
-                      variant="outline"
-                      className="h-6 px-2 text-xs"
-                    >
-                      {generating ? (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Capturando...
-                        </>
-                      ) : (
-                        <>
-                          <Tag className="h-3 w-3 mr-1" />
-                          Capturar Keywords dos Produtos
-                        </>
-                      )}
-                    </Button>
+                     <Button
+                       onClick={captureAllKeywords}
+                       disabled={generating || (!selectedProducts.length && !landingPage)}
+                       size="sm"
+                       variant="outline"
+                       className="h-6 px-2 text-xs"
+                     >
+                       {generating ? (
+                         <>
+                           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                           Capturando...
+                         </>
+                       ) : (
+                         <>
+                           <Tag className="h-3 w-3 mr-1" />
+                           Capturar Keywords Completas
+                         </>
+                       )}
+                     </Button>
+                     
+                     <Button
+                       onClick={() => setShowKeywordsDashboard(!showKeywordsDashboard)}
+                       size="sm"
+                       variant="outline"
+                       className="h-6 px-2 text-xs"
+                     >
+                       <BarChart3 className="h-3 w-3 mr-1" />
+                       Dashboard
+                     </Button>
+                     
+                     <Button
+                       onClick={generateAutoSchema}
+                       disabled={!selectedProducts.length}
+                       size="sm"
+                       variant="outline"
+                       className="h-6 px-2 text-xs"
+                     >
+                       <Sparkles className="h-3 w-3 mr-1" />
+                       Schema JSON-LD
+                     </Button>
                     
                     <Button
                       onClick={generateIntelligentLinks}
@@ -1097,15 +1181,53 @@ export default function BlogGenerator() {
                 </Button>
               </div>
 
-              <div>
-                <Label htmlFor="youtube_url">URL do YouTube (opcional)</Label>
-                <Input
-                  id="youtube_url"
-                  value={blogPost.youtube_video_url}
-                  onChange={(e) => setBlogPost(prev => ({ ...prev, youtube_video_url: e.target.value }))}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                />
-              </div>
+               {/* Keywords Dashboard */}
+               {showKeywordsDashboard && (
+                 <KeywordsDashboard
+                   selectedProductIds={selectedProducts.map(p => p.id)}
+                   landingPageData={landingPage?.content}
+                   onKeywordsUpdate={(keywords) => {
+                     setBlogPost(prev => ({
+                       ...prev,
+                       keywords: [...new Set([...prev.keywords, ...keywords])]
+                     }));
+                   }}
+                   className="mb-4"
+                 />
+               )}
+
+               {/* Schema JSON-LD Preview */}
+               {generatedSchema && (
+                 <div className="space-y-2">
+                   <Label>Schema JSON-LD Gerado</Label>
+                   <div className="bg-muted/50 p-3 rounded-lg">
+                     <pre className="text-xs overflow-auto max-h-32">
+                       {JSON.stringify(generatedSchema, null, 2)}
+                     </pre>
+                     <Button
+                       onClick={() => {
+                         navigator.clipboard.writeText(JSON.stringify(generatedSchema, null, 2));
+                         toast({ title: "Schema copiado!", description: "Schema JSON-LD copiado para área de transferência." });
+                       }}
+                       size="sm"
+                       variant="outline"
+                       className="mt-2"
+                     >
+                       Copiar Schema
+                     </Button>
+                   </div>
+                 </div>
+               )}
+
+               <div>
+                 <Label htmlFor="youtube_url">URL do YouTube (opcional)</Label>
+                 <Input
+                   id="youtube_url"
+                   value={blogPost.youtube_video_url}
+                   onChange={(e) => setBlogPost(prev => ({ ...prev, youtube_video_url: e.target.value }))}
+                   placeholder="https://www.youtube.com/watch?v=..."
+                 />
+               </div>
 
               {(() => {
                 // Debug offers data
