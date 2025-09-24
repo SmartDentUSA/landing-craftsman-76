@@ -94,7 +94,7 @@ interface SEOData {
   lastmod: string;
   faq_enable: boolean;
   // Novos campos para SEO inteligente com IA
-  seo_hidden_content?: string;
+  contextual_seo_info?: string;
   ai_keywords?: any;
   seo_generated_by_ai?: boolean;
   ai_seo_enabled?: boolean;
@@ -1494,7 +1494,7 @@ const EditorContent = () => {
           }))
         },
         seo: {
-          hidden_content: data.seo.seo_hidden_content,
+          hidden_content: data.seo.contextual_seo_info,
           description: data.seo_description
         }
       };
@@ -1506,7 +1506,7 @@ const EditorContent = () => {
           landingPageId: id,
           landingPageData: data,
           contentData: {
-            content: data.seo?.seo_hidden_content?.trim() || data.seo_description?.trim() || data.banner?.title,
+            content: data.seo?.contextual_seo_info?.trim() || data.seo_description?.trim() || data.banner?.title,
             title: data.seo_title || data.banner?.title,
             fullLandingPageContent: fullContent
           },
@@ -3895,7 +3895,7 @@ const EditorContent = () => {
                                        if (aiLoading.hidden) return;
                                        setAiLoading(prev => ({ ...prev, hidden: true }));
                                        try {
-                                         const contentRaw = data.seo.seo_hidden_content || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
+                                         const contentRaw = data.seo.contextual_seo_info || `${data.banner.title} ${data.banner.subtitle} ${data.advisory.paragraph}`;
                                          const content = (contentRaw || '').trim();
                                           if (!content) {
                                             toast({ title: "Informe o contexto", description: "Adicione informações no campo 'Contexto Adicional SEO' para a IA trabalhar melhor.", variant: "destructive" });
@@ -3908,10 +3908,10 @@ const EditorContent = () => {
                                          
                                          if (error) throw error;
                                          if (result?.content) {
-                                           setData(prev => ({
-                                             ...prev,
-                                             seo: { ...prev.seo, seo_hidden_content: result.content }
-                                           }));
+                                            setData(prev => ({
+                                              ...prev,
+                                              seo: { ...prev.seo, contextual_seo_info: result.content }
+                                            }));
                                            toast({ title: "✨ Contexto gerado!", description: "Contexto adicional SEO criado com sucesso." });
                                          }
                                        } catch (error) {
@@ -3937,7 +3937,7 @@ const EditorContent = () => {
                                  </div>
                                   <Textarea
                                     placeholder="Ex: Somos especialistas em implantes dentários, ortodontia invisível e harmonização orofacial. Atendemos pacientes com foco em excelência técnica e atendimento humanizado."
-                                    value={data.seo.seo_hidden_content}
+                                    value={data.seo.contextual_seo_info}
                                     onChange={(e) => {
                                       const value = e.target.value;
                                       // Validação básica para evitar keyword stuffing
@@ -3949,10 +3949,10 @@ const EditorContent = () => {
                                         });
                                         return;
                                       }
-                                      setData(prev => ({
-                                        ...prev,
-                                        seo: { ...prev.seo, seo_hidden_content: value }
-                                      }));
+                                       setData(prev => ({
+                                         ...prev,
+                                         seo: { ...prev.seo, contextual_seo_info: value }
+                                       }));
                                     }}
                                     className="text-xs min-h-[80px] text-emerald-700 bg-white/50"
                                     maxLength={500}
@@ -3962,7 +3962,7 @@ const EditorContent = () => {
                                       ✅ Contexto natural e descritivo
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      {data.seo.seo_hidden_content?.length || 0}/500
+                                      {data.seo.contextual_seo_info?.length || 0}/500
                                     </div>
                                   </div>
                                </div>

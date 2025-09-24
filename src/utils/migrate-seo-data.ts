@@ -8,11 +8,11 @@ export async function migrateSEOData() {
   try {
     console.log('🔄 Starting SEO data migration...');
     
-    // 1. Get existing SEO hidden content from approved_reviews
+    // 1. Get existing contextual SEO info from approved_reviews
     const { data: reviews, error: reviewsError } = await supabase
       .from('approved_reviews')
-      .select('seo_hidden_content')
-      .not('seo_hidden_content', 'is', null);
+      .select('contextual_seo_info')
+      .not('contextual_seo_info', 'is', null);
     
     if (reviewsError) {
       console.error('Error fetching reviews:', reviewsError);
@@ -30,13 +30,13 @@ export async function migrateSEOData() {
       return { success: false, error: profileError.message };
     }
     
-    // 3. Analyze and migrate SEO content
+    // 3. Analyze and migrate contextual SEO info
     const seoContents = reviews
-      ?.map(r => r.seo_hidden_content)
+      ?.map(r => r.contextual_seo_info)
       .filter(Boolean) || [];
     
     if (seoContents.length === 0) {
-      console.log('✅ No SEO hidden content found to migrate');
+      console.log('✅ No contextual SEO info found to migrate');
       return { success: true, message: 'No data to migrate' };
     }
     

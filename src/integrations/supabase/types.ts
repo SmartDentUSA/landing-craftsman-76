@@ -19,6 +19,7 @@ export type Database = {
           ai_keywords: Json | null
           approved_at: string
           approved_by: string | null
+          contextual_seo_info: string | null
           created_at: string
           display_order: number | null
           id: string
@@ -26,12 +27,12 @@ export type Database = {
           notes: string | null
           raw_review_id: string
           seo_generated_by_ai: boolean | null
-          seo_hidden_content: string | null
         }
         Insert: {
           ai_keywords?: Json | null
           approved_at?: string
           approved_by?: string | null
+          contextual_seo_info?: string | null
           created_at?: string
           display_order?: number | null
           id?: string
@@ -39,12 +40,12 @@ export type Database = {
           notes?: string | null
           raw_review_id: string
           seo_generated_by_ai?: boolean | null
-          seo_hidden_content?: string | null
         }
         Update: {
           ai_keywords?: Json | null
           approved_at?: string
           approved_by?: string | null
+          contextual_seo_info?: string | null
           created_at?: string
           display_order?: number | null
           id?: string
@@ -52,7 +53,6 @@ export type Database = {
           notes?: string | null
           raw_review_id?: string
           seo_generated_by_ai?: boolean | null
-          seo_hidden_content?: string | null
         }
         Relationships: [
           {
