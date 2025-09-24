@@ -19,6 +19,7 @@ import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
 import ProductRepositoryCSVImporter from "@/components/ProductRepositoryCSVImporter";
+import { useCategoryContext } from '@/contexts/CategoryContext';
 
 interface Video {
   url: string;
@@ -93,6 +94,7 @@ export function RepositoryPanel({
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
+  const { refreshAllCategories } = useCategoryContext();
 
   // Function to load manual reviews
   const loadManualReviews = async () => {
@@ -164,6 +166,17 @@ export function RepositoryPanel({
       refreshAllData();
     }
   }, [landingPageId]);
+
+  // Listen for category changes and refresh data automatically
+  useEffect(() => {
+    const handleCategoryUpdate = async () => {
+      console.log('Category data updated, refreshing product list...');
+      await loadProducts();
+    };
+
+    // This effect will run when categories context changes
+    handleCategoryUpdate();
+  }, [refreshAllCategories]);
 
   // Apply filters
   useEffect(() => {

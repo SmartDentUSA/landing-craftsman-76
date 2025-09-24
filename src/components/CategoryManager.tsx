@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { useCategoryContext } from '@/contexts/CategoryContext';
 import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +34,7 @@ interface RenameData {
 const CategoryManager = () => {
   const { configs, loading, createConfig, updateConfig, deleteConfig } = useCategoryConfig();
   const { categories, subcategories, getSubcategoriesForCategory, refreshCategories } = useProductCategories();
+  const { notifyCategoryChange } = useCategoryContext();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -149,8 +151,13 @@ const CategoryManager = () => {
         description: data.message,
       });
 
-      // Refresh data
-      await refreshCategories();
+      // Notify global category change for automatic synchronization
+      await notifyCategoryChange('rename', {
+        type: renameData.type,
+        oldName: renameData.oldName,
+        newName: renameData.newName,
+        category: renameData.category
+      });
       
       setIsRenameDialogOpen(false);
       setRenameData({ type: 'category', oldName: '', newName: '', category: '' });
