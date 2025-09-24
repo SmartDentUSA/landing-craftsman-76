@@ -611,46 +611,55 @@ const CategoryManager = () => {
               );
 
               return (
-                <Card key={category} className="border-border/20 shadow-soft">
+                <Card key={category} className="overflow-hidden border-border/20 shadow-soft">
                   <Collapsible open={isOpen} onOpenChange={() => toggleCategoryOpen(category)}>
                     <CollapsibleTrigger asChild>
-                      <div className="w-full">
-                        <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <div onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 checked={isAllSelected}
+                                ref={(el) => {
+                                  if (el && 'indeterminate' in el) {
+                                    (el as any).indeterminate = isIndeterminate;
+                                  }
+                                }}
                                 onCheckedChange={() => toggleCategorySelection(category)}
-                                onClick={(e) => e.stopPropagation()}
-                                className={isIndeterminate ? "data-[state=checked]:bg-primary/50" : ""}
                               />
-                              <div className="flex items-center gap-2">
-                                {isOpen ? (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <Folder className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{category}</span>
-                              </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {categoryConfigs.length} config{categoryConfigs.length !== 1 ? 's' : ''}
-                              </Badge>
-                              <Badge variant={getCompletenessColor(avgCompleteness)} className="text-xs">
-                                {getCompletenessLabel(avgCompleteness)} ({avgCompleteness}%)
-                              </Badge>
+                              <Folder className="h-5 w-5 text-muted-foreground" />
+                              <h3 className="font-semibold text-lg">
+                                {category}
+                              </h3>
                             </div>
                           </div>
-                        </CardHeader>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {categoryConfigs.length} config{categoryConfigs.length !== 1 ? 's' : ''}
+                            </Badge>
+                            {selectedInCategory.length > 0 && (
+                              <Badge variant="default" className="text-xs">
+                                {selectedInCategory.length} selecionada{selectedInCategory.length !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                            <Badge variant={getCompletenessColor(avgCompleteness)} className="text-xs">
+                              {getCompletenessLabel(avgCompleteness)} ({avgCompleteness}%)
+                            </Badge>
+                          </div>
+                        </div>
+                        <ChevronDown 
+                          className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
+                            isOpen ? 'rotate-180' : ''
+                          }`} 
+                        />
                       </div>
                     </CollapsibleTrigger>
                     
-                    <CollapsibleContent>
-                      <div className="border-t border-border/20 p-4">
-                        <div className="space-y-3">
-                          {categoryConfigs.map((config) => {
+                     <CollapsibleContent className="border-t border-border/20">
+                       <div className="p-4 space-y-4">
+                         {categoryConfigs.map((config) => {
                             const completeness = calculateConfigCompleteness(config);
                             const isSelected = selectedConfigIds.has(config.id);
                             
@@ -679,13 +688,12 @@ const CategoryManager = () => {
                                 onDelete={handleDelete}
                               />
                             );
-                          })}
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Card>
-              );
+                         })}
+                       </div>
+                     </CollapsibleContent>
+                   </Collapsible>
+                 </Card>
+               );
             })
           )}
         </div>
