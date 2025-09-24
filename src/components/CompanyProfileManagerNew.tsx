@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search } from "lucide-react";
 import { VideoSection } from "./VideoSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
+import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
 
 interface Video {
   url: string;
@@ -30,6 +31,12 @@ interface CompanyProfile {
   contact_phone?: string;
   youtube_channel?: string;
   instagram_profile?: string;
+  // SEO Hidden Fields
+  seo_context_keywords?: string[];
+  seo_market_positioning?: string;
+  seo_competitive_advantages?: string;
+  seo_technical_expertise?: string;
+  seo_service_areas?: string;
   company_videos?: {
     youtube_videos: Video[];
     instagram_videos: Video[];
@@ -57,6 +64,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     contact_phone: "",
     youtube_channel: "",
     instagram_profile: "",
+    // SEO Hidden Fields
+    seo_context_keywords: [],
+    seo_market_positioning: "",
+    seo_competitive_advantages: "",
+    seo_technical_expertise: "",
+    seo_service_areas: "",
     company_videos: {
       youtube_videos: [],
       instagram_videos: [],
@@ -69,6 +82,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const { saveCompanyVideos, loadCompanyVideos, updateCompanyProfile } = useCompanyVideos();
+  const { aggregateTargetAudiences, loading: aggregatingAudiences } = useTargetAudienceAggregator();
 
   useEffect(() => {
     loadProfile();
@@ -114,6 +128,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           contact_phone: data.contact_phone || "",
           youtube_channel: data.youtube_channel || "",
           instagram_profile: data.instagram_profile || "",
+          // SEO Hidden Fields
+          seo_context_keywords: Array.isArray((data as any).seo_context_keywords) ? (data as any).seo_context_keywords : [],
+          seo_market_positioning: (data as any).seo_market_positioning || "",
+          seo_competitive_advantages: (data as any).seo_competitive_advantages || "",
+          seo_technical_expertise: (data as any).seo_technical_expertise || "",
+          seo_service_areas: (data as any).seo_service_areas || "",
           company_videos: videos,
         });
       } else {
@@ -155,6 +175,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           contact_phone: profile.contact_phone,
           youtube_channel: profile.youtube_channel,
           instagram_profile: profile.instagram_profile,
+          // SEO Hidden Fields
+          seo_context_keywords: profile.seo_context_keywords,
+          seo_market_positioning: profile.seo_market_positioning,
+          seo_competitive_advantages: profile.seo_competitive_advantages,
+          seo_technical_expertise: profile.seo_technical_expertise,
+          seo_service_areas: profile.seo_service_areas,
           updated_at: new Date().toISOString()
         });
 
@@ -191,6 +217,16 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     }));
   };
 
+  const handleAggregateTargetAudiences = async () => {
+    const audiences = await aggregateTargetAudiences();
+    if (audiences) {
+      setProfile(prev => ({
+        ...prev,
+        target_audience: audiences
+      }));
+    }
+  };
+
   if (loading) {
     return (
       <Card className={className}>
@@ -217,10 +253,11 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
             <TabsTrigger value="social">Redes Sociais</TabsTrigger>
             <TabsTrigger value="videos">Vídeos da Empresa</TabsTrigger>
+            <TabsTrigger value="seo">SEO Hidden</TabsTrigger>
           </TabsList>
           
           <TabsContent value="basic" className="space-y-4">
@@ -258,7 +295,29 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="target_audience">Público-Alvo</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="target_audience">Público-Alvo</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAggregateTargetAudiences}
+                    disabled={aggregatingAudiences}
+                    className="text-xs"
+                  >
+                    {aggregatingAudiences ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Capturando...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-3 w-3 mr-1" />
+                        Capturar das Categorias
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Input
                   id="target_audience"
                   value={profile.target_audience || ''}
@@ -411,6 +470,77 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 }}
                 maxVideos={20}
               />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="seo" className="space-y-4">
+            <div className="mb-4 p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-semibold text-sm mb-2">ℹ️ Campos SEO Hidden</h4>
+              <p className="text-sm text-muted-foreground">
+                Estes campos não aparecem no site público, mas enriquecem o contexto da IA para geração de conteúdo mais preciso.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="seo_context_keywords">Palavras-chave de Contexto SEO</Label>
+                <Input
+                  id="seo_context_keywords"
+                  value={profile.seo_context_keywords?.join(', ') || ''}
+                  onChange={(e) => setProfile({
+                    ...profile, 
+                    seo_context_keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k)
+                  })}
+                  placeholder="palavra1, palavra2, palavra3"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Separe as palavras-chave por vírgula
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="seo_market_positioning">Posicionamento de Mercado</Label>
+                <Textarea
+                  id="seo_market_positioning"
+                  value={profile.seo_market_positioning || ''}
+                  onChange={(e) => setProfile({...profile, seo_market_positioning: e.target.value})}
+                  placeholder="Como sua empresa se posiciona no mercado? Qual é seu diferencial competitivo?"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="seo_competitive_advantages">Vantagens Competitivas</Label>
+                <Textarea
+                  id="seo_competitive_advantages"
+                  value={profile.seo_competitive_advantages || ''}
+                  onChange={(e) => setProfile({...profile, seo_competitive_advantages: e.target.value})}
+                  placeholder="Quais são as principais vantagens da sua empresa sobre a concorrência?"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="seo_technical_expertise">Expertise Técnica</Label>
+                <Textarea
+                  id="seo_technical_expertise"
+                  value={profile.seo_technical_expertise || ''}
+                  onChange={(e) => setProfile({...profile, seo_technical_expertise: e.target.value})}
+                  placeholder="Descreva a expertise técnica e conhecimentos específicos da empresa"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="seo_service_areas">Áreas de Serviço</Label>
+                <Textarea
+                  id="seo_service_areas"
+                  value={profile.seo_service_areas || ''}
+                  onChange={(e) => setProfile({...profile, seo_service_areas: e.target.value})}
+                  placeholder="Quais regiões, cidades ou áreas geográficas sua empresa atende?"
+                  rows={2}
+                />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

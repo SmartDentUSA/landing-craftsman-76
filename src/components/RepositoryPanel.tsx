@@ -15,6 +15,7 @@ import { useProductSync } from "@/hooks/useProductSync";
 import useLandingPages from "@/hooks/useLandingPages";
 import { ProductEditModal } from "@/components/ProductEditModal";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
+import { CompanyProfileManager as CompanyProfileManagerNew } from "@/components/CompanyProfileManagerNew";
 import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
@@ -729,11 +730,12 @@ export function RepositoryPanel({
 
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="products">Produtos</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
             <TabsTrigger value="kols">KOLs</TabsTrigger>
+            <TabsTrigger value="company">Empresa</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="mt-4">
@@ -779,6 +781,12 @@ export function RepositoryPanel({
 
           <TabsContent value="kols" className="mt-4">
             <KOLManager />
+          </TabsContent>
+
+          <TabsContent value="company" className="mt-4">
+            <CompanyProfileManagerNew 
+              onProfileChange={onCompanyProfileChange || (() => {})}
+            />
           </TabsContent>
         </Tabs>
       </CardContent>
