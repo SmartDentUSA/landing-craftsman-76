@@ -2,14 +2,17 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { TagInput } from '@/components/ui/tag-input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useProductCategories } from '@/hooks/useProductCategories';
-import { Plus, Edit, Trash2, Save, X, Info } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface CategoryFormData {
   category: string;
@@ -20,12 +23,29 @@ interface CategoryFormData {
   search_intent_keywords: string[];
 }
 
+interface RenameData {
+  type: 'category' | 'subcategory';
+  oldName: string;
+  newName: string;
+  category?: string;
+}
+
 const CategoryManager = () => {
   const { configs, loading, createConfig, updateConfig, deleteConfig } = useCategoryConfig();
-  const { categories, subcategories, getSubcategoriesForCategory } = useProductCategories();
+  const { categories, subcategories, getSubcategoriesForCategory, refreshCategories } = useProductCategories();
+  const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<string | null>(null);
+  const [renameMode, setRenameMode] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameData, setRenameData] = useState<RenameData>({
+    type: 'category',
+    oldName: '',
+    newName: '',
+    category: ''
+  });
   const [formData, setFormData] = useState<CategoryFormData>({
     category: '',
     subcategory: '',
@@ -105,6 +125,58 @@ const CategoryManager = () => {
     await deleteConfig(id);
   };
 
+  const handleRename = async () => {
+    if (!renameData.newName.trim() || renameData.newName === renameData.oldName) {
+      toast({
+        title: "Erro",
+        description: "Digite um novo nome válido e diferente do atual.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsRenaming(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('rename-category', {
+        body: renameData
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: data.message,
+      });
+
+      // Refresh data
+      await refreshCategories();
+      
+      setIsRenameDialogOpen(false);
+      setRenameData({ type: 'category', oldName: '', newName: '', category: '' });
+      
+    } catch (error) {
+      console.error('Error renaming:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao renomear. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const openRenameDialog = (type: 'category' | 'subcategory', oldName: string, category?: string) => {
+    setRenameData({
+      type,
+      oldName,
+      newName: oldName,
+      category: category || ''
+    });
+    setIsRenameDialogOpen(true);
+  };
+
   if (loading) {
     return <div className="p-6">Carregando configurações...</div>;
   }
@@ -140,7 +212,21 @@ const CategoryManager = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Categoria</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Categoria</Label>
+                    {formData.category && categories.includes(formData.category) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openRenameDialog('category', formData.category)}
+                        className="h-6 text-xs"
+                      >
+                        <FileEdit className="h-3 w-3 mr-1" />
+                        Renomear
+                      </Button>
+                    )}
+                  </div>
                   <Combobox
                     value={formData.category}
                     onValueChange={handleCategoryChange}
@@ -156,7 +242,21 @@ const CategoryManager = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Subcategoria</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Subcategoria</Label>
+                    {formData.subcategory && formData.category && availableSubcategories.includes(formData.subcategory) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openRenameDialog('subcategory', formData.subcategory, formData.category)}
+                        className="h-6 text-xs"
+                      >
+                        <FileEdit className="h-3 w-3 mr-1" />
+                        Renomear
+                      </Button>
+                    )}
+                  </div>
                   <Combobox
                     value={formData.subcategory}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
@@ -241,6 +341,63 @@ const CategoryManager = () => {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rename Dialog */}
+        <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileEdit className="h-4 w-4" />
+                Renomear {renameData.type === 'category' ? 'Categoria' : 'Subcategoria'}
+              </DialogTitle>
+              <DialogDescription>
+                {renameData.type === 'category' 
+                  ? 'Esta ação irá renomear a categoria em todos os produtos e configurações.'
+                  : `Esta ação irá renomear a subcategoria em todos os produtos da categoria "${renameData.category}".`
+                }
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome atual</Label>
+                <Input value={renameData.oldName} disabled className="bg-muted" />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Novo nome</Label>
+                <Input
+                  value={renameData.newName}
+                  onChange={(e) => setRenameData(prev => ({ ...prev, newName: e.target.value }))}
+                  placeholder="Digite o novo nome"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+                <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <div className="text-sm text-amber-700 dark:text-amber-300">
+                  Esta operação pode afetar múltiplos produtos no repositório.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setIsRenameDialogOpen(false)}
+                disabled={isRenaming}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleRename}
+                disabled={isRenaming || !renameData.newName.trim() || renameData.newName === renameData.oldName}
+              >
+                {isRenaming ? 'Renomeando...' : 'Renomear'}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
