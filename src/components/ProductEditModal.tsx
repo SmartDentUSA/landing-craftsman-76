@@ -728,9 +728,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                               subcategory: '' // Reset subcategoria quando mudar categoria
                             }));
                             setCategoryOpen(false);
-                            
-                            // Auto-preencher com configurações da categoria se disponível
-                            loadCategoryDefaults(currentValue, '');
                           }}
                         >
                           <Check
