@@ -166,6 +166,14 @@ export default function BlogGenerator() {
     loadSelectedProductsData();
   }, [id, getSelectedProducts, loadProductsByIds]);
 
+  // Auto-activate preview when blog content becomes available
+  useEffect(() => {
+    if (blogPost.title && blogPost.content && !previewMode) {
+      console.log("✅ Ativando preview automaticamente - conteúdo disponível");
+      setPreviewMode(true);
+    }
+  }, [blogPost.title, blogPost.content, previewMode]);
+
   // Auto-save draft when blog post data changes
   useEffect(() => {
     if (landingPage && (blogPost.title || blogPost.content) && !loading && !generating && !publishing) {
@@ -270,48 +278,113 @@ export default function BlogGenerator() {
 
   const loadExistingBlogPost = async () => {
     try {
-      const { data, error } = await supabase
+      console.log("🔍 Carregando blog posts existentes para landing page:", id);
+      
+      const { data: blogPosts, error } = await supabase
         .from("blog_posts")
         .select("*")
         .eq("landing_page_id", id)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      if (data) {
-        console.log("📝 Blog post existente encontrado:", data);
-        
+      console.log("📝 Blog posts encontrados:", blogPosts?.length || 0);
+
+      if (blogPosts && blogPosts.length > 0) {
         // Get intelligent links from Editor data if available
         const editorData = getLandingPage(id || "");
         const editorIntelligentLinks = editorData?.data?.seo?.intelligent_links || {};
         
-        const loadedBlogPost = {
-          id: data.id,
-          title: data.title,
-          content: data.content,
-          meta_description: data.meta_description || "",
-          keywords: normalizeKeywords(data.keywords || []),
-          youtube_video_url: data.youtube_video_url || "",
-          status: data.status,
-          published_domains: data.published_domains || [],
-          intelligent_links: {
-            ...editorIntelligentLinks,
-            ...(data.intelligent_links as Record<string, string> || {})
-          },
-        };
+        // Check if we have dual versions (dentala/eodonto)
+        const dentalaPost = blogPosts.find(post => 
+          post.published_domains?.includes('dentala.com.br') || post.published_domains?.includes('dentala.com')
+        );
+        const eodontoPost = blogPosts.find(post => 
+          post.published_domains?.includes('eodonto.com.br') || post.published_domains?.includes('eodonto.com')
+        );
         
-        setBlogPost(loadedBlogPost);
-        
-        // Ativar preview se tiver conteúdo
-        if (loadedBlogPost.title && loadedBlogPost.content) {
+        if (dentalaPost && eodontoPost) {
+          console.log("🔄 Versões duplas encontradas - montando dualVersions");
+          
+          const normalizedDentala = {
+            id: dentalaPost.id,
+            title: dentalaPost.title,
+            content: dentalaPost.content,
+            meta_description: dentalaPost.meta_description || "",
+            keywords: normalizeKeywords(dentalaPost.keywords || []),
+            youtube_video_url: dentalaPost.youtube_video_url || "",
+            status: dentalaPost.status,
+            published_domains: dentalaPost.published_domains || [],
+            intelligent_links: {
+              ...editorIntelligentLinks,
+              ...(dentalaPost.intelligent_links as Record<string, string> || {})
+            },
+          };
+          
+          const normalizedEodonto = {
+            id: eodontoPost.id,
+            title: eodontoPost.title,
+            content: eodontoPost.content,
+            meta_description: eodontoPost.meta_description || "",
+            keywords: normalizeKeywords(eodontoPost.keywords || []),
+            youtube_video_url: eodontoPost.youtube_video_url || "",
+            status: eodontoPost.status,
+            published_domains: eodontoPost.published_domains || [],
+            intelligent_links: {
+              ...editorIntelligentLinks,
+              ...(eodontoPost.intelligent_links as Record<string, string> || {})
+            },
+          };
+          
+          setDualVersions({
+            dentala: normalizedDentala,
+            eodonto: normalizedEodonto
+          });
+          
+          setIsDualMode(true);
+          
+          // Set current blog post to dentala version by default
+          setBlogPost(normalizedDentala);
+          setSelectedDomain('dentala');
+          
+          console.log("✅ Versões duplas carregadas - ativando preview");
           setPreviewMode(true);
+          
+        } else {
+          // Single blog post version
+          const firstPost = blogPosts[0];
+          console.log("📝 Blog post único encontrado:", firstPost);
+          
+          const loadedBlogPost = {
+            id: firstPost.id,
+            title: firstPost.title,
+            content: firstPost.content,
+            meta_description: firstPost.meta_description || "",
+            keywords: normalizeKeywords(firstPost.keywords || []),
+            youtube_video_url: firstPost.youtube_video_url || "",
+            status: firstPost.status,
+            published_domains: firstPost.published_domains || [],
+            intelligent_links: {
+              ...editorIntelligentLinks,
+              ...(firstPost.intelligent_links as Record<string, string> || {})
+            },
+          };
+          
+          setBlogPost(loadedBlogPost);
+          
+          // Ativar preview se tiver conteúdo
+          if (loadedBlogPost.title && loadedBlogPost.content) {
+            console.log("✅ Ativando preview para blog post único");
+            setPreviewMode(true);
+          }
         }
         
-        console.log("✅ Blog post carregado com preview:", {
-          hasTitle: !!loadedBlogPost.title,
-          hasContent: !!loadedBlogPost.content,
-          previewActivated: !!(loadedBlogPost.title && loadedBlogPost.content)
+        console.log("✅ Blog post(s) carregado(s) com preview:", {
+          totalPosts: blogPosts.length,
+          hasDualVersions: !!(dentalaPost && eodontoPost),
+          previewActivated: true
         });
+        
       } else {
         console.log("📝 Nenhum blog post existente encontrado");
         
@@ -332,10 +405,15 @@ export default function BlogGenerator() {
       }
     } catch (error) {
       console.error("❌ Erro ao carregar blog post:", error);
+      toast({
+        title: "Erro de carregamento",
+        description: "Erro ao carregar blog posts existentes. Tente gerar novo conteúdo.",
+        variant: "destructive"
+      });
     }
   };
 
-  const generateBlogContent = async () => {
+  const generateBlogContent = async (retryCount = 0) => {
     if (!landingPage) return;
 
     // Ensure selected products are loaded before generating content
@@ -354,7 +432,8 @@ export default function BlogGenerator() {
     console.log('🚀 Gerando conteúdo de blog com produtos:', {
       selectedProductIds,
       selectedProductsLoaded: selectedProducts.length,
-      isDualMode
+      isDualMode,
+      retryCount
     });
 
     setGenerating(true);
@@ -446,9 +525,25 @@ export default function BlogGenerator() {
       });
     } catch (error) {
       console.error("Erro ao gerar conteúdo:", error);
+      
+      // Retry logic for "Failed to fetch" errors
+      if (error instanceof Error && error.message.includes("Failed to fetch") && retryCount < 2) {
+        console.log(`🔄 Tentando novamente (${retryCount + 1}/3)...`);
+        toast({
+          title: "Tentando novamente...",
+          description: `Erro de conexão. Tentativa ${retryCount + 1} de 3.`,
+        });
+        
+        // Wait a bit before retrying
+        setTimeout(() => {
+          generateBlogContent(retryCount + 1);
+        }, 1000 * (retryCount + 1)); // Exponential backoff
+        return;
+      }
+      
       toast({
         title: "Erro",
-        description: "Erro ao gerar conteúdo do blog.",
+        description: `Erro ao gerar conteúdo do blog${retryCount > 0 ? ' após ' + (retryCount + 1) + ' tentativas' : ''}.`,
         variant: "destructive",
       });
     } finally {
@@ -900,7 +995,7 @@ export default function BlogGenerator() {
               <CardTitle className="flex items-center justify-between">
                 Editar Conteúdo
                 <Button
-                  onClick={generateBlogContent}
+                  onClick={() => generateBlogContent()}
                   disabled={generating}
                   size="sm"
                   variant="outline"
