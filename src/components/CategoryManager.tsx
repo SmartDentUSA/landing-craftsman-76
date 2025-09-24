@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
-import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -468,16 +468,90 @@ const CategoryManager = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4">
+      {/* Estatísticas gerais */}
+      {configs.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700 dark:text-green-300">Completas</p>
+                  <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                    {configs.filter(c => calculateConfigCompleteness(c).percentage >= 90).length}
+                  </p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Boas</p>
+                  <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-200">
+                    {configs.filter(c => {
+                      const p = calculateConfigCompleteness(c).percentage;
+                      return p >= 70 && p < 90;
+                    }).length}
+                  </p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-700 dark:text-orange-300">Regulares</p>
+                  <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">
+                    {configs.filter(c => {
+                      const p = calculateConfigCompleteness(c).percentage;
+                      return p >= 50 && p < 70;
+                    }).length}
+                  </p>
+                </div>
+                <Target className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-red-200 dark:border-red-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">Críticas</p>
+                  <p className="text-2xl font-bold text-red-800 dark:text-red-200">
+                    {configs.filter(c => calculateConfigCompleteness(c).percentage < 50).length}
+                  </p>
+                </div>
+                <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <div className="grid gap-6">
         {configs.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">
-                Nenhuma configuração de categoria encontrada.
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Crie uma nova configuração para começar.
-              </p>
+          <Card className="bg-gradient-to-br from-muted/30 to-muted/10">
+            <CardContent className="p-8 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-3 rounded-full bg-muted">
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-foreground">
+                    Nenhuma configuração de categoria encontrada
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Crie uma nova configuração para definir campos padrões que serão preenchidos automaticamente nos produtos
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -487,20 +561,42 @@ const CategoryManager = () => {
             const completenessLabel = getCompletenessLabel(completeness.percentage);
             
             return (
-              <Card key={config.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
+              <Card key={config.id} className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-card to-card/80">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-lg">
-                          {config.category} → {config.subcategory}
-                        </CardTitle>
-                        <Badge variant={completenessColor}>
-                          {completenessLabel} ({completeness.percentage}%)
-                        </Badge>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                          <Target className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                            {config.category}
+                          </CardTitle>
+                          <p className="text-lg text-muted-foreground font-medium">
+                            → {config.subcategory}
+                          </p>
+                        </div>
                       </div>
-                      <CardDescription className="flex items-center gap-2">
-                        <Calendar className="h-3 w-3" />
+                      
+                      <div className="flex items-center gap-3 mb-2">
+                        <Badge variant={completenessColor} className="px-3 py-1 font-semibold">
+                          {completenessLabel} • {completeness.percentage}%
+                        </Badge>
+                        <div className="flex-1 bg-muted/30 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              completeness.percentage >= 90 ? 'bg-green-500' :
+                              completeness.percentage >= 70 ? 'bg-yellow-500' :
+                              completeness.percentage >= 50 ? 'bg-orange-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${completeness.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <CardDescription className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4" />
                         Criada em {new Date(config.created_at).toLocaleDateString('pt-BR')}
                         {config.updated_at !== config.created_at && (
                           <span className="text-muted-foreground">
@@ -509,18 +605,20 @@ const CategoryManager = () => {
                         )}
                       </CardDescription>
                     </div>
-                    <div className="flex space-x-2">
+                    
+                    <div className="flex space-x-2 opacity-70 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(config)}
+                        className="hover:bg-primary hover:text-primary-foreground"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="hover:bg-destructive hover:text-destructive-foreground">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -547,73 +645,137 @@ const CategoryManager = () => {
                   </div>
                 </CardHeader>
 
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <CardContent className="pt-0 space-y-6">
+                  {/* Status dos campos */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {completeness.fields.map((field) => {
                       const IconComponent = field.icon;
                       return (
                         <div 
                           key={field.name}
-                          className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${
+                          className={`relative overflow-hidden rounded-xl border p-4 transition-all duration-300 hover:scale-105 ${
                             field.filled 
-                              ? 'border-success/20 bg-success/5' 
-                              : 'border-muted bg-muted/30'
+                              ? 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800' 
+                              : 'border-muted bg-gradient-to-br from-muted/20 to-muted/5'
                           }`}
                         >
-                          <IconComponent className={`h-4 w-4 ${
-                            field.filled ? 'text-success' : 'text-muted-foreground'
-                          }`} />
-                          <div className="flex-1 min-w-0">
-                            <div className={`text-xs font-medium truncate ${
-                              field.filled ? 'text-success-foreground' : 'text-muted-foreground'
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${
+                              field.filled 
+                                ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                                : 'bg-muted text-muted-foreground'
                             }`}>
-                              {field.name === 'target_audience' && 'Público-Alvo'}
-                              {field.name === 'keywords' && 'Keywords'}
-                              {field.name === 'market_keywords' && 'Mercado'}
-                              {field.name === 'search_intent_keywords' && 'Busca'}
+                              <IconComponent className="h-4 w-4" />
                             </div>
-                            <div className={`text-xs ${
-                              field.filled ? 'text-success-foreground/80' : 'text-muted-foreground'
-                            }`}>
-                              {field.count} {field.count === 1 ? 'item' : 'itens'}
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-sm font-semibold truncate ${
+                                field.filled ? 'text-green-800 dark:text-green-200' : 'text-muted-foreground'
+                              }`}>
+                                {field.name === 'target_audience' && 'Público-Alvo'}
+                                {field.name === 'keywords' && 'Keywords'}
+                                {field.name === 'market_keywords' && 'Mercado'}
+                                {field.name === 'search_intent_keywords' && 'Busca'}
+                              </div>
+                              <div className={`text-xs font-medium ${
+                                field.filled ? 'text-green-700 dark:text-green-300' : 'text-muted-foreground'
+                              }`}>
+                                {field.count} {field.count === 1 ? 'item' : 'itens'}
+                              </div>
                             </div>
                           </div>
+                          {field.filled && (
+                            <div className="absolute top-1 right-1">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Preview dos dados */}
-                  <div className="mt-4 space-y-2">
+                  {/* Preview expandido dos dados */}
+                  <div className="space-y-4">
                     {config.target_audience && config.target_audience.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="text-xs font-medium text-muted-foreground mr-2">Público:</span>
-                        {config.target_audience.slice(0, 3).map((audience: string, index: number) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {audience}
-                          </Badge>
-                        ))}
-                        {config.target_audience.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{config.target_audience.length - 3}
-                          </Badge>
-                        )}
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">Público-Alvo ({config.target_audience.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {config.target_audience.slice(0, 6).map((audience: string, index: number) => (
+                            <Badge key={index} variant="outline" className="bg-white/50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200">
+                              {audience}
+                            </Badge>
+                          ))}
+                          {config.target_audience.length > 6 && (
+                            <Badge variant="outline" className="bg-white/50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200">
+                              +{config.target_audience.length - 6} mais
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
                     
                     {config.keywords && config.keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="text-xs font-medium text-muted-foreground mr-2">Keywords:</span>
-                        {config.keywords.slice(0, 4).map((keyword: string, index: number) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {keyword}
-                          </Badge>
-                        ))}
-                        {config.keywords.length > 4 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{config.keywords.length - 4}
-                          </Badge>
-                        )}
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Hash className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <span className="text-sm font-semibold text-purple-800 dark:text-purple-200">Keywords ({config.keywords.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {config.keywords.slice(0, 8).map((keyword: string, index: number) => (
+                            <Badge key={index} variant="secondary" className="bg-white/50 dark:bg-purple-950/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200">
+                              {keyword}
+                            </Badge>
+                          ))}
+                          {config.keywords.length > 8 && (
+                            <Badge variant="secondary" className="bg-white/50 dark:bg-purple-950/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200">
+                              +{config.keywords.length - 8} mais
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {config.market_keywords && config.market_keywords.length > 0 && (
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <TrendingUp className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                          <span className="text-sm font-semibold text-orange-800 dark:text-orange-200">Keywords de Mercado ({config.market_keywords.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {config.market_keywords.slice(0, 6).map((keyword: string, index: number) => (
+                            <Badge key={index} variant="outline" className="bg-white/50 dark:bg-orange-950/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200">
+                              {keyword}
+                            </Badge>
+                          ))}
+                          {config.market_keywords.length > 6 && (
+                            <Badge variant="outline" className="bg-white/50 dark:bg-orange-950/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200">
+                              +{config.market_keywords.length - 6} mais
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {config.search_intent_keywords && config.search_intent_keywords.length > 0 && (
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20 border border-teal-200 dark:border-teal-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Search className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                          <span className="text-sm font-semibold text-teal-800 dark:text-teal-200">Keywords de Intenção de Busca ({config.search_intent_keywords.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {config.search_intent_keywords.slice(0, 6).map((keyword: string, index: number) => (
+                            <Badge key={index} variant="outline" className="bg-white/50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200">
+                              {keyword}
+                            </Badge>
+                          ))}
+                          {config.search_intent_keywords.length > 6 && (
+                            <Badge variant="outline" className="bg-white/50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200">
+                              +{config.search_intent_keywords.length - 6} mais
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
