@@ -163,10 +163,23 @@ export const useCategoryConfig = () => {
     }
   }, [toast]);
 
-  const getConfigByCategory = useCallback((category: string, subcategory: string) => {
-    return configs.find(config => 
+  const getConfigByCategory = useCallback((category: string, subcategory: string = '') => {
+    // Primeiro tenta buscar a configuração exata (categoria + subcategoria)
+    let config = configs.find(config => 
       config.category === category && config.subcategory === subcategory
     );
+    
+    // Se não encontrar e não foi especificada subcategoria, busca qualquer configuração da categoria
+    if (!config && !subcategory) {
+      config = configs.find(config => config.category === category);
+    }
+    
+    // Se não encontrar configuração específica mas foi fornecida subcategoria, busca configuração geral da categoria
+    if (!config && subcategory) {
+      config = configs.find(config => config.category === category && !config.subcategory);
+    }
+    
+    return config;
   }, [configs]);
 
   useEffect(() => {

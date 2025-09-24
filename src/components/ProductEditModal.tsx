@@ -115,35 +115,53 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
   // Função para carregar configurações padrão de categoria
   const loadCategoryDefaults = useCallback((category: string, subcategory: string) => {
-    const config = getConfigByCategory(category, subcategory);
+    // Tenta buscar configuração específica (categoria + subcategoria)
+    let config = getConfigByCategory(category, subcategory);
+    
+    // Se não encontrar configuração específica, tenta buscar apenas por categoria
+    if (!config && category) {
+      const generalConfigs = getConfigByCategory(category, '');
+      config = generalConfigs;
+    }
+    
     if (config) {
+      console.log('Aplicando configuração:', config);
       // Auto-preencher apenas campos vazios para não sobrescrever dados já inseridos
       const updates: Partial<Product> = {};
+      let fieldsUpdated = [];
       
       if (config.target_audience.length > 0 && (!targetAudience || targetAudience.length === 0)) {
         setTargetAudience(config.target_audience);
+        fieldsUpdated.push('Público-Alvo');
       }
       
       if (config.keywords.length > 0 && (!formData.keywords || formData.keywords.length === 0)) {
         updates.keywords = config.keywords;
+        fieldsUpdated.push('Keywords');
       }
       
       if (config.market_keywords.length > 0 && (!marketKeywords || marketKeywords.length === 0)) {
         setMarketKeywords(config.market_keywords);
+        fieldsUpdated.push('Keywords de Mercado');
       }
       
       if (config.search_intent_keywords.length > 0 && (!searchIntentKeywords || searchIntentKeywords.length === 0)) {
         setSearchIntentKeywords(config.search_intent_keywords);
+        fieldsUpdated.push('Keywords de Intenção de Busca');
       }
       
       if (Object.keys(updates).length > 0) {
         setFormData(prev => ({ ...prev, ...updates }));
       }
       
-      toast({
-        title: "Campos preenchidos automaticamente",
-        description: "Dados padrão da categoria foram aplicados aos campos vazios"
-      });
+      if (fieldsUpdated.length > 0) {
+        toast({
+          title: "Campos preenchidos automaticamente",
+          description: `${fieldsUpdated.join(', ')} foram aplicados da configuração da categoria`
+        });
+      }
+    } else {
+      console.log('Nenhuma configuração encontrada para:', { category, subcategory });
     }
   }, [getConfigByCategory, targetAudience, formData.keywords, marketKeywords, searchIntentKeywords, toast]);
 
@@ -679,7 +697,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
+                <PopoverContent className="w-full p-0 z-50 bg-popover border">
                   <Command>
                     <CommandInput 
                       placeholder="Digite para buscar ou criar categoria..." 
@@ -703,6 +721,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                               subcategory: '' // Reset subcategoria quando mudar categoria
                             }));
                             setCategoryOpen(false);
+                            
+                            // Auto-preencher com configurações da categoria se disponível
+                            loadCategoryDefaults(currentValue, '');
                           }}
                         >
                           <Check
@@ -788,7 +809,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
+                <PopoverContent className="w-full p-0 z-50 bg-popover border">
                   <Command>
                     <CommandInput 
                       placeholder="Digite para buscar ou criar subcategoria..." 
