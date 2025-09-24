@@ -71,6 +71,11 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            onBlur={() => {
+              if (inputValue.trim()) {
+                addTag(inputValue)
+              }
+            }}
             placeholder={value.length === 0 ? placeholder : ""}
             className="flex-1 border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
           />
