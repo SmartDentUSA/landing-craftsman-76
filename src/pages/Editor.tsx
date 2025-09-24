@@ -1869,23 +1869,34 @@ const EditorContent = () => {
   }, [id, getLandingPage]);
 
   const handleSave = () => {
+    console.log('[DEBUG] Salvando landing page...');
+    console.log('[DEBUG] Dados originais:', data);
+    
     const processedData = onSave(data);
+    
+    console.log('[DEBUG] Dados processados:', processedData);
     
     const storeData = {
       name: processedData.name,
       status: processedData.status,
       template: processedData.template,
-      data: processedData
+      data: processedData,
+      // Salvar IDs dos produtos selecionados se existirem
+      selectedProductIds: selectedProductIds || []
     };
+    
+    console.log('[DEBUG] Dados da store:', storeData);
     
     if (id) {
       updateLandingPage(id, storeData);
+      console.log('[DEBUG] Landing page atualizada com ID:', id);
       toast({
         title: "Alterações salvas",
         description: "Landing page atualizada com sucesso!",
       });
     } else {
       const newId = addLandingPage(storeData);
+      console.log('[DEBUG] Nova landing page criada com ID:', newId);
       navigate(`/editor/${newId}`);
       toast({
         title: "Landing page criada",

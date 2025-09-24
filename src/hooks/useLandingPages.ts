@@ -97,6 +97,7 @@ const useLandingPages = create<LandingPagesStore>()(
         return id;
       },
       updateLandingPage: (id, updates) => {
+        console.log('[DEBUG] Atualizando landing page:', id, updates);
         set((state) => ({
           landingPages: state.landingPages.map((lp) =>
             lp.id === id
@@ -109,6 +110,7 @@ const useLandingPages = create<LandingPagesStore>()(
               : lp
           )
         }));
+        console.log('[DEBUG] Landing page atualizada no store local');
       },
       getLandingPage: (id) => {
         return get().landingPages.find((lp) => lp.id === id);
@@ -172,6 +174,7 @@ const useLandingPages = create<LandingPagesStore>()(
 
       // Novos métodos para gerenciar produtos selecionados
       updateSelectedProducts: (landingPageId: string, productIds: string[]) => {
+        console.log('[DEBUG] Atualizando produtos selecionados:', landingPageId, productIds);
         set((state) => ({
           landingPages: state.landingPages.map(lp =>
             lp.id === landingPageId
@@ -184,6 +187,7 @@ const useLandingPages = create<LandingPagesStore>()(
               : lp
           )
         }));
+        console.log('[DEBUG] Produtos selecionados atualizados no store local');
       },
 
       getSelectedProducts: (landingPageId: string) => {

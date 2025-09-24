@@ -621,8 +621,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         resource_cta1: formData.resource_cta1,
         resource_cta2: formData.resource_cta2,
         resource_cta3: formData.resource_cta3,
+        // Offer Discount CTA
+        offer_discount_cta: formData.offer_discount_cta,
         updated_at: new Date().toISOString()
       };
+
+      console.log('[DEBUG] Dados que serão salvos:', dataToSave);
 
       let result;
       if (isEditing) {
@@ -648,13 +652,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       }
 
       console.log('[DEBUG] Produto salvo com sucesso:', result.data);
-      onSave(result.data);
-      onClose();
       
       toast({
         title: "Sucesso",
-        description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso!`
+        description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso! Configurações salvas.`,
       });
+
+      onSave(result.data);
+      onClose();
     } catch (error) {
       console.error('[DEBUG] Error saving product:', error);
       
