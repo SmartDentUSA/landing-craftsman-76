@@ -601,7 +601,7 @@ export function RepositoryPanel({
                     Perfil da Empresa
                   </DialogTitle>
                 </DialogHeader>
-                <CompanyProfileManager 
+                <CompanyProfileManagerNew 
                   onProfileChange={onCompanyProfileChange}
                 />
               </DialogContent>
@@ -730,13 +730,12 @@ export function RepositoryPanel({
 
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="products">Produtos</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
-            <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
-            <TabsTrigger value="kols">KOLs</TabsTrigger>
-            <TabsTrigger value="company">Empresa</TabsTrigger>
-          </TabsList>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="products">Produtos</TabsTrigger>
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
+              <TabsTrigger value="kols">KOLs</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="products" className="mt-4">
             <div className="space-y-4">
@@ -783,11 +782,6 @@ export function RepositoryPanel({
             <KOLManager />
           </TabsContent>
 
-          <TabsContent value="company" className="mt-4">
-            <CompanyProfileManagerNew 
-              onProfileChange={onCompanyProfileChange || (() => {})}
-            />
-          </TabsContent>
         </Tabs>
       </CardContent>
 
