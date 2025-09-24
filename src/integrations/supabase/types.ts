@@ -478,8 +478,13 @@ export type Database = {
           original_data: Json | null
           price: number | null
           product_url: string | null
+          resource_cta1: Json | null
+          resource_cta2: Json | null
+          resource_cta3: Json | null
           sales_pitch: string | null
           search_intent_keywords: Json | null
+          selected: boolean | null
+          show_in_resources: boolean | null
           source_landing_page_id: string | null
           source_type: string
           subcategory: string | null
@@ -513,8 +518,13 @@ export type Database = {
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
+          resource_cta1?: Json | null
+          resource_cta2?: Json | null
+          resource_cta3?: Json | null
           sales_pitch?: string | null
           search_intent_keywords?: Json | null
+          selected?: boolean | null
+          show_in_resources?: boolean | null
           source_landing_page_id?: string | null
           source_type: string
           subcategory?: string | null
@@ -548,8 +558,13 @@ export type Database = {
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
+          resource_cta1?: Json | null
+          resource_cta2?: Json | null
+          resource_cta3?: Json | null
           sales_pitch?: string | null
           search_intent_keywords?: Json | null
+          selected?: boolean | null
+          show_in_resources?: boolean | null
           source_landing_page_id?: string | null
           source_type?: string
           subcategory?: string | null
