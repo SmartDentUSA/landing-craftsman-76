@@ -33,92 +33,123 @@ interface CategoryProviderProps {
 export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const productCategories = useProductCategories();
-  const categoryConfigs = useCategoryConfig();
+  try {
+    console.log('CategoryProvider: Inicializando...');
+    const productCategories = useProductCategories();
+    console.log('CategoryProvider: useProductCategories loaded', productCategories);
+    const categoryConfigs = useCategoryConfig();
+    console.log('CategoryProvider: useCategoryConfig loaded', categoryConfigs);
 
-  const refreshAllCategories = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      // Refresh both hooks simultaneously
-      await Promise.all([
-        productCategories.refreshCategories(),
-        categoryConfigs.refreshConfigs()
-      ]);
-    } catch (error) {
-      console.error('Error refreshing categories:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [productCategories, categoryConfigs]);
+    const refreshAllCategories = useCallback(async () => {
+      setIsRefreshing(true);
+      try {
+        // Refresh both hooks simultaneously
+        await Promise.all([
+          productCategories.refreshCategories(),
+          categoryConfigs.refreshConfigs()
+        ]);
+      } catch (error) {
+        console.error('Error refreshing categories:', error);
+      } finally {
+        setIsRefreshing(false);
+      }
+    }, [productCategories, categoryConfigs]);
 
-  const refreshProductCategories = useCallback(() => {
-    productCategories.refreshCategories();
-  }, [productCategories]);
+    const refreshProductCategories = useCallback(() => {
+      productCategories.refreshCategories();
+    }, [productCategories]);
 
-  const refreshCategoryConfigs = useCallback(() => {
-    categoryConfigs.refreshConfigs();
-  }, [categoryConfigs]);
+    const refreshCategoryConfigs = useCallback(() => {
+      categoryConfigs.refreshConfigs();
+    }, [categoryConfigs]);
 
-  const notifyCategoryChange = useCallback(async (type: 'rename' | 'delete' | 'create', data?: any) => {
-    console.log(`Category change notification: ${type}`, data);
+    const notifyCategoryChange = useCallback(async (type: 'rename' | 'delete' | 'create', data?: any) => {
+      console.log(`Category change notification: ${type}`, data);
+      
+      // Automatically refresh all category data when changes occur
+      await refreshAllCategories();
+    }, [refreshAllCategories]);
+
+    // Create unified category lists combining both data sources
+    const unifiedCategories = useMemo(() => {
+      const productCats = productCategories.categories || [];
+      const configCategories = (categoryConfigs.configs || []).map(config => config.category);
+      return [...new Set([...productCats, ...configCategories])].sort();
+    }, [productCategories.categories, categoryConfigs.configs]);
+
+    const unifiedSubcategories = useMemo(() => {
+      const productSubcats = productCategories.subcategories || [];
+      const configSubcategories = (categoryConfigs.configs || []).map(config => config.subcategory);
+      return [...new Set([...productSubcats, ...configSubcategories])].sort();
+    }, [productCategories.subcategories, categoryConfigs.configs]);
+
+    const getUnifiedSubcategoriesForCategory = useCallback((category: string) => {
+      // Get subcategories from products
+      const productSubcats = productCategories.getSubcategoriesForCategory?.(category) || [];
+      
+      // Get subcategories from configs for this category
+      const configSubcats = (categoryConfigs.configs || [])
+        .filter(config => config.category === category)
+        .map(config => config.subcategory);
+      
+      // Combine and deduplicate
+      return [...new Set([...productSubcats, ...configSubcats])].sort();
+    }, [productCategories.getSubcategoriesForCategory, categoryConfigs.configs]);
+
+    const value: CategoryContextType = {
+      // Data from hooks
+      categories: productCategories.categories || [],
+      subcategories: productCategories.subcategories || [],
+      getSubcategoriesForCategory: productCategories.getSubcategoriesForCategory || (() => []),
+      configs: categoryConfigs.configs || [],
+      loading: productCategories.loading || categoryConfigs.loading || isRefreshing,
+      
+      // Unified data
+      unifiedCategories,
+      unifiedSubcategories,
+      getUnifiedSubcategoriesForCategory,
+      
+      // Global refresh functions
+      refreshAllCategories,
+      refreshProductCategories,
+      refreshCategoryConfigs,
+      
+      // Notification system
+      notifyCategoryChange
+    };
+
+    console.log('CategoryProvider: value criado', value);
+
+    return (
+      <CategoryContext.Provider value={value}>
+        {children}
+      </CategoryContext.Provider>
+    );
+  } catch (error) {
+    console.error('Erro no CategoryProvider:', error);
     
-    // Automatically refresh all category data when changes occur
-    await refreshAllCategories();
-  }, [refreshAllCategories]);
+    // Return a fallback provider with default values
+    const fallbackValue: CategoryContextType = {
+      categories: [],
+      subcategories: [],
+      getSubcategoriesForCategory: () => [],
+      configs: [],
+      loading: false,
+      unifiedCategories: [],
+      unifiedSubcategories: [],
+      getUnifiedSubcategoriesForCategory: () => [],
+      refreshAllCategories: async () => {},
+      refreshProductCategories: () => {},
+      refreshCategoryConfigs: () => {},
+      notifyCategoryChange: () => {}
+    };
 
-  // Create unified category lists combining both data sources
-  const unifiedCategories = useMemo(() => {
-    const productCats = productCategories.categories;
-    const configCategories = categoryConfigs.configs.map(config => config.category);
-    return [...new Set([...productCats, ...configCategories])].sort();
-  }, [productCategories.categories, categoryConfigs.configs]);
-
-  const unifiedSubcategories = useMemo(() => {
-    const productSubcats = productCategories.subcategories;
-    const configSubcategories = categoryConfigs.configs.map(config => config.subcategory);
-    return [...new Set([...productSubcats, ...configSubcategories])].sort();
-  }, [productCategories.subcategories, categoryConfigs.configs]);
-
-  const getUnifiedSubcategoriesForCategory = useCallback((category: string) => {
-    // Get subcategories from products
-    const productSubcats = productCategories.getSubcategoriesForCategory(category);
-    
-    // Get subcategories from configs for this category
-    const configSubcats = categoryConfigs.configs
-      .filter(config => config.category === category)
-      .map(config => config.subcategory);
-    
-    // Combine and deduplicate
-    return [...new Set([...productSubcats, ...configSubcats])].sort();
-  }, [productCategories.getSubcategoriesForCategory, categoryConfigs.configs]);
-
-  const value: CategoryContextType = {
-    // Data from hooks
-    categories: productCategories.categories,
-    subcategories: productCategories.subcategories,
-    getSubcategoriesForCategory: productCategories.getSubcategoriesForCategory,
-    configs: categoryConfigs.configs,
-    loading: productCategories.loading || categoryConfigs.loading || isRefreshing,
-    
-    // Unified data
-    unifiedCategories,
-    unifiedSubcategories,
-    getUnifiedSubcategoriesForCategory,
-    
-    // Global refresh functions
-    refreshAllCategories,
-    refreshProductCategories,
-    refreshCategoryConfigs,
-    
-    // Notification system
-    notifyCategoryChange
-  };
-
-  return (
-    <CategoryContext.Provider value={value}>
-      {children}
-    </CategoryContext.Provider>
-  );
+    return (
+      <CategoryContext.Provider value={fallbackValue}>
+        {children}
+      </CategoryContext.Provider>
+    );
+  }
 };
 
 export const useCategoryContext = () => {
