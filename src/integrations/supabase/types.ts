@@ -19,7 +19,6 @@ export type Database = {
           ai_keywords: Json | null
           approved_at: string
           approved_by: string | null
-          contextual_seo_info: string | null
           created_at: string
           display_order: number | null
           id: string
@@ -27,12 +26,12 @@ export type Database = {
           notes: string | null
           raw_review_id: string
           seo_generated_by_ai: boolean | null
+          seo_hidden_content: string | null
         }
         Insert: {
           ai_keywords?: Json | null
           approved_at?: string
           approved_by?: string | null
-          contextual_seo_info?: string | null
           created_at?: string
           display_order?: number | null
           id?: string
@@ -40,12 +39,12 @@ export type Database = {
           notes?: string | null
           raw_review_id: string
           seo_generated_by_ai?: boolean | null
+          seo_hidden_content?: string | null
         }
         Update: {
           ai_keywords?: Json | null
           approved_at?: string
           approved_by?: string | null
-          contextual_seo_info?: string | null
           created_at?: string
           display_order?: number | null
           id?: string
@@ -53,6 +52,7 @@ export type Database = {
           notes?: string | null
           raw_review_id?: string
           seo_generated_by_ai?: boolean | null
+          seo_hidden_content?: string | null
         }
         Relationships: [
           {
@@ -185,11 +185,6 @@ export type Database = {
           location: string | null
           main_products_services: string | null
           mission_statement: string | null
-          seo_competitive_advantages: string | null
-          seo_context_keywords: Json | null
-          seo_market_positioning: string | null
-          seo_service_areas: string | null
-          seo_technical_expertise: string | null
           social_media_links: Json | null
           target_audience: string | null
           team_size: string | null
@@ -219,11 +214,6 @@ export type Database = {
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
-          seo_competitive_advantages?: string | null
-          seo_context_keywords?: Json | null
-          seo_market_positioning?: string | null
-          seo_service_areas?: string | null
-          seo_technical_expertise?: string | null
           social_media_links?: Json | null
           target_audience?: string | null
           team_size?: string | null
@@ -253,11 +243,6 @@ export type Database = {
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
-          seo_competitive_advantages?: string | null
-          seo_context_keywords?: Json | null
-          seo_market_positioning?: string | null
-          seo_service_areas?: string | null
-          seo_technical_expertise?: string | null
           social_media_links?: Json | null
           target_audience?: string | null
           team_size?: string | null

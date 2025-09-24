@@ -54,10 +54,10 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/ai_keywords}}
     
     <!-- SEO Context Information -->
-    {{#contextual_seo_info}}
+    {{#seo_hidden_content}}
     <meta name="theme-color" content="#007bff">
-    <!-- Informações Contextuais de SEO: {{contextual_seo_info}} -->
-    {{/contextual_seo_info}}
+    <!-- SEO Context: {{seo_hidden_content}} -->
+    {{/seo_hidden_content}}
     
     <!-- Schema Markup JSON-LD -->
     {{#schema_json_ld}}

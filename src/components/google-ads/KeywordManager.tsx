@@ -7,31 +7,26 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus } from 'lucide-react';
 import { KeywordCollector } from '@/lib/google-ads/collectors/KeywordCollector';
-import { useSelectedProducts } from '@/hooks/useSelectedProducts';
 
 interface KeywordManagerProps {
   config: any;
   data: any;
-  selectedProductIds?: string[];
   onChange: (updates: any) => void;
 }
 
-export const KeywordManager = ({ config, data, selectedProductIds = [], onChange }: KeywordManagerProps) => {
-  const { loadProductsByIds } = useSelectedProducts();
+export const KeywordManager = ({ config, data, onChange }: KeywordManagerProps) => {
   const [generatedKeywords, setGeneratedKeywords] = useState<string[]>([]);
   const [extraKeywords, setExtraKeywords] = useState<string>('');
   const [negativeKeywords, setNegativeKeywords] = useState<string>('');
-  const [productKeywords, setProductKeywords] = useState<string[]>([]);
 
   useEffect(() => {
     generateKeywords();
-  }, [config.include_ai_keywords, config.include_faq_longtail, data, selectedProductIds]);
+  }, [config.include_ai_keywords, config.include_faq_longtail, data]);
 
-  const generateKeywords = async () => {
+  const generateKeywords = () => {
     const aiKeywords: string[] = [];
     const faqKeywords: string[] = [];
     const seoKeywords: string[] = [];
-    let productKeywords: string[] = [];
 
     // Collect from AI keywords
     if (config.include_ai_keywords && data?.seo?.ai_keywords) {
@@ -52,21 +47,7 @@ export const KeywordManager = ({ config, data, selectedProductIds = [], onChange
       seoKeywords.push(...data.seo.keywords.filter((k: string) => k && k.trim().length > 0));
     }
 
-    // Collect from selected products
-    if (selectedProductIds.length > 0) {
-      try {
-        const products = await loadProductsByIds(selectedProductIds);
-        productKeywords = KeywordCollector.collectFromProducts(products);
-        setProductKeywords(productKeywords);
-      } catch (error) {
-        console.warn('Error collecting product keywords:', error);
-        setProductKeywords([]);
-      }
-    } else {
-      setProductKeywords([]);
-    }
-
-    const allKeywords = [...aiKeywords, ...faqKeywords, ...seoKeywords, ...productKeywords];
+    const allKeywords = [...aiKeywords, ...faqKeywords, ...seoKeywords];
     setGeneratedKeywords(KeywordCollector.normalizeKeywords(allKeywords));
   };
 
@@ -176,25 +157,6 @@ export const KeywordManager = ({ config, data, selectedProductIds = [], onChange
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {data.seo.keywords.slice(0, 10).map((keyword: string, index: number) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {keyword}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Keywords from Products */}
-              {selectedProductIds.length > 0 && productKeywords.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="default">Produtos Selecionados</Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {productKeywords.length} keywords
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {productKeywords.slice(0, 10).map((keyword, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {keyword}
                       </Badge>

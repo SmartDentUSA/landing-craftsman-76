@@ -274,8 +274,7 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
         body: {
           landingPageId,
           config: campaignConfig,
-          landingPageData: data,
-          selectedProductIds: selectedProductIds || []
+          landingPageData: data
         }
       });
 
@@ -469,7 +468,6 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
             <KeywordManager
               config={campaignConfig}
               data={data}
-              selectedProductIds={selectedProductIds}
               onChange={(updates) => setCampaignConfig(prev => ({ ...prev, ...updates }))}
             />
           </TabsContent>

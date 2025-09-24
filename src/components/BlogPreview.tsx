@@ -6,7 +6,7 @@ import { Loader2, Eye, Edit3, Sparkles, FileText, RefreshCw, AlertTriangle } fro
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-// Removed DualBlogGeneratorWithKOL import - component deleted
+import { DualBlogGeneratorWithKOL } from "./DualBlogGeneratorWithKOL";
 
 interface BlogPreviewProps {
   landingPageId: string;
@@ -39,7 +39,12 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
     fetchPublishedBlog();
   }, [landingPageId]);
 
-  // Manual generation only - no auto-generation to prevent infinite loading
+  // Generate blog preview automatically when component mounts or data changes
+  useEffect(() => {
+    if (landingPageData && (!blogPost || shouldRegenerate())) {
+      generateBlogPreview();
+    }
+  }, [landingPageData]);
 
   // Check sync status when both preview and published blogs are available
   useEffect(() => {
@@ -411,32 +416,19 @@ Para mais informações, entre em contato conosco.
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-muted-foreground space-y-4">
+          <div className="text-center py-8 text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm mb-4">Clique no botão abaixo para gerar um blog com IA</p>
-            <Button 
-              onClick={generateBlogPreview}
-              disabled={generating}
-              size="default"
-              className="flex items-center gap-2"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Gerando Blog...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Gerar Blog com IA
-                </>
-              )}
-            </Button>
+            <p className="text-sm">Gerando preview do blog...</p>
           </div>
         )}
       </CardContent>
     </Card>
 
+    <DualBlogGeneratorWithKOL 
+      landingPageId={landingPageId}
+      landingPageData={landingPageData}
+      selectedProductIds={selectedProductIds}
+    />
   </div>
   );
 }

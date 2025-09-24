@@ -197,12 +197,12 @@ const DashboardContent = () => {
     }
   };
 
-  const handleCreateNew = async () => {
+  const handleCreateNew = () => {
     try {
       console.log('🚀 Creating new landing page');
       
       // Criar nova landing page com dados mínimos padrão
-      const newId = await addLandingPage({
+      const newId = addLandingPage({
         name: "Nova Landing Page",
         status: "draft",
         template: "default"
@@ -236,7 +236,7 @@ const DashboardContent = () => {
     }
   };
 
-  const handleDuplicate = async (landingPage: LandingPage) => {
+  const handleDuplicate = (landingPage: LandingPage) => {
     try {
       console.log('📋 Duplicating landing page:', landingPage.name);
       
@@ -251,7 +251,7 @@ const DashboardContent = () => {
       };
       
       // Add the duplicate to the store
-      const newId = await addLandingPage(duplicateData);
+      const newId = addLandingPage(duplicateData);
       console.log('✅ Landing page duplicated with ID:', newId);
       
       toast({

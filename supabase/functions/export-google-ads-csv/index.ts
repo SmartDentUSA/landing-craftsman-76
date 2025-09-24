@@ -10,8 +10,6 @@ const corsHeaders = {
 interface ExportRequest {
   landingPageId: string;
   config: any; // GoogleAdsCampaignConfig
-  landingPageData?: any;
-  selectedProductIds?: string[];
 }
 
 serve(async (req) => {
@@ -21,9 +19,9 @@ serve(async (req) => {
   }
 
   try {
-    const { landingPageId, config, landingPageData, selectedProductIds = [] }: ExportRequest = await req.json();
+    const { landingPageId, config }: ExportRequest = await req.json();
 
-    console.log('📊 Iniciando export Google Ads CSV:', { landingPageId, config, selectedProductIds });
+    console.log('📊 Iniciando export Google Ads CSV:', { landingPageId, config });
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -31,23 +29,23 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Collect data from existing tables
-    const finalLandingPageData = landingPageData || await collectLandingPageData(supabase, landingPageId);
-    const keywords = await collectKeywords(supabase, finalLandingPageData, config, selectedProductIds);
-    const sitelinks = await collectSitelinks(finalLandingPageData, config);
+    const landingPageData = await collectLandingPageData(supabase, landingPageId);
+    const keywords = await collectKeywords(supabase, landingPageData, config);
+    const sitelinks = await collectSitelinks(landingPageData, config);
     const videos = await collectVideos(supabase, landingPageId, config);
 
     // Generate ad copies using AI
-    const adCopies = await generateAdCopies(finalLandingPageData, keywords);
+    const adCopies = await generateAdCopies(landingPageData, keywords);
 
     // Build CSV
     const csvData = buildGoogleAdsCSV({
-      campaignName: `LP ${finalLandingPageData.name} - Search`,
+      campaignName: `LP ${landingPageData.name} - Search`,
       config,
       keywords,
       adCopies,
       sitelinks,
       videos,
-      finalUrl: finalLandingPageData.canonical_url
+      finalUrl: landingPageData.canonical_url
     });
 
     // Save configuration to database
@@ -79,66 +77,33 @@ serve(async (req) => {
 });
 
 async function collectLandingPageData(supabase: any, landingPageId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('landing_pages')
-      .select('*')
-      .eq('id', landingPageId)
-      .single();
-
-    if (error) throw error;
-
-    return {
-      name: data.name || `Landing Page ${landingPageId}`,
-      canonical_url: data.data?.seo?.canonical_url || `https://example.com/lp/${landingPageId}`,
-      seo_title: data.data?.seo?.title || data.data?.banner?.title || 'SEO Title',
-      seo_description: data.data?.seo?.description || data.data?.banner?.subtitle || 'SEO Description',
-      ai_keywords: data.data?.seo?.ai_keywords || [],
-      faq: data.data?.faq || [],
-      intelligent_links: data.data?.intelligent_links || {}
-    };
-  } catch (error) {
-    console.error('Error fetching landing page data:', error);
-    return {
-      name: `Landing Page ${landingPageId}`,
-      canonical_url: `https://example.com/lp/${landingPageId}`,
-      seo_title: 'SEO Title Example',
-      seo_description: 'SEO Description Example',
-      ai_keywords: [],
-      faq: [],
-      intelligent_links: {}
-    };
-  }
+  // This is a placeholder - we need to implement the actual data collection
+  // based on your existing landing page structure
+  return {
+    name: `Landing Page ${landingPageId}`,
+    canonical_url: `https://example.com/lp/${landingPageId}`,
+    seo_title: 'SEO Title Example',
+    seo_description: 'SEO Description Example',
+    ai_keywords: ['keyword1', 'keyword2'],
+    intelligent_links: {
+      'Comprar Produto': 'https://loja.example.com/produto',
+      'Catálogo': 'https://loja.example.com/catalogo'
+    }
+  };
 }
 
-async function collectKeywords(supabase: any, landingPageData: any, config: any, selectedProductIds: string[] = []): Promise<string[]> {
+async function collectKeywords(supabase: any, landingPageData: any, config: any): Promise<string[]> {
   let keywords: string[] = [];
 
   // Collect from AI keywords
   if (config.include_ai_keywords && landingPageData.ai_keywords) {
-    keywords.push(...collectFromAI(landingPageData.ai_keywords));
+    keywords.push(...landingPageData.ai_keywords);
   }
 
   // Collect from FAQ (if enabled)
-  if (config.include_faq_longtail && landingPageData.faq) {
-    keywords.push(...collectFromFAQ(landingPageData.faq));
-  }
-
-  // Collect from selected products
-  if (selectedProductIds.length > 0) {
-    try {
-      const { data: products } = await supabase
-        .from('products_repository')
-        .select('*')
-        .in('id', selectedProductIds)
-        .eq('approved', true);
-
-      if (products) {
-        keywords.push(...collectFromProducts(products));
-      }
-    } catch (error) {
-      console.error('Error collecting product keywords:', error);
-    }
+  if (config.include_faq_longtail) {
+    // TODO: Fetch FAQ data and extract long-tail keywords
+    keywords.push('como funciona', 'qual o preço', 'onde comprar');
   }
 
   // Add manual keywords
@@ -146,78 +111,7 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
     keywords.push(...config.extra_keywords);
   }
 
-  return normalizeKeywords(keywords);
-}
-
-// Helper functions from KeywordCollector
-function collectFromAI(aiKeywords: any[] = []): string[] {
-  return aiKeywords
-    .filter(k => typeof k === 'string' && k.trim().length > 0)
-    .map(k => k.trim().toLowerCase())
-    .filter(isCommercialKeyword);
-}
-
-function collectFromProducts(products: any[] = []): string[] {
-  const keywords: string[] = [];
-  
-  for (const product of products) {
-    if (product.keywords && Array.isArray(product.keywords)) {
-      keywords.push(...product.keywords);
-    }
-    if (product.market_keywords && Array.isArray(product.market_keywords)) {
-      keywords.push(...product.market_keywords);
-    }
-    if (product.search_intent_keywords && Array.isArray(product.search_intent_keywords)) {
-      keywords.push(...product.search_intent_keywords);
-    }
-    if (product.category) {
-      keywords.push(product.category);
-    }
-    if (product.subcategory) {
-      keywords.push(product.subcategory);
-    }
-  }
-  
-  return keywords.filter(k => k && k.trim().length > 0);
-}
-
-function collectFromFAQ(faq: Array<{ question: string; answer: string }>): string[] {
-  const keywords: string[] = [];
-  
-  for (const item of faq) {
-    if (item.question) {
-      const longTailKeywords = extractLongTailFromQuestion(item.question);
-      keywords.push(...longTailKeywords);
-    }
-  }
-  
-  return keywords;
-}
-
-function extractLongTailFromQuestion(question: string): string[] {
-  return question
-    .toLowerCase()
-    .replace(/[?!.]/g, '')
-    .split(' ')
-    .filter(word => word.length > 3)
-    .slice(0, 5);
-}
-
-function isCommercialKeyword(keyword: string): boolean {
-  const commercialTerms = [
-    'preço', 'valor', 'custo', 'comprar', 'vender', 'orçamento',
-    'promoção', 'desconto', 'oferta', 'melhor', 'qualidade',
-    'serviço', 'produto', 'especialista', 'profissional'
-  ];
-  
-  return commercialTerms.some(term => keyword.includes(term));
-}
-
-function normalizeKeywords(keywords: string[]): string[] {
-  return [...new Set(keywords
-    .filter(k => k && k.trim().length > 0)
-    .map(k => k.trim().toLowerCase())
-  )];
+  return [...new Set(keywords)]; // Remove duplicates
 }
 
 async function collectSitelinks(landingPageData: any, config: any) {

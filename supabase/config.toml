@@ -3,12 +3,6 @@ project_id = "pgfgripuanuwwolmtknn"
 [functions.ai-content-generator]
 verify_jwt = false
 
-[functions.auto-generate-ai-content]
-verify_jwt = false
-
-[functions.generate-blog-content]
-verify_jwt = false
-
 [functions.generate-product-ai-content]
 verify_jwt = false
 

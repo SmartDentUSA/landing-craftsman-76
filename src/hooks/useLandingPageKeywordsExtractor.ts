@@ -42,13 +42,8 @@ export function useLandingPageKeywordsExtractor() {
       }
 
       // 2. Extract from solutions
-      if (landingPageData.data?.solutions) {
-        // Handle both array and object structures
-        const solutions = Array.isArray(landingPageData.data.solutions) 
-          ? landingPageData.data.solutions 
-          : landingPageData.data.solutions.items || [];
-          
-        solutions.forEach((solution: any, index: number) => {
+      if (landingPageData.data?.solutions?.items) {
+        landingPageData.data.solutions.items.forEach((solution: any, index: number) => {
           if (solution.text) {
             const solutionKeywords = extractRelevantKeywords(solution.text);
             solutionKeywords.forEach(keyword => {
@@ -64,13 +59,8 @@ export function useLandingPageKeywordsExtractor() {
       }
 
       // 3. Extract from FAQ
-      if (landingPageData.data?.faq) {
-        // Handle both array and object structures
-        const faqs = Array.isArray(landingPageData.data.faq) 
-          ? landingPageData.data.faq 
-          : landingPageData.data.faq.items || [];
-          
-        faqs.forEach((faq: any, index: number) => {
+      if (landingPageData.data?.faq?.items) {
+        landingPageData.data.faq.items.forEach((faq: any, index: number) => {
           if (faq.question) {
             const faqKeywords = extractRelevantKeywords(faq.question);
             faqKeywords.forEach(keyword => {
