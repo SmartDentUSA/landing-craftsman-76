@@ -924,6 +924,43 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             max-width: none;
         }
         
+        /* Estilos específicos para cards de recursos */
+        .resources-grid .offer-content {
+            padding: 0.75rem;
+            min-height: 0;
+        }
+        
+        .resources-grid .offer-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 0.5rem;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        /* Botões dos cards de recursos */
+        .resources-grid .offer-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-top: 0.75rem;
+        }
+        
+        .resources-grid .offer-buy-button,
+        .resources-grid .offer-discount-button {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+        }
+        
         /* Responsive adjustments for offers carousel */
         @media (max-width: 768px) {
             .offer-card {
@@ -950,16 +987,19 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .resources-grid .offer-name {
                 font-size: 0.8rem;
                 line-height: 1.2;
+                margin-bottom: 0.4rem;
             }
             
-            .resources-grid .offer-description {
-                font-size: 0.7rem;
-                line-height: 1.3;
+            .resources-grid .offer-buttons {
+                gap: 0.25rem;
+                margin-top: 0.5rem;
             }
             
-            .resources-grid .offer-cta {
+            .resources-grid .offer-buy-button,
+            .resources-grid .offer-discount-button {
                 padding: 0.4rem 0.6rem;
-                font-size: 0.7rem;
+                font-size: 0.65rem;
+                min-height: 28px;
             }
         }
         
@@ -983,6 +1023,28 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .resources-grid {
                 grid-template-columns: repeat(4, 1fr);
                 gap: 0.4rem;
+            }
+            
+            .resources-grid .offer-content {
+                padding: 0.4rem;
+            }
+            
+            .resources-grid .offer-name {
+                font-size: 0.75rem;
+                line-height: 1.1;
+                margin-bottom: 0.3rem;
+            }
+            
+            .resources-grid .offer-buttons {
+                gap: 0.2rem;
+                margin-top: 0.4rem;
+            }
+            
+            .resources-grid .offer-buy-button,
+            .resources-grid .offer-discount-button {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.6rem;
+                min-height: 24px;
             }
         }
         
