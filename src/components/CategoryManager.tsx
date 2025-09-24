@@ -9,14 +9,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
-import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle, Folder, User, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle, Folder, User, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { ProductScoreIndicator } from './ProductScoreIndicator';
+import { ConfigCard } from './ConfigCard';
 
 interface CategoryFormData {
   category: string;
@@ -648,90 +648,40 @@ const CategoryManager = () => {
                     </CollapsibleTrigger>
                     
                     <CollapsibleContent>
-                      <CardContent className="pt-0 pb-4">
+                      <div className="border-t border-border/20 p-4">
                         <div className="space-y-3">
                           {categoryConfigs.map((config) => {
                             const completeness = calculateConfigCompleteness(config);
                             const isSelected = selectedConfigIds.has(config.id);
                             
                             return (
-                              <Card key={config.id} className="border-border/20">
-                                <CardContent className="p-4">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-3 flex-1">
-                                      <Checkbox
-                                        checked={isSelected}
-                                        onCheckedChange={() => toggleConfigSelection(config.id)}
-                                      />
-                                      
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <span className="font-medium text-sm">{config.subcategory}</span>
-                                        </div>
-                                        
-                                        <div className="flex flex-wrap gap-2 mb-2">
-                                          <Badge variant={getCompletenessColor(completeness.percentage)} className="text-xs">
-                                            {getCompletenessLabel(completeness.percentage)} ({completeness.percentage}%)
-                                          </Badge>
-                                          <Badge variant={getCompletenessColor(completeness.percentage)} className="text-xs">
-                                            {getCompletenessLabel(completeness.percentage)}
-                                          </Badge>
-                                        </div>
-                                        
-                                        <div className="text-xs text-muted-foreground space-y-1">
-                                          {completeness.fields.map((field) => (
-                                            <div key={field.name} className="flex items-center gap-2">
-                                              <field.icon className="h-3 w-3" />
-                                              <span className={cn(
-                                                field.filled ? "text-green-600" : "text-muted-foreground"
-                                              )}>
-                                                {field.name.replace('_', ' ')}: {field.count} item(s)
-                                              </span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleEdit(config)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                      
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button variant="ghost" size="sm">
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Tem certeza que deseja excluir a configuração "{config.category} → {config.subcategory}"?
-                                              Esta ação não pode ser desfeita.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDelete(config.id)}>
-                                              Excluir
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
+                              <ConfigCard
+                                key={config.id}
+                                config={{
+                                  id: config.id,
+                                  categoria: config.category,
+                                  subcategoria: config.subcategory,
+                                  publico_alvo: config.target_audience?.join(', ') || '',
+                                  palavras_chave: [...(config.keywords || []), ...(config.market_keywords || []), ...(config.search_intent_keywords || [])]
+                                }}
+                                isSelected={isSelected}
+                                completenessPercentage={completeness.percentage}
+                                onToggleSelection={toggleConfigSelection}
+                                onEdit={(configData) => handleEdit({
+                                  id: configData.id,
+                                  category: configData.categoria,
+                                  subcategory: configData.subcategoria,
+                                  target_audience: configData.publico_alvo.split(', ').filter(Boolean),
+                                  keywords: config.keywords || [],
+                                  market_keywords: config.market_keywords || [],
+                                  search_intent_keywords: config.search_intent_keywords || []
+                                })}
+                                onDelete={handleDelete}
+                              />
                             );
                           })}
                         </div>
-                      </CardContent>
+                      </div>
                     </CollapsibleContent>
                   </Collapsible>
                 </Card>
