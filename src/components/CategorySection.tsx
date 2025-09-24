@@ -82,7 +82,7 @@ export function CategorySection({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden border-border/20 shadow-soft">
       <Collapsible open={isOpen} onOpenChange={onToggleOpen}>
         <CollapsibleTrigger asChild>
           <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors">
@@ -128,7 +128,7 @@ export function CategorySection({
           </div>
         </CollapsibleTrigger>
         
-        <CollapsibleContent className="border-t">
+        <CollapsibleContent className="border-t border-border/20">
           <div className="p-4 space-y-4">
             {products.map((product) => (
               <ModernProductCard
