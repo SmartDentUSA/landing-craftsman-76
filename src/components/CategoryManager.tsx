@@ -118,42 +118,34 @@ const CategoryManager = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria</Label>
-                  <Select
+                  <Input
+                    id="category"
                     value={formData.category}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    placeholder="Digite o nome da categoria"
                     required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
+                  {categories.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Existentes: {categories.slice(0, 3).join(', ')}{categories.length > 3 && '...'}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="subcategory">Subcategoria</Label>
-                  <Select
+                  <Input
+                    id="subcategory"
                     value={formData.subcategory}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, subcategory: e.target.value }))}
+                    placeholder="Digite o nome da subcategoria"
                     required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma subcategoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subcategories.map((subcategory) => (
-                        <SelectItem key={subcategory} value={subcategory}>
-                          {subcategory}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
+                  {subcategories.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Existentes: {subcategories.slice(0, 3).join(', ')}{subcategories.length > 3 && '...'}
+                    </div>
+                  )}
                 </div>
               </div>
 
