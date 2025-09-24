@@ -8,6 +8,7 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { SelectedProductLinkModal } from "@/components/SelectedProductLinkModal";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useProductKeywordsAggregator } from "@/hooks/useProductKeywordsAggregator";
+import { useLandingPageKeywordsExtractor } from "@/hooks/useLandingPageKeywordsExtractor";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -78,10 +79,14 @@ export default function BlogGenerator() {
   const [isDualMode, setIsDualMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [intelligentLinks, setIntelligentLinks] = useState<Record<string, string>>({});
+  const [linkMappings, setLinkMappings] = useState<any[]>([]);
+  const [showLinkPreview, setShowLinkPreview] = useState(false);
   const { toast } = useToast();
   const { loadProductsByIds } = useSelectedProducts();
   const { getSelectedProducts } = useLandingPages();
   const { aggregateKeywordsFromProducts, enrichKeywordsWithCategories } = useProductKeywordsAggregator();
+  const { extractKeywordsFromLandingPage, extracting: extractingKeywords } = useLandingPageKeywordsExtractor();
 
   useEffect(() => {
     if (id) {
@@ -479,6 +484,46 @@ export default function BlogGenerator() {
     }
   };
 
+  const generateIntelligentLinks = async () => {
+    if (!landingPage) {
+      toast({
+        title: "Dados não encontrados",
+        description: "Landing page não carregada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await extractKeywordsFromLandingPage(
+        landingPage.content, 
+        getSelectedProducts(landingPage.id) || []
+      );
+      
+      setIntelligentLinks(result.intelligentLinks);
+      setLinkMappings(result.mappings);
+      setShowLinkPreview(true);
+      
+      // Update blog post with intelligent links
+      setBlogPost(prev => ({
+        ...prev,
+        intelligent_links: { ...prev.intelligent_links, ...result.intelligentLinks }
+      }));
+      
+      toast({
+        title: "Links Inteligentes Gerados",
+        description: `${result.totalKeywords} palavras-chave mapeadas para links automáticos`,
+      });
+    } catch (error) {
+      console.error('Error generating intelligent links:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar links inteligentes",
+        variant: "destructive",
+      });
+    }
+  };
+
   const saveBlogDraft = async () => {
     if (!landingPage || loading || generating) return;
     
@@ -869,6 +914,26 @@ export default function BlogGenerator() {
                         </>
                       )}
                     </Button>
+                    
+                    <Button
+                      onClick={generateIntelligentLinks}
+                      disabled={extractingKeywords || !landingPage}
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-xs"
+                    >
+                      {extractingKeywords ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <Link className="h-3 w-3 mr-1" />
+                          Gerar Links Inteligentes
+                        </>
+                      )}
+                    </Button>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {normalizeKeywords(blogPost.keywords).map((keyword, index) => (
@@ -1109,9 +1174,40 @@ export default function BlogGenerator() {
                   <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Clique em "Preview" para visualizar o blog post</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                  )}
+                  
+                  {showLinkPreview && linkMappings.length > 0 && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Link className="h-3 w-3" />
+                        <span className="font-medium text-green-800">
+                          Links Inteligentes ({linkMappings.length})
+                        </span>
+                      </div>
+                      <div className="space-y-1 max-h-20 overflow-y-auto">
+                        {linkMappings.slice(0, 5).map((mapping, index) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <span className="font-mono text-green-700 text-xs">
+                              "{mapping.keyword}"
+                            </span>
+                            <Badge variant="secondary" className="text-xs">
+                              {mapping.source}
+                            </Badge>
+                          </div>
+                        ))}
+                        {linkMappings.length > 5 && (
+                          <div className="text-center text-green-600 text-xs">
+                            +{linkMappings.length - 5} links adicionais
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-green-600 mt-1 text-xs">
+                        Estes links serão inseridos automaticamente no conteúdo
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
         </div>
       </div>
 
