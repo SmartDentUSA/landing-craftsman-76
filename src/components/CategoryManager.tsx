@@ -547,24 +547,22 @@ const CategoryManager = () => {
 
       <CardContent className="space-y-6">
         {/* Resumo das estatísticas */}
-        <div className="bg-muted/50 rounded-lg p-3">
-          <div className="grid grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-green-600">{stats.complete}</div>
-              <div className="text-xs text-muted-foreground">Completo</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-600">{stats.good}</div>
-              <div className="text-xs text-muted-foreground">Bom</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-orange-600">{stats.regular}</div>
-              <div className="text-xs text-muted-foreground">Regular</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
-              <div className="text-xs text-muted-foreground">Crítico</div>
-            </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-success/5 border border-success/20 rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-success">{stats.complete}</div>
+            <div className="text-xs text-success/80">Completo</div>
+          </div>
+          <div className="bg-warning/5 border border-warning/20 rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-warning">{stats.good}</div>
+            <div className="text-xs text-warning/80">Bom</div>
+          </div>
+          <div className="bg-secondary/50 border rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-secondary-foreground">{stats.regular}</div>
+            <div className="text-xs text-secondary-foreground/80">Regular</div>
+          </div>
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-center">
+            <div className="text-lg font-bold text-destructive">{stats.critical}</div>
+            <div className="text-xs text-destructive/80">Crítico</div>
           </div>
         </div>
 
