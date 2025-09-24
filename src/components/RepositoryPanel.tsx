@@ -20,6 +20,10 @@ import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
 import ProductRepositoryCSVImporter from "@/components/ProductRepositoryCSVImporter";
 import { useCategoryContext } from '@/contexts/CategoryContext';
+import { ModernProductCard } from './ModernProductCard';
+import { ScoreFilters } from './ScoreFilters';
+import { calculateProductScore } from './ProductScoreCalculator';
+import { calculateProductStats } from './ProductStatsHelper';
 
 interface Video {
   url: string;
@@ -82,6 +86,8 @@ export function RepositoryPanel({
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [scoreFilter, setScoreFilter] = useState<string>("all");
+  const [fieldFilter, setFieldFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
@@ -208,8 +214,40 @@ export function RepositoryPanel({
       });
     }
 
+    // Score filter
+    if (scoreFilter !== "all") {
+      filtered = filtered.filter(product => {
+        const score = calculateProductScore(product);
+        if (scoreFilter === "complete") return score.percentage >= 90;
+        if (scoreFilter === "good") return score.percentage >= 70 && score.percentage < 90;
+        if (scoreFilter === "regular") return score.percentage >= 50 && score.percentage < 70;
+        if (scoreFilter === "critical") return score.percentage < 50;
+        return true;
+      });
+    }
+
+    // Field filter
+    if (fieldFilter !== "all") {
+      filtered = filtered.filter(product => {
+        const score = calculateProductScore(product);
+        return score.missingFields.some(field => {
+          if (fieldFilter === "image") return field === "Imagem";
+          if (fieldFilter === "description") return field === "Descrição";
+          if (fieldFilter === "keywords") return field === "Palavras-chave";
+          if (fieldFilter === "benefits") return field === "Benefícios";
+          if (fieldFilter === "features") return field === "Características";
+          if (fieldFilter === "target_audience") return field === "Público-alvo";
+          if (fieldFilter === "sales_pitch") return field === "Pitch de Vendas";
+          if (fieldFilter === "videos") return field === "Vídeos";
+          if (fieldFilter === "product_url") return field === "URL do Produto";
+          if (fieldFilter === "price") return field === "Preço";
+          return false;
+        });
+      });
+    }
+
     setFilteredProducts(filtered);
-  }, [products, searchTerm, categoryFilter, priceFilter]);
+  }, [products, searchTerm, categoryFilter, priceFilter, scoreFilter, fieldFilter]);
 
   // Update selection callback
   useEffect(() => {
@@ -488,45 +526,27 @@ export function RepositoryPanel({
           </div>
           
           {activeTab === "products" && (
-            <div className="space-y-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar produtos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              {/* Filters */}
-              <div className="flex gap-2">
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {getUniqueCategories().map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select value={priceFilter} onValueChange={setPriceFilter}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Preço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="free">Gratuito</SelectItem>
-                    <SelectItem value="low">Até R$ 100</SelectItem>
-                    <SelectItem value="medium">R$ 100-500</SelectItem>
-                    <SelectItem value="high">Acima R$ 500</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-4">
+              {/* Modern Score Filters */}
+              <ScoreFilters
+                scoreFilter={scoreFilter}
+                onScoreFilterChange={setScoreFilter}
+                fieldFilter={fieldFilter}
+                onFieldFilterChange={setFieldFilter}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                categoryFilter={categoryFilter}
+                onCategoryFilterChange={setCategoryFilter}
+                categories={getUniqueCategories()}
+                productCounts={calculateProductStats(products)}
+                onClearFilters={() => {
+                  setScoreFilter("all");
+                  setFieldFilter("all");
+                  setCategoryFilter("all");
+                  setPriceFilter("all");
+                  setSearchTerm("");
+                }}
+              />
               
               {/* Toggle and Actions */}
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -638,123 +658,26 @@ export function RepositoryPanel({
             <div className="space-y-4">
               <ProductRepositoryCSVImporter onImportComplete={() => loadProducts()} />
               
-              <ScrollArea className="h-96 w-full rounded-md border">
-                <div className="p-4 space-y-3">
-                  {filteredProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          checked={selectedProductIds.has(product.id)}
-                          onCheckedChange={() => toggleProductSelection(product.id)}
-                        />
-                        
-                        {product.image_url && (
-                          <div className="w-12 h-12 rounded-md overflow-hidden bg-muted">
-                            <img
-                              src={product.image_url}
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-medium text-sm truncate">{product.name}</div>
-                            {product.subcategory && (
-                              <Badge variant="outline" className="text-xs h-5">
-                                {product.subcategory}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {product.category} • {formatPrice(product.price, product.currency)}
-                          </div>
-                          
-                          {/* Configuration badges */}
-                          <div className="flex items-center gap-1 mt-1 flex-wrap">
-                            {(product.keywords as any)?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs h-4 px-1">
-                                <span className="text-xs">Keywords: {(product.keywords as any)?.length}</span>
-                              </Badge>
-                            )}
-                            {(product.target_audience as any)?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs h-4 px-1">
-                                <span className="text-xs">Público: {(product.target_audience as any)?.length}</span>
-                              </Badge>
-                            )}
-                            {(product.market_keywords as any)?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs h-4 px-1">
-                                <span className="text-xs">Market: {(product.market_keywords as any)?.length}</span>
-                              </Badge>
-                            )}
-                            {(product.search_intent_keywords as any)?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs h-4 px-1">
-                                <span className="text-xs">Intent: {(product.search_intent_keywords as any)?.length}</span>
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {product.sales_pitch && (
-                            <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              {product.sales_pitch}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {/* Configuration status indicator */}
-                        {((product.keywords as any)?.length > 0 || 
-                          (product.target_audience as any)?.length > 0 || 
-                          (product.market_keywords as any)?.length > 0 || 
-                          (product.search_intent_keywords as any)?.length > 0) && (
-                          <Badge variant="success" className="text-xs">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Config
-                          </Badge>
-                        )}
-                        
-                        {product.use_in_ai_generation && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Star className="h-3 w-3 mr-1" />
-                            IA
-                          </Badge>
-                        )}
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteProduct(product.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {filteredProducts.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhum produto encontrado</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredProducts.map((product) => (
+                  <ModernProductCard
+                    key={product.id}
+                    product={product}
+                    isSelected={selectedProductIds.has(product.id)}
+                    onToggleSelection={toggleProductSelection}
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteProduct}
+                  />
+                ))}
+                
+                {filteredProducts.length === 0 && (
+                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                    <Package className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                    <p className="text-lg font-medium mb-2">Nenhum produto encontrado</p>
+                    <p className="text-sm">Ajuste os filtros ou adicione novos produtos ao repositório</p>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
 
