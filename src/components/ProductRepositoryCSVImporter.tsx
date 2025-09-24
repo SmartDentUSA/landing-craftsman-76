@@ -559,19 +559,6 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         </div>
       )}
 
-      {previewData.length === 0 && importLogs.length === 0 && (
-        <div className="text-xs text-muted-foreground space-y-1">
-          <div className="flex items-center gap-1 mb-1">
-            <AlertCircle className="h-3 w-3" />
-            Guia de Importação CSV
-          </div>
-          <div>• <strong>Com ID:</strong> atualiza produto existente</div>
-          <div>• <strong>Sem ID:</strong> cria novo produto</div>
-          <div>• <strong>URLs trocadas:</strong> corrigidas automaticamente</div>
-          <div>• <strong>Arrays:</strong> separe por ";" ou ","</div>
-          <div>• <strong>Workflow:</strong> Export CSV → Editar → Import</div>
-        </div>
-      )}
     </div>
   );
 };
