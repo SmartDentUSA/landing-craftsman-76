@@ -1500,12 +1500,17 @@ const EditorContent = () => {
       };
 
       // Gerar conteúdo do blog usando IA com todo o conteúdo da landing page
-      const { data: blogContentResult, error: blogError } = await supabase.functions.invoke('ai-seo-generator', {
+      const { data: blogContentResult, error: blogError } = await supabase.functions.invoke('ai-content-generator', {
         body: {
           type: 'blog_content',
-          content: data.seo.seo_hidden_content?.trim() || data.seo_description?.trim() || data.banner.title,
-          title: data.seo_title || data.banner.title,
-          fullLandingPageContent: fullContent,
+          landingPageId: id,
+          landingPageData: data,
+          contentData: {
+            content: data.seo?.seo_hidden_content?.trim() || data.seo_description?.trim() || data.banner?.title,
+            title: data.seo_title || data.banner?.title,
+            fullLandingPageContent: fullContent
+          },
+          primaryKeyword: data.banner?.title || 'Conteúdo Especializado',
           speed: fastMode ? 'fast' : 'detailed'
         },
       });
