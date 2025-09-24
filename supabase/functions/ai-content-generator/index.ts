@@ -55,12 +55,25 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     
+    console.log('🔧 Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasDeepSeekKey: !!deepSeekApiKey
+    });
+    
     if (!deepSeekApiKey) {
+      console.error('❌ DEEPSEEK_API_KEY not configured');
       throw new Error('DEEPSEEK_API_KEY not configured');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const request: ContentRequest = await req.json();
+    
+    console.log('📥 Request received:', {
+      type: request.type,
+      landingPageId: request.landingPageId,
+      hasSelectedProductIds: !!request.selectedProductIds?.length
+    });
 
     console.log(`Generating ${request.type} content for landing page: ${request.landingPageId}`);
 

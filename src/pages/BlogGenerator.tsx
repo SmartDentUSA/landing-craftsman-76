@@ -127,13 +127,7 @@ export default function BlogGenerator() {
     }
   }, [id, location.state]);
 
-  // Auto-generate blog content when landing page is loaded but no blog content exists
-  useEffect(() => {
-    if (landingPage && !blogPost.content && !generating && !loading) {
-      console.log("🚀 Auto-gerando conteúdo do blog...");
-      generateBlogContent();
-    }
-  }, [landingPage]);
+  // Auto-generation removed - only generate manually via button
 
   // Load selected products from landing page
   useEffect(() => {
