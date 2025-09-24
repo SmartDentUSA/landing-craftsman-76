@@ -100,22 +100,13 @@ export function ConfigCard({
                 </span>
               </div>
 
-              {/* Keywords com ícone */}
+              {/* Keywords counter */}
               {config.palavras_chave?.length > 0 && (
                 <div className="flex items-center gap-1.5 mt-1">
                   <Hash className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <div className="flex flex-wrap gap-1 min-w-0">
-                    {config.palavras_chave.slice(0, 3).map((keyword, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {keyword}
-                      </Badge>
-                    ))}
-                    {config.palavras_chave.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{config.palavras_chave.length - 3}
-                      </Badge>
-                    )}
-                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {config.palavras_chave.length}
+                  </span>
                 </div>
               )}
             </div>
