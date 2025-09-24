@@ -1564,9 +1564,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             {{#productUrl}}
                             <button class="offer-buy-button" onclick="window.open('{{productUrl}}', '_blank')">Loja Online</button>
                             {{/productUrl}}
-                            {{#banner.cta_primary.href}}
-                            <button class="offer-discount-button" onclick="window.open('{{banner.cta_primary.href}}', '_blank')">Ganhar Desconto</button>
-                            {{/banner.cta_primary.href}}
+                            {{#offer_discount_cta.visible}}
+                            <button class="offer-discount-button" onclick="window.open('{{offer_discount_cta.url}}', '_blank')">{{offer_discount_cta.label}}</button>
+                            {{/offer_discount_cta.visible}}
                         </div>
                     </div>
                 </div>

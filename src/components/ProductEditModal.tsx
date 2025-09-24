@@ -59,6 +59,8 @@ interface Product {
   resource_cta1?: { label: string; url: string; visible: boolean };
   resource_cta2?: { label: string; url: string; visible: boolean };
   resource_cta3?: { label: string; url: string; visible: boolean };
+  // Offer discount CTA
+  offer_discount_cta?: { label: string; url: string; visible: boolean };
 }
 
 interface ProductEditModalProps {
@@ -109,7 +111,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // Resource CTAs
     resource_cta1: { label: '', url: '', visible: false },
     resource_cta2: { label: '', url: '', visible: false },
-    resource_cta3: { label: '', url: '', visible: false }
+    resource_cta3: { label: '', url: '', visible: false },
+    // Offer discount CTA
+    offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false }
   });
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
@@ -207,7 +211,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // Resource CTAs
         resource_cta1: product.resource_cta1 || { label: '', url: '', visible: false },
         resource_cta2: product.resource_cta2 || { label: '', url: '', visible: false },
-        resource_cta3: product.resource_cta3 || { label: '', url: '', visible: false }
+        resource_cta3: product.resource_cta3 || { label: '', url: '', visible: false },
+        // Offer discount CTA
+        offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false }
       });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -248,7 +254,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // Resource CTAs
         resource_cta1: { label: '', url: '', visible: false },
         resource_cta2: { label: '', url: '', visible: false },
-        resource_cta3: { label: '', url: '', visible: false }
+        resource_cta3: { label: '', url: '', visible: false },
+        // Offer discount CTA
+        offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false }
       });
       setBenefits([]);
       setFeatures([]);
@@ -1264,6 +1272,47 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                         onChange={(e) => setFormData(prev => ({ 
                           ...prev, 
                           resource_cta3: { ...prev.resource_cta3!, url: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Offer Discount CTA Configuration */}
+            {formData.selected && (
+              <div className="space-y-4 bg-muted/20 p-4 rounded-lg">
+                <h4 className="font-medium">CTA Desconto para Ofertas Especiais</h4>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="offer_discount_cta_visible"
+                      checked={formData.offer_discount_cta?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        offer_discount_cta: { ...prev.offer_discount_cta!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="offer_discount_cta_visible" className="font-medium">Ativar CTA Desconto</Label>
+                  </div>
+                  {formData.offer_discount_cta?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão (ex: Comprar com Desconto)"
+                        value={formData.offer_discount_cta?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          offer_discount_cta: { ...prev.offer_discount_cta!, label: e.target.value }
+                        }))}
+                      />
+                      <Input
+                        placeholder="URL de atendimento específico"
+                        value={formData.offer_discount_cta?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          offer_discount_cta: { ...prev.offer_discount_cta!, url: e.target.value }
                         }))}
                       />
                     </div>

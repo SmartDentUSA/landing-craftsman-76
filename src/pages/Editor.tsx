@@ -906,6 +906,7 @@ const EditorContent = () => {
               resource_cta1: product.resource_cta1 as any || { label: '', url: '', visible: false },
               resource_cta2: product.resource_cta2 as any || { label: '', url: '', visible: false },
               resource_cta3: product.resource_cta3 as any || { label: '', url: '', visible: false },
+              offer_discount_cta: product.offer_discount_cta as any || { label: 'Comprar com Desconto', url: '', visible: false },
             }));
 
             // Atualizar data.schema.offers sem duplicar

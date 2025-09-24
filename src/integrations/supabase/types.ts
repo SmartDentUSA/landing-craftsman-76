@@ -475,6 +475,7 @@ export type Database = {
           keywords: Json | null
           market_keywords: Json | null
           name: string
+          offer_discount_cta: Json | null
           original_data: Json | null
           price: number | null
           product_url: string | null
@@ -515,6 +516,7 @@ export type Database = {
           keywords?: Json | null
           market_keywords?: Json | null
           name: string
+          offer_discount_cta?: Json | null
           original_data?: Json | null
           price?: number | null
           product_url?: string | null
@@ -555,6 +557,7 @@ export type Database = {
           keywords?: Json | null
           market_keywords?: Json | null
           name?: string
+          offer_discount_cta?: Json | null
           original_data?: Json | null
           price?: number | null
           product_url?: string | null

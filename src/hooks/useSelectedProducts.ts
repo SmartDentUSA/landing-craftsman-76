@@ -22,6 +22,7 @@ interface Product {
   instagram_videos?: any[];
   testimonial_videos?: any[];
   technical_videos?: any[];
+  offer_discount_cta?: { label: string; url: string; visible: boolean };
 }
 
 
@@ -58,11 +59,12 @@ export const useSelectedProducts = () => {
           category: product.category || '',
           image_url: product.image_url || '',
           product_url: product.product_url || '',
-          target_audience: (product.target_audience as unknown as string[]) || [],
-          youtube_videos: (product.youtube_videos as unknown as any[]) || [],
-          instagram_videos: (product.instagram_videos as unknown as any[]) || [],
-          testimonial_videos: (product.testimonial_videos as unknown as any[]) || [],
-          technical_videos: (product.technical_videos as unknown as any[]) || [],
+      target_audience: (product.target_audience as unknown as string[]) || [],
+      youtube_videos: (product.youtube_videos as unknown as any[]) || [],
+      instagram_videos: (product.instagram_videos as unknown as any[]) || [],
+      testimonial_videos: (product.testimonial_videos as unknown as any[]) || [],
+      technical_videos: (product.technical_videos as unknown as any[]) || [],
+      offer_discount_cta: (product as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
         })) as Product[];
 
       return orderedProducts;
@@ -97,6 +99,7 @@ export const useSelectedProducts = () => {
       keywords: product.keywords,
       market_keywords: product.market_keywords,
       search_intent_keywords: product.search_intent_keywords,
+      offer_discount_cta: product.offer_discount_cta,
       sourceType: 'repository' as const,
       lastUpdated: new Date().toISOString(),
       selected: true,
