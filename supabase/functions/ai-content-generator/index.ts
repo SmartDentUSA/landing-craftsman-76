@@ -203,16 +203,31 @@ function buildStrategicContext(
   categoriesConfig: any[] = [],
   landingPage?: any
 ): string {
+  // CORREÇÃO: Use contentData ou landingPage como fonte primária de dados
+  const contentData = request.contentData || request.landingPage || landingPage?.data || {};
+  
   // PROGRESSIVE GENERATION: Always use available data, even if partial
-  const pageTitle = request.seoTitle || request.contentData?.banner?.title || request.contentData?.brand?.name || 'Nossos Serviços';
-  const pageSubtitle = request.seoDescription || request.contentData?.banner?.subtitle || request.contentData?.seo?.meta_description || 'Soluções de qualidade para você';
-  const targetAudience = request.targetAudience || request.contentData?.banner?.subtitle || 'público geral';
+  const pageTitle = request.seoTitle || 
+                   contentData?.banner?.title || 
+                   contentData?.brand?.name || 
+                   landingPage?.name || 
+                   request.primaryKeyword || 
+                   'Nossos Serviços';
+  
+  const pageSubtitle = request.seoDescription || 
+                      contentData?.banner?.subtitle || 
+                      contentData?.seo?.meta_description || 
+                      'Soluções de qualidade para você';
+  
+  const targetAudience = request.targetAudience || 
+                        contentData?.banner?.subtitle || 
+                        'público geral';
   
   // Extract solutions from content data - always try to extract something useful
-  const solutions = extractSolutions(request.contentData);
+  const solutions = extractSolutions(contentData);
   
   // FASE 1: Extract keywords from FAQ using KeywordCollector logic
-  const faqKeywords = extractFAQKeywords(request.contentData);
+  const faqKeywords = extractFAQKeywords(contentData);
   
   // Extract keywords from products - ENHANCED WITH MARKET & SEARCH INTENT
   const productKeywords = products.flatMap(p => [
@@ -370,7 +385,7 @@ ${categoriesConfig.length > 0 ? categoriesConfig.map(config =>
 ).join('\n') : 'Nenhuma configuração de categoria disponível'}
 
 ## FAQ - Perguntas e Respostas:
-${extractFAQSection(request.contentData)}
+${extractFAQSection(contentData)}
 
 ## Benefícios Identificados:
 ${[...new Set(productBenefits)].length > 0 ? [...new Set(productBenefits)].join(', ') : 'qualidade garantida, atendimento especializado, resultados comprovados'}
@@ -801,7 +816,7 @@ Nossa equipe está pronta para atender você com excelência e profissionalismo.
 }
 
 async function generateBlogContent(apiKey: string, context: string, products: any[] = []): Promise<BlogContent> {
-  console.log('🎯 Iniciando geração de blog com validação robusta');
+  console.log('🎯 Iniciando geração de blog');
   
   const prompt = `${context}
 
