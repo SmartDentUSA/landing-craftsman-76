@@ -24,6 +24,7 @@ import { ModernProductCard } from './ModernProductCard';
 import { ScoreFilters } from './ScoreFilters';
 import { calculateProductScore } from './ProductScoreCalculator';
 import { calculateProductStats } from './ProductStatsHelper';
+import { CategorySection } from './CategorySection';
 
 interface Video {
   url: string;
@@ -97,6 +98,7 @@ export function RepositoryPanel({
   const [manualReviews, setManualReviews] = useState<ManualReview[]>([]);
   const [exportingData, setExportingData] = useState(false);
   const [showUnapproved, setShowUnapproved] = useState(false);
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
@@ -341,6 +343,81 @@ export function RepositoryPanel({
     const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
     return categories.sort();
   };
+
+  // Group products by category
+  const groupProductsByCategory = () => {
+    const grouped: { [key: string]: Product[] } = {};
+    
+    filteredProducts.forEach(product => {
+      const category = product.category || 'Sem categoria';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(product);
+    });
+
+    // Sort categories by product count (descending) and then alphabetically
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      if (a === 'Sem categoria') return 1;
+      if (b === 'Sem categoria') return -1;
+      if (grouped[b].length !== grouped[a].length) {
+        return grouped[b].length - grouped[a].length;
+      }
+      return a.localeCompare(b);
+    });
+
+    const result: { category: string; products: Product[] }[] = [];
+    sortedCategories.forEach(category => {
+      result.push({ category, products: grouped[category] });
+    });
+
+    return result;
+  };
+
+  const toggleCategoryOpen = (category: string) => {
+    setOpenCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleCategorySelection = (category: string) => {
+    const categoryProducts = filteredProducts.filter(p => (p.category || 'Sem categoria') === category);
+    const categoryProductIds = categoryProducts.map(p => p.id);
+    const selectedInCategory = categoryProductIds.filter(id => selectedProductIds.has(id));
+    
+    setSelectedProductIds(prev => {
+      const newSet = new Set(prev);
+      
+      if (selectedInCategory.length === categoryProductIds.length) {
+        // All selected, unselect all
+        categoryProductIds.forEach(id => newSet.delete(id));
+      } else {
+        // Some or none selected, select all
+        categoryProductIds.forEach(id => newSet.add(id));
+      }
+      
+      return newSet;
+    });
+  };
+
+  // Initialize open categories on first load
+  useEffect(() => {
+    if (products.length > 0 && openCategories.size === 0) {
+      const categories = getUniqueCategories();
+      // Open the first few categories by default
+      const initialOpen = new Set(categories.slice(0, 3));
+      if (filteredProducts.some(p => !p.category)) {
+        initialOpen.add('Sem categoria');
+      }
+      setOpenCategories(initialOpen);
+    }
+  }, [products]);
 
   const formatPrice = (price?: number, currency?: string) => {
     if (!price) return "Gratuito";
@@ -658,20 +735,24 @@ export function RepositoryPanel({
             <div className="space-y-4">
               <ProductRepositoryCSVImporter onImportComplete={() => loadProducts()} />
               
-              <div className="grid grid-cols-1 gap-4">
-                {filteredProducts.map((product) => (
-                  <ModernProductCard
-                    key={product.id}
-                    product={product}
-                    isSelected={selectedProductIds.has(product.id)}
+              <div className="space-y-4">
+                {groupProductsByCategory().map(({ category, products }) => (
+                  <CategorySection
+                    key={category}
+                    category={category}
+                    products={products}
+                    selectedProductIds={selectedProductIds}
+                    isOpen={openCategories.has(category)}
+                    onToggleOpen={() => toggleCategoryOpen(category)}
                     onToggleSelection={toggleProductSelection}
-                    onEdit={handleEditProduct}
-                    onDelete={handleDeleteProduct}
+                    onToggleCategorySelection={() => toggleCategorySelection(category)}
+                    onEditProduct={handleEditProduct}
+                    onDeleteProduct={handleDeleteProduct}
                   />
                 ))}
                 
                 {filteredProducts.length === 0 && (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Package className="h-16 w-16 mx-auto mb-4 opacity-30" />
                     <p className="text-lg font-medium mb-2">Nenhum produto encontrado</p>
                     <p className="text-sm">Ajuste os filtros ou adicione novos produtos ao repositório</p>
