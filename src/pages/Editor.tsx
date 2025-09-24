@@ -145,7 +145,7 @@ interface SchemaData {
     youtube_url?: string;
     instagram_url?: string;
     image?: string;
-    sourceType?: 'manual' | 'imported';
+    sourceType?: 'manual' | 'imported' | 'repository';
     lastUpdated?: string;
     selected?: boolean;
     original_price?: string;
@@ -872,6 +872,118 @@ const EditorContent = () => {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const { getProductsForTemplate } = useSelectedProducts();
   
+  // Sincronização automática entre produtos selecionados e schema.offers
+  useEffect(() => {
+    const syncSelectedProductsToOffers = async () => {
+      if (selectedProductIds.length > 0) {
+        try {
+          console.log('🔄 Sincronizando produtos selecionados para offers:', selectedProductIds);
+          
+          // Buscar produtos do repositório baseado nos IDs selecionados
+          const { data: repoProducts, error } = await supabase
+            .from('products_repository')
+            .select('*')
+            .in('id', selectedProductIds)
+            .eq('approved', true);
+
+          if (error) throw error;
+
+          if (repoProducts && repoProducts.length > 0) {
+            // Converter produtos do repositório para formato offers
+            const newOffers = repoProducts.map(product => ({
+              name: product.name,
+              description: product.description || '',
+              price: product.price?.toString() || '',
+              currency: product.currency || 'BRL',
+              availability: 'InStock',
+              valid_through: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              productUrl: product.product_url || '',
+              image: product.image_url || '',
+              sourceType: 'repository' as const,
+              lastUpdated: new Date().toISOString(),
+              selected: product.selected || false,
+              show_in_resources: product.show_in_resources || false,
+              resource_cta1: product.resource_cta1 as any || { label: '', url: '', visible: false },
+              resource_cta2: product.resource_cta2 as any || { label: '', url: '', visible: false },
+              resource_cta3: product.resource_cta3 as any || { label: '', url: '', visible: false },
+            }));
+
+            // Atualizar data.schema.offers sem duplicar
+            setData(prev => {
+              const existingOfferIds = new Set(prev.schema.offers.map(offer => offer.name));
+              const uniqueNewOffers = newOffers.filter(offer => !existingOfferIds.has(offer.name));
+              
+              return {
+                ...prev,
+                schema: {
+                  ...prev.schema,
+                  offers: [...prev.schema.offers, ...uniqueNewOffers]
+                }
+              };
+            });
+
+            console.log('✅ Produtos sincronizados para offers:', newOffers.length);
+          }
+        } catch (error) {
+          console.error('❌ Erro ao sincronizar produtos:', error);
+        }
+      }
+    };
+
+    syncSelectedProductsToOffers();
+  }, [selectedProductIds]);
+
+  // Carregar produtos selecionados do store quando a página carregar
+  useEffect(() => {
+    if (id) {
+      const storedProductIds = getSelectedProducts(id);
+      setSelectedProductIds(storedProductIds);
+      console.log('🔄 Produtos selecionados carregados do store:', storedProductIds);
+    }
+  }, [id, getSelectedProducts]);
+
+  // Handler para mudanças na seleção de produtos
+  const handleProductSelectionChange = useCallback((productIds: string[]) => {
+    setSelectedProductIds(productIds);
+    if (id) {
+      updateSelectedProducts(id, productIds);
+      console.log('✅ Produtos selecionados atualizados:', productIds);
+    }
+  }, [id, updateSelectedProducts]);
+
+  // Monitorar mudanças nas flags dos produtos para atualizar seções
+  useEffect(() => {
+    const checkProductFlags = async () => {
+      if (selectedProductIds.length > 0) {
+        try {
+          const { data: products, error } = await supabase
+            .from('products_repository')
+            .select('id, selected, show_in_resources')
+            .in('id', selectedProductIds)
+            .eq('approved', true);
+
+          if (error) throw error;
+
+          if (products) {
+            // Verificar se há produtos com flags ativas
+            const hasSelectedProducts = products.some(p => p.selected);
+            const hasResourceProducts = products.some(p => p.show_in_resources);
+            
+            console.log('🔍 Verificação de flags dos produtos:', {
+              selectedProducts: hasSelectedProducts,
+              resourceProducts: hasResourceProducts,
+              totalProducts: products.length
+            });
+          }
+        } catch (error) {
+          console.error('❌ Erro ao verificar flags dos produtos:', error);
+        }
+      }
+    };
+
+    checkProductFlags();
+  }, [selectedProductIds]);
+
   // Auto-sync offers to repository when they change (debounced)
   const handleAutoSyncOffers = useCallback(async (newData: LandingPageData) => {
     if (id && newData.schema?.offers) {
@@ -2947,8 +3059,8 @@ const EditorContent = () => {
                   </AccordionContent>
                  </AccordionItem>
 
-                 {/* Ofertas na Landing Page */}
-                 {data.schema?.offers && data.schema.offers.length > 0 && (
+                  {/* Ofertas na Landing Page */}
+                  {((data.schema?.offers && data.schema.offers.length > 0) || selectedProductIds.length > 0) && (
                    <AccordionItem value="offers-section">
                      <AccordionTrigger>
                        <div className="flex items-center gap-2">
@@ -3029,8 +3141,8 @@ const EditorContent = () => {
                    </AccordionItem>
                   )}
 
-                  {/* Recursos e Downloads na Landing Page */}
-                  {data.schema?.offers && data.schema.offers.filter(offer => offer.show_in_resources).length > 0 && (
+                   {/* Recursos e Downloads na Landing Page */}
+                   {((data.schema?.offers && data.schema.offers.filter(offer => offer.show_in_resources).length > 0) || selectedProductIds.length > 0) && (
                     <AccordionItem value="resources-section">
                       <AccordionTrigger>
                         <div className="flex items-center gap-2">
@@ -4695,12 +4807,7 @@ const EditorContent = () => {
                 <ProductSelector
                   landingPageId={id || ''}
                   selectedProductIds={selectedProductIds}
-                  onSelectionChange={(newIds) => {
-                    setSelectedProductIds(newIds);
-                    if (id) {
-                      updateSelectedProducts(id, newIds);
-                    }
-                  }}
+                  onSelectionChange={handleProductSelectionChange}
                 />
                 
                 {/* Produtos Selecionados */}
