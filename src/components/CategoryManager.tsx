@@ -94,10 +94,19 @@ const CategoryManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('=== DEBUG CategoryManager handleSubmit ===');
+    console.log('formData antes do submit:', JSON.stringify(formData, null, 2));
+    console.log('target_audience length:', formData.target_audience.length);
+    console.log('keywords length:', formData.keywords.length);
+    console.log('market_keywords length:', formData.market_keywords.length);
+    console.log('search_intent_keywords length:', formData.search_intent_keywords.length);
+    
     try {
       if (editingConfig) {
+        console.log('Editando config:', editingConfig);
         await updateConfig(editingConfig, formData);
       } else {
+        console.log('Criando nova config');
         await createConfig(formData);
       }
       
@@ -299,7 +308,10 @@ const CategoryManager = () => {
                 <Label>Público-Alvo</Label>
                 <TagInput
                   value={formData.target_audience}
-                  onChange={(value) => setFormData(prev => ({ ...prev, target_audience: value }))}
+                  onChange={(value) => {
+                    console.log('DEBUG TagInput target_audience onChange:', value);
+                    setFormData(prev => ({ ...prev, target_audience: value }));
+                  }}
                   placeholder="Digite e pressione Enter para adicionar"
                 />
               </div>
@@ -308,7 +320,10 @@ const CategoryManager = () => {
                 <Label>Keywords</Label>
                 <TagInput
                   value={formData.keywords}
-                  onChange={(value) => setFormData(prev => ({ ...prev, keywords: value }))}
+                  onChange={(value) => {
+                    console.log('DEBUG TagInput keywords onChange:', value);
+                    setFormData(prev => ({ ...prev, keywords: value }));
+                  }}
                   placeholder="Digite e pressione Enter para adicionar"
                 />
               </div>
@@ -317,7 +332,10 @@ const CategoryManager = () => {
                 <Label>Keywords de Mercado</Label>
                 <TagInput
                   value={formData.market_keywords}
-                  onChange={(value) => setFormData(prev => ({ ...prev, market_keywords: value }))}
+                  onChange={(value) => {
+                    console.log('DEBUG TagInput market_keywords onChange:', value);
+                    setFormData(prev => ({ ...prev, market_keywords: value }));
+                  }}
                   placeholder="Digite e pressione Enter para adicionar"
                 />
               </div>
@@ -326,7 +344,10 @@ const CategoryManager = () => {
                 <Label>Keywords de Intenção de Busca</Label>
                 <TagInput
                   value={formData.search_intent_keywords}
-                  onChange={(value) => setFormData(prev => ({ ...prev, search_intent_keywords: value }))}
+                  onChange={(value) => {
+                    console.log('DEBUG TagInput search_intent_keywords onChange:', value);
+                    setFormData(prev => ({ ...prev, search_intent_keywords: value }));
+                  }}
                   placeholder="Digite e pressione Enter para adicionar"
                 />
               </div>

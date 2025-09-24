@@ -62,6 +62,9 @@ export const useCategoryConfig = () => {
 
   const createConfig = useCallback(async (config: CreateCategoryConfig) => {
     try {
+      console.log('=== DEBUG useCategoryConfig createConfig ===');
+      console.log('config recebido:', JSON.stringify(config, null, 2));
+      
       const { data, error } = await supabase
         .from('categories_config')
         .insert([config])
@@ -69,6 +72,8 @@ export const useCategoryConfig = () => {
         .single();
 
       if (error) throw error;
+      
+      console.log('data retornada do Supabase:', JSON.stringify(data, null, 2));
 
       const formattedData = {
         ...data,
@@ -99,6 +104,10 @@ export const useCategoryConfig = () => {
 
   const updateConfig = useCallback(async (id: string, updates: Partial<CreateCategoryConfig>) => {
     try {
+      console.log('=== DEBUG useCategoryConfig updateConfig ===');
+      console.log('id:', id);
+      console.log('updates recebido:', JSON.stringify(updates, null, 2));
+      
       const { data, error } = await supabase
         .from('categories_config')
         .update(updates)
@@ -107,6 +116,8 @@ export const useCategoryConfig = () => {
         .single();
 
       if (error) throw error;
+      
+      console.log('data retornada do Supabase:', JSON.stringify(data, null, 2));
 
       const formattedData = {
         ...data,

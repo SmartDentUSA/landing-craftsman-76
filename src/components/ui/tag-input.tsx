@@ -17,14 +17,19 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
 
     const addTag = (tag: string) => {
       const trimmedTag = tag.trim()
+      console.log('DEBUG TagInput addTag:', { tag, trimmedTag, currentValue: value });
       if (trimmedTag && !value.includes(trimmedTag)) {
-        onChange?.([...value, trimmedTag])
+        const newValue = [...value, trimmedTag];
+        console.log('DEBUG TagInput calling onChange with:', newValue);
+        onChange?.(newValue)
         setInputValue("")
       }
     }
 
     const removeTag = (indexToRemove: number) => {
-      onChange?.(value.filter((_, index) => index !== indexToRemove))
+      const newValue = value.filter((_, index) => index !== indexToRemove);
+      console.log('DEBUG TagInput removeTag:', { indexToRemove, newValue });
+      onChange?.(newValue)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
