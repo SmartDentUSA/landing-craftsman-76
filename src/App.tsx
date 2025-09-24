@@ -31,7 +31,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/editor" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
-          <Route path="/editor/:id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+          <Route path="/editor/:landingPageId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
           <Route path="/code-view" element={<ProtectedRoute><CodeView /></ProtectedRoute>} />
           <Route path="/cloudflare-settings" element={<ProtectedRoute><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute><PublicationSettings /></ProtectedRoute>} />

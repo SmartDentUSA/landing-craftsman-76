@@ -10,14 +10,14 @@ import { BlogPreview } from '@/components/blog/BlogPreview';
 import { AutoGenerationPanel } from '@/components/blog/AutoGenerationPanel';
 import { BlogStatusIndicator } from '@/components/blog/BlogStatusIndicator';
 import { useBlogData } from '@/hooks/useBlogData';
-import useLandingPages from '@/hooks/useLandingPages';
+import { useLandingPagesSupabase } from '@/hooks/useLandingPagesSupabase';
 
 function EditorContent() {
   const { landingPageId } = useParams<{ landingPageId: string }>();
   const blogDataResult = useBlogData(landingPageId);
   const blogData = blogDataResult?.landingPageData;
-  const landingPages = useLandingPages((state) => state.landingPages);
-  const landingPage = landingPages.find(lp => lp.id === landingPageId);
+  const { landingPages, getLandingPage } = useLandingPagesSupabase();
+  const landingPage = getLandingPage(landingPageId || '');
 
   if (!landingPageId || !landingPage) {
     return (
@@ -160,9 +160,9 @@ function EditorContent() {
                   </div>
                   <div>
                     <label className="text-sm font-medium">Última Modificação</label>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(landingPage.lastModified).toLocaleString('pt-BR')}
-                    </p>
+                     <p className="text-sm text-muted-foreground">
+                       {new Date(landingPage.last_modified).toLocaleString('pt-BR')}
+                     </p>
                   </div>
                 </div>
               </CardContent>
