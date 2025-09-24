@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown } from "lucide-react";
+import { Search, Package, Star, DollarSign, Eye, EyeOff, RefreshCw, RotateCcw, Edit, Trash2, Plus, Building2, VideoIcon, Download, FileDown, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSync } from "@/hooks/useProductSync";
@@ -652,10 +652,42 @@ export function RepositoryPanel({
                         )}
                         
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{product.name}</div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="font-medium text-sm truncate">{product.name}</div>
+                            {product.subcategory && (
+                              <Badge variant="outline" className="text-xs h-5">
+                                {product.subcategory}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {product.category} • {formatPrice(product.price, product.currency)}
                           </div>
+                          
+                          {/* Configuration badges */}
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            {(product.keywords as any)?.length > 0 && (
+                              <Badge variant="secondary" className="text-xs h-4 px-1">
+                                <span className="text-xs">Keywords: {(product.keywords as any)?.length}</span>
+                              </Badge>
+                            )}
+                            {(product.target_audience as any)?.length > 0 && (
+                              <Badge variant="secondary" className="text-xs h-4 px-1">
+                                <span className="text-xs">Público: {(product.target_audience as any)?.length}</span>
+                              </Badge>
+                            )}
+                            {(product.market_keywords as any)?.length > 0 && (
+                              <Badge variant="secondary" className="text-xs h-4 px-1">
+                                <span className="text-xs">Market: {(product.market_keywords as any)?.length}</span>
+                              </Badge>
+                            )}
+                            {(product.search_intent_keywords as any)?.length > 0 && (
+                              <Badge variant="secondary" className="text-xs h-4 px-1">
+                                <span className="text-xs">Intent: {(product.search_intent_keywords as any)?.length}</span>
+                              </Badge>
+                            )}
+                          </div>
+                          
                           {product.sales_pitch && (
                             <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {product.sales_pitch}
@@ -665,6 +697,17 @@ export function RepositoryPanel({
                       </div>
                       
                       <div className="flex items-center gap-2">
+                        {/* Configuration status indicator */}
+                        {((product.keywords as any)?.length > 0 || 
+                          (product.target_audience as any)?.length > 0 || 
+                          (product.market_keywords as any)?.length > 0 || 
+                          (product.search_intent_keywords as any)?.length > 0) && (
+                          <Badge variant="success" className="text-xs">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Config
+                          </Badge>
+                        )}
+                        
                         {product.use_in_ai_generation && (
                           <Badge variant="secondary" className="text-xs">
                             <Star className="h-3 w-3 mr-1" />
