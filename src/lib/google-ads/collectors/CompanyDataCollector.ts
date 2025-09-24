@@ -131,4 +131,57 @@ export class CompanyDataCollector {
       return [];
     }
   }
+
+  /**
+   * Collect SEO context information from company profile
+   */
+  static async collectSEOContext(): Promise<{
+    keywords: string[];
+    positioning: string;
+    advantages: string;
+    expertise: string;
+    serviceAreas: string;
+  }> {
+    try {
+      const { data: companyProfile } = await supabase
+        .from('company_profile')
+        .select(`
+          seo_context_keywords,
+          seo_market_positioning,
+          seo_competitive_advantages,
+          seo_technical_expertise,
+          seo_service_areas
+        `)
+        .single();
+
+      if (!companyProfile) {
+        return {
+          keywords: [],
+          positioning: '',
+          advantages: '',
+          expertise: '',
+          serviceAreas: ''
+        };
+      }
+
+      return {
+        keywords: Array.isArray(companyProfile.seo_context_keywords) 
+          ? companyProfile.seo_context_keywords.filter(k => typeof k === 'string') as string[]
+          : [],
+        positioning: companyProfile.seo_market_positioning || '',
+        advantages: companyProfile.seo_competitive_advantages || '',
+        expertise: companyProfile.seo_technical_expertise || '',
+        serviceAreas: companyProfile.seo_service_areas || ''
+      };
+    } catch (error) {
+      console.error('Error collecting SEO context:', error);
+      return {
+        keywords: [],
+        positioning: '',
+        advantages: '',
+        expertise: '',
+        serviceAreas: ''
+      };
+    }
+  }
 }

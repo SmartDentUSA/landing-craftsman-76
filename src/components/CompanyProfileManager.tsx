@@ -33,6 +33,11 @@ interface CompanyProfile {
   contact_email?: string;
   contact_phone?: string;
   social_media_links?: Array<{ platform: string; url: string }>;
+  seo_context_keywords?: string[];
+  seo_market_positioning?: string;
+  seo_competitive_advantages?: string;
+  seo_technical_expertise?: string;
+  seo_service_areas?: string;
 }
 
 interface CompanyProfileManagerProps {
@@ -502,6 +507,80 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             )}
             {saving ? 'Salvando...' : 'Salvar Perfil'}
           </Button>
+        </div>
+
+        {/* SEO Context Section */}
+        <div className="space-y-6">
+          <div className="text-lg font-semibold text-primary">Contexto SEO</div>
+          <p className="text-sm text-muted-foreground">
+            Estas informações são utilizadas pela IA para gerar conteúdo mais rico e específico nos blogs.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="seo_market_positioning">
+                Posicionamento no Mercado
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Como você se posiciona competitivamente)
+                </span>
+              </Label>
+              <Textarea
+                id="seo_market_positioning"
+                value={profile.seo_market_positioning || ''}
+                onChange={(e) => updateProfile('seo_market_positioning', e.target.value)}
+                placeholder="Ex: Líder em odontologia digital no Brasil, referência em automação para consultórios"
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="seo_competitive_advantages">
+                Vantagens Competitivas
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Seus diferenciais únicos)
+                </span>
+              </Label>
+              <Textarea
+                id="seo_competitive_advantages"
+                value={profile.seo_competitive_advantages || ''}
+                onChange={(e) => updateProfile('seo_competitive_advantages', e.target.value)}
+                placeholder="Ex: Única empresa com certificação ISO, suporte 24h, garantia estendida"
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="seo_technical_expertise">
+                Expertise Técnica
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Conhecimentos técnicos específicos)
+                </span>
+              </Label>
+              <Textarea
+                id="seo_technical_expertise"
+                value={profile.seo_technical_expertise || ''}
+                onChange={(e) => updateProfile('seo_technical_expertise', e.target.value)}
+                placeholder="Ex: Especialistas em tecnologia 3D, impressão digital, automação de processos"
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="seo_service_areas">
+                Áreas de Atuação
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Onde e como você atua)
+                </span>
+              </Label>
+              <Textarea
+                id="seo_service_areas"
+                value={profile.seo_service_areas || ''}
+                onChange={(e) => updateProfile('seo_service_areas', e.target.value)}
+                placeholder="Ex: Todo Brasil, instalação presencial, treinamento in-loco, suporte remoto"
+                rows={3}
+              />
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

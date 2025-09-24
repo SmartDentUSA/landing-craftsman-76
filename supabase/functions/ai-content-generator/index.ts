@@ -113,10 +113,16 @@ serve(async (req) => {
     // Use only the selected/landing page products - no fallback products
     let allProducts = products || [];
 
-    // Fetch company profile for additional context - EXPANDED FIELDS
+    // Fetch company profile for additional context - EXPANDED FIELDS including SEO context
     const { data: companyProfiles } = await supabase
       .from('company_profile')
-      .select('company_name, company_description, working_methodology, differentiators, business_sector, brand_values, mission_statement, vision_statement, target_audience, main_products_services, company_videos, social_media_links')
+      .select(`
+        company_name, company_description, working_methodology, differentiators, 
+        business_sector, brand_values, mission_statement, vision_statement, 
+        target_audience, main_products_services, company_videos, social_media_links,
+        seo_context_keywords, seo_market_positioning, seo_competitive_advantages,
+        seo_technical_expertise, seo_service_areas
+      `)
       .limit(1);
     
     const companyProfile = companyProfiles?.[0] || null;
@@ -373,6 +379,13 @@ ${companyProfile ? `## Perfil da Empresa:
 - **Descrição**: ${companyProfile.company_description || 'Empresa especializada em soluções de qualidade'}
 - **Metodologia**: ${companyProfile.working_methodology || 'Atendimento personalizado e resultados comprovados'}
 - **Diferenciais**: ${companyProfile.differentiators || 'Qualidade, confiabilidade e excelência no atendimento'}
+
+## Contexto SEO Especializado:
+- **Posicionamento**: ${companyProfile.seo_market_positioning || 'Não especificado'}
+- **Vantagens Competitivas**: ${companyProfile.seo_competitive_advantages || 'Não especificadas'}
+- **Expertise Técnica**: ${companyProfile.seo_technical_expertise || 'Não especificada'}
+- **Áreas de Atuação**: ${companyProfile.seo_service_areas || 'Não especificadas'}
+- **Keywords de Contexto**: ${Array.isArray(companyProfile.seo_context_keywords) ? companyProfile.seo_context_keywords.join(', ') : 'Não especificadas'}
 
 ` : `## Informações da Empresa:
 - **Nome**: ${pageTitle.split(' ')[0] || 'Nossa Empresa'}
