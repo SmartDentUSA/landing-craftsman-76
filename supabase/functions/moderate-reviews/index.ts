@@ -230,7 +230,7 @@ serve(async (req) => {
     console.error('Error in moderate-reviews function:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: (error as Error).message,
       timestamp: new Date().toISOString()
     }), {
       status: 200,

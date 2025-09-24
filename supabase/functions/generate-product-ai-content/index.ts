@@ -131,7 +131,7 @@ serve(async (req) => {
           productId: product.id,
           productName: product.name,
           success: false,
-          error: productError.message
+          error: (productError as Error).message
         });
       }
     }
@@ -148,7 +148,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in generate-product-ai-content function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: (error as Error).message,
       success: false 
     }), {
       status: 500,

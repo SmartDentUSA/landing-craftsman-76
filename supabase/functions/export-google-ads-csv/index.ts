@@ -68,7 +68,7 @@ serve(async (req) => {
     console.error('❌ Erro na função export-google-ads-csv:', error);
     return new Response(JSON.stringify({ 
       error: 'Erro interno do servidor',
-      details: error.message 
+      details: (error as Error).message 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -290,7 +290,7 @@ function buildGoogleAdsCSV(params: any): string {
   // Build Keywords section
   const keywordsSection = [
     'Campaign,Ad group,Keyword,Match type',
-    ...keywords.map(keyword => `"${campaignName}","Geral","${keyword}",Phrase`)
+    ...keywords.map((keyword: string) => `"${campaignName}","Geral","${keyword}",Phrase`)
   ].join('\n');
 
   // Build Sitelinks section
@@ -298,7 +298,7 @@ function buildGoogleAdsCSV(params: any): string {
   if (sitelinks.length > 0) {
     sitelinksSection = [
       'Campaign,Ad extension type,Sitelink text,Sitelink final URL',
-      ...sitelinks.map(sitelink => `"${campaignName}",Sitelink,"${sitelink.label}","${sitelink.url}"`)
+      ...sitelinks.map((sitelink: any) => `"${campaignName}",Sitelink,"${sitelink.label}","${sitelink.url}"`)
     ].join('\n');
   }
 

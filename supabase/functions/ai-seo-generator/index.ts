@@ -147,7 +147,7 @@ Retorne no formato JSON especificado.`;
           linkBuildingStrategy = `
 LINK BUILDING INTELIGENTE PERSONALIZADO:
 ${Object.entries(intelligent_links).map(([keyword, url]) => {
-  const fullUrl = url.startsWith('http') ? url : `https://smartdent.com.br${url}`;
+  const fullUrl = (url as string).startsWith('http') ? url : `https://smartdent.com.br${url}`;
   return `• "${keyword}" → <a href="${fullUrl}" target="_blank">${keyword}</a>`;
 }).join('\n')}
 
@@ -183,10 +183,10 @@ DADOS DA LANDING PAGE:
 Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
 
 Soluções: ${fullLandingPageContent?.solutions?.title || ''}
-${fullLandingPageContent?.solutions?.items?.map((s, i) => `${i + 1}. ${s.text}`).join('\n') || ''}
+${fullLandingPageContent?.solutions?.items?.map((s: any, i: number) => `${i + 1}. ${s.text}`).join('\n') || ''}
 
 FAQ: ${fullLandingPageContent?.faq?.title || ''}
-${fullLandingPageContent?.faq?.items?.map(f => `P: ${f.question}\nR: ${f.answer}`).join('\n\n') || ''}
+${fullLandingPageContent?.faq?.items?.map((f: any) => `P: ${f.question}\nR: ${f.answer}`).join('\n\n') || ''}
 
 Conteúdo SEO: ${fullLandingPageContent?.seo?.hidden_content || fullLandingPageContent?.seo?.description || ''}
 
@@ -205,10 +205,10 @@ DADOS DA LANDING PAGE:
 Banner: ${fullLandingPageContent?.banner?.title || ''} - ${fullLandingPageContent?.banner?.subtitle || ''}
 
 Soluções: ${fullLandingPageContent?.solutions?.title || ''}
-${fullLandingPageContent?.solutions?.items?.map((s, i) => `${i + 1}. ${s.text}`).join('\n') || ''}
+${fullLandingPageContent?.solutions?.items?.map((s: any, i: number) => `${i + 1}. ${s.text}`).join('\n') || ''}
 
 FAQ: ${fullLandingPageContent?.faq?.title || ''}
-${fullLandingPageContent?.faq?.items?.map(f => `P: ${f.question}\nR: ${f.answer}`).join('\n\n') || ''}
+${fullLandingPageContent?.faq?.items?.map((f: any) => `P: ${f.question}\nR: ${f.answer}`).join('\n\n') || ''}
 
 Conteúdo SEO: ${fullLandingPageContent?.seo?.hidden_content || fullLandingPageContent?.seo?.description || ''}
 
@@ -364,7 +364,7 @@ CRÍTICO: Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou 
       
     } catch (timeoutError) {
       clearTimeout(timeoutId);
-      if (timeoutError.name === 'AbortError') {
+      if ((timeoutError as any).name === 'AbortError') {
         console.error('Timeout na API DeepSeek');
         return new Response(
           JSON.stringify({ error: 'Request timeout - try fast mode' }),
@@ -380,7 +380,7 @@ CRÍTICO: Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou 
     return new Response(
       JSON.stringify({ 
         error: 'Erro interno do servidor',
-        details: error.message 
+        details: (error as Error).message 
       }),
       { 
         status: 500, 

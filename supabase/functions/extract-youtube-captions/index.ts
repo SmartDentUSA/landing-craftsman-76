@@ -109,7 +109,7 @@ serve(async (req) => {
         }
       } catch (videoError) {
         console.error(`Failed to extract captions from ${video.url}:`, videoError);
-        errors.push(`${video.url}: ${videoError.message}`);
+        errors.push(`${video.url}: ${(videoError as Error).message}`);
       }
     }
 
@@ -150,7 +150,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in extract-youtube-captions function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: (error as Error).message,
       success: false 
     }), {
       status: 500,
@@ -252,7 +252,7 @@ async function analyzeCaptionsWithAI(apiKey: string, captions: string, videoType
     instagram_videos: 'vídeo de mídia social'
   };
 
-  const context = contextMap[videoType] || 'vídeo';
+  const context = (contextMap as any)[videoType] || 'vídeo';
 
   const prompt = `Analise o seguinte texto de legendas de um ${context}:
 

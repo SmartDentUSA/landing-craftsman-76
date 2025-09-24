@@ -62,7 +62,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: (error as Error).message,
       extracted_at: new Date().toISOString()
     }), {
       status: 200,
@@ -440,7 +440,7 @@ async function extractAndSaveReviews(url: string, supabase: any) {
       .from('extraction_jobs')
       .update({
         status: 'failed',
-        error_message: error.message,
+        error_message: (error as Error).message,
         completed_at: new Date().toISOString()
       })
       .eq('id', job.id);

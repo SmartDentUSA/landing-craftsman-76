@@ -124,7 +124,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error(`❌ Erro ao publicar no ${domain}:`, error);
-        errors.push(`${domain}: ${error.message}`);
+        errors.push(`${domain}: ${(error as Error).message}`);
       }
     }
 
@@ -214,13 +214,13 @@ async function publishToFTP(blogPost: any, settings: any) {
       console.error('❌ Erro FTP:', ftpError);
       return { 
         success: false, 
-        error: `Erro FTP: ${ftpError.message}` 
+        error: `Erro FTP: ${(ftpError as Error).message}` 
       };
     }
   } catch (error) {
     return { 
       success: false, 
-      error: error.message 
+      error: (error as Error).message 
     };
   }
 }
@@ -413,7 +413,7 @@ async function publishToWordPress(blogPost: any, settings: any) {
     console.error(`❌ Erro na publicação WordPress:`, error);
     return { 
       success: false, 
-      error: `Erro de conexão: ${error.message}` 
+      error: `Erro de conexão: ${(error as Error).message}` 
     };
   }
 }
@@ -454,7 +454,7 @@ async function createOrGetWordPressTags(keywords: string[], baseUrl: string, set
       }
     }
   } catch (error) {
-    console.warn(`⚠️ Erro ao processar tags: ${error.message}`);
+    console.warn(`⚠️ Erro ao processar tags: ${(error as Error).message}`);
   }
   
   return tagIds;

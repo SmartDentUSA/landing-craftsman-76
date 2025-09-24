@@ -57,7 +57,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Schema validation failed',
-        details: error.message 
+        details: (error as Error).message 
       }),
       {
         status: 500,
@@ -117,7 +117,7 @@ async function validateSchemaMarkup(html: string, url?: string): Promise<SchemaV
         }
         
       } catch (parseError) {
-        result.errors.push(`Erro ao analisar JSON-LD: ${parseError.message}`);
+        result.errors.push(`Erro ao analisar JSON-LD: ${(parseError as Error).message}`);
         result.isValid = false;
       }
     }
@@ -143,7 +143,7 @@ async function validateSchemaMarkup(html: string, url?: string): Promise<SchemaV
 
   } catch (error) {
     result.isValid = false;
-    result.errors.push(`Erro na validação: ${error.message}`);
+    result.errors.push(`Erro na validação: ${(error as Error).message}`);
     return result;
   }
 }

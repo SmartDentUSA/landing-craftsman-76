@@ -145,7 +145,7 @@ Retorne APENAS um JSON válido no formato:
     console.error('❌ Erro na função generate-ad-copies:', error);
     return new Response(JSON.stringify({ 
       error: 'Erro interno do servidor',
-      details: error.message 
+      details: (error as Error).message 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

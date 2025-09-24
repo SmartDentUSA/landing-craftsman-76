@@ -31,10 +31,13 @@ serve(async (req) => {
 
     // Validate URL format
     if (url.includes('/wp-admin') || url.includes('/blog')) {
-      return {
+      return new Response(JSON.stringify({
         success: false,
         error: 'A URL não deve conter /wp-admin ou outros caminhos. Use apenas o domínio (ex.: https://dentala.com.br)'
-      };
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Testar conexão com WordPress REST API
@@ -69,17 +72,23 @@ serve(async (req) => {
           
           if (!apiCheckResponse.ok) {
             console.log(`❌ REST API não encontrada: ${apiCheckResponse.status}`);
-            return { 
+            return new Response(JSON.stringify({ 
               success: false, 
               error: 'WordPress REST API não está disponível neste domínio. Verifique se é um site WordPress válido.' 
-            };
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
         } catch (error) {
           console.log(`❌ Erro ao verificar REST API: ${error}`);
-          return { 
+          return new Response(JSON.stringify({ 
             success: false, 
             error: 'Não foi possível acessar o site. Verifique a URL e conectividade.' 
-          };
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
         // Segundo: tentar autenticar com /users/me
@@ -104,7 +113,10 @@ serve(async (req) => {
         if (usersResponse.ok) {
           const userData = await usersResponse.json();
           console.log('✅ Usuário WordPress autenticado via /users/me:', userData.name || userData.username);
-          return { success: true, user: userData.name || userData.username };
+          return new Response(JSON.stringify({ success: true, user: userData.name || userData.username }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
         // Terceiro: se /users/me falhar com 404, tentar /posts (endpoint alternativo)
@@ -124,83 +136,79 @@ serve(async (req) => {
           
           if (postsResponse.ok) {
             console.log('✅ Usuário WordPress autenticado via /posts');
-            return { success: true, user: user };
+            return new Response(JSON.stringify({ success: true, user: user }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           } else if (postsResponse.status === 401) {
             const postsWwwAuth = postsResponse.headers.get('WWW-Authenticate');
             if (postsWwwAuth) {
               console.log(`🔐 WWW-Authenticate header em /posts: ${postsWwwAuth}`);
             }
-            return { 
+            return new Response(JSON.stringify({ 
               success: false, 
               error: 'invalid_credentials',
               details: 'Credenciais inválidas. Verifique se está usando um Application Password (não a senha normal).' 
-            };
-          } else {
-            return { 
+            }), {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+            return new Response(JSON.stringify({ 
               success: false, 
               error: 'auth_blocked',
               details: `Erro ${postsResponse.status}. O servidor pode estar bloqueando headers de Authorization.` 
-            };
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
         }
 
         // Análise detalhada dos erros de /users/me
         if (usersResponse.status === 401) {
-          return { 
+          return new Response(JSON.stringify({ 
             success: false, 
             error: 'invalid_credentials',
             details: 'Credenciais inválidas. Certifique-se de usar seu username (não email) e um Application Password.' 
-          };
+          }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         } else if (usersResponse.status === 403) {
-          return { 
+          return new Response(JSON.stringify({ 
             success: false, 
             error: 'auth_blocked',
             details: 'Acesso negado. O servidor pode estar bloqueando headers de Authorization.' 
-          };
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         } else {
           const errorText = await usersResponse.text();
           console.log('❌ Erro na autenticação WordPress:', usersResponse.status, errorText);
-          return { 
+          return new Response(JSON.stringify({ 
             success: false, 
             error: 'connection_error',
             details: `Erro HTTP ${usersResponse.status}. Verifique a conectividade e configurações do servidor.` 
-          };
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
       } catch (error) {
         console.log('❌ Erro de conexão WordPress:', error);
-        return { 
+        return new Response(JSON.stringify({ 
           success: false, 
           error: 'Erro de conexão. Verifique a URL e conectividade.' 
-        };
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
     };
 
-    const result = await testWordPressAPI();
-
-    if (result.success) {
-      console.log('✅ Conexão WordPress estabelecida com sucesso');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Conexão WordPress estabelecida com sucesso. Usuário: ${result.user}` 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: result.error || 'connection_error',
-          details: result.details || result.error || 'Erro desconhecido'
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
+    // Execute the test and return directly
+    return await testWordPressAPI();
 
   } catch (error) {
     console.error('❌ Erro no teste de conexão WordPress:', error);
