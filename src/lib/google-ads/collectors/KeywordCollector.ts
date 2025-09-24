@@ -15,6 +15,44 @@ export class KeywordCollector {
       return [];
     }
   }
+
+  // NEW: Collect keywords directly from product repository
+  static collectFromProducts(products: any[] = []): string[] {
+    try {
+      const allKeywords = products.flatMap(product => [
+        ...(product.keywords || []),
+        ...(product.market_keywords || []),
+        ...(product.search_intent_keywords || []),
+        product.category,
+        product.subcategory
+      ].filter(Boolean));
+      
+      return this.normalizeKeywords(allKeywords);
+    } catch (error) {
+      console.warn('Error processing product keywords:', error);
+      return [];
+    }
+  }
+
+  // NEW: Collect keywords from categories config
+  static collectFromCategoriesConfig(categoriesConfig: any[] = [], productCategories: string[] = []): string[] {
+    try {
+      const relevantConfigs = categoriesConfig.filter(config => 
+        productCategories.includes(config.category)
+      );
+      
+      const allKeywords = relevantConfigs.flatMap(config => [
+        ...(config.keywords || []),
+        ...(config.market_keywords || []),
+        ...(config.search_intent_keywords || [])
+      ]);
+      
+      return this.normalizeKeywords(allKeywords);
+    } catch (error) {
+      console.warn('Error processing categories config keywords:', error);
+      return [];
+    }
+  }
   
   private static normalizeAIKeywords(aiKeywords: any): string[] {
     if (!aiKeywords) return [];

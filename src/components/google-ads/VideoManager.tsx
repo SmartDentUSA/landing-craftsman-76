@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink } from 'lucide-react';
 import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
+import { CompanyDataCollector } from '@/lib/google-ads/collectors/CompanyDataCollector';
 import { VideoExtension } from '@/types/google-ads';
 
 interface VideoManagerProps {
@@ -23,8 +24,22 @@ export const VideoManager = ({ config, data, landingPageId, onChange }: VideoMan
   const collectAutoVideos = async () => {
     setIsLoading(true);
     try {
-      const videos = await VideoCollector.collectAll(landingPageId, [], data);
-      setAutoVideos(videos);
+      // Collect videos from products
+      const productVideos = await VideoCollector.collectAll(landingPageId, [], data);
+      
+      // Collect videos from company profile
+      const companyVideos = await CompanyDataCollector.collectCompanyVideos();
+      
+      // Combine and limit to 20 videos
+      const allVideos = [
+        ...productVideos, 
+        ...companyVideos.map(video => ({
+          youtube_id: video.youtube_id,
+          label: video.label
+        }))
+      ].slice(0, 20);
+      
+      setAutoVideos(allVideos);
     } catch (error) {
       console.error('Error collecting videos:', error);
     } finally {

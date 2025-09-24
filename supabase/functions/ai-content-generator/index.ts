@@ -71,10 +71,10 @@ serve(async (req) => {
     if (request.selectedProductIds && request.selectedProductIds.length > 0) {
       console.log(`🎯 Using ${request.selectedProductIds.length} selected products:`, request.selectedProductIds);
       
-      // Fetch specifically selected products
+      // Fetch specifically selected products with expanded fields
       const { data: selectedProducts, error: selectedError } = await supabase
         .from('products_repository')
-        .select('name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation')
+        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation, price, currency')
         .in('id', request.selectedProductIds)
         .eq('approved', true);
       
@@ -84,7 +84,7 @@ serve(async (req) => {
       // Fallback: Fetch products from repository related to this landing page
       const { data: landingPageProducts, error: landingError } = await supabase
         .from('products_repository')
-        .select('name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation')
+        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation, price, currency')
         .eq('source_landing_page_id', request.landingPageId)
         .eq('approved', true)
         .order('display_order', { ascending: true });
@@ -100,13 +100,28 @@ serve(async (req) => {
     // Use only the selected/landing page products - no fallback products
     let allProducts = products || [];
 
-    // Fetch company profile for additional context
+    // Fetch company profile for additional context - EXPANDED FIELDS
     const { data: companyProfiles } = await supabase
       .from('company_profile')
-      .select('company_name, company_description, working_methodology, differentiators')
+      .select('company_name, company_description, working_methodology, differentiators, business_sector, brand_values, mission_statement, vision_statement, target_audience, main_products_services, company_videos, social_media_links')
       .limit(1);
     
     const companyProfile = companyProfiles?.[0] || null;
+
+    // Fetch categories_config for keyword enrichment - CRITICAL ADDITION
+    const { data: categoriesConfig } = await supabase
+      .from('categories_config')
+      .select('category, subcategory, keywords, market_keywords, search_intent_keywords, target_audience')
+      .limit(100);
+
+    // Fetch landing page data for context enrichment - NEW
+    const { data: landingPageData } = await supabase
+      .from('landing_pages')
+      .select('name, data, template')
+      .eq('id', request.landingPageId)
+      .single();
+    
+    const landingPage = landingPageData || null;
 
     // Fetch manual reviews for SEO enrichment
     const { data: manualReviews } = await supabase
@@ -124,8 +139,16 @@ serve(async (req) => {
       .eq('approved', true)
       .order('sentiment_score', { ascending: false });
 
-    // Build strategic context with progressive data
-    const strategicContext = buildStrategicContext(request, allProducts, companyProfile, manualReviews || [], videoTestimonials || []);
+    // Build strategic context with progressive data - ENHANCED WITH CATEGORIES
+    const strategicContext = buildStrategicContext(
+      request, 
+      allProducts, 
+      companyProfile, 
+      manualReviews || [], 
+      videoTestimonials || [], 
+      categoriesConfig || [],
+      landingPage
+    );
     
     // Generate content based on type
     let result: any;
@@ -162,7 +185,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in ai-content-generator function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: (error as Error).message,
       success: false 
     }), {
       status: 500,
@@ -171,7 +194,15 @@ serve(async (req) => {
   }
 });
 
-function buildStrategicContext(request: ContentRequest, products: any[], companyProfile?: any, manualReviews: any[] = [], videoTestimonials: any[] = []): string {
+function buildStrategicContext(
+  request: ContentRequest, 
+  products: any[], 
+  companyProfile?: any, 
+  manualReviews: any[] = [], 
+  videoTestimonials: any[] = [], 
+  categoriesConfig: any[] = [],
+  landingPage?: any
+): string {
   // PROGRESSIVE GENERATION: Always use available data, even if partial
   const pageTitle = request.seoTitle || request.contentData?.banner?.title || request.contentData?.brand?.name || 'Nossos Serviços';
   const pageSubtitle = request.seoDescription || request.contentData?.banner?.subtitle || request.contentData?.seo?.meta_description || 'Soluções de qualidade para você';
@@ -183,8 +214,12 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   // FASE 1: Extract keywords from FAQ using KeywordCollector logic
   const faqKeywords = extractFAQKeywords(request.contentData);
   
-  // Extract keywords from products
-  const productKeywords = products.flatMap(p => p.keywords || []);
+  // Extract keywords from products - ENHANCED WITH MARKET & SEARCH INTENT
+  const productKeywords = products.flatMap(p => [
+    ...(p.keywords || []),
+    ...(p.market_keywords || []),
+    ...(p.search_intent_keywords || [])
+  ]);
   const productBenefits = products.flatMap(p => p.benefits || []);
   const productFeatures = products.flatMap(p => p.features || []);
   
@@ -193,8 +228,29 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
   const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
   const uniqueSubcategories = [...new Set(products.map(p => p.subcategory).filter(Boolean))];
   
-  // FASE 2: Improve Primary Keyword detection with intelligent fallback
-  const primaryKeyword = determinePrimaryKeyword(request.primaryKeyword, faqKeywords, productKeywords, pageTitle);
+  // CRITICAL: Extract keywords from categories_config for matching products
+  const categoryConfigKeywords = categoriesConfig.filter(config => 
+    uniqueCategories.includes(config.category) || uniqueSubcategories.includes(config.subcategory)
+  ).flatMap(config => [
+    ...(config.keywords || []),
+    ...(config.market_keywords || []),
+    ...(config.search_intent_keywords || [])
+  ]);
+  
+  // Enhanced target audience from products + categories config
+  const allTargetAudiences = [
+    ...products.flatMap(p => p.target_audience || []),
+    ...categoriesConfig.flatMap(config => config.target_audience || [])
+  ];
+  const mergedTargetAudience = [...new Set(allTargetAudiences)].join(', ') || targetAudience;
+  
+  // FASE 2: Improve Primary Keyword detection with intelligent fallback + CATEGORIES
+  const primaryKeyword = determinePrimaryKeyword(
+    request.primaryKeyword, 
+    faqKeywords, 
+    [...productKeywords, ...categoryConfigKeywords], 
+    pageTitle
+  );
   
   // FASE 3: Debug logging for context generation
   console.log(`🔍 DEBUG - Progressive Context Generation:`);
@@ -280,7 +336,9 @@ function buildStrategicContext(request: ContentRequest, products: any[], company
 - **Título**: ${pageTitle}
 - **Subtítulo**: ${pageSubtitle}
 - **Palavra-chave Principal**: ${primaryKeyword}
-- **Público-alvo**: ${targetAudience}
+- **Público-alvo**: ${mergedTargetAudience}
+- **Template**: ${landingPage?.template || 'Não especificado'}
+- **Landing Page**: ${landingPage?.name || 'Não especificada'}
 
 ${companyProfile ? `## Perfil da Empresa:
 - **Nome**: ${companyProfile.company_name || 'Nossa Empresa'}
@@ -303,8 +361,13 @@ ${categoryKeywords.length > 0 ? `**Keywords por Categoria**: ${categoryKeywords.
 ## Repositório de Produtos/Serviços (${products.filter(p => p.use_in_ai_generation !== false).length} disponíveis):
 ${productContext}
 
-## Keywords Inteligentes (incluindo categorias para SEO/ADS):
-${[...new Set([...faqKeywords, ...productKeywords, ...categoryKeywords, primaryKeyword].filter(Boolean))].join(', ') || 'soluções, qualidade, atendimento'}
+## Keywords Inteligentes EXPANDIDAS (FAQ + Produtos + Categorias Config):
+${[...new Set([...faqKeywords, ...productKeywords, ...categoryKeywords, ...categoryConfigKeywords, primaryKeyword].filter(Boolean))].join(', ') || 'soluções, qualidade, atendimento'}
+
+## Keywords por Categoria (de categories_config):
+${categoriesConfig.length > 0 ? categoriesConfig.map(config => 
+  `**${config.category}${config.subcategory ? ' > ' + config.subcategory : ''}**: ${[...(config.keywords || []), ...(config.market_keywords || []), ...(config.search_intent_keywords || [])].join(', ')}`
+).join('\n') : 'Nenhuma configuração de categoria disponível'}
 
 ## FAQ - Perguntas e Respostas:
 ${extractFAQSection(request.contentData)}
@@ -732,7 +795,7 @@ Nossa equipe está pronta para atender você com excelência e profissionalismo.
   return {
     title: fallbackTitle,
     content: fallbackContent,
-    meta_description: "Soluções profissionais de alta qualidade com atendimento personalizado e tecnologia avançada para seu negócio.",
+    metaDescription: "Soluções profissionais de alta qualidade com atendimento personalizado e tecnologia avançada para seu negócio.",
     keywords: ["soluções profissionais", "qualidade", "atendimento personalizado", "tecnologia avançada", "resultados"]
   };
 }
@@ -863,7 +926,7 @@ Retorne APENAS um JSON válido:
             return {
               title: fallback.title,
               content: fallback.content,
-              metaDescription: fallback.meta_description,
+              metaDescription: fallback.metaDescription,
               keywords: fallback.keywords
             };
           }
@@ -878,7 +941,7 @@ Retorne APENAS um JSON válido:
           return {
             title: fallback.title,
             content: fallback.content,
-            metaDescription: fallback.meta_description,
+            metaDescription: fallback.metaDescription,
             keywords: fallback.keywords
           };
         }
@@ -893,7 +956,7 @@ Retorne APENAS um JSON válido:
         return {
           title: fallback.title,
           content: fallback.content,
-          metaDescription: fallback.meta_description,
+          metaDescription: fallback.metaDescription,
           keywords: fallback.keywords
         };
       }
@@ -907,7 +970,7 @@ Retorne APENAS um JSON válido:
   return {
     title: fallback.title,
     content: fallback.content,
-    metaDescription: fallback.meta_description,
+    metaDescription: fallback.metaDescription,
     keywords: fallback.keywords
   };
 }
