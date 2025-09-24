@@ -22,7 +22,8 @@ interface DualBlogGeneratorProps {
 interface BlogVersion {
   title: string;
   content: string;
-  metaDescription: string;
+  metaDescription?: string;
+  meta_description?: string;
   keywords: string[];
 }
 
@@ -53,6 +54,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
           type: 'dual_blog_versions',
           landingPageId,
           landingPage: landingPageData,
+          contentData: landingPageData, // For compatibility with Edge Function
           selectedProductIds: selectedProductIds || [],
           include_offers: true
         }
@@ -60,9 +62,12 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
 
       if (error) throw error;
 
-      if (data?.blogVersions) {
-        setBlogVersions(data.blogVersions);
-        await saveBlogVersions(data.blogVersions);
+      console.log("🔍 DualBlogGeneratorWithKOL - Resposta da AI:", data);
+      
+      if (data?.success && data?.content) {
+        console.log("✅ DualBlogGeneratorWithKOL - Conteúdo encontrado:", data.content);
+        setBlogVersions(data.content);
+        await saveBlogVersions(data.content);
         markBlogGenerated(landingPageId);
         
         toast({
@@ -92,7 +97,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
           landing_page_id: landingPageId,
           title: versions.dentala.title,
           content: versions.dentala.content,
-          meta_description: versions.dentala.metaDescription,
+          meta_description: versions.dentala.meta_description || versions.dentala.metaDescription || '',
           keywords: versions.dentala.keywords,
           published_domains: ['dentala.com.br'],
           status: 'generated',
@@ -110,7 +115,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
           landing_page_id: landingPageId,
           title: versions.eodonto.title,
           content: versions.eodonto.content,
-          meta_description: versions.eodonto.metaDescription,
+          meta_description: versions.eodonto.meta_description || versions.eodonto.metaDescription || '',
           keywords: versions.eodonto.keywords,
           published_domains: ['eodonto.com'],
           status: 'generated',

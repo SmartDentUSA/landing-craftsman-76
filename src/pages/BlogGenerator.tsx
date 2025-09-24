@@ -19,6 +19,7 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
 import { generateBlogHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
+import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
 import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag } from "lucide-react";
 
 interface BlogPost {
@@ -52,12 +53,7 @@ export default function BlogGenerator() {
   const location = useLocation();
   const { getLandingPage } = useLandingPages();
   const [landingPage, setLandingPage] = useState<LandingPageData | null>(null);
-  // Helper function to ensure keywords is always an array
-  const normalizeKeywords = (keywords: any): string[] => {
-    if (Array.isArray(keywords)) return keywords;
-    if (typeof keywords === 'string') return keywords.split(',').map(k => k.trim()).filter(Boolean);
-    return [];
-  };
+  // Note: normalizeKeywords function moved to src/lib/blog-utils.ts
 
   const [blogPost, setBlogPost] = useState<BlogPost>({
     title: "",
@@ -371,37 +367,42 @@ export default function BlogGenerator() {
             landingPageId: landingPage.id,
             selectedProductIds: getSelectedProducts(landingPage.id) || [],
             landingPageData: landingPage.content || {},
+            contentData: landingPage.content || {}, // For compatibility with Edge Function
             primaryKeyword: blogPost.keywords?.[0] || landingPage.title,
           },
         });
 
-        if (dualResponse.data?.dentala && dualResponse.data?.eodonto) {
+        console.log("🔍 BlogGenerator - Resposta dual da AI:", dualResponse.data);
+
+        // Get the content from the correct path: data.content or fallback to data
+        const payload = dualResponse.data?.content || dualResponse.data;
+        
+        if (payload?.dentala && payload?.eodonto) {
+          console.log("✅ BlogGenerator - Versões encontradas:", { dentala: payload.dentala, eodonto: payload.eodonto });
+          
+          // Normalize both versions
+          const normalizedDentala = normalizeAiBlog(payload.dentala);
+          const normalizedEodonto = normalizeAiBlog(payload.eodonto);
+          
           setDualVersions({
             dentala: {
               ...blogPost,
-              title: dualResponse.data.dentala.title,
-              content: dualResponse.data.dentala.content,
-              meta_description: dualResponse.data.dentala.meta_description,
-              keywords: normalizeKeywords(dualResponse.data.dentala.keywords || []),
+              ...normalizedDentala,
             },
             eodonto: {
               ...blogPost,
-              title: dualResponse.data.eodonto.title,
-              content: dualResponse.data.eodonto.content,
-              meta_description: dualResponse.data.eodonto.meta_description,
-              keywords: normalizeKeywords(dualResponse.data.eodonto.keywords || []),
+              ...normalizedEodonto,
             }
           });
           
-          // Atualizar o blog post atual com a versão selecionada
-          const selectedVersion = selectedDomain === 'dentala' ? dualResponse.data.dentala : dualResponse.data.eodonto;
+          // Update current blog post with selected version
+          const selectedNormalized = selectedDomain === 'dentala' ? normalizedDentala : normalizedEodonto;
           setBlogPost(prev => ({
             ...prev,
-            title: selectedVersion.title,
-            content: selectedVersion.content,
-            meta_description: selectedVersion.meta_description,
-            keywords: normalizeKeywords(selectedVersion.keywords || []),
+            ...selectedNormalized,
           }));
+        } else {
+          console.error("❌ BlogGenerator - Versões não encontradas na resposta:", payload);
         }
       } else {
         // Gerar conteúdo único
@@ -411,18 +412,28 @@ export default function BlogGenerator() {
             landingPageId: landingPage.id,
             selectedProductIds: getSelectedProducts(landingPage.id) || [],
             landingPageData: landingPage.content || {},
+            contentData: landingPage.content || {}, // For compatibility with Edge Function
             primaryKeyword: blogPost.keywords?.[0] || landingPage.title,
           },
         });
 
-        if (contentResponse.data?.title && contentResponse.data?.content) {
+        console.log("🔍 BlogGenerator - Resposta single da AI:", contentResponse.data);
+
+        // Get the content from the correct path: data.content or fallback to data
+        const payload = contentResponse.data?.content || contentResponse.data;
+        
+        if (payload?.title && payload?.content) {
+          console.log("✅ BlogGenerator - Conteúdo encontrado:", payload);
+          
+          // Normalize the response
+          const normalizedContent = normalizeAiBlog(payload);
+          
           setBlogPost(prev => ({
             ...prev,
-            title: contentResponse.data.title,
-            content: contentResponse.data.content,
-            meta_description: contentResponse.data.meta_description || prev.meta_description,
-            keywords: normalizeKeywords(contentResponse.data.keywords || prev.keywords),
+            ...normalizedContent,
           }));
+        } else {
+          console.error("❌ BlogGenerator - Conteúdo não encontrado na resposta:", payload);
         }
       }
 
