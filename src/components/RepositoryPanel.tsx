@@ -422,18 +422,6 @@ export function RepositoryPanel({
     });
   };
 
-  // Initialize open categories on first load
-  useEffect(() => {
-    if (products.length > 0 && openCategories.size === 0) {
-      const categories = getUniqueCategories();
-      // Open the first few categories by default
-      const initialOpen = new Set(categories.slice(0, 3));
-      if (filteredProducts.some(p => !p.category)) {
-        initialOpen.add('Sem categoria');
-      }
-      setOpenCategories(initialOpen);
-    }
-  }, [products]);
 
   const formatPrice = (price?: number, currency?: string) => {
     if (price === 0) return "Pedir orçamento";
