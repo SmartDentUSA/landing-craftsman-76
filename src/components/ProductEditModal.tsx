@@ -18,6 +18,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { useCategoryConfig } from '@/hooks/useCategoryConfig';
+import { useCallback } from 'react';
 
 interface Video {
   url: string;
@@ -62,6 +64,7 @@ interface ProductEditModalProps {
 
 export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }: ProductEditModalProps) {
   const { categories, getSubcategoriesForCategory, refreshCategories } = useProductCategories();
+  const { getConfigByCategory } = useCategoryConfig();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -109,6 +112,40 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [videoCaptions, setVideoCaptions] = useState<any>({});
   
   const { toast } = useToast();
+
+  // Função para carregar configurações padrão de categoria
+  const loadCategoryDefaults = useCallback((category: string, subcategory: string) => {
+    const config = getConfigByCategory(category, subcategory);
+    if (config) {
+      // Auto-preencher apenas campos vazios para não sobrescrever dados já inseridos
+      const updates: Partial<Product> = {};
+      
+      if (config.target_audience.length > 0 && (!targetAudience || targetAudience.length === 0)) {
+        setTargetAudience(config.target_audience);
+      }
+      
+      if (config.keywords.length > 0 && (!formData.keywords || formData.keywords.length === 0)) {
+        updates.keywords = config.keywords;
+      }
+      
+      if (config.market_keywords.length > 0 && (!marketKeywords || marketKeywords.length === 0)) {
+        setMarketKeywords(config.market_keywords);
+      }
+      
+      if (config.search_intent_keywords.length > 0 && (!searchIntentKeywords || searchIntentKeywords.length === 0)) {
+        setSearchIntentKeywords(config.search_intent_keywords);
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+      
+      toast({
+        title: "Campos preenchidos automaticamente",
+        description: "Dados padrão da categoria foram aplicados aos campos vazios"
+      });
+    }
+  }, [getConfigByCategory, targetAudience, formData.keywords, marketKeywords, searchIntentKeywords, toast]);
 
   const isEditing = !!product;
 
@@ -771,6 +808,11 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           onSelect={(currentValue) => {
                             setFormData(prev => ({ ...prev, subcategory: currentValue }));
                             setSubcategoryOpen(false);
+                            
+                            // Auto-preencher com configurações da categoria se disponível
+                            if (formData.category && currentValue) {
+                              loadCategoryDefaults(formData.category, currentValue);
+                            }
                           }}
                         >
                           <Check

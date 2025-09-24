@@ -129,6 +129,42 @@ export type Database = {
           },
         ]
       }
+      categories_config: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          keywords: Json | null
+          market_keywords: Json | null
+          search_intent_keywords: Json | null
+          subcategory: string
+          target_audience: Json | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          keywords?: Json | null
+          market_keywords?: Json | null
+          search_intent_keywords?: Json | null
+          subcategory: string
+          target_audience?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          keywords?: Json | null
+          market_keywords?: Json | null
+          search_intent_keywords?: Json | null
+          subcategory?: string
+          target_audience?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_profile: {
         Row: {
           brand_values: string | null

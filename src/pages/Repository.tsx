@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
+import CategoryManager from '@/components/CategoryManager';
 
 const Repository = () => {
   const navigate = useNavigate();
+  const [activeView, setActiveView] = useState<'repository' | 'categories'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -30,20 +32,48 @@ const Repository = () => {
                   Voltar
                 </Button>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Repositório Central de Dados</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {activeView === 'repository' ? 'Repositório Central de Dados' : 'Gerenciar Categorias'}
+                  </h1>
                   <p className="text-muted-foreground mt-2">
-                    Gerencie produtos, avaliações e depoimentos centralizados para suas landing pages
+                    {activeView === 'repository' 
+                      ? 'Gerencie produtos, avaliações e depoimentos centralizados para suas landing pages'
+                      : 'Configure campos padrões para categorias e subcategorias'
+                    }
                   </p>
                 </div>
               </div>
-              <AdminStatusBadge />
+              <div className="flex items-center space-x-3">
+                <div className="flex bg-muted rounded-lg p-1">
+                  <Button
+                    variant={activeView === 'repository' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('repository')}
+                  >
+                    Repositório
+                  </Button>
+                  <Button
+                    variant={activeView === 'categories' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('categories')}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Categorias
+                  </Button>
+                </div>
+                <AdminStatusBadge />
+              </div>
             </div>
             
-            <RepositoryPanel 
-              landingPageId="repository"
-              onProductSelectionChange={() => {}}
-              onCompanyProfileChange={() => {}}
-            />
+            {activeView === 'repository' ? (
+              <RepositoryPanel 
+                landingPageId="repository"
+                onProductSelectionChange={() => {}}
+                onCompanyProfileChange={() => {}}
+              />
+            ) : (
+              <CategoryManager />
+            )}
           </div>
         </main>
       </div>
