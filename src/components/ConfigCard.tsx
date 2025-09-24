@@ -56,12 +56,6 @@ export function ConfigCard({
   onEdit,
   onDelete,
 }: ConfigCardProps) {
-  const handleCheckboxChange = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (config.id) {
-      onToggleSelection(config.id);
-    }
-  };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -78,24 +72,26 @@ export function ConfigCard({
   return (
     <Card
       className={cn(
-        "group relative transition-all duration-200 hover:shadow-md p-4 cursor-pointer border-border/20 shadow-soft",
+        "group relative transition-all duration-200 hover:shadow-md p-4",
         isSelected && "ring-2 ring-primary shadow-lg"
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-4">
         {/* Checkbox */}
-        <div className="pt-0.5" onClick={handleCheckboxChange}>
-          <Checkbox checked={isSelected} />
-        </div>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => config.id && onToggleSelection(config.id)}
+          className="flex-shrink-0"
+        />
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-foreground truncate">
+              <h3 className="font-medium text-sm leading-tight truncate">
                 {config.subcategoria}
-              </h4>
-              <p className="text-sm text-muted-foreground mt-1">
+              </h3>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
                 {config.publico_alvo}
               </p>
               {config.palavras_chave?.length > 0 && (
@@ -135,7 +131,7 @@ export function ConfigCard({
             size="sm"
             variant="ghost"
             onClick={handleDelete}
-            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

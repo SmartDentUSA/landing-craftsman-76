@@ -58,7 +58,7 @@ const CategoryManager = () => {
     market_keywords: [],
     search_intent_keywords: []
   });
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [selectedConfigIds, setSelectedConfigIds] = useState<Set<string>>(new Set());
 
   // Filtrar subcategorias com base na categoria selecionada
@@ -121,15 +121,7 @@ const CategoryManager = () => {
   };
 
   const toggleCategoryOpen = (category: string) => {
-    setOpenCategories(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(category)) {
-        newSet.delete(category);
-      } else {
-        newSet.add(category);
-      }
-      return newSet;
-    });
+    setOpenCategory(prev => (prev === category ? null : category));
   };
 
   const toggleCategorySelection = (category: string) => {
@@ -326,13 +318,11 @@ const CategoryManager = () => {
 
   // Initialize open categories on first load
   React.useEffect(() => {
-    if (configs.length > 0 && openCategories.size === 0) {
+    if (configs.length > 0 && !openCategory) {
       const categories = [...new Set(configs.map(c => c.category || 'Sem categoria'))];
-      // Open the first few categories by default
-      const initialOpen = new Set(categories.slice(0, 3));
-      setOpenCategories(initialOpen);
+      setOpenCategory(categories[0] || null);
     }
-  }, [configs, openCategories.size]);
+  }, [configs, openCategory]);
 
   const categoryGroups = groupConfigsByCategory();
 
@@ -601,7 +591,7 @@ const CategoryManager = () => {
               const selectedInCategory = categoryConfigIds.filter(id => selectedConfigIds.has(id));
               const isIndeterminate = selectedInCategory.length > 0 && selectedInCategory.length < categoryConfigIds.length;
               const isAllSelected = selectedInCategory.length === categoryConfigIds.length;
-              const isOpen = openCategories.has(category);
+              const isOpen = openCategory === category;
               
               // Calculate category average completeness
               const avgCompleteness = Math.round(
@@ -612,7 +602,7 @@ const CategoryManager = () => {
 
               return (
                 <Card key={category} className="overflow-hidden border-border/20 shadow-soft">
-                  <Collapsible open={isOpen} onOpenChange={() => toggleCategoryOpen(category)}>
+                  <Collapsible open={isOpen} onOpenChange={(open) => setOpenCategory(open ? category : null)}>
                     <CollapsibleTrigger asChild>
                       <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors">
                         <div className="flex items-center gap-3">
