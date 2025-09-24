@@ -2017,7 +2017,8 @@ const EditorContent = () => {
         landingPageId: landingPageId,
         selectedProductIds: selectedProductIds,
         include_offers: true,
-        landingPageData: processedData
+        landingPageData: processedData,
+        contentData: processedData
       };
 
       console.log('📡 Enviando request para ai-content-generator:', requestBody);

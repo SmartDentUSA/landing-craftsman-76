@@ -117,6 +117,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
           type: 'blog_content',
           landingPageId,
           landingPage: landingPageData,
+          contentData: landingPageData,
           selectedProductIds: selectedProductIds || [],
           include_offers: true
         }
@@ -125,11 +126,12 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
       if (error) throw error;
 
       if (data?.success && data?.content) {
+        const content = data.content;
         setBlogPost({
-          title: data.content.title || "Blog Post Gerado",
-          content: data.content.content || "Conteúdo em desenvolvimento...",
-          meta_description: data.content.meta_description || "",
-          keywords: data.content.keywords || [],
+          title: content.title || "Blog Post Gerado",
+          content: content.content || "Conteúdo em desenvolvimento...",
+          meta_description: content.meta_description || content.metaDescription || "",
+          keywords: Array.isArray(content.keywords) ? content.keywords : (typeof content.keywords === 'string' ? content.keywords.split(',').map(k => k.trim()).filter(Boolean) : []),
           status: "preview"
         });
 
@@ -189,6 +191,7 @@ Para mais informações, entre em contato conosco.
           type: 'blog_content',
           landingPageId,
           landingPage: landingPageData,
+          contentData: landingPageData,
           selectedProductIds: selectedProductIds || [],
           include_offers: true
         }
@@ -197,14 +200,15 @@ Para mais informações, entre em contato conosco.
       if (error) throw error;
 
       if (data?.success && data?.content) {
+        const content = data.content;
         // Update the published blog with new content
         const { error: updateError } = await supabase
           .from('blog_posts')
           .update({
-            title: data.content.title,
-            content: data.content.content,
-            meta_description: data.content.meta_description,
-            keywords: data.content.keywords,
+            title: content.title,
+            content: content.content,
+            meta_description: content.meta_description || content.metaDescription || '',
+            keywords: Array.isArray(content.keywords) ? content.keywords : (typeof content.keywords === 'string' ? content.keywords.split(',').map(k => k.trim()).filter(Boolean) : []),
             updated_at: new Date().toISOString()
           })
           .eq('id', publishedBlog.id);

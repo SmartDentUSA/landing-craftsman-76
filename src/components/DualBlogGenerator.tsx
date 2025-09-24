@@ -249,7 +249,7 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
           landing_page_id: landingPageId,
           title: versions.dentala.title,
           content: versions.dentala.content,
-          meta_description: versions.dentala.metaDescription || versions.dentala.meta_description,
+          meta_description: versions.dentala.metaDescription || (versions.dentala as any).meta_description,
           keywords: versions.dentala.keywords,
           status: 'published',
           published_domains: ['dentala.com.br']
@@ -267,7 +267,7 @@ export function DualBlogGenerator({ landingPageId, landingPageData, selectedProd
           landing_page_id: landingPageId,
           title: versions.eodonto.title,
           content: versions.eodonto.content,
-          meta_description: versions.eodonto.metaDescription || versions.eodonto.meta_description,
+          meta_description: versions.eodonto.metaDescription || (versions.eodonto as any).meta_description,
           keywords: versions.eodonto.keywords,
           status: 'published',
           published_domains: ['eodonto.com.br']
