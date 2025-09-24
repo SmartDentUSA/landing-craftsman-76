@@ -9,7 +9,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
-import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle, Folder, User, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle, Folder, User, ChevronRight, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +58,8 @@ const CategoryManager = () => {
     market_keywords: [],
     search_intent_keywords: []
   });
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const [selectedConfigIds, setSelectedConfigIds] = useState<Set<string>>(new Set());
 
   // Filtrar subcategorias com base na categoria selecionada
   const availableSubcategories = useMemo(() => {
@@ -85,6 +89,80 @@ const CategoryManager = () => {
     });
     return counts;
   }, [configs]);
+
+  // Group configurations by category
+  const groupConfigsByCategory = () => {
+    const grouped: { [key: string]: any[] } = {};
+    
+    configs.forEach(config => {
+      const category = config.category || 'Sem categoria';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(config);
+    });
+
+    // Sort categories by config count (descending) and then alphabetically
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      if (a === 'Sem categoria') return 1;
+      if (b === 'Sem categoria') return -1;
+      if (grouped[b].length !== grouped[a].length) {
+        return grouped[b].length - grouped[a].length;
+      }
+      return a.localeCompare(b);
+    });
+
+    const result: { category: string; configs: any[] }[] = [];
+    sortedCategories.forEach(category => {
+      result.push({ category, configs: grouped[category] });
+    });
+
+    return result;
+  };
+
+  const toggleCategoryOpen = (category: string) => {
+    setOpenCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleCategorySelection = (category: string) => {
+    const categoryConfigs = configs.filter(c => (c.category || 'Sem categoria') === category);
+    const categoryConfigIds = categoryConfigs.map(c => c.id);
+    const selectedInCategory = categoryConfigIds.filter(id => selectedConfigIds.has(id));
+    
+    setSelectedConfigIds(prev => {
+      const newSet = new Set(prev);
+      
+      if (selectedInCategory.length === categoryConfigIds.length) {
+        // All selected, unselect all
+        categoryConfigIds.forEach(id => newSet.delete(id));
+      } else {
+        // Some or none selected, select all
+        categoryConfigIds.forEach(id => newSet.add(id));
+      }
+      
+      return newSet;
+    });
+  };
+
+  const toggleConfigSelection = (configId: string) => {
+    setSelectedConfigIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(configId)) {
+        newSet.delete(configId);
+      } else {
+        newSet.add(configId);
+      }
+      return newSet;
+    });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -245,6 +323,18 @@ const CategoryManager = () => {
     if (percentage >= 50) return 'Regular';
     return 'Crítico';
   };
+
+  // Initialize open categories on first load
+  React.useEffect(() => {
+    if (configs.length > 0 && openCategories.size === 0) {
+      const categories = [...new Set(configs.map(c => c.category || 'Sem categoria'))];
+      // Open the first few categories by default
+      const initialOpen = new Set(categories.slice(0, 3));
+      setOpenCategories(initialOpen);
+    }
+  }, [configs, openCategories.size]);
+
+  const categoryGroups = groupConfigsByCategory();
 
   return (
     <Card className="border-border/20 shadow-soft">
@@ -472,183 +562,183 @@ const CategoryManager = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <>
-            {/* Statistics Summary */}
-            <div className="bg-muted/50 rounded-lg p-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-green-600">{stats.complete}</div>
-                  <div className="text-sm text-muted-foreground">Completas</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">{stats.good}</div>
-                  <div className="text-sm text-muted-foreground">Boas</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-yellow-600">{stats.regular}</div>
-                  <div className="text-sm text-muted-foreground">Regulares</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
-                  <div className="text-sm text-muted-foreground">Críticas</div>
-                </div>
-              </div>
+      <CardContent className="space-y-6">
+        {/* Resumo das estatísticas */}
+        <div className="bg-muted/50 rounded-lg p-3">
+          <div className="grid grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-green-600">{stats.complete}</div>
+              <div className="text-xs text-muted-foreground">Completo</div>
             </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-600">{stats.good}</div>
+              <div className="text-xs text-muted-foreground">Bom</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orange-600">{stats.regular}</div>
+              <div className="text-xs text-muted-foreground">Regular</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
+              <div className="text-xs text-muted-foreground">Crítico</div>
+            </div>
+          </div>
+        </div>
 
-            {/* Category Cards */}
-            {configs.length === 0 ? (
-              <div className="text-center py-8">
-                <Folder className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma configuração encontrada</h3>
-                <p className="text-muted-foreground mb-4">
-                  Crie sua primeira configuração de categoria para começar a organizar seu conteúdo
-                </p>
-                <Button onClick={() => setIsDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeira Configuração
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {configs.map((config) => {
-                  const completeness = calculateConfigCompleteness(config);
-                  const score = {
-                    percentage: completeness.percentage,
-                    missingFields: [],
-                    hasAllRequired: completeness.percentage >= 90,
-                    hasPartialData: completeness.percentage >= 50,
-                    total: completeness.filledCount,
-                    details: {
-                      basicInfo: completeness.filledCount > 0 ? 10 : 0,
-                      content: completeness.filledCount > 1 ? 10 : 0,
-                      multimedia: completeness.filledCount > 2 ? 10 : 0,
-                      seo: completeness.filledCount > 3 ? 10 : 0,
-                      commercial: 0
-                    },
-                    maxPoints: completeness.totalCount
-                  };
+        {/* Lista de configurações agrupadas por categoria */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">Carregando configurações...</div>
+            </div>
+          ) : configs.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">Nenhuma configuração encontrada</div>
+            </div>
+          ) : (
+            categoryGroups.map(({ category, configs: categoryConfigs }) => {
+              const categoryConfigIds = categoryConfigs.map(c => c.id);
+              const selectedInCategory = categoryConfigIds.filter(id => selectedConfigIds.has(id));
+              const isIndeterminate = selectedInCategory.length > 0 && selectedInCategory.length < categoryConfigIds.length;
+              const isAllSelected = selectedInCategory.length === categoryConfigIds.length;
+              const isOpen = openCategories.has(category);
+              
+              // Calculate category average completeness
+              const avgCompleteness = Math.round(
+                categoryConfigs.reduce((sum, config) => {
+                  return sum + calculateConfigCompleteness(config).percentage;
+                }, 0) / categoryConfigs.length
+              );
 
-                  return (
-                    <Card 
-                      key={config.id} 
-                      className="group border-border/20 shadow-soft hover:shadow-medium transition-all duration-200 hover:border-border/40"
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          {/* Icon */}
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <Folder className="h-5 w-5 text-primary" />
-                            </div>
-                          </div>
-
-                          {/* Main Content */}
-                          <div className="flex-1 min-w-0">
-                            {/* Category and Subcategory */}
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-foreground truncate">{config.category}</h3>
-                              <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm text-muted-foreground truncate">{config.subcategory}</span>
-                            </div>
-
-                            {/* Preview badges */}
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {completeness.fields.map((field, index) => (
-                                <Badge 
-                                  key={index} 
-                                  variant={field.filled ? "default" : "outline"} 
-                                  className="text-xs flex items-center gap-1"
-                                >
-                                  <field.icon className="h-3 w-3" />
-                                  {field.count > 0 ? field.count : "0"}
-                                </Badge>
-                              ))}
-                            </div>
-
-                            {/* Score Display and Date */}
-                            <div className="flex items-center justify-between">
+              return (
+                <Card key={category} className="border-border/20 shadow-soft">
+                  <Collapsible open={isOpen} onOpenChange={() => toggleCategoryOpen(category)}>
+                    <CollapsibleTrigger asChild>
+                      <div className="w-full">
+                        <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isAllSelected}
+                                onCheckedChange={() => toggleCategorySelection(category)}
+                                onClick={(e) => e.stopPropagation()}
+                                className={isIndeterminate ? "data-[state=checked]:bg-primary/50" : ""}
+                              />
                               <div className="flex items-center gap-2">
-                                <ProductScoreIndicator score={score} size="sm" showDetails />
-                                <div className="flex items-center gap-1">
-                                  {completeness.percentage >= 90 ? (
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                  ) : completeness.percentage >= 70 ? (
-                                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                  ) : (
-                                    <XCircle className="h-4 w-4 text-red-500" />
-                                  )}
-                                  <span className="font-bold text-sm">{completeness.percentage}%</span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Calendar className="h-3 w-3" />
-                                <span>
-                                  {new Date(config.created_at).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                  })}
-                                </span>
+                                {isOpen ? (
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <Folder className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{category}</span>
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {categoryConfigs.length} config{categoryConfigs.length !== 1 ? 's' : ''}
+                              </Badge>
+                              <Badge variant={getCompletenessColor(avgCompleteness)} className="text-xs">
+                                {getCompletenessLabel(avgCompleteness)} ({avgCompleteness}%)
+                              </Badge>
+                            </div>
                           </div>
-
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(config)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja excluir a configuração "{config.category} → {config.subcategory}"? 
-                                    Esta ação não pode ser desfeita.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDelete(config.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Excluir
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                        </CardHeader>
+                      </div>
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 pb-4">
+                        <div className="space-y-3">
+                          {categoryConfigs.map((config) => {
+                            const completeness = calculateConfigCompleteness(config);
+                            const isSelected = selectedConfigIds.has(config.id);
+                            
+                            return (
+                              <Card key={config.id} className="border-border/20">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3 flex-1">
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => toggleConfigSelection(config.id)}
+                                      />
+                                      
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className="font-medium text-sm">{config.subcategory}</span>
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                          <Badge variant={getCompletenessColor(completeness.percentage)} className="text-xs">
+                                            {getCompletenessLabel(completeness.percentage)} ({completeness.percentage}%)
+                                          </Badge>
+                                          <Badge variant={getCompletenessColor(completeness.percentage)} className="text-xs">
+                                            {getCompletenessLabel(completeness.percentage)}
+                                          </Badge>
+                                        </div>
+                                        
+                                        <div className="text-xs text-muted-foreground space-y-1">
+                                          {completeness.fields.map((field) => (
+                                            <div key={field.name} className="flex items-center gap-2">
+                                              <field.icon className="h-3 w-3" />
+                                              <span className={cn(
+                                                field.filled ? "text-green-600" : "text-muted-foreground"
+                                              )}>
+                                                {field.name.replace('_', ' ')}: {field.count} item(s)
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEdit(config)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="sm">
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Tem certeza que deseja excluir a configuração "{config.category} → {config.subcategory}"?
+                                              Esta ação não pode ser desfeita.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(config.id)}>
+                                              Excluir
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                         </div>
                       </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })
+          )}
+        </div>
       </CardContent>
     </Card>
   );
