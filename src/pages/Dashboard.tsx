@@ -7,7 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import useLandingPages, { type LandingPage } from "@/hooks/useLandingPages";
+import { useLandingPagesSupabase } from "@/hooks/useLandingPagesSupabase";
+import { type LandingPage } from "@/hooks/useLandingPagesSupabase";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
@@ -33,7 +34,7 @@ interface BlogPost {
 const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { landingPages, deleteLandingPage, addLandingPage } = useLandingPages();
+  const { landingPages, deleteLandingPage, addLandingPage, isLoading } = useLandingPagesSupabase();
   const { 
     consolidatedBlogs,
     approvedBlogsCount, 
@@ -246,7 +247,7 @@ const DashboardContent = () => {
         template: landingPage.template,
         data: landingPage.data,
         embed: landingPage.embed,
-        selectedProductIds: landingPage.selectedProductIds
+        selected_product_ids: landingPage.selected_product_ids
       };
       
       // Add the duplicate to the store
@@ -821,9 +822,9 @@ const DashboardContent = () => {
                       <span>Versão: v{landingPage.version}</span>
                       <span>
                         Modificado em: {
-                          landingPage.lastModified instanceof Date 
-                            ? landingPage.lastModified.toLocaleDateString('pt-BR')
-                            : new Date(landingPage.lastModified).toLocaleDateString('pt-BR')
+                          landingPage.last_modified instanceof Date 
+                            ? landingPage.last_modified.toLocaleDateString('pt-BR')
+                            : new Date(landingPage.last_modified).toLocaleDateString('pt-BR')
                         }
                       </span>
                     </div>
