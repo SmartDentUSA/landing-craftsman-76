@@ -3166,7 +3166,7 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
         
         .offer-title {
             font-size: 1.125rem;
-            font-weight: 600;
+            font-weight: 400;
             color: #1e293b;
             margin-bottom: 0.75rem;
         }
@@ -3262,7 +3262,7 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
         
         .offer-title {
             font-size: 1.125rem;
-            font-weight: 600;
+            font-weight: 400;
             color: #1e293b;
             margin-bottom: 0.75rem;
         }
