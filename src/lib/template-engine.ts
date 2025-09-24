@@ -684,7 +684,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             text-align: center;
             margin-bottom: 2rem;
             color: var(--secondary-color);
-            font-size: 1.1rem;
+            font-size: 0.95rem;
         }
         
         /* Horizontal Grid Container */
@@ -1386,7 +1386,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div class="offers-header">
                 <h2>{{resources_section.title}}</h2>
                 {{#resources_section.subtitle}}
-                <p class="offers-subtitle">{{resources_section.subtitle}}</p>
+                <p class="subtitle">{{resources_section.subtitle}}</p>
                 {{/resources_section.subtitle}}
             </div>
             <div class="offers-content">
