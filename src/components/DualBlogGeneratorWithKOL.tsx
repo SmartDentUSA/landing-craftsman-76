@@ -77,10 +77,11 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
       }
     } catch (error) {
       console.error("❌ Erro ao gerar versões:", error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setError(`Erro ao gerar conteúdo: ${errorMessage}`);
       toast({
         title: "Erro",
-        description: "Falha ao gerar as versões do blog",
+        description: `Falha ao gerar as versões do blog: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
@@ -90,43 +91,79 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
 
   const saveBlogVersions = async (versions: DualBlogVersions) => {
     try {
-      // Save Dentala version
-      const { error: dentalaError } = await supabase
+      // Check if Dentala version exists
+      const { data: existingDentala } = await supabase
         .from('blog_posts')
-        .upsert({
-          landing_page_id: landingPageId,
-          title: versions.dentala.title,
-          content: versions.dentala.content,
-          meta_description: versions.dentala.meta_description || versions.dentala.metaDescription || '',
-          keywords: versions.dentala.keywords,
-          published_domains: ['dentala.com.br'],
-          status: 'generated',
-          author_kol_id: selectedAuthorId === "none" ? null : selectedAuthorId
-        }, {
-          onConflict: 'landing_page_id,published_domains'
-        });
+        .select('id')
+        .eq('landing_page_id', landingPageId)
+        .contains('published_domains', ['dentala.com.br'])
+        .single();
+
+      const dentalaData = {
+        landing_page_id: landingPageId,
+        title: versions.dentala.title,
+        content: versions.dentala.content,
+        meta_description: versions.dentala.meta_description || versions.dentala.metaDescription || '',
+        keywords: versions.dentala.keywords,
+        published_domains: ['dentala.com.br'],
+        status: 'generated',
+        author_kol_id: selectedAuthorId === "none" ? null : selectedAuthorId
+      };
+
+      let dentalaError;
+      if (existingDentala) {
+        ({ error: dentalaError } = await supabase
+          .from('blog_posts')
+          .update(dentalaData)
+          .eq('id', existingDentala.id));
+      } else {
+        ({ error: dentalaError } = await supabase
+          .from('blog_posts')
+          .insert(dentalaData));
+      }
 
       if (dentalaError) throw dentalaError;
 
-      // Save Eodonto version
-      const { error: eodontoError } = await supabase
+      // Check if Eodonto version exists
+      const { data: existingEodonto } = await supabase
         .from('blog_posts')
-        .upsert({
-          landing_page_id: landingPageId,
-          title: versions.eodonto.title,
-          content: versions.eodonto.content,
-          meta_description: versions.eodonto.meta_description || versions.eodonto.metaDescription || '',
-          keywords: versions.eodonto.keywords,
-          published_domains: ['eodonto.com'],
-          status: 'generated',
-          author_kol_id: selectedAuthorId === "none" ? null : selectedAuthorId
-        }, {
-          onConflict: 'landing_page_id,published_domains'
-        });
+        .select('id')
+        .eq('landing_page_id', landingPageId)
+        .contains('published_domains', ['eodonto.com'])
+        .single();
+
+      const eodontoData = {
+        landing_page_id: landingPageId,
+        title: versions.eodonto.title,
+        content: versions.eodonto.content,
+        meta_description: versions.eodonto.meta_description || versions.eodonto.metaDescription || '',
+        keywords: versions.eodonto.keywords,
+        published_domains: ['eodonto.com'],
+        status: 'generated',
+        author_kol_id: selectedAuthorId === "none" ? null : selectedAuthorId
+      };
+
+      let eodontoError;
+      if (existingEodonto) {
+        ({ error: eodontoError } = await supabase
+          .from('blog_posts')
+          .update(eodontoData)
+          .eq('id', existingEodonto.id));
+      } else {
+        ({ error: eodontoError } = await supabase
+          .from('blog_posts')
+          .insert(eodontoData));
+      }
 
       if (eodontoError) throw eodontoError;
     } catch (error) {
       console.error('Error saving blog versions:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar';
+      toast({
+        title: "Erro ao salvar",
+        description: `Erro ao salvar as versões do blog: ${errorMessage}`,
+        variant: "destructive",
+      });
       throw error;
     }
   };

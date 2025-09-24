@@ -39,12 +39,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
     fetchPublishedBlog();
   }, [landingPageId]);
 
-  // Generate blog preview automatically when component mounts or data changes
-  useEffect(() => {
-    if (landingPageData && (!blogPost || shouldRegenerate())) {
-      generateBlogPreview();
-    }
-  }, [landingPageData]);
+  // Manual generation only - no auto-generation to prevent infinite loading
 
   // Check sync status when both preview and published blogs are available
   useEffect(() => {
