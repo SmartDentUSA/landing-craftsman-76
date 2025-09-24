@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Save, Loader2 } from "lucide-react";
+import { Building2, Save, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
 
 interface CompanyProfile {
   id?: string;
@@ -66,6 +67,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { aggregateTargetAudiences, loading: aggregating } = useTargetAudienceAggregator();
 
   useEffect(() => {
     loadCompanyProfile();
@@ -207,6 +209,38 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleCaptureTargetAudiences = async () => {
+    const aggregated = await aggregateTargetAudiences();
+    if (aggregated) {
+      const currentValue = profile.target_audience?.trim() || '';
+      let newValue = aggregated;
+      
+      if (currentValue) {
+        // Se já existe conteúdo, perguntar se deve mesclar ou substituir
+        const shouldMerge = window.confirm(
+          `Já existe conteúdo no campo Público-Alvo.\n\nClique "OK" para mesclar com o conteúdo existente\nClique "Cancelar" para substituir completamente`
+        );
+        
+        if (shouldMerge) {
+          // Mesclar, removendo duplicatas
+          const existingAudiences = currentValue.split(',').map(a => a.trim());
+          const newAudiences = aggregated.split(',').map(a => a.trim());
+          const allAudiences = [...existingAudiences, ...newAudiences];
+          
+          const uniqueAudiences = Array.from(
+            new Map(
+              allAudiences.map(audience => [audience.toLowerCase(), audience])
+            ).values()
+          );
+          
+          newValue = uniqueAudiences.sort((a, b) => a.localeCompare(b, 'pt-BR')).join(', ');
+        }
+      }
+      
+      updateProfile('target_audience', newValue);
+    }
+  };
+
   const currentYear = new Date().getFullYear();
   const completionPercentage = Math.round(
     (Object.values(profile).filter(value => 
@@ -291,12 +325,30 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="target_audience">Público-Alvo</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="target_audience">Público-Alvo</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCaptureTargetAudiences}
+                disabled={aggregating}
+                className="gap-2"
+                title="Capturar públicos-alvo das subcategorias cadastradas"
+              >
+                {aggregating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Capturar das Categorias
+              </Button>
+            </div>
             <Textarea
               id="target_audience"
               value={profile.target_audience}
               onChange={(e) => updateProfile('target_audience', e.target.value)}
-              placeholder="Descreva seu público-alvo principal"
+              placeholder="Descreva seu público-alvo principal ou use o botão para capturar das subcategorias"
               rows={2}
             />
           </div>
