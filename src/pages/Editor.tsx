@@ -16,9 +16,34 @@ function EditorContent() {
   const { landingPageId } = useParams<{ landingPageId: string }>();
   const blogDataResult = useBlogData(landingPageId);
   const blogData = blogDataResult?.landingPageData;
-  const { landingPages, getLandingPage } = useLandingPagesSupabase();
+  const { landingPages, getLandingPage, isLoading } = useLandingPagesSupabase();
   const landingPage = getLandingPage(landingPageId || '');
+  
+  console.log('🔍 Editor Debug:', {
+    landingPageId,
+    landingPagesCount: landingPages.length,
+    isLoading,
+    foundLandingPage: !!landingPage,
+    allLandingPageIds: landingPages.map(lp => lp.id)
+  });
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Carregando...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Carregando dados da landing page...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   if (!landingPageId || !landingPage) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
