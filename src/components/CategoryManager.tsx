@@ -207,7 +207,7 @@ const CategoryManager = () => {
   };
 
   // Função para calcular completude da configuração
-  const calculateConfigCompleteness = (config: any) => {
+  function calculateConfigCompleteness(config: any) {
     const fields = [
       { name: 'target_audience', data: config.target_audience, icon: Target },
       { name: 'keywords', data: config.keywords, icon: Hash },
@@ -228,7 +228,7 @@ const CategoryManager = () => {
         count: field.data ? field.data.length : 0
       }))
     };
-  };
+  }
 
   // Função para obter cor baseada na completude
   const getCompletenessColor = (percentage: number) => {
