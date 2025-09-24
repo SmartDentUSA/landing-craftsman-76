@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { SelectedProductLinkModal } from "@/components/SelectedProductLinkModal";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
+import { useProductKeywordsAggregator } from "@/hooks/useProductKeywordsAggregator";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -17,7 +18,7 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
 import { generateBlogHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
-import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link } from "lucide-react";
+import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag } from "lucide-react";
 
 interface BlogPost {
   id?: string;
@@ -80,6 +81,7 @@ export default function BlogGenerator() {
   const { toast } = useToast();
   const { loadProductsByIds } = useSelectedProducts();
   const { getSelectedProducts } = useLandingPages();
+  const { aggregateKeywordsFromProducts, enrichKeywordsWithCategories } = useProductKeywordsAggregator();
 
   useEffect(() => {
     if (id) {
@@ -405,6 +407,72 @@ export default function BlogGenerator() {
         title: "Erro",
         description: "Erro ao gerar conteúdo do blog.",
         variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCaptureProductKeywords = async () => {
+    if (!landingPage?.id) {
+      toast({
+        title: "Erro",
+        description: "Landing page não encontrada",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedProductIds = getSelectedProducts(landingPage.id);
+    
+    if (selectedProductIds.length === 0) {
+      toast({
+        title: "Nenhum produto selecionado",
+        description: "Selecione produtos no Editor para capturar suas keywords",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      console.log('🔄 Capturando keywords dos produtos:', selectedProductIds);
+      
+      const keywordAggregation = await aggregateKeywordsFromProducts(selectedProductIds);
+      
+      if (keywordAggregation.allKeywords.length > 0) {
+        // Enriquecer com keywords das configurações de categoria
+        const enrichedKeywords = await enrichKeywordsWithCategories(keywordAggregation);
+        
+        // Atualizar as keywords do blog post
+        setBlogPost(prev => ({
+          ...prev,
+          keywords: enrichedKeywords
+        }));
+
+        toast({
+          title: "Keywords capturadas!",
+          description: `${enrichedKeywords.length} keywords coletadas de ${keywordAggregation.productCount} produtos`,
+        });
+
+        console.log('✅ Keywords capturadas e aplicadas:', {
+          totalKeywords: enrichedKeywords.length,
+          productCount: keywordAggregation.productCount,
+          sampleKeywords: enrichedKeywords.slice(0, 10)
+        });
+      } else {
+        toast({
+          title: "Nenhuma keyword encontrada",
+          description: "Os produtos selecionados não possuem keywords válidas",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erro ao capturar keywords:', error);
+      toast({
+        title: "Erro na captura",
+        description: "Erro ao capturar keywords dos produtos",
+        variant: "destructive"
       });
     } finally {
       setGenerating(false);
@@ -780,14 +848,51 @@ export default function BlogGenerator() {
                   <p className="text-sm">{blogPost.meta_description || "Não definida"}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Keywords:</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">Keywords:</span>
+                    <Button
+                      onClick={handleCaptureProductKeywords}
+                      disabled={generating || !selectedProducts.length}
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-xs"
+                    >
+                      {generating ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Capturando...
+                        </>
+                      ) : (
+                        <>
+                          <Tag className="h-3 w-3 mr-1" />
+                          Capturar Keywords dos Produtos
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {normalizeKeywords(blogPost.keywords).map((keyword, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {keyword}
                       </Badge>
                     ))}
+                    {normalizeKeywords(blogPost.keywords).length === 0 && (
+                      <span className="text-xs text-muted-foreground italic">
+                        Nenhuma keyword definida. Use o botão acima para capturar automaticamente.
+                      </span>
+                    )}
                   </div>
+                  {selectedProducts.length > 0 && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                      <span className="font-medium text-blue-800">
+                        Produtos disponíveis: {selectedProducts.length}
+                      </span>
+                      <div className="text-blue-600 mt-1">
+                        {selectedProducts.slice(0, 3).map(p => p.name).join(", ")}
+                        {selectedProducts.length > 3 && ` + ${selectedProducts.length - 3} mais`}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button
                   onClick={() => navigate(`/editor/${id}`)}
