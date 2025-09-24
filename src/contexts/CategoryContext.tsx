@@ -10,6 +10,11 @@ interface CategoryContextType {
   configs: any[];
   loading: boolean;
   
+  // Unified data (merging products_repository + categories_config)
+  unifiedCategories: string[];
+  unifiedSubcategories: string[];
+  getUnifiedSubcategoriesForCategory: (category: string) => string[];
+  
   // Global refresh functions
   refreshAllCategories: () => Promise<void>;
   refreshProductCategories: () => void;
@@ -61,6 +66,32 @@ export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) 
     await refreshAllCategories();
   }, [refreshAllCategories]);
 
+  // Create unified category lists combining both data sources
+  const unifiedCategories = React.useMemo(() => {
+    const productCats = productCategories.categories;
+    const configCategories = categoryConfigs.configs.map(config => config.category);
+    return [...new Set([...productCats, ...configCategories])].sort();
+  }, [productCategories.categories, categoryConfigs.configs]);
+
+  const unifiedSubcategories = React.useMemo(() => {
+    const productSubcats = productCategories.subcategories;
+    const configSubcategories = categoryConfigs.configs.map(config => config.subcategory);
+    return [...new Set([...productSubcats, ...configSubcategories])].sort();
+  }, [productCategories.subcategories, categoryConfigs.configs]);
+
+  const getUnifiedSubcategoriesForCategory = useCallback((category: string) => {
+    // Get subcategories from products
+    const productSubcats = productCategories.getSubcategoriesForCategory(category);
+    
+    // Get subcategories from configs for this category
+    const configSubcats = categoryConfigs.configs
+      .filter(config => config.category === category)
+      .map(config => config.subcategory);
+    
+    // Combine and deduplicate
+    return [...new Set([...productSubcats, ...configSubcats])].sort();
+  }, [productCategories.getSubcategoriesForCategory, categoryConfigs.configs]);
+
   const value: CategoryContextType = {
     // Data from hooks
     categories: productCategories.categories,
@@ -68,6 +99,11 @@ export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) 
     getSubcategoriesForCategory: productCategories.getSubcategoriesForCategory,
     configs: categoryConfigs.configs,
     loading: productCategories.loading || categoryConfigs.loading || isRefreshing,
+    
+    // Unified data
+    unifiedCategories,
+    unifiedSubcategories,
+    getUnifiedSubcategoriesForCategory,
     
     // Global refresh functions
     refreshAllCategories,

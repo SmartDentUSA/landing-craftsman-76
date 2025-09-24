@@ -17,8 +17,8 @@ import { CaptionExtractor } from "@/components/CaptionExtractor";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useProductCategories } from '@/hooks/useProductCategories';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
+import { useCategoryContext } from '@/contexts/CategoryContext';
 import { useCallback } from 'react';
 
 interface Video {
@@ -63,7 +63,7 @@ interface ProductEditModalProps {
 }
 
 export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }: ProductEditModalProps) {
-  const { categories, getSubcategoriesForCategory, refreshCategories } = useProductCategories();
+  const { unifiedCategories, getUnifiedSubcategoriesForCategory } = useCategoryContext();
   const { getConfigByCategory } = useCategoryConfig();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
@@ -710,7 +710,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                       </div>
                     </CommandEmpty>
                     <CommandGroup>
-                      {categories.map((category) => (
+                      {unifiedCategories.map((category) => (
                         <CommandItem
                           key={category}
                           value={category}
@@ -822,7 +822,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                       </div>
                     </CommandEmpty>
                     <CommandGroup>
-                      {formData.category && getSubcategoriesForCategory(formData.category).map((subcategory) => (
+                      {formData.category && getUnifiedSubcategoriesForCategory(formData.category).map((subcategory) => (
                         <CommandItem
                           key={subcategory}
                           value={subcategory}

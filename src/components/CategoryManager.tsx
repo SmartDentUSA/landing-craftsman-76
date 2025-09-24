@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
-import { useProductCategories } from '@/hooks/useProductCategories';
 import { useCategoryContext } from '@/contexts/CategoryContext';
 import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -33,8 +32,7 @@ interface RenameData {
 
 const CategoryManager = () => {
   const { configs, loading, createConfig, updateConfig, deleteConfig } = useCategoryConfig();
-  const { categories, subcategories, getSubcategoriesForCategory, refreshCategories } = useProductCategories();
-  const { notifyCategoryChange } = useCategoryContext();
+  const { unifiedCategories, unifiedSubcategories, getUnifiedSubcategoriesForCategory, notifyCategoryChange } = useCategoryContext();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -59,9 +57,9 @@ const CategoryManager = () => {
 
   // Filtrar subcategorias com base na categoria selecionada
   const availableSubcategories = useMemo(() => {
-    if (!formData.category) return subcategories;
-    return getSubcategoriesForCategory(formData.category);
-  }, [formData.category, subcategories, getSubcategoriesForCategory]);
+    if (!formData.category) return unifiedSubcategories;
+    return getUnifiedSubcategoriesForCategory(formData.category);
+  }, [formData.category, unifiedSubcategories, getUnifiedSubcategoriesForCategory]);
 
   // Verificar se já existe configuração para a combinação categoria/subcategoria
   const existingConfig = useMemo(() => {
@@ -221,7 +219,7 @@ const CategoryManager = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Categoria</Label>
-                    {formData.category && categories.includes(formData.category) && (
+                    {formData.category && unifiedCategories.includes(formData.category) && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -237,14 +235,14 @@ const CategoryManager = () => {
                   <Combobox
                     value={formData.category}
                     onValueChange={handleCategoryChange}
-                    options={categories}
+                    options={unifiedCategories}
                     placeholder="Selecione ou digite nova categoria"
                     searchPlaceholder="Buscar categoria..."
                     emptyText="Nenhuma categoria encontrada."
                     createText="Criar categoria"
                   />
                   <div className="text-xs text-muted-foreground">
-                    {categories.length} categorias existentes no repositório
+                    {unifiedCategories.length} categorias existentes no repositório
                   </div>
                 </div>
 
