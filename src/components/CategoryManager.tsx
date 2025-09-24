@@ -316,13 +316,6 @@ const CategoryManager = () => {
     return 'Crítico';
   };
 
-  // Initialize open categories on first load
-  React.useEffect(() => {
-    if (configs.length > 0 && !openCategory) {
-      const categories = [...new Set(configs.map(c => c.category || 'Sem categoria'))];
-      setOpenCategory(categories[0] || null);
-    }
-  }, [configs, openCategory]);
 
   const categoryGroups = groupConfigsByCategory();
 
