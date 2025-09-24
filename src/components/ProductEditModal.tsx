@@ -43,11 +43,13 @@ interface Product {
   search_intent_keywords?: string[];
   benefits?: string[];
   features?: string[];
+  tags?: string[];
   instagram_videos?: Video[];
   youtube_videos?: Video[];
   testimonial_videos?: Video[];
   technical_videos?: Video[];
   video_captions?: any;
+  original_data?: any;
 }
 
 interface ProductEditModalProps {

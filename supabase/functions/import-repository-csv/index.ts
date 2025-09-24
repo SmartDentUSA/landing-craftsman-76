@@ -119,6 +119,26 @@ const sanitizeProduct = (product: ProductData): any => {
     sanitized[field] = parseJsonField((product as any)[field]) || [];
   });
 
+  // Processar video_captions (objeto JSON, não array)
+  if (product.video_captions) {
+    try {
+      if (typeof product.video_captions === 'string') {
+        sanitized.video_captions = product.video_captions === '{}' ? {} : JSON.parse(product.video_captions);
+      } else {
+        sanitized.video_captions = product.video_captions;
+      }
+    } catch {
+      sanitized.video_captions = {};
+    }
+  } else {
+    sanitized.video_captions = {};
+  }
+
+  // Processar original_data
+  if (product.original_data) {
+    sanitized.original_data = parseJsonField(product.original_data);
+  }
+
   // Campos especiais
   sanitized.video_captions = parseJsonField(product.video_captions) || {};
   sanitized.original_data = parseJsonField(product.original_data) || null;

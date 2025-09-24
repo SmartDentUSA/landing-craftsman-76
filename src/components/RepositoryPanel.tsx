@@ -20,6 +20,11 @@ import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
 import ProductRepositoryCSVImporter from "@/components/ProductRepositoryCSVImporter";
 
+interface Video {
+  url: string;
+  description: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -39,6 +44,13 @@ interface Product {
   target_audience?: string[];
   search_intent_keywords?: string[];
   market_keywords?: string[];
+  tags?: string[];
+  youtube_videos?: Video[];
+  instagram_videos?: Video[];
+  technical_videos?: Video[];
+  testimonial_videos?: Video[];
+  video_captions?: any;
+  original_data?: any;
 }
 
 interface ManualReview {
@@ -226,7 +238,14 @@ export function RepositoryPanel({
         features: Array.isArray(data.features) ? data.features.map(f => String(f)) : [],
         target_audience: Array.isArray(data.target_audience) ? data.target_audience.map(t => String(t)) : [],
         search_intent_keywords: Array.isArray(data.search_intent_keywords) ? data.search_intent_keywords.map(s => String(s)) : [],
-        market_keywords: Array.isArray(data.market_keywords) ? data.market_keywords.map(m => String(m)) : []
+        market_keywords: Array.isArray(data.market_keywords) ? data.market_keywords.map(m => String(m)) : [],
+        tags: Array.isArray(data.tags) ? data.tags.map(t => String(t)) : [],
+        youtube_videos: Array.isArray(data.youtube_videos) ? data.youtube_videos as unknown as Video[] : [],
+        instagram_videos: Array.isArray(data.instagram_videos) ? data.instagram_videos as unknown as Video[] : [],
+        technical_videos: Array.isArray(data.technical_videos) ? data.technical_videos as unknown as Video[] : [],
+        testimonial_videos: Array.isArray(data.testimonial_videos) ? data.testimonial_videos as unknown as Video[] : [],
+        video_captions: data.video_captions || {},
+        original_data: data.original_data || null
       }));
       
       setProducts(formattedProducts);
