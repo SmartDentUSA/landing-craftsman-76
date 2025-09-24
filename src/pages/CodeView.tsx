@@ -40,7 +40,7 @@ const CodeView = () => {
 <body>
     <h1>Smart Dent - Odontologia Digital</h1>
     <p>Para visualizar o código HTML completo, acesse através do Editor.</p>
-    <a href="/editor">Ir para o Editor</a>
+    <a href="/dashboard">Ir para o Dashboard</a>
 </body>
 </html>`;
   });
@@ -100,7 +100,7 @@ const CodeView = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate(editorId ? `/editor/${editorId}` : '/')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate(editorId ? `/editor/${editorId}` : '/dashboard')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
