@@ -3,6 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { ProductScoreIndicator } from './ProductScoreIndicator';
+import { CompletionBadges } from './CompletionBadges';
 import { calculateProductScore } from './ProductScoreCalculator';
 import { cn } from "@/lib/utils";
 import { 
@@ -110,6 +111,9 @@ export function ModernProductCard({
               {product.description}
             </p>
           )}
+          <div className="mt-1">
+            <CompletionBadges product={product} score={score} compact={true} />
+          </div>
         </div>
 
         {/* Score compacto */}
