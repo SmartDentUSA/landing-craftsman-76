@@ -6,7 +6,7 @@ import { Loader2, Eye, Edit3, Sparkles, FileText, RefreshCw, AlertTriangle } fro
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { DualBlogGeneratorWithKOL } from "./DualBlogGeneratorWithKOL";
+// Removed DualBlogGeneratorWithKOL import - component deleted
 
 interface BlogPreviewProps {
   landingPageId: string;
@@ -437,11 +437,6 @@ Para mais informações, entre em contato conosco.
       </CardContent>
     </Card>
 
-    <DualBlogGeneratorWithKOL 
-      landingPageId={landingPageId}
-      landingPageData={landingPageData}
-      selectedProductIds={selectedProductIds}
-    />
   </div>
   );
 }
