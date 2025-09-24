@@ -52,6 +52,13 @@ interface Product {
   technical_videos?: Video[];
   video_captions?: any;
   original_data?: any;
+  // Landing Page Section controls
+  show_in_resources?: boolean;
+  selected?: boolean;
+  // Resource CTAs
+  resource_cta1?: { label: string; url: string; visible: boolean };
+  resource_cta2?: { label: string; url: string; visible: boolean };
+  resource_cta3?: { label: string; url: string; visible: boolean };
 }
 
 interface ProductEditModalProps {
@@ -95,7 +102,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     instagram_videos: [],
     youtube_videos: [],
     testimonial_videos: [],
-    technical_videos: []
+    technical_videos: [],
+    // Landing Page Section controls
+    show_in_resources: false,
+    selected: false,
+    // Resource CTAs
+    resource_cta1: { label: '', url: '', visible: false },
+    resource_cta2: { label: '', url: '', visible: false },
+    resource_cta3: { label: '', url: '', visible: false }
   });
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
@@ -186,7 +200,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         instagram_videos: product.instagram_videos || [],
         youtube_videos: product.youtube_videos || [],
         testimonial_videos: product.testimonial_videos || [],
-        technical_videos: product.technical_videos || []
+        technical_videos: product.technical_videos || [],
+        // Landing Page Section controls
+        show_in_resources: product.show_in_resources || false,
+        selected: product.selected || false,
+        // Resource CTAs
+        resource_cta1: product.resource_cta1 || { label: '', url: '', visible: false },
+        resource_cta2: product.resource_cta2 || { label: '', url: '', visible: false },
+        resource_cta3: product.resource_cta3 || { label: '', url: '', visible: false }
       });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -220,7 +241,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         instagram_videos: [],
         youtube_videos: [],
         testimonial_videos: [],
-        technical_videos: []
+        technical_videos: [],
+        // Landing Page Section controls
+        show_in_resources: false,
+        selected: false,
+        // Resource CTAs
+        resource_cta1: { label: '', url: '', visible: false },
+        resource_cta2: { label: '', url: '', visible: false },
+        resource_cta3: { label: '', url: '', visible: false }
       });
       setBenefits([]);
       setFeatures([]);
@@ -578,6 +606,13 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         search_intent_keywords: searchIntentKeywords,
         benefits: benefits,
         features: features,
+        // Landing Page Section controls
+        show_in_resources: formData.show_in_resources,
+        selected: formData.selected,
+        // Resource CTAs
+        resource_cta1: formData.resource_cta1,
+        resource_cta2: formData.resource_cta2,
+        resource_cta3: formData.resource_cta3,
         updated_at: new Date().toISOString()
       };
 
@@ -1098,6 +1133,144 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 </Badge>
               ))}
             </div>
+          </div>
+
+          {/* Landing Page Sections Configuration */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold">Configurações de Seções da Landing Page</h3>
+            
+            {/* Section Toggles */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show_in_resources"
+                  checked={formData.show_in_resources}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, show_in_resources: checked }))}
+                />
+                <Label htmlFor="show_in_resources">Mostrar na seção "Recursos e Downloads"</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="selected"
+                  checked={formData.selected}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, selected: checked }))}
+                />
+                <Label htmlFor="selected">Mostrar na seção "Ofertas"</Label>
+              </div>
+            </div>
+
+            {/* Resource CTAs Configuration */}
+            {formData.show_in_resources && (
+              <div className="space-y-4 bg-muted/20 p-4 rounded-lg">
+                <h4 className="font-medium">Botões CTA para Recursos</h4>
+                
+                {/* CTA 1 */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="cta1_visible"
+                      checked={formData.resource_cta1?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        resource_cta1: { ...prev.resource_cta1!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="cta1_visible" className="font-medium">CTA 1</Label>
+                  </div>
+                  {formData.resource_cta1?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão"
+                        value={formData.resource_cta1?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta1: { ...prev.resource_cta1!, label: e.target.value }
+                        }))}
+                      />
+                      <Input
+                        placeholder="URL do link"
+                        value={formData.resource_cta1?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta1: { ...prev.resource_cta1!, url: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA 2 */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="cta2_visible"
+                      checked={formData.resource_cta2?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        resource_cta2: { ...prev.resource_cta2!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="cta2_visible" className="font-medium">CTA 2</Label>
+                  </div>
+                  {formData.resource_cta2?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão"
+                        value={formData.resource_cta2?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta2: { ...prev.resource_cta2!, label: e.target.value }
+                        }))}
+                      />
+                      <Input
+                        placeholder="URL do link"
+                        value={formData.resource_cta2?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta2: { ...prev.resource_cta2!, url: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA 3 */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="cta3_visible"
+                      checked={formData.resource_cta3?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        resource_cta3: { ...prev.resource_cta3!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="cta3_visible" className="font-medium">CTA 3</Label>
+                  </div>
+                  {formData.resource_cta3?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão"
+                        value={formData.resource_cta3?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta3: { ...prev.resource_cta3!, label: e.target.value }
+                        }))}
+                      />
+                      <Input
+                        placeholder="URL do link"
+                        value={formData.resource_cta3?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta3: { ...prev.resource_cta3!, url: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between">

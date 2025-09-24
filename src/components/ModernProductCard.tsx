@@ -10,8 +10,13 @@ import {
   Edit, 
   Trash2, 
   ArrowRight,
-  Package
+  Package,
+  Check,
+  X,
+  Download,
+  ShoppingCart
 } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
 
 interface Product {
   id: string;
@@ -37,6 +42,13 @@ interface Product {
   instagram_videos?: any[];
   technical_videos?: any[];
   testimonial_videos?: any[];
+  // Landing Page Section controls
+  show_in_resources?: boolean;
+  selected?: boolean;
+  // Resource CTAs
+  resource_cta1?: { label: string; url: string; visible: boolean };
+  resource_cta2?: { label: string; url: string; visible: boolean };
+  resource_cta3?: { label: string; url: string; visible: boolean };
 }
 
 interface ModernProductCardProps {
@@ -111,8 +123,61 @@ export function ModernProductCard({
               {product.description}
             </p>
           )}
-          <div className="mt-1">
+          <div className="mt-1 space-y-1">
             <CompletionBadges product={product} score={score} compact={true} />
+            
+            {/* Status and Section Badges */}
+            <div className="flex flex-wrap gap-1">
+              {/* Approval Status */}
+              <Badge 
+                variant={product.approved ? "default" : "destructive"}
+                className="text-xs px-1.5 py-0.5 h-5"
+              >
+                {product.approved ? (
+                  <>
+                    <Check className="h-3 w-3 mr-1" />
+                    Aprovado
+                  </>
+                ) : (
+                  <>
+                    <X className="h-3 w-3 mr-1" />
+                    Pendente
+                  </>
+                )}
+              </Badge>
+
+              {/* Landing Page Sections */}
+              {product.show_in_resources && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
+                  <Download className="h-3 w-3 mr-1" />
+                  Recursos
+                </Badge>
+              )}
+              
+              {product.selected && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
+                  <ShoppingCart className="h-3 w-3 mr-1" />
+                  Ofertas
+                </Badge>
+              )}
+              
+              {/* Active CTAs Count */}
+              {product.show_in_resources && (
+                (() => {
+                  const activeCTAs = [
+                    product.resource_cta1?.visible,
+                    product.resource_cta2?.visible,
+                    product.resource_cta3?.visible
+                  ].filter(Boolean).length;
+                  
+                  return activeCTAs > 0 ? (
+                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5">
+                      {activeCTAs} CTA{activeCTAs > 1 ? 's' : ''}
+                    </Badge>
+                  ) : null;
+                })()
+              )}
+            </div>
           </div>
         </div>
 
