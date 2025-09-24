@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TagInput } from '@/components/ui/tag-input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useProductCategories } from '@/hooks/useProductCategories';
-import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface CategoryFormData {
@@ -23,7 +22,7 @@ interface CategoryFormData {
 
 const CategoryManager = () => {
   const { configs, loading, createConfig, updateConfig, deleteConfig } = useCategoryConfig();
-  const { categories, subcategories } = useProductCategories();
+  const { categories, subcategories, getSubcategoriesForCategory } = useProductCategories();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<string | null>(null);
@@ -36,6 +35,22 @@ const CategoryManager = () => {
     search_intent_keywords: []
   });
 
+  // Filtrar subcategorias com base na categoria selecionada
+  const availableSubcategories = useMemo(() => {
+    if (!formData.category) return subcategories;
+    return getSubcategoriesForCategory(formData.category);
+  }, [formData.category, subcategories, getSubcategoriesForCategory]);
+
+  // Verificar se já existe configuração para a combinação categoria/subcategoria
+  const existingConfig = useMemo(() => {
+    if (!formData.category || !formData.subcategory) return null;
+    return configs.find(config => 
+      config.category === formData.category && 
+      config.subcategory === formData.subcategory &&
+      config.id !== editingConfig
+    );
+  }, [formData.category, formData.subcategory, configs, editingConfig]);
+
   const resetForm = () => {
     setFormData({
       category: '',
@@ -46,6 +61,14 @@ const CategoryManager = () => {
       search_intent_keywords: []
     });
     setEditingConfig(null);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setFormData(prev => ({
+      ...prev,
+      category,
+      subcategory: '' // Reset subcategoria quando categoria muda
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,37 +140,55 @@ const CategoryManager = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Categoria</Label>
-                  <Input
-                    id="category"
+                  <Label>Categoria</Label>
+                  <Combobox
                     value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="Digite o nome da categoria"
-                    required
+                    onValueChange={handleCategoryChange}
+                    options={categories}
+                    placeholder="Selecione ou digite nova categoria"
+                    searchPlaceholder="Buscar categoria..."
+                    emptyText="Nenhuma categoria encontrada."
+                    createText="Criar categoria"
                   />
-                  {categories.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      Existentes: {categories.slice(0, 3).join(', ')}{categories.length > 3 && '...'}
-                    </div>
-                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {categories.length} categorias existentes no repositório
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategoria</Label>
-                  <Input
-                    id="subcategory"
+                  <Label>Subcategoria</Label>
+                  <Combobox
                     value={formData.subcategory}
-                    onChange={(e) => setFormData(prev => ({ ...prev, subcategory: e.target.value }))}
-                    placeholder="Digite o nome da subcategoria"
-                    required
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                    options={availableSubcategories}
+                    placeholder="Selecione ou digite nova subcategoria"
+                    searchPlaceholder="Buscar subcategoria..."
+                    emptyText={formData.category ? "Nenhuma subcategoria para esta categoria." : "Selecione uma categoria primeiro."}
+                    createText="Criar subcategoria"
                   />
-                  {subcategories.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      Existentes: {subcategories.slice(0, 3).join(', ')}{subcategories.length > 3 && '...'}
-                    </div>
-                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {formData.category 
+                      ? `${availableSubcategories.length} subcategorias para "${formData.category}"`
+                      : "Selecione uma categoria para ver subcategorias"
+                    }
+                  </div>
                 </div>
               </div>
+
+              {existingConfig && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+                  <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800 dark:text-amber-200">
+                      Configuração já existe
+                    </p>
+                    <p className="text-amber-700 dark:text-amber-300">
+                      Já existe uma configuração para "{formData.category} → {formData.subcategory}". 
+                      Criar uma nova configuração irá sobrescrever a existente.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Público-Alvo</Label>
