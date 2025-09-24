@@ -73,6 +73,19 @@ const CategoryManager = () => {
     );
   }, [formData.category, formData.subcategory, configs, editingConfig]);
 
+  // Estatísticas de completude
+  const stats = useMemo(() => {
+    const counts = { complete: 0, good: 0, regular: 0, critical: 0 };
+    configs.forEach(config => {
+      const completeness = calculateConfigCompleteness(config);
+      if (completeness.percentage >= 90) counts.complete++;
+      else if (completeness.percentage >= 70) counts.good++;
+      else if (completeness.percentage >= 50) counts.regular++;
+      else counts.critical++;
+    });
+    return counts;
+  }, [configs]);
+
   const resetForm = () => {
     setFormData({
       category: '',
@@ -233,262 +246,241 @@ const CategoryManager = () => {
     return 'Crítico';
   };
 
-  // Estatísticas de completude - moved before early return
-  const stats = useMemo(() => {
-    const counts = { complete: 0, good: 0, regular: 0, critical: 0 };
-    configs.forEach(config => {
-      const completeness = calculateConfigCompleteness(config);
-      if (completeness.percentage >= 90) counts.complete++;
-      else if (completeness.percentage >= 70) counts.good++;
-      else if (completeness.percentage >= 50) counts.regular++;
-      else counts.critical++;
-    });
-    return counts;
-  }, [configs]);
-
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold gradient-text">Gerenciar Categorias</h2>
-          <p className="text-muted-foreground mt-1">
-            Configure categorias e suas configurações de palavras-chave e público-alvo
-          </p>
-        </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Configuração
-            </Button>
-          </DialogTrigger>
+    <Card className="border-border/20 shadow-soft">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Folder className="h-5 w-5" />
+            Gerenciar Categorias
+          </CardTitle>
           
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingConfig ? 'Editar' : 'Criar'} Configuração de Categoria
-              </DialogTitle>
-              <DialogDescription>
-                Configure os campos padrões que serão preenchidos automaticamente nos produtos
-              </DialogDescription>
-            </DialogHeader>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Configuração
+              </Button>
+            </DialogTrigger>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingConfig ? 'Editar' : 'Criar'} Configuração de Categoria
+                </DialogTitle>
+                <DialogDescription>
+                  Configure os campos padrões que serão preenchidos automaticamente nos produtos
+                </DialogDescription>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Categoria</Label>
+                      {formData.category && unifiedCategories.includes(formData.category) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openRenameDialog('category', formData.category)}
+                          className="h-6 text-xs"
+                        >
+                          <FileEdit className="h-3 w-3 mr-1" />
+                          Renomear
+                        </Button>
+                      )}
+                    </div>
+                    <Combobox
+                      value={formData.category}
+                      onValueChange={handleCategoryChange}
+                      options={unifiedCategories}
+                      placeholder="Selecione ou digite nova categoria"
+                      searchPlaceholder="Buscar categoria..."
+                      emptyText="Nenhuma categoria encontrada."
+                      createText="Criar categoria"
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      {unifiedCategories.length} categorias existentes no repositório
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Subcategoria</Label>
+                      {formData.subcategory && formData.category && availableSubcategories.includes(formData.subcategory) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openRenameDialog('subcategory', formData.subcategory, formData.category)}
+                          className="h-6 text-xs"
+                        >
+                          <FileEdit className="h-3 w-3 mr-1" />
+                          Renomear
+                        </Button>
+                      )}
+                    </div>
+                    <Combobox
+                      value={formData.subcategory}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                      options={availableSubcategories}
+                      placeholder="Selecione ou digite nova subcategoria"
+                      searchPlaceholder="Buscar subcategoria..."
+                      emptyText={formData.category ? "Nenhuma subcategoria para esta categoria." : "Selecione uma categoria primeiro."}
+                      createText="Criar subcategoria"
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      {formData.category 
+                        ? `${availableSubcategories.length} subcategorias para "${formData.category}"`
+                        : "Selecione uma categoria para ver subcategorias"
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                {existingConfig && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+                    <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-800 dark:text-amber-200">
+                        Configuração já existe
+                      </p>
+                      <p className="text-amber-700 dark:text-amber-300">
+                        Já existe uma configuração para "{formData.category} → {formData.subcategory}". 
+                        Criar uma nova configuração irá sobrescrever a existente.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Categoria</Label>
-                    {formData.category && unifiedCategories.includes(formData.category) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openRenameDialog('category', formData.category)}
-                        className="h-6 text-xs"
-                      >
-                        <FileEdit className="h-3 w-3 mr-1" />
-                        Renomear
-                      </Button>
-                    )}
-                  </div>
-                  <Combobox
-                    value={formData.category}
-                    onValueChange={handleCategoryChange}
-                    options={unifiedCategories}
-                    placeholder="Selecione ou digite nova categoria"
-                    searchPlaceholder="Buscar categoria..."
-                    emptyText="Nenhuma categoria encontrada."
-                    createText="Criar categoria"
+                  <Label>Público-Alvo</Label>
+                  <TagInput
+                    value={formData.target_audience}
+                    onChange={(value) => {
+                      console.log('DEBUG TagInput target_audience onChange:', value);
+                      setFormData(prev => ({ ...prev, target_audience: value }));
+                    }}
+                    placeholder="Digite e pressione Enter para adicionar"
                   />
-                  <div className="text-xs text-muted-foreground">
-                    {unifiedCategories.length} categorias existentes no repositório
-                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Subcategoria</Label>
-                    {formData.subcategory && formData.category && availableSubcategories.includes(formData.subcategory) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openRenameDialog('subcategory', formData.subcategory, formData.category)}
-                        className="h-6 text-xs"
-                      >
-                        <FileEdit className="h-3 w-3 mr-1" />
-                        Renomear
-                      </Button>
-                    )}
-                  </div>
-                  <Combobox
-                    value={formData.subcategory}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
-                    options={availableSubcategories}
-                    placeholder="Selecione ou digite nova subcategoria"
-                    searchPlaceholder="Buscar subcategoria..."
-                    emptyText={formData.category ? "Nenhuma subcategoria para esta categoria." : "Selecione uma categoria primeiro."}
-                    createText="Criar subcategoria"
+                  <Label>Keywords</Label>
+                  <TagInput
+                    value={formData.keywords}
+                    onChange={(value) => {
+                      console.log('DEBUG TagInput keywords onChange:', value);
+                      setFormData(prev => ({ ...prev, keywords: value }));
+                    }}
+                    placeholder="Digite e pressione Enter para adicionar"
                   />
-                  <div className="text-xs text-muted-foreground">
-                    {formData.category 
-                      ? `${availableSubcategories.length} subcategorias para "${formData.category}"`
-                      : "Selecione uma categoria para ver subcategorias"
-                    }
-                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Keywords de Mercado</Label>
+                  <TagInput
+                    value={formData.market_keywords}
+                    onChange={(value) => {
+                      console.log('DEBUG TagInput market_keywords onChange:', value);
+                      setFormData(prev => ({ ...prev, market_keywords: value }));
+                    }}
+                    placeholder="Digite e pressione Enter para adicionar"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Keywords de Intenção de Busca</Label>
+                  <TagInput
+                    value={formData.search_intent_keywords}
+                    onChange={(value) => {
+                      console.log('DEBUG TagInput search_intent_keywords onChange:', value);
+                      setFormData(prev => ({ ...prev, search_intent_keywords: value }));
+                    }}
+                    placeholder="Digite e pressione Enter para adicionar"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    <Save className="h-4 w-4 mr-2" />
+                    {editingConfig ? 'Atualizar' : 'Criar'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Rename Dialog */}
+          <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileEdit className="h-4 w-4" />
+                  Renomear {renameData.type === 'category' ? 'Categoria' : 'Subcategoria'}
+                </DialogTitle>
+                <DialogDescription>
+                  {renameData.type === 'category' 
+                    ? 'Esta ação irá renomear a categoria em todos os produtos e configurações.'
+                    : `Esta ação irá renomear a subcategoria em todos os produtos da categoria "${renameData.category}".`
+                  }
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Nome atual</Label>
+                  <Input value={renameData.oldName} disabled className="bg-muted" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Novo nome</Label>
+                  <Input
+                    value={renameData.newName}
+                    onChange={(e) => setRenameData(prev => ({ ...prev, newName: e.target.value }))}
+                    placeholder="Digite o novo nome"
+                  />
                 </div>
               </div>
 
-              {existingConfig && (
-                <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
-                  <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-800 dark:text-amber-200">
-                      Configuração já existe
-                    </p>
-                    <p className="text-amber-700 dark:text-amber-300">
-                      Já existe uma configuração para "{formData.category} → {formData.subcategory}". 
-                      Criar uma nova configuração irá sobrescrever a existente.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Público-Alvo</Label>
-                <TagInput
-                  value={formData.target_audience}
-                  onChange={(value) => {
-                    console.log('DEBUG TagInput target_audience onChange:', value);
-                    setFormData(prev => ({ ...prev, target_audience: value }));
-                  }}
-                  placeholder="Digite e pressione Enter para adicionar"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Keywords</Label>
-                <TagInput
-                  value={formData.keywords}
-                  onChange={(value) => {
-                    console.log('DEBUG TagInput keywords onChange:', value);
-                    setFormData(prev => ({ ...prev, keywords: value }));
-                  }}
-                  placeholder="Digite e pressione Enter para adicionar"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Keywords de Mercado</Label>
-                <TagInput
-                  value={formData.market_keywords}
-                  onChange={(value) => {
-                    console.log('DEBUG TagInput market_keywords onChange:', value);
-                    setFormData(prev => ({ ...prev, market_keywords: value }));
-                  }}
-                  placeholder="Digite e pressione Enter para adicionar"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Keywords de Intenção de Busca</Label>
-                <TagInput
-                  value={formData.search_intent_keywords}
-                  onChange={(value) => {
-                    console.log('DEBUG TagInput search_intent_keywords onChange:', value);
-                    setFormData(prev => ({ ...prev, search_intent_keywords: value }));
-                  }}
-                  placeholder="Digite e pressione Enter para adicionar"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 mt-6">
                 <Button
-                  type="button"
                   variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={() => setIsRenameDialogOpen(false)}
+                  disabled={isRenaming}
                 >
-                  <X className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  <Save className="h-4 w-4 mr-2" />
-                  {editingConfig ? 'Atualizar' : 'Criar'}
+                <Button 
+                  onClick={handleRename}
+                  disabled={isRenaming || !renameData.newName.trim() || renameData.newName === renameData.oldName}
+                >
+                  {isRenaming ? 'Renomeando...' : 'Renomear'}
                 </Button>
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Rename Dialog */}
-        <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FileEdit className="h-4 w-4" />
-                Renomear {renameData.type === 'category' ? 'Categoria' : 'Subcategoria'}
-              </DialogTitle>
-              <DialogDescription>
-                {renameData.type === 'category' 
-                  ? 'Esta ação irá renomear a categoria em todos os produtos e configurações.'
-                  : `Esta ação irá renomear a subcategoria em todos os produtos da categoria "${renameData.category}".`
-                }
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome atual</Label>
-                <Input value={renameData.oldName} disabled className="bg-muted" />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Novo nome</Label>
-                <Input
-                  value={renameData.newName}
-                  onChange={(e) => setRenameData(prev => ({ ...prev, newName: e.target.value }))}
-                  placeholder="Digite o novo nome"
-                />
-              </div>
-              
-              <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
-                <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <div className="text-sm text-amber-700 dark:text-amber-300">
-                  Esta operação pode afetar múltiplos produtos no repositório.
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setIsRenameDialogOpen(false)}
-                disabled={isRenaming}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleRename}
-                disabled={isRenaming || !renameData.newName.trim() || renameData.newName === renameData.oldName}
-              >
-                {isRenaming ? 'Renomeando...' : 'Renomear'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </DialogContent>
+          </Dialog>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Statistics Summary */}
-          <Card className="border-border/20 shadow-soft">
-            <CardContent className="p-4">
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <>
+            {/* Statistics Summary */}
+            <div className="bg-muted/50 rounded-lg p-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-green-600">{stats.complete}</div>
@@ -507,13 +499,11 @@ const CategoryManager = () => {
                   <div className="text-sm text-muted-foreground">Críticas</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Category Cards */}
-          {configs.length === 0 ? (
-            <Card className="border-border/20 shadow-soft">
-              <CardContent className="text-center py-8">
+            {/* Category Cards */}
+            {configs.length === 0 ? (
+              <div className="text-center py-8">
                 <Folder className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma configuração encontrada</h3>
                 <p className="text-muted-foreground mb-4">
@@ -523,153 +513,144 @@ const CategoryManager = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Criar Primeira Configuração
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {configs.map((config) => {
-                const completeness = calculateConfigCompleteness(config);
-                const score = {
-                  percentage: completeness.percentage,
-                  missingFields: [],
-                  hasAllRequired: completeness.percentage >= 90,
-                  hasPartialData: completeness.percentage >= 50,
-                  total: completeness.filledCount,
-                  details: completeness.fields,
-                  maxPoints: completeness.totalCount
-                };
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {configs.map((config) => {
+                  const completeness = calculateConfigCompleteness(config);
+                  const score = {
+                    percentage: completeness.percentage,
+                    missingFields: [],
+                    hasAllRequired: completeness.percentage >= 90,
+                    hasPartialData: completeness.percentage >= 50,
+                    total: completeness.filledCount,
+                    details: {
+                      basicInfo: completeness.filledCount > 0 ? 10 : 0,
+                      content: completeness.filledCount > 1 ? 10 : 0,
+                      multimedia: completeness.filledCount > 2 ? 10 : 0,
+                      seo: completeness.filledCount > 3 ? 10 : 0,
+                      commercial: 0
+                    },
+                    maxPoints: completeness.totalCount
+                  };
 
-                return (
-                  <Card 
-                    key={config.id} 
-                    className="group border-border/20 shadow-soft hover:shadow-medium transition-all duration-200 hover:border-border/40"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        {/* Icon */}
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Folder className="h-5 w-5 text-primary" />
+                  return (
+                    <Card 
+                      key={config.id} 
+                      className="group border-border/20 shadow-soft hover:shadow-medium transition-all duration-200 hover:border-border/40"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          {/* Icon */}
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Folder className="h-5 w-5 text-primary" />
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-base font-semibold text-foreground truncate">
-                                {config.category}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground truncate">
-                                  {config.subcategory}
+                          {/* Main Content */}
+                          <div className="flex-1 min-w-0">
+                            {/* Category and Subcategory */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-foreground truncate">{config.category}</h3>
+                              <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm text-muted-foreground truncate">{config.subcategory}</span>
+                            </div>
+
+                            {/* Preview badges */}
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {completeness.fields.map((field, index) => (
+                                <Badge 
+                                  key={index} 
+                                  variant={field.filled ? "default" : "outline"} 
+                                  className="text-xs flex items-center gap-1"
+                                >
+                                  <field.icon className="h-3 w-3" />
+                                  {field.count > 0 ? field.count : "0"}
+                                </Badge>
+                              ))}
+                            </div>
+
+                            {/* Score Display and Date */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <ProductScoreIndicator score={score} size="sm" showDetails />
+                                <div className="flex items-center gap-1">
+                                  {completeness.percentage >= 90 ? (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  ) : completeness.percentage >= 70 ? (
+                                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                  )}
+                                  <span className="font-bold text-sm">{completeness.percentage}%</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  {new Date(config.created_at).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                  })}
                                 </span>
                               </div>
-                              
-                              {/* Preview badges */}
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {config.target_audience && config.target_audience.length > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Users className="h-3 w-3 mr-1" />
-                                    {config.target_audience.length} público
-                                  </Badge>
-                                )}
-                                {config.keywords && config.keywords.length > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Hash className="h-3 w-3 mr-1" />
-                                    {config.keywords.length} keywords
-                                  </Badge>
-                                )}
-                                {config.search_intent_keywords && config.search_intent_keywords.length > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Target className="h-3 w-3 mr-1" />
-                                    {config.search_intent_keywords.length} intenção
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Score Indicator */}
-                            <div className="flex-shrink-0 ml-3">
-                              <div className="flex items-center gap-1">
-                                {completeness.percentage >= 90 ? (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                ) : completeness.percentage >= 50 ? (
-                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 text-red-500" />
-                                )}
-                                <span className="font-bold text-sm">{completeness.percentage}%</span>
-                              </div>
                             </div>
                           </div>
 
-                          {/* Date and Actions */}
-                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/20">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                {new Date(config.created_at).toLocaleDateString('pt-BR', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric'
-                                })}
-                              </span>
-                            </div>
-
-                            {/* Action buttons */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(config)}
-                                className="h-7 w-7 p-0"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(config)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir a configuração "{config.category} → {config.subcategory}"? 
+                                    Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(config.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja excluir a configuração "{config.category} → {config.subcategory}"? 
-                                      Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(config.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Excluir
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
