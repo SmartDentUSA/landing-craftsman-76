@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
-import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -189,6 +189,46 @@ const CategoryManager = () => {
       category: category || ''
     });
     setIsRenameDialogOpen(true);
+  };
+
+  // Função para calcular completude da configuração
+  const calculateConfigCompleteness = (config: any) => {
+    const fields = [
+      { name: 'target_audience', data: config.target_audience, icon: Target },
+      { name: 'keywords', data: config.keywords, icon: Hash },
+      { name: 'market_keywords', data: config.market_keywords, icon: TrendingUp },
+      { name: 'search_intent_keywords', data: config.search_intent_keywords, icon: Search }
+    ];
+    
+    const filledFields = fields.filter(field => field.data && field.data.length > 0);
+    const completeness = Math.round((filledFields.length / fields.length) * 100);
+    
+    return {
+      percentage: completeness,
+      filledCount: filledFields.length,
+      totalCount: fields.length,
+      fields: fields.map(field => ({
+        ...field,
+        filled: field.data && field.data.length > 0,
+        count: field.data ? field.data.length : 0
+      }))
+    };
+  };
+
+  // Função para obter cor baseada na completude
+  const getCompletenessColor = (percentage: number) => {
+    if (percentage >= 90) return 'success';
+    if (percentage >= 70) return 'warning';
+    if (percentage >= 50) return 'secondary';
+    return 'destructive';
+  };
+
+  // Função para obter label baseado na completude
+  const getCompletenessLabel = (percentage: number) => {
+    if (percentage >= 90) return 'Completo';
+    if (percentage >= 70) return 'Bom';
+    if (percentage >= 50) return 'Regular';
+    return 'Crítico';
   };
 
   if (loading) {
@@ -441,57 +481,146 @@ const CategoryManager = () => {
             </CardContent>
           </Card>
         ) : (
-          configs.map((config) => (
-            <Card key={config.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {config.category} → {config.subcategory}
-                    </CardTitle>
-                    <CardDescription>
-                      Configuração criada em {new Date(config.created_at).toLocaleDateString()}
-                    </CardDescription>
+          configs.map((config) => {
+            const completeness = calculateConfigCompleteness(config);
+            const completenessColor = getCompletenessColor(completeness.percentage);
+            const completenessLabel = getCompletenessLabel(completeness.percentage);
+            
+            return (
+              <Card key={config.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <CardTitle className="text-lg">
+                          {config.category} → {config.subcategory}
+                        </CardTitle>
+                        <Badge variant={completenessColor}>
+                          {completenessLabel} ({completeness.percentage}%)
+                        </Badge>
+                      </div>
+                      <CardDescription className="flex items-center gap-2">
+                        <Calendar className="h-3 w-3" />
+                        Criada em {new Date(config.created_at).toLocaleDateString('pt-BR')}
+                        {config.updated_at !== config.created_at && (
+                          <span className="text-muted-foreground">
+                            • Atualizada em {new Date(config.updated_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </CardDescription>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(config)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir a configuração para "{config.category} → {config.subcategory}"?
+                              Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(config.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(config)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                </CardHeader>
+
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {completeness.fields.map((field) => {
+                      const IconComponent = field.icon;
+                      return (
+                        <div 
+                          key={field.name}
+                          className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${
+                            field.filled 
+                              ? 'border-success/20 bg-success/5' 
+                              : 'border-muted bg-muted/30'
+                          }`}
+                        >
+                          <IconComponent className={`h-4 w-4 ${
+                            field.filled ? 'text-success' : 'text-muted-foreground'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-xs font-medium truncate ${
+                              field.filled ? 'text-success-foreground' : 'text-muted-foreground'
+                            }`}>
+                              {field.name === 'target_audience' && 'Público-Alvo'}
+                              {field.name === 'keywords' && 'Keywords'}
+                              {field.name === 'market_keywords' && 'Mercado'}
+                              {field.name === 'search_intent_keywords' && 'Busca'}
+                            </div>
+                            <div className={`text-xs ${
+                              field.filled ? 'text-success-foreground/80' : 'text-muted-foreground'
+                            }`}>
+                              {field.count} {field.count === 1 ? 'item' : 'itens'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Preview dos dados */}
+                  <div className="mt-4 space-y-2">
+                    {config.target_audience && config.target_audience.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-xs font-medium text-muted-foreground mr-2">Público:</span>
+                        {config.target_audience.slice(0, 3).map((audience: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {audience}
+                          </Badge>
+                        ))}
+                        {config.target_audience.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{config.target_audience.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir esta configuração? Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(config.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {config.keywords && config.keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-xs font-medium text-muted-foreground mr-2">Keywords:</span>
+                        {config.keywords.slice(0, 4).map((keyword: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {keyword}
+                          </Badge>
+                        ))}
+                        {config.keywords.length > 4 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{config.keywords.length - 4}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardHeader>
-              
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>
