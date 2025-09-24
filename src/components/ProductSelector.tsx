@@ -135,6 +135,7 @@ export function ProductSelector({
   };
 
   const formatPrice = (price?: number, currency?: string) => {
+    if (price === 0) return "Pedir orçamento";
     if (!price) return "Gratuito";
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',

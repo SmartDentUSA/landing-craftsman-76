@@ -69,6 +69,7 @@ export function ModernProductCard({
   const score = calculateProductScore(product);
   
   const formatPrice = (price?: number, currency?: string) => {
+    if (price === 0) return "Pedir orçamento";
     if (!price) return "Gratuito";
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -187,7 +188,7 @@ export function ModernProductCard({
         </div>
 
         {/* Preço (se disponível) */}
-        {product.price && (
+        {(product.price !== undefined && product.price !== null) && (
           <div className="flex-shrink-0 text-sm font-medium">
             {formatPrice(product.price, product.currency)}
           </div>

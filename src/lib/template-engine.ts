@@ -1537,7 +1537,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             <span class="offer-price-original">R$ {{original_price}}</span>
                             {{/original_price}}
                             {{#price}}
-                            <div class="offer-price-current">R$ {{price}}</div>
+                            <div class="offer-price-current">{{#isPriceZero}}Pedir orçamento{{/isPriceZero}}{{^isPriceZero}}R$ {{price}}{{/isPriceZero}}</div>
                             {{/price}}
                             {{#installment_price}}
                             <div class="offer-price-installment">{{installment_price}}</div>
@@ -2241,6 +2241,10 @@ export const generateHTML = (data: any): string => {
     processedData.offers = data.schema?.offers?.filter((offer: any) => offer.selected !== false).map((offer: any) => {
       let processedOffer = { ...offer };
       
+      // Check if price is zero for "Pedir orçamento" logic
+      const priceValue = parseFloat(offer.price?.toString().replace(/[^\d.,]/g, '').replace(',', '.') || '0');
+      processedOffer.isPriceZero = priceValue === 0;
+      
       // Calculate discount percentage if both prices exist
       if (offer.original_price && offer.price) {
         const original = parseFloat(offer.original_price.replace(/[^\d.,]/g, '').replace(',', '.'));
@@ -2285,6 +2289,10 @@ export const generateHTML = (data: any): string => {
     // Process resources products - only products with show_in_resources = true
     processedData.resources_products = data.schema?.offers?.filter((offer: any) => offer.show_in_resources === true).map((offer: any, index: number) => {
       let processedOffer = { ...offer };
+      
+      // Check if price is zero for "Pedir orçamento" logic
+      const priceValue = parseFloat(offer.price?.toString().replace(/[^\d.,]/g, '').replace(',', '.') || '0');
+      processedOffer.isPriceZero = priceValue === 0;
       
       // Handle image URL processing (Cloudflare support)
       if (offer.image) {
@@ -2902,10 +2910,12 @@ const generateOffersSection = (landingPageData: any) => {
         <h4 class="offer-title">${product.name}</h4>
         ${product.description ? `<p class="offer-description">${product.description.substring(0, 100)}...</p>` : ''}
         <div class="offer-price">
-          ${product.discount_price && product.discount_price < product.price ? 
-            `<span class="offer-price-old">R$ ${product.price.toFixed(2)}</span>
-             <span class="offer-price-new">R$ ${product.discount_price.toFixed(2)}</span>` :
-            `<span class="offer-price-current">R$ ${product.price.toFixed(2)}</span>`
+          ${product.price === 0 ? 
+            `<span class="offer-price-current">Pedir orçamento</span>` :
+            product.discount_price && product.discount_price < product.price ? 
+              `<span class="offer-price-old">R$ ${product.price.toFixed(2)}</span>
+               <span class="offer-price-new">R$ ${product.discount_price.toFixed(2)}</span>` :
+              `<span class="offer-price-current">R$ ${product.price.toFixed(2)}</span>`
           }
         </div>
         ${product.link ? `<a href="${product.link}" class="offer-button" target="_blank">Ver Oferta</a>` : ''}

@@ -87,7 +87,7 @@ export const useSelectedProducts = () => {
     return products.map(product => ({
       name: product.name,
       description: product.description,
-      price: product.price?.toString() || '',
+      price: product.price === 0 ? 'Pedir orçamento' : (product.price?.toString() || ''),
       currency: 'BRL',
       availability: 'InStock',
       valid_through: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
