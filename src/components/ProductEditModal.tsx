@@ -63,7 +63,14 @@ interface ProductEditModalProps {
 }
 
 export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }: ProductEditModalProps) {
-  const { unifiedCategories, getUnifiedSubcategoriesForCategory } = useCategoryContext();
+  console.log('ProductEditModal rendering...');
+  
+  const categoryContext = useCategoryContext();
+  console.log('CategoryContext:', categoryContext);
+  
+  const { unifiedCategories, getUnifiedSubcategoriesForCategory } = categoryContext;
+  console.log('unifiedCategories:', unifiedCategories);
+  
   const { getConfigByCategory } = useCategoryConfig();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);

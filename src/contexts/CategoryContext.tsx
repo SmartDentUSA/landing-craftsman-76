@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 
@@ -67,13 +67,13 @@ export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) 
   }, [refreshAllCategories]);
 
   // Create unified category lists combining both data sources
-  const unifiedCategories = React.useMemo(() => {
+  const unifiedCategories = useMemo(() => {
     const productCats = productCategories.categories;
     const configCategories = categoryConfigs.configs.map(config => config.category);
     return [...new Set([...productCats, ...configCategories])].sort();
   }, [productCategories.categories, categoryConfigs.configs]);
 
-  const unifiedSubcategories = React.useMemo(() => {
+  const unifiedSubcategories = useMemo(() => {
     const productSubcats = productCategories.subcategories;
     const configSubcategories = categoryConfigs.configs.map(config => config.subcategory);
     return [...new Set([...productSubcats, ...configSubcategories])].sort();
