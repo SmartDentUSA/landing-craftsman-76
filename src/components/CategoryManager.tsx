@@ -233,11 +233,7 @@ const CategoryManager = () => {
     return 'Crítico';
   };
 
-  if (loading) {
-    return <div className="p-6">Carregando configurações...</div>;
-  }
-
-  // Estatísticas de completude
+  // Estatísticas de completude - moved before early return
   const stats = useMemo(() => {
     const counts = { complete: 0, good: 0, regular: 0, critical: 0 };
     configs.forEach(config => {
@@ -249,6 +245,10 @@ const CategoryManager = () => {
     });
     return counts;
   }, [configs]);
+
+  if (loading) {
+    return <div className="p-6">Carregando configurações...</div>;
+  }
 
   return (
     <div className="space-y-6">
