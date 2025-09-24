@@ -1400,7 +1400,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             </div>
                             {{/image}}
                             <div class="offer-content">
-                                <h3 class="offer-title">{{name}}</h3>
+                                <h4 class="offer-title">{{name}}</h4>
                                 <div class="offer-buttons">
                                     {{#resource_cta1}}
                                     {{#visible}}
@@ -1435,7 +1435,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                             </div>
                             {{/image}}
                             <div class="offer-content">
-                                <h3 class="offer-title">{{name}}</h3>
+                                <h4 class="offer-title">{{name}}</h4>
                                 <div class="offer-buttons">
                                     {{#resource_cta1}}
                                     {{#visible}}

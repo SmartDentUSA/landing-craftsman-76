@@ -57,6 +57,15 @@ interface Product {
   testimonial_videos?: Video[];
   video_captions?: any;
   original_data?: any;
+  // Landing Page Section controls
+  show_in_resources?: boolean;
+  selected?: boolean;
+  // Resource CTAs
+  resource_cta1?: { label: string; url: string; visible: boolean };
+  resource_cta2?: { label: string; url: string; visible: boolean };
+  resource_cta3?: { label: string; url: string; visible: boolean };
+  // Offer discount CTA
+  offer_discount_cta?: { label: string; url: string; visible: boolean };
 }
 
 interface ManualReview {
@@ -298,7 +307,14 @@ export function RepositoryPanel({
         technical_videos: Array.isArray(data.technical_videos) ? data.technical_videos as unknown as Video[] : [],
         testimonial_videos: Array.isArray(data.testimonial_videos) ? data.testimonial_videos as unknown as Video[] : [],
         video_captions: data.video_captions || {},
-        original_data: data.original_data || null
+        original_data: data.original_data || null,
+        // Landing page sections and CTAs
+        selected: data.selected ?? false,
+        show_in_resources: data.show_in_resources ?? false,
+        resource_cta1: (data as any).resource_cta1 || { label: '', url: '', visible: false },
+        resource_cta2: (data as any).resource_cta2 || { label: '', url: '', visible: false },
+        resource_cta3: (data as any).resource_cta3 || { label: '', url: '', visible: false },
+        offer_discount_cta: (data as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false }
       }));
       
       setProducts(formattedProducts);
