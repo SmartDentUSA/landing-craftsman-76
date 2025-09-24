@@ -7,6 +7,7 @@ import { CategoryProvider } from "@/contexts/CategoryContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
+import LandingPageEditor from "./pages/LandingPageEditor";
 import CodeView from "./pages/CodeView";
 import CloudflareSettings from "./pages/CloudflareSettings";
 import PublicationSettings from "./pages/PublicationSettings";
@@ -31,7 +32,8 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/editor" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
-          <Route path="/editor/:landingPageId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+          <Route path="/editor/:landingPageId" element={<ProtectedRoute><LandingPageEditor /></ProtectedRoute>} />
+          <Route path="/blog-editor/:landingPageId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
           <Route path="/code-view" element={<ProtectedRoute><CodeView /></ProtectedRoute>} />
           <Route path="/cloudflare-settings" element={<ProtectedRoute><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute><PublicationSettings /></ProtectedRoute>} />
