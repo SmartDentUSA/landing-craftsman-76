@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -137,11 +137,11 @@ export const usePromptsConfiguration = () => {
     }
   };
 
-  const getConfigurationByFunction = (edgeFunctionId: string, promptName: string) => {
+  const getConfigurationByFunction = useCallback((edgeFunctionId: string, promptName: string) => {
     return configurations.find(
       config => config.edge_function_id === edgeFunctionId && config.prompt_name === promptName
     );
-  };
+  }, [configurations]);
 
   useEffect(() => {
     loadConfigurations();

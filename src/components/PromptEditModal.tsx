@@ -656,52 +656,79 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
   const [customPrompts, setCustomPrompts] = useState<Record<string, string>>({});
   const [previewPrompt, setPreviewPrompt] = useState('');
   const [tokenCount, setTokenCount] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(false);
   const { toast } = useToast();
-  const { saveConfiguration, getConfigurationByFunction } = usePromptsConfiguration();
+  const { saveConfiguration, getConfigurationByFunction, loading } = usePromptsConfiguration();
 
   useEffect(() => {
-    if (edgeFunction) {
+    if (edgeFunction && open && !loading && !isInitializing) {
+      setIsInitializing(true);
       console.log('🔄 Carregando configurações para:', edgeFunction.id);
       
-      // Carregar configurações salvas
-      const savedConfig = getConfigurationByFunction(edgeFunction.id, edgeFunction.prompts[0]);
-      
-      if (savedConfig) {
-        console.log('✅ Configuração salva encontrada:', savedConfig);
+      try {
+        // Carregar configurações salvas
+        const savedConfig = getConfigurationByFunction(edgeFunction.id, edgeFunction.prompts[0]);
         
-        // Carregar campos selecionados da configuração
-        setSelectedFields(savedConfig.selected_fields || {});
-        
-        // Carregar prompts customizados (buscar todas as configurações dessa função)
-        const savedPrompts: Record<string, string> = {};
-        edgeFunction.prompts.forEach(promptName => {
-          const promptConfig = getConfigurationByFunction(edgeFunction.id, promptName);
-          if (promptConfig?.custom_prompt) {
-            savedPrompts[promptName] = promptConfig.custom_prompt;
-          } else {
-            // Usar prompt padrão
-            const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[promptName];
-            savedPrompts[promptName] = realPrompt || `Prompt personalizado para ${promptName}...`;
+        if (savedConfig) {
+          console.log('✅ Configuração salva encontrada:', savedConfig);
+          
+          // Carregar campos selecionados da configuração
+          setSelectedFields(savedConfig.selected_fields || {});
+          
+          // Carregar prompts customizados (buscar todas as configurações dessa função)
+          const savedPrompts: Record<string, string> = {};
+          edgeFunction.prompts.forEach(promptName => {
+            const promptConfig = getConfigurationByFunction(edgeFunction.id, promptName);
+            if (promptConfig?.custom_prompt) {
+              savedPrompts[promptName] = promptConfig.custom_prompt;
+            } else {
+              // Usar prompt padrão
+              const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[promptName];
+              savedPrompts[promptName] = realPrompt || `Prompt personalizado para ${promptName}...`;
+            }
+          });
+          setCustomPrompts(savedPrompts);
+          
+        } else {
+          console.log('ℹ️ Nenhuma configuração salva, usando defaults');
+          
+          // Para novas funções, inicializar com configuração padrão útil
+          const defaultFields: Record<string, string[]> = {};
+          
+          // Configurações padrão baseadas na função
+          if (edgeFunction.id === 'generate-social-content') {
+            defaultFields['products_repository'] = ['name', 'description', 'benefits'];
+            defaultFields['company_profile'] = ['company_name', 'target_audience'];
           }
-        });
-        setCustomPrompts(savedPrompts);
-        
-      } else {
-        console.log('ℹ️ Nenhuma configuração salva, usando defaults vazios');
-        
-        // Não selecionar nenhum campo por padrão se não houver configuração
-        setSelectedFields({});
-        
-        // Inicializar prompts com prompts reais das Edge Functions
-        const initialPrompts: Record<string, string> = {};
-        edgeFunction.prompts.forEach(prompt => {
-          const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[prompt];
-          initialPrompts[prompt] = realPrompt || `Prompt personalizado para ${prompt}...`;
-        });
-        setCustomPrompts(initialPrompts);
+          
+          setSelectedFields(defaultFields);
+          
+          // Inicializar prompts com prompts reais das Edge Functions
+          const initialPrompts: Record<string, string> = {};
+          edgeFunction.prompts.forEach(prompt => {
+            const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[prompt];
+            initialPrompts[prompt] = realPrompt || `Prompt personalizado para ${prompt}...`;
+          });
+          setCustomPrompts(initialPrompts);
+        }
+      } catch (error) {
+        console.error('Erro ao inicializar modal:', error);
+      } finally {
+        setIsInitializing(false);
       }
     }
-  }, [edgeFunction, getConfigurationByFunction]);
+  }, [edgeFunction, open, loading, getConfigurationByFunction, isInitializing]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedFields({});
+      setCustomPrompts({});
+      setPreviewPrompt('');
+      setTokenCount(0);
+      setIsInitializing(false);
+    }
+  }, [open]);
 
   const handleFieldToggle = (dataSource: string, field: string) => {
     setSelectedFields(prev => ({
