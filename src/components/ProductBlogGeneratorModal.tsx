@@ -106,7 +106,7 @@ export const ProductBlogGeneratorModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -115,82 +115,12 @@ export const ProductBlogGeneratorModal = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Informações do Produto */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Dados do Produto</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Nome:</strong> {product.name}
-                </div>
-                <div>
-                  <strong>Categoria:</strong> {product.category || 'Não definida'}
-                </div>
-                <div>
-                  <strong>Subcategoria:</strong> {product.subcategory || 'Não definida'}
-                </div>
-                <div>
-                  <strong>Preço:</strong> {product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não definido'}
-                </div>
-              </div>
-              
-              {product.description && (
-                <div>
-                  <strong>Descrição:</strong>
-                  <p className="text-muted-foreground mt-1">{product.description}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {product.keywords && product.keywords.length > 0 && (
-                  <div>
-                    <strong>Keywords:</strong>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {product.keywords.slice(0, 3).map((keyword, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {keyword}
-                        </Badge>
-                      ))}
-                      {product.keywords.length > 3 && (
-                        <Badge variant="outline" className="text-xs">+{product.keywords.length - 3}</Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {product.benefits && product.benefits.length > 0 && (
-                  <div>
-                    <strong>Benefícios:</strong>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {product.benefits.slice(0, 3).map((benefit, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {benefit}
-                        </Badge>
-                      ))}
-                      {product.benefits.length > 3 && (
-                        <Badge variant="outline" className="text-xs">+{product.benefits.length - 3}</Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {product.features && product.features.length > 0 && (
-                  <div>
-                    <strong>Características:</strong>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {product.features.slice(0, 3).map((feature, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {feature}
-                        </Badge>
-                      ))}
-                      {product.features.length > 3 && (
-                        <Badge variant="outline" className="text-xs">+{product.features.length - 3}</Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
+          {/* Informação sobre configuração de dados */}
+          <Card className="bg-muted/30">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Settings className="h-4 w-4" />
+                Os dados utilizados na geração são configurados na aba <strong>"Prompts IA"</strong>
               </div>
             </CardContent>
           </Card>
