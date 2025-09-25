@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Package, GripVertical, ExternalLink, Edit, Eye, Settings } from "lucide-react";
+import { Package, GripVertical, ExternalLink, Edit, Eye, Settings, FileText, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +18,12 @@ interface Product {
   image_url?: string;
   product_url?: string;
   display_order?: number;
+  // Blog content gerado por IA
+  individual_blog_content?: {
+    commercial?: string | null;
+    technical?: string | null;
+    generated_at?: string | null;
+  };
 }
 
 interface SelectedProductsPanelProps {
@@ -57,9 +63,17 @@ export function SelectedProductsPanel({
 
       if (error) throw error;
 
-      // Order products according to selectedProductIds order
+      // Order products according to selectedProductIds order and include blog content
       const orderedProducts = selectedProductIds
-        .map(id => data?.find(p => p.id === id))
+        .map(id => {
+          const product = data?.find(p => p.id === id);
+          if (!product) return null;
+          
+          return {
+            ...product,
+            individual_blog_content: (product.individual_blog_content as any) || { commercial: null, technical: null, generated_at: null }
+          };
+        })
         .filter(Boolean) as Product[];
       
       setProducts(orderedProducts);
@@ -208,19 +222,34 @@ export function SelectedProductsPanel({
                                           </p>
                                         )}
                                         
-                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                          {product.category && (
-                                            <Badge variant="secondary" className="text-xs px-2 py-0">
-                                              {product.category}
-                                            </Badge>
-                                          )}
-                                          
-                                          {product.price !== undefined && (
-                                            <Badge variant="outline" className="text-xs px-2 py-0">
-                                              {formatPrice(product.price, product.currency)}
-                                            </Badge>
-                                          )}
-                                        </div>
+                                         <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                           {product.category && (
+                                             <Badge variant="secondary" className="text-xs px-2 py-0">
+                                               {product.category}
+                                             </Badge>
+                                           )}
+                                           
+                                           {product.price !== undefined && (
+                                             <Badge variant="outline" className="text-xs px-2 py-0">
+                                               {formatPrice(product.price, product.currency)}
+                                             </Badge>
+                                           )}
+
+                                           {/* Indicadores de blogs gerados */}
+                                           {product.individual_blog_content?.commercial && (
+                                             <Badge variant="default" className="text-xs px-2 py-0 bg-blue-100 text-blue-700">
+                                               <FileText className="h-3 w-3 mr-1" />
+                                               Blog Comercial
+                                             </Badge>
+                                           )}
+                                           
+                                           {product.individual_blog_content?.technical && (
+                                             <Badge variant="default" className="text-xs px-2 py-0 bg-green-100 text-green-700">
+                                               <Sparkles className="h-3 w-3 mr-1" />
+                                               Blog Técnico
+                                             </Badge>
+                                           )}
+                                         </div>
                                       </div>
                                     </div>
                                   </div>

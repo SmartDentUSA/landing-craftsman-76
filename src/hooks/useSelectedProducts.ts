@@ -23,6 +23,12 @@ interface Product {
   testimonial_videos?: any[];
   technical_videos?: any[];
   offer_discount_cta?: { label: string; url: string; visible: boolean };
+  // Blog content gerado por IA
+  individual_blog_content?: {
+    commercial?: string | null;
+    technical?: string | null;
+    generated_at?: string | null;
+  };
 }
 
 
@@ -59,12 +65,14 @@ export const useSelectedProducts = () => {
           category: product.category || '',
           image_url: product.image_url || '',
           product_url: product.product_url || '',
-      target_audience: (product.target_audience as unknown as string[]) || [],
-      youtube_videos: (product.youtube_videos as unknown as any[]) || [],
-      instagram_videos: (product.instagram_videos as unknown as any[]) || [],
-      testimonial_videos: (product.testimonial_videos as unknown as any[]) || [],
-      technical_videos: (product.technical_videos as unknown as any[]) || [],
-      offer_discount_cta: (product as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
+          target_audience: (product.target_audience as unknown as string[]) || [],
+          youtube_videos: (product.youtube_videos as unknown as any[]) || [],
+          instagram_videos: (product.instagram_videos as unknown as any[]) || [],
+          testimonial_videos: (product.testimonial_videos as unknown as any[]) || [],
+          technical_videos: (product.technical_videos as unknown as any[]) || [],
+          offer_discount_cta: (product as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
+          // Incluir blog content para curadoria
+          individual_blog_content: (product.individual_blog_content as any) || { commercial: null, technical: null, generated_at: null },
         })) as Product[];
 
       return orderedProducts;

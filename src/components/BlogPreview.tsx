@@ -7,12 +7,20 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { DualBlogGeneratorWithKOL } from "./DualBlogGeneratorWithKOL";
+import { ProductBlogCuratorPanel } from "./ProductBlogCuratorPanel";
 
 interface BlogPreviewProps {
   landingPageId: string;
   landingPageData: any;
   selectedProductIds?: string[];
   onEditBlog?: () => void;
+}
+
+interface BlogConsolidationPreferences {
+  [productId: string]: {
+    useCommercial: boolean;
+    useTechnical: boolean;
+  };
 }
 
 interface BlogPost {
@@ -31,6 +39,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
   const [isOutOfSync, setIsOutOfSync] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [blogPreferences, setBlogPreferences] = useState<BlogConsolidationPreferences>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -119,7 +128,8 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
           landingPage: landingPageData,
           contentData: landingPageData,
           selectedProductIds: selectedProductIds || [],
-          include_offers: true
+          include_offers: true,
+          blogConsolidationPreferences: blogPreferences
         }
       });
 
@@ -193,7 +203,8 @@ Para mais informações, entre em contato conosco.
           landingPage: landingPageData,
           contentData: landingPageData,
           selectedProductIds: selectedProductIds || [],
-          include_offers: true
+          include_offers: true,
+          blogConsolidationPreferences: blogPreferences
         }
       });
 
@@ -423,6 +434,15 @@ Para mais informações, entre em contato conosco.
         )}
       </CardContent>
     </Card>
+
+    {/* Curador de Blogs dos Produtos */}
+    {selectedProductIds && selectedProductIds.length > 0 && (
+      <ProductBlogCuratorPanel
+        selectedProductIds={selectedProductIds}
+        onPreferencesChange={setBlogPreferences}
+        className="mt-6"
+      />
+    )}
 
     <DualBlogGeneratorWithKOL 
       landingPageId={landingPageId}
