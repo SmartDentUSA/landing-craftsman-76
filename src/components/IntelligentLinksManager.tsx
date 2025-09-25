@@ -120,40 +120,43 @@ export function IntelligentLinksManager({
   const analyzedLinks = analyzeLinks();
 
   return (
-    <Card className="border-2">
-      <CardHeader className="pb-4">
+    <Card className="border border-muted-foreground/20">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Link className="h-4 w-4" />
-            Links Inteligentes - Blog {blogType === 'commercial' ? 'Comercial' : 'Técnico'}
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Link className="h-5 w-5 text-primary" />
+            Links Inteligentes
           </CardTitle>
           
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {analyzedLinks.length} link{analyzedLinks.length !== 1 ? 's' : ''}
+            <Badge variant="secondary" className="text-xs px-2 py-1">
+              {analyzedLinks.length} {analyzedLinks.length === 1 ? 'link' : 'links'} aplicado{analyzedLinks.length !== 1 ? 's' : ''}
             </Badge>
             
             <Dialog open={showPreview} onOpenChange={setShowPreview}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-8 px-3">
+                  <Eye className="h-4 w-4 mr-1" />
+                  Preview
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh]">
+              <DialogContent className="max-w-4xl max-h-[85vh]">
                 <DialogHeader>
-                  <DialogTitle>Preview - {productName} - Blog {blogType === 'commercial' ? 'Comercial' : 'Técnico'}</DialogTitle>
+                  <DialogTitle className="text-lg">
+                    Preview: {productName} - Blog {blogType === 'commercial' ? 'Comercial' : 'Técnico'}
+                  </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[60vh]">
+                <ScrollArea className="max-h-[70vh] border rounded-md">
                   <div 
-                    className="prose prose-sm max-w-none p-4"
+                    className="prose prose-sm max-w-none p-6 bg-background"
                     dangerouslySetInnerHTML={{ 
                       __html: generatePreviewContent()
                         .replace(/#{1,6}\s/g, '')
                         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-600 underline" target="_blank" rel="noopener">$1</a>')
-                        .replace(/\n\n/g, '</p><p>')
-                        .replace(/^/, '<p>')
-                        .replace(/$/, '</p>')
+                        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank" rel="noopener">$1 🔗</a>')
+                        .replace(/\n\n/g, '</p><p class="mb-4">')
+                        .replace(/^/, '<div class="leading-relaxed"><p class="mb-4">')
+                        .replace(/$/, '</p></div>')
                     }}
                   />
                 </ScrollArea>
@@ -161,108 +164,185 @@ export function IntelligentLinksManager({
             </Dialog>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Blog {blogType === 'commercial' ? 'Comercial' : 'Técnico'} • Gerencie links internos automaticamente
+        </p>
       </CardHeader>
       
       <CardContent className="space-y-4">
         {/* Lista de Links Existentes */}
         {analyzedLinks.length > 0 ? (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Links Aplicados</h4>
-            {analyzedLinks.map((link) => (
-              <div key={link.keyword} className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
-                <div className="flex items-center gap-2 flex-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {link.occurrences}x
-                  </Badge>
-                  <span className="text-sm font-medium">{link.keyword}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    {link.url}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Editar Link</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium">Palavra-chave</label>
-                          <Input value={link.keyword} disabled />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">URL</label>
-                          <Input
-                            value={editingLinks[link.keyword]}
-                            onChange={(e) => updateLink(link.keyword, e.target.value)}
-                            placeholder="https://..."
-                          />
-                        </div>
-                        <DialogTrigger asChild>
-                          <Button className="w-full">
-                            Salvar
-                          </Button>
-                        </DialogTrigger>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">Links Aplicados</h4>
+              <span className="text-xs text-muted-foreground">
+                Total: {analyzedLinks.reduce((sum, link) => sum + link.occurrences, 0)} ocorrências
+              </span>
+            </div>
+            <div className="space-y-2">
+              {analyzedLinks.map((link) => (
+                <div 
+                  key={link.keyword} 
+                  className="group flex items-center justify-between p-3 border border-border rounded-lg bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Badge variant="outline" className="text-xs font-medium shrink-0 bg-primary/10 text-primary border-primary/20">
+                      {link.occurrences}×
+                    </Badge>
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <span className="text-sm font-medium text-foreground">
+                        {link.keyword}
+                      </span>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{link.url}</span>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </div>
+                  </div>
                   
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeLink(link.keyword)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary opacity-70 group-hover:opacity-100 transition-opacity"
+                          title="Editar link"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-lg">Editar Link Inteligente</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-2">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Palavra-chave</label>
+                            <Input 
+                              value={link.keyword} 
+                              disabled 
+                              className="bg-muted/50 text-muted-foreground"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">URL de destino</label>
+                            <Input
+                              value={editingLinks[link.keyword] || ''}
+                              onChange={(e) => updateLink(link.keyword, e.target.value)}
+                              placeholder="https://exemplo.com/pagina"
+                              className="font-mono text-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <DialogTrigger asChild>
+                              <Button className="flex-1">
+                                <Edit className="h-4 w-4 mr-2" />
+                                Salvar Alterações
+                              </Button>
+                            </DialogTrigger>
+                            <DialogTrigger asChild>
+                              <Button variant="outline">
+                                Cancelar
+                              </Button>
+                            </DialogTrigger>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm(`Tem certeza que deseja remover o link "${link.keyword}"?`)) {
+                          removeLink(link.keyword);
+                        }
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity"
+                      title="Remover link"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ) : (
-          <div className="text-center py-4 text-sm text-muted-foreground">
-            Nenhum link inteligente configurado
+          <div className="text-center py-8 border border-dashed border-muted-foreground/25 rounded-lg bg-muted/20">
+            <Link className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Nenhum link inteligente configurado
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Adicione palavras-chave para criar links automaticamente
+            </p>
           </div>
         )}
 
         <Separator />
 
         {/* Adicionar Novo Link */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium">Adicionar Novo Link</h4>
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              placeholder="Palavra-chave"
-              value={newKeyword}
-              onChange={(e) => setNewKeyword(e.target.value)}
-            />
-            <Input
-              placeholder="URL (https://...)"
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-            />
+        <div className="space-y-4 p-4 border border-dashed border-muted-foreground/25 rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-semibold text-foreground">Adicionar Novo Link</h4>
           </div>
-          <Button onClick={addNewLink} size="sm" className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Link
-          </Button>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Palavra-chave
+              </label>
+              <Input
+                placeholder="Ex: smartdent, implante dentário..."
+                value={newKeyword}
+                onChange={(e) => setNewKeyword(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                URL de destino
+              </label>
+              <Input
+                placeholder="https://exemplo.com/pagina"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                className="h-9 font-mono text-sm"
+              />
+            </div>
+            <Button 
+              onClick={addNewLink} 
+              className="w-full h-9"
+              disabled={!newKeyword.trim() || !newUrl.trim()}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Link Inteligente
+            </Button>
+          </div>
         </div>
 
-        <Separator />
-
-        {/* Ações */}
-        <div className="flex gap-2">
-          <Button onClick={saveChanges} size="sm" className="flex-1">
+        {/* Ações Principais */}
+        <div className="flex gap-3 pt-2">
+          <Button 
+            onClick={saveChanges} 
+            className="flex-1 h-10"
+            disabled={JSON.stringify(editingLinks) === JSON.stringify(existingLinks)}
+          >
             Salvar Alterações
+            {JSON.stringify(editingLinks) !== JSON.stringify(existingLinks) && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                ●
+              </Badge>
+            )}
           </Button>
-          <Button onClick={resetChanges} variant="outline" size="sm">
+          <Button 
+            onClick={resetChanges} 
+            variant="outline" 
+            className="h-10 px-4"
+            disabled={JSON.stringify(editingLinks) === JSON.stringify(existingLinks)}
+          >
             Descartar
           </Button>
         </div>

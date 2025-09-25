@@ -449,7 +449,7 @@ export const ProductBlogGeneratorModal = ({
                         )}
                         
                         {/* Gerenciador de Links Inteligentes */}
-                        <div className="mt-3">
+                        <div className="mt-4 border-t pt-4">
                           <IntelligentLinksManager
                             blogContent={currentProduct.individual_blog_content?.commercial || ''}
                             existingLinks={getIntelligentLinks('commercial')}
