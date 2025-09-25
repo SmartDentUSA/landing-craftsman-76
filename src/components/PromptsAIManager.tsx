@@ -17,7 +17,22 @@ const EDGE_FUNCTIONS = [
       "Blog Consolidado com Ofertas",
       "Conteúdo Híbrido LP + Produtos"
     ],
-    dataSources: ["landing_pages", "products_repository", "approved_reviews", "company_profile", "key_opinion_leaders", "selected_product_blogs"]
+    dataSources: [
+      "landing_page_banner", 
+      "landing_page_solutions_1", 
+      "landing_page_solutions_2", 
+      "landing_page_solutions_3", 
+      "landing_page_solutions_4", 
+      "landing_page_solutions_5", 
+      "landing_page_desktop_info", 
+      "landing_page_consulting", 
+      "landing_page_faq", 
+      "products_repository", 
+      "approved_reviews", 
+      "company_profile", 
+      "key_opinion_leaders", 
+      "selected_product_blogs"
+    ]
   },
   {
     id: "generate-product-blog",
