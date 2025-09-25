@@ -86,7 +86,7 @@ export class VideoCollector {
       const seenUrls = new Set<string>();
       const companyVideos = profile.company_videos as any;
 
-      // Process company video collections
+      // Process company video collections with descriptions
       this.processVideoCollection(companyVideos.youtube_videos, 'Empresa', 'YouTube', videos, seenUrls);
       this.processVideoCollection(companyVideos.testimonial_videos, 'Empresa', 'Depoimento', videos, seenUrls);
       this.processVideoCollection(companyVideos.technical_videos, 'Empresa', 'Técnico', videos, seenUrls);
@@ -96,7 +96,7 @@ export class VideoCollector {
         console.info(`⚠️ ${companyVideos.instagram_videos.length} vídeos do Instagram da empresa encontrados mas não são suportados pelo Google Ads.`);
       }
 
-      console.log(`VideoCollector: Collected ${videos.length} YouTube videos from company profile`);
+      console.log(`VideoCollector: Collected ${videos.length} YouTube videos from company profile with descriptions`);
       return videos;
     } catch (error) {
       console.error('Error collecting videos from company profile:', error);

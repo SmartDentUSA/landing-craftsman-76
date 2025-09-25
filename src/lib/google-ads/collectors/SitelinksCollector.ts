@@ -15,6 +15,24 @@ export class SitelinksCollector {
       }))
       .filter(sitelink => this.isValidSitelink(sitelink));
   }
+
+  static collectFromResourceCTAs(products: any[] = []): Sitelink[] {
+    const sitelinks: Sitelink[] = [];
+    
+    products.forEach(product => {
+      // Extract from resource CTAs with descriptions
+      [product.resource_cta1, product.resource_cta2, product.resource_cta3].forEach((cta, index) => {
+        if (cta && typeof cta === 'object' && cta.visible && cta.url && cta.label) {
+          sitelinks.push({
+            label: this.formatSitelinkLabel(cta.label),
+            url: this.ensureHttps(cta.url)
+          });
+        }
+      });
+    });
+
+    return sitelinks.filter(sitelink => this.isValidSitelink(sitelink));
+  }
   
   static collectBrandPolicies(baseUrl: string, landingPageUrl?: string): Sitelink[] {
     const extractedBaseUrl = this.extractBaseUrl(baseUrl);

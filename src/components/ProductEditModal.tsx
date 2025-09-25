@@ -59,6 +59,8 @@ interface Product {
   resource_cta1?: { label: string; url: string; visible: boolean };
   resource_cta2?: { label: string; url: string; visible: boolean };
   resource_cta3?: { label: string; url: string; visible: boolean };
+  // Resource descriptions
+  resource_descriptions?: { cta1: string; cta2: string; cta3: string };
   // Offer discount CTA
   offer_discount_cta?: { label: string; url: string; visible: boolean };
 }
@@ -112,6 +114,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     resource_cta1: { label: '', url: '', visible: false },
     resource_cta2: { label: '', url: '', visible: false },
     resource_cta3: { label: '', url: '', visible: false },
+    // Resource descriptions
+    resource_descriptions: { cta1: '', cta2: '', cta3: '' },
     // Offer discount CTA
     offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false }
   });
@@ -212,6 +216,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         resource_cta1: product.resource_cta1 || { label: '', url: '', visible: false },
         resource_cta2: product.resource_cta2 || { label: '', url: '', visible: false },
         resource_cta3: product.resource_cta3 || { label: '', url: '', visible: false },
+        // Resource descriptions
+        resource_descriptions: product.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
         // Offer discount CTA
         offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false }
       });
@@ -255,6 +261,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         resource_cta1: { label: '', url: '', visible: false },
         resource_cta2: { label: '', url: '', visible: false },
         resource_cta3: { label: '', url: '', visible: false },
+        // Resource descriptions
+        resource_descriptions: { cta1: '', cta2: '', cta3: '' },
         // Offer discount CTA
         offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false }
       });
@@ -1201,7 +1209,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           resource_cta1: { ...prev.resource_cta1!, label: e.target.value }
                         }))}
                       />
-                      <Input
+                       <Input
                         placeholder="URL do link"
                         value={formData.resource_cta1?.url || ''}
                         onChange={(e) => setFormData(prev => ({ 
@@ -1209,6 +1217,17 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           resource_cta1: { ...prev.resource_cta1!, url: e.target.value }
                         }))}
                       />
+                      <div className="col-span-2">
+                        <Textarea
+                          placeholder="Descrição do recurso (para SEO e Google Ads)"
+                          value={formData.resource_descriptions?.cta1 || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            resource_descriptions: { ...prev.resource_descriptions!, cta1: e.target.value }
+                          }))}
+                          rows={2}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1236,7 +1255,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           resource_cta2: { ...prev.resource_cta2!, label: e.target.value }
                         }))}
                       />
-                      <Input
+                       <Input
                         placeholder="URL do link"
                         value={formData.resource_cta2?.url || ''}
                         onChange={(e) => setFormData(prev => ({ 
@@ -1244,6 +1263,17 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           resource_cta2: { ...prev.resource_cta2!, url: e.target.value }
                         }))}
                       />
+                      <div className="col-span-2">
+                        <Textarea
+                          placeholder="Descrição do recurso (para SEO e Google Ads)"
+                          value={formData.resource_descriptions?.cta2 || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            resource_descriptions: { ...prev.resource_descriptions!, cta2: e.target.value }
+                          }))}
+                          rows={2}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1271,7 +1301,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           resource_cta3: { ...prev.resource_cta3!, label: e.target.value }
                         }))}
                       />
-                      <Input
+                       <Input
                         placeholder="URL do link"
                         value={formData.resource_cta3?.url || ''}
                         onChange={(e) => setFormData(prev => ({ 
@@ -1279,6 +1309,17 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                           resource_cta3: { ...prev.resource_cta3!, url: e.target.value }
                         }))}
                       />
+                      <div className="col-span-2">
+                        <Textarea
+                          placeholder="Descrição do recurso (para SEO e Google Ads)"
+                          value={formData.resource_descriptions?.cta3 || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            resource_descriptions: { ...prev.resource_descriptions!, cta3: e.target.value }
+                          }))}
+                          rows={2}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

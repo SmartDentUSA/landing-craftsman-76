@@ -237,7 +237,7 @@ export default function BlogGenerator() {
         setLandingPage({
           id: data.landing_page_id,
           title: "Landing Page",
-          description: data.notes || data.seo_hidden_content || "Landing page para geração de blog",
+          description: data.notes || data.contextual_seo_info || "Landing page para geração de blog",
           content: data,
         });
         console.log(`✅ Landing page carregada do Supabase: "${data.landing_page_id}"`);

@@ -87,7 +87,7 @@ serve(async (req) => {
       // Fetch specifically selected products with ALL FIELDS 
       const { data: selectedProducts, error: selectedError } = await supabase
         .from('products_repository')
-        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, instagram_videos, use_in_ai_generation, price, currency, tags, video_captions, offer_discount_cta, resource_cta1, resource_cta2, resource_cta3, image_url, product_url')
+        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, instagram_videos, use_in_ai_generation, price, currency, tags, video_captions, offer_discount_cta, resource_cta1, resource_cta2, resource_cta3, resource_descriptions, image_url, product_url')
         .in('id', request.selectedProductIds)
         .eq('approved', true);
       

@@ -75,6 +75,11 @@ export const useProductKeywordsAggregator = () => {
           resource_cta1,
           resource_cta2,
           resource_cta3,
+          resource_descriptions,
+          testimonial_videos,
+          technical_videos,
+          youtube_videos,
+          instagram_videos,
           price,
           currency
         `)
@@ -188,6 +193,14 @@ export const useProductKeywordsAggregator = () => {
           const captionKeywords = extractKeywordsFromVideoCaptions(product.video_captions);
           keywordsBySource.videoCaptionsKeywords.push(...captionKeywords);
         }
+
+        // ✨ Extrair keywords de descrições de vídeos
+        const videoDescriptions = extractKeywordsFromVideoDescriptions(product);
+        keywordsBySource.videoCaptionsKeywords.push(...videoDescriptions);
+
+        // ✨ Extrair keywords de descrições de recursos
+        const resourceDescriptions = extractKeywordsFromResourceDescriptions(product);
+        keywordsBySource.salesPitchKeywords.push(...resourceDescriptions);
 
         // ✨ Coletar dados comerciais (com type safety)
         if (product.offer_discount_cta && typeof product.offer_discount_cta === 'object') {
@@ -384,28 +397,90 @@ function extractKeywordsFromText(text: string): string[] {
   return [...words, ...phrases].slice(0, 20); // Limitar a 20 keywords por texto
 }
 
-// Extrair keywords de video_captions 
+/**
+ * Helper function to extract keywords from video caption data
+ */
 function extractKeywordsFromVideoCaptions(videoCaptions: any): string[] {
   if (!videoCaptions || typeof videoCaptions !== 'object') return [];
   
-  const allCaptions: string[] = [];
+  const keywords: string[] = [];
   
-  // Verificar diferentes estruturas de video_captions
-  Object.values(videoCaptions).forEach((caption: any) => {
-    if (typeof caption === 'string') {
-      allCaptions.push(caption);
-    } else if (caption && typeof caption === 'object') {
-      // Se caption for objeto, tentar extrair texto
-      Object.values(caption).forEach((text: any) => {
-        if (typeof text === 'string') {
-          allCaptions.push(text);
+  Object.values(videoCaptions).forEach((captionData: any) => {
+    if (Array.isArray(captionData)) {
+      captionData.forEach((caption: any) => {
+        if (caption?.text) {
+          keywords.push(...extractKeywordsFromText(caption.text));
+        }
+        
+        // If captions have AI analysis
+        if (caption?.ai_analysis?.keywords && Array.isArray(caption.ai_analysis.keywords)) {
+          keywords.push(...caption.ai_analysis.keywords);
         }
       });
     }
   });
   
-  // Extrair keywords de todas as captions
-  return allCaptions
-    .flatMap(caption => extractKeywordsFromText(caption))
-    .slice(0, 30); // Limitar a 30 keywords de vídeos
+  return [...new Set(keywords)]; // Remove duplicates
+}
+
+/**
+ * Helper function to extract keywords from video descriptions
+ */
+function extractKeywordsFromVideoDescriptions(product: any): string[] {
+  const keywords: string[] = [];
+  
+  // Process testimonial videos descriptions
+  if (product.testimonial_videos && Array.isArray(product.testimonial_videos)) {
+    product.testimonial_videos.forEach((video: any) => {
+      if (video.description) {
+        keywords.push(...extractKeywordsFromText(video.description));
+      }
+    });
+  }
+  
+  // Process technical videos descriptions
+  if (product.technical_videos && Array.isArray(product.technical_videos)) {
+    product.technical_videos.forEach((video: any) => {
+      if (video.description) {
+        keywords.push(...extractKeywordsFromText(video.description));
+      }
+    });
+  }
+  
+  // Process YouTube videos descriptions
+  if (product.youtube_videos && Array.isArray(product.youtube_videos)) {
+    product.youtube_videos.forEach((video: any) => {
+      if (video.description) {
+        keywords.push(...extractKeywordsFromText(video.description));
+      }
+    });
+  }
+  
+  // Process Instagram videos descriptions
+  if (product.instagram_videos && Array.isArray(product.instagram_videos)) {
+    product.instagram_videos.forEach((video: any) => {
+      if (video.description) {
+        keywords.push(...extractKeywordsFromText(video.description));
+      }
+    });
+  }
+  
+  return [...new Set(keywords)]; // Remove duplicates
+}
+
+/**
+ * Helper function to extract keywords from resource descriptions
+ */
+function extractKeywordsFromResourceDescriptions(product: any): string[] {
+  const keywords: string[] = [];
+  
+  if (product.resource_descriptions && typeof product.resource_descriptions === 'object') {
+    Object.values(product.resource_descriptions).forEach((description: any) => {
+      if (typeof description === 'string' && description.trim()) {
+        keywords.push(...extractKeywordsFromText(description));
+      }
+    });
+  }
+  
+  return [...new Set(keywords)]; // Remove duplicates
 }
