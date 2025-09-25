@@ -486,6 +486,7 @@ export type Database = {
           features: Json | null
           id: string
           image_url: string | null
+          individual_blog_content: Json | null
           instagram_videos: Json | null
           keywords: Json | null
           market_keywords: Json | null
@@ -528,6 +529,7 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
+          individual_blog_content?: Json | null
           instagram_videos?: Json | null
           keywords?: Json | null
           market_keywords?: Json | null
@@ -570,6 +572,7 @@ export type Database = {
           features?: Json | null
           id?: string
           image_url?: string | null
+          individual_blog_content?: Json | null
           instagram_videos?: Json | null
           keywords?: Json | null
           market_keywords?: Json | null

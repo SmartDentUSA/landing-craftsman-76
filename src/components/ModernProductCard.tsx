@@ -14,9 +14,12 @@ import {
   Check,
   X,
   Download,
-  ShoppingCart
+  ShoppingCart,
+  FileText
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
+import { useState } from "react";
 
 interface Product {
   id: string;
@@ -49,6 +52,11 @@ interface Product {
   resource_cta1?: { label: string; url: string; visible: boolean };
   resource_cta2?: { label: string; url: string; visible: boolean };
   resource_cta3?: { label: string; url: string; visible: boolean };
+  individual_blog_content?: {
+    commercial?: string;
+    technical?: string;
+    generated_at?: string;
+  };
 }
 
 interface ModernProductCardProps {
@@ -57,6 +65,7 @@ interface ModernProductCardProps {
   onToggleSelection: (productId: string) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
+  onProductUpdate?: () => void;
 }
 
 export function ModernProductCard({
@@ -64,8 +73,10 @@ export function ModernProductCard({
   isSelected,
   onToggleSelection,
   onEdit,
-  onDelete
+  onDelete,
+  onProductUpdate
 }: ModernProductCardProps) {
+  const [showBlogModal, setShowBlogModal] = useState(false);
   const score = calculateProductScore(product);
   
   const formatPrice = (price?: number, currency?: string) => {
@@ -162,6 +173,16 @@ export function ModernProductCard({
                 </Badge>
               )}
               
+              {/* Blog Status */}
+              {(product.individual_blog_content?.commercial || product.individual_blog_content?.technical) && (
+                <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5">
+                  <FileText className="h-3 w-3 mr-1" />
+                  {product.individual_blog_content?.commercial && product.individual_blog_content?.technical 
+                    ? '2 Blogs' 
+                    : '1 Blog'}
+                </Badge>
+              )}
+              
               {/* Active CTAs Count */}
               {product.show_in_resources && (
                 (() => {
@@ -199,6 +220,15 @@ export function ModernProductCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowBlogModal(true)}
+            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+            title="Gerar Blog IA"
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onEdit(product)}
             className="h-8 w-8 p-0"
           >
@@ -214,6 +244,17 @@ export function ModernProductCard({
           </Button>
         </div>
       </div>
+
+      {/* Modal de Geração de Blog */}
+      <ProductBlogGeneratorModal
+        open={showBlogModal}
+        onOpenChange={setShowBlogModal}
+        product={product}
+        onBlogGenerated={() => {
+          onProductUpdate?.();
+          setShowBlogModal(false);
+        }}
+      />
     </Card>
   );
 }

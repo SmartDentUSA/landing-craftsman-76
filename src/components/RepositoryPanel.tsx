@@ -754,6 +754,7 @@ export function RepositoryPanel({
                     onToggleCategorySelection={() => toggleCategorySelection(category)}
                     onEditProduct={handleEditProduct}
                     onDeleteProduct={handleDeleteProduct}
+                    onProductUpdate={loadProducts}
                   />
                 ))}
                 

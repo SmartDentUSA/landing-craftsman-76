@@ -45,6 +45,7 @@ interface CategorySectionProps {
   onToggleCategorySelection: () => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
+  onProductUpdate?: () => void;
 }
 
 export function CategorySection({
@@ -57,6 +58,7 @@ export function CategorySection({
   onToggleCategorySelection,
   onEditProduct,
   onDeleteProduct,
+  onProductUpdate
 }: CategorySectionProps) {
   const categoryIcon = category === 'Sem categoria' ? Package : Star;
   const selectedCount = products.filter(p => selectedProductIds.has(p.id)).length;
@@ -138,6 +140,7 @@ export function CategorySection({
                 onToggleSelection={() => onToggleSelection(product.id)}
                 onEdit={() => onEditProduct(product)}
                 onDelete={() => onDeleteProduct(product.id)}
+                onProductUpdate={onProductUpdate}
               />
             ))}
           </div>
