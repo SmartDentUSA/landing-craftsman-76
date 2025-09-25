@@ -282,7 +282,7 @@ Para mais informações, entre em contato conosco.
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Preview do Blog IA</CardTitle>
+            <CardTitle className="text-lg">Artigo Estratégico Contextual</CardTitle>
             {generating && <Loader2 className="h-4 w-4 animate-spin" />}
             {syncing && <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />}
           </div>
@@ -386,43 +386,31 @@ Para mais informações, entre em contato conosco.
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-green-600 border-green-600 hover:bg-green-50"
+                >
+                  Utilizar no Consolidado: Sim
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-red-600 border-red-600 hover:bg-red-50"
+                >
+                  Não
+                </Button>
+              </div>
+              
               <Button 
                 onClick={handleEditBlog}
-                variant="outline" 
+                variant="default" 
                 size="sm"
-                className="flex-1"
               >
                 <Edit3 className="h-4 w-4 mr-2" />
-                Editar Blog Completo
-              </Button>
-
-              {isOutOfSync && publishedBlog && (
-                <Button 
-                  onClick={syncPublishedBlog}
-                  disabled={syncing}
-                  size="sm"
-                  variant="default"
-                >
-                  {syncing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-
-              <Button 
-                onClick={generateBlogPreview}
-                disabled={generating}
-                size="sm"
-                variant="secondary"
-              >
-                {generating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
+                Editar
               </Button>
             </div>
           </>

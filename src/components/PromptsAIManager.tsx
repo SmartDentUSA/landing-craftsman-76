@@ -13,9 +13,7 @@ const EDGE_FUNCTIONS = [
     icon: Brain,
     status: "active" as const,
     prompts: [
-      "Artigo Estratégico Contextual",
-      "Blog Consolidado com Ofertas",
-      "Conteúdo Híbrido LP + Produtos"
+      "Artigo Estratégico Contextual"
     ],
     dataSources: [
       "landing_page_banner", 
