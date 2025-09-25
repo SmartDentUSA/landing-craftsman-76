@@ -252,7 +252,7 @@ export function ModernProductCard({
         product={product}
         onBlogGenerated={() => {
           onProductUpdate?.();
-          setShowBlogModal(false);
+          // Modal não fecha automaticamente para mostrar resultado
         }}
       />
     </Card>

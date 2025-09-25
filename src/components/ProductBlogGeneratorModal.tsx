@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,11 @@ export const ProductBlogGeneratorModal = ({
   const [selectedType, setSelectedType] = useState<'commercial' | 'technical'>('commercial');
   const [currentProduct, setCurrentProduct] = useState(product);
   const { toast } = useToast();
+
+  // Sincronizar dados do produto quando props mudam
+  useEffect(() => {
+    setCurrentProduct(product);
+  }, [product]);
 
   const hasExistingBlog = (type: 'commercial' | 'technical') => {
     return currentProduct.individual_blog_content?.[type] != null;
@@ -105,11 +110,13 @@ export const ProductBlogGeneratorModal = ({
 
       toast({
         title: "Blog gerado com sucesso!",
-        description: `Blog ${selectedType} criado para ${currentProduct.name}`,
+        description: `Blog ${selectedType} criado para ${currentProduct.name}. Conteúdo disponível para visualização.`,
       });
 
+      // Notificar o componente pai para atualizar dados
       onBlogGenerated();
-      // Não fechar o modal para mostrar o conteúdo gerado
+      
+      // Modal permanece aberto para mostrar o conteúdo gerado
     } catch (error) {
       console.error('Erro ao gerar blog:', error);
       toast({
