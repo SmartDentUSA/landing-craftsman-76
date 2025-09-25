@@ -48,12 +48,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
     fetchPublishedBlog();
   }, [landingPageId]);
 
-  // Generate blog preview automatically when component mounts or data changes
-  useEffect(() => {
-    if (landingPageData && (!blogPost || shouldRegenerate())) {
-      generateBlogPreview();
-    }
-  }, [landingPageData]);
+  // Removed automatic generation - now manual via button
 
   // Check sync status when both preview and published blogs are available
   useEffect(() => {
@@ -415,9 +410,30 @@ Para mais informações, entre em contato conosco.
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">Gerando preview do blog...</p>
+          <div className="text-center py-8 space-y-4">
+            <div className="text-muted-foreground">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-sm mb-4">Clique para gerar o preview do blog com IA</p>
+            </div>
+            <Button 
+              onClick={generateBlogPreview}
+              disabled={generating}
+              variant="default"
+              size="lg"
+              className="min-w-48"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Gerar com IA
+                </>
+              )}
+            </Button>
           </div>
         )}
       </CardContent>
