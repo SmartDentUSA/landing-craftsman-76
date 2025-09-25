@@ -53,8 +53,62 @@ const DATA_SOURCES = {
       "search_intent_keywords", "market_keywords"
     ]
   },
+  landing_page_banner: {
+    label: "Banner da Landing Page",
+    fields: [
+      "banner_title", "banner_subtitle", "banner_description", "banner_image"
+    ]
+  },
+  landing_page_solutions_1: {
+    label: "Solução 1 da Landing Page",
+    fields: [
+      "solution_title", "solution_description", "solution_image", "solution_benefits"
+    ]
+  },
+  landing_page_solutions_2: {
+    label: "Solução 2 da Landing Page",
+    fields: [
+      "solution_title", "solution_description", "solution_image", "solution_benefits"
+    ]
+  },
+  landing_page_solutions_3: {
+    label: "Solução 3 da Landing Page",
+    fields: [
+      "solution_title", "solution_description", "solution_image", "solution_benefits"
+    ]
+  },
+  landing_page_solutions_4: {
+    label: "Solução 4 da Landing Page",
+    fields: [
+      "solution_title", "solution_description", "solution_image", "solution_benefits"
+    ]
+  },
+  landing_page_solutions_5: {
+    label: "Solução 5 da Landing Page",
+    fields: [
+      "solution_title", "solution_description", "solution_image", "solution_benefits"
+    ]
+  },
+  landing_page_desktop_info: {
+    label: "Informações Desktop",
+    fields: [
+      "desktop_title", "desktop_description", "desktop_features", "desktop_specifications"
+    ]
+  },
+  landing_page_consulting: {
+    label: "Consultoria",
+    fields: [
+      "consulting_title", "consulting_description", "consulting_services", "consulting_benefits"
+    ]
+  },
+  landing_page_faq: {
+    label: "FAQ (Perguntas e Respostas)",
+    fields: [
+      "question", "answer", "category", "keywords"
+    ]
+  },
   landing_pages: {
-    label: "Landing Pages",
+    label: "Landing Pages (Genérico)",
     fields: [
       "name", "template", "data", "selected_product_ids"
     ]
