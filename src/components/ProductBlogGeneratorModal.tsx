@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Settings, Sparkles, Clock } from "lucide-react";
+import { FileText, Settings, Sparkles, Clock, Link, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,6 +23,8 @@ interface Product {
     commercial?: string;
     technical?: string;
     generated_at?: string;
+    commercial_links?: Record<string, string>;
+    technical_links?: Record<string, string>;
   };
 }
 
@@ -53,11 +55,18 @@ export const ProductBlogGeneratorModal = ({
     return currentProduct.individual_blog_content?.[type] != null;
   };
 
-  const getLastGenerated = () => {
-    if (currentProduct.individual_blog_content?.generated_at) {
-      return new Date(currentProduct.individual_blog_content.generated_at).toLocaleString('pt-BR');
-    }
-    return null;
+  const getIntelligentLinks = (type: 'commercial' | 'technical') => {
+    const linksKey = type === 'commercial' ? 'commercial_links' : 'technical_links';
+    return currentProduct.individual_blog_content?.[linksKey] || {};
+  };
+
+  const getLinksCount = (type: 'commercial' | 'technical') => {
+    const links = getIntelligentLinks(type);
+    return Object.keys(links).length;
+  };
+
+  const hasIntelligentLinks = (type: 'commercial' | 'technical') => {
+    return getLinksCount(type) > 0;
   };
 
   const handleGenerateBlog = async () => {
@@ -241,6 +250,30 @@ export const ProductBlogGeneratorModal = ({
                             {currentProduct.individual_blog_content?.commercial?.length || 0} caracteres
                           </div>
                         </div>
+                        
+                        {/* Links Inteligentes */}
+                        {hasIntelligentLinks('commercial') && (
+                          <Card className="mt-3">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm flex items-center gap-2">
+                                <Link className="h-4 w-4 text-primary" />
+                                Links Inteligentes Aplicados ({getLinksCount('commercial')})
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="space-y-2">
+                                {Object.entries(getIntelligentLinks('commercial')).map(([keyword, url]) => (
+                                  <div key={keyword} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
+                                    <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-sm font-medium text-primary">{keyword}</span>
+                                    <span className="text-xs text-muted-foreground">→</span>
+                                    <span className="text-xs text-muted-foreground truncate">{url}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
@@ -314,6 +347,30 @@ export const ProductBlogGeneratorModal = ({
                             {currentProduct.individual_blog_content?.technical?.length || 0} caracteres
                           </div>
                         </div>
+                        
+                        {/* Links Inteligentes */}
+                        {hasIntelligentLinks('technical') && (
+                          <Card className="mt-3">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm flex items-center gap-2">
+                                <Link className="h-4 w-4 text-primary" />
+                                Links Inteligentes Aplicados ({getLinksCount('technical')})
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="space-y-2">
+                                {Object.entries(getIntelligentLinks('technical')).map(([keyword, url]) => (
+                                  <div key={keyword} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
+                                    <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-sm font-medium text-primary">{keyword}</span>
+                                    <span className="text-xs text-muted-foreground">→</span>
+                                    <span className="text-xs text-muted-foreground truncate">{url}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
@@ -327,17 +384,6 @@ export const ProductBlogGeneratorModal = ({
             </TabsContent>
           </Tabs>
 
-          {/* Status dos Blogs Existentes */}
-          {getLastGenerated() && (
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  Última geração: {getLastGenerated()}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Ações */}
           <div className="flex justify-end gap-3 pt-4">
