@@ -6,11 +6,12 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown } from "lucide-react";
+import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown, RefreshCw } from "lucide-react";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { IntelligentLinksManager } from "./IntelligentLinksManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { STORAGE_KEYS } from "@/constants/storage-keys";
 
 interface Product {
   id: string;
@@ -49,9 +50,11 @@ export function ProductBlogCuratorPanel({
 }: ProductBlogCuratorPanelProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [preferences, setPreferences] = useState<BlogConsolidationPreferences>({});
   const [selectedBlogContent, setSelectedBlogContent] = useState<{ content: string; title: string } | null>(null);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   const { loadProductsByIds } = useSelectedProducts();
 
@@ -65,8 +68,8 @@ export function ProductBlogCuratorPanel({
   }, [selectedProductIds]);
 
   useEffect(() => {
-    // Carregar preferências do localStorage
-    const savedPrefs = localStorage.getItem('blog-consolidation-preferences');
+    // Carregar preferências do localStorage usando chave padronizada
+    const savedPrefs = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
     if (savedPrefs) {
       setPreferences(JSON.parse(savedPrefs));
     }
@@ -74,18 +77,65 @@ export function ProductBlogCuratorPanel({
 
   useEffect(() => {
     // Salvar preferências no localStorage e notificar parent
-    localStorage.setItem('blog-consolidation-preferences', JSON.stringify(preferences));
+    localStorage.setItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES, JSON.stringify(preferences));
     onPreferencesChange(preferences);
   }, [preferences, onPreferencesChange]);
 
-  const loadProducts = async () => {
-    setLoading(true);
+  // Realtime subscription para mudanças na tabela products_repository
+  useEffect(() => {
+    if (selectedProductIds.length === 0) return;
+
+    const channel = supabase
+      .channel('products-blog-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products_repository',
+          filter: `id=in.(${selectedProductIds.join(',')})`,
+        },
+        (payload) => {
+          console.log('🔄 Product blog content updated:', payload);
+          // Recarregar produtos quando houver mudanças
+          loadProducts(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedProductIds]);
+
+  const loadProducts = async (forceRefresh = false) => {
+    const isRefresh = forceRefresh && !loading;
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      const loadedProducts = await loadProductsByIds(selectedProductIds);
+      console.log('🔄 Loading products, force refresh:', forceRefresh);
+      const loadedProducts = await loadProductsByIds(selectedProductIds, forceRefresh);
       setProducts(loadedProducts);
+      setLastUpdated(new Date());
+      
+      if (isRefresh) {
+        toast.success("Dados atualizados com sucesso");
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error("Erro ao carregar produtos");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadProducts(true);
   };
 
   const productsWithBlogs = products.filter(product => 
@@ -186,26 +236,47 @@ export function ProductBlogCuratorPanel({
   return (
     <Card className={className}>
       <CardHeader className="pb-4">
-        <div className="space-y-4">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Curadoria de Blogs dos Produtos
-          </CardTitle>
-          
-          <div className="text-sm text-muted-foreground">
-            Selecione quais blogs individuais serão incluídos no blog consolidado.
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <Badge variant="outline">
-              {productsWithBlogs.length} produto{productsWithBlogs.length !== 1 ? 's' : ''} com blog{productsWithBlogs.length !== 1 ? 's' : ''}
-            </Badge>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Curadoria de Blogs dos Produtos
+              </CardTitle>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+            </div>
             
-            <Badge variant="default">
-              {getActiveBlogsCount()} blog{getActiveBlogsCount() !== 1 ? 's' : ''} ativo{getActiveBlogsCount() !== 1 ? 's' : ''}
-            </Badge>
+            <div className="text-sm text-muted-foreground">
+              Selecione quais blogs individuais serão incluídos no blog consolidado.
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Badge variant="outline">
+                  {productsWithBlogs.length} produto{productsWithBlogs.length !== 1 ? 's' : ''} com blog{productsWithBlogs.length !== 1 ? 's' : ''}
+                </Badge>
+                
+                <Badge variant="default">
+                  {getActiveBlogsCount()} blog{getActiveBlogsCount() !== 1 ? 's' : ''} ativo{getActiveBlogsCount() !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+              
+              {lastUpdated && (
+                <div className="text-xs text-muted-foreground">
+                  Última atualização: {lastUpdated.toLocaleTimeString('pt-BR')}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
       </CardHeader>
       
       <CardContent className="p-0">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSelectedProducts } from './useSelectedProducts';
+import { STORAGE_KEYS } from '@/constants/storage-keys';
 
 interface BlogConsolidationPreferences {
   [productId: string]: {
@@ -61,7 +62,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
 
   // Get blog consolidation preferences from localStorage
   const getBlogPreferences = (): BlogConsolidationPreferences => {
-    const savedPreferences = localStorage.getItem('blogConsolidationPreferences');
+    const savedPreferences = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
     return savedPreferences ? JSON.parse(savedPreferences) : {};
   };
 

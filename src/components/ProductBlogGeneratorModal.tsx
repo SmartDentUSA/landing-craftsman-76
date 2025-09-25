@@ -275,6 +275,11 @@ export const ProductBlogGeneratorModal = ({
         description: `Blog ${type} editado e salvo com sucesso.`,
       });
 
+      // Disparar evento global para notificar outras partes da aplicação
+      window.dispatchEvent(new CustomEvent('productBlogUpdated', {
+        detail: { productId: currentProduct.id, blogType: type }
+      }));
+
       onBlogGenerated();
     } catch (error) {
       console.error('Erro ao salvar conteúdo editado:', error);

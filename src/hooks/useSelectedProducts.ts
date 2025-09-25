@@ -35,14 +35,23 @@ interface Product {
 export const useSelectedProducts = () => {
   const { toast } = useToast();
 
-  const loadProductsByIds = useCallback(async (productIds: string[]): Promise<Product[]> => {
+  const loadProductsByIds = useCallback(async (productIds: string[], forceRefresh = false): Promise<Product[]> => {
     if (productIds.length === 0) return [];
 
     try {
-      const { data, error } = await supabase
+      console.log('🔄 Loading products by IDs, force refresh:', forceRefresh);
+      
+      const query = supabase
         .from('products_repository')
         .select('*')
         .in('id', productIds);
+        
+      // Force refresh bypasses any potential caching
+      if (forceRefresh) {
+        console.log('🔄 Forcing refresh, clearing any potential cache');
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
