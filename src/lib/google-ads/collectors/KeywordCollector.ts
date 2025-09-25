@@ -16,16 +16,36 @@ export class KeywordCollector {
     }
   }
 
-  // NEW: Collect keywords directly from product repository
+  // EXPANDED: Collect keywords from ALL product fields
   static collectFromProducts(products: any[] = []): string[] {
     try {
-      const allKeywords = products.flatMap(product => [
-        ...(product.keywords || []),
-        ...(product.market_keywords || []),
-        ...(product.search_intent_keywords || []),
-        product.category,
-        product.subcategory
-      ].filter(Boolean));
+      const allKeywords = products.flatMap(product => {
+        const keywords = [
+          // Keywords existentes
+          ...(product.keywords || []),
+          ...(product.market_keywords || []),
+          ...(product.search_intent_keywords || []),
+          product.category,
+          product.subcategory,
+          
+          // ✨ NOVOS CAMPOS: Expandir coleta completa
+          ...(product.features || []),
+          ...(product.benefits || []),
+          ...(product.target_audience || []),
+          ...(product.tags || []),
+          
+          // Extrair de sales_pitch
+          ...(product.sales_pitch ? this.extractKeywordsFromText(product.sales_pitch) : []),
+          
+          // Extrair de video_captions
+          ...(product.video_captions ? this.extractFromVideoCaptions(product.video_captions) : []),
+          
+          // Extrair de CTAs
+          ...(this.extractFromCTAs(product))
+        ];
+        
+        return keywords.filter(Boolean);
+      });
       
       return this.normalizeKeywords(allKeywords);
     } catch (error) {
@@ -182,6 +202,64 @@ export class KeywordCollector {
     return nameMap[theme] || theme.charAt(0).toUpperCase() + theme.slice(1);
   }
   
+  // ✨ NOVAS FUNÇÕES AUXILIARES
+  private static extractKeywordsFromText(text: string): string[] {
+    if (!text || typeof text !== 'string') return [];
+    
+    const words = text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3)
+      .filter(word => !['para', 'com', 'que', 'uma', 'por', 'seu', 'sua', 'mais', 'como', 'onde', 'quando'].includes(word));
+    
+    const phrases: string[] = [];
+    for (let i = 0; i < words.length - 1; i++) {
+      phrases.push(`${words[i]} ${words[i + 1]}`);
+    }
+    
+    return [...words, ...phrases].slice(0, 15);
+  }
+
+  private static extractFromVideoCaptions(videoCaptions: any): string[] {
+    if (!videoCaptions || typeof videoCaptions !== 'object') return [];
+    
+    const allCaptions: string[] = [];
+    Object.values(videoCaptions).forEach((caption: any) => {
+      if (typeof caption === 'string') {
+        allCaptions.push(caption);
+      }
+    });
+    
+    return allCaptions
+      .flatMap(caption => this.extractKeywordsFromText(caption))
+      .slice(0, 20);
+  }
+
+  private static extractFromCTAs(product: any): string[] {
+    const ctaKeywords: string[] = [];
+    
+    // Offer discount CTA
+    if (product.offer_discount_cta && typeof product.offer_discount_cta === 'object') {
+      const cta = product.offer_discount_cta as any;
+      if (cta.label && typeof cta.label === 'string') {
+        ctaKeywords.push(...this.extractKeywordsFromText(cta.label));
+      }
+    }
+    
+    // Resource CTAs
+    [product.resource_cta1, product.resource_cta2, product.resource_cta3].forEach(cta => {
+      if (cta && typeof cta === 'object') {
+        const ctaObj = cta as any;
+        if (ctaObj.label && typeof ctaObj.label === 'string') {
+          ctaKeywords.push(...this.extractKeywordsFromText(ctaObj.label));
+        }
+      }
+    });
+    
+    return ctaKeywords;
+  }
+
   static normalizeKeywords(keywords: string[]): string[] {
     return keywords
       .map(k => k.trim().toLowerCase())

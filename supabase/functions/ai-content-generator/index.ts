@@ -84,20 +84,20 @@ serve(async (req) => {
     if (request.selectedProductIds && request.selectedProductIds.length > 0) {
       console.log(`🎯 Using ${request.selectedProductIds.length} selected products:`, request.selectedProductIds);
       
-      // Fetch specifically selected products with expanded fields
+      // Fetch specifically selected products with ALL FIELDS 
       const { data: selectedProducts, error: selectedError } = await supabase
         .from('products_repository')
-        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation, price, currency')
+        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, instagram_videos, use_in_ai_generation, price, currency, tags, video_captions, offer_discount_cta, resource_cta1, resource_cta2, resource_cta3, image_url, product_url')
         .in('id', request.selectedProductIds)
         .eq('approved', true);
       
       products = selectedProducts || [];
       productsError = selectedError;
     } else {
-      // Fallback: Fetch products from repository related to this landing page
+      // Fallback: Fetch products from repository related to this landing page with ALL FIELDS
       const { data: landingPageProducts, error: landingError } = await supabase
         .from('products_repository')
-        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, use_in_ai_generation, price, currency')
+        .select('id, name, description, sales_pitch, keywords, benefits, features, category, subcategory, target_audience, market_keywords, search_intent_keywords, youtube_videos, testimonial_videos, technical_videos, instagram_videos, use_in_ai_generation, price, currency, tags, video_captions, offer_discount_cta, resource_cta1, resource_cta2, resource_cta3, image_url, product_url')
         .eq('source_landing_page_id', request.landingPageId)
         .eq('approved', true)
         .order('display_order', { ascending: true });
@@ -113,10 +113,10 @@ serve(async (req) => {
     // Use only the selected/landing page products - no fallback products
     let allProducts = products || [];
 
-    // Fetch company profile for additional context - EXPANDED FIELDS
+    // Fetch company profile for additional context - TODOS OS CAMPOS INCLUDING SEO HIDDEN
     const { data: companyProfiles } = await supabase
       .from('company_profile')
-      .select('company_name, company_description, working_methodology, differentiators, business_sector, brand_values, mission_statement, vision_statement, target_audience, main_products_services, company_videos, social_media_links')
+      .select('company_name, company_description, working_methodology, differentiators, business_sector, brand_values, mission_statement, vision_statement, target_audience, main_products_services, company_videos, social_media_links, seo_context_keywords, seo_market_positioning, seo_competitive_advantages, seo_technical_expertise, seo_service_areas, location, contact_phone, contact_email, website_url')
       .limit(1);
     
     const companyProfile = companyProfiles?.[0] || null;
@@ -350,6 +350,37 @@ function buildStrategicContext(
                 productInfo += `\n  👥 PÚBLICO-ALVO DISPONÍVEL: ${p.target_audience.join(', ')}`;
               } else {
                 productInfo += `\n  👥 PÚBLICO-ALVO: Não especificado`;
+              }
+
+              // ✨ NOVOS CAMPOS EXPANDIDOS
+              if (p.tags && Array.isArray(p.tags) && p.tags.length > 0) {
+                productInfo += `\n  🏷️ TAGS DISPONÍVEIS: ${p.tags.join(', ')}`;
+              }
+
+              if (p.market_keywords && Array.isArray(p.market_keywords) && p.market_keywords.length > 0) {
+                productInfo += `\n  📊 KEYWORDS DE MERCADO: ${p.market_keywords.join(', ')}`;
+              }
+
+              if (p.search_intent_keywords && Array.isArray(p.search_intent_keywords) && p.search_intent_keywords.length > 0) {
+                productInfo += `\n  🎯 KEYWORDS DE INTENÇÃO: ${p.search_intent_keywords.join(', ')}`;
+              }
+
+              if (p.video_captions && typeof p.video_captions === 'object') {
+                const captionText = Object.values(p.video_captions).join(' ').substring(0, 200);
+                if (captionText) {
+                  productInfo += `\n  📹 CONTEÚDO DE VÍDEOS: ${captionText}...`;
+                }
+              }
+
+              if (p.offer_discount_cta && typeof p.offer_discount_cta === 'object') {
+                const cta = p.offer_discount_cta as any;
+                if (cta.label) {
+                  productInfo += `\n  💳 OFERTA ESPECIAL: ${cta.label}`;
+                }
+              }
+
+              if (p.instagram_videos && Array.isArray(p.instagram_videos) && p.instagram_videos.length > 0) {
+                productInfo += `\n  📱 VÍDEOS INSTAGRAM: ${p.instagram_videos.length} disponíveis`;
               }
               
               return productInfo;

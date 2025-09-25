@@ -10,8 +10,19 @@ interface KeywordAggregation {
     marketKeywords: string[];
     searchIntentKeywords: string[];
     categories: string[];
+    salesPitchKeywords: string[];
+    featuresKeywords: string[];
+    benefitsKeywords: string[];
+    targetAudienceKeywords: string[];
+    tags: string[];
+    videoCaptionsKeywords: string[];
   };
   productCount: number;
+  commercialData: {
+    ctaUrls: string[];
+    offerLabels: string[];
+    priceRanges: string[];
+  };
 }
 
 export const useProductKeywordsAggregator = () => {
@@ -19,21 +30,32 @@ export const useProductKeywordsAggregator = () => {
 
   const aggregateKeywordsFromProducts = useCallback(async (productIds: string[]): Promise<KeywordAggregation> => {
     if (!productIds || productIds.length === 0) {
-      return {
-        allKeywords: [],
-        formattedForBlog: '',
-        keywordsBySource: {
-          keywords: [],
-          marketKeywords: [],
-          searchIntentKeywords: [],
-          categories: []
-        },
-        productCount: 0
-      };
+        return {
+          allKeywords: [],
+          formattedForBlog: '',
+          keywordsBySource: {
+            keywords: [],
+            marketKeywords: [],
+            searchIntentKeywords: [],
+            categories: [],
+            salesPitchKeywords: [],
+            featuresKeywords: [],
+            benefitsKeywords: [],
+            targetAudienceKeywords: [],
+            tags: [],
+            videoCaptionsKeywords: []
+          },
+          productCount: 0,
+          commercialData: {
+            ctaUrls: [],
+            offerLabels: [],
+            priceRanges: []
+          }
+        };
     }
 
     try {
-      // Buscar produtos selecionados
+      // Buscar produtos selecionados com TODOS os campos
       const { data: products, error } = await supabase
         .from('products_repository')
         .select(`
@@ -42,7 +64,19 @@ export const useProductKeywordsAggregator = () => {
           subcategory,
           keywords,
           market_keywords,
-          search_intent_keywords
+          search_intent_keywords,
+          sales_pitch,
+          features,
+          benefits,
+          target_audience,
+          tags,
+          video_captions,
+          offer_discount_cta,
+          resource_cta1,
+          resource_cta2,
+          resource_cta3,
+          price,
+          currency
         `)
         .in('id', productIds)
         .eq('approved', true);
@@ -62,18 +96,41 @@ export const useProductKeywordsAggregator = () => {
             keywords: [],
             marketKeywords: [],
             searchIntentKeywords: [],
-            categories: []
+            categories: [],
+            salesPitchKeywords: [],
+            featuresKeywords: [],
+            benefitsKeywords: [],
+            targetAudienceKeywords: [],
+            tags: [],
+            videoCaptionsKeywords: []
           },
-          productCount: 0
+          productCount: 0,
+          commercialData: {
+            ctaUrls: [],
+            offerLabels: [],
+            priceRanges: []
+          }
         };
       }
 
-      // Extrair keywords de diferentes fontes
+      // Extrair keywords de TODAS as fontes disponíveis
       const keywordsBySource = {
         keywords: [] as string[],
         marketKeywords: [] as string[],
         searchIntentKeywords: [] as string[],
-        categories: [] as string[]
+        categories: [] as string[],
+        salesPitchKeywords: [] as string[],
+        featuresKeywords: [] as string[],
+        benefitsKeywords: [] as string[],
+        targetAudienceKeywords: [] as string[],
+        tags: [] as string[],
+        videoCaptionsKeywords: [] as string[]
+      };
+
+      const commercialData = {
+        ctaUrls: [] as string[],
+        offerLabels: [] as string[],
+        priceRanges: [] as string[]
       };
 
       products.forEach(product => {
@@ -99,14 +156,81 @@ export const useProductKeywordsAggregator = () => {
         if (product.subcategory) {
           keywordsBySource.categories.push(product.subcategory);
         }
+
+        // ✨ NOVOS CAMPOS: Extrair keywords de sales_pitch
+        if (product.sales_pitch) {
+          const pitchKeywords = extractKeywordsFromText(product.sales_pitch);
+          keywordsBySource.salesPitchKeywords.push(...pitchKeywords);
+        }
+
+        // ✨ Features como keywords
+        if (product.features && Array.isArray(product.features)) {
+          keywordsBySource.featuresKeywords.push(...(product.features as string[]));
+        }
+
+        // ✨ Benefits como keywords
+        if (product.benefits && Array.isArray(product.benefits)) {
+          keywordsBySource.benefitsKeywords.push(...(product.benefits as string[]));
+        }
+
+        // ✨ Target audience como keywords
+        if (product.target_audience && Array.isArray(product.target_audience)) {
+          keywordsBySource.targetAudienceKeywords.push(...(product.target_audience as string[]));
+        }
+
+        // ✨ Tags órfãs agora conectadas
+        if (product.tags && Array.isArray(product.tags)) {
+          keywordsBySource.tags.push(...(product.tags as string[]));
+        }
+
+        // ✨ Extrair keywords de video_captions
+        if (product.video_captions && typeof product.video_captions === 'object') {
+          const captionKeywords = extractKeywordsFromVideoCaptions(product.video_captions);
+          keywordsBySource.videoCaptionsKeywords.push(...captionKeywords);
+        }
+
+        // ✨ Coletar dados comerciais (com type safety)
+        if (product.offer_discount_cta && typeof product.offer_discount_cta === 'object') {
+          const cta = product.offer_discount_cta as any;
+          if (cta.url && typeof cta.url === 'string') {
+            commercialData.ctaUrls.push(cta.url);
+          }
+          if (cta.label && typeof cta.label === 'string') {
+            commercialData.offerLabels.push(cta.label);
+          }
+        }
+
+        // CTAs de recursos (com type safety)
+        [product.resource_cta1, product.resource_cta2, product.resource_cta3].forEach(cta => {
+          if (cta && typeof cta === 'object') {
+            const ctaObj = cta as any;
+            if (ctaObj.url && typeof ctaObj.url === 'string') {
+              commercialData.ctaUrls.push(ctaObj.url);
+            }
+            if (ctaObj.label && typeof ctaObj.label === 'string') {
+              commercialData.offerLabels.push(ctaObj.label);
+            }
+          }
+        });
+
+        // Preços para schema
+        if (product.price && product.currency) {
+          commercialData.priceRanges.push(`${product.price} ${product.currency}`);
+        }
       });
 
-      // Compilar todas as keywords e remover duplicatas
+      // Compilar TODAS as keywords de TODAS as fontes
       const allKeywords = [
         ...keywordsBySource.keywords,
         ...keywordsBySource.marketKeywords,
         ...keywordsBySource.searchIntentKeywords,
-        ...keywordsBySource.categories
+        ...keywordsBySource.categories,
+        ...keywordsBySource.salesPitchKeywords,
+        ...keywordsBySource.featuresKeywords,
+        ...keywordsBySource.benefitsKeywords,
+        ...keywordsBySource.targetAudienceKeywords,
+        ...keywordsBySource.tags,
+        ...keywordsBySource.videoCaptionsKeywords
       ];
 
       // Normalizar e remover duplicatas
@@ -120,10 +244,18 @@ export const useProductKeywordsAggregator = () => {
       // Formatar para inserção no blog
       const formattedForBlog = normalizedKeywords.join(', ');
 
-      console.log('📊 Keywords agregadas dos produtos:', {
+      console.log('📊 Keywords COMPLETAS agregadas dos produtos:', {
         productCount: products.length,
         totalKeywords: normalizedKeywords.length,
-        keywordsBySource,
+        newFieldsUsed: {
+          salesPitch: keywordsBySource.salesPitchKeywords.length,
+          features: keywordsBySource.featuresKeywords.length,
+          benefits: keywordsBySource.benefitsKeywords.length,
+          targetAudience: keywordsBySource.targetAudienceKeywords.length,
+          tags: keywordsBySource.tags.length,
+          videoCaptions: keywordsBySource.videoCaptionsKeywords.length
+        },
+        commercialData,
         sample: normalizedKeywords.slice(0, 10)
       });
 
@@ -131,7 +263,8 @@ export const useProductKeywordsAggregator = () => {
         allKeywords: normalizedKeywords,
         formattedForBlog,
         keywordsBySource,
-        productCount: products.length
+        productCount: products.length,
+        commercialData
       };
 
     } catch (error) {
@@ -149,9 +282,20 @@ export const useProductKeywordsAggregator = () => {
           keywords: [],
           marketKeywords: [],
           searchIntentKeywords: [],
-          categories: []
+          categories: [],
+          salesPitchKeywords: [],
+          featuresKeywords: [],
+          benefitsKeywords: [],
+          targetAudienceKeywords: [],
+          tags: [],
+          videoCaptionsKeywords: []
         },
-        productCount: 0
+        productCount: 0,
+        commercialData: {
+          ctaUrls: [],
+          offerLabels: [],
+          priceRanges: []
+        }
       };
     }
   }, [toast]);
@@ -213,3 +357,55 @@ export const useProductKeywordsAggregator = () => {
     enrichKeywordsWithCategories
   };
 };
+
+// ✨ FUNÇÕES AUXILIARES PARA EXTRAIR KEYWORDS
+
+// Extrair keywords de texto livre (sales_pitch, descriptions)
+function extractKeywordsFromText(text: string): string[] {
+  if (!text || typeof text !== 'string') return [];
+  
+  // Remove pontuação e quebra em palavras
+  const words = text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3) // Palavras com mais de 3 caracteres
+    .filter(word => !['para', 'com', 'que', 'uma', 'por', 'seu', 'sua', 'mais', 'como', 'onde', 'quando'].includes(word)); // Remove stop words
+  
+  // Extrair bi-gramas e tri-gramas relevantes
+  const phrases: string[] = [];
+  for (let i = 0; i < words.length - 1; i++) {
+    phrases.push(`${words[i]} ${words[i + 1]}`);
+    if (i < words.length - 2) {
+      phrases.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`);
+    }
+  }
+  
+  return [...words, ...phrases].slice(0, 20); // Limitar a 20 keywords por texto
+}
+
+// Extrair keywords de video_captions 
+function extractKeywordsFromVideoCaptions(videoCaptions: any): string[] {
+  if (!videoCaptions || typeof videoCaptions !== 'object') return [];
+  
+  const allCaptions: string[] = [];
+  
+  // Verificar diferentes estruturas de video_captions
+  Object.values(videoCaptions).forEach((caption: any) => {
+    if (typeof caption === 'string') {
+      allCaptions.push(caption);
+    } else if (caption && typeof caption === 'object') {
+      // Se caption for objeto, tentar extrair texto
+      Object.values(caption).forEach((text: any) => {
+        if (typeof text === 'string') {
+          allCaptions.push(text);
+        }
+      });
+    }
+  });
+  
+  // Extrair keywords de todas as captions
+  return allCaptions
+    .flatMap(caption => extractKeywordsFromText(caption))
+    .slice(0, 30); // Limitar a 30 keywords de vídeos
+}

@@ -12,6 +12,18 @@ interface ProductSchemaData {
   category?: string;
   subcategory?: string;
   sales_pitch?: string;
+  // ✨ NOVOS CAMPOS PARA SCHEMA COMPLETO
+  features?: string[];
+  benefits?: string[];
+  target_audience?: string[];
+  tags?: string[];
+  video_captions?: any;
+  resource_cta1?: any;
+  resource_cta2?: any;
+  resource_cta3?: any;
+  keywords?: string[];
+  market_keywords?: string[];
+  search_intent_keywords?: string[];
 }
 
 interface SchemaResult {
@@ -92,6 +104,28 @@ export const useProductSchemaGenerator = () => {
       "description": product.description || product.sales_pitch || `${product.name} - Solução de qualidade`,
       "category": product.category || "Produtos e Serviços"
     };
+
+    // ✨ NOVOS CAMPOS: Adicionar features se disponíveis
+    if (product.features && Array.isArray(product.features) && product.features.length > 0) {
+      baseSchema.additionalProperty = product.features.map((feature: string) => ({
+        "@type": "PropertyValue",
+        "name": "Feature",
+        "value": feature
+      }));
+    }
+
+    // ✨ Adicionar benefits como hasEnergyConsumptionDetails ou similar
+    if (product.benefits && Array.isArray(product.benefits) && product.benefits.length > 0) {
+      baseSchema.description += ` Benefícios: ${product.benefits.join(', ')}.`;
+    }
+
+    // ✨ Adicionar target_audience como audience
+    if (product.target_audience && Array.isArray(product.target_audience) && product.target_audience.length > 0) {
+      baseSchema.audience = {
+        "@type": "Audience",
+        "audienceType": product.target_audience.join(', ')
+      };
+    }
 
     // Adicionar preço se disponível
     if (product.price && product.price > 0) {
