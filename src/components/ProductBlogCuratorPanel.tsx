@@ -5,8 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Sparkles, Eye, Package, Settings } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown } from "lucide-react";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
+import { IntelligentLinksManager } from "./IntelligentLinksManager";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -18,6 +22,10 @@ interface Product {
     commercial?: string | null;
     technical?: string | null;
     generated_at?: string | null;
+    commercial_links?: Record<string, string>;
+    technical_links?: Record<string, string>;
+    commercial_links_generated_at?: string | null;
+    technical_links_generated_at?: string | null;
   };
 }
 
@@ -43,6 +51,7 @@ export function ProductBlogCuratorPanel({
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState<BlogConsolidationPreferences>({});
   const [selectedBlogContent, setSelectedBlogContent] = useState<{ content: string; title: string } | null>(null);
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   
   const { loadProductsByIds } = useSelectedProducts();
 
@@ -115,6 +124,50 @@ export function ProductBlogCuratorPanel({
     return Object.values(preferences).reduce((count, pref) => {
       return count + (pref.useCommercial ? 1 : 0) + (pref.useTechnical ? 1 : 0);
     }, 0);
+  };
+
+  const toggleProductExpanded = (productId: string) => {
+    setExpandedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  const updateProductLinks = async (productId: string, blogType: 'commercial' | 'technical', links: Record<string, string>) => {
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+
+      const updatedBlogContent = {
+        ...product.individual_blog_content,
+        [`${blogType}_links`]: links,
+        [`${blogType}_links_generated_at`]: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ individual_blog_content: updatedBlogContent })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setProducts(prev => prev.map(p => 
+        p.id === productId 
+          ? { ...p, individual_blog_content: updatedBlogContent }
+          : p
+      ));
+
+      toast.success("Links inteligentes atualizados");
+    } catch (error) {
+      console.error('Error updating links:', error);
+      toast.error("Erro ao atualizar links");
+    }
   };
 
   if (loading) {
@@ -199,107 +252,160 @@ export function ProductBlogCuratorPanel({
                             )}
 
                             <div className="space-y-3">
+                              {/* Header com botão de expandir */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">Blogs Disponíveis</span>
+                                  {(product.individual_blog_content?.commercial_links || product.individual_blog_content?.technical_links) && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Link className="h-3 w-3 mr-1" />
+                                      Links
+                                    </Badge>
+                                  )}
+                                </div>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleProductExpanded(product.id)}
+                                >
+                                  <ChevronDown className={`h-4 w-4 transition-transform ${
+                                    expandedProducts.has(product.id) ? 'rotate-180' : ''
+                                  }`} />
+                                </Button>
+                              </div>
+
                               {/* Blog Comercial */}
                               {product.individual_blog_content?.commercial && (
-                                <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50/50">
-                                  <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-blue-600" />
-                                    <div>
-                                      <div className="text-sm font-medium">Blog Comercial</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        Gerado em {formatDate(product.individual_blog_content.generated_at)}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50/50">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4 text-blue-600" />
+                                      <div>
+                                        <div className="text-sm font-medium">Blog Comercial</div>
+                                        <div className="text-xs text-muted-foreground">
+                                          Gerado em {formatDate(product.individual_blog_content.generated_at)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3">
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => viewBlogContent(
+                                              product.individual_blog_content!.commercial!,
+                                              product.name,
+                                              'commercial'
+                                            )}
+                                          >
+                                            <Eye className="h-4 w-4" />
+                                          </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl max-h-[80vh]">
+                                          <DialogHeader>
+                                            <DialogTitle>{selectedBlogContent?.title}</DialogTitle>
+                                          </DialogHeader>
+                                          <ScrollArea className="max-h-[60vh]">
+                                            <div 
+                                              className="prose prose-sm max-w-none p-4"
+                                              dangerouslySetInnerHTML={{ 
+                                                __html: selectedBlogContent?.content
+                                                  ?.replace(/#{1,6}\s/g, '')
+                                                  ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                  ?.replace(/\n\n/g, '</p><p>')
+                                                  ?.replace(/^/, '<p>')
+                                                  ?.replace(/$/, '</p>') || ''
+                                              }}
+                                            />
+                                          </ScrollArea>
+                                        </DialogContent>
+                                      </Dialog>
+                                      
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm">Usar no Consolidado</span>
+                                        <Switch
+                                          checked={prefs.useCommercial}
+                                          onCheckedChange={(checked) => 
+                                            toggleBlogUse(product.id, 'commercial', checked)
+                                          }
+                                        />
                                       </div>
                                     </div>
                                   </div>
-                                  
-                                  <div className="flex items-center gap-3">
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => viewBlogContent(
-                                            product.individual_blog_content!.commercial!,
-                                            product.name,
-                                            'commercial'
-                                          )}
-                                        >
-                                          <Eye className="h-4 w-4" />
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="max-w-4xl max-h-[80vh]">
-                                        <DialogHeader>
-                                          <DialogTitle>{selectedBlogContent?.title}</DialogTitle>
-                                        </DialogHeader>
-                                        <ScrollArea className="max-h-[60vh]">
-                                          <div 
-                                            className="prose prose-sm max-w-none p-4"
-                                            dangerouslySetInnerHTML={{ 
-                                              __html: selectedBlogContent?.content
-                                                ?.replace(/#{1,6}\s/g, '')
-                                                ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                                ?.replace(/\n\n/g, '</p><p>')
-                                                ?.replace(/^/, '<p>')
-                                                ?.replace(/$/, '</p>') || ''
-                                            }}
-                                          />
-                                        </ScrollArea>
-                                      </DialogContent>
-                                    </Dialog>
-                                    
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm">Usar no Consolidado</span>
-                                      <Switch
-                                        checked={prefs.useCommercial}
-                                        onCheckedChange={(checked) => 
-                                          toggleBlogUse(product.id, 'commercial', checked)
-                                        }
+
+                                  {/* Links Inteligentes - Blog Comercial */}
+                                  <Collapsible open={expandedProducts.has(product.id)}>
+                                    <CollapsibleContent>
+                                      <IntelligentLinksManager
+                                        blogContent={product.individual_blog_content.commercial}
+                                        existingLinks={product.individual_blog_content.commercial_links || {}}
+                                        onLinksChange={(links) => updateProductLinks(product.id, 'commercial', links)}
+                                        blogType="commercial"
+                                        productName={product.name}
                                       />
-                                    </div>
-                                  </div>
+                                    </CollapsibleContent>
+                                  </Collapsible>
                                 </div>
                               )}
 
                               {/* Blog Técnico */}
                               {product.individual_blog_content?.technical && (
-                                <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50/50">
-                                  <div className="flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-green-600" />
-                                    <div>
-                                      <div className="text-sm font-medium">Blog Técnico</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        Gerado em {formatDate(product.individual_blog_content.generated_at)}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50/50">
+                                    <div className="flex items-center gap-2">
+                                      <Sparkles className="h-4 w-4 text-green-600" />
+                                      <div>
+                                        <div className="text-sm font-medium">Blog Técnico</div>
+                                        <div className="text-xs text-muted-foreground">
+                                          Gerado em {formatDate(product.individual_blog_content.generated_at)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3">
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => viewBlogContent(
+                                              product.individual_blog_content!.technical!,
+                                              product.name,
+                                              'technical'
+                                            )}
+                                          >
+                                            <Eye className="h-4 w-4" />
+                                          </Button>
+                                        </DialogTrigger>
+                                      </Dialog>
+                                      
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm">Usar no Consolidado</span>
+                                        <Switch
+                                          checked={prefs.useTechnical}
+                                          onCheckedChange={(checked) => 
+                                            toggleBlogUse(product.id, 'technical', checked)
+                                          }
+                                        />
                                       </div>
                                     </div>
                                   </div>
-                                  
-                                  <div className="flex items-center gap-3">
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => viewBlogContent(
-                                            product.individual_blog_content!.technical!,
-                                            product.name,
-                                            'technical'
-                                          )}
-                                        >
-                                          <Eye className="h-4 w-4" />
-                                        </Button>
-                                      </DialogTrigger>
-                                    </Dialog>
-                                    
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm">Usar no Consolidado</span>
-                                      <Switch
-                                        checked={prefs.useTechnical}
-                                        onCheckedChange={(checked) => 
-                                          toggleBlogUse(product.id, 'technical', checked)
-                                        }
+
+                                  {/* Links Inteligentes - Blog Técnico */}
+                                  <Collapsible open={expandedProducts.has(product.id)}>
+                                    <CollapsibleContent>
+                                      <IntelligentLinksManager
+                                        blogContent={product.individual_blog_content.technical}
+                                        existingLinks={product.individual_blog_content.technical_links || {}}
+                                        onLinksChange={(links) => updateProductLinks(product.id, 'technical', links)}
+                                        blogType="technical"
+                                        productName={product.name}
                                       />
-                                    </div>
-                                  </div>
+                                    </CollapsibleContent>
+                                  </Collapsible>
                                 </div>
                               )}
                             </div>

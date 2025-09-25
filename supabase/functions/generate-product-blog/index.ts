@@ -58,10 +58,16 @@ serve(async (req) => {
     // Gerar blog com IA
     const blogContent = await generateProductBlog(deepSeekApiKey, product, companyProfile, blogType);
     
-    // Atualizar produto com o novo blog
+    // Gerar links inteligentes para o blog
+    const intelligentLinks = await generateIntelligentLinks(supabase, product, blogContent);
+    const blogWithLinks = await processContentWithIntelligentLinks(blogContent, intelligentLinks);
+    
+    // Atualizar produto com o novo blog e links
     const updatedBlogContent = {
       ...product.individual_blog_content,
-      [blogType]: blogContent,
+      [blogType]: blogWithLinks,
+      [`${blogType}_links`]: intelligentLinks,
+      [`${blogType}_links_generated_at`]: new Date().toISOString(),
       generated_at: new Date().toISOString()
     };
 
@@ -80,7 +86,8 @@ serve(async (req) => {
       success: true,
       productId,
       blogType,
-      contentLength: blogContent.length,
+      contentLength: blogWithLinks.length,
+      linksApplied: Object.keys(intelligentLinks).length,
       generatedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -266,4 +273,120 @@ Gere o blog post completo agora:`;
   console.log(`✅ Blog content generated: ${blogContent.length} characters`);
   
   return blogContent.trim();
+}
+
+// Função para gerar links inteligentes baseados no conteúdo do blog
+async function generateIntelligentLinks(supabase: any, product: any, blogContent: string): Promise<Record<string, string>> {
+  console.log('🔗 Generating intelligent links for blog content');
+  
+  const intelligentLinks: Record<string, string> = {};
+  
+  try {
+    // Buscar landing page relacionada ao produto
+    if (product.source_landing_page_id) {
+      const { data: landingPage } = await supabase
+        .from('landing_pages')
+        .select('data')
+        .eq('id', product.source_landing_page_id)
+        .single();
+      
+      if (landingPage?.data?.intelligent_links) {
+        Object.assign(intelligentLinks, landingPage.data.intelligent_links);
+      }
+    }
+    
+    // Buscar produtos relacionados para criar links internos
+    const { data: relatedProducts } = await supabase
+      .from('products_repository')
+      .select('name, product_url, category, subcategory')
+      .neq('id', product.id)
+      .eq('approved', true)
+      .limit(10);
+    
+    if (relatedProducts) {
+      relatedProducts.forEach((relatedProduct: any) => {
+        if (relatedProduct.product_url && relatedProduct.name) {
+          const keyword = relatedProduct.name.toLowerCase();
+          if (blogContent.toLowerCase().includes(keyword)) {
+            intelligentLinks[keyword] = relatedProduct.product_url;
+          }
+        }
+      });
+    }
+    
+    // Extrair palavras-chave do próprio produto para links
+    const extractKeywords = (text: string): string[] => {
+      if (!text) return [];
+      return text.toLowerCase()
+        .split(/[,\s]+/)
+        .map(k => k.trim())
+        .filter(k => k.length > 3);
+    };
+    
+    // Adicionar links para keywords do produto (para outras seções do site)
+    const productKeywords = [
+      ...(Array.isArray(product.keywords) ? product.keywords : []),
+      ...(Array.isArray(product.market_keywords) ? product.market_keywords : []),
+      ...(Array.isArray(product.search_intent_keywords) ? product.search_intent_keywords : [])
+    ];
+    
+    productKeywords.forEach(keyword => {
+      if (typeof keyword === 'string' && keyword.length > 3) {
+        const keywordLower = keyword.toLowerCase();
+        if (blogContent.toLowerCase().includes(keywordLower)) {
+          // Criar link genérico para a categoria do produto
+          if (product.category && !intelligentLinks[keywordLower]) {
+            intelligentLinks[keywordLower] = `#categoria-${product.category.toLowerCase().replace(/\s+/g, '-')}`;
+          }
+        }
+      }
+    });
+    
+    console.log(`✅ Generated ${Object.keys(intelligentLinks).length} intelligent links`);
+    
+  } catch (error) {
+    console.error('❌ Error generating intelligent links:', error);
+  }
+  
+  return intelligentLinks;
+}
+
+// Função para processar conteúdo com links inteligentes (simplificada)
+async function processContentWithIntelligentLinks(content: string, intelligentLinks: Record<string, string> = {}): Promise<string> {
+  let processedContent = content;
+  const linksApplied: string[] = [];
+  
+  // Aplicar links de forma controlada (máximo 3 links por parágrafo)
+  const paragraphs = content.split('\n\n');
+  
+  paragraphs.forEach((paragraph, index) => {
+    let linksInParagraph = 0;
+    let processedParagraph = paragraph;
+    
+    // Ordenar keywords por tamanho (maior primeiro) para evitar sobreposições
+    const sortedKeywords = Object.keys(intelligentLinks).sort((a, b) => b.length - a.length);
+    
+    sortedKeywords.forEach(keyword => {
+      if (linksInParagraph >= 2) return; // Máximo 2 links por parágrafo
+      if (linksApplied.includes(keyword)) return; // Não repetir mesmo link
+      
+      const url = intelligentLinks[keyword];
+      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      
+      if (regex.test(processedParagraph)) {
+        processedParagraph = processedParagraph.replace(regex, (match) => {
+          linksInParagraph++;
+          linksApplied.push(keyword);
+          return `[${match}](${url} "Saiba mais sobre ${match}")`;
+        });
+      }
+    });
+    
+    paragraphs[index] = processedParagraph;
+  });
+  
+  processedContent = paragraphs.join('\n\n');
+  console.log(`🔗 Applied ${linksApplied.length} intelligent links to content`);
+  
+  return processedContent;
 }
