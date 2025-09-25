@@ -54,26 +54,33 @@ export function BlogConsolidationInterface({
       };
     }
 
-    if (!blogGenerated) {
-      return {
-        status: 'pending',
-        message: 'Clique em "Gerar Blog com IA" para criar o conteúdo',
-        progress: 25
-      };
+    // Base: produtos selecionados (25%)
+    let progress = 25;
+    let status = 'pending';
+    let message = 'Configure blogs de produtos ou gere blog estratégico';
+
+    // Se há blogs de produtos ativos: +50% (75% total)
+    if (activeProductBlogsCount > 0) {
+      progress += 50;
+      status = 'complete';
+      message = `Consolidação pronta com ${activeProductBlogsCount} blogs de produtos`;
     }
 
-    if (activeProductBlogsCount === 0) {
-      return {
-        status: 'info',
-        message: 'Configure blogs de produtos para incluir no consolidado',
-        progress: 50
-      };
+    // Se há blog estratégico: +25% adicional (100% total)
+    if (blogGenerated) {
+      progress += 25;
+      if (activeProductBlogsCount > 0) {
+        message = `Blog completo: estratégico + ${activeProductBlogsCount} blogs de produtos`;
+      } else {
+        status = 'info';
+        message = 'Blog estratégico gerado. Configure blogs de produtos para enriquecer';
+      }
     }
 
     return {
-      status: 'complete',
-      message: `Blog pronto para consolidação com ${activeProductBlogsCount} blogs de produtos`,
-      progress: 100
+      status,
+      message,
+      progress: Math.min(progress, 100)
     };
   };
 
