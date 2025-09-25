@@ -7,10 +7,11 @@ import { ArrowLeft, Settings } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
+import { PromptsAIManager } from '@/components/PromptsAIManager';
 
 const Repository = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -33,12 +34,15 @@ const Repository = () => {
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
-                    {activeView === 'repository' ? 'Repositório Central de Dados' : 'Gerenciar Categorias'}
+                    {activeView === 'repository' ? 'Repositório Central de Dados' : 
+                     activeView === 'categories' ? 'Gerenciar Categorias' : 'Prompts IA'}
                   </h1>
                   <p className="text-muted-foreground mt-2">
                     {activeView === 'repository' 
                       ? 'Gerencie produtos, avaliações e depoimentos centralizados para suas landing pages'
-                      : 'Configure campos padrões para categorias e subcategorias'
+                      : activeView === 'categories'
+                      ? 'Configure campos padrões para categorias e subcategorias'
+                      : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                     }
                   </p>
                 </div>
@@ -60,6 +64,14 @@ const Repository = () => {
                     <Settings className="h-4 w-4 mr-2" />
                     Categorias
                   </Button>
+                  <Button
+                    variant={activeView === 'prompts' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('prompts')}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Prompts IA
+                  </Button>
                 </div>
                 <AdminStatusBadge />
               </div>
@@ -71,8 +83,10 @@ const Repository = () => {
                 onProductSelectionChange={() => {}}
                 onCompanyProfileChange={() => {}}
               />
-            ) : (
+            ) : activeView === 'categories' ? (
               <CategoryManager />
+            ) : (
+              <PromptsAIManager />
             )}
           </div>
         </main>
