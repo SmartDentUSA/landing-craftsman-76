@@ -20,7 +20,7 @@ import { TagInput } from "@/components/ui/tag-input";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
-import { BlogPreview } from "@/components/BlogPreview";
+import { BlogEditorSection } from "@/components/BlogEditorSection";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -6507,27 +6507,10 @@ dataLayer = [{
             </TabsContent>
 
             <TabsContent value="blog-preview" className="flex-1 p-4">
-              <BlogPreview 
+              <BlogEditorSection
                 landingPageId={id || ""}
                 landingPageData={data}
                 selectedProductIds={selectedProductIds}
-                onEditBlog={() => navigate(`/blog/${id}`, { 
-                  state: { 
-                    fromEditor: true, 
-                    landingPageData: data,
-                    blogData: {
-                      title: data.banner.title || "",
-                      content: "",
-                      meta_description: data.seo_description || "",
-                      keywords: [],
-                      youtube_video_url: "",
-                      status: "draft",
-                      published_domains: [],
-                      intelligent_links: {},
-                      include_offers: true
-                    }
-                  } 
-                })}
               />
             </TabsContent>
 
