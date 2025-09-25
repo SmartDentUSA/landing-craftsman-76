@@ -287,10 +287,6 @@ CRÍTICO: Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou 
       
       return processedPrompt;
     }
-          JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content, blog_content, video_testimonial_analysis, faq_keywords' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-    }
 
     // Define token limits based on type and speed
     let maxTokens = 200;
