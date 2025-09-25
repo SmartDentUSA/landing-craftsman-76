@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { DualBlogGeneratorWithKOL } from "./DualBlogGeneratorWithKOL";
 import { ProductBlogCuratorPanel } from "./ProductBlogCuratorPanel";
+import { usePromptsConfiguration } from "@/hooks/usePromptsConfiguration";
+import { useSelectedProducts } from "@/hooks/useSelectedProducts";
+import { calculateProductStats } from "./ProductStatsHelper";
 
 interface BlogPreviewProps {
   landingPageId: string;
@@ -40,15 +43,26 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [blogPreferences, setBlogPreferences] = useState<BlogConsolidationPreferences>({});
+  const [productQuality, setProductQuality] = useState<any>(null);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { getConfigurationByFunction } = usePromptsConfiguration();
+  const { loadProductsByIds } = useSelectedProducts();
 
   // Fetch published blog and check sync status
   useEffect(() => {
     fetchPublishedBlog();
   }, [landingPageId]);
 
-  // Removed automatic generation - now manual via button
+  // Load product quality when selectedProductIds changes
+  useEffect(() => {
+    if (selectedProductIds && selectedProductIds.length > 0) {
+      loadProductQuality();
+    } else {
+      setProductQuality(null);
+    }
+  }, [selectedProductIds]);
 
   // Check sync status when both preview and published blogs are available
   useEffect(() => {
@@ -56,6 +70,27 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
       checkSyncStatus();
     }
   }, [blogPost, publishedBlog, landingPageData]);
+
+  const loadProductQuality = async () => {
+    if (!selectedProductIds || selectedProductIds.length === 0) return;
+    
+    setLoadingProducts(true);
+    try {
+      const products = await loadProductsByIds(selectedProductIds);
+      // Adaptar produtos para o formato esperado pelo ProductStatsHelper
+      const adaptedProducts = products.map(product => ({
+        ...product,
+        use_in_ai_generation: true,
+        approved: true
+      }));
+      const stats = calculateProductStats(adaptedProducts);
+      setProductQuality(stats);
+    } catch (error) {
+      console.error('Erro ao carregar qualidade dos produtos:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   const fetchPublishedBlog = async () => {
     try {
@@ -110,68 +145,105 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
   };
 
   const generateBlogPreview = async () => {
+    if (!selectedProductIds || selectedProductIds.length === 0) {
+      toast({
+        title: "Produtos necessários",
+        description: "Selecione produtos no repositório para gerar o blog contextual",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setGenerating(true);
     setError(null);
 
     try {
-      console.log("🔄 Gerando preview do blog para:", landingPageId);
+      console.log("🔄 Gerando blog estratégico contextual para:", landingPageId);
 
-      const { data, error } = await supabase.functions.invoke('ai-content-generator', {
+      // Buscar configuração de prompt para o gerador estratégico
+      const promptConfig = getConfigurationByFunction('strategic-blog-generator', 'Artigo Estratégico Contextual');
+      
+      const repositoryConfig = {
+        selectedSources: promptConfig?.selected_data_sources || ['products_repository', 'approved_reviews', 'key_opinion_leaders', 'company_profile'],
+        selectedFields: promptConfig?.selected_fields || {
+          landing_pages: ['banner', 'seo_title', 'seo_description'],
+          products_repository: ['name', 'description', 'benefits', 'keywords'],
+          approved_reviews: ['review_text', 'contextual_seo_info'],
+          key_opinion_leaders: ['full_name', 'specialty', 'mini_cv'],
+          company_profile: ['company_name', 'main_products_services', 'target_audience']
+        },
+        selectedProductIds: selectedProductIds
+      };
+
+      const { data, error } = await supabase.functions.invoke('strategic-blog-generator', {
         body: {
-          type: 'blog_content',
           landingPageId,
-          landingPage: landingPageData,
-          contentData: landingPageData,
-          selectedProductIds: selectedProductIds || [],
-          include_offers: true,
-          blogConsolidationPreferences: blogPreferences
+          repositoryConfig
         }
       });
 
       if (error) throw error;
 
-      if (data?.success && data?.content) {
-        const content = data.content;
+      if (data && typeof data === 'string') {
+        // A strategic-blog-generator retorna um string direto
+        const blogContent = data;
+        
+        // Extrair título da primeira linha do conteúdo
+        const lines = blogContent.split('\n').filter(line => line.trim());
+        const title = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico Contextual";
+        
         setBlogPost({
-          title: content.title || "Blog Post Gerado",
-          content: content.content || "Conteúdo em desenvolvimento...",
-          meta_description: content.meta_description || content.metaDescription || "",
-          keywords: Array.isArray(content.keywords) ? content.keywords : (typeof content.keywords === 'string' ? content.keywords.split(',').map(k => k.trim()).filter(Boolean) : []),
+          title: title,
+          content: blogContent,
+          meta_description: `${title.substring(0, 150)}...`,
+          keywords: selectedProductIds?.slice(0, 5) || [],
           status: "preview"
         });
 
-        console.log("✅ Blog preview gerado com sucesso");
+        console.log("✅ Blog estratégico gerado com sucesso");
       } else {
-        throw new Error("Erro na geração do conteúdo");
+        throw new Error("Resposta inválida do gerador estratégico");
       }
     } catch (err: any) {
-      console.error("❌ Erro ao gerar blog preview:", err);
-      setError(err.message || "Erro ao gerar preview do blog");
+      console.error("❌ Erro ao gerar blog estratégico:", err);
+      setError(err.message || "Erro ao gerar blog estratégico");
       
-      // Fallback preview with available data
-      setBlogPost({
-        title: landingPageData?.banner?.title || landingPageData?.seo_title || "Seu Blog Post",
-        content: `
-# ${landingPageData?.banner?.title || "Título do Artigo"}
+      // Fallback para o gerador padrão
+      try {
+        const { data, error } = await supabase.functions.invoke('ai-content-generator', {
+          body: {
+            type: 'blog_content',
+            landingPageId,
+            landingPage: landingPageData,
+            contentData: landingPageData,
+            selectedProductIds: selectedProductIds || [],
+            include_offers: true,
+            blogConsolidationPreferences: blogPreferences
+          }
+        });
 
-${landingPageData?.banner?.subtitle || "Subtítulo do artigo baseado nos dados da landing page."}
+        if (error) throw error;
 
-## Introdução
-
-Conteúdo gerado automaticamente baseado nos dados da sua landing page...
-
-## Principais Benefícios
-
-${landingPageData?.solutions?.map((s: any, i: number) => `${i + 1}. ${s.text}`).join('\n') || "• Benefício 1\n• Benefício 2\n• Benefício 3"}
-
-## Conclusão
-
-Para mais informações, entre em contato conosco.
-        `.trim(),
-        meta_description: landingPageData?.seo_description || "Artigo sobre " + (landingPageData?.banner?.title || "nossos serviços"),
-        keywords: ["blog", "artigo", landingPageData?.banner?.title].filter(Boolean),
-        status: "fallback"
-      });
+        if (data?.success && data?.content) {
+          const content = data.content;
+          setBlogPost({
+            title: content.title || "Blog Post Gerado",
+            content: content.content || "Conteúdo em desenvolvimento...",
+            meta_description: content.meta_description || content.metaDescription || "",
+            keywords: Array.isArray(content.keywords) ? content.keywords : (typeof content.keywords === 'string' ? content.keywords.split(',').map(k => k.trim()).filter(Boolean) : []),
+            status: "fallback"
+          });
+        }
+      } catch (fallbackErr) {
+        // Fallback final com dados básicos
+        setBlogPost({
+          title: landingPageData?.banner?.title || landingPageData?.seo_title || "Seu Blog Post",
+          content: `# ${landingPageData?.banner?.title || "Título do Artigo"}\n\nConteúdo básico gerado...`,
+          meta_description: landingPageData?.seo_description || "",
+          keywords: ["blog", "artigo"],
+          status: "fallback"
+        });
+      }
     } finally {
       setGenerating(false);
     }
@@ -259,16 +331,33 @@ Para mais informações, entre em contato conosco.
     }
   };
 
-  const getDataQuality = () => {
-    let score = 0;
-    if (landingPageData?.banner?.title) score += 25;
-    if (landingPageData?.banner?.subtitle) score += 25;
-    if (landingPageData?.seo_description) score += 25;
-    if (landingPageData?.solutions?.length > 0) score += 25;
-    return score;
+  const getProductQualityInfo = () => {
+    if (!productQuality || !selectedProductIds?.length) {
+      return { percentage: 0, message: "Nenhum produto selecionado" };
+    }
+
+    const completeAndGood = productQuality.complete + productQuality.good;
+    const percentage = Math.round((completeAndGood / productQuality.total) * 100);
+    
+    let message = "";
+    if (productQuality.complete > 0) message += `${productQuality.complete} completos`;
+    if (productQuality.good > 0) {
+      if (message) message += ", ";
+      message += `${productQuality.good} bons`;
+    }
+    if (productQuality.regular > 0) {
+      if (message) message += ", ";
+      message += `${productQuality.regular} regulares`;
+    }
+    if (productQuality.critical > 0) {
+      if (message) message += ", ";
+      message += `${productQuality.critical} críticos`;
+    }
+
+    return { percentage, message };
   };
 
-  const dataQuality = getDataQuality();
+  const productQualityInfo = getProductQualityInfo();
 
   return (
     <div className="space-y-6">
@@ -293,9 +382,18 @@ Para mais informações, entre em contato conosco.
                 Sincronizado
               </Badge>
             )}
-            {dataQuality < 100 && (
+            {loadingProducts ? (
               <Badge variant="secondary" className="text-xs">
-                Dados: {dataQuality}%
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Avaliando...
+              </Badge>
+            ) : selectedProductIds?.length ? (
+              <Badge variant="secondary" className="text-xs">
+                Produtos: {productQualityInfo.percentage}%
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                Sem produtos
               </Badge>
             )}
             {blogPost?.status === "fallback" && (
@@ -322,10 +420,18 @@ Para mais informações, entre em contato conosco.
           </div>
         )}
 
-        {dataQuality < 100 && (
+        {!selectedProductIds?.length && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <p className="text-sm text-orange-700">
+              ⚠️ <strong>Produtos necessários:</strong> Selecione produtos no repositório para gerar o blog contextual
+            </p>
+          </div>
+        )}
+
+        {selectedProductIds?.length && productQuality && productQualityInfo.percentage < 70 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700">
-              💡 <strong>Dica:</strong> Complete os dados SEO para melhorar a qualidade do blog
+              💡 <strong>Dica:</strong> Complete os dados dos produtos para melhorar o blog ({productQualityInfo.message})
             </p>
           </div>
         )}
