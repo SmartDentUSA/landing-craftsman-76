@@ -18,23 +18,47 @@ const Auth = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Check current session without immediate navigation
+    // Check current session and redirect if authenticated
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted && session?.user) {
-        setUser(session.user);
-        // Let ProtectedRoute handle navigation to avoid conflicts
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Error getting session:', error);
+          return;
+        }
+
+        if (mounted) {
+          if (session?.user) {
+            setUser(session.user);
+            // Redirect authenticated users to dashboard
+            navigate('/dashboard', { replace: true });
+          } else {
+            setUser(null);
+          }
+        }
+      } catch (error) {
+        console.error('Session check failed:', error);
       }
     };
 
     checkSession();
 
-    // Listen for auth changes - simplified
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (mounted) {
+      async (event, session) => {
+        if (!mounted) return;
+        
+        console.log('Auth state change:', event, session?.user?.email);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user);
+          // Redirect to dashboard on successful login
+          navigate('/dashboard', { replace: true });
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        } else {
           setUser(session?.user ?? null);
-          // Remove automatic navigation - let ProtectedRoute handle it
         }
       }
     );
@@ -43,7 +67,7 @@ const Auth = () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Remove navigate dependency
+  }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -68,7 +92,7 @@ const Auth = () => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth`
+        emailRedirectTo: `${window.location.origin}/dashboard`
       }
     });
 
@@ -96,16 +120,32 @@ const Auth = () => {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro no Login",
+          description: error.message
+        });
+      } else if (data.user) {
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Redirecionando para o dashboard..."
+        });
+        // Navigation will be handled by onAuthStateChange
+      }
+    } catch (error) {
+      console.error('Unexpected login error:', error);
       toast({
         variant: "destructive",
-        title: "Sign In Failed",
-        description: error.message
+        title: "Erro inesperado",
+        description: "Tente novamente em alguns segundos"
       });
     }
 

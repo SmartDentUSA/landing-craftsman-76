@@ -25,18 +25,24 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
     const checkAuth = async () => {
       try {
         // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
+
+        if (error) {
+          console.warn('Session error:', error);
+        }
 
         if (!session?.user) {
           if (!hasNavigated.current) {
             hasNavigated.current = true;
+            console.log('No session found, redirecting to auth');
             navigate("/auth", { replace: true });
           }
           return;
         }
 
+        console.log('Session found for user:', session.user.email);
         setUser(session.user);
 
         // Check cached role first (5 minute cache)
@@ -75,6 +81,7 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
 
         if (!mounted) return;
 
+        console.log('User role determined:', role);
         setUserRole(role);
         setRoleCache({ role, timestamp: now });
         setLoading(false);
@@ -88,24 +95,33 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
 
     checkAuth();
 
-    // Listen for auth changes with debouncing
+    // Listen for auth changes with improved handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
         
-        // Reset navigation flag on auth changes
-        hasNavigated.current = false;
+        console.log('Auth state change event:', event, session?.user?.email);
         
-        if (!session?.user) {
+        // Reset navigation flag on significant auth changes
+        if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+          hasNavigated.current = false;
+        }
+        
+        if (event === 'SIGNED_OUT' || !session?.user) {
           setUser(null);
           setUserRole(null);
+          setRoleCache(null);
           if (!hasNavigated.current) {
             hasNavigated.current = true;
+            console.log('User signed out, redirecting to auth');
             navigate("/auth", { replace: true });
           }
-        } else {
+        } else if (session?.user) {
           setUser(session.user);
-          // Let the main auth check handle role verification
+          // Trigger role check for new sessions
+          if (event === 'SIGNED_IN') {
+            checkAuth();
+          }
         }
       }
     );
@@ -114,7 +130,7 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Remove navigate dependency to prevent loops
+  }, [navigate]);
 
   if (loading) {
     return (
