@@ -7,58 +7,70 @@ import { PromptEditModal } from './PromptEditModal';
 
 const EDGE_FUNCTIONS = [
   {
-    id: 'ai-content-generator',
-    name: 'AI Content Generator',
-    description: 'Gera conteúdo principal, títulos SEO e meta descriptions',
-    icon: Brain,
-    status: 'active',
-    prompts: ['blog_content', 'seo_title', 'meta_description', 'structured_data'],
-    dataSources: ['products', 'company_profile', 'reviews']
-  },
-  {
-    id: 'ai-seo-generator', 
-    name: 'AI SEO Generator',
-    description: 'Gera keywords, schema markup e otimizações SEO',
-    icon: Search,
-    status: 'active',
-    prompts: ['keywords_generation', 'schema_markup', 'seo_optimization'],
-    dataSources: ['products', 'categories', 'target_audience']
-  },
-  {
-    id: 'generate-product-ai-content',
-    name: 'Generate Product AI Content',
-    description: 'Gera keywords, benefícios e features para produtos',
-    icon: Zap,
-    status: 'active',
-    prompts: ['product_benefits', 'product_keywords', 'product_features'],
-    dataSources: ['products_repository', 'categories_config']
-  },
-  {
-    id: 'generate-product-blog',
-    name: 'Generate Product Blog',
-    description: 'Gera blogs comerciais e técnicos para produtos',
+    id: "generate-product-blog",
+    name: "Gerador de Blog de Produtos",
+    description: "Gera conteúdo de blog comercial e técnico para produtos específicos",
     icon: FileText,
-    status: 'active',
-    prompts: ['commercial_blog', 'technical_blog'],
-    dataSources: ['products', 'company_profile', 'kols', 'testimonials']
+    status: "active" as const,
+    prompts: [
+      "Blog Comercial",
+      "Blog Técnico"
+    ],
+    dataSources: ["products_repository", "company_profile"]
   },
   {
-    id: 'extract-youtube-captions',
-    name: 'Extract YouTube Captions',
-    description: 'Extrai e processa legendas de vídeos do YouTube',
-    icon: Video,
-    status: 'active',
-    prompts: ['caption_extraction', 'content_summarization'],
-    dataSources: ['youtube_videos', 'video_metadata']
+    id: "generate-product-ai-content",
+    name: "Gerador de Conteúdo IA para Produtos",
+    description: "Gera benefícios, palavras-chave e características usando IA",
+    icon: Zap,
+    status: "active" as const,
+    prompts: [
+      "Benefícios do Produto",
+      "Palavras-chave do Produto",
+      "Características do Produto"
+    ],
+    dataSources: ["products_repository", "categories_config"]
   },
   {
-    id: 'moderate-reviews',
-    name: 'Moderate Reviews',
-    description: 'Modera e analisa avaliações com IA',
+    id: "ai-seo-generator",
+    name: "Gerador de SEO com IA",
+    description: "Cria conteúdo otimizado para SEO: meta descriptions, títulos, palavras-chave e conteúdo",
+    icon: Search,
+    status: "active" as const,
+    prompts: [
+      "Meta Description",
+      "Título SEO",
+      "Palavras-chave",
+      "Conteúdo Oculto",
+      "Conteúdo de Blog",
+      "Análise de Depoimento em Vídeo",
+      "Palavras-chave FAQ"
+    ],
+    dataSources: ["landing_pages", "products_repository", "company_profile", "video_testimonials"]
+  },
+  {
+    id: "generate-ad-copies",
+    name: "Gerador de Anúncios Google",
+    description: "Cria cópias de anúncios otimizadas para Google Ads",
     icon: MessageSquare,
-    status: 'active',
-    prompts: ['review_moderation', 'sentiment_analysis'],
-    dataSources: ['raw_reviews', 'approved_reviews']
+    status: "active" as const,
+    prompts: [
+      "Cópias Google Ads"
+    ],
+    dataSources: ["landing_pages", "keywords", "target_audience"]
+  },
+  {
+    id: "extract-youtube-captions",
+    name: "Extrator de Legendas YouTube",
+    description: "Extrai e analisa legendas de vídeos do YouTube com IA",
+    icon: Video,
+    status: "active" as const,
+    prompts: [
+      "Análise de Vídeo Promocional",
+      "Análise de Depoimento",
+      "Análise de Vídeo Técnico"
+    ],
+    dataSources: ["products_repository", "company_videos", "video_captions"]
   }
 ];
 

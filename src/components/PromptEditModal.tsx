@@ -30,29 +30,65 @@ interface PromptEditModalProps {
 
 // Mapeamento de fontes de dados disponíveis
 const DATA_SOURCES = {
-  products: {
-    label: 'Produtos',
-    fields: ['name', 'description', 'keywords', 'benefits', 'features', 'price', 'category', 'subcategory']
+  products_repository: {
+    label: "Repositório de Produtos",
+    fields: [
+      "name", "description", "price", "category", "subcategory", "benefits", 
+      "features", "keywords", "target_audience", "sales_pitch", "youtube_videos", 
+      "instagram_videos", "technical_videos", "testimonial_videos"
+    ]
   },
   company_profile: {
-    label: 'Perfil da Empresa',
-    fields: ['company_name', 'company_description', 'mission_statement', 'vision_statement', 'brand_values', 'target_audience']
+    label: "Perfil da Empresa",
+    fields: [
+      "company_name", "company_description", "business_sector", "mission_statement", 
+      "vision_statement", "brand_values", "differentiators", "seo_technical_expertise", 
+      "working_methodology", "target_audience", "seo_competitive_advantages"
+    ]
   },
-  reviews: {
-    label: 'Avaliações',
-    fields: ['rating', 'review_text', 'author_name', 'review_date']
+  categories_config: {
+    label: "Configuração de Categorias",
+    fields: [
+      "category", "subcategory", "keywords", "target_audience", 
+      "search_intent_keywords", "market_keywords"
+    ]
   },
-  kols: {
-    label: 'KOLs',
-    fields: ['full_name', 'specialty', 'mini_cv', 'instagram_url', 'youtube_url']
+  landing_pages: {
+    label: "Landing Pages",
+    fields: [
+      "name", "template", "data", "selected_product_ids"
+    ]
   },
-  testimonials: {
-    label: 'Depoimentos',
-    fields: ['client_name', 'testimonial_text', 'profession', 'location']
+  keywords: {
+    label: "Palavras-chave",
+    fields: [
+      "primary_keyword", "secondary_keywords", "long_tail_keywords"
+    ]
   },
-  categories: {
-    label: 'Categorias',
-    fields: ['category', 'subcategory', 'keywords', 'target_audience']
+  target_audience: {
+    label: "Público-alvo",
+    fields: [
+      "demographics", "interests", "pain_points", "behaviors"
+    ]
+  },
+  video_testimonials: {
+    label: "Depoimentos em Vídeo",
+    fields: [
+      "client_name", "profession", "testimonial_text", "youtube_url", 
+      "instagram_url", "ai_keywords", "sentiment_score"
+    ]
+  },
+  company_videos: {
+    label: "Vídeos da Empresa",
+    fields: [
+      "youtube_videos", "instagram_videos", "technical_videos", "testimonial_videos"
+    ]
+  },
+  video_captions: {
+    label: "Legendas de Vídeo",
+    fields: [
+      "caption_text", "video_url", "language", "extraction_method", "ai_analysis"
+    ]
   }
 };
 
