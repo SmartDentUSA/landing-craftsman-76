@@ -158,6 +158,19 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
     setError(null);
 
     try {
+      // Marcar como blog_generated: true na landing page
+      await supabase
+        .from('landing_pages')
+        .update({ 
+          blog_generated: true,
+          blog_generated_at: new Date().toISOString()
+        })
+        .eq('id', landingPageId);
+    } catch (err) {
+      console.warn('Aviso: não foi possível marcar blog_generated:', err);
+    }
+
+    try {
       console.log("🔄 Gerando blog estratégico contextual para:", landingPageId);
 
       // Buscar configuração de prompt para o gerador estratégico
@@ -201,6 +214,20 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
         });
 
         console.log("✅ Blog estratégico gerado com sucesso");
+        
+        // Marcar como blog_generated: true após geração bem-sucedida
+        try {
+          await supabase
+            .from('landing_pages')
+            .update({ 
+              blog_generated: true,
+              blog_generated_at: new Date().toISOString()
+            })
+            .eq('id', landingPageId);
+          console.log("✅ Landing page marcada como blog_generated: true");
+        } catch (updateErr) {
+          console.warn('Aviso: não foi possível marcar blog_generated:', updateErr);
+        }
       } else {
         throw new Error("Resposta inválida do gerador estratégico");
       }

@@ -943,25 +943,33 @@ const DashboardContent = () => {
                   <CardTitle className="text-lg">Preview Consolidado Eodonto.com</CardTitle>
                 </div>
                 <CardDescription>
-                  {getApprovedBlogsCount('eodonto')} blogs de {landingPages.filter(lp => lp.status === 'approved').length} landing pages aprovadas
+                  {getApprovedBlogsCount('eodonto')} blogs consolidados disponíveis
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    ({generatedBlogsCount} gerados + {publishedBlogsCount} publicados)
+                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCount} produtos individuais)
                   </span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 mb-4">
                   <div className="text-sm text-muted-foreground">
-                    📝 Total de blogs: <strong>{consolidatedBlogs.length}</strong>
+                    📝 Total de blogs: <strong>{approvedBlogsCount}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    ✅ Blogs na seção principal: <strong>{Math.min(7, consolidatedBlogs.length)}</strong>
+                    📄 Landing pages: <strong>{consolidatedBlogs.length}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    📌 Blogs na sidebar: <strong>{Math.max(0, consolidatedBlogs.length - 7)}</strong>
+                    🏷️ Produtos individuais: <strong>{activeProductBlogsCount}</strong>
                   </div>
-                  {blogPosts.length === 0 && consolidatedBlogs.length > 0 && (
+                  {approvedBlogsCount === 0 && (
+                    <div className="text-xs text-orange-600 bg-orange-50 p-3 rounded-lg border">
+                      ⚠️ <strong>Nenhum blog disponível:</strong><br/>
+                      • Gere blogs para as landing pages aprovadas<br/>
+                      • Configure blogs individuais dos produtos<br/>
+                      • Use a interface de curadoria para incluir blogs
+                    </div>
+                  )}
+                  {blogPosts.length === 0 && approvedBlogsCount > 0 && (
                     <div className="text-xs text-warning bg-warning/10 p-2 rounded">
                       ⚠️ Prévia com rascunhos gerados; publique para ver o conteúdo final
                     </div>
@@ -994,25 +1002,33 @@ const DashboardContent = () => {
                   <CardTitle className="text-lg">Preview Consolidado Dentala.com</CardTitle>
                 </div>
                 <CardDescription>
-                  {getApprovedBlogsCount('dentala')} blogs de {landingPages.filter(lp => lp.status === 'approved').length} landing pages aprovadas
+                  {getApprovedBlogsCount('dentala')} blogs consolidados disponíveis  
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    ({generatedBlogsCount} gerados + {publishedBlogsCount} publicados)
+                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCount} produtos individuais)
                   </span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 mb-4">
                   <div className="text-sm text-muted-foreground">
-                    📝 Total de blogs: <strong>{consolidatedBlogs.length}</strong>
+                    📝 Total de blogs: <strong>{approvedBlogsCount}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    ✅ Blogs na seção principal: <strong>{Math.min(7, consolidatedBlogs.length)}</strong>
+                    📄 Landing pages: <strong>{consolidatedBlogs.length}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    📌 Blogs na sidebar: <strong>{Math.max(0, consolidatedBlogs.length - 7)}</strong>
+                    🏷️ Produtos individuais: <strong>{activeProductBlogsCount}</strong>
                   </div>
-                  {blogPosts.length === 0 && consolidatedBlogs.length > 0 && (
+                  {approvedBlogsCount === 0 && (
+                    <div className="text-xs text-orange-600 bg-orange-50 p-3 rounded-lg border">
+                      ⚠️ <strong>Nenhum blog disponível:</strong><br/>
+                      • Gere blogs para as landing pages aprovadas<br/>
+                      • Configure blogs individuais dos produtos<br/>
+                      • Use a interface de curadoria para incluir blogs
+                    </div>
+                  )}
+                  {blogPosts.length === 0 && approvedBlogsCount > 0 && (
                     <div className="text-xs text-warning bg-warning/10 p-2 rounded">
                       ⚠️ Prévia com rascunhos gerados; publique para ver o conteúdo final
                     </div>

@@ -107,10 +107,25 @@ export const useBlogStatusMonitor = () => {
 
   // Memoize counts for performance
   const approvedBlogsCount = useMemo(() => {
-    const count = consolidatedBlogs.length;
-    console.log('🔢 Approved blogs count:', count);
-    return count;
-  }, [consolidatedBlogs]);
+    // Somar blogs de landing pages + blogs de produtos ativos
+    const landingPageBlogs = consolidatedBlogs.length;
+    const activeProductBlogs = productsWithBlogs.reduce((count, product) => {
+      const preferences = JSON.parse(localStorage.getItem('blogConsolidationPreferences') || '{}');
+      const productPrefs = preferences[product.id];
+      if (productPrefs) {
+        count += (productPrefs.useCommercial ? 1 : 0) + (productPrefs.useTechnical ? 1 : 0);
+      }
+      return count;
+    }, 0);
+    
+    const totalCount = landingPageBlogs + activeProductBlogs;
+    console.log('🔢 Approved blogs count:', {
+      landingPageBlogs,
+      activeProductBlogs,
+      totalCount
+    });
+    return totalCount;
+  }, [consolidatedBlogs, productsWithBlogs]);
 
   const generatedBlogsCount = useMemo(() => {
     const generatedCount = landingPages.filter(lp => 
