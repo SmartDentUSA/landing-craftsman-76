@@ -41,27 +41,28 @@ export const ProductBlogGeneratorModal = ({
 }: ProductBlogGeneratorModalProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedType, setSelectedType] = useState<'commercial' | 'technical'>('commercial');
+  const [currentProduct, setCurrentProduct] = useState(product);
   const { toast } = useToast();
 
   const hasExistingBlog = (type: 'commercial' | 'technical') => {
-    return product.individual_blog_content?.[type] != null;
+    return currentProduct.individual_blog_content?.[type] != null;
   };
 
   const getLastGenerated = () => {
-    if (product.individual_blog_content?.generated_at) {
-      return new Date(product.individual_blog_content.generated_at).toLocaleString('pt-BR');
+    if (currentProduct.individual_blog_content?.generated_at) {
+      return new Date(currentProduct.individual_blog_content.generated_at).toLocaleString('pt-BR');
     }
     return null;
   };
 
   const handleGenerateBlog = async () => {
-    if (!product.id) return;
+    if (!currentProduct.id) return;
 
     setIsGenerating(true);
     try {
       const response = await supabase.functions.invoke('generate-product-blog', {
         body: {
-          productId: product.id,
+          productId: currentProduct.id,
           blogType: selectedType
         }
       });
@@ -70,13 +71,45 @@ export const ProductBlogGeneratorModal = ({
         throw new Error(response.error.message);
       }
 
+      // Buscar os dados atualizados do produto
+      const { data: updatedProduct, error: fetchError } = await supabase
+        .from('products_repository')
+        .select('*')
+        .eq('id', currentProduct.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Erro ao buscar produto atualizado:', fetchError);
+      } else {
+        // Mapear os dados para corresponder à interface Product
+        const mappedProduct: Product = {
+          id: updatedProduct.id,
+          name: updatedProduct.name,
+          description: updatedProduct.description,
+          price: updatedProduct.price,
+          currency: updatedProduct.currency,
+          category: updatedProduct.category,
+          subcategory: updatedProduct.subcategory,
+          keywords: Array.isArray(updatedProduct.keywords) ? 
+            updatedProduct.keywords.filter((k): k is string => typeof k === 'string') : [],
+          benefits: Array.isArray(updatedProduct.benefits) ? 
+            updatedProduct.benefits.filter((b): b is string => typeof b === 'string') : [],
+          features: Array.isArray(updatedProduct.features) ? 
+            updatedProduct.features.filter((f): f is string => typeof f === 'string') : [],
+          individual_blog_content: typeof updatedProduct.individual_blog_content === 'object' && 
+            updatedProduct.individual_blog_content !== null ? 
+            updatedProduct.individual_blog_content as any : undefined
+        };
+        setCurrentProduct(mappedProduct);
+      }
+
       toast({
         title: "Blog gerado com sucesso!",
-        description: `Blog ${selectedType} criado para ${product.name}`,
+        description: `Blog ${selectedType} criado para ${currentProduct.name}`,
       });
 
       onBlogGenerated();
-      onOpenChange(false);
+      // Não fechar o modal para mostrar o conteúdo gerado
     } catch (error) {
       console.error('Erro ao gerar blog:', error);
       toast({
@@ -110,7 +143,7 @@ export const ProductBlogGeneratorModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Gerar Blog IA - {product.name}
+            Gerar Blog IA - {currentProduct.name}
           </DialogTitle>
         </DialogHeader>
 
@@ -186,19 +219,19 @@ export const ProductBlogGeneratorModal = ({
                       <div className="space-y-3">
                         <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
                           <pre className="text-sm whitespace-pre-wrap font-sans">
-                            {product.individual_blog_content?.commercial}
+                            {currentProduct.individual_blog_content?.commercial}
                           </pre>
                         </div>
                         <div className="flex gap-2">
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => navigator.clipboard.writeText(product.individual_blog_content?.commercial || '')}
+                            onClick={() => navigator.clipboard.writeText(currentProduct.individual_blog_content?.commercial || '')}
                           >
                             Copiar
                           </Button>
                           <div className="text-xs text-muted-foreground flex items-center">
-                            {product.individual_blog_content?.commercial?.length || 0} caracteres
+                            {currentProduct.individual_blog_content?.commercial?.length || 0} caracteres
                           </div>
                         </div>
                       </div>
@@ -259,19 +292,19 @@ export const ProductBlogGeneratorModal = ({
                       <div className="space-y-3">
                         <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
                           <pre className="text-sm whitespace-pre-wrap font-sans">
-                            {product.individual_blog_content?.technical}
+                            {currentProduct.individual_blog_content?.technical}
                           </pre>
                         </div>
                         <div className="flex gap-2">
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => navigator.clipboard.writeText(product.individual_blog_content?.technical || '')}
+                            onClick={() => navigator.clipboard.writeText(currentProduct.individual_blog_content?.technical || '')}
                           >
                             Copiar
                           </Button>
                           <div className="text-xs text-muted-foreground flex items-center">
-                            {product.individual_blog_content?.technical?.length || 0} caracteres
+                            {currentProduct.individual_blog_content?.technical?.length || 0} caracteres
                           </div>
                         </div>
                       </div>
