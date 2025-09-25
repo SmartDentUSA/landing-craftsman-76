@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Brain, FileText, Search, MessageSquare, Video, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3 } from 'lucide-react';
+import { PromptEditModal } from './PromptEditModal';
 
 const EDGE_FUNCTIONS = [
   {
@@ -61,6 +63,8 @@ const EDGE_FUNCTIONS = [
 ];
 
 export const PromptsAIManager = () => {
+  const [editingFunction, setEditingFunction] = useState<typeof EDGE_FUNCTIONS[0] | null>(null);
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -84,6 +88,15 @@ export const PromptsAIManager = () => {
                       </Badge>
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingFunction(func)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    Editar
+                  </Button>
                 </div>
                 <CardDescription className="text-sm">
                   {func.description}
@@ -135,6 +148,12 @@ export const PromptsAIManager = () => {
           </div>
         </CardContent>
       </Card>
+
+      <PromptEditModal
+        edgeFunction={editingFunction}
+        open={!!editingFunction}
+        onOpenChange={(open) => !open && setEditingFunction(null)}
+      />
     </div>
   );
 };
