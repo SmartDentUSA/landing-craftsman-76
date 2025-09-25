@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePromptsConfiguration } from "@/hooks/usePromptsConfiguration";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { TagInput } from "@/components/ui/tag-input";
+import { BlogConsolidationInterface } from "./BlogConsolidationInterface";
 
 interface BlogEditorSectionProps {
   landingPageId: string;
@@ -39,6 +40,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blogGenerated, setBlogGenerated] = useState(false);
   
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
@@ -136,6 +138,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
           keywords: selectedProductIds?.slice(0, 5) || []
         }));
 
+        setBlogGenerated(true);
+
         console.log("✅ Blog estratégico gerado com sucesso");
         
         toast({
@@ -226,15 +230,16 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Editor de Blog</CardTitle>
-            {generating && <Loader2 className="h-4 w-4 animate-spin" />}
-            {saving && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
-          </div>
+    <div className="space-y-6">
+      <Card className="w-full">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Editor de Blog</CardTitle>
+              {generating && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
+            </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -357,5 +362,15 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         </div>
       </CardContent>
     </Card>
+
+    {/* Curadoria de Blogs dos Produtos */}
+    <BlogConsolidationInterface
+      landingPageId={landingPageId}
+      selectedProductIds={selectedProductIds || []}
+      onGenerateBlog={generateBlogContent}
+      isGenerating={generating}
+      blogGenerated={blogGenerated}
+    />
+  </div>
   );
 }
