@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.import-repository-csv]
 verify_jwt = true
+
+[functions.generate-social-content]
+verify_jwt = false

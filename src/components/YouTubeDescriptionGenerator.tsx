@@ -240,8 +240,14 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
   const isOverLimit = (text: string) => getCharacterCount(text) > 5000;
 
   const formatDescription = (content: any) => {
-    if (typeof content === 'string') return content;
-    if (content?.description) return content.description;
+    if (typeof content === 'string') {
+      // Converte \n literais em quebras de linha reais se necessário
+      return content.replace(/\\n/g, '\n');
+    }
+    if (content?.description) {
+      // Converte \n literais em quebras de linha reais se necessário
+      return content.description.replace(/\\n/g, '\n');
+    }
     return JSON.stringify(content, null, 2);
   };
 

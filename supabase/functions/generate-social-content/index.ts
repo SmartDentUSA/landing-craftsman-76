@@ -185,12 +185,17 @@ Informações do Produto:
 Informações da Empresa:
 - Template de Rodapé: {company.youtube_company_footer}
 
-Retorne no formato JSON:
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
+Use quebras de linha (\\n) que serão convertidas automaticamente para quebras reais na exibição.
+
+Exemplo do formato JSON esperado:
 {
   "title_suggestion": "Sugestão de título SEO otimizado",
-  "description": "Descrição completa formatada incluindo o template de rodapé",
+  "description": "Descrição completa formatada incluindo o template de rodapé com quebras de linha usando \\n",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
-}`;
+}
+
+IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`;
   }
 }
 
@@ -221,6 +226,21 @@ function processPromptVariables(prompt: string, product: any, company: any): str
   return processedPrompt;
 }
 
+function cleanJsonResponse(content: string): string {
+  // Remove blocos de código markdown
+  let cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  
+  // Remove texto adicional antes e depois do JSON
+  const jsonStart = cleanContent.indexOf('{');
+  const jsonEnd = cleanContent.lastIndexOf('}') + 1;
+  
+  if (jsonStart !== -1 && jsonEnd > jsonStart) {
+    cleanContent = cleanContent.substring(jsonStart, jsonEnd);
+  }
+  
+  return cleanContent.trim();
+}
+
 async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whatsapp' | 'youtube'): Promise<any> {
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -244,17 +264,33 @@ async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whats
   }
 
   const data = await response.json();
-  const content = data.choices[0].message.content;
+  let content = data.choices[0].message.content;
+
+  console.log('Raw content from DeepSeek:', content);
 
   // Para YouTube, tentar parsear como JSON
   if (type === 'youtube') {
     try {
-      return JSON.parse(content);
-    } catch {
-      // Se não conseguir parsear, retornar como texto simples
+      // Limpar resposta antes de parsear
+      const cleanedContent = cleanJsonResponse(content);
+      console.log('Cleaned content:', cleanedContent);
+      
+      const parsed = JSON.parse(cleanedContent);
+      
+      // Converter \n em quebras de linha reais na descrição
+      if (parsed.description) {
+        parsed.description = parsed.description.replace(/\\n/g, '\n');
+      }
+      
+      return parsed;
+    } catch (error) {
+      console.error('JSON parse error:', error);
+      console.log('Failed to parse content:', content);
+      
+      // Se não conseguir parsear, retornar como texto simples com fallback
       return {
         title_suggestion: "Título sugerido não disponível",
-        description: content,
+        description: content.replace(/\\n/g, '\n'),
         tags: []
       };
     }
