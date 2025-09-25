@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Settings, Sparkles, Clock, Link, ExternalLink } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { FileText, Settings, Sparkles, Clock, Link, ExternalLink, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { IntelligentLinksManager } from "@/components/IntelligentLinksManager";
@@ -45,6 +46,9 @@ export const ProductBlogGeneratorModal = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedType, setSelectedType] = useState<'commercial' | 'technical'>('commercial');
   const [currentProduct, setCurrentProduct] = useState(product);
+  const [isEditingCommercial, setIsEditingCommercial] = useState(false);
+  const [isEditingTechnical, setIsEditingTechnical] = useState(false);
+  const [editingContent, setEditingContent] = useState('');
   const { toast } = useToast();
 
   // Sincronizar dados do produto quando props mudam
@@ -221,6 +225,67 @@ export const ProductBlogGeneratorModal = ({
     }
   };
 
+  const handleStartEdit = (type: 'commercial' | 'technical') => {
+    const content = currentProduct.individual_blog_content?.[type] || '';
+    setEditingContent(content);
+    if (type === 'commercial') {
+      setIsEditingCommercial(true);
+    } else {
+      setIsEditingTechnical(true);
+    }
+  };
+
+  const handleCancelEdit = (type: 'commercial' | 'technical') => {
+    setEditingContent('');
+    if (type === 'commercial') {
+      setIsEditingCommercial(false);
+    } else {
+      setIsEditingTechnical(false);
+    }
+  };
+
+  const handleSaveEdit = async (type: 'commercial' | 'technical') => {
+    if (!currentProduct.id) return;
+
+    try {
+      const updatedContent = {
+        ...currentProduct.individual_blog_content,
+        [type]: editingContent,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ individual_blog_content: updatedContent })
+        .eq('id', currentProduct.id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setCurrentProduct(prev => ({
+        ...prev,
+        individual_blog_content: updatedContent
+      }));
+
+      // Sair do modo de edição
+      handleCancelEdit(type);
+
+      toast({
+        title: "Conteúdo atualizado",
+        description: `Blog ${type} editado e salvo com sucesso.`,
+      });
+
+      onBlogGenerated();
+    } catch (error) {
+      console.error('Erro ao salvar conteúdo editado:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as alterações.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const blogTypeConfig = {
     commercial: {
       title: "Blog Comercial",
@@ -316,23 +381,67 @@ export const ProductBlogGeneratorModal = ({
                   <CardContent>
                     {hasExistingBlog('commercial') ? (
                       <div className="space-y-3">
-                        <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
-                          <pre className="text-sm whitespace-pre-wrap font-sans">
-                            {currentProduct.individual_blog_content?.commercial}
-                          </pre>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => navigator.clipboard.writeText(currentProduct.individual_blog_content?.commercial || '')}
-                          >
-                            Copiar
-                          </Button>
-                          <div className="text-xs text-muted-foreground flex items-center">
-                            {currentProduct.individual_blog_content?.commercial?.length || 0} caracteres
-                          </div>
-                        </div>
+                        {isEditingCommercial ? (
+                          <>
+                            <Textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              className="min-h-60 text-sm font-mono"
+                              placeholder="Edite o conteúdo do blog comercial..."
+                            />
+                            <div className="flex gap-2 justify-between">
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm"
+                                  onClick={() => handleSaveEdit('commercial')}
+                                  disabled={!editingContent.trim()}
+                                >
+                                  <Save className="h-4 w-4 mr-1" />
+                                  Salvar
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleCancelEdit('commercial')}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancelar
+                                </Button>
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center">
+                                {editingContent.length} caracteres
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
+                              <pre className="text-sm whitespace-pre-wrap font-sans">
+                                {currentProduct.individual_blog_content?.commercial}
+                              </pre>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigator.clipboard.writeText(currentProduct.individual_blog_content?.commercial || '')}
+                              >
+                                Copiar
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleStartEdit('commercial')}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                              <div className="text-xs text-muted-foreground flex items-center">
+                                {currentProduct.individual_blog_content?.commercial?.length || 0} caracteres
+                              </div>
+                            </div>
+                          </>
+                        )}
                         
                         {/* Gerenciador de Links Inteligentes */}
                         <div className="mt-3">
@@ -400,23 +509,67 @@ export const ProductBlogGeneratorModal = ({
                   <CardContent>
                     {hasExistingBlog('technical') ? (
                       <div className="space-y-3">
-                        <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
-                          <pre className="text-sm whitespace-pre-wrap font-sans">
-                            {currentProduct.individual_blog_content?.technical}
-                          </pre>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => navigator.clipboard.writeText(currentProduct.individual_blog_content?.technical || '')}
-                          >
-                            Copiar
-                          </Button>
-                          <div className="text-xs text-muted-foreground flex items-center">
-                            {currentProduct.individual_blog_content?.technical?.length || 0} caracteres
-                          </div>
-                        </div>
+                        {isEditingTechnical ? (
+                          <>
+                            <Textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              className="min-h-60 text-sm font-mono"
+                              placeholder="Edite o conteúdo do blog técnico..."
+                            />
+                            <div className="flex gap-2 justify-between">
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm"
+                                  onClick={() => handleSaveEdit('technical')}
+                                  disabled={!editingContent.trim()}
+                                >
+                                  <Save className="h-4 w-4 mr-1" />
+                                  Salvar
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleCancelEdit('technical')}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancelar
+                                </Button>
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center">
+                                {editingContent.length} caracteres
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
+                              <pre className="text-sm whitespace-pre-wrap font-sans">
+                                {currentProduct.individual_blog_content?.technical}
+                              </pre>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigator.clipboard.writeText(currentProduct.individual_blog_content?.technical || '')}
+                              >
+                                Copiar
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleStartEdit('technical')}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                              <div className="text-xs text-muted-foreground flex items-center">
+                                {currentProduct.individual_blog_content?.technical?.length || 0} caracteres
+                              </div>
+                            </div>
+                          </>
+                        )}
                         
                         {/* Gerenciador de Links Inteligentes */}
                         <div className="mt-3">
