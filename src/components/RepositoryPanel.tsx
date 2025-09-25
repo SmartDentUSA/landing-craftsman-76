@@ -67,6 +67,12 @@ interface Product {
   resource_cta3?: { label: string; url: string; visible: boolean };
   // Offer discount CTA
   offer_discount_cta?: { label: string; url: string; visible: boolean };
+  // Blog content gerado por IA
+  individual_blog_content?: {
+    commercial?: string | null;
+    technical?: string | null;
+    generated_at?: string | null;
+  };
 }
 
 interface ManualReview {
@@ -315,7 +321,9 @@ export function RepositoryPanel({
         resource_cta1: (data as any).resource_cta1 || { label: '', url: '', visible: false },
         resource_cta2: (data as any).resource_cta2 || { label: '', url: '', visible: false },
         resource_cta3: (data as any).resource_cta3 || { label: '', url: '', visible: false },
-        offer_discount_cta: (data as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false }
+        offer_discount_cta: (data as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
+        // Blog content gerado por IA
+        individual_blog_content: (data.individual_blog_content as any) || { commercial: null, technical: null, generated_at: null }
       }));
       
       setProducts(formattedProducts);
