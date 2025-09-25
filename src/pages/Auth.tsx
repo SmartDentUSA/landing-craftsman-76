@@ -16,29 +16,34 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check current session
+    let mounted = true;
+
+    // Check current session without immediate navigation
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      if (mounted && session?.user) {
         setUser(session.user);
-        navigate("/dashboard");
+        // Let ProtectedRoute handle navigation to avoid conflicts
       }
     };
 
     checkSession();
 
-    // Listen for auth changes
+    // Listen for auth changes - simplified
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          navigate("/dashboard");
+        if (mounted) {
+          setUser(session?.user ?? null);
+          // Remove automatic navigation - let ProtectedRoute handle it
         }
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // Remove navigate dependency
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

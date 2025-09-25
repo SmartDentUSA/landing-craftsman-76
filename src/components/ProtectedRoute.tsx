@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
@@ -14,18 +14,26 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const hasNavigated = useRef(false);
 
   // Simple role cache to avoid excessive RPC calls
   const [roleCache, setRoleCache] = useState<{role: 'admin' | 'user', timestamp: number} | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
       try {
         // Get current session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
+        if (!mounted) return;
+
         if (!session?.user) {
-          navigate("/auth");
+          if (!hasNavigated.current) {
+            hasNavigated.current = true;
+            navigate("/auth", { replace: true });
+          }
           return;
         }
 
@@ -39,48 +47,74 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
           return;
         }
 
-        // Check if user has admin role
-        const { data: isAdmin, error: roleError } = await supabase
-          .rpc('has_role', { 
-            _user_id: session.user.id, 
-            _role: 'admin' 
-          });
-
-        let role: 'admin' | 'user';
+        // Check if user has admin role with fallback
+        let role: 'admin' | 'user' = 'user';
         
-        if (roleError) {
+        try {
+          const { data: isAdmin, error: roleError } = await supabase
+            .rpc('has_role', { 
+              _user_id: session.user.id, 
+              _role: 'admin' 
+            });
+
+          if (!roleError && isAdmin) {
+            role = 'admin';
+          } else {
+            // Fallback for known admin emails
+            const isKnownAdmin = session.user.email === 'danilohen@gmail.com' || 
+                                 session.user.email?.includes('admin');
+            role = isKnownAdmin ? 'admin' : 'user';
+          }
+        } catch (rpcError) {
+          console.warn('RPC has_role failed, using fallback:', rpcError);
           // Fallback for known admin emails
           const isKnownAdmin = session.user.email === 'danilohen@gmail.com' || 
                                session.user.email?.includes('admin');
           role = isKnownAdmin ? 'admin' : 'user';
-        } else {
-          role = isAdmin ? 'admin' : 'user';
         }
+
+        if (!mounted) return;
 
         setUserRole(role);
         setRoleCache({ role, timestamp: now });
         setLoading(false);
       } catch (error) {
         console.error('Authentication check failed:', error);
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     checkAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes with debouncing
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!mounted) return;
+        
+        // Reset navigation flag on auth changes
+        hasNavigated.current = false;
+        
         if (!session?.user) {
-          navigate("/auth");
+          setUser(null);
+          setUserRole(null);
+          if (!hasNavigated.current) {
+            hasNavigated.current = true;
+            navigate("/auth", { replace: true });
+          }
         } else {
           setUser(session.user);
+          // Let the main auth check handle role verification
         }
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, [navigate, requiredRole]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // Remove navigate dependency to prevent loops
 
   if (loading) {
     return (
