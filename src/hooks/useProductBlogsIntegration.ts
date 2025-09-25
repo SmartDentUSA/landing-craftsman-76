@@ -53,6 +53,12 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     }
   };
 
+  // Extract title from markdown content
+  const extractTitleFromMarkdown = (content: string): string | null => {
+    const titleMatch = content.match(/^# (.+)$/m);
+    return titleMatch ? titleMatch[1].trim() : null;
+  };
+
   // Get blog consolidation preferences from localStorage
   const getBlogPreferences = (): BlogConsolidationPreferences => {
     const savedPreferences = localStorage.getItem('blogConsolidationPreferences');
@@ -68,9 +74,10 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       const productPrefs = preferences[product.id];
       
       if (productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
+        const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
         productBlogs.push({
           id: `${product.id}-commercial`,
-          title: `${product.name} - Análise Comercial`,
+          title: extractedTitle || `${product.name} - Análise Comercial`,
           content: product.individual_blog_content.commercial,
           type: 'commercial',
           productId: product.id,
@@ -80,9 +87,10 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       }
       
       if (productPrefs?.useTechnical && product.individual_blog_content?.technical) {
+        const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
         productBlogs.push({
           id: `${product.id}-technical`,
-          title: `${product.name} - Análise Técnica`,
+          title: extractedTitle || `${product.name} - Análise Técnica`,
           content: product.individual_blog_content.technical,
           type: 'technical',
           productId: product.id,
