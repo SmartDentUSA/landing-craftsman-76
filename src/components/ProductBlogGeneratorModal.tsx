@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Settings, Sparkles, Clock, Link, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { IntelligentLinksManager } from "@/components/IntelligentLinksManager";
 
 interface Product {
   id: string;
@@ -67,6 +68,44 @@ export const ProductBlogGeneratorModal = ({
 
   const hasIntelligentLinks = (type: 'commercial' | 'technical') => {
     return getLinksCount(type) > 0;
+  };
+
+  const updateProductLinks = async (type: 'commercial' | 'technical', links: Record<string, string>) => {
+    if (!currentProduct.id) return;
+
+    try {
+      const linksKey = type === 'commercial' ? 'commercial_links' : 'technical_links';
+      const updatedContent = {
+        ...currentProduct.individual_blog_content,
+        [linksKey]: links,
+        _links_generated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ individual_blog_content: updatedContent })
+        .eq('id', currentProduct.id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setCurrentProduct(prev => ({
+        ...prev,
+        individual_blog_content: updatedContent
+      }));
+
+      toast({
+        title: "Links atualizados",
+        description: `Links inteligentes do blog ${type} salvos com sucesso.`,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar links:', error);
+      toast({
+        title: "Erro ao salvar links",
+        description: "Não foi possível salvar os links inteligentes.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleGenerateBlog = async () => {
@@ -251,29 +290,16 @@ export const ProductBlogGeneratorModal = ({
                           </div>
                         </div>
                         
-                        {/* Links Inteligentes */}
-                        {hasIntelligentLinks('commercial') && (
-                          <Card className="mt-3">
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm flex items-center gap-2">
-                                <Link className="h-4 w-4 text-primary" />
-                                Links Inteligentes Aplicados ({getLinksCount('commercial')})
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="space-y-2">
-                                {Object.entries(getIntelligentLinks('commercial')).map(([keyword, url]) => (
-                                  <div key={keyword} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
-                                    <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-sm font-medium text-primary">{keyword}</span>
-                                    <span className="text-xs text-muted-foreground">→</span>
-                                    <span className="text-xs text-muted-foreground truncate">{url}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
+                        {/* Gerenciador de Links Inteligentes */}
+                        <div className="mt-3">
+                          <IntelligentLinksManager
+                            blogContent={currentProduct.individual_blog_content?.commercial || ''}
+                            existingLinks={getIntelligentLinks('commercial')}
+                            onLinksChange={(links) => updateProductLinks('commercial', links)}
+                            blogType="commercial"
+                            productName={currentProduct.name}
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
@@ -348,29 +374,16 @@ export const ProductBlogGeneratorModal = ({
                           </div>
                         </div>
                         
-                        {/* Links Inteligentes */}
-                        {hasIntelligentLinks('technical') && (
-                          <Card className="mt-3">
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm flex items-center gap-2">
-                                <Link className="h-4 w-4 text-primary" />
-                                Links Inteligentes Aplicados ({getLinksCount('technical')})
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="space-y-2">
-                                {Object.entries(getIntelligentLinks('technical')).map(([keyword, url]) => (
-                                  <div key={keyword} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
-                                    <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-sm font-medium text-primary">{keyword}</span>
-                                    <span className="text-xs text-muted-foreground">→</span>
-                                    <span className="text-xs text-muted-foreground truncate">{url}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
+                        {/* Gerenciador de Links Inteligentes */}
+                        <div className="mt-3">
+                          <IntelligentLinksManager
+                            blogContent={currentProduct.individual_blog_content?.technical || ''}
+                            existingLinks={getIntelligentLinks('technical')}
+                            onLinksChange={(links) => updateProductLinks('technical', links)}
+                            blogType="technical"
+                            productName={currentProduct.name}
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
