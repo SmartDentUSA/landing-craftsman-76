@@ -201,8 +201,15 @@ async function generateProductBlog(
     values: companyProfile.brand_values || ''
   } : null;
 
-  // Se há um prompt customizado, use-o; senão use o prompt padrão
-  const systemPrompt = customPrompt || `${currentPrompt.role}
+  // Se há um prompt customizado, processa variáveis; senão usa o prompt padrão
+  let systemPrompt;
+  
+  if (customPrompt) {
+    // Processa variáveis no prompt customizado
+    systemPrompt = processPromptVariables(customPrompt, productData, companyData);
+    console.log('📝 Using custom prompt with variables processed');
+  } else {
+    systemPrompt = `${currentPrompt.role}
 
 OBJETIVO: ${currentPrompt.objective}
 
@@ -238,6 +245,7 @@ INSTRUÇÕES ESPECÍFICAS:
 9. Use formato markdown limpo e profissional
 
 Gere o blog post completo agora:`;
+  }
 
   console.log(`🤖 Generating ${blogType} blog for product: ${product.name}`);
 
@@ -273,6 +281,38 @@ Gere o blog post completo agora:`;
   console.log(`✅ Blog content generated: ${blogContent.length} characters`);
   
   return blogContent.trim();
+}
+
+// Função para processar variáveis no prompt customizado
+function processPromptVariables(prompt: string, productData: any, companyData: any): string {
+  let processedPrompt = prompt;
+  
+  // Formatar dados do produto para substituição
+  const formattedProductData = `
+Nome: ${productData.name}
+Descrição: ${productData.description}
+Categoria: ${productData.category}
+Subcategoria: ${productData.subcategory}
+Preço: ${productData.price}
+Keywords: ${productData.keywords}
+Benefícios: ${productData.benefits}
+Características: ${productData.features}
+Pitch de Vendas: ${productData.salesPitch}`.trim();
+
+  // Formatar dados da empresa para substituição
+  const formattedCompanyData = companyData ? `
+Nome: ${companyData.name}
+Descrição: ${companyData.description}
+Missão: ${companyData.mission}
+Valores: ${companyData.values}`.trim() : 'Dados da empresa não disponíveis';
+
+  // Substituir variáveis no prompt
+  processedPrompt = processedPrompt.replace(/{productData}/g, formattedProductData);
+  processedPrompt = processedPrompt.replace(/{companyData}/g, formattedCompanyData);
+  
+  console.log('🔄 Variables processed in custom prompt');
+  
+  return processedPrompt;
 }
 
 // Função para gerar links inteligentes baseados no conteúdo do blog
