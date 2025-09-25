@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle } from 'lucide-react';
 import { PromptEditModal } from './PromptEditModal';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
+import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
 
 const EDGE_FUNCTIONS = [
   {
@@ -155,14 +156,14 @@ export const PromptsAIManager = () => {
           const IconComponent = func.icon;
           return (
             <Card key={func.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <IconComponent className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{func.name}</CardTitle>
+                      <h3 className="font-medium text-sm">{func.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge 
                           variant={func.status === 'active' ? 'default' : 'secondary'}
@@ -185,11 +186,6 @@ export const PromptsAIManager = () => {
                           </Badge>
                         )}
                       </div>
-                      {!loading && getLastUpdated(func.id) && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Última atualização: {getLastUpdated(func.id)}
-                        </p>
-                      )}
                     </div>
                   </div>
                   <Button
@@ -202,56 +198,19 @@ export const PromptsAIManager = () => {
                     Editar
                   </Button>
                 </div>
-                <CardDescription className="text-sm">
-                  {func.description}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Prompts ({func.prompts.length})</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {func.prompts.map((prompt) => (
-                      <Badge key={prompt} variant="outline" className="text-xs">
-                        {prompt}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Fontes de Dados ({func.dataSources.length})</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {func.dataSources.map((source) => (
-                      <Badge key={source} variant="secondary" className="text-xs">
-                        {source}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      <Card className="border-dashed border-2">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-2">
-            <Brain className="h-8 w-8 text-muted-foreground mx-auto" />
-            <h3 className="text-lg font-medium">Sistema de Prompts IA</h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Fase 1 concluída: Estrutura base criada. Próximas fases incluirão edição de prompts, 
-              controle granular de dados e sistema de backup automático.
-            </p>
-            <div className="flex justify-center space-x-2 mt-4">
-              <Badge variant="outline">✅ Fase 1: Estrutura Base</Badge>
-              <Badge variant="secondary">⏳ Fase 2: Leitura de Prompts</Badge>
-              <Badge variant="secondary">⏳ Fase 3: Sistema de Backup</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center">
+        <img 
+          src={sistemaPromptsAI} 
+          alt="Sistema de Prompts IA" 
+          className="max-w-sm w-full h-auto"
+        />
+      </div>
 
       <PromptEditModal
         edgeFunction={editingFunction}

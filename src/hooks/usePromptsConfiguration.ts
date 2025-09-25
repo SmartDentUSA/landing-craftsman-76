@@ -19,6 +19,8 @@ export const usePromptsConfiguration = () => {
   const { toast } = useToast();
 
   const loadConfigurations = async (edgeFunctionId?: string) => {
+    if (loading) return; // Evita múltiplas chamadas simultâneas
+    
     setLoading(true);
     try {
       let query = supabase.from('prompts_configuration').select('*');
@@ -31,7 +33,7 @@ export const usePromptsConfiguration = () => {
       
       if (error) throw error;
       
-      setConfigurations((data || []).map(item => ({
+      const processedData = (data || []).map(item => ({
         ...item,
         selected_data_sources: Array.isArray(item.selected_data_sources) 
           ? item.selected_data_sources.filter((s): s is string => typeof s === 'string')
@@ -46,7 +48,9 @@ export const usePromptsConfiguration = () => {
               ])
             )
           : {}
-      })));
+      }));
+      
+      setConfigurations(processedData);
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
       toast({
@@ -86,8 +90,8 @@ export const usePromptsConfiguration = () => {
         description: "A configuração do prompt foi salva com sucesso.",
       });
 
-      // Recarregar configurações
-      await loadConfigurations(edgeFunctionId);
+      // Recarregar apenas todas as configurações para evitar loops
+      await loadConfigurations();
       
       return true;
     } catch (error) {
