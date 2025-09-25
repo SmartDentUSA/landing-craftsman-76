@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ContentRequest {
-  type: 'google_ads' | 'blog_content' | 'seo_meta' | 'dual_blog_versions';
+  type: 'google_ads' | 'blog_content' | 'seo_meta' | 'dual_blog_versions' | 'strategic_blog';
   landingPageId: string;
   seoTitle?: string;
   seoDescription?: string;
@@ -18,6 +18,7 @@ interface ContentRequest {
   selectedProductIds?: string[]; // Specific product IDs to use
   landingPage?: any;
   include_offers?: boolean;
+  repositoryConfig?: any; // Configuration from prompts repository
 }
 
 interface AdCopies {
@@ -175,6 +176,9 @@ serve(async (req) => {
         break;
       case 'seo_meta':
         result = await generateSEOMeta(deepSeekApiKey, strategicContext);
+        break;
+      case 'strategic_blog':
+        result = await generateStrategicBlog(deepSeekApiKey, strategicContext, allProducts, request.repositoryConfig);
         break;
       case 'dual_blog_versions':
         result = await generateDualBlogVersions(deepSeekApiKey, strategicContext, allProducts);
@@ -1279,5 +1283,103 @@ async function parseAIDualResponse(response: Response, products: any[] = []): Pr
   } catch (e) {
     console.error('❌ Error parsing dual blog response:', e);
     throw new Error('Failed to parse dual blog content from AI response');
+  }
+}
+
+// Strategic Blog Generator Function
+async function generateStrategicBlog(
+  apiKey: string, 
+  strategicContext: any, 
+  products: any[], 
+  repositoryConfig?: any
+): Promise<BlogContent> {
+  console.log('🎯 Iniciando geração de blog estratégico');
+  
+  try {
+    // Use custom prompt from repository config if available
+    const customPrompt = repositoryConfig?.selectedPrompt || "Artigo Estratégico Contextual";
+    const selectedDataSources = repositoryConfig?.selectedDataSources || [];
+    
+    console.log(`📝 Usando prompt: "${customPrompt}"`);
+    console.log(`📊 Fontes de dados selecionadas:`, selectedDataSources);
+
+    // Build strategic prompt based on repository configuration
+    const prompt = `
+**PAPEL:** Especialista em Marketing Digital e SEO para ${strategicContext.companyName || 'empresa'}
+
+**OBJETIVO:** Criar um artigo estratégico contextual usando dados específicos conforme configuração do repositório
+
+**CONFIGURAÇÃO DO REPOSITÓRIO:**
+- Prompt Selecionado: ${customPrompt}
+- Fontes de Dados: ${selectedDataSources.join(', ')}
+
+**DADOS DISPONÍVEIS:**
+${JSON.stringify(strategicContext, null, 2)}
+
+**PRODUTOS SELECIONADOS (${products.length}):**
+${products.map(p => `- ${p.name}: ${p.description}`).join('\n')}
+
+**INSTRUÇÕES ESPECÍFICAS:**
+1. Crie um artigo contextual que combine dados da landing page com produtos selecionados
+2. Use APENAS informações fornecidas - PROIBIDO inventar dados
+3. Foque nas palavras-chave estratégicas identificadas
+4. Combine ofertas específicas com conteúdo educacional
+5. Gere título otimizado para SEO (50-60 caracteres)
+6. Meta description atrativa (140-160 caracteres)
+7. Use markdown para formatação
+
+**ESTRUTURA OBRIGATÓRIA:**
+{
+  "title": "Título SEO Otimizado",
+  "content": "# Título Principal\\n\\nConteúdo em markdown...",
+  "metaDescription": "Meta description atrativa",
+  "keywords": ["palavra1", "palavra2", "palavra3"]
+}
+
+**RESPONDA APENAS COM JSON VÁLIDO:**`;
+
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2500,
+        temperature: 0.7
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    console.log('📝 Resposta da IA recebida, processando...');
+    
+    // Parse and validate response
+    const parsed = JSON.parse(content);
+    
+    return {
+      title: parsed.title || 'Artigo Estratégico',
+      content: parsed.content || 'Conteúdo em desenvolvimento...',
+      metaDescription: parsed.metaDescription || 'Meta description estratégica',
+      keywords: parsed.keywords || []
+    };
+    
+  } catch (error) {
+    console.error('❌ Erro na geração de blog estratégico:', error);
+    
+    // Fallback content
+    return {
+      title: 'Artigo Estratégico',
+      content: '# Artigo Estratégico\n\nConteúdo sendo gerado...',
+      metaDescription: 'Artigo estratégico contextual',
+      keywords: ['estratégico', 'contextual']
+    };
   }
 }
