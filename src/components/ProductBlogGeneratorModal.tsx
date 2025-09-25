@@ -343,9 +343,9 @@ export const ProductBlogGeneratorModal = ({
             </TabsList>
 
             <TabsContent value="commercial" className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {/* Configuração do Blog */}
-                <Card className={blogTypeConfig.commercial.color}>
+                <Card className={`w-full ${blogTypeConfig.commercial.color}`}>
                   <CardHeader>
                     <CardTitle className="text-lg">{blogTypeConfig.commercial.title}</CardTitle>
                   </CardHeader>
@@ -376,7 +376,7 @@ export const ProductBlogGeneratorModal = ({
                 </Card>
 
                 {/* Conteúdo Gerado */}
-                <Card>
+                <Card className="w-full">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <FileText className="h-4 w-4" />
@@ -447,33 +447,33 @@ export const ProductBlogGeneratorModal = ({
                             </div>
                           </>
                         )}
-                        
-                        {/* Gerenciador de Links Inteligentes */}
-                        <div className="mt-4 border-t pt-4">
-                          <IntelligentLinksManager
-                            blogContent={currentProduct.individual_blog_content?.commercial || ''}
-                            existingLinks={getIntelligentLinks('commercial')}
-                            onLinksChange={(links) => updateProductLinks('commercial', links)}
-                            blogType="commercial"
-                            productName={currentProduct.name}
-                          />
-                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Nenhum blog comercial gerado ainda</p>
+                        <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Clique em "Gerar Blog" para criar o conteúdo comercial</p>
                       </div>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Gerenciador de Links Inteligentes */}
+                <div className="w-full">
+                  <IntelligentLinksManager
+                    blogContent={currentProduct.individual_blog_content?.commercial || ''}
+                    existingLinks={getIntelligentLinks('commercial')}
+                    onLinksChange={(links) => updateProductLinks('commercial', links)}
+                    blogType="commercial"
+                    productName={currentProduct.name}
+                  />
+                </div>
               </div>
             </TabsContent>
 
             <TabsContent value="technical" className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {/* Configuração do Blog */}
-                <Card className={blogTypeConfig.technical.color}>
+                <Card className={`w-full ${blogTypeConfig.technical.color}`}>
                   <CardHeader>
                     <CardTitle className="text-lg">{blogTypeConfig.technical.title}</CardTitle>
                   </CardHeader>
@@ -504,7 +504,7 @@ export const ProductBlogGeneratorModal = ({
                 </Card>
 
                 {/* Conteúdo Gerado */}
-                <Card>
+                <Card className="w-full">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <FileText className="h-4 w-4" />
@@ -575,26 +575,26 @@ export const ProductBlogGeneratorModal = ({
                             </div>
                           </>
                         )}
-                        
-                        {/* Gerenciador de Links Inteligentes */}
-                        <div className="mt-3">
-                          <IntelligentLinksManager
-                            blogContent={currentProduct.individual_blog_content?.technical || ''}
-                            existingLinks={getIntelligentLinks('technical')}
-                            onLinksChange={(links) => updateProductLinks('technical', links)}
-                            blogType="technical"
-                            productName={currentProduct.name}
-                          />
-                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Nenhum blog técnico gerado ainda</p>
+                        <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Clique em "Gerar Blog" para criar o conteúdo técnico</p>
                       </div>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Gerenciador de Links Inteligentes */}
+                <div className="w-full">
+                  <IntelligentLinksManager
+                    blogContent={currentProduct.individual_blog_content?.technical || ''}
+                    existingLinks={getIntelligentLinks('technical')}
+                    onLinksChange={(links) => updateProductLinks('technical', links)}
+                    blogType="technical"
+                    productName={currentProduct.name}
+                  />
+                </div>
               </div>
             </TabsContent>
           </Tabs>
