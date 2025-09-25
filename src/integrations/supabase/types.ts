@@ -199,6 +199,7 @@ export type Database = {
           website_url: string | null
           working_methodology: string | null
           youtube_channel: string | null
+          youtube_company_footer: string | null
         }
         Insert: {
           brand_values?: string | null
@@ -233,6 +234,7 @@ export type Database = {
           website_url?: string | null
           working_methodology?: string | null
           youtube_channel?: string | null
+          youtube_company_footer?: string | null
         }
         Update: {
           brand_values?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           website_url?: string | null
           working_methodology?: string | null
           youtube_channel?: string | null
+          youtube_company_footer?: string | null
         }
         Relationships: []
       }
@@ -513,6 +516,8 @@ export type Database = {
           updated_at: string
           use_in_ai_generation: boolean | null
           video_captions: Json | null
+          whatsapp_messages: Json | null
+          youtube_descriptions: Json | null
           youtube_videos: Json | null
         }
         Insert: {
@@ -556,6 +561,8 @@ export type Database = {
           updated_at?: string
           use_in_ai_generation?: boolean | null
           video_captions?: Json | null
+          whatsapp_messages?: Json | null
+          youtube_descriptions?: Json | null
           youtube_videos?: Json | null
         }
         Update: {
@@ -599,6 +606,8 @@ export type Database = {
           updated_at?: string
           use_in_ai_generation?: boolean | null
           video_captions?: Json | null
+          whatsapp_messages?: Json | null
+          youtube_descriptions?: Json | null
           youtube_videos?: Json | null
         }
         Relationships: []

@@ -484,6 +484,86 @@ Keywords: {keywords}
 Retorne apenas o JSON com as FAQs.`
   },
 
+  "generate-whatsapp-messages": {
+    "Mensagem Promocional WhatsApp": `Você é um especialista em marketing digital e comunicação para WhatsApp.
+
+Crie uma mensagem promocional otimizada para WhatsApp que seja envolvente e gere conversões.
+
+Informações do Produto:
+- Nome: {product.name}
+- Resumo Comercial: {product.sales_pitch}
+- Benefícios: {product.benefits}
+- URL do Produto: {product.product_url}
+- Categoria: {product.category}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+
+Template da Mensagem:
+🔥 [NOME DO PRODUTO] 🔥
+
+[RESUMO COMERCIAL EM 1-2 FRASES IMPACTANTES]
+
+✅ PRINCIPAIS BENEFÍCIOS:
+[LISTE ATÉ 10 BENEFÍCIOS COM EMOJIS RELEVANTES]
+
+🛒 Saiba mais → [LINK DO PRODUTO]
+
+#[EMPRESA] #[CATEGORIA]
+
+Instruções:
+1. Use emojis relevantes para cada benefício
+2. Mantenha linguagem conversacional e persuasiva
+3. Máximo 1000 caracteres (ideal para WhatsApp)
+4. Inclua call-to-action claro
+5. Use hashtags da empresa e categoria
+6. Foque nos benefícios mais atrativos
+7. Tom entusiasmado mas profissional
+
+Retorne apenas o texto da mensagem formatada, sem explicações.`
+  },
+
+  "generate-youtube-descriptions": {
+    "Descrição Completa YouTube": `Você é um especialista em criação de conteúdo para YouTube e SEO de vídeos.
+
+Gere uma descrição completa para vídeo do YouTube que otimize o alcance e engajamento.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Template de Rodapé: {company.youtube_company_footer}
+
+Template da Descrição:
+[NOME DO PRODUTO]
+
+[DESCRIÇÃO DETALHADA DO PRODUTO/VÍDEO - 2-3 PARÁGRAFOS ENVOLVENTES]
+
+[SEÇÃO DE BENEFÍCIOS PRINCIPAIS]
+
+[TEMPLATE DE RODAPÉ DA EMPRESA]
+
+Instruções:
+1. Primeira linha: Nome do produto (otimizado para SEO)
+2. Descrição: 2-3 parágrafos envolventes sobre o produto
+3. Benefícios: Lista dos principais benefícios
+4. Rodapé: Use o template da empresa fornecido
+5. Total máximo: 5000 caracteres
+6. Tom profissional mas acessível
+7. Inclua call-to-action para engagement
+
+Retorne no formato JSON:
+{
+  "title_suggestion": "Sugestão de título SEO otimizado",
+  "description": "Descrição completa formatada",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}`
+  },
+
   "generate-ad-copies": {
     "Cópias Google Ads": `Você é um especialista em Google Ads e copywriting persuasivo.
 

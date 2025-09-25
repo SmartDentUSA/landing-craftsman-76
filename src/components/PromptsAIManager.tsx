@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2 } from 'lucide-react';
+import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle } from 'lucide-react';
 import { PromptEditModal } from './PromptEditModal';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 
@@ -98,6 +98,34 @@ const EDGE_FUNCTIONS = [
       "Análise de Vídeo Técnico"
     ],
     dataSources: ["products_repository", "company_videos", "video_captions"]
+  },
+  {
+    id: "generate-whatsapp-messages",
+    name: "Gerador de Mensagens WhatsApp",
+    description: "Gera mensagens promocionais otimizadas para WhatsApp com emojis e CTAs.",
+    icon: MessageCircle,
+    status: "active" as const,
+    prompts: [
+      "Mensagem Promocional WhatsApp"
+    ],
+    dataSources: [
+      "products_repository",
+      "company_profile"
+    ]
+  },
+  {
+    id: "generate-youtube-descriptions",
+    name: "Gerador de Descrições YouTube",
+    description: "Gera descrições completas para vídeos no YouTube incluindo informações da empresa.",
+    icon: PlayCircle,
+    status: "active" as const,
+    prompts: [
+      "Descrição Completa YouTube"
+    ],
+    dataSources: [
+      "products_repository",
+      "company_profile"
+    ]
   }
 ];
 

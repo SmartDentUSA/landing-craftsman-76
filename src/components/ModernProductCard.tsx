@@ -15,10 +15,14 @@ import {
   X,
   Download,
   ShoppingCart,
-  FileText
+  FileText,
+  MessageCircle,
+  PlayCircle
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
+import { WhatsAppMessageGenerator } from "./WhatsAppMessageGenerator";
+import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { useState } from "react";
 
 interface Product {
@@ -77,6 +81,8 @@ export function ModernProductCard({
   onProductUpdate
 }: ModernProductCardProps) {
   const [showBlogModal, setShowBlogModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const score = calculateProductScore(product);
   
   const formatPrice = (price?: number, currency?: string) => {
@@ -229,6 +235,24 @@ export function ModernProductCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowWhatsAppModal(true)}
+            className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+            title="Gerar WhatsApp"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowYouTubeModal(true)}
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+            title="Gerar YouTube"
+          >
+            <PlayCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onEdit(product)}
             className="h-8 w-8 p-0"
           >
@@ -254,6 +278,22 @@ export function ModernProductCard({
           onProductUpdate?.();
           // Modal não fecha automaticamente para mostrar resultado
         }}
+      />
+
+      {/* Modal de Geração WhatsApp */}
+      <WhatsAppMessageGenerator
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        productId={product.id}
+        productName={product.name}
+      />
+
+      {/* Modal de Geração YouTube */}
+      <YouTubeDescriptionGenerator
+        isOpen={showYouTubeModal}
+        onClose={() => setShowYouTubeModal(false)}
+        productId={product.id}
+        productName={product.name}
       />
     </Card>
   );

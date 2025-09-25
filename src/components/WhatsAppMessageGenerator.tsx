@@ -1,0 +1,354 @@
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface WhatsAppMessage {
+  id: string;
+  content: string;
+  generated_at: string;
+  editable: boolean;
+}
+
+interface WhatsAppMessageGeneratorProps {
+  productId: string;
+  productName: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> = ({
+  productId,
+  productName,
+  isOpen,
+  onClose,
+}) => {
+  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [currentMessage, setCurrentMessage] = useState<string>('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      loadMessages();
+    }
+  }, [isOpen, productId]);
+
+  const loadMessages = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('products_repository')
+        .select('whatsapp_messages')
+        .eq('id', productId)
+        .single();
+
+      if (error) throw error;
+
+      const whatsappData = data.whatsapp_messages as any;
+      const messagesData = whatsappData?.messages || [];
+      setMessages(messagesData);
+      
+      if (messagesData.length > 0) {
+        setCurrentMessage(messagesData[0].content);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar mensagens:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as mensagens.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateNewMessage = async () => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-social-content', {
+        body: {
+          type: 'whatsapp',
+          productId: productId
+        }
+      });
+
+      if (error) throw error;
+
+      setCurrentMessage(data.content);
+      await loadMessages(); // Recarrega para pegar a mensagem salva
+
+      toast({
+        title: "Sucesso",
+        description: "Nova mensagem WhatsApp gerada!",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar mensagem:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar a mensagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyToClipboard = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast({
+        title: "Copiado!",
+        description: "Mensagem copiada para a área de transferência.",
+      });
+    } catch (error) {
+      console.error('Erro ao copiar:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar a mensagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startEditing = (message: WhatsAppMessage) => {
+    setEditingId(message.id);
+    setEditingContent(message.content);
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+
+    try {
+      // Atualizar na lista local
+      const updatedMessages = messages.map(msg => 
+        msg.id === editingId ? { ...msg, content: editingContent } : msg
+      );
+      
+      // Atualizar no banco
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ 
+          whatsapp_messages: { 
+            messages: updatedMessages, 
+            last_generated: new Date().toISOString() 
+          } as any
+        })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      setMessages(updatedMessages);
+      
+      // Se estamos editando a mensagem atual
+      if (editingId === messages[0]?.id) {
+        setCurrentMessage(editingContent);
+      }
+
+      setEditingId(null);
+      setEditingContent('');
+
+      toast({
+        title: "Salvo",
+        description: "Mensagem atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar edição:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a edição.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingContent('');
+  };
+
+  const getCharacterCount = (text: string) => text.length;
+  const isOverLimit = (text: string) => getCharacterCount(text) > 1000;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-green-600" />
+            Gerador de Mensagens WhatsApp - {productName}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Ações principais */}
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              onClick={generateNewMessage} 
+              disabled={isGenerating}
+              className="flex items-center gap-2"
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Gerar Nova Mensagem
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center gap-2"
+            >
+              <History className="h-4 w-4" />
+              {showHistory ? 'Ocultar' : 'Ver'} Histórico
+            </Button>
+          </div>
+
+          {/* Mensagem atual */}
+          {currentMessage && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-semibold">Mensagem Atual</h3>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(currentMessage)}
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="whitespace-pre-wrap font-mono text-sm">
+                    {currentMessage}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center mt-2">
+                  <Badge variant={isOverLimit(currentMessage) ? "destructive" : "secondary"}>
+                    {getCharacterCount(currentMessage)}/1000 caracteres
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Histórico de mensagens */}
+          {showHistory && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4">Histórico de Mensagens</h3>
+                
+                {isLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhuma mensagem gerada ainda.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message, index) => (
+                      <div key={message.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              Mensagem {index + 1}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(message.generated_at).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                          
+                          <div className="flex gap-1">
+                            {editingId === message.id ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={saveEdit}
+                                  disabled={isOverLimit(editingContent)}
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEdit}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => startEditing(message)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyToClipboard(message.content)}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {editingId === message.id ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              className="min-h-[200px] font-mono text-sm"
+                              placeholder="Edite a mensagem..."
+                            />
+                            <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
+                              {getCharacterCount(editingContent)}/1000 caracteres
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 border rounded p-3">
+                            <div className="whitespace-pre-wrap font-mono text-sm">
+                              {message.content}
+                            </div>
+                            <div className="mt-2">
+                              <Badge variant={isOverLimit(message.content) ? "destructive" : "secondary"}>
+                                {getCharacterCount(message.content)}/1000 caracteres
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
