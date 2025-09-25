@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
 import { useCallback } from 'react';
+import { ProductAISmartMerge } from './ProductAISmartMerge';
 
 interface Video {
   url: string;
@@ -1109,6 +1110,30 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               placeholder="Ex: preço de implante, melhor dentista, tratamento ortodôntico"
             />
           </div>
+
+          {/* AI Smart Merge System */}
+          {isEditing && product && (
+            <ProductAISmartMerge
+              productId={product.id || ''}
+              currentData={{
+                keywords: formData.keywords || [],
+                benefits: formData.benefits || [],
+                features: formData.features || [],
+                ai_generated_keywords: (product as any).ai_generated_keywords || false,
+                ai_generated_benefits: (product as any).ai_generated_benefits || false
+              }}
+              onDataUpdated={(updatedData) => {
+                setFormData(prev => ({
+                  ...prev,
+                  keywords: updatedData.keywords || [],
+                  benefits: updatedData.benefits || [],
+                  features: updatedData.features || [],
+                }));
+                setBenefits(updatedData.benefits || []);
+                setFeatures(updatedData.features || []);
+              }}
+            />
+          )}
 
           <div className="space-y-2">
             <Label>Benefícios</Label>

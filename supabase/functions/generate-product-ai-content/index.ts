@@ -10,6 +10,8 @@ const corsHeaders = {
 interface ProductAIRequest {
   productId?: string;
   generateAll?: boolean;
+  forceRegenerate?: boolean;
+  complementOnly?: boolean;
 }
 
 serve(async (req) => {
@@ -58,36 +60,54 @@ serve(async (req) => {
 
     for (const product of productsToProcess) {
       try {
-        console.log(`Generating AI content for product: ${product.name}`);
+        console.log(`Processing AI content for product: ${product.name}`);
         
         const updates: any = {};
         let needsUpdate = false;
 
-        // Generate benefits if not already AI-generated
-        if (!product.ai_generated_benefits || (product.benefits && product.benefits.length === 0)) {
-          const benefits = await generateProductBenefits(deepSeekApiKey, product);
-          if (benefits && benefits.length > 0) {
-            updates.benefits = benefits;
+        // Smart merge for benefits
+        const shouldGenerateBenefits = request.forceRegenerate || 
+          !product.ai_generated_benefits || 
+          (product.benefits && product.benefits.length === 0);
+          
+        if (shouldGenerateBenefits) {
+          const existingBenefits = product.benefits || [];
+          const newBenefits = await generateProductBenefits(deepSeekApiKey, product, existingBenefits, request.complementOnly);
+          
+          if (newBenefits && newBenefits.length > 0) {
+            updates.benefits = request.complementOnly ? [...existingBenefits, ...newBenefits] : newBenefits;
             updates.ai_generated_benefits = true;
             needsUpdate = true;
           }
         }
 
-        // Generate keywords if not already AI-generated
-        if (!product.ai_generated_keywords || (product.keywords && product.keywords.length === 0)) {
-          const keywords = await generateProductKeywords(deepSeekApiKey, product);
-          if (keywords && keywords.length > 0) {
-            updates.keywords = keywords;
+        // Smart merge for keywords
+        const shouldGenerateKeywords = request.forceRegenerate || 
+          !product.ai_generated_keywords || 
+          (product.keywords && product.keywords.length === 0);
+          
+        if (shouldGenerateKeywords) {
+          const existingKeywords = product.keywords || [];
+          const newKeywords = await generateProductKeywords(deepSeekApiKey, product, existingKeywords, request.complementOnly);
+          
+          if (newKeywords && newKeywords.length > 0) {
+            updates.keywords = request.complementOnly ? [...existingKeywords, ...newKeywords] : newKeywords;
             updates.ai_generated_keywords = true;
             needsUpdate = true;
           }
         }
 
-        // Generate features if empty
-        if (!product.features || product.features.length === 0) {
-          const features = await generateProductFeatures(deepSeekApiKey, product);
-          if (features && features.length > 0) {
-            updates.features = features;
+        // Smart merge for features
+        const shouldGenerateFeatures = request.forceRegenerate || 
+          !product.features || 
+          product.features.length === 0;
+          
+        if (shouldGenerateFeatures) {
+          const existingFeatures = product.features || [];
+          const newFeatures = await generateProductFeatures(deepSeekApiKey, product, existingFeatures, request.complementOnly);
+          
+          if (newFeatures && newFeatures.length > 0) {
+            updates.features = request.complementOnly ? [...existingFeatures, ...newFeatures] : newFeatures;
             needsUpdate = true;
           }
         }
@@ -157,8 +177,15 @@ serve(async (req) => {
   }
 });
 
-async function generateProductBenefits(apiKey: string, product: any): Promise<string[]> {
-  const prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:
+async function generateProductBenefits(apiKey: string, product: any, existingBenefits: string[] = [], complementOnly: boolean = false): Promise<string[]> {
+  const existingContext = existingBenefits.length > 0 ? 
+    `\n\nDADOS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingBenefits.join(', ')}` : '';
+  
+  const instruction = complementOnly && existingBenefits.length > 0 ? 
+    'Gere APENAS 3 benefícios complementares que NÃO duplicem os existentes e preencham lacunas identificadas:' :
+    'Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:';
+  
+  const prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -166,7 +193,7 @@ Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategory || 'Não informada'}
 Preço: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado'}
 
-Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:
+${instruction}
 
 ["benefício 1", "benefício 2", "benefício 3"]
 
@@ -199,8 +226,15 @@ Foque em:
   return await parseAIArrayResponse(response, 'benefits');
 }
 
-async function generateProductKeywords(apiKey: string, product: any): Promise<string[]> {
-  const prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:
+async function generateProductKeywords(apiKey: string, product: any, existingKeywords: string[] = [], complementOnly: boolean = false): Promise<string[]> {
+  const existingContext = existingKeywords.length > 0 ? 
+    `\n\nPALAVRAS-CHAVE MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingKeywords.join(', ')}` : '';
+  
+  const instruction = complementOnly && existingKeywords.length > 0 ? 
+    'Gere APENAS 3 palavras-chave complementares que NÃO duplicem as existentes:' :
+    'Gere APENAS um array JSON com 8-12 palavras-chave relevantes:';
+  
+  const prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -208,7 +242,7 @@ Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategory || 'Não informada'}
 Público-alvo: ${product.target_audience || 'Não informado'}
 
-Gere APENAS um array JSON com 8-12 palavras-chave relevantes:
+${instruction}
 
 ["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]
 
@@ -242,15 +276,22 @@ Inclua NESTA ORDEM DE PRIORIDADE:
   return await parseAIArrayResponse(response, 'keywords');
 }
 
-async function generateProductFeatures(apiKey: string, product: any): Promise<string[]> {
-  const prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA:
+async function generateProductFeatures(apiKey: string, product: any, existingFeatures: string[] = [], complementOnly: boolean = false): Promise<string[]> {
+  const existingContext = existingFeatures.length > 0 ? 
+    `\n\nCARACTERÍSTICAS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingFeatures.join(', ')}` : '';
+  
+  const instruction = complementOnly && existingFeatures.length > 0 ? 
+    'Gere APENAS 3 características complementares que NÃO duplicem as existentes:' :
+    'Gere APENAS um array JSON com 4-6 características específicas:';
+  
+  const prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategory || 'Não informada'}
 
-Gere APENAS um array JSON com 4-6 características específicas:
+${instruction}
 
 ["característica 1", "característica 2", "característica 3"]
 
