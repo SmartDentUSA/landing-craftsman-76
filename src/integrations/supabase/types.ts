@@ -627,6 +627,39 @@ export type Database = {
         }
         Relationships: []
       }
+      prompts_configuration: {
+        Row: {
+          created_at: string
+          custom_prompt: string
+          edge_function_id: string
+          id: string
+          prompt_name: string
+          selected_data_sources: Json
+          selected_fields: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_prompt: string
+          edge_function_id: string
+          id?: string
+          prompt_name: string
+          selected_data_sources?: Json
+          selected_fields?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_prompt?: string
+          edge_function_id?: string
+          id?: string
+          prompt_name?: string
+          selected_data_sources?: Json
+          selected_fields?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       publication_settings: {
         Row: {
           created_at: string

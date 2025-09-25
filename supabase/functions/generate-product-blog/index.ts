@@ -104,6 +104,20 @@ async function generateProductBlog(
   blogType: 'commercial' | 'technical'
 ): Promise<string> {
   
+  // Carregar prompts customizados do banco de dados
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  const { data: customPromptData } = await supabase
+    .from('prompts_configuration')
+    .select('custom_prompt')
+    .eq('edge_function_id', 'generate-product-blog')
+    .eq('prompt_name', blogType === 'commercial' ? 'Blog Comercial' : 'Blog Técnico')
+    .single();
+
+  const customPrompt = customPromptData?.custom_prompt;
+  
   const prompts = {
     commercial: {
       role: "Você é um especialista em marketing digital e copywriting comercial para produtos odontológicos.",
@@ -180,7 +194,8 @@ async function generateProductBlog(
     values: companyProfile.brand_values || ''
   } : null;
 
-  const systemPrompt = `${currentPrompt.role}
+  // Se há um prompt customizado, use-o; senão use o prompt padrão
+  const systemPrompt = customPrompt || `${currentPrompt.role}
 
 OBJETIVO: ${currentPrompt.objective}
 

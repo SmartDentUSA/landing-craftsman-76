@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, Eye, Database, FileText, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 
 interface EdgeFunction {
   id: string;
@@ -142,6 +143,24 @@ const DATA_SOURCES = {
     label: "Legendas de Vídeo",
     fields: [
       "caption_text", "video_url", "language", "extraction_method", "ai_analysis"
+    ]
+  },
+  approved_reviews: {
+    label: "Avaliações Aprovadas",
+    fields: [
+      "author_name", "rating", "review_text", "contextual_seo_info", "ai_keywords", "notes"
+    ]
+  },
+  key_opinion_leaders: {
+    label: "Key Opinion Leaders (KOLs)",
+    fields: [
+      "full_name", "specialty", "mini_cv", "photo_url", "website_url", "youtube_url", "instagram_url"
+    ]
+  },
+  selected_product_blogs: {
+    label: "Blogs de Produtos Selecionados",
+    fields: [
+      "commercial_blog_content", "technical_blog_content", "product_name", "product_category"
     ]
   }
 };
@@ -490,6 +509,7 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
   const [previewPrompt, setPreviewPrompt] = useState('');
   const [tokenCount, setTokenCount] = useState(0);
   const { toast } = useToast();
+  const { saveConfiguration, getConfigurationByFunction } = usePromptsConfiguration();
 
   useEffect(() => {
     if (edgeFunction) {
@@ -547,12 +567,27 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
     setTokenCount(Math.floor(preview.length / 4)); // Estimativa simples
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Configuração Salva",
-      description: "As configurações do prompt foram salvas com sucesso.",
-    });
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!edgeFunction) return;
+    
+    try {
+      // Salvar configurações para cada prompt customizado
+      for (const [promptName, customPrompt] of Object.entries(customPrompts)) {
+        if (customPrompt.trim()) {
+          await saveConfiguration(
+            edgeFunction.id,
+            promptName,
+            customPrompt,
+            edgeFunction.dataSources,
+            selectedFields
+          );
+        }
+      }
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+    }
   };
 
   const handleReset = () => {
