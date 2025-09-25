@@ -75,8 +75,14 @@ export const ProductBlogGeneratorModal = ({
 
     try {
       const linksKey = type === 'commercial' ? 'commercial_links' : 'technical_links';
+      const currentBlogContent = currentProduct.individual_blog_content?.[type] || '';
+      
+      // Aplicar links ao conteúdo atual usando a mesma lógica da edge function
+      const contentWithLinks = applyLinksToContent(currentBlogContent, links);
+      
       const updatedContent = {
         ...currentProduct.individual_blog_content,
+        [type]: contentWithLinks,
         [linksKey]: links,
         _links_generated_at: new Date().toISOString()
       };
@@ -96,7 +102,7 @@ export const ProductBlogGeneratorModal = ({
 
       toast({
         title: "Links atualizados",
-        description: `Links inteligentes do blog ${type} salvos com sucesso.`,
+        description: `Links inteligentes do blog ${type} aplicados e salvos com sucesso.`,
       });
     } catch (error) {
       console.error('Erro ao atualizar links:', error);
@@ -106,6 +112,44 @@ export const ProductBlogGeneratorModal = ({
         variant: "destructive",
       });
     }
+  };
+
+  // Função para aplicar links ao conteúdo (mesma lógica da edge function)
+  const applyLinksToContent = (content: string, links: Record<string, string>): string => {
+    let processedContent = content;
+    const linksApplied: string[] = [];
+    
+    // Aplicar links de forma controlada (máximo 2 links por parágrafo)
+    const paragraphs = content.split('\n\n');
+    
+    paragraphs.forEach((paragraph, index) => {
+      let linksInParagraph = 0;
+      let processedParagraph = paragraph;
+      
+      // Ordenar keywords por tamanho (maior primeiro) para evitar sobreposições
+      const sortedKeywords = Object.keys(links).sort((a, b) => b.length - a.length);
+      
+      sortedKeywords.forEach(keyword => {
+        if (linksInParagraph >= 2) return; // Máximo 2 links por parágrafo
+        if (linksApplied.includes(keyword)) return; // Não repetir mesmo link
+        
+        const url = links[keyword];
+        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(?<![\p{L}\p{N}])${escapedKeyword}(?![\p{L}\p{N}])`, 'giu');
+        
+        if (regex.test(processedParagraph)) {
+          processedParagraph = processedParagraph.replace(regex, (match) => {
+            linksInParagraph++;
+            linksApplied.push(keyword);
+            return `[${match}](${url} "Saiba mais sobre ${match}")`;
+          });
+        }
+      });
+      
+      paragraphs[index] = processedParagraph;
+    });
+    
+    return paragraphs.join('\n\n');
   };
 
   const handleGenerateBlog = async () => {

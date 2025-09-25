@@ -39,7 +39,8 @@ export function IntelligentLinksManager({
     const links: IntelligentLink[] = [];
     
     Object.entries(editingLinks).forEach(([keyword, url]) => {
-      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?<![\p{L}\p{N}])${escapedKeyword}(?![\p{L}\p{N}])`, 'giu');
       const matches = blogContent.match(regex);
       const occurrences = matches ? matches.length : 0;
       
@@ -57,7 +58,8 @@ export function IntelligentLinksManager({
     
     sortedKeywords.forEach(keyword => {
       const url = editingLinks[keyword];
-      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?<![\p{L}\p{N}])${escapedKeyword}(?![\p{L}\p{N}])`, 'giu');
       previewContent = previewContent.replace(regex, `**[${keyword}](${url})**`);
     });
     
@@ -71,7 +73,8 @@ export function IntelligentLinksManager({
     }
     
     const keyword = newKeyword.trim().toLowerCase();
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?<![\p{L}\p{N}])${escapedKeyword}(?![\p{L}\p{N}])`, 'giu');
     
     if (!regex.test(blogContent)) {
       toast.error("Palavra-chave não encontrada no conteúdo do blog");
@@ -202,9 +205,11 @@ export function IntelligentLinksManager({
                             placeholder="https://..."
                           />
                         </div>
-                        <Button onClick={() => setShowPreview(false)} className="w-full">
-                          Salvar
-                        </Button>
+                        <DialogTrigger asChild>
+                          <Button className="w-full">
+                            Salvar
+                          </Button>
+                        </DialogTrigger>
                       </div>
                     </DialogContent>
                   </Dialog>

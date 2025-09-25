@@ -59,7 +59,7 @@ serve(async (req) => {
     const blogContent = await generateProductBlog(deepSeekApiKey, product, companyProfile, blogType);
     
     // Gerar links inteligentes para o blog
-    const intelligentLinks = await generateIntelligentLinks(supabase, product, blogContent);
+    const intelligentLinks = await generateIntelligentLinks(supabase, product, blogContent, blogType);
     const blogWithLinks = await processContentWithIntelligentLinks(blogContent, intelligentLinks);
     
     // Atualizar produto com o novo blog e links
@@ -316,13 +316,20 @@ Valores: ${companyData.values}`.trim() : 'Dados da empresa não disponíveis';
 }
 
 // Função para gerar links inteligentes baseados no conteúdo do blog
-async function generateIntelligentLinks(supabase: any, product: any, blogContent: string): Promise<Record<string, string>> {
-  console.log('🔗 Generating intelligent links for blog content');
+async function generateIntelligentLinks(supabase: any, product: any, blogContent: string, blogType: string): Promise<Record<string, string>> {
+  console.log(`🔗 Generating intelligent links for ${blogType} blog content`);
   
   const intelligentLinks: Record<string, string> = {};
   
   try {
-    // Buscar landing page relacionada ao produto
+    // 1. Carregar links salvos existentes (prioridade máxima)
+    const linksKey = `${blogType}_links`;
+    const existingLinks = product.individual_blog_content?.[linksKey] || {};
+    if (Object.keys(existingLinks).length > 0) {
+      Object.assign(intelligentLinks, existingLinks);
+      console.log(`📎 Loaded ${Object.keys(existingLinks).length} existing custom links`);
+    }
+    // 2. Buscar landing page relacionada ao produto (prioridade média)
     if (product.source_landing_page_id) {
       const { data: landingPage } = await supabase
         .from('landing_pages')
@@ -331,11 +338,25 @@ async function generateIntelligentLinks(supabase: any, product: any, blogContent
         .single();
       
       if (landingPage?.data?.intelligent_links) {
-        Object.assign(intelligentLinks, landingPage.data.intelligent_links);
+        // Só adiciona se não existe link customizado para a mesma keyword
+        Object.entries(landingPage.data.intelligent_links).forEach(([keyword, url]) => {
+          if (!intelligentLinks[keyword] && typeof url === 'string') {
+            intelligentLinks[keyword] = url;
+          }
+        });
       }
     }
     
-    // Buscar produtos relacionados para criar links internos
+    // 3. Mapear nome do produto para sua URL (prioridade alta)
+    if (product.product_url && product.name) {
+      const productNameKey = product.name.toLowerCase();
+      if (!intelligentLinks[productNameKey] && isKeywordInContent(productNameKey, blogContent)) {
+        intelligentLinks[productNameKey] = product.product_url;
+        console.log(`🔗 Mapped product name "${product.name}" to product URL`);
+      }
+    }
+    
+    // 4. Buscar produtos relacionados para criar links internos (prioridade baixa)
     const { data: relatedProducts } = await supabase
       .from('products_repository')
       .select('name, product_url, category, subcategory')
@@ -347,23 +368,14 @@ async function generateIntelligentLinks(supabase: any, product: any, blogContent
       relatedProducts.forEach((relatedProduct: any) => {
         if (relatedProduct.product_url && relatedProduct.name) {
           const keyword = relatedProduct.name.toLowerCase();
-          if (blogContent.toLowerCase().includes(keyword)) {
+          if (!intelligentLinks[keyword] && isKeywordInContent(keyword, blogContent)) {
             intelligentLinks[keyword] = relatedProduct.product_url;
           }
         }
       });
     }
     
-    // Extrair palavras-chave do próprio produto para links
-    const extractKeywords = (text: string): string[] => {
-      if (!text) return [];
-      return text.toLowerCase()
-        .split(/[,\s]+/)
-        .map(k => k.trim())
-        .filter(k => k.length > 3);
-    };
-    
-    // Adicionar links para keywords do produto (para outras seções do site)
+    // 5. Mapear keywords do produto para sua URL (se disponível) ou categoria (prioridade baixa)
     const productKeywords = [
       ...(Array.isArray(product.keywords) ? product.keywords : []),
       ...(Array.isArray(product.market_keywords) ? product.market_keywords : []),
@@ -373,22 +385,32 @@ async function generateIntelligentLinks(supabase: any, product: any, blogContent
     productKeywords.forEach(keyword => {
       if (typeof keyword === 'string' && keyword.length > 3) {
         const keywordLower = keyword.toLowerCase();
-        if (blogContent.toLowerCase().includes(keywordLower)) {
-          // Criar link genérico para a categoria do produto
-          if (product.category && !intelligentLinks[keywordLower]) {
+        if (!intelligentLinks[keywordLower] && isKeywordInContent(keywordLower, blogContent)) {
+          // Priorizar URL do produto, senão usar categoria
+          if (product.product_url) {
+            intelligentLinks[keywordLower] = product.product_url;
+          } else if (product.category) {
             intelligentLinks[keywordLower] = `#categoria-${product.category.toLowerCase().replace(/\s+/g, '-')}`;
           }
         }
       }
     });
     
-    console.log(`✅ Generated ${Object.keys(intelligentLinks).length} intelligent links`);
+    console.log(`✅ Generated ${Object.keys(intelligentLinks).length} intelligent links for ${blogType} blog`);
+    console.log(`🔍 First 5 keywords detected: ${Object.keys(intelligentLinks).slice(0, 5).join(', ')}`);
     
   } catch (error) {
     console.error('❌ Error generating intelligent links:', error);
   }
   
   return intelligentLinks;
+}
+
+// Função auxiliar para verificar se keyword existe no conteúdo (Unicode-safe)
+function isKeywordInContent(keyword: string, content: string): boolean {
+  const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(?<![\p{L}\p{N}])${escapedKeyword}(?![\p{L}\p{N}])`, 'giu');
+  return regex.test(content);
 }
 
 // Função para processar conteúdo com links inteligentes (simplificada)
@@ -411,7 +433,8 @@ async function processContentWithIntelligentLinks(content: string, intelligentLi
       if (linksApplied.includes(keyword)) return; // Não repetir mesmo link
       
       const url = intelligentLinks[keyword];
-      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?<![\p{L}\p{N}])${escapedKeyword}(?![\p{L}\p{N}])`, 'giu');
       
       if (regex.test(processedParagraph)) {
         processedParagraph = processedParagraph.replace(regex, (match) => {
