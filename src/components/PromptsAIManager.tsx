@@ -7,6 +7,19 @@ import { PromptEditModal } from './PromptEditModal';
 
 const EDGE_FUNCTIONS = [
   {
+    id: "strategic-blog-generator",
+    name: "Gerador de Blog Estratégico",
+    description: "Gera artigos contextuais combinando dados da landing page com blogs de produtos selecionados",
+    icon: Brain,
+    status: "active" as const,
+    prompts: [
+      "Artigo Estratégico Contextual",
+      "Blog Consolidado com Ofertas",
+      "Conteúdo Híbrido LP + Produtos"
+    ],
+    dataSources: ["landing_pages", "products_repository", "approved_reviews", "company_profile", "key_opinion_leaders", "selected_product_blogs"]
+  },
+  {
     id: "generate-product-blog",
     name: "Gerador de Blog de Produtos",
     description: "Gera conteúdo de blog comercial e técnico para produtos específicos",
