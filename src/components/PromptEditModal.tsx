@@ -581,24 +581,47 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
 
   useEffect(() => {
     if (edgeFunction) {
-      // Inicializar com fontes de dados padrão
-      const initialFields: Record<string, string[]> = {};
-      edgeFunction.dataSources.forEach(source => {
-        if (DATA_SOURCES[source as keyof typeof DATA_SOURCES]) {
-          initialFields[source] = DATA_SOURCES[source as keyof typeof DATA_SOURCES].fields;
-        }
-      });
-      setSelectedFields(initialFields);
-
-      // Inicializar prompts com prompts reais das Edge Functions
-      const initialPrompts: Record<string, string> = {};
-      edgeFunction.prompts.forEach(prompt => {
-        const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[prompt];
-        initialPrompts[prompt] = realPrompt || `Prompt personalizado para ${prompt}...`;
-      });
-      setCustomPrompts(initialPrompts);
+      console.log('🔄 Carregando configurações para:', edgeFunction.id);
+      
+      // Carregar configurações salvas
+      const savedConfig = getConfigurationByFunction(edgeFunction.id, edgeFunction.prompts[0]);
+      
+      if (savedConfig) {
+        console.log('✅ Configuração salva encontrada:', savedConfig);
+        
+        // Carregar campos selecionados da configuração
+        setSelectedFields(savedConfig.selected_fields || {});
+        
+        // Carregar prompts customizados (buscar todas as configurações dessa função)
+        const savedPrompts: Record<string, string> = {};
+        edgeFunction.prompts.forEach(promptName => {
+          const promptConfig = getConfigurationByFunction(edgeFunction.id, promptName);
+          if (promptConfig?.custom_prompt) {
+            savedPrompts[promptName] = promptConfig.custom_prompt;
+          } else {
+            // Usar prompt padrão
+            const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[promptName];
+            savedPrompts[promptName] = realPrompt || `Prompt personalizado para ${promptName}...`;
+          }
+        });
+        setCustomPrompts(savedPrompts);
+        
+      } else {
+        console.log('ℹ️ Nenhuma configuração salva, usando defaults vazios');
+        
+        // Não selecionar nenhum campo por padrão se não houver configuração
+        setSelectedFields({});
+        
+        // Inicializar prompts com prompts reais das Edge Functions
+        const initialPrompts: Record<string, string> = {};
+        edgeFunction.prompts.forEach(prompt => {
+          const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[prompt];
+          initialPrompts[prompt] = realPrompt || `Prompt personalizado para ${prompt}...`;
+        });
+        setCustomPrompts(initialPrompts);
+      }
     }
-  }, [edgeFunction]);
+  }, [edgeFunction, getConfigurationByFunction]);
 
   const handleFieldToggle = (dataSource: string, field: string) => {
     setSelectedFields(prev => ({
@@ -638,7 +661,29 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
   const handleSave = async () => {
     if (!edgeFunction) return;
     
+    // Validar se há pelo menos um campo selecionado
+    const hasFields = Object.values(selectedFields).some(fields => fields.length > 0);
+    if (!hasFields) {
+      toast({
+        title: "Erro de validação",
+        description: "Selecione pelo menos um campo de dados antes de salvar",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
+      console.log('💾 Salvando configurações:', {
+        edgeFunctionId: edgeFunction.id,
+        selectedFields,
+        promptCount: Object.keys(customPrompts).length
+      });
+      
+      // Preparar selectedDataSources a partir dos selectedFields
+      const selectedDataSources = Object.keys(selectedFields).filter(key => 
+        selectedFields[key] && selectedFields[key].length > 0
+      );
+      
       // Salvar configurações para cada prompt customizado
       for (const [promptName, customPrompt] of Object.entries(customPrompts)) {
         if (customPrompt.trim()) {
@@ -646,11 +691,16 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
             edgeFunction.id,
             promptName,
             customPrompt,
-            edgeFunction.dataSources,
+            selectedDataSources,
             selectedFields
           );
         }
       }
+      
+      toast({
+        title: "Configurações salvas",
+        description: `${Object.keys(customPrompts).length} prompt(s) e ${selectedDataSources.length} fonte(s) de dados configuradas`,
+      });
       
       onOpenChange(false);
     } catch (error) {
@@ -660,13 +710,33 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
 
   const handleReset = () => {
     if (edgeFunction) {
-      const initialFields: Record<string, string[]> = {};
-      edgeFunction.dataSources.forEach(source => {
-        if (DATA_SOURCES[source as keyof typeof DATA_SOURCES]) {
-          initialFields[source] = DATA_SOURCES[source as keyof typeof DATA_SOURCES].fields;
-        }
-      });
-      setSelectedFields(initialFields);
+      // Verificar se há configuração salva
+      const savedConfig = getConfigurationByFunction(edgeFunction.id, edgeFunction.prompts[0]);
+      
+      if (savedConfig) {
+        // Restaurar para configuração salva
+        setSelectedFields(savedConfig.selected_fields || {});
+        
+        const savedPrompts: Record<string, string> = {};
+        edgeFunction.prompts.forEach(promptName => {
+          const promptConfig = getConfigurationByFunction(edgeFunction.id, promptName);
+          savedPrompts[promptName] = promptConfig?.custom_prompt || REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[promptName] || '';
+        });
+        setCustomPrompts(savedPrompts);
+        
+        toast({
+          title: "Configuração restaurada",
+          description: "Campos e prompts foram restaurados para a configuração salva",
+        });
+      } else {
+        // Limpar seleção se não houver configuração salva
+        setSelectedFields({});
+        
+        toast({
+          title: "Seleção limpa",
+          description: "Todos os campos foram desmarcados",
+        });
+      }
     }
   };
 

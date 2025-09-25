@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3 } from 'lucide-react';
+import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2 } from 'lucide-react';
 import { PromptEditModal } from './PromptEditModal';
+import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 
 const EDGE_FUNCTIONS = [
   {
@@ -102,6 +103,22 @@ const EDGE_FUNCTIONS = [
 
 export const PromptsAIManager = () => {
   const [editingFunction, setEditingFunction] = useState<typeof EDGE_FUNCTIONS[0] | null>(null);
+  const { configurations, loading } = usePromptsConfiguration();
+
+  const isConfigured = (functionId: string) => {
+    return configurations.some(config => config.edge_function_id === functionId);
+  };
+
+  const getLastUpdated = (functionId: string) => {
+    const configs = configurations.filter(config => config.edge_function_id === functionId);
+    if (configs.length === 0) return null;
+    
+    const latestConfig = configs.reduce((latest, current) => 
+      new Date(current.updated_at) > new Date(latest.updated_at) ? current : latest
+    );
+    
+    return new Date(latestConfig.updated_at).toLocaleDateString('pt-BR');
+  };
 
   return (
     <div className="space-y-6">
@@ -118,12 +135,33 @@ export const PromptsAIManager = () => {
                     </div>
                     <div>
                       <CardTitle className="text-base">{func.name}</CardTitle>
-                      <Badge 
-                        variant={func.status === 'active' ? 'default' : 'secondary'}
-                        className="text-xs mt-1"
-                      >
-                        {func.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </Badge>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge 
+                          variant={func.status === 'active' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {func.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                        {loading ? (
+                          <Badge variant="outline" className="text-xs">
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Carregando...
+                          </Badge>
+                        ) : isConfigured(func.id) ? (
+                          <Badge variant="secondary" className="text-xs">
+                            ✅ Configurado
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            ⚙️ Padrão
+                          </Badge>
+                        )}
+                      </div>
+                      {!loading && getLastUpdated(func.id) && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Última atualização: {getLastUpdated(func.id)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Button

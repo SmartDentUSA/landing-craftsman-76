@@ -177,7 +177,7 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
       const promptConfig = getConfigurationByFunction('strategic-blog-generator', 'Artigo Estratégico Contextual');
       
       const repositoryConfig = {
-        selectedSources: promptConfig?.selected_data_sources || ['products_repository', 'approved_reviews', 'key_opinion_leaders', 'company_profile'],
+        selectedDataSources: promptConfig?.selected_data_sources || ['products_repository', 'approved_reviews', 'key_opinion_leaders', 'company_profile'],
         selectedFields: promptConfig?.selected_fields || {
           landing_pages: ['banner', 'seo_title', 'seo_description'],
           products_repository: ['name', 'description', 'benefits', 'keywords'],

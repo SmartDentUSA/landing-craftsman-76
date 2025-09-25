@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,8 +36,26 @@ serve(async (req) => {
       throw new Error('DEEPSEEK_API_KEY não configurada');
     }
 
-    const prompt = `
-Você é um especialista em copywriting para Google Ads com foco em campanhas para ${targetAudience}, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
+    // Verificar se há prompt customizado
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient('https://pgfgripuanuwwolmtknn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZmdyaXB1YW51d3dvbG10a25uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjE0OTE3MywiZXhwIjoyMDcxNzI1MTczfQ.vn4PJ2fNqyPjuJyEv1Ln8fGpTT0r5L7pQu_V3M4HnEA');
+    
+    const { data: customPrompts } = await supabase
+      .from('prompts_configuration')
+      .select('custom_prompt')
+      .eq('edge_function_id', 'generate-ad-copies')
+      .eq('prompt_name', 'Cópias Google Ads')
+      .limit(1);
+
+    let prompt = '';
+
+    if (customPrompts && customPrompts.length > 0) {
+      // Usar prompt customizado e processar variáveis
+      prompt = processPromptVariables(customPrompts[0].custom_prompt, { seoTitle, seoDescription, primaryKeyword, targetAudience });
+    } else {
+      // Usar prompt padrão
+      prompt = `Você é um especialista em copywriting para Google Ads com foco em campanhas para ${targetAudience}, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
 
 Gere cópias para um Responsive Search Ad (RSA) baseadas nas seguintes informações:
 - SEO Title: ${seoTitle}
@@ -66,6 +85,19 @@ Retorne APENAS um JSON válido no formato:
   "descriptions": ["desc1", "desc2", ...],
   "paths": ["path1", "path2"]
 }`;
+    }
+
+    // Função para processar variáveis nos prompts customizados
+    function processPromptVariables(prompt: string, data: any): string {
+      let processedPrompt = prompt;
+      
+      processedPrompt = processedPrompt.replace(/{seoTitle}/g, data.seoTitle || '');
+      processedPrompt = processedPrompt.replace(/{seoDescription}/g, data.seoDescription || '');
+      processedPrompt = processedPrompt.replace(/{primaryKeyword}/g, data.primaryKeyword || '');
+      processedPrompt = processedPrompt.replace(/{targetAudience}/g, data.targetAudience || '');
+      
+      return processedPrompt;
+    }
 
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',

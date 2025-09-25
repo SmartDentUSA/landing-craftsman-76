@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,14 +43,46 @@ serve(async (req) => {
 
     console.log(`🤖 Gerando SEO com IA - Tipo: ${type}, Modo: ${speed}`);
 
+    // Verificar se há prompt customizado
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient('https://pgfgripuanuwwolmtknn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZmdyaXB1YW51d3dvbG10a25uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjE0OTE3MywiZXhwIjoyMDcxNzI1MTczfQ.vn4PJ2fNqyPjuJyEv1Ln8fGpTT0r5L7pQu_V3M4HnEA');
+    
+    // Mapear tipos da API para nomes de prompts na UI
+    const promptNameMap: Record<string, string> = {
+      'meta_description': 'Meta Description',
+      'seo_title': 'Título SEO', 
+      'keywords': 'Keywords',
+      'hidden_content': 'Conteúdo Oculto',
+      'blog_content': 'Conteúdo de Blog',
+      'video_testimonial_analysis': 'Análise de Depoimento',
+      'faq_keywords': 'Keywords FAQ'
+    };
+    
+    const promptName = promptNameMap[type] || type;
+    
+    const { data: customPrompts } = await supabase
+      .from('prompts_configuration')
+      .select('custom_prompt')
+      .eq('edge_function_id', 'ai-seo-generator')
+      .eq('prompt_name', promptName)
+      .limit(1);
+
     let systemPrompt = '';
     let userPrompt = '';
 
-    switch (type) {
-      case 'meta_description':
-        systemPrompt = 'Você é um especialista em SEO. Gere uma meta description otimizada, persuasiva e que incentive cliques. Máximo 160 caracteres.';
-        userPrompt = `Baseado no conteúdo da página: "${content}"\n\nGere uma meta description atrativa que:\n1. Destaque o principal benefício\n2. Inclua palavras-chave relevantes\n3. Tenha call-to-action implícito\n4. Seja única e persuasiva\n\nResponda APENAS com a meta description, sem aspas ou explicações.`;
-        break;
+    if (customPrompts && customPrompts.length > 0) {
+      // Usar prompt customizado e processar variáveis
+      const customPrompt = customPrompts[0].custom_prompt;
+      userPrompt = processPromptVariables(customPrompt, { content, title, landingPageData, pageData });
+      systemPrompt = 'Você é um especialista em SEO e marketing digital.';
+    } else {
+      // Usar prompts padrão
+      switch (type) {
+        case 'meta_description':
+          systemPrompt = 'Você é um especialista em SEO. Gere uma meta description otimizada, persuasiva e que incentive cliques. Máximo 160 caracteres.';
+          userPrompt = `Baseado no conteúdo da página: "${content}"\n\nGere uma meta description atrativa que:\n1. Destaque o principal benefício\n2. Inclua palavras-chave relevantes\n3. Tenha call-to-action implícito\n4. Seja única e persuasiva\n\nResponda APENAS com a meta description, sem aspas ou explicações.`;
+          break;
 
       case 'seo_title':
         systemPrompt = 'Você é um especialista em SEO. Gere títulos otimizados para CTR e posicionamento. Máximo 60 caracteres.';
@@ -231,10 +264,29 @@ FORMATAÇÃO:
 
 CRÍTICO: Retorne APENAS o conteúdo HTML do artigo, sem tags <html>, <head> ou <body>. NÃO use markdown (##, **, etc.) - use apenas HTML puro (<h2>, <strong>, <p>, etc.).`;
         }
-        break;
+          break;
 
-      default:
-        return new Response(
+        default:
+          return new Response(
+            JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content, blog_content, video_testimonial_analysis, faq_keywords' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+      }
+    }
+
+    // Função para processar variáveis nos prompts customizados
+    function processPromptVariables(prompt: string, data: any): string {
+      let processedPrompt = prompt;
+      
+      // Substituir variáveis básicas
+      processedPrompt = processedPrompt.replace(/{content}/g, data.content || '');
+      processedPrompt = processedPrompt.replace(/{title}/g, data.title || '');
+      processedPrompt = processedPrompt.replace(/{primaryKeyword}/g, data.primaryKeyword || '');
+      processedPrompt = processedPrompt.replace(/{keywords}/g, data.keywords || '');
+      processedPrompt = processedPrompt.replace(/{topic}/g, data.topic || '');
+      
+      return processedPrompt;
+    }
           JSON.stringify({ error: 'Tipo inválido. Use: meta_description, seo_title, keywords, hidden_content, blog_content, video_testimonial_analysis, faq_keywords' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

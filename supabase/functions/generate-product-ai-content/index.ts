@@ -178,14 +178,33 @@ serve(async (req) => {
 });
 
 async function generateProductBenefits(apiKey: string, product: any, existingBenefits: string[] = [], complementOnly: boolean = false): Promise<string[]> {
-  const existingContext = existingBenefits.length > 0 ? 
-    `\n\nDADOS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingBenefits.join(', ')}` : '';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
   
-  const instruction = complementOnly && existingBenefits.length > 0 ? 
-    'Gere APENAS 3 benefícios complementares que NÃO duplicem os existentes e preencham lacunas identificadas:' :
-    'Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:';
+  // Buscar prompt customizado
+  const { data: customPrompts } = await supabase
+    .from('prompts_configuration')
+    .select('custom_prompt')
+    .eq('edge_function_id', 'generate-product-ai-content')
+    .eq('prompt_name', 'Benefícios do Produto')
+    .limit(1);
   
-  const prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
+  let prompt = '';
+  
+  if (customPrompts && customPrompts.length > 0) {
+    // Usar prompt customizado e processar variáveis
+    prompt = processPromptVariables(customPrompts[0].custom_prompt, product, existingBenefits, complementOnly);
+  } else {
+    // Usar prompt padrão
+    const existingContext = existingBenefits.length > 0 ? 
+      `\n\nDADOS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingBenefits.join(', ')}` : '';
+    
+    const instruction = complementOnly && existingBenefits.length > 0 ? 
+      'Gere APENAS 3 benefícios complementares que NÃO duplicem os existentes e preencham lacunas identificadas:' :
+      'Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:';
+    
+    prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -208,6 +227,7 @@ Foque em:
 - Vantagens competitivas dentro da categoria
 - Economia de tempo/dinheiro específica da categoria
 - Qualidade e confiabilidade da categoria`;
+  }
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -277,14 +297,33 @@ Inclua NESTA ORDEM DE PRIORIDADE:
 }
 
 async function generateProductFeatures(apiKey: string, product: any, existingFeatures: string[] = [], complementOnly: boolean = false): Promise<string[]> {
-  const existingContext = existingFeatures.length > 0 ? 
-    `\n\nCARACTERÍSTICAS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingFeatures.join(', ')}` : '';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
   
-  const instruction = complementOnly && existingFeatures.length > 0 ? 
-    'Gere APENAS 3 características complementares que NÃO duplicem as existentes:' :
-    'Gere APENAS um array JSON com 4-6 características específicas:';
+  // Buscar prompt customizado
+  const { data: customPrompts } = await supabase
+    .from('prompts_configuration')
+    .select('custom_prompt')
+    .eq('edge_function_id', 'generate-product-ai-content')
+    .eq('prompt_name', 'Características do Produto')
+    .limit(1);
   
-  const prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA:${existingContext}
+  let prompt = '';
+  
+  if (customPrompts && customPrompts.length > 0) {
+    // Usar prompt customizado e processar variáveis
+    prompt = processPromptVariables(customPrompts[0].custom_prompt, product, existingFeatures, complementOnly);
+  } else {
+    // Usar prompt padrão
+    const existingContext = existingFeatures.length > 0 ? 
+      `\n\nCARACTERÍSTICAS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingFeatures.join(', ')}` : '';
+    
+    const instruction = complementOnly && existingFeatures.length > 0 ? 
+      'Gere APENAS 3 características complementares que NÃO duplicem as existentes:' :
+      'Gere APENAS um array JSON com 4-6 características específicas:';
+    
+    prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -306,6 +345,7 @@ Foque em:
 - Dimensões ou capacidades padrão da categoria
 - Compatibilidades dentro da categoria
 - Certificações ou padrões da categoria/subcategoria`;
+  }
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -322,6 +362,37 @@ Foque em:
   });
 
   return await parseAIArrayResponse(response, 'features');
+}
+
+// Função para processar variáveis nos prompts customizados
+function processPromptVariables(
+  prompt: string, 
+  product: any, 
+  existingItems: string[] = [], 
+  complementOnly: boolean = false
+): string {
+  let processedPrompt = prompt;
+  
+  // Substituir variáveis básicas do produto
+  processedPrompt = processedPrompt.replace(/{product\.name}/g, product.name || 'Não informado');
+  processedPrompt = processedPrompt.replace(/{product\.description}/g, product.description || 'Não informada');
+  processedPrompt = processedPrompt.replace(/{product\.category}/g, product.category || 'Não informada');
+  processedPrompt = processedPrompt.replace(/{product\.subcategory}/g, product.subcategory || 'Não informada');
+  processedPrompt = processedPrompt.replace(/{product\.price}/g, product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado');
+  processedPrompt = processedPrompt.replace(/{product\.target_audience}/g, product.target_audience || 'Não informado');
+  
+  // Contexto de itens existentes
+  const existingContext = existingItems.length > 0 ? 
+    `\n\nITENS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingItems.join(', ')}` : '';
+  processedPrompt = processedPrompt.replace(/{existingContext}/g, existingContext);
+  
+  // Instrução baseada no modo
+  const instruction = complementOnly && existingItems.length > 0 ? 
+    'Gere APENAS 3 itens complementares que NÃO duplicem os existentes:' :
+    'Gere APENAS um array JSON com os itens solicitados:';
+  processedPrompt = processedPrompt.replace(/{instruction}/g, instruction);
+  
+  return processedPrompt;
 }
 
 async function parseAIArrayResponse(response: Response, type: string): Promise<string[]> {
