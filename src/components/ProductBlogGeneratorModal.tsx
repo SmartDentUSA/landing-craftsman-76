@@ -106,7 +106,7 @@ export const ProductBlogGeneratorModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -125,51 +125,165 @@ export const ProductBlogGeneratorModal = ({
             </CardContent>
           </Card>
 
-          {/* Seleção de Tipo de Blog */}
+          {/* Tabs para Geração e Visualização */}
           <Tabs value={selectedType} onValueChange={(value) => setSelectedType(value as 'commercial' | 'technical')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="commercial" className="flex items-center gap-2">
                 {blogTypeConfig.commercial.icon}
                 Blog Comercial
+                {hasExistingBlog('commercial') && <span className="text-xs">✓</span>}
               </TabsTrigger>
               <TabsTrigger value="technical" className="flex items-center gap-2">
                 {blogTypeConfig.technical.icon}
                 Blog Técnico
+                {hasExistingBlog('technical') && <span className="text-xs">✓</span>}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="commercial" className="space-y-4">
-              <Card className={blogTypeConfig.commercial.color}>
-                <CardContent className="pt-4">
-                  <h3 className="font-semibold mb-2">{blogTypeConfig.commercial.title}</h3>
-                  <p className="text-sm mb-3">{blogTypeConfig.commercial.description}</p>
-                  <div className="text-xs">
-                    <strong>Variáveis utilizadas:</strong> Nome, benefícios, keywords, CTAs, preço
-                  </div>
-                  {hasExistingBlog('commercial') && (
-                    <Badge variant="outline" className="mt-2">
-                      ✓ Blog já existe
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Configuração do Blog */}
+                <Card className={blogTypeConfig.commercial.color}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{blogTypeConfig.commercial.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm mb-3">{blogTypeConfig.commercial.description}</p>
+                    <div className="text-xs mb-4">
+                      <strong>Variáveis utilizadas:</strong> Nome, benefícios, keywords, CTAs, preço
+                    </div>
+                    <Button 
+                      onClick={handleGenerateBlog}
+                      disabled={isGenerating}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          {hasExistingBlog('commercial') ? 'Regerar Blog' : 'Gerar Blog'}
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Conteúdo Gerado */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Conteúdo Gerado
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {hasExistingBlog('commercial') ? (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
+                          <pre className="text-sm whitespace-pre-wrap font-sans">
+                            {product.individual_blog_content?.commercial}
+                          </pre>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => navigator.clipboard.writeText(product.individual_blog_content?.commercial || '')}
+                          >
+                            Copiar
+                          </Button>
+                          <div className="text-xs text-muted-foreground flex items-center">
+                            {product.individual_blog_content?.commercial?.length || 0} caracteres
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Nenhum blog comercial gerado ainda</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="technical" className="space-y-4">
-              <Card className={blogTypeConfig.technical.color}>
-                <CardContent className="pt-4">
-                  <h3 className="font-semibold mb-2">{blogTypeConfig.technical.title}</h3>
-                  <p className="text-sm mb-3">{blogTypeConfig.technical.description}</p>
-                  <div className="text-xs">
-                    <strong>Variáveis utilizadas:</strong> Nome, características, especificações, categoria
-                  </div>
-                  {hasExistingBlog('technical') && (
-                    <Badge variant="outline" className="mt-2">
-                      ✓ Blog já existe
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Configuração do Blog */}
+                <Card className={blogTypeConfig.technical.color}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{blogTypeConfig.technical.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm mb-3">{blogTypeConfig.technical.description}</p>
+                    <div className="text-xs mb-4">
+                      <strong>Variáveis utilizadas:</strong> Nome, características, especificações, categoria
+                    </div>
+                    <Button 
+                      onClick={handleGenerateBlog}
+                      disabled={isGenerating}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          {hasExistingBlog('technical') ? 'Regerar Blog' : 'Gerar Blog'}
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Conteúdo Gerado */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Conteúdo Gerado
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {hasExistingBlog('technical') ? (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-muted/50 rounded-md max-h-60 overflow-y-auto">
+                          <pre className="text-sm whitespace-pre-wrap font-sans">
+                            {product.individual_blog_content?.technical}
+                          </pre>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => navigator.clipboard.writeText(product.individual_blog_content?.technical || '')}
+                          >
+                            Copiar
+                          </Button>
+                          <div className="text-xs text-muted-foreground flex items-center">
+                            {product.individual_blog_content?.technical?.length || 0} caracteres
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Nenhum blog técnico gerado ainda</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
 
@@ -181,14 +295,6 @@ export const ProductBlogGeneratorModal = ({
                   <Clock className="h-4 w-4" />
                   Última geração: {getLastGenerated()}
                 </div>
-                <div className="flex gap-2 mt-2">
-                  {hasExistingBlog('commercial') && (
-                    <Badge variant="outline" className="text-xs">Blog Comercial ✓</Badge>
-                  )}
-                  {hasExistingBlog('technical') && (
-                    <Badge variant="outline" className="text-xs">Blog Técnico ✓</Badge>
-                  )}
-                </div>
               </CardContent>
             </Card>
           )}
@@ -196,24 +302,7 @@ export const ProductBlogGeneratorModal = ({
           {/* Ações */}
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleGenerateBlog}
-              disabled={isGenerating}
-              className="min-w-[140px]"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Gerar Blog {blogTypeConfig[selectedType].title.split(' ')[1]}
-                </>
-              )}
+              Fechar
             </Button>
           </div>
         </div>
