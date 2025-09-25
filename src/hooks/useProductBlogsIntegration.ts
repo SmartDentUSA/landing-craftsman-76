@@ -103,15 +103,66 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     return productBlogs;
   }, [productsWithBlogs, getBlogPreferences]);
 
+  // Create blog entries filtered by domain
+  const getProductBlogsForHTMLByDomain = useMemo(() => {
+    return (domain: string): ProductBlog[] => {
+      const preferences = getBlogPreferences();
+      const productBlogs: ProductBlog[] = [];
+
+      productsWithBlogs.forEach(product => {
+        const productPrefs = preferences[product.id];
+        
+        // For Eodonto: only commercial blogs
+        if (domain === 'eodonto' && productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
+          const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
+          productBlogs.push({
+            id: `${product.id}-commercial`,
+            title: extractedTitle || `${product.name} - Análise Comercial`,
+            content: product.individual_blog_content.commercial,
+            type: 'commercial',
+            productId: product.id,
+            productName: product.name,
+            created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+          });
+        }
+        
+        // For Dentala: only technical blogs
+        if (domain === 'dentala' && productPrefs?.useTechnical && product.individual_blog_content?.technical) {
+          const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
+          productBlogs.push({
+            id: `${product.id}-technical`,
+            title: extractedTitle || `${product.name} - Análise Técnica`,
+            content: product.individual_blog_content.technical,
+            type: 'technical',
+            productId: product.id,
+            productName: product.name,
+            created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+          });
+        }
+      });
+
+      return productBlogs;
+    };
+  }, [productsWithBlogs, getBlogPreferences]);
+
   // Count active product blogs based on preferences
   const getActiveProductBlogsCount = useMemo((): number => {
     return getProductBlogsForHTML.length;
   }, [getProductBlogsForHTML]);
 
+  // Count active product blogs by domain
+  const getActiveProductBlogsCountByDomain = useMemo(() => {
+    return (domain: string): number => {
+      return getProductBlogsForHTMLByDomain(domain).length;
+    };
+  }, [getProductBlogsForHTMLByDomain]);
+
   return {
     productsWithBlogs,
     productBlogsForHTML: getProductBlogsForHTML,
+    productBlogsForHTMLByDomain: getProductBlogsForHTMLByDomain,
     activeProductBlogsCount: getActiveProductBlogsCount,
+    activeProductBlogsCountByDomain: getActiveProductBlogsCountByDomain,
     refreshProductsWithBlogs: fetchProductsWithBlogs,
   };
 };

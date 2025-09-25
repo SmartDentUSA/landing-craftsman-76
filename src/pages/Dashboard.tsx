@@ -46,7 +46,9 @@ const DashboardContent = () => {
   
   const { 
     productBlogsForHTML, 
-    activeProductBlogsCount 
+    productBlogsForHTMLByDomain,
+    activeProductBlogsCount,
+    activeProductBlogsCountByDomain
   } = useProductBlogsIntegration(approvedLandingPagesWithBlogs);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -326,8 +328,9 @@ const DashboardContent = () => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
     console.log(`🎨 Generating ${domainName} HTML with ${blogs.length} blogs`);
     
-    // Create individual product blogs from integrated hook
-    const productBlogs: BlogPost[] = productBlogsForHTML.map(productBlog => ({
+    // Create individual product blogs filtered by domain
+    const domainProductBlogs = productBlogsForHTMLByDomain(domain);
+    const productBlogs: BlogPost[] = domainProductBlogs.map(productBlog => ({
       id: productBlog.id,
       title: productBlog.title,
       created_at: productBlog.created_at,
@@ -357,7 +360,7 @@ const DashboardContent = () => {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
-    console.log(`📊 Using ${approvedBlogs.length} blogs for ${domainName} (${landingPageBlogs.length} LP + ${productBlogs.length} products)`);
+    console.log(`📊 Using ${approvedBlogs.length} blogs for ${domainName} (${landingPageBlogs.length} LP + ${productBlogs.length} ${domain === 'eodonto' ? 'commercial' : 'technical'} products)`);
     
     const featuredBlog = approvedBlogs[0];
     // Mostrar mais blogs na seção principal - até 6 blogs recentes
@@ -631,16 +634,16 @@ const DashboardContent = () => {
             });
         });
     </script>`;
-  }, [productBlogsForHTML]);
+  }, [productBlogsForHTMLByDomain]);
 
   const eodontoHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'eodonto'), 
-    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTML]
+    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
   );
 
   const dentalaHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'dentala'), 
-    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTML]
+    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
   );
 
   const copyConsolidatedHTML = useCallback(async (domain: string) => {
@@ -662,12 +665,13 @@ const DashboardContent = () => {
   }, [eodontoHTML, dentalaHTML, toast]);
 
   const getApprovedBlogsCount = (domain: string) => {
-    // Calculate total blogs including products with individual blogs
-    const totalBlogs = consolidatedBlogs.length + activeProductBlogsCount;
+    // Calculate total blogs including products with individual blogs by domain
+    const domainProductBlogsCount = activeProductBlogsCountByDomain(domain);
+    const totalBlogs = consolidatedBlogs.length + domainProductBlogsCount;
     
     console.log(`🔍 Getting approved blogs count for ${domain}:`, {
       consolidatedBlogsCount: consolidatedBlogs.length,
-      activeProductBlogsCount,
+      domainProductBlogsCount,
       totalBlogs,
       approvedBlogsCount,
       generatedBlogsCount,
@@ -946,7 +950,7 @@ const DashboardContent = () => {
                   {getApprovedBlogsCount('eodonto')} blogs consolidados disponíveis
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCount} produtos individuais)
+                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCountByDomain('eodonto')} produtos comerciais)
                   </span>
                 </CardDescription>
               </CardHeader>
@@ -959,7 +963,7 @@ const DashboardContent = () => {
                     📄 Landing pages: <strong>{consolidatedBlogs.length}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    🏷️ Produtos individuais: <strong>{activeProductBlogsCount}</strong>
+                    🏷️ Produtos comerciais: <strong>{activeProductBlogsCountByDomain('eodonto')}</strong>
                   </div>
                   {approvedBlogsCount === 0 && (
                     <div className="text-xs text-orange-600 bg-orange-50 p-3 rounded-lg border">
@@ -1005,7 +1009,7 @@ const DashboardContent = () => {
                   {getApprovedBlogsCount('dentala')} blogs consolidados disponíveis  
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCount} produtos individuais)
+                    ({consolidatedBlogs.length} landing pages + {activeProductBlogsCountByDomain('dentala')} produtos técnicos)
                   </span>
                 </CardDescription>
               </CardHeader>
@@ -1018,7 +1022,7 @@ const DashboardContent = () => {
                     📄 Landing pages: <strong>{consolidatedBlogs.length}</strong>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    🏷️ Produtos individuais: <strong>{activeProductBlogsCount}</strong>
+                    🏷️ Produtos técnicos: <strong>{activeProductBlogsCountByDomain('dentala')}</strong>
                   </div>
                   {approvedBlogsCount === 0 && (
                     <div className="text-xs text-orange-600 bg-orange-50 p-3 rounded-lg border">
