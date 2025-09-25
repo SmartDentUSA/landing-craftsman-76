@@ -92,9 +92,12 @@ export const usePromptsConfiguration = () => {
       return true;
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
+      const errorMessage = error?.message || 'Erro desconhecido';
+      console.error('Detalhes do erro ao salvar:', error);
+      
       toast({
         title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar a configuração.",
+        description: `Falha ao salvar a configuração: ${errorMessage}`,
         variant: "destructive"
       });
       return false;
