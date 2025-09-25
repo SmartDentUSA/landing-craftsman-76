@@ -2,10 +2,13 @@ import { useEffect, useState, useMemo } from 'react';
 import useLandingPages from './useLandingPages';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useSelectedProducts } from './useSelectedProducts';
 
 export const useBlogStatusMonitor = () => {
   const landingPages = useLandingPages((state) => state.landingPages);
   const [publishedBlogs, setPublishedBlogs] = useState<any[]>([]);
+  const [productsWithBlogs, setProductsWithBlogs] = useState<any[]>([]);
+  const { loadProductsByIds } = useSelectedProducts();
 
   // Memoize approved landing pages with blog data to detect changes
   const approvedLandingPagesWithBlogs = useMemo(() => {
@@ -14,7 +17,13 @@ export const useBlogStatusMonitor = () => {
 
   useEffect(() => {
     fetchPublishedBlogs();
+    fetchProductsWithBlogs();
   }, []);
+
+  // Fetch products with individual blogs when approved landing pages change
+  useEffect(() => {
+    fetchProductsWithBlogs();
+  }, [approvedLandingPagesWithBlogs]);
 
   // Add real-time subscription to blog_posts table
   useEffect(() => {
@@ -117,6 +126,32 @@ export const useBlogStatusMonitor = () => {
     return publishedCount;
   }, [publishedBlogs]);
 
+  const fetchProductsWithBlogs = async () => {
+    try {
+      // Get all selected product IDs from approved landing pages
+      const allSelectedProductIds = approvedLandingPagesWithBlogs
+        .filter(lp => lp.selectedProductIds && lp.selectedProductIds.length > 0)
+        .flatMap(lp => lp.selectedProductIds);
+
+      if (allSelectedProductIds.length === 0) {
+        setProductsWithBlogs([]);
+        return;
+      }
+
+      const products = await loadProductsByIds(allSelectedProductIds);
+      
+      // Filter only products that have generated individual blogs
+      const productsWithBlogContent = products.filter(product => 
+        product.individual_blog_content?.commercial || product.individual_blog_content?.technical
+      );
+
+      setProductsWithBlogs(productsWithBlogContent);
+      console.log('🎯 Products with individual blogs loaded:', productsWithBlogContent.length);
+    } catch (error) {
+      console.error('❌ Error fetching products with blogs:', error);
+    }
+  };
+
   const getBlogsByLandingPage = (landingPageId: string) => {
     return publishedBlogs.filter(blog => blog.landing_page_id === landingPageId);
   };
@@ -130,5 +165,7 @@ export const useBlogStatusMonitor = () => {
     getBlogsByLandingPage,
     refreshBlogs: fetchPublishedBlogs,
     approvedLandingPagesWithBlogs,
+    productsWithBlogs,
+    refreshProductsWithBlogs: fetchProductsWithBlogs,
   };
 };

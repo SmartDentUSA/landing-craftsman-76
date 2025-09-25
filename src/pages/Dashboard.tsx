@@ -15,6 +15,7 @@ import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
+import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 
 // Interface for blog posts
@@ -42,6 +43,11 @@ const DashboardContent = () => {
     publishedBlogsCount,
     approvedLandingPagesWithBlogs
   } = useBlogStatusMonitor();
+  
+  const { 
+    productBlogsForHTML, 
+    activeProductBlogsCount 
+  } = useProductBlogsIntegration(approvedLandingPagesWithBlogs);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
@@ -320,8 +326,21 @@ const DashboardContent = () => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
     console.log(`🎨 Generating ${domainName} HTML with ${blogs.length} blogs`);
     
+    // Create individual product blogs from integrated hook
+    const productBlogs: BlogPost[] = productBlogsForHTML.map(productBlog => ({
+      id: productBlog.id,
+      title: productBlog.title,
+      created_at: productBlog.created_at,
+      status: 'published',
+      landing_page_id: `product-${productBlog.productId}`,
+      content: productBlog.content,
+      meta_description: `${productBlog.type === 'commercial' ? 'Análise comercial' : 'Análise técnica'} do produto ${productBlog.productName}`,
+      keywords: [],
+      intelligent_links: {}
+    } as BlogPost));
+    
     // If no published blogs, create fallback from consolidatedBlogs
-    const approvedBlogs = blogs.length > 0 ? blogs : consolidatedBlogs.map(lp => ({
+    const landingPageBlogs = blogs.length > 0 ? blogs : consolidatedBlogs.map(lp => ({
       id: lp.id,
       title: lp.name,
       created_at: new Date().toISOString(),
@@ -333,7 +352,12 @@ const DashboardContent = () => {
       intelligent_links: {}
     } as BlogPost));
     
-    console.log(`📊 Using ${approvedBlogs.length} blogs for ${domainName} (${blogs.length > 0 ? 'published' : 'fallback'})`);
+    // Combine landing page blogs and product blogs
+    const approvedBlogs = [...landingPageBlogs, ...productBlogs].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    console.log(`📊 Using ${approvedBlogs.length} blogs for ${domainName} (${landingPageBlogs.length} LP + ${productBlogs.length} products)`);
     
     const featuredBlog = approvedBlogs[0];
     // Mostrar mais blogs na seção principal - até 6 blogs recentes
@@ -607,16 +631,16 @@ const DashboardContent = () => {
             });
         });
     </script>`;
-  }, []);
+  }, [productBlogsForHTML]);
 
   const eodontoHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'eodonto'), 
-    [blogPosts, generateConsolidatedHTML, consolidatedBlogs]
+    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTML]
   );
 
   const dentalaHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'dentala'), 
-    [blogPosts, generateConsolidatedHTML, consolidatedBlogs]
+    [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTML]
   );
 
   const copyConsolidatedHTML = useCallback(async (domain: string) => {
@@ -638,15 +662,20 @@ const DashboardContent = () => {
   }, [eodontoHTML, dentalaHTML, toast]);
 
   const getApprovedBlogsCount = (domain: string) => {
-    // Use dados consolidados do useBlogStatusMonitor
+    // Calculate total blogs including products with individual blogs
+    const totalBlogs = consolidatedBlogs.length + activeProductBlogsCount;
+    
     console.log(`🔍 Getting approved blogs count for ${domain}:`, {
       consolidatedBlogsCount: consolidatedBlogs.length,
+      activeProductBlogsCount,
+      totalBlogs,
       approvedBlogsCount,
       generatedBlogsCount,
       publishedBlogsCount,
       blogPostsLength: blogPosts.length
     });
-    return consolidatedBlogs.length;
+    
+    return totalBlogs;
   };
 
   return (

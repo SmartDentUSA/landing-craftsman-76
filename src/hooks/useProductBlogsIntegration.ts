@@ -1,0 +1,109 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useSelectedProducts } from './useSelectedProducts';
+
+interface BlogConsolidationPreferences {
+  [productId: string]: {
+    useCommercial: boolean;
+    useTechnical: boolean;
+  };
+}
+
+interface ProductBlog {
+  id: string;
+  title: string;
+  content: string;
+  type: 'commercial' | 'technical';
+  productId: string;
+  productName: string;
+  created_at: string;
+}
+
+export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
+  const [productsWithBlogs, setProductsWithBlogs] = useState<any[]>([]);
+  const { loadProductsByIds } = useSelectedProducts();
+
+  // Load products with individual blogs when approved landing pages change
+  useEffect(() => {
+    fetchProductsWithBlogs();
+  }, [approvedLandingPages]);
+
+  const fetchProductsWithBlogs = async () => {
+    try {
+      // Get all selected product IDs from approved landing pages
+      const allSelectedProductIds = approvedLandingPages
+        .filter(lp => lp.selectedProductIds && lp.selectedProductIds.length > 0)
+        .flatMap(lp => lp.selectedProductIds);
+
+      if (allSelectedProductIds.length === 0) {
+        setProductsWithBlogs([]);
+        return;
+      }
+
+      const products = await loadProductsByIds(allSelectedProductIds);
+      
+      // Filter only products that have generated individual blogs
+      const productsWithBlogContent = products.filter(product => 
+        product.individual_blog_content?.commercial || product.individual_blog_content?.technical
+      );
+
+      setProductsWithBlogs(productsWithBlogContent);
+      console.log('🎯 Products with individual blogs loaded:', productsWithBlogContent.length);
+    } catch (error) {
+      console.error('❌ Error fetching products with blogs:', error);
+    }
+  };
+
+  // Get blog consolidation preferences from localStorage
+  const getBlogPreferences = (): BlogConsolidationPreferences => {
+    const savedPreferences = localStorage.getItem('blogConsolidationPreferences');
+    return savedPreferences ? JSON.parse(savedPreferences) : {};
+  };
+
+  // Create blog entries for HTML generation based on preferences
+  const getProductBlogsForHTML = useMemo((): ProductBlog[] => {
+    const preferences = getBlogPreferences();
+    const productBlogs: ProductBlog[] = [];
+
+    productsWithBlogs.forEach(product => {
+      const productPrefs = preferences[product.id];
+      
+      if (productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
+        productBlogs.push({
+          id: `${product.id}-commercial`,
+          title: `${product.name} - Análise Comercial`,
+          content: product.individual_blog_content.commercial,
+          type: 'commercial',
+          productId: product.id,
+          productName: product.name,
+          created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+        });
+      }
+      
+      if (productPrefs?.useTechnical && product.individual_blog_content?.technical) {
+        productBlogs.push({
+          id: `${product.id}-technical`,
+          title: `${product.name} - Análise Técnica`,
+          content: product.individual_blog_content.technical,
+          type: 'technical',
+          productId: product.id,
+          productName: product.name,
+          created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+        });
+      }
+    });
+
+    return productBlogs;
+  }, [productsWithBlogs, getBlogPreferences]);
+
+  // Count active product blogs based on preferences
+  const getActiveProductBlogsCount = useMemo((): number => {
+    return getProductBlogsForHTML.length;
+  }, [getProductBlogsForHTML]);
+
+  return {
+    productsWithBlogs,
+    productBlogsForHTML: getProductBlogsForHTML,
+    activeProductBlogsCount: getActiveProductBlogsCount,
+    refreshProductsWithBlogs: fetchProductsWithBlogs,
+  };
+};
