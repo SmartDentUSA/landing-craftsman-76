@@ -17,12 +17,14 @@ import {
   ShoppingCart,
   FileText,
   MessageCircle,
-  PlayCircle
+  PlayCircle,
+  Instagram
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
 import { WhatsAppMessageGenerator } from "./WhatsAppMessageGenerator";
 import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
+import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
 import { useState } from "react";
 
 interface Product {
@@ -83,6 +85,7 @@ export function ModernProductCard({
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
+  const [showInstagramModal, setShowInstagramModal] = useState(false);
   const score = calculateProductScore(product);
   
   const formatPrice = (price?: number, currency?: string) => {
@@ -253,6 +256,15 @@ export function ModernProductCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowInstagramModal(true)}
+            className="h-8 w-8 p-0 text-pink-600 hover:text-pink-700"
+            title="Gerar Copy Instagram"
+          >
+            <Instagram className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onEdit(product)}
             className="h-8 w-8 p-0"
           >
@@ -292,6 +304,14 @@ export function ModernProductCard({
       <YouTubeDescriptionGenerator
         isOpen={showYouTubeModal}
         onClose={() => setShowYouTubeModal(false)}
+        productId={product.id}
+        productName={product.name}
+      />
+
+      {/* Modal de Geração Instagram */}
+      <InstagramCopyGenerator
+        isOpen={showInstagramModal}
+        onClose={() => setShowInstagramModal(false)}
         productId={product.id}
         productName={product.name}
       />
