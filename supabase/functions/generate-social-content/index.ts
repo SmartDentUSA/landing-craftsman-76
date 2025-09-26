@@ -253,6 +253,8 @@ Informações da Empresa:
 - Nome: {company.company_name}
 - Mention: @smartdentoficial
 
+PALAVRAS GATILHO BOT: {product.bot_trigger_words}
+
 INSTRUÇÕES ESPECÍFICAS PARA REELS:
 1. Copy Principal: Máximo 2200 caracteres, mas mais dinâmica e energética
 2. Hook inicial: Muito impactante, cause curiosidade nos primeiros 3 segundos
@@ -261,17 +263,22 @@ INSTRUÇÕES ESPECÍFICAS PARA REELS:
 5. Interação: Incentive likes, shares, comentários e saves
 6. Copy para Stories: Versão para republicar nos Stories
 7. Hashtags: Foque em hashtags de Reels e tendências
-8. Call-to-Action: CTAs específicos para vídeo ("Assista até o final", "Duplo toque se concorda")
-9. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
-   - Se configuradas, inclua frases como: "💬 Comenta '{random_trigger_word}' que te mando tudo!"
+8. Call-to-Action OBRIGATÓRIO: A última frase DEVE usar uma palavra gatilho BOT para incentivar interação
+
+TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
+- "💬 Comenta '{random_trigger_word}' que te mando tudo no direct! 🔥"
+- "💬 Duplo toque + comenta '{random_trigger_word}' para mais informações!"
+- "💬 Deixa '{random_trigger_word}' nos comentários que te explico tudo!"
+
+Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
 {
-  "feed_copy": "Copy dinâmica para Reels com hooks impactantes \\n\\nLinguagem energética e casual",
+  "feed_copy": "Copy dinâmica para Reels (DEVE terminar com frase usando palavra gatilho) \\n\\nLinguagem energética e casual",
   "story_copy": "Versão para Stories - máximo 160 caracteres",
   "hashtags": ["#reels", "#viral", "#trending"],
-  "call_to_action": "Assista até o final! Duplo toque se concorda 🔥",
+  "call_to_action": "Frase de call-to-action para engajamento com palavra gatilho",
   "post_type": "reels"
 }`;
     } else if (instagramType === 'carousel') {
@@ -290,23 +297,30 @@ Informações da Empresa:
 - Nome: {company.company_name}
 - Mention: @smartdentoficial
 
+PALAVRAS GATILHO BOT: {product.bot_trigger_words}
+
 INSTRUÇÕES ESPECÍFICAS PARA CARROSSEL:
 1. Copy Principal: Máximo 2200 caracteres, estruturada para múltiplas imagens
 2. Narrativa sequencial: Conte uma história que se desenvolve através dos slides
 3. Ganchos para deslizar: Crie curiosidade para o próximo slide
 4. Numeração: Use "1/5", "Slide 2:", etc. quando apropriado
 5. Informação progressiva: Cada slide adiciona valor ao anterior
-6. Call-to-Action: CTAs que incentivem deslizar e salvar
-7. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
-   - Se configuradas, inclua frases como: "💬 Deixa '{random_trigger_word}' aqui em baixo!"
+6. Call-to-Action OBRIGATÓRIO: A última frase DEVE usar uma palavra gatilho BOT para incentivar comentários
+
+TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
+- "💬 Salva o post + comenta '{random_trigger_word}' que te envio mais informações!"
+- "💬 Marca um amigo + comenta '{random_trigger_word}' para saber mais!"
+- "💬 Deixa '{random_trigger_word}' nos comentários que te mando os detalhes!"
+
+Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
 {
-  "feed_copy": "Copy educativa para carrossel com narrativa sequencial \\n\\nSlide 1: Introdução \\nSlide 2: Desenvolvimento...",
+  "feed_copy": "Copy educativa para carrossel (DEVE terminar com frase usando palavra gatilho) \\n\\nSlide 1: Introdução \\nSlide 2: Desenvolvimento...",
   "story_copy": "Versão para Stories destacando valor educativo",
   "hashtags": ["#carrossel", "#educativo", "#dicas"],
-  "call_to_action": "Salve este post para não esquecer! Deslize para ver tudo →",
+  "call_to_action": "Frase de call-to-action educativa com palavra gatilho",
   "post_type": "carousel"
 }`;
     } else {
@@ -325,22 +339,30 @@ Informações da Empresa:
 - Nome: {company.company_name}
 - Mention: @smartdentoficial
 
+PALAVRAS GATILHO BOT: {product.bot_trigger_words}
+
 INSTRUÇÕES ESPECÍFICAS PARA POST ESTÁTICO:
 1. Copy Principal: Máximo 2200 caracteres, foque em storytelling envolvente
 2. Início impactante: Hook que prenda a atenção nos primeiros segundos
 3. Desenvolvimento: História que conecte emocionalmente com o público
 4. Narrativa visual: Descreva como o produto se encaixa na vida do usuário
 5. Copy para Stories: Versão resumida de até 160 caracteres
-6. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
-   - Se configuradas, inclua frases como: "💬 Comenta '{random_trigger_word}' nos comentários!"
+6. Call-to-action OBRIGATÓRIO: A última frase DEVE usar uma palavra gatilho BOT para incentivar comentários
+
+TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
+- "💬 Comenta '{random_trigger_word}' nos comentários que te mando mais detalhes!"
+- "💬 Deixa '{random_trigger_word}' aqui em baixo que te envio as informações!"
+- "💬 Escreve '{random_trigger_word}' nos comentários para saber mais!"
+
+Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
 {
-  "feed_copy": "Copy principal para feed com storytelling envolvente \\n\\nIncluir quebras de linha",
+  "feed_copy": "Copy principal para feed com storytelling envolvente (DEVE terminar com frase usando palavra gatilho) \\n\\nIncluir quebras de linha",
   "story_copy": "Versão resumida para Stories - máximo 160 caracteres",
   "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
-  "call_to_action": "Link na bio para saber mais! 👆",
+  "call_to_action": "Frase final de call-to-action com palavra gatilho",
   "post_type": "feed"
 }`;
     }
