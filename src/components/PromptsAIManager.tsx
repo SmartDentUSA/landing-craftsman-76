@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle } from 'lucide-react';
+import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, MessageCircle, PlayCircle, Instagram } from 'lucide-react';
 import { PromptEditModal } from './PromptEditModal';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
@@ -129,14 +129,12 @@ const EDGE_FUNCTIONS = [
     ]
   },
   {
-    id: "generate-social-content",
-    name: "Gerador de Conteúdo Social",
-    description: "Gera conteúdo otimizado para WhatsApp, YouTube e Instagram com base nos dados do produto",
-    icon: MessageCircle,
+    id: "generate-instagram-copy",
+    name: "Gerador de Copy Instagram",
+    description: "Gera conteúdo otimizado para Instagram com captions, hashtags e CTAs",
+    icon: Instagram,
     status: "active" as const,
     prompts: [
-      "Mensagem WhatsApp",
-      "Descrição YouTube", 
       "Copy Instagram"
     ],
     dataSources: [
