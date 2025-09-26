@@ -13,7 +13,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, Eye, Database, FileText, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
-import { FieldSelectionInterface } from './FieldSelectionInterface';
 
 interface EdgeFunction {
   id: string;
@@ -37,8 +36,7 @@ const DATA_SOURCES = {
     fields: [
       "name", "description", "price", "category", "subcategory", "benefits", 
       "features", "keywords", "target_audience", "sales_pitch", "youtube_videos", 
-      "instagram_videos", "technical_videos", "testimonial_videos", "bot_trigger_words",
-      "market_keywords", "search_intent_keywords"
+      "instagram_videos", "technical_videos", "testimonial_videos"
     ]
   },
   company_profile: {
@@ -46,8 +44,7 @@ const DATA_SOURCES = {
     fields: [
       "company_name", "company_description", "business_sector", "mission_statement", 
       "vision_statement", "brand_values", "differentiators", "seo_technical_expertise", 
-      "working_methodology", "target_audience", "seo_competitive_advantages",
-      "instagram_profile", "youtube_channel", "contact_phone", "contact_email"
+      "working_methodology", "target_audience", "seo_competitive_advantages"
     ]
   },
   categories_config: {
@@ -1013,36 +1010,50 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
           </TabsList>
 
           <TabsContent value="data-sources" className="flex-1 overflow-hidden">
-            <FieldSelectionInterface
-              dataSources={edgeFunction.dataSources.map(sourceId => {
-                const sourceData = DATA_SOURCES[sourceId as keyof typeof DATA_SOURCES];
-                return {
-                  id: sourceId,
-                  label: sourceData?.label || sourceId,
-                  fields: sourceData?.fields?.map(fieldName => ({
-                    name: fieldName,
-                    isUsedInPrompt: false, // TODO: implementar lógica real
-                    isRequired: false, // TODO: implementar lógica real
-                    hasData: true, // TODO: implementar lógica real
-                  })) || [],
-                  isSelected: selectedFields[sourceId]?.length > 0
-                };
-              })}
-              selectedFields={selectedFields}
-              onFieldToggle={handleFieldToggle}
-              onSourceToggle={(sourceId) => {
-                const sourceData = DATA_SOURCES[sourceId as keyof typeof DATA_SOURCES];
-                if (!sourceData) return;
-                
-                const isCurrentlySelected = selectedFields[sourceId]?.length > 0;
-                if (isCurrentlySelected) {
-                  setSelectedFields(prev => ({ ...prev, [sourceId]: [] }));
-                } else {
-                  setSelectedFields(prev => ({ ...prev, [sourceId]: sourceData.fields }));
-                }
-              }}
-              edgeFunctionId={edgeFunction.id}
-            />
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-4">
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Selecione quais campos de dados serão utilizados na geração de conteúdo para esta função.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid gap-4">
+                  {edgeFunction.dataSources.map(source => {
+                    const sourceData = DATA_SOURCES[source as keyof typeof DATA_SOURCES];
+                    if (!sourceData) return null;
+
+                    return (
+                      <Card key={source}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">{sourceData.label}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {sourceData.fields.map(field => (
+                              <div key={field} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`${source}-${field}`}
+                                  checked={selectedFields[source]?.includes(field) || false}
+                                  onCheckedChange={() => handleFieldToggle(source, field)}
+                                />
+                                <Label 
+                                  htmlFor={`${source}-${field}`} 
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {field}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            </ScrollArea>
           </TabsContent>
 
           <TabsContent value="prompts" className="flex-1 overflow-hidden">
