@@ -41,6 +41,13 @@ serve(async (req) => {
       throw new Error(`Produto não encontrado: ${productError?.message}`);
     }
 
+    console.log('Product data loaded:', {
+      name: product.name,
+      benefits: Array.isArray(product.benefits) ? product.benefits.length : 0,
+      keywords: Array.isArray(product.keywords) ? product.keywords.length : 0,
+      bot_trigger_words: Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words.length : 0
+    });
+
     // Buscar dados da empresa
     const { data: company, error: companyError } = await supabase
       .from('company_profile')
@@ -95,7 +102,7 @@ serve(async (req) => {
     const processedPrompt = processPromptVariables(finalPrompt, product, company);
 
     // Gerar conteúdo com DeepSeek
-    const generatedContent = await generateWithDeepSeek(deepseekApiKey, processedPrompt, type);
+    const generatedContent = await generateWithDeepSeek(deepseekApiKey, processedPrompt, type, product);
 
     // Salvar no banco
     let fieldName: string = '';
@@ -145,7 +152,15 @@ serve(async (req) => {
       throw new Error(`Erro ao salvar: ${updateError.message}`);
     }
 
+    // Verificação pós-salvamento - buscar dados salvos para confirmar
+    const { data: savedProduct } = await supabase
+      .from('products_repository')
+      .select(fieldName)
+      .eq('id', productId)
+      .single();
+
     console.log(`${type} content generated and saved successfully`);
+    console.log('Saved data verification:', savedProduct?.[fieldName as keyof typeof savedProduct]);
 
     return new Response(
       JSON.stringify({ 
@@ -268,7 +283,9 @@ TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
 Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+IMPORTANTE: As hashtags DEVEM estar sempre entre aspas. Exemplo CORRETO: ["#reels", "#viral"]
 
+Formato JSON obrigatório:
 {
   "feed_copy": "Copy dinâmica para Reels (DEVE terminar com frase usando palavra gatilho) \\n\\nLinguagem energética e casual",
   "story_copy": "Versão para Stories - máximo 160 caracteres",
@@ -310,7 +327,9 @@ TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
 Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+IMPORTANTE: As hashtags DEVEM estar sempre entre aspas. Exemplo CORRETO: ["#carrossel", "#educativo"]
 
+Formato JSON obrigatório:
 {
   "feed_copy": "Copy educativa para carrossel (DEVE terminar com frase usando palavra gatilho) \\n\\nSlide 1: Introdução \\nSlide 2: Desenvolvimento...",
   "story_copy": "Versão para Stories destacando valor educativo",
@@ -352,7 +371,9 @@ TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
 Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+IMPORTANTE: As hashtags DEVEM estar sempre entre aspas. Exemplo CORRETO: ["#hashtag1", "#hashtag2"]
 
+Formato JSON obrigatório:
 {
   "feed_copy": "Copy principal para feed com storytelling envolvente (DEVE terminar com frase usando palavra gatilho) \\n\\nIncluir quebras de linha",
   "story_copy": "Versão resumida para Stories - máximo 160 caracteres",
@@ -422,6 +443,8 @@ function processPromptVariables(prompt: string, product: any, company: any): str
 }
 
 function cleanJsonResponse(content: string): string {
+  console.log('Original content to clean:', content);
+  
   // Remove blocos de código markdown
   let cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
   
@@ -433,14 +456,54 @@ function cleanJsonResponse(content: string): string {
     cleanContent = cleanContent.substring(jsonStart, jsonEnd);
   }
   
-  // Fix malformed hashtags - add quotes around hashtags that don't have them
-  cleanContent = cleanContent.replace(/(,\s*)(#[^,\]]+)(\s*[\],])/g, '$1"$2"$3');
-  cleanContent = cleanContent.replace(/(\[\s*)(#[^,\]]+)(\s*[,\]])/g, '$1"$2"$3');
+  // Multiple passes of hashtag fixing with more robust patterns
   
+  // Fix hashtags without quotes in arrays: #hashtag -> "#hashtag"
+  cleanContent = cleanContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]"]+)/g, '$1", "$2"');
+  cleanContent = cleanContent.replace(/(\[\s*)(#[^,\]"]+)(\s*[,\]])/g, '$1"$2"$3');
+  cleanContent = cleanContent.replace(/(,\s*)(#[^,\]"]+)(\s*[,\]])/g, '$1"$2"$3');
+  
+  // Fix hashtags with quotes inside: #"hashtag" -> "#hashtag"
+  cleanContent = cleanContent.replace(/#"([^"]+)"/g, '"#$1"');
+  
+  // Fix broken quotes around hashtags: "#hashtag", -> "#hashtag",
+  cleanContent = cleanContent.replace(/"\s*(#[^"]+)\s*"/g, '"$1"');
+  
+  // Fix trailing commas in arrays
+  cleanContent = cleanContent.replace(/,(\s*[\]\}])/g, '$1');
+  
+  // Fix multiple spaces
+  cleanContent = cleanContent.replace(/\s+/g, ' ');
+  
+  console.log('Cleaned content result:', cleanContent);
   return cleanContent.trim();
 }
 
-async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whatsapp' | 'youtube' | 'instagram'): Promise<any> {
+function createIntelligentFallback(type: string, product: any): any {
+  console.log('Creating intelligent fallback for type:', type);
+  
+  const productName = product?.name || 'Produto Inovador';
+  const productCategory = product?.category || 'tecnologia';
+  const categoryHashtag = productCategory.toLowerCase().replace(/\s+/g, '').substring(0, 15);
+  
+  if (type === 'instagram') {
+    return {
+      feed_copy: `🔥 Conheça o ${productName}! 💡\n\nUma solução inovadora que vai transformar sua experiência. Descubra todos os benefícios que esse produto pode oferecer!\n\n💬 Comenta 'QUERO' que te mando mais informações!`,
+      story_copy: `${productName} - Inovação que faz a diferença! 🚀`,
+      hashtags: ["#inovacao", "#tecnologia", "#qualidade", `#${categoryHashtag}`],
+      call_to_action: "💬 Comenta 'QUERO' que te mando mais informações!",
+      post_type: "feed"
+    };
+  } else {
+    return {
+      title_suggestion: `${productName} - Conheça os Benefícios`,
+      description: `Descubra tudo sobre este produto incrível!\n\nNome: ${productName}\nCategoria: ${productCategory}`,
+      tags: ["produto", "inovacao", "tecnologia", "qualidade", "beneficios"]
+    };
+  }
+}
+
+async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whatsapp' | 'youtube' | 'instagram', product?: any): Promise<any> {
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: {
@@ -492,13 +555,14 @@ async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whats
       console.error('JSON parse error:', error);
       console.log('Failed to parse content:', content);
       
-      // Tentar corrigir hashtags malformadas e tentar novamente
+      // Tentar correções mais agressivas
       let fixedContent = content;
       
-      // Fix unquoted hashtags more aggressively
-      fixedContent = fixedContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]]+),/g, '$1", "$2",');
-      fixedContent = fixedContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]]+)(\s*\])/g, '$1", "$2"$3');
+      // Fix multiple patterns of malformed hashtags
+      fixedContent = fixedContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]"]+),/g, '$1", "$2",');
+      fixedContent = fixedContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]"]+)(\s*\])/g, '$1", "$2"$3');
       fixedContent = fixedContent.replace(/,\s*(#[^,\]"\s]+)(\s*[\],])/g, ', "$1"$2');
+      fixedContent = fixedContent.replace(/#"([^"]+)"/g, '"#$1"');
       
       try {
         const retryParsed = JSON.parse(fixedContent);
@@ -519,22 +583,9 @@ async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whats
       } catch (retryError) {
         console.error('Retry parse error:', retryError);
         
-        // Se ainda não conseguir parsear, retornar como texto simples com fallback
-        if (type === 'instagram') {
-          return {
-            feed_copy: content.replace(/\\n/g, '\n'),
-            story_copy: "Copy para stories não disponível",
-            hashtags: [],
-            call_to_action: "Comenta 'QUERO' que te mando mais informações!",
-            post_type: "feed"
-          };
-        } else {
-          return {
-            title_suggestion: "Título sugerido não disponível",
-            description: content.replace(/\\n/g, '\n'),
-            tags: []
-          };
-        }
+        // Fallback inteligente usando dados do produto
+        console.error('Creating intelligent fallback after parsing failures');
+        return createIntelligentFallback(type, product);
       }
     }
   }
