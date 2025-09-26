@@ -40,11 +40,15 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editingCopy, setEditingCopy] = useState<InstagramCopy | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 3 });
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [companyMention, setCompanyMention] = useState('@smartdentoficial');
   const [instagramType, setInstagramType] = useState<'feed' | 'reels' | 'carousel'>('feed');
+  const [allCopies, setAllCopies] = useState<{ feed?: InstagramCopy; reels?: InstagramCopy; carousel?: InstagramCopy }>({});
+  const [activeTab, setActiveTab] = useState<'feed' | 'reels' | 'carousel'>('feed');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -150,6 +154,77 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const generateAllCopyTypes = async () => {
+    setIsGeneratingAll(true);
+    setGenerationProgress({ current: 0, total: 3 });
+    const newAllCopies: { feed?: InstagramCopy; reels?: InstagramCopy; carousel?: InstagramCopy } = {};
+    
+    try {
+      const types: ('feed' | 'reels' | 'carousel')[] = ['feed', 'reels', 'carousel'];
+      
+      for (let i = 0; i < types.length; i++) {
+        const type = types[i];
+        setGenerationProgress({ current: i + 1, total: 3 });
+        
+        const { data, error } = await supabase.functions.invoke('generate-social-content', {
+          body: {
+            type: 'instagram',
+            productId: productId,
+            instagramType: type
+          }
+        });
+
+        if (error) throw error;
+
+        const newCopy: InstagramCopy = {
+          id: crypto.randomUUID(),
+          ...data.content,
+          generated_at: new Date().toISOString(),
+          editable: true
+        };
+
+        newAllCopies[type] = newCopy;
+        
+        // Adicionar ao histórico existente
+        const updatedCopies = [newCopy, ...copies];
+        setCopies(updatedCopies);
+      }
+
+      setAllCopies(newAllCopies);
+      setActiveTab('feed');
+      setCurrentCopy(newAllCopies.feed || null);
+
+      // Salvar todas no banco
+      const allGeneratedCopies = Object.values(newAllCopies).filter(Boolean);
+      const { error: updateError } = await supabase
+        .from('products_repository')
+        .update({
+          instagram_copies: {
+            copies: [...allGeneratedCopies, ...copies],
+            last_generated: new Date().toISOString()
+          } as any
+        })
+        .eq('id', productId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Sucesso!",
+        description: "Todas as 3 opções de copy do Instagram foram geradas!",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar copies do Instagram:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar todas as copies do Instagram.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAll(false);
+      setGenerationProgress({ current: 0, total: 3 });
     }
   };
 
@@ -298,7 +373,7 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
             <div className="flex flex-wrap gap-2">
               <Button 
                 onClick={generateNewCopy} 
-                disabled={isGenerating}
+                disabled={isGenerating || isGeneratingAll}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
                 {isGenerating ? (
@@ -314,9 +389,28 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
                 )}
               </Button>
 
+              <Button 
+                onClick={generateAllCopyTypes} 
+                disabled={isGenerating || isGeneratingAll}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+              >
+                {isGeneratingAll ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {generationProgress.current}/{generationProgress.total} - Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Instagram className="mr-2 h-4 w-4" />
+                    ✨ Gerar Todas as Opções
+                  </>
+                )}
+              </Button>
+
               <Button
                 variant="outline"
                 onClick={() => setShowHistory(!showHistory)}
+                disabled={isGenerating || isGeneratingAll}
               >
                 <History className="mr-2 h-4 w-4" />
                 {showHistory ? 'Ocultar' : 'Ver'} Histórico
@@ -325,6 +419,7 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
               <Button
                 variant="outline"
                 onClick={() => setShowConfig(!showConfig)}
+                disabled={isGenerating || isGeneratingAll}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Configurar
@@ -356,8 +451,112 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
             </Card>
           )}
 
-          {/* Copy Atual */}
-          {currentCopy && !isEditing && (
+          {/* Visualização das 3 Opções em Tabs */}
+          {Object.keys(allCopies).length > 0 && !isEditing && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Todas as Opções Geradas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Tabs */}
+                <div className="flex space-x-1 mb-4 p-1 bg-muted rounded-lg">
+                  {(['feed', 'reels', 'carousel'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setActiveTab(type);
+                        setCurrentCopy(allCopies[type] || null);
+                      }}
+                      className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        activeTab === type
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {type === 'feed' ? '📱 Feed' : type === 'reels' ? '🎬 Reels' : '📸 Carrossel'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Conteúdo da Tab Ativa */}
+                {allCopies[activeTab] && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">
+                        {activeTab === 'feed' ? 'Copy Feed (post estático)' : 
+                         activeTab === 'reels' ? 'Copy Vídeo Reels' : 'Copy Carrossel'}
+                      </h3>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(formatCopy(allCopies[activeTab]?.feed_copy))}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditing(allCopies[activeTab]!)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Copy do Feed */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <Label>Copy para Feed</Label>
+                        <Badge variant={isOverLimit(allCopies[activeTab]?.feed_copy || '', 2200) ? "destructive" : "secondary"}>
+                          {getCharacterCount(allCopies[activeTab]?.feed_copy || '')}/2200
+                        </Badge>
+                      </div>
+                      <div className="p-3 bg-muted rounded-md whitespace-pre-wrap text-sm">
+                        {formatCopy(allCopies[activeTab]?.feed_copy)}
+                      </div>
+                    </div>
+
+                    {/* Copy para Stories */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <Label>Copy para Stories</Label>
+                        <Badge variant={isOverLimit(allCopies[activeTab]?.story_copy || '', 160) ? "destructive" : "secondary"}>
+                          {getCharacterCount(allCopies[activeTab]?.story_copy || '')}/160
+                        </Badge>
+                      </div>
+                      <div className="p-3 bg-muted rounded-md text-sm">
+                        {allCopies[activeTab]?.story_copy}
+                      </div>
+                    </div>
+
+                    {/* Hashtags */}
+                    <div>
+                      <Label>Hashtags ({allCopies[activeTab]?.hashtags?.length || 0})</Label>
+                      <div className="p-3 bg-muted rounded-md text-sm">
+                        {getHashtagsString(allCopies[activeTab]?.hashtags || [])}
+                      </div>
+                    </div>
+
+                    {/* Call to Action */}
+                    <div>
+                      <Label>Call to Action</Label>
+                      <div className="p-3 bg-muted rounded-md text-sm">
+                        {allCopies[activeTab]?.call_to_action}
+                      </div>
+                    </div>
+
+                    <Badge variant="outline">
+                      Gerado em: {allCopies[activeTab]?.generated_at ? new Date(allCopies[activeTab]!.generated_at).toLocaleString() : ''}
+                    </Badge>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Copy Atual (fallback para geração individual) */}
+          {currentCopy && !isEditing && Object.keys(allCopies).length === 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
