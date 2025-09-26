@@ -1,11 +1,34 @@
+import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Shield, User } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export function AdminStatusBadge() {
-  const { userRole, loading } = useAuth();
+  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
 
-  if (loading || !userRole) return null;
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        const { data: isAdmin } = await supabase
+          .rpc('has_role', { 
+            _user_id: session.user.id, 
+            _role: 'admin' 
+          });
+
+        setUserRole(isAdmin ? 'admin' : 'user');
+      } catch (error) {
+        console.error('Error checking role:', error);
+        setUserRole('user');
+      }
+    };
+
+    checkRole();
+  }, []);
+
+  if (!userRole) return null;
 
   return (
     <Badge 

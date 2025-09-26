@@ -17,7 +17,6 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
 import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
-import { useAuth } from "@/contexts/AuthContext";
 
 // Interface for blog posts
 interface BlogPost {
@@ -36,7 +35,6 @@ interface BlogPost {
 const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, userRole, loading: authLoading } = useAuth();
   const { landingPages, deleteLandingPage, addLandingPage, isLoading } = useLandingPagesSupabase();
   const { 
     consolidatedBlogs,
@@ -52,11 +50,11 @@ const DashboardContent = () => {
     activeProductBlogsCount,
     activeProductBlogsCountByDomain
   } = useProductBlogsIntegration(approvedLandingPagesWithBlogs);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
-
-  console.log('Dashboard - AuthContext data:', { userRole, user: user?.email, authLoading });
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
@@ -112,6 +110,24 @@ const DashboardContent = () => {
     debouncedFetchBlogPosts();
   }, [debouncedFetchBlogPosts]);
 
+  const getCurrentUser = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setUserEmail(session.user.email);
+      
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      setUserRole(roleData?.role || 'user');
+    }
+  }, []);
+
+  useEffect(() => {
+    getCurrentUser();
+  }, [getCurrentUser]);
 
   // Separate effect to react to landing page approval/disapproval changes
   useEffect(() => {
@@ -154,37 +170,31 @@ const DashboardContent = () => {
   }, [fetchBlogPosts]);
 
   const handlePromoteToAdmin = async () => {
-    if (!user?.email) return;
+    if (!userEmail) return;
     
     setPromotingToAdmin(true);
     try {
-      console.log('🔄 Promoting user to admin:', user.email);
       const { data, error } = await supabase.rpc('promote_user_to_admin', { 
-        _email: user.email 
+        _email: userEmail 
       });
       
-      if (error) {
-        console.error('❌ RPC error:', error);
-        throw error;
-      }
-      
-      console.log('✅ RPC response:', data);
+      if (error) throw error;
       
       if (data) {
         toast({
           title: "Acesso de administrador ativado!",
-          description: "Você agora tem acesso total ao editor. A página irá recarregar em breve.",
+          description: "Você agora tem acesso total ao editor.",
         });
         
-        // Aguardar um pouco para o contexto atualizar
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        // Update role state
+        setUserRole('admin');
+        
+        // Redirect to editor
+        navigate('/editor');
       } else {
         throw new Error('Não foi possível ativar o acesso de administrador');
       }
     } catch (error) {
-      console.error('❌ Error promoting to admin:', error);
       toast({
         title: "Erro ao ativar acesso",
         description: "Não foi possível ativar o acesso de administrador. Tente novamente.",
@@ -678,7 +688,7 @@ const DashboardContent = () => {
         <BreadcrumbNavigation />
       </div>
       {/* Admin Promotion Banner */}
-      {!authLoading && userRole !== 'admin' && (
+      {userRole !== 'admin' && (
         <div className="bg-gradient-to-r from-primary/10 to-accent/10 border-b border-primary/20">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
