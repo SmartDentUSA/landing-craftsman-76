@@ -135,7 +135,9 @@ const EDGE_FUNCTIONS = [
     icon: Instagram,
     status: "active" as const,
     prompts: [
-      "Copy Instagram"
+      "Copy Feed (post estático)",
+      "Copy Vídeo Reels",
+      "Copy Carrossel"
     ],
     dataSources: [
       "products_repository",

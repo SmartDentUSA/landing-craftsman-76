@@ -484,6 +484,137 @@ Keywords: {keywords}
 Retorne apenas o JSON com as FAQs.`
   },
 
+  "generate-instagram-copy": {
+    "Copy Feed (post estático)": `Você é um especialista em marketing digital no Instagram. Crie uma copy envolvente e otimizada para posts estáticos de feed do Instagram.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Mention: @smartdentoficial
+
+INSTRUÇÕES ESPECÍFICAS PARA POST ESTÁTICO:
+1. Copy Principal: Máximo 2200 caracteres, foque em storytelling envolvente
+2. Início impactante: Hook que prenda a atenção nos primeiros segundos
+3. Desenvolvimento: História que conecte emocionalmente com o público
+4. Narrativa visual: Descreva como o produto se encaixa na vida do usuário
+5. Copy para Stories: Versão resumida de até 160 caracteres
+6. Hashtags: Entre 20-30 hashtags relevantes e estratégicas
+7. Call-to-Action: CTAs específicos ("Link na bio", "Salve este post", "Comenta aqui")
+8. Emojis: Usar estrategicamente para aumentar engajamento
+9. Mention: Incluir @smartdentoficial quando apropriado
+
+ESTRUTURA SUGERIDA:
+- Hook inicial (1-2 frases impactantes)
+- História/problema relatable 
+- Como o produto resolve o problema
+- Benefícios com storytelling
+- Call-to-action claro
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+
+{
+  "feed_copy": "Copy principal para feed com storytelling envolvente \\n\\nIncluir quebras de linha com \\n",
+  "story_copy": "Versão resumida para Stories - máximo 160 caracteres",
+  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
+  "call_to_action": "Link na bio para saber mais! 👆",
+  "post_type": "feed"
+}`,
+
+    "Copy Vídeo Reels": `Você é um especialista em marketing digital no Instagram especializado em conteúdo para Reels. Crie uma copy otimizada para vídeos Reels.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Mention: @smartdentoficial
+
+INSTRUÇÕES ESPECÍFICAS PARA REELS:
+1. Copy Principal: Máximo 2200 caracteres, mas mais dinâmica e energética
+2. Hook inicial: Muito impactante, cause curiosidade nos primeiros 3 segundos
+3. Linguagem: Mais casual, use gírias quando apropriado ao público
+4. Timing: Pense na sincronização com as cenas do vídeo
+5. Interação: Incentive likes, shares, comentários e saves
+6. Copy para Stories: Versão para republicar nos Stories
+7. Hashtags: Foque em hashtags de Reels e tendências
+8. Call-to-Action: CTAs específicos para vídeo ("Assista até o final", "Duplo toque se concorda")
+9. Trends: Considere trends atuais do Instagram
+10. Mention: Incluir @smartdentoficial estrategicamente
+
+ESTRUTURA SUGERIDA:
+- Hook ultra-impactante (pergunta, afirmação polêmica, número surpreendente)
+- Desenvolvimento rápido e dinâmico
+- Pontos-chave com timing para o vídeo
+- CTA para engajamento máximo
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+
+{
+  "feed_copy": "Copy dinâmica para Reels com hooks impactantes \\n\\nLinguagem energética e casual",
+  "story_copy": "Versão para Stories - máximo 160 caracteres",
+  "hashtags": ["#reels", "#viral", "#trending", "#produto"],
+  "call_to_action": "Assista até o final! Duplo toque se concorda 🔥",
+  "post_type": "reels"
+}`,
+
+    "Copy Carrossel": `Você é um especialista em marketing digital no Instagram especializado em posts em carrossel. Crie uma copy estratégica para carrossel com múltiplas imagens.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Mention: @smartdentoficial
+
+INSTRUÇÕES ESPECÍFICAS PARA CARROSSEL:
+1. Copy Principal: Máximo 2200 caracteres, estruturada para múltiplas imagens
+2. Narrativa sequencial: Conte uma história que se desenvolve através dos slides
+3. Ganchos para deslizar: Crie curiosidade para o próximo slide
+4. Numeração: Use "1/5", "Slide 2:", etc. quando apropriado
+5. Informação progressiva: Cada slide adiciona valor ao anterior
+6. Copy para Stories: Versão que destaque o aspecto educativo/informativo
+7. Hashtags: Foque em hashtags educativas e de nicho
+8. Call-to-Action: CTAs que incentivem deslizar e salvar
+9. Valor educativo: Carrosseis são ideais para educar
+10. Mention: Incluir @smartdentoficial no contexto educativo
+
+ESTRUTURA SUGERIDA:
+- Introdução que promete informação valiosa
+- Desenvolvimento por slides (ex: "No slide 2, você vai descobrir...")
+- Conclusão que amarre todo o conteúdo
+- CTA para salvar e compartilhar
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+
+{
+  "feed_copy": "Copy educativa para carrossel com narrativa sequencial \\n\\nSlide 1: Introdução \\nSlide 2: Desenvolvimento...",
+  "story_copy": "Versão para Stories destacando valor educativo",
+  "hashtags": ["#carrossel", "#educativo", "#dicas", "#aprenda"],
+  "call_to_action": "Salve este post para não esquecer! Deslize para ver tudo →",
+  "post_type": "carousel"
+}`,
+  },
+
   "generate-whatsapp-messages": {
     "Mensagem Promocional WhatsApp": `Você é um especialista em marketing digital e comunicação para WhatsApp.
 

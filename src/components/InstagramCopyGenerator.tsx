@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface InstagramCopy {
   id: string;
@@ -43,6 +44,7 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
   const [showHistory, setShowHistory] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [companyMention, setCompanyMention] = useState('@smartdentoficial');
+  const [instagramType, setInstagramType] = useState<'feed' | 'reels' | 'carousel'>('feed');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,7 +106,8 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
       const { data, error } = await supabase.functions.invoke('generate-social-content', {
         body: {
           type: 'instagram',
-          productId: productId
+          productId: productId,
+          instagramType: instagramType
         }
       });
 
@@ -274,41 +277,59 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Botões de Ação */}
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              onClick={generateNewCopy} 
-              disabled={isGenerating}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Instagram className="mr-2 h-4 w-4" />
-                  Gerar Nova Copy
-                </>
-              )}
-            </Button>
+          {/* Seletor de Tipo e Botões de Ação */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="instagram-type">Tipo de Copy:</Label>
+                <Select value={instagramType} onValueChange={(value: 'feed' | 'reels' | 'carousel') => setInstagramType(value)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="feed">Copy Feed (post estático)</SelectItem>
+                    <SelectItem value="reels">Copy Vídeo Reels</SelectItem>
+                    <SelectItem value="carousel">Copy Carrossel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-            <Button
-              variant="outline"
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              <History className="mr-2 h-4 w-4" />
-              {showHistory ? 'Ocultar' : 'Ver'} Histórico
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={generateNewCopy} 
+                disabled={isGenerating}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Instagram className="mr-2 h-4 w-4" />
+                    Gerar Nova Copy
+                  </>
+                )}
+              </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => setShowConfig(!showConfig)}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Configurar
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                <History className="mr-2 h-4 w-4" />
+                {showHistory ? 'Ocultar' : 'Ver'} Histórico
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setShowConfig(!showConfig)}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Configurar
+              </Button>
+            </div>
           </div>
 
           {/* Configuração da Empresa */}
@@ -340,7 +361,7 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Copy para Instagram</span>
+                  <span>Copy para Instagram - {currentCopy.post_type === 'feed' ? 'Post Estático' : currentCopy.post_type === 'reels' ? 'Vídeo Reels' : 'Carrossel'}</span>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"

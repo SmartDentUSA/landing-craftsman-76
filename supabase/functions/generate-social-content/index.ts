@@ -11,6 +11,7 @@ interface SocialContentRequest {
   type: 'whatsapp' | 'youtube' | 'instagram';
   productId: string;
   customPrompt?: string;
+  instagramType?: 'feed' | 'reels' | 'carousel';
 }
 
 serve(async (req) => {
@@ -25,7 +26,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { type, productId, customPrompt }: SocialContentRequest = await req.json();
+    const { type, productId, customPrompt, instagramType }: SocialContentRequest = await req.json();
 
     console.log(`Generating ${type} content for product ${productId}`);
 
@@ -64,8 +65,14 @@ serve(async (req) => {
         functionId = 'generate-youtube-descriptions';
         promptName = 'Descrição Completa YouTube';
       } else if (type === 'instagram') {
-        functionId = 'generate-social-content';
-        promptName = 'Copy Instagram';
+        functionId = 'generate-instagram-copy';
+        if (instagramType === 'reels') {
+          promptName = 'Copy Vídeo Reels';
+        } else if (instagramType === 'carousel') {
+          promptName = 'Copy Carrossel';
+        } else {
+          promptName = 'Copy Feed (post estático)';
+        }
       } else {
         throw new Error(`Tipo inválido: ${type}`);
       }
@@ -80,7 +87,7 @@ serve(async (req) => {
       if (promptConfig?.custom_prompt) {
         finalPrompt = promptConfig.custom_prompt;
       } else {
-        finalPrompt = getDefaultPrompt(type);
+        finalPrompt = getDefaultPrompt(type, instagramType);
       }
     }
 
@@ -167,7 +174,7 @@ serve(async (req) => {
   }
 });
 
-function getDefaultPrompt(type: 'whatsapp' | 'youtube' | 'instagram'): string {
+function getDefaultPrompt(type: 'whatsapp' | 'youtube' | 'instagram', instagramType?: 'feed' | 'reels' | 'carousel'): string {
   if (type === 'whatsapp') {
     return `Você é um especialista em marketing digital e comunicação para WhatsApp.
 
@@ -226,7 +233,8 @@ Exemplo do formato JSON esperado:
 
 IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`;
   } else if (type === 'instagram') {
-    return `Você é um especialista em marketing digital no Instagram. Crie uma copy envolvente e otimizada para Instagram baseada no produto fornecido.
+    if (instagramType === 'reels') {
+      return `Você é um especialista em marketing digital no Instagram especializado em conteúdo para Reels. Crie uma copy otimizada para vídeos Reels.
 
 Informações do Produto:
 - Nome: {product.name}
@@ -241,27 +249,91 @@ Informações da Empresa:
 - Nome: {company.company_name}
 - Mention: @smartdentoficial
 
-INSTRUÇÕES ESPECÍFICAS PARA INSTAGRAM:
-1. Copy para Feed: Máximo 2200 caracteres, início impactante, storytelling envolvente
-2. Copy para Stories: Versão resumida de até 160 caracteres, mais direta
-3. Hashtags: Entre 20-30 hashtags relevantes e estratégicas
-4. Call-to-Action: CTAs específicos do Instagram ("Link na bio", "Deslize para ver mais", "Salve este post")
-5. Emojis: Usar estrategicamente para aumentar engajamento
-6. Mention da empresa: Incluir @smartdentoficial quando apropriado
+INSTRUÇÕES ESPECÍFICAS PARA REELS:
+1. Copy Principal: Máximo 2200 caracteres, mas mais dinâmica e energética
+2. Hook inicial: Muito impactante, cause curiosidade nos primeiros 3 segundos
+3. Linguagem: Mais casual, use gírias quando apropriado ao público
+4. Timing: Pense na sincronização com as cenas do vídeo
+5. Interação: Incentive likes, shares, comentários e saves
+6. Copy para Stories: Versão para republicar nos Stories
+7. Hashtags: Foque em hashtags de Reels e tendências
+8. Call-to-Action: CTAs específicos para vídeo ("Assista até o final", "Duplo toque se concorda")
 
-CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
-Use quebras de linha (\\n) que serão convertidas automaticamente para quebras reais na exibição.
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
-Exemplo do formato JSON esperado:
 {
-  "feed_copy": "Copy principal para feed com storytelling envolvente, incluindo benefícios e CTA. Use emojis estrategicamente. \\n\\nMencione @smartdentoficial quando apropriado.",
-  "story_copy": "Versão resumida e direta para Stories - máximo 160 caracteres",
-  "hashtags": ["#odontologia", "#sorriso", "#saude", "#dentista", "#smartdent", "#inovacao", "#tecnologia", "#bemestar", "#cuidados", "#qualidade"],
+  "feed_copy": "Copy dinâmica para Reels com hooks impactantes \\n\\nLinguagem energética e casual",
+  "story_copy": "Versão para Stories - máximo 160 caracteres",
+  "hashtags": ["#reels", "#viral", "#trending"],
+  "call_to_action": "Assista até o final! Duplo toque se concorda 🔥",
+  "post_type": "reels"
+}`;
+    } else if (instagramType === 'carousel') {
+      return `Você é um especialista em marketing digital no Instagram especializado em posts em carrossel. Crie uma copy estratégica para carrossel com múltiplas imagens.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Mention: @smartdentoficial
+
+INSTRUÇÕES ESPECÍFICAS PARA CARROSSEL:
+1. Copy Principal: Máximo 2200 caracteres, estruturada para múltiplas imagens
+2. Narrativa sequencial: Conte uma história que se desenvolve através dos slides
+3. Ganchos para deslizar: Crie curiosidade para o próximo slide
+4. Numeração: Use "1/5", "Slide 2:", etc. quando apropriado
+5. Informação progressiva: Cada slide adiciona valor ao anterior
+6. Call-to-Action: CTAs que incentivem deslizar e salvar
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+
+{
+  "feed_copy": "Copy educativa para carrossel com narrativa sequencial \\n\\nSlide 1: Introdução \\nSlide 2: Desenvolvimento...",
+  "story_copy": "Versão para Stories destacando valor educativo",
+  "hashtags": ["#carrossel", "#educativo", "#dicas"],
+  "call_to_action": "Salve este post para não esquecer! Deslize para ver tudo →",
+  "post_type": "carousel"
+}`;
+    } else {
+      return `Você é um especialista em marketing digital no Instagram. Crie uma copy envolvente e otimizada para posts estáticos de feed do Instagram.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Mention: @smartdentoficial
+
+INSTRUÇÕES ESPECÍFICAS PARA POST ESTÁTICO:
+1. Copy Principal: Máximo 2200 caracteres, foque em storytelling envolvente
+2. Início impactante: Hook que prenda a atenção nos primeiros segundos
+3. Desenvolvimento: História que conecte emocionalmente com o público
+4. Narrativa visual: Descreva como o produto se encaixa na vida do usuário
+5. Copy para Stories: Versão resumida de até 160 caracteres
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+
+{
+  "feed_copy": "Copy principal para feed com storytelling envolvente \\n\\nIncluir quebras de linha",
+  "story_copy": "Versão resumida para Stories - máximo 160 caracteres",
+  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
   "call_to_action": "Link na bio para saber mais! 👆",
   "post_type": "feed"
-}
-
-IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`;
+}`;
+    }
   }
   
   throw new Error(`Tipo não suportado: ${type}`);
