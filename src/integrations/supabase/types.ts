@@ -481,6 +481,7 @@ export type Database = {
           ai_generated_keywords: boolean | null
           approved: boolean | null
           benefits: Json | null
+          bot_trigger_words: Json | null
           category: string | null
           created_at: string
           currency: string | null
@@ -527,6 +528,7 @@ export type Database = {
           ai_generated_keywords?: boolean | null
           approved?: boolean | null
           benefits?: Json | null
+          bot_trigger_words?: Json | null
           category?: string | null
           created_at?: string
           currency?: string | null
@@ -573,6 +575,7 @@ export type Database = {
           ai_generated_keywords?: boolean | null
           approved?: boolean | null
           benefits?: Json | null
+          bot_trigger_words?: Json | null
           category?: string | null
           created_at?: string
           currency?: string | null

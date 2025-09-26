@@ -47,6 +47,7 @@ interface Product {
   benefits?: string[];
   features?: string[];
   tags?: string[];
+  bot_trigger_words?: string[];
   instagram_videos?: Video[];
   youtube_videos?: Video[];
   testimonial_videos?: Video[];
@@ -99,11 +100,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     target_audience: [],
     use_in_ai_generation: true,
     approved: true,
-    keywords: [],
-    market_keywords: [],
-    search_intent_keywords: [],
-    benefits: [],
-    features: [],
+        keywords: [],
+        market_keywords: [],
+        search_intent_keywords: [],
+        benefits: [],
+        features: [],
+        bot_trigger_words: [],
     instagram_videos: [],
     youtube_videos: [],
     testimonial_videos: [],
@@ -125,6 +127,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [targetAudience, setTargetAudience] = useState<string[]>([]);
   const [marketKeywords, setMarketKeywords] = useState<string[]>([]);
   const [searchIntentKeywords, setSearchIntentKeywords] = useState<string[]>([]);
+  const [botTriggerWords, setBotTriggerWords] = useState<string[]>([]);
   const [newBenefit, setNewBenefit] = useState('');
   const [newFeature, setNewFeature] = useState('');
   const [saving, setSaving] = useState(false);
@@ -227,6 +230,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTargetAudience(product.target_audience || []);
       setMarketKeywords(product.market_keywords || []);
       setSearchIntentKeywords(product.search_intent_keywords || []);
+      setBotTriggerWords(product.bot_trigger_words || []);
       setInstagramVideos(product.instagram_videos || []);
       setYoutubeVideos(product.youtube_videos || []);
       setTestimonialVideos(product.testimonial_videos || []);
@@ -272,6 +276,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTargetAudience([]);
       setMarketKeywords([]);
       setSearchIntentKeywords([]);
+      setBotTriggerWords([]);
       setInstagramVideos([]);
       setYoutubeVideos([]);
       setTestimonialVideos([]);
@@ -623,6 +628,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         search_intent_keywords: searchIntentKeywords,
         benefits: benefits,
         features: features,
+        bot_trigger_words: botTriggerWords,
         // Landing Page Section controls
         show_in_resources: formData.show_in_resources,
         selected: formData.selected,
@@ -1179,6 +1185,19 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 </Badge>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bot_trigger_words">Palavras Gatilho BOT</Label>
+            <TagInput
+              value={botTriggerWords}
+              onChange={setBotTriggerWords}
+              placeholder="Digite palavras gatilho (ex: QUERO, INTERESSE) e pressione Enter"
+            />
+            <p className="text-sm text-muted-foreground">
+              Palavras que serão inseridas automaticamente nas copies do Instagram e WhatsApp para incentivar interação. 
+              Ex: "Comente 'QUERO' e receba mais informações"
+            </p>
           </div>
 
           {/* Landing Page Sections Configuration */}

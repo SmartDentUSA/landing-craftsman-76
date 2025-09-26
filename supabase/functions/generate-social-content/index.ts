@@ -30,7 +30,7 @@ serve(async (req) => {
 
     console.log(`Generating ${type} content for product ${productId}`);
 
-    // Buscar dados do produto
+    // Buscar dados do produto incluindo bot_trigger_words
     const { data: product, error: productError } = await supabase
       .from('products_repository')
       .select('*')
@@ -195,6 +195,8 @@ Template da Mensagem:
 ✅ PRINCIPAIS BENEFÍCIOS:
 [LISTE ATÉ 10 BENEFÍCIOS COM EMOJIS RELEVANTES]
 
+💬 Responda com '{random_trigger_word}' para receber mais informações!
+
 🛒 Saiba mais → [LINK DO PRODUTO]
 
 #[EMPRESA] #[CATEGORIA]
@@ -205,6 +207,8 @@ Instruções:
 3. Máximo 1000 caracteres (ideal para WhatsApp)
 4. Inclua call-to-action claro
 5. Use hashtags da empresa e categoria
+6. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
+   - Se configuradas, inclua frases como: "💬 Responda com '{random_trigger_word}' que envio mais detalhes!"
 
 Retorne apenas o texto da mensagem formatada, sem explicações.`;
   } else if (type === 'youtube') {
@@ -258,6 +262,8 @@ INSTRUÇÕES ESPECÍFICAS PARA REELS:
 6. Copy para Stories: Versão para republicar nos Stories
 7. Hashtags: Foque em hashtags de Reels e tendências
 8. Call-to-Action: CTAs específicos para vídeo ("Assista até o final", "Duplo toque se concorda")
+9. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
+   - Se configuradas, inclua frases como: "💬 Comenta '{random_trigger_word}' que te mando tudo!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
@@ -291,6 +297,8 @@ INSTRUÇÕES ESPECÍFICAS PARA CARROSSEL:
 4. Numeração: Use "1/5", "Slide 2:", etc. quando apropriado
 5. Informação progressiva: Cada slide adiciona valor ao anterior
 6. Call-to-Action: CTAs que incentivem deslizar e salvar
+7. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
+   - Se configuradas, inclua frases como: "💬 Deixa '{random_trigger_word}' aqui em baixo!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
@@ -323,6 +331,8 @@ INSTRUÇÕES ESPECÍFICAS PARA POST ESTÁTICO:
 3. Desenvolvimento: História que conecte emocionalmente com o público
 4. Narrativa visual: Descreva como o produto se encaixa na vida do usuário
 5. Copy para Stories: Versão resumida de até 160 caracteres
+6. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
+   - Se configuradas, inclua frases como: "💬 Comenta '{random_trigger_word}' nos comentários!"
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
 
@@ -363,6 +373,20 @@ function processPromptVariables(prompt: string, product: any, company: any): str
   const targetAudienceArray = Array.isArray(product.target_audience) ? product.target_audience : [];
   const targetAudienceText = targetAudienceArray.join(', ') || 'Não informado';
   processedPrompt = processedPrompt.replace(/{product\.target_audience}/g, targetAudienceText);
+
+  // Processar palavras gatilho BOT
+  const botTriggerWordsArray = Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : [];
+  const botTriggerWordsText = botTriggerWordsArray.length > 0 ? botTriggerWordsArray.join(', ') : '';
+  const randomTriggerWord = botTriggerWordsArray.length > 0 ? botTriggerWordsArray[Math.floor(Math.random() * botTriggerWordsArray.length)] : '';
+  
+  processedPrompt = processedPrompt.replace(/{product\.bot_trigger_words}/g, botTriggerWordsText);
+  processedPrompt = processedPrompt.replace(/{random_trigger_word}/g, randomTriggerWord);
+  
+  // Criar exemplos formatados de palavras gatilho
+  const triggerWordExamples = botTriggerWordsArray.length > 0 
+    ? `Exemplos de palavras gatilho configuradas: ${botTriggerWordsArray.slice(0, 3).map((word: string) => `"${word}"`).join(', ')}`
+    : '';
+  processedPrompt = processedPrompt.replace(/{trigger_word_examples}/g, triggerWordExamples);
 
   // Processar preço
   const priceText = product.price ? `${product.currency || 'R$'} ${product.price}` : 'Não informado';
