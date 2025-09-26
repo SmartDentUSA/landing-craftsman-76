@@ -4,6 +4,12 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+export interface TagInputHandle {
+  commitPending: () => void
+  getPendingValue: () => string
+  clear: () => void
+}
+
 export interface TagInputProps {
   value?: string[]
   onChange?: (tags: string[]) => void
@@ -11,7 +17,7 @@ export interface TagInputProps {
   className?: string
 }
 
-const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
+const TagInput = React.forwardRef<TagInputHandle, TagInputProps>(
   ({ value = [], onChange, placeholder = "Digite e pressione Enter", className }, ref) => {
     const [inputValue, setInputValue] = React.useState("")
 
@@ -38,9 +44,18 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
       }
     }
 
+    React.useImperativeHandle(ref, () => ({
+      commitPending: () => {
+        if (inputValue.trim()) {
+          addTag(inputValue)
+        }
+      },
+      getPendingValue: () => inputValue,
+      clear: () => setInputValue("")
+    }), [inputValue, addTag])
+
     return (
       <div
-        ref={ref}
         className={cn(
           "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
           className

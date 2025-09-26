@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TagInput } from "@/components/ui/tag-input";
+import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
 import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown } from "lucide-react";
@@ -134,6 +134,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
   const [importing, setImporting] = useState(false);
+  
+  const botTagRef = useRef<TagInputHandle>(null);
   
   // Video states
   const [instagramVideos, setInstagramVideos] = useState<Video[]>([]);
@@ -596,6 +598,23 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     console.log('[DEBUG] Dados do formulário:', formData);
     console.log('[DEBUG] botTriggerWords state:', botTriggerWords);
     
+    // Capturar texto pendente do TagInput e consolidar palavras gatilho
+    const pendingBotWord = botTagRef.current?.getPendingValue()?.trim();
+    console.log('[DEBUG] Palavra pendente no input:', pendingBotWord);
+    
+    const consolidatedBotWords = [...botTriggerWords];
+    if (pendingBotWord && !consolidatedBotWords.includes(pendingBotWord)) {
+      consolidatedBotWords.push(pendingBotWord);
+    }
+    
+    // Limitar e validar palavras gatilho (segurança)
+    const finalBotWords = consolidatedBotWords
+      .filter(word => word && word.trim().length > 0)
+      .map(word => word.trim().substring(0, 50)) // Max 50 chars por palavra
+      .slice(0, 50); // Max 50 palavras
+    
+    console.log('[DEBUG] Palavras gatilho finais:', finalBotWords);
+    
     if (!formData.name?.trim()) {
       toast({
         title: "Erro",
@@ -630,7 +649,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         search_intent_keywords: searchIntentKeywords,
         benefits: benefits,
         features: features,
-        bot_trigger_words: botTriggerWords,
+        bot_trigger_words: finalBotWords,
         // Landing Page Section controls
         show_in_resources: formData.show_in_resources,
         selected: formData.selected,
@@ -1193,21 +1212,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           <div className="space-y-2">
             <Label htmlFor="bot_trigger_words">Palavras Gatilho BOT</Label>
             <TagInput
+              ref={botTagRef}
               value={botTriggerWords}
-              onChange={(tags) => {
-                console.log('DEBUG TagInput onChange - Novas tags:', tags);
-                console.log('DEBUG TagInput onChange - Tags antigas:', botTriggerWords);
-                setBotTriggerWords(tags);
-              }}
+              onChange={setBotTriggerWords}
               placeholder="Digite palavras gatilho (ex: QUERO, INTERESSE) e pressione Enter"
             />
             <p className="text-sm text-muted-foreground">
               Palavras que serão inseridas automaticamente nas copies do Instagram e WhatsApp para incentivar interação. 
               Ex: "Comente 'QUERO' e receba mais informações"
             </p>
-            <div className="text-xs text-muted-foreground">
-              Debug: {JSON.stringify(botTriggerWords)}
-            </div>
           </div>
 
           {/* Landing Page Sections Configuration */}
