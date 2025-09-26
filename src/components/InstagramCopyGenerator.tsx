@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Copy, Edit2, History, Settings, Instagram, Check } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Copy, Edit, Save, X, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface InstagramCopy {
   id: string;
@@ -29,37 +25,25 @@ interface InstagramCopyGeneratorProps {
   onClose: () => void;
 }
 
-export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
-  productId,
-  productName,
-  isOpen,
-  onClose
-}) => {
-  const [copies, setCopies] = useState<InstagramCopy[]>([]);
-  const [currentCopy, setCurrentCopy] = useState<InstagramCopy | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingCopy, setEditingCopy] = useState<InstagramCopy | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 3 });
-  const [isLoading, setIsLoading] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
-  const [companyMention, setCompanyMention] = useState('@smartdentoficial');
-  const [instagramType, setInstagramType] = useState<'feed' | 'reels' | 'carousel'>('feed');
-  const [allCopies, setAllCopies] = useState<{ feed?: InstagramCopy; reels?: InstagramCopy; carousel?: InstagramCopy }>({});
-  const [activeTab, setActiveTab] = useState<'feed' | 'reels' | 'carousel'>('feed');
+export function InstagramCopyGenerator({ productId, productName, isOpen, onClose }: InstagramCopyGeneratorProps) {
+  const [feedCopy, setFeedCopy] = useState('');
+  const [storyCopy, setStoryCopy] = useState('');
+  const [reelsCopy, setReelsCopy] = useState('');
+  const [editingFeed, setEditingFeed] = useState(false);
+  const [editingStory, setEditingStory] = useState(false);
+  const [editingReels, setEditingReels] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen && productId) {
-      loadCopies();
-      loadCompanyConfig();
+    if (isOpen) {
+      loadExistingCopies();
     }
   }, [isOpen, productId]);
 
-  const loadCopies = async () => {
-    setIsLoading(true);
+  const loadExistingCopies = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('products_repository')
@@ -71,104 +55,35 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
 
       const instagramData = data?.instagram_copies as any || { copies: [] };
       const loadedCopies = instagramData.copies || [];
-      setCopies(loadedCopies);
       
       if (loadedCopies.length > 0) {
-        setCurrentCopy(loadedCopies[0]);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar copies do Instagram:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as copies do Instagram.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadCompanyConfig = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('company_profile')
-        .select('instagram_profile')
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data?.instagram_profile) {
-        setCompanyMention(data.instagram_profile);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configuração da empresa:', error);
-    }
-  };
-
-  const generateNewCopy = async () => {
-    setIsGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-social-content', {
-        body: {
-          type: 'instagram',
-          productId: productId,
-          instagramType: instagramType
-        }
-      });
-
-      if (error) throw error;
-
-      const newCopy: InstagramCopy = {
-        id: crypto.randomUUID(),
-        ...data.content,
-        generated_at: new Date().toISOString(),
-        editable: true
-      };
-
-      const updatedCopies = [newCopy, ...copies];
-      setCopies(updatedCopies);
-      setCurrentCopy(newCopy);
-
-      // Salvar no banco
-      const { error: updateError } = await supabase
-        .from('products_repository')
-        .update({
-          instagram_copies: {
-            copies: updatedCopies,
-            last_generated: new Date().toISOString()
-          } as any
-        })
-        .eq('id', productId);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: "Sucesso!",
-        description: "Nova copy do Instagram gerada com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao gerar copy do Instagram:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível gerar a copy do Instagram.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const generateAllCopyTypes = async () => {
-    setIsGeneratingAll(true);
-    setGenerationProgress({ current: 0, total: 3 });
-    const newAllCopies: { feed?: InstagramCopy; reels?: InstagramCopy; carousel?: InstagramCopy } = {};
-    
-    try {
-      const types: ('feed' | 'reels' | 'carousel')[] = ['feed', 'reels', 'carousel'];
-      
-      for (let i = 0; i < types.length; i++) {
-        const type = types[i];
-        setGenerationProgress({ current: i + 1, total: 3 });
+        const feedData = loadedCopies.find((item: any) => item.post_type === 'feed');
+        const reelsData = loadedCopies.find((item: any) => item.post_type === 'reels');
+        const carouselData = loadedCopies.find((item: any) => item.post_type === 'carousel');
         
+        setFeedCopy(feedData?.feed_copy || '');
+        setReelsCopy(reelsData?.feed_copy || '');
+        setStoryCopy(carouselData?.feed_copy || '');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar copies:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as copies existentes.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateAllCopies = async () => {
+    setGenerating(true);
+    try {
+      const types = ['feed', 'reels', 'carousel'];
+      const newCopies: InstagramCopy[] = [];
+      
+      for (const type of types) {
         const { data, error } = await supabase.functions.invoke('generate-social-content', {
           body: {
             type: 'instagram',
@@ -179,115 +94,106 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
 
         if (error) throw error;
 
-        const newCopy: InstagramCopy = {
-          id: crypto.randomUUID(),
-          ...data.content,
-          generated_at: new Date().toISOString(),
-          editable: true
-        };
+        if (data?.content) {
+          const newCopy: InstagramCopy = {
+            id: crypto.randomUUID(),
+            ...data.content,
+            post_type: type,
+            generated_at: new Date().toISOString(),
+            editable: true
+          };
 
-        newAllCopies[type] = newCopy;
-        
-        // Adicionar ao histórico existente
-        const updatedCopies = [newCopy, ...copies];
-        setCopies(updatedCopies);
+          newCopies.push(newCopy);
+
+          // Atualizar estado conforme o tipo
+          const content = data.content.feed_copy || '';
+          if (type === 'feed') setFeedCopy(content);
+          else if (type === 'reels') setReelsCopy(content);
+          else if (type === 'carousel') setStoryCopy(content);
+        }
       }
 
-      setAllCopies(newAllCopies);
-      setActiveTab('feed');
-      setCurrentCopy(newAllCopies.feed || null);
+      // Salvar no banco
+      if (newCopies.length > 0) {
+        const { error: updateError } = await supabase
+          .from('products_repository')
+          .update({
+            instagram_copies: {
+              copies: newCopies,
+              last_generated: new Date().toISOString()
+            } as any
+          })
+          .eq('id', productId);
 
-      // Salvar todas no banco
-      const allGeneratedCopies = Object.values(newAllCopies).filter(Boolean);
-      const { error: updateError } = await supabase
-        .from('products_repository')
-        .update({
-          instagram_copies: {
-            copies: [...allGeneratedCopies, ...copies],
-            last_generated: new Date().toISOString()
-          } as any
-        })
-        .eq('id', productId);
-
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }
 
       toast({
         title: "Sucesso!",
-        description: "Todas as 3 opções de copy do Instagram foram geradas!",
+        description: "Todas as copies foram geradas!",
       });
     } catch (error) {
-      console.error('Erro ao gerar copies do Instagram:', error);
+      console.error('Erro ao gerar copies:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível gerar todas as copies do Instagram.",
+        description: "Não foi possível gerar as copies. Tente novamente.",
         variant: "destructive",
       });
     } finally {
-      setIsGeneratingAll(false);
-      setGenerationProgress({ current: 0, total: 3 });
+      setGenerating(false);
     }
   };
 
-  const saveCompanyConfig = async () => {
+  const copyToClipboard = async (text: string) => {
     try {
-      const { error } = await supabase
-        .from('company_profile')
-        .upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          company_name: 'SmartDent',
-          instagram_profile: companyMention
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso!",
-        description: "Configuração da empresa salva com sucesso.",
-      });
-      setShowConfig(false);
-    } catch (error) {
-      console.error('Erro ao salvar configuração:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar a configuração.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const copyToClipboard = async (content: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(text);
       toast({
         title: "Copiado!",
-        description: "Conteúdo copiado para a área de transferência.",
+        description: "Texto copiado para a área de transferência.",
       });
     } catch (error) {
+      console.error('Erro ao copiar:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível copiar o conteúdo.",
+        description: "Não foi possível copiar o texto.",
         variant: "destructive",
       });
     }
   };
 
-  const startEditing = (copy: InstagramCopy) => {
-    setEditingCopy({ ...copy });
-    setIsEditing(true);
-  };
-
-  const saveEdit = async () => {
-    if (!editingCopy) return;
-
+  const saveCopy = async (type: 'feed' | 'story' | 'reels', content: string) => {
     try {
-      const updatedCopies = copies.map(copy => 
-        copy.id === editingCopy.id ? editingCopy : copy
-      );
+      // Carregar copies existentes
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('instagram_copies')
+        .eq('id', productId)
+        .single();
 
-      setCopies(updatedCopies);
+      const instagramData = existingData?.instagram_copies as any || { copies: [] };
+      const existingCopies = instagramData.copies || [];
+
+      // Encontrar e atualizar a copy existente ou criar nova
+      const postType = type === 'story' ? 'carousel' : type;
+      const copyIndex = existingCopies.findIndex((c: any) => c.post_type === postType);
       
-      if (currentCopy?.id === editingCopy.id) {
-        setCurrentCopy(editingCopy);
+      const updatedCopy: InstagramCopy = {
+        id: copyIndex >= 0 ? existingCopies[copyIndex].id : crypto.randomUUID(),
+        feed_copy: content,
+        story_copy: type === 'story' ? content : '',
+        hashtags: [],
+        call_to_action: '',
+        post_type: postType,
+        generated_at: new Date().toISOString(),
+        editable: true
+      };
+
+      let updatedCopies;
+      if (copyIndex >= 0) {
+        updatedCopies = [...existingCopies];
+        updatedCopies[copyIndex] = updatedCopy;
+      } else {
+        updatedCopies = [...existingCopies, updatedCopy];
       }
 
       const { error } = await supabase
@@ -295,7 +201,7 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
         .update({
           instagram_copies: {
             copies: updatedCopies,
-            last_generated: copies.find(c => c.id === editingCopy.id)?.generated_at || new Date().toISOString()
+            last_generated: new Date().toISOString()
           } as any
         })
         .eq('id', productId);
@@ -303,42 +209,17 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
       if (error) throw error;
 
       toast({
-        title: "Sucesso!",
-        description: "Copy editada com sucesso.",
+        title: "Salvo!",
+        description: `Copy ${type} salva com sucesso!`,
       });
-      
-      setIsEditing(false);
-      setEditingCopy(null);
     } catch (error) {
-      console.error('Erro ao salvar edição:', error);
+      console.error('Erro ao salvar:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível salvar a edição.",
+        description: "Não foi possível salvar a copy.",
         variant: "destructive",
       });
     }
-  };
-
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setEditingCopy(null);
-  };
-
-  const getCharacterCount = (text: string | undefined) => text?.length || 0;
-  const isOverLimit = (text: string | undefined, limit: number) => getCharacterCount(text) > limit;
-
-  const formatCopy = (content: any) => {
-    if (typeof content === 'string') {
-      return content.replace(/\\n/g, '\n');
-    }
-    if (content?.feed_copy) {
-      return content.feed_copy.replace(/\\n/g, '\n');
-    }
-    return JSON.stringify(content, null, 2);
-  };
-
-  const getHashtagsString = (hashtags: string[]) => {
-    return hashtags.join(' ');
   };
 
   return (
@@ -346,419 +227,230 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Instagram className="h-5 w-5 text-pink-500" />
+            <Zap className="h-5 w-5 text-primary" />
             Gerador de Copy Instagram - {productName}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Seletor de Tipo e Botões de Ação */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="instagram-type">Tipo de Copy:</Label>
-                <Select value={instagramType} onValueChange={(value: 'feed' | 'reels' | 'carousel') => setInstagramType(value)}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="feed">Copy Feed (post estático)</SelectItem>
-                    <SelectItem value="reels">Copy Vídeo Reels</SelectItem>
-                    <SelectItem value="carousel">Copy Carrossel</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="space-y-6">
+          {loading && (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Carregando...</span>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                onClick={generateNewCopy} 
-                disabled={isGenerating || isGeneratingAll}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <Instagram className="mr-2 h-4 w-4" />
-                    Gerar Nova Copy
-                  </>
-                )}
-              </Button>
-
-              <Button 
-                onClick={generateAllCopyTypes} 
-                disabled={isGenerating || isGeneratingAll}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-              >
-                {isGeneratingAll ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {generationProgress.current}/{generationProgress.total} - Gerando...
-                  </>
-                ) : (
-                  <>
-                    <Instagram className="mr-2 h-4 w-4" />
-                    ✨ Gerar Todas as Opções
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => setShowHistory(!showHistory)}
-                disabled={isGenerating || isGeneratingAll}
-              >
-                <History className="mr-2 h-4 w-4" />
-                {showHistory ? 'Ocultar' : 'Ver'} Histórico
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => setShowConfig(!showConfig)}
-                disabled={isGenerating || isGeneratingAll}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Configurar
-              </Button>
-            </div>
-          </div>
-
-          {/* Configuração da Empresa */}
-          {showConfig && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuração da Empresa</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="company-mention">Mention da Empresa no Instagram</Label>
-                  <Input
-                    id="company-mention"
-                    value={companyMention}
-                    onChange={(e) => setCompanyMention(e.target.value)}
-                    placeholder="@smartdentoficial"
-                  />
-                </div>
-                <Button onClick={saveCompanyConfig}>
-                  <Check className="mr-2 h-4 w-4" />
-                  Salvar Configuração
-                </Button>
-              </CardContent>
-            </Card>
           )}
 
-          {/* Visualização das 3 Opções em Tabs */}
-          {Object.keys(allCopies).length > 0 && !isEditing && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Todas as Opções Geradas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Tabs */}
-                <div className="flex space-x-1 mb-4 p-1 bg-muted rounded-lg">
-                  {(['feed', 'reels', 'carousel'] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setActiveTab(type);
-                        setCurrentCopy(allCopies[type] || null);
-                      }}
-                      className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                        activeTab === type
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {type === 'feed' ? '📱 Feed' : type === 'reels' ? '🎬 Reels' : '📸 Carrossel'}
-                    </button>
-                  ))}
-                </div>
+          {!loading && (
+            <>
+              {/* Botão principal para gerar todas as copies */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={generateAllCopies}
+                  disabled={generating}
+                  size="lg"
+                  className="flex items-center gap-2"
+                >
+                  {generating ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Zap className="h-5 w-5" />
+                  )}
+                  Gerar Todas as Copies
+                </Button>
+              </div>
 
-                {/* Conteúdo da Tab Ativa */}
-                {allCopies[activeTab] && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">
-                        {activeTab === 'feed' ? 'Copy Feed (post estático)' : 
-                         activeTab === 'reels' ? 'Copy Vídeo Reels' : 'Copy Carrossel'}
-                      </h3>
-                      <div className="flex gap-2">
+              {/* Copy para Feed */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Copy para Feed</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    value={feedCopy}
+                    onChange={(e) => setFeedCopy(e.target.value)}
+                    className="min-h-[150px]"
+                    placeholder="A copy para feed será gerada aqui..."
+                    readOnly={!editingFeed}
+                  />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {feedCopy.length} caracteres
+                    </span>
+                    <div className="flex gap-2">
+                      {feedCopy && (
                         <Button
-                          variant="outline"
                           size="sm"
-                          onClick={() => copyToClipboard(formatCopy(allCopies[activeTab]?.feed_copy))}
+                          variant="outline"
+                          onClick={() => copyToClipboard(feedCopy)}
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
+                      )}
+                      {!editingFeed ? (
                         <Button
-                          variant="outline"
                           size="sm"
-                          onClick={() => startEditing(allCopies[activeTab]!)}
+                          variant="outline"
+                          onClick={() => setEditingFeed(true)}
+                          disabled={!feedCopy}
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit className="h-4 w-4" />
+                          Editar
                         </Button>
-                      </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              saveCopy('feed', feedCopy);
+                              setEditingFeed(false);
+                            }}
+                          >
+                            <Save className="h-4 w-4" />
+                            Salvar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingFeed(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Copy do Feed */}
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <Label>Copy para Feed</Label>
-                        <Badge variant={isOverLimit(allCopies[activeTab]?.feed_copy || '', 2200) ? "destructive" : "secondary"}>
-                          {getCharacterCount(allCopies[activeTab]?.feed_copy || '')}/2200
-                        </Badge>
-                      </div>
-                      <div className="p-3 bg-muted rounded-md whitespace-pre-wrap text-sm">
-                        {formatCopy(allCopies[activeTab]?.feed_copy)}
-                      </div>
-                    </div>
-
-                    {/* Copy para Stories */}
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <Label>Copy para Stories</Label>
-                        <Badge variant={isOverLimit(allCopies[activeTab]?.story_copy || '', 160) ? "destructive" : "secondary"}>
-                          {getCharacterCount(allCopies[activeTab]?.story_copy || '')}/160
-                        </Badge>
-                      </div>
-                      <div className="p-3 bg-muted rounded-md text-sm">
-                        {allCopies[activeTab]?.story_copy}
-                      </div>
-                    </div>
-
-                    {/* Hashtags */}
-                    <div>
-                      <Label>Hashtags ({allCopies[activeTab]?.hashtags?.length || 0})</Label>
-                      <div className="p-3 bg-muted rounded-md text-sm">
-                        {getHashtagsString(allCopies[activeTab]?.hashtags || [])}
-                      </div>
-                    </div>
-
-                    {/* Call to Action */}
-                    <div>
-                      <Label>Call to Action</Label>
-                      <div className="p-3 bg-muted rounded-md text-sm">
-                        {allCopies[activeTab]?.call_to_action}
-                      </div>
-                    </div>
-
-                    <Badge variant="outline">
-                      Gerado em: {allCopies[activeTab]?.generated_at ? new Date(allCopies[activeTab]!.generated_at).toLocaleString() : ''}
-                    </Badge>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
 
-          {/* Copy Atual (fallback para geração individual) */}
-          {currentCopy && !isEditing && Object.keys(allCopies).length === 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Copy para Instagram - {currentCopy.post_type === 'feed' ? 'Post Estático' : currentCopy.post_type === 'reels' ? 'Vídeo Reels' : 'Carrossel'}</span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(formatCopy(currentCopy.feed_copy))}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startEditing(currentCopy)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Copy do Feed */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label>Copy para Feed</Label>
-                    <Badge variant={isOverLimit(currentCopy.feed_copy || '', 2200) ? "destructive" : "secondary"}>
-                      {getCharacterCount(currentCopy.feed_copy || '')}/2200
-                    </Badge>
-                  </div>
-                  <div className="p-3 bg-muted rounded-md whitespace-pre-wrap text-sm">
-                    {formatCopy(currentCopy.feed_copy)}
-                  </div>
-                </div>
-
-                {/* Copy para Stories */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label>Copy para Stories</Label>
-                    <Badge variant={isOverLimit(currentCopy.story_copy || '', 160) ? "destructive" : "secondary"}>
-                      {getCharacterCount(currentCopy.story_copy || '')}/160
-                    </Badge>
-                  </div>
-                  <div className="p-3 bg-muted rounded-md text-sm">
-                    {currentCopy.story_copy}
-                  </div>
-                </div>
-
-                {/* Hashtags */}
-                <div>
-                  <Label>Hashtags ({currentCopy.hashtags?.length || 0})</Label>
-                  <div className="p-3 bg-muted rounded-md text-sm">
-                    {getHashtagsString(currentCopy.hashtags || [])}
-                  </div>
-                </div>
-
-                {/* Call to Action */}
-                <div>
-                  <Label>Call to Action</Label>
-                  <div className="p-3 bg-muted rounded-md text-sm">
-                    {currentCopy.call_to_action}
-                  </div>
-                </div>
-
-                <Badge variant="outline">
-                  Gerado em: {new Date(currentCopy.generated_at).toLocaleString()}
-                </Badge>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Modo de Edição */}
-          {isEditing && editingCopy && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Editando Copy do Instagram</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Editar Copy do Feed */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label>Copy para Feed</Label>
-                    <Badge variant={isOverLimit(editingCopy.feed_copy || '', 2200) ? "destructive" : "secondary"}>
-                      {getCharacterCount(editingCopy.feed_copy || '')}/2200
-                    </Badge>
-                  </div>
+              {/* Copy para Stories */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Copy para Stories</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <Textarea
-                    value={editingCopy.feed_copy}
-                    onChange={(e) => setEditingCopy({...editingCopy, feed_copy: e.target.value})}
-                    className="min-h-[200px]"
+                    value={storyCopy}
+                    onChange={(e) => setStoryCopy(e.target.value)}
+                    className="min-h-[150px]"
+                    placeholder="A copy para stories será gerada aqui..."
+                    readOnly={!editingStory}
                   />
-                </div>
-
-                {/* Editar Copy para Stories */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label>Copy para Stories</Label>
-                    <Badge variant={isOverLimit(editingCopy.story_copy || '', 160) ? "destructive" : "secondary"}>
-                      {getCharacterCount(editingCopy.story_copy || '')}/160
-                    </Badge>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {storyCopy.length} caracteres
+                    </span>
+                    <div className="flex gap-2">
+                      {storyCopy && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(storyCopy)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!editingStory ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingStory(true)}
+                          disabled={!storyCopy}
+                        >
+                          <Edit className="h-4 w-4" />
+                          Editar
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              saveCopy('story', storyCopy);
+                              setEditingStory(false);
+                            }}
+                          >
+                            <Save className="h-4 w-4" />
+                            Salvar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingStory(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Copy para Reels */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Copy para Reels</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <Textarea
-                    value={editingCopy.story_copy}
-                    onChange={(e) => setEditingCopy({...editingCopy, story_copy: e.target.value})}
-                    className="min-h-[100px]"
+                    value={reelsCopy}
+                    onChange={(e) => setReelsCopy(e.target.value)}
+                    className="min-h-[150px]"
+                    placeholder="A copy para reels será gerada aqui..."
+                    readOnly={!editingReels}
                   />
-                </div>
-
-                {/* Editar Hashtags */}
-                <div>
-                  <Label>Hashtags (separadas por espaço)</Label>
-                  <Textarea
-                    value={getHashtagsString(editingCopy.hashtags || [])}
-                    onChange={(e) => setEditingCopy({
-                      ...editingCopy, 
-                      hashtags: e.target.value.split(' ').filter(tag => tag.trim())
-                    })}
-                    placeholder="#hashtag1 #hashtag2 #hashtag3"
-                  />
-                </div>
-
-                {/* Editar Call to Action */}
-                <div>
-                  <Label>Call to Action</Label>
-                  <Input
-                    value={editingCopy.call_to_action}
-                    onChange={(e) => setEditingCopy({...editingCopy, call_to_action: e.target.value})}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button onClick={saveEdit}>
-                    <Check className="mr-2 h-4 w-4" />
-                    Salvar
-                  </Button>
-                  <Button variant="outline" onClick={cancelEdit}>
-                    Cancelar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Histórico */}
-          {showHistory && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico de Copies</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    Carregando histórico...
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {reelsCopy.length} caracteres
+                    </span>
+                    <div className="flex gap-2">
+                      {reelsCopy && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(reelsCopy)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!editingReels ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingReels(true)}
+                          disabled={!reelsCopy}
+                        >
+                          <Edit className="h-4 w-4" />
+                          Editar
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              saveCopy('reels', reelsCopy);
+                              setEditingReels(false);
+                            }}
+                          >
+                            <Save className="h-4 w-4" />
+                            Salvar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingReels(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : copies.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
-                    Nenhuma copy gerada ainda. Clique em "Gerar Nova Copy" para começar.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {copies.map((copy, index) => (
-                      <Card key={copy.id} className={currentCopy?.id === copy.id ? "ring-2 ring-primary" : ""}>
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <Badge variant="outline">
-                              Copy #{copies.length - index}
-                            </Badge>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentCopy(copy)}
-                              >
-                                Ver
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => copyToClipboard(formatCopy(copy.feed_copy))}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="text-sm text-muted-foreground line-clamp-3">
-                            {formatCopy(copy.feed_copy)}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            {new Date(copy.generated_at).toLocaleString()}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </DialogContent>
     </Dialog>
   );
-};
+}
