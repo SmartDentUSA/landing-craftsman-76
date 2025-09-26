@@ -255,6 +255,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         search_intent_keywords: [],
         benefits: [],
         features: [],
+        bot_trigger_words: [],
         instagram_videos: [],
         youtube_videos: [],
         testimonial_videos: [],
@@ -593,6 +594,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const handleSave = async () => {
     console.log('[DEBUG] Iniciando salvamento do produto...');
     console.log('[DEBUG] Dados do formulário:', formData);
+    console.log('[DEBUG] botTriggerWords state:', botTriggerWords);
     
     if (!formData.name?.trim()) {
       toast({
@@ -642,6 +644,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       };
 
       console.log('[DEBUG] Dados que serão salvos:', dataToSave);
+      console.log('[DEBUG] bot_trigger_words especificamente:', dataToSave.bot_trigger_words);
 
       let result;
       if (isEditing) {
@@ -1191,13 +1194,20 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             <Label htmlFor="bot_trigger_words">Palavras Gatilho BOT</Label>
             <TagInput
               value={botTriggerWords}
-              onChange={setBotTriggerWords}
+              onChange={(tags) => {
+                console.log('DEBUG TagInput onChange - Novas tags:', tags);
+                console.log('DEBUG TagInput onChange - Tags antigas:', botTriggerWords);
+                setBotTriggerWords(tags);
+              }}
               placeholder="Digite palavras gatilho (ex: QUERO, INTERESSE) e pressione Enter"
             />
             <p className="text-sm text-muted-foreground">
               Palavras que serão inseridas automaticamente nas copies do Instagram e WhatsApp para incentivar interação. 
               Ex: "Comente 'QUERO' e receba mais informações"
             </p>
+            <div className="text-xs text-muted-foreground">
+              Debug: {JSON.stringify(botTriggerWords)}
+            </div>
           </div>
 
           {/* Landing Page Sections Configuration */}
