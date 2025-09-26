@@ -81,23 +81,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const initAuth = async () => {
+      console.log('AuthContext: Initializing authentication...');
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('AuthContext: Current session:', currentSession ? 'exists' : 'null');
         
         if (!mounted) return;
 
         if (currentSession?.user) {
+          console.log('AuthContext: User found, setting session and user');
           setSession(currentSession);
           setUser(currentSession.user);
           
           const role = await checkUserRole(currentSession.user.id);
+          console.log('AuthContext: User role:', role);
           if (mounted) {
             setUserRole(role);
           }
+        } else {
+          console.log('AuthContext: No user found, clearing state');
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
         }
       } catch (error) {
         console.error('Auth initialization failed:', error);
       } finally {
+        console.log('AuthContext: Setting loading to false');
         if (mounted) {
           setLoading(false);
         }
@@ -111,15 +121,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, newSession) => {
         if (!mounted) return;
 
-        console.log('Auth state change:', event);
+        console.log('AuthContext: Auth state change:', event, newSession ? 'has session' : 'no session');
 
         if (event === 'SIGNED_OUT' || !newSession?.user) {
+          console.log('AuthContext: Signed out or no user, clearing state');
           setSession(null);
           setUser(null);
           setUserRole(null);
           roleCache.current = null;
           setLoading(false);
         } else if (newSession?.user) {
+          console.log('AuthContext: New session with user, updating state');
           setSession(newSession);
           setUser(newSession.user);
           
@@ -135,10 +147,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // Safety timeout para evitar loading infinito
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log('AuthContext: Safety timeout triggered, setting loading to false');
+        setLoading(false);
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
       requestInProgress.current = false;
+      clearTimeout(safetyTimeout);
     };
   }, []); // Dependências vazias - evita re-execução
 
