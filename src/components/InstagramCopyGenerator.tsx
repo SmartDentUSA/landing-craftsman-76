@@ -246,8 +246,8 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
     setEditingCopy(null);
   };
 
-  const getCharacterCount = (text: string) => text.length;
-  const isOverLimit = (text: string, limit: number) => getCharacterCount(text) > limit;
+  const getCharacterCount = (text: string | undefined) => text?.length || 0;
+  const isOverLimit = (text: string | undefined, limit: number) => getCharacterCount(text) > limit;
 
   const formatCopy = (content: any) => {
     if (typeof content === 'string') {
@@ -364,8 +364,8 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <Label>Copy para Feed</Label>
-                    <Badge variant={isOverLimit(currentCopy.feed_copy, 2200) ? "destructive" : "secondary"}>
-                      {getCharacterCount(currentCopy.feed_copy)}/2200
+                    <Badge variant={isOverLimit(currentCopy.feed_copy || '', 2200) ? "destructive" : "secondary"}>
+                      {getCharacterCount(currentCopy.feed_copy || '')}/2200
                     </Badge>
                   </div>
                   <div className="p-3 bg-muted rounded-md whitespace-pre-wrap text-sm">
@@ -377,8 +377,8 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <Label>Copy para Stories</Label>
-                    <Badge variant={isOverLimit(currentCopy.story_copy, 160) ? "destructive" : "secondary"}>
-                      {getCharacterCount(currentCopy.story_copy)}/160
+                    <Badge variant={isOverLimit(currentCopy.story_copy || '', 160) ? "destructive" : "secondary"}>
+                      {getCharacterCount(currentCopy.story_copy || '')}/160
                     </Badge>
                   </div>
                   <div className="p-3 bg-muted rounded-md text-sm">
@@ -420,8 +420,8 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <Label>Copy para Feed</Label>
-                    <Badge variant={isOverLimit(editingCopy.feed_copy, 2200) ? "destructive" : "secondary"}>
-                      {getCharacterCount(editingCopy.feed_copy)}/2200
+                    <Badge variant={isOverLimit(editingCopy.feed_copy || '', 2200) ? "destructive" : "secondary"}>
+                      {getCharacterCount(editingCopy.feed_copy || '')}/2200
                     </Badge>
                   </div>
                   <Textarea
@@ -435,8 +435,8 @@ export const InstagramCopyGenerator: React.FC<InstagramCopyGeneratorProps> = ({
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <Label>Copy para Stories</Label>
-                    <Badge variant={isOverLimit(editingCopy.story_copy, 160) ? "destructive" : "secondary"}>
-                      {getCharacterCount(editingCopy.story_copy)}/160
+                    <Badge variant={isOverLimit(editingCopy.story_copy || '', 160) ? "destructive" : "secondary"}>
+                      {getCharacterCount(editingCopy.story_copy || '')}/160
                     </Badge>
                   </div>
                   <Textarea
