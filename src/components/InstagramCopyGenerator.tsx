@@ -53,17 +53,25 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
 
       if (error) throw error;
 
-      const instagramData = data?.instagram_copies as any || { copies: [] };
-      const loadedCopies = instagramData.copies || [];
+      const instagramData = data?.instagram_copies as any;
       
-      if (loadedCopies.length > 0) {
-        const feedData = loadedCopies.find((item: any) => item.post_type === 'feed');
-        const reelsData = loadedCopies.find((item: any) => item.post_type === 'reels');
-        const carouselData = loadedCopies.find((item: any) => item.post_type === 'carousel');
-        
-        setFeedCopy(feedData?.feed_copy || '');
-        setReelsCopy(reelsData?.feed_copy || '');
-        setStoryCopy(carouselData?.feed_copy || '');
+      if (instagramData) {
+        // Nova estrutura direta
+        if (instagramData.feed_copy || instagramData.story_copy || instagramData.reels_copy) {
+          setFeedCopy(instagramData.feed_copy || '');
+          setStoryCopy(instagramData.story_copy || '');
+          setReelsCopy(instagramData.reels_copy || '');
+        }
+        // Estrutura antiga com array de copies (fallback)
+        else if (instagramData.copies && instagramData.copies.length > 0) {
+          const feedData = instagramData.copies.find((item: any) => item.post_type === 'feed');
+          const reelsData = instagramData.copies.find((item: any) => item.post_type === 'reels');
+          const carouselData = instagramData.copies.find((item: any) => item.post_type === 'carousel');
+          
+          setFeedCopy(feedData?.feed_copy || '');
+          setReelsCopy(reelsData?.feed_copy || '');
+          setStoryCopy(carouselData?.feed_copy || '');
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar copies:', error);
@@ -80,10 +88,17 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
   const generateAllCopies = async () => {
     setGenerating(true);
     try {
-      const types = ['feed', 'reels', 'carousel'];
-      const newCopies: InstagramCopy[] = [];
+      const types = [
+        { type: 'feed', label: 'Feed' },
+        { type: 'reels', label: 'Reels' },
+        { type: 'carousel', label: 'Stories' }
+      ];
       
-      for (const type of types) {
+      const allCopies: any = {};
+      
+      for (const { type, label } of types) {
+        console.log(`Gerando copy para ${label}...`);
+        
         const { data, error } = await supabase.functions.invoke('generate-social-content', {
           body: {
             type: 'instagram',
@@ -92,40 +107,51 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error(`Erro ao gerar ${label}:`, error);
+          throw error;
+        }
 
         if (data?.content) {
-          const newCopy: InstagramCopy = {
-            id: crypto.randomUUID(),
-            ...data.content,
-            post_type: type,
-            generated_at: new Date().toISOString(),
-            editable: true
-          };
-
-          newCopies.push(newCopy);
-
+          console.log(`Copy gerada para ${label}:`, data.content);
+          
           // Atualizar estado conforme o tipo
           const content = data.content.feed_copy || '';
-          if (type === 'feed') setFeedCopy(content);
-          else if (type === 'reels') setReelsCopy(content);
-          else if (type === 'carousel') setStoryCopy(content);
+          if (type === 'feed') {
+            setFeedCopy(content);
+            allCopies.feed_copy = content;
+          }
+          else if (type === 'reels') {
+            setReelsCopy(content);
+            allCopies.reels_copy = content;
+          }
+          else if (type === 'carousel') {
+            setStoryCopy(content);
+            allCopies.story_copy = content;
+          }
+
+          // Preservar outros dados da resposta
+          if (data.content.hashtags) allCopies.hashtags = data.content.hashtags;
+          if (data.content.call_to_action) allCopies.call_to_action = data.content.call_to_action;
         }
       }
 
-      // Salvar no banco
-      if (newCopies.length > 0) {
+      // Salvar todas as copies no banco usando nova estrutura
+      if (Object.keys(allCopies).length > 0) {
         const { error: updateError } = await supabase
           .from('products_repository')
           .update({
             instagram_copies: {
-              copies: newCopies,
+              ...allCopies,
               last_generated: new Date().toISOString()
-            } as any
+            }
           })
           .eq('id', productId);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Erro ao salvar no banco:', updateError);
+          throw updateError;
+        }
       }
 
       toast({
@@ -163,46 +189,32 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
 
   const saveCopy = async (type: 'feed' | 'story' | 'reels', content: string) => {
     try {
-      // Carregar copies existentes
+      // Carregar dados existentes
       const { data: existingData } = await supabase
         .from('products_repository')
         .select('instagram_copies')
         .eq('id', productId)
         .single();
 
-      const instagramData = existingData?.instagram_copies as any || { copies: [] };
-      const existingCopies = instagramData.copies || [];
+      const existingCopies = existingData?.instagram_copies as any || {};
 
-      // Encontrar e atualizar a copy existente ou criar nova
-      const postType = type === 'story' ? 'carousel' : type;
-      const copyIndex = existingCopies.findIndex((c: any) => c.post_type === postType);
-      
-      const updatedCopy: InstagramCopy = {
-        id: copyIndex >= 0 ? existingCopies[copyIndex].id : crypto.randomUUID(),
-        feed_copy: content,
-        story_copy: type === 'story' ? content : '',
-        hashtags: [],
-        call_to_action: '',
-        post_type: postType,
-        generated_at: new Date().toISOString(),
-        editable: true
+      // Atualizar o campo específico
+      const fieldMap = {
+        'feed': 'feed_copy',
+        'story': 'story_copy', 
+        'reels': 'reels_copy'
       };
 
-      let updatedCopies;
-      if (copyIndex >= 0) {
-        updatedCopies = [...existingCopies];
-        updatedCopies[copyIndex] = updatedCopy;
-      } else {
-        updatedCopies = [...existingCopies, updatedCopy];
-      }
+      const updatedCopies = {
+        ...existingCopies,
+        [fieldMap[type]]: content,
+        last_updated: new Date().toISOString()
+      };
 
       const { error } = await supabase
         .from('products_repository')
         .update({
-          instagram_copies: {
-            copies: updatedCopies,
-            last_generated: new Date().toISOString()
-          } as any
+          instagram_copies: updatedCopies
         })
         .eq('id', productId);
 

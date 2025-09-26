@@ -127,16 +127,11 @@ serve(async (req) => {
       currentData.descriptions = currentData.descriptions.slice(0, 10);
     } else if (type === 'instagram') {
       fieldName = 'instagram_copies';
-      currentData = product[fieldName] || { copies: [], last_generated: null };
-      currentData.copies = currentData.copies || [];
-      currentData.copies.unshift({
-        id: crypto.randomUUID(),
+      // Usar nova estrutura direta ao invés de array de copies
+      currentData = {
         ...generatedContent,
-        generated_at: new Date().toISOString(),
-        editable: true
-      });
-      // Manter apenas os últimos 10
-      currentData.copies = currentData.copies.slice(0, 10);
+        last_generated: new Date().toISOString()
+      };
     }
 
     currentData.last_generated = new Date().toISOString();
@@ -438,6 +433,10 @@ function cleanJsonResponse(content: string): string {
     cleanContent = cleanContent.substring(jsonStart, jsonEnd);
   }
   
+  // Fix malformed hashtags - add quotes around hashtags that don't have them
+  cleanContent = cleanContent.replace(/(,\s*)(#[^,\]]+)(\s*[\],])/g, '$1"$2"$3');
+  cleanContent = cleanContent.replace(/(\[\s*)(#[^,\]]+)(\s*[,\]])/g, '$1"$2"$3');
+  
   return cleanContent.trim();
 }
 
@@ -493,12 +492,50 @@ async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whats
       console.error('JSON parse error:', error);
       console.log('Failed to parse content:', content);
       
-      // Se não conseguir parsear, retornar como texto simples com fallback
-      return {
-        title_suggestion: "Título sugerido não disponível",
-        description: content.replace(/\\n/g, '\n'),
-        tags: []
-      };
+      // Tentar corrigir hashtags malformadas e tentar novamente
+      let fixedContent = content;
+      
+      // Fix unquoted hashtags more aggressively
+      fixedContent = fixedContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]]+),/g, '$1", "$2",');
+      fixedContent = fixedContent.replace(/(\[\s*"[^"]*"),\s*(#[^,\]]+)(\s*\])/g, '$1", "$2"$3');
+      fixedContent = fixedContent.replace(/,\s*(#[^,\]"\s]+)(\s*[\],])/g, ', "$1"$2');
+      
+      try {
+        const retryParsed = JSON.parse(fixedContent);
+        console.log('Successfully parsed after fixing:', JSON.stringify(retryParsed, null, 2));
+        
+        // Converter \n em quebras de linha reais
+        if (retryParsed.description) {
+          retryParsed.description = retryParsed.description.replace(/\\n/g, '\n');
+        }
+        if (retryParsed.feed_copy) {
+          retryParsed.feed_copy = retryParsed.feed_copy.replace(/\\n/g, '\n');
+        }
+        if (retryParsed.story_copy) {
+          retryParsed.story_copy = retryParsed.story_copy.replace(/\\n/g, '\n');
+        }
+        
+        return retryParsed;
+      } catch (retryError) {
+        console.error('Retry parse error:', retryError);
+        
+        // Se ainda não conseguir parsear, retornar como texto simples com fallback
+        if (type === 'instagram') {
+          return {
+            feed_copy: content.replace(/\\n/g, '\n'),
+            story_copy: "Copy para stories não disponível",
+            hashtags: [],
+            call_to_action: "Comenta 'QUERO' que te mando mais informações!",
+            post_type: "feed"
+          };
+        } else {
+          return {
+            title_suggestion: "Título sugerido não disponível",
+            description: content.replace(/\\n/g, '\n'),
+            tags: []
+          };
+        }
+      }
     }
   }
 
