@@ -22,8 +22,7 @@ interface KeywordLink {
 }
 
 export const LinksManager = () => {
-  const { allLinks, isLoading } = useLinksRepository();
-  const [keywordLinks, setKeywordLinks] = useState<KeywordLink[]>([]);
+  const { allLinks, isLoading, addExternalLink, updateExternalLink, deleteExternalLink, externalLinks } = useLinksRepository();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   const [editingKeyword, setEditingKeyword] = useState<KeywordLink | null>(null);
@@ -41,24 +40,25 @@ export const LinksManager = () => {
     }
 
     try {
-      const newKeyword: KeywordLink = {
-        id: crypto.randomUUID(),
-        keyword: formData.keyword.trim(),
-        url: formData.url.trim(),
-        source: 'manual',
-        created_at: new Date().toISOString()
-      };
-
       if (editingKeyword) {
-        setKeywordLinks(prev => prev.map(kw => 
-          kw.id === editingKeyword.id 
-            ? { ...editingKeyword, keyword: formData.keyword.trim(), url: formData.url.trim() }
-            : kw
-        ));
+        // Atualizar keyword existente no Supabase
+        const linkId = editingKeyword.id;
+        await updateExternalLink(linkId, {
+          name: formData.keyword.trim(),
+          url: formData.url.trim() || '#',
+          category: 'keyword-manual'
+        });
         setEditingKeyword(null);
         toast.success('Palavra-chave atualizada com sucesso');
       } else {
-        setKeywordLinks(prev => [...prev, newKeyword]);
+        // Adicionar nova keyword no Supabase
+        await addExternalLink({
+          name: formData.keyword.trim(),
+          url: formData.url.trim() || '#',
+          category: 'keyword-manual',
+          description: 'Keyword adicionada manualmente',
+          approved: true
+        });
         setIsAddModalOpen(false);
         toast.success('Palavra-chave adicionada com sucesso');
       }
@@ -77,9 +77,13 @@ export const LinksManager = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
-    setKeywordLinks(prev => prev.filter(kw => kw.id !== id));
-    toast.success('Palavra-chave removida com sucesso');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteExternalLink(id);
+      toast.success('Palavra-chave removida com sucesso');
+    } catch (error) {
+      toast.error('Erro ao remover palavra-chave');
+    }
   };
 
   const handleImportKeywords = async () => {
@@ -124,8 +128,12 @@ export const LinksManager = () => {
         }
       });
 
-      // Filtrar keywords que já existem
-      const existingKeywords = new Set(keywordLinks.map(link => link.keyword.toLowerCase()));
+      // Filtrar keywords que já existem no Supabase
+      const existingKeywords = new Set(
+        externalLinks
+          .filter(link => link.category?.includes('keyword'))
+          .map(link => link.name.toLowerCase())
+      );
       const newKeywords = Array.from(allKeywords).filter(keyword => !existingKeywords.has(keyword));
 
       if (newKeywords.length === 0) {
@@ -133,18 +141,20 @@ export const LinksManager = () => {
         return;
       }
 
-      // Criar as novas entradas de keywords
-      const newKeywordLinks = newKeywords.map(keyword => ({
-        id: crypto.randomUUID(),
-        keyword,
-        url: '', // URL em branco para o usuário preencher depois
-        source: 'imported' as const,
-        created_at: new Date().toISOString()
-      }));
+      // Salvar as novas keywords no Supabase
+      const promises = newKeywords.map(keyword => 
+        addExternalLink({
+          name: keyword,
+          url: '#', // URL padrão, usuário pode editar depois
+          category: 'keyword-import',
+          description: 'Keyword importada dos produtos',
+          approved: true
+        })
+      );
 
-      setKeywordLinks(prev => [...prev, ...newKeywordLinks]);
+      await Promise.all(promises);
       
-      toast.success(`${newKeywordLinks.length} keywords importadas. Defina as URLs para cada uma.`);
+      toast.success(`${newKeywords.length} keywords importadas. Defina as URLs para cada uma.`);
 
     } catch (error) {
       console.error('Erro ao importar keywords:', error);
@@ -259,7 +269,7 @@ export const LinksManager = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {keywordLinks.length === 0 ? (
+          {!externalLinks.filter(link => link.category?.includes('keyword')).length ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Link className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-center">
@@ -279,18 +289,20 @@ export const LinksManager = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {keywordLinks.map((keyword) => (
-                  <TableRow key={keyword.id}>
-                    <TableCell className="font-medium">{keyword.keyword}</TableCell>
+                {externalLinks
+                  .filter(link => link.category?.includes('keyword'))
+                  .map((link) => (
+                  <TableRow key={link.id}>
+                    <TableCell className="font-medium">{link.name}</TableCell>
                     <TableCell>
-                      {keyword.url ? (
+                      {link.url && link.url !== '#' ? (
                         <a 
-                          href={keyword.url}
+                          href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:underline flex items-center gap-1 truncate max-w-[300px]"
                         >
-                          {keyword.url}
+                          {link.url}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       ) : (
@@ -298,8 +310,8 @@ export const LinksManager = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={keyword.source === 'imported' ? 'default' : 'secondary'}>
-                        {keyword.source === 'imported' ? 'Importada' : 'Manual'}
+                      <Badge variant={link.category === 'keyword-import' ? 'default' : 'secondary'}>
+                        {link.category === 'keyword-import' ? 'Importada' : 'Manual'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -307,7 +319,13 @@ export const LinksManager = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEdit(keyword)}
+                          onClick={() => handleEdit({ 
+                            id: link.id, 
+                            keyword: link.name, 
+                            url: link.url, 
+                            source: link.category === 'keyword-import' ? 'imported' : 'manual',
+                            created_at: link.created_at 
+                          })}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -321,12 +339,12 @@ export const LinksManager = () => {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Remover Palavra-chave</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja remover a palavra-chave "{keyword.keyword}"? Esta ação não pode ser desfeita.
+                                Tem certeza que deseja remover a palavra-chave "{link.name}"? Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(keyword.id)}>
+                              <AlertDialogAction onClick={() => handleDelete(link.id)}>
                                 Remover
                               </AlertDialogAction>
                             </AlertDialogFooter>
