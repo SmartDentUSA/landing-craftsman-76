@@ -52,9 +52,13 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
           seo_title: lpData?.data?.seo?.seo_title || lp.name,
           seo_description: lpData?.data?.seo?.seo_description || '',
           ai_keywords: lpData?.data?.seo?.ai_keywords || [],
-          selected_product_ids: lpData?.selected_product_ids || []
+          selected_product_ids: lpData?.selected_product_ids || [],
+          image1_url: lpData?.data?.image1?.url || null
         };
       });
+
+      // Extract standard image (image1) from first landing page that has one
+      const ogImage = landingPageSEOData.find(lp => lp.image1_url)?.image1_url;
 
       // Gather all selected products data for SEO
       const allSelectedProductIds = [...new Set(landingPageSEOData.flatMap(lp => lp.selected_product_ids))];
@@ -81,7 +85,8 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         })),
         landingPagesSEO: landingPageSEOData,
         selectedProducts: selectedProductsData,
-        aggregatedKeywords: aggregatedKeywords
+        aggregatedKeywords: aggregatedKeywords,
+        ogImage: ogImage
       });
 
       // Copy to clipboard
@@ -89,7 +94,7 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
       
       toast({
         title: "HTML Consolidado SEO Completo!",
-        description: `HTML com ${blogsForDomain.length} blogs, dados de ${landingPageSEOData.length} landing pages e ${selectedProductsData.length} produtos copiado`,
+        description: `HTML com ${blogsForDomain.length} blogs, dados de ${landingPageSEOData.length} landing pages e ${selectedProductsData.length} produtos copiado${ogImage ? ' (com imagem padrão)' : ''}`,
       });
 
     } catch (error) {
@@ -247,6 +252,14 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
               <div className="flex items-center space-x-2">
                 <Badge variant="outline" className="text-xs">✓</Badge>
                 <span>Keywords consolidadas</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="text-xs">✓</Badge>
+                <span>Imagem padrão automática (image1)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="text-xs">✓</Badge>
+                <span>Artigos com URLs clicáveis</span>
               </div>
             </div>
           </div>

@@ -36,6 +36,7 @@ interface ConsolidatedBlogOptions {
     seo_description: string;
     ai_keywords: string[];
     selected_product_ids: string[];
+    image1_url?: string;
   }>;
   selectedProducts?: Array<{
     id: string;
@@ -50,6 +51,7 @@ interface ConsolidatedBlogOptions {
   aggregatedKeywords?: string[];
   landingPageData?: any;
   includeOffers?: boolean;
+  ogImage?: string;
 }
 
 export const useSEOHTMLGenerator = () => {
@@ -335,7 +337,7 @@ export const useSEOHTMLGenerator = () => {
   }, [generateProductSchema]);
 
   const generateConsolidatedBlogHTML = useCallback((options: ConsolidatedBlogOptions): string => {
-    const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false } = options;
+    const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage } = options;
 
     // Use aggregated keywords from landing pages + products + blogs if provided
     const allKeywords = aggregatedKeywords && aggregatedKeywords.length > 0 
@@ -398,16 +400,21 @@ export const useSEOHTMLGenerator = () => {
       });
     }
 
-    // Processar conteúdo dos blogs
-    const blogContents = blogs.map(blog => `
-      <section class="blog-item">
-        <h2>${blog.title}</h2>
-        ${blog.productName ? `<p class="product-reference"><strong>Produto:</strong> ${blog.productName}</p>` : ''}
-        <div class="blog-content">
-          ${processContentWithIntelligentLinks(blog.content, intelligentLinks)}
-        </div>
-      </section>
-    `).join('\n');
+    // Processar conteúdo dos blogs com links clicáveis
+    const blogContents = blogs.map((blog, index) => {
+      const blogCanonicalUrl = `${canonicalUrl}/blog/${domain}-${index + 1}`;
+      return `
+        <section class="blog-item">
+          <a href="${blogCanonicalUrl}" class="blog-link">
+            <h2>${blog.title}</h2>
+          </a>
+          ${blog.productName ? `<p class="product-reference"><strong>Produto:</strong> ${blog.productName}</p>` : ''}
+          <div class="blog-content">
+            ${processContentWithIntelligentLinks(blog.content, intelligentLinks)}
+          </div>
+        </section>
+      `;
+    }).join('\n');
 
     const canonicalUrl = `https://${domain}`;
     
@@ -449,11 +456,13 @@ export const useSEOHTMLGenerator = () => {
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:site_name" content="${domain}">
   <meta property="og:locale" content="pt_BR">
+  ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
+  ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : ''}
   
   <!-- Additional SEO Meta Tags -->
   <meta name="author" content="${domain}">
@@ -521,12 +530,28 @@ export const useSEOHTMLGenerator = () => {
       border-bottom: none;
     }
     
+    .blog-link {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: all 0.3s ease;
+    }
+    
+    .blog-link:hover {
+      transform: translateY(-2px);
+    }
+    
     .blog-item h2 {
       color: #2c3e50;
       font-size: 2rem;
       margin-bottom: 20px;
       border-left: 4px solid #007bff;
       padding-left: 15px;
+      transition: color 0.3s ease;
+    }
+    
+    .blog-link:hover h2 {
+      color: #007bff;
     }
     
     .product-reference {
