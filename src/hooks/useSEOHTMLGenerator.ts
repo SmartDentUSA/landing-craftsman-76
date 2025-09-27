@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useProductSchemaGenerator } from './useProductSchemaGenerator';
+import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithIntelligentLinks } from '@/lib/intelligent-links';
 import { useLinksRepository } from './useLinksRepository';
 
@@ -56,7 +56,7 @@ interface ConsolidatedBlogOptions {
 }
 
 export const useSEOHTMLGenerator = () => {
-  const { generateProductSchema, combineSchemas } = useProductSchemaGenerator();
+  const { generateAdvancedProductSchema, generateFAQSchema, generateCompletePageSchema } = useAdvancedSchemaGenerator();
   const { allLinks } = useLinksRepository();
 
   const generateOptimizedHTML = useCallback((options: SEOHTMLOptions): string => {
@@ -89,10 +89,10 @@ export const useSEOHTMLGenerator = () => {
     let schemaJson = '';
     if (includeSchema) {
       if (type === 'product' && products.length > 0) {
-        const { jsonLD } = generateProductSchema(products, title, description);
+        const { schemas } = generateCompletePageSchema(products, undefined, undefined, undefined, title, description);
         schemaJson = `
         <script type="application/ld+json">
-        ${JSON.stringify(jsonLD, null, 2)}
+        ${JSON.stringify(schemas, null, 2)}
         </script>`;
       } else if (type === 'article') {
         const articleSchema = {
@@ -344,7 +344,7 @@ export const useSEOHTMLGenerator = () => {
   </div>
 </body>
 </html>`;
-  }, [generateProductSchema]);
+  }, [generateCompletePageSchema]);
 
   const generateConsolidatedBlogHTML = useCallback((options: ConsolidatedBlogOptions): string => {
     const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage } = options;
