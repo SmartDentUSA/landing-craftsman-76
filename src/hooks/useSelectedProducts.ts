@@ -100,8 +100,9 @@ export const useSelectedProducts = () => {
   const getProductsForTemplate = useCallback(async (productIds: string[]) => {
     const products = await loadProductsByIds(productIds);
     
-    // Convert to template format (offers)
+    // Convert to template format (offers) with full SEO data
     return products.map(product => ({
+      id: product.id,
       name: product.name,
       description: product.description,
       price: product.price === 0 ? 'Pedir orçamento' : (product.price?.toString() || ''),
@@ -116,7 +117,10 @@ export const useSelectedProducts = () => {
       keywords: product.keywords,
       market_keywords: product.market_keywords,
       search_intent_keywords: product.search_intent_keywords,
+      target_audience: product.target_audience,
       offer_discount_cta: product.offer_discount_cta,
+      category: product.category,
+      individual_blog_content: product.individual_blog_content,
       sourceType: 'repository' as const,
       lastUpdated: new Date().toISOString(),
       selected: true,

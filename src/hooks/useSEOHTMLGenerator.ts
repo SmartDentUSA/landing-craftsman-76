@@ -29,6 +29,25 @@ interface ConsolidatedBlogOptions {
     productName?: string;
     keywords?: string[];
   }>;
+  landingPagesSEO?: Array<{
+    id: string;
+    name: string;
+    seo_title: string;
+    seo_description: string;
+    ai_keywords: string[];
+    selected_product_ids: string[];
+  }>;
+  selectedProducts?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    keywords?: string[];
+    market_keywords?: string[];
+    search_intent_keywords?: string[];
+    category?: string;
+    target_audience?: string[];
+  }>;
+  aggregatedKeywords?: string[];
   landingPageData?: any;
   includeOffers?: boolean;
 }
@@ -316,18 +335,20 @@ export const useSEOHTMLGenerator = () => {
   }, [generateProductSchema]);
 
   const generateConsolidatedBlogHTML = useCallback((options: ConsolidatedBlogOptions): string => {
-    const { title, description, domain, blogs, landingPageData, includeOffers = false } = options;
+    const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false } = options;
 
-    // Combinar todas as keywords dos blogs
-    const allKeywords = blogs.reduce((acc: string[], blog) => {
-      if (blog.keywords) {
-        acc.push(...blog.keywords);
-      }
-      return acc;
-    }, []);
+    // Use aggregated keywords from landing pages + products + blogs if provided
+    const allKeywords = aggregatedKeywords && aggregatedKeywords.length > 0 
+      ? aggregatedKeywords 
+      : blogs.reduce((acc: string[], blog) => {
+          if (blog.keywords) {
+            acc.push(...blog.keywords);
+          }
+          return acc;
+        }, []);
 
-    // Remover duplicatas
-    const uniqueKeywords = [...new Set(allKeywords)];
+    // Remover duplicatas e limitar para melhor performance SEO
+    const uniqueKeywords = [...new Set(allKeywords)].slice(0, 30);
 
     // Gerar schema para múltiplos artigos
     const blogSchemas = blogs.map((blog, index) => ({
@@ -361,18 +382,51 @@ export const useSEOHTMLGenerator = () => {
     ${JSON.stringify(itemListSchema, null, 2)}
     </script>`;
 
+    // Create intelligent links mapping from selected products
+    const intelligentLinks: Record<string, string> = {};
+    if (selectedProducts) {
+      selectedProducts.forEach(product => {
+        if (product.name) {
+          intelligentLinks[product.name.toLowerCase()] = `${canonicalUrl}/produto/${product.id}`;
+        }
+        // Add keywords as links too
+        [...(product.keywords || []), ...(product.market_keywords || [])].forEach(keyword => {
+          if (keyword.length > 3) {
+            intelligentLinks[keyword.toLowerCase()] = `${canonicalUrl}/produto/${product.id}`;
+          }
+        });
+      });
+    }
+
     // Processar conteúdo dos blogs
     const blogContents = blogs.map(blog => `
       <section class="blog-item">
         <h2>${blog.title}</h2>
         ${blog.productName ? `<p class="product-reference"><strong>Produto:</strong> ${blog.productName}</p>` : ''}
         <div class="blog-content">
-          ${processContentWithIntelligentLinks(blog.content)}
+          ${processContentWithIntelligentLinks(blog.content, intelligentLinks)}
         </div>
       </section>
     `).join('\n');
 
     const canonicalUrl = `https://${domain}`;
+    
+    // Add SEO summary from landing pages if available
+    let seoSummary = '';
+    if (landingPagesSEO && landingPagesSEO.length > 0) {
+      seoSummary = `
+        <section class="seo-summary">
+          <h2>Contexto das Landing Pages</h2>
+          ${landingPagesSEO.map(lp => `
+            <div class="landing-page-context">
+              <h3>${lp.seo_title}</h3>
+              <p>${lp.seo_description}</p>
+              ${lp.ai_keywords.length > 0 ? `<p><strong>Keywords:</strong> ${lp.ai_keywords.slice(0, 10).join(', ')}</p>` : ''}
+            </div>
+          `).join('')}
+        </section>
+      `;
+    }
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -575,6 +629,44 @@ export const useSEOHTMLGenerator = () => {
       margin-bottom: 15px;
     }
     
+    .seo-summary {
+      background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+      padding: 25px;
+      border-radius: 12px;
+      margin: 40px 0;
+      border-left: 4px solid #9c27b0;
+    }
+    
+    .landing-page-context {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+    }
+    
+    .products-summary {
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+      padding: 25px;
+      border-radius: 12px;
+      margin: 40px 0;
+      border-left: 4px solid #ff9800;
+    }
+    
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .product-card {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     footer {
       margin-top: 60px;
       padding-top: 40px;
@@ -619,7 +711,24 @@ export const useSEOHTMLGenerator = () => {
     </div>
     
     <main>
+      ${seoSummary}
       ${blogContents}
+      
+      ${selectedProducts && selectedProducts.length > 0 ? `
+      <section class="products-summary">
+        <h2>Produtos Relacionados</h2>
+        <div class="products-grid">
+          ${selectedProducts.map(product => `
+            <div class="product-card">
+              <h3>${product.name}</h3>
+              <p>${product.description}</p>
+              ${product.category ? `<p><strong>Categoria:</strong> ${product.category}</p>` : ''}
+              ${product.keywords && product.keywords.length > 0 ? `<p><strong>Keywords:</strong> ${product.keywords.slice(0, 5).join(', ')}</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </section>
+      ` : ''}
     </main>
     
     ${uniqueKeywords.length > 0 ? `

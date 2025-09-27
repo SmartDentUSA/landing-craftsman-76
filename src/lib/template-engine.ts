@@ -2492,6 +2492,27 @@ export const generateHTML = (data: any): string => {
   // Gerar Schema Markup automaticamente se habilitado
   if (data.seo?.hreflang_auto) {
     const schemaGraph = [];
+    
+    // Include selected products in schema if available
+    if (data.selectedProductsForSEO && data.selectedProductsForSEO.length > 0) {
+      const productsSchema = {
+        "@type": "ItemList",
+        "name": "Produtos Relacionados",
+        "numberOfItems": data.selectedProductsForSEO.length,
+        "itemListElement": data.selectedProductsForSEO.map((product: any, index: number) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "item": {
+            "@type": "Product",
+            "name": product.name,
+            "description": product.description,
+            "category": product.category,
+            "keywords": [...(product.keywords || []), ...(product.market_keywords || [])].join(', ')
+          }
+        }))
+      };
+      schemaGraph.push(productsSchema);
+    }
 
     // Combinar reviews manuais, do Google e depoimentos em vídeo para agregateRating e reviews
     const manualReviews = data.schema?.manual_reviews || [];

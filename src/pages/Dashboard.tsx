@@ -35,7 +35,7 @@ interface BlogPost {
 const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { landingPages, deleteLandingPage, addLandingPage, isLoading } = useLandingPagesSupabase();
+  const { landingPages, deleteLandingPage, addLandingPage, isLoading, loadLandingPages } = useLandingPagesSupabase();
   const { 
     consolidatedBlogs,
     approvedBlogsCount, 
@@ -95,6 +95,11 @@ const DashboardContent = () => {
       });
     }
   }, 300);
+
+  // Force refresh landing pages when component mounts to sync names
+  useEffect(() => {
+    loadLandingPages();
+  }, []);
 
   // Memoize approved landing pages to detect changes
   const approvedLandingPagesIds = useMemo(() => {
@@ -286,15 +291,62 @@ const DashboardContent = () => {
         let htmlCode: string;
         
         if (landingPage.data) {
-          htmlCode = generateHTML(landingPage.data);
+          // Enhance with selected products SEO data
+          const selectedProductIds = landingPage.selected_product_ids || [];
+          let enhancedData = { ...landingPage.data };
+          
+          if (selectedProductIds.length > 0) {
+            try {
+              const { data: products } = await supabase
+                .from('products_repository')
+                .select('*')
+                .in('id', selectedProductIds);
+              
+              if (products && products.length > 0) {
+                // Aggregate keywords from selected products
+                const productKeywords = products.flatMap(p => [
+                  ...(Array.isArray(p.keywords) ? p.keywords : []),
+                  ...(Array.isArray(p.market_keywords) ? p.market_keywords : []),
+                  ...(Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [])
+                ]);
+                
+                // Enhance SEO data with product information
+                enhancedData = {
+                  ...landingPage.data,
+                  seo: {
+                    ...landingPage.data.seo,
+                    ai_keywords: [
+                      ...(Array.isArray(landingPage.data.seo?.ai_keywords) ? landingPage.data.seo.ai_keywords : []),
+                      ...productKeywords
+                    ].slice(0, 50), // Limit to 50 keywords for better performance
+                    seo_hidden_content: `${landingPage.data.seo?.seo_hidden_content || ''} Produtos relacionados: ${products.map(p => p.name).join(', ')}`
+                  },
+                  selectedProductsForSEO: products.map(p => ({
+                    name: p.name,
+                    description: p.description,
+                    category: p.category,
+                    keywords: Array.isArray(p.keywords) ? p.keywords : [],
+                    market_keywords: Array.isArray(p.market_keywords) ? p.market_keywords : []
+                  }))
+                };
+              }
+            } catch (error) {
+              console.error('Erro ao carregar produtos para SEO:', error);
+            }
+          }
+          
+          htmlCode = generateHTML(enhancedData);
         } else {
           htmlCode = '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1><p>Dados não encontrados.</p></body></html>';
         }
         
         await navigator.clipboard.writeText(htmlCode);
+        // Refresh landing pages to sync names
+        await loadLandingPages();
+        
         toast({
-          title: "Código copiado!",
-          description: "HTML da landing page copiado para a área de transferência.",
+          title: "HTML SEO Completo Copiado!",
+          description: `HTML da landing page com dados de ${(landingPage.selected_product_ids || []).length} produtos selecionados copiado`,
         });
       } catch (err) {
         toast({

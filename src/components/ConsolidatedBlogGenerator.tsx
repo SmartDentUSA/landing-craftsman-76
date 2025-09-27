@@ -7,6 +7,8 @@ import { Copy, FileText, Globe, Building2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { useSEOHTMLGenerator } from '@/hooks/useSEOHTMLGenerator';
+import { useSelectedProducts } from '@/hooks/useSelectedProducts';
+import { useLandingPagesSupabase } from '@/hooks/useLandingPagesSupabase';
 
 interface ConsolidatedBlogGeneratorProps {
   approvedLandingPages: any[];
@@ -15,6 +17,8 @@ interface ConsolidatedBlogGeneratorProps {
 export function ConsolidatedBlogGenerator({ approvedLandingPages }: ConsolidatedBlogGeneratorProps) {
   const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
+  const { getProductsForTemplate } = useSelectedProducts();
+  const { getLandingPage } = useLandingPagesSupabase();
   
   const {
     productBlogsForHTMLByDomain,
@@ -24,47 +28,76 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
   const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
 
   const generateConsolidatedHTML = async (domain: 'dentala' | 'eodonto') => {
-    setGenerating(true);
     try {
-      const blogs = productBlogsForHTMLByDomain(domain);
+      setGenerating(true);
       
-      if (blogs.length === 0) {
+      // Get blogs for the specific domain
+      const blogsForDomain = productBlogsForHTMLByDomain(domain);
+      
+      if (blogsForDomain.length === 0) {
         toast({
-          title: "Aviso",
-          description: `Nenhum blog individual foi encontrado para ${domain}. Configure os blogs nos produtos primeiro.`,
-          variant: "destructive",
+          title: "Nenhum blog disponível",
+          description: `Não há blogs disponíveis para o domínio ${domain}`,
+          variant: "destructive"
         });
         return;
       }
 
-      const domainName = domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com';
-      const blogType = domain === 'dentala' ? 'técnicos' : 'comerciais';
-      
+      // Gather SEO data from all landing pages involved
+      const landingPageSEOData = approvedLandingPages.map(lp => {
+        const lpData = getLandingPage(lp.id);
+        return {
+          id: lp.id,
+          name: lp.name,
+          seo_title: lpData?.data?.seo?.seo_title || lp.name,
+          seo_description: lpData?.data?.seo?.seo_description || '',
+          ai_keywords: lpData?.data?.seo?.ai_keywords || [],
+          selected_product_ids: lpData?.selected_product_ids || []
+        };
+      });
+
+      // Gather all selected products data for SEO
+      const allSelectedProductIds = [...new Set(landingPageSEOData.flatMap(lp => lp.selected_product_ids))];
+      const selectedProductsData = await getProductsForTemplate(allSelectedProductIds);
+
+      // Aggregate all keywords
+      const aggregatedKeywords = [
+        ...new Set([
+          ...landingPageSEOData.flatMap(lp => lp.ai_keywords),
+          ...selectedProductsData.flatMap(p => [...(p.keywords || []), ...(p.market_keywords || []), ...(p.search_intent_keywords || [])])
+        ])
+      ];
+
+      // Generate consolidated HTML with full SEO integration
       const consolidatedHTML = generateConsolidatedBlogHTML({
-        title: `Análise Completa de Produtos - ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}`,
-        description: `Compilação de artigos ${blogType} sobre produtos e serviços especializados para profissionais da odontologia.`,
-        domain: domainName,
-        blogs: blogs.map(blog => ({
+        title: `Blog Consolidado - ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}`,
+        description: `Conteúdo técnico e comercial consolidado para ${domain} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos`,
+        domain: domain,
+        blogs: blogsForDomain.map(blog => ({
           title: blog.title,
           content: blog.content,
           productName: blog.productName,
-          keywords: [] // Keywords serão extraídas do conteúdo
+          keywords: []
         })),
-        includeOffers: domain === 'eodonto'
+        landingPagesSEO: landingPageSEOData,
+        selectedProducts: selectedProductsData,
+        aggregatedKeywords: aggregatedKeywords
       });
 
+      // Copy to clipboard
       await navigator.clipboard.writeText(consolidatedHTML);
       
       toast({
-        title: "Sucesso!",
-        description: `HTML consolidado para ${domainName} copiado para a área de transferência`,
+        title: "HTML Consolidado SEO Completo!",
+        description: `HTML com ${blogsForDomain.length} blogs, dados de ${landingPageSEOData.length} landing pages e ${selectedProductsData.length} produtos copiado`,
       });
+
     } catch (error) {
       console.error('Erro ao gerar HTML consolidado:', error);
       toast({
         title: "Erro",
-        description: "Falha ao gerar HTML consolidado",
-        variant: "destructive",
+        description: "Erro ao gerar HTML consolidado",
+        variant: "destructive"
       });
     } finally {
       setGenerating(false);
