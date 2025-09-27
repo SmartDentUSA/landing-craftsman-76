@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings } from "lucide-react";
+import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePromptsConfiguration } from "@/hooks/usePromptsConfiguration";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { TagInput } from "@/components/ui/tag-input";
 import { BlogConsolidationInterface } from "./BlogConsolidationInterface";
+import { useAutoLinker } from "@/hooks/useAutoLinker";
 
 interface BlogEditorSectionProps {
   landingPageId: string;
@@ -42,10 +43,14 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blogGenerated, setBlogGenerated] = useState(false);
+  const [autoLinksEnabled, setAutoLinksEnabled] = useState(true);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewLinksCount, setPreviewLinksCount] = useState(0);
   
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
   const { loadProductsByIds } = useSelectedProducts();
+  const { processAutoLinks, debouncedPreviewLinks, getApplicableLinks, isProcessing, autoLinksCount } = useAutoLinker();
 
   // Load existing blog post on mount
   useEffect(() => {
@@ -168,12 +173,21 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     setSaving(true);
     
     try {
+      // Apply auto-links if enabled
+      let finalContent = blogPost.content;
+      let linksAdded = 0;
+      
+      if (autoLinksEnabled && blogPost.content) {
+        finalContent = processAutoLinks(blogPost.content, true);
+        linksAdded = autoLinksCount;
+      }
+
       const { data, error } = await supabase
         .from('blog_posts')
         .upsert({
           landing_page_id: landingPageId,
           title: blogPost.title,
-          content: blogPost.content,
+          content: finalContent,
           meta_description: blogPost.meta_description,
           keywords: blogPost.keywords,
           status: 'draft',
@@ -183,9 +197,14 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
 
       if (error) throw error;
 
+      // Update local state with processed content
+      if (autoLinksEnabled && linksAdded > 0) {
+        setBlogPost(prev => ({ ...prev, content: finalContent }));
+      }
+
       toast({
         title: "Blog salvo!",
-        description: "Suas alterações foram salvas com sucesso.",
+        description: `Suas alterações foram salvas com sucesso.${linksAdded > 0 ? ` ${linksAdded} links automáticos adicionados.` : ''}`,
       });
     } catch (error: any) {
       console.error('Erro ao salvar blog:', error);
@@ -204,6 +223,14 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       ...prev,
       [field]: value
     }));
+
+    // Real-time auto-links preview for content changes
+    if (field === 'content' && autoLinksEnabled && value) {
+      debouncedPreviewLinks(value, (processed, count) => {
+        setPreviewContent(processed);
+        setPreviewLinksCount(count);
+      });
+    }
   };
 
   const generatePreviewHTML = (content: string) => {
@@ -294,6 +321,31 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                 </Button>
               </div>
 
+              {/* Auto-Links Status */}
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">Auto-Links Inteligentes</span>
+                  <Badge variant={autoLinksEnabled ? "default" : "secondary"}>
+                    {autoLinksEnabled ? "Ativado" : "Desativado"}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                  {blogPost.content && autoLinksEnabled && (
+                    <span className="text-xs text-blue-700">
+                      {previewLinksCount > 0 ? `${previewLinksCount} links detectados` : 'Nenhum link detectado'}
+                    </span>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAutoLinksEnabled(!autoLinksEnabled)}
+                  >
+                    {autoLinksEnabled ? "Desativar" : "Ativar"}
+                  </Button>
+                </div>
+              </div>
+
               {error && (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-4">
                   <p className="text-sm text-orange-700">⚠️ {error}</p>
@@ -363,9 +415,14 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <Eye className="h-4 w-4" />
                     Preview do Blog
+                    {autoLinksEnabled && previewLinksCount > 0 && (
+                      <Badge variant="outline" className="ml-2">
+                        {previewLinksCount} auto-links
+                      </Badge>
+                    )}
                   </h3>
                   <iframe
-                    srcDoc={generatePreviewHTML(blogPost.content)}
+                    srcDoc={generatePreviewHTML(autoLinksEnabled && previewContent ? previewContent : blogPost.content)}
                     className="w-full h-96 border rounded"
                     title="Preview do Blog"
                   />
