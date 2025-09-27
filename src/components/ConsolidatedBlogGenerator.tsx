@@ -9,6 +9,7 @@ import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { useSEOHTMLGenerator } from '@/hooks/useSEOHTMLGenerator';
 import { useSelectedProducts } from '@/hooks/useSelectedProducts';
 import { useLandingPagesSupabase } from '@/hooks/useLandingPagesSupabase';
+import { generateAdvancedIntelligentLinks, processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 
 interface ConsolidatedBlogGeneratorProps {
   approvedLandingPages: any[];
@@ -72,17 +73,36 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         ])
       ];
 
+      // Generate advanced intelligent links for each blog
+      const blogsWithAdvancedLinks = await Promise.all(
+        blogsForDomain.map(async (blog) => {
+          const intelligentLinks = await generateAdvancedIntelligentLinks({
+            content: blog.content,
+            customLinks: {}, // Could be enhanced with custom links
+            landingPagesData: landingPageSEOData,
+            productUrl: selectedProductsData.find(p => p.name === blog.productName)?.productUrl,
+            relatedProducts: selectedProductsData.filter(p => p.name !== blog.productName),
+            productKeywords: selectedProductsData.find(p => p.name === blog.productName)?.keywords || [],
+            productCategories: selectedProductsData.find(p => p.name === blog.productName)?.category ? [selectedProductsData.find(p => p.name === blog.productName)?.category] : []
+          });
+
+          const processedContent = processContentWithAdvancedIntelligentLinks(blog.content, intelligentLinks);
+
+          return {
+            title: blog.title,
+            content: processedContent,
+            productName: blog.productName,
+            keywords: []
+          };
+        })
+      );
+
       // Generate consolidated HTML with full SEO integration
       const consolidatedHTML = generateConsolidatedBlogHTML({
         title: `Blog Consolidado - ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}`,
         description: `Conteúdo técnico e comercial consolidado para ${domain} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos`,
         domain: domain,
-        blogs: blogsForDomain.map(blog => ({
-          title: blog.title,
-          content: blog.content,
-          productName: blog.productName,
-          keywords: []
-        })),
+        blogs: blogsWithAdvancedLinks,
         landingPagesSEO: landingPageSEOData,
         selectedProducts: selectedProductsData,
         aggregatedKeywords: aggregatedKeywords,

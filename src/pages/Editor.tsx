@@ -869,6 +869,17 @@ const EditorContent = () => {
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   
+  // State for debounced name input
+  const [localName, setLocalName] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  
+  // Debounced name update
+  const debouncedNameUpdate = useDebounce((name: string) => {
+    setData(prev => ({ ...prev, name }));
+    setIsEditingName(false);
+  }, 300);
+
+  
   // Sincronização automática entre produtos selecionados e schema.offers
   useEffect(() => {
     const syncSelectedProductsToOffers = async () => {
@@ -1857,10 +1868,15 @@ const EditorContent = () => {
               images: Array.isArray(migratedData.banner.images) && migratedData.banner.images.length ? migratedData.banner.images : [createImageData()]
             } as any;
           }
+          // Only update name if not currently editing
+          if (!isEditingName) {
+            setLocalName(landingPage.name);
+          }
+          
           setData({
             ...data,
             ...migratedData,
-            name: landingPage.name,
+            name: isEditingName ? data.name : landingPage.name,
             status: landingPage.status,
             template: landingPage.template
           });
@@ -1871,6 +1887,13 @@ const EditorContent = () => {
       console.log('Nova landing page - usando dados padrão do estado inicial');
     }
   }, [id, getLandingPage]);
+
+  // Initialize localName when data.name changes (but not when editing)
+  useEffect(() => {
+    if (!isEditingName && data.name !== localName) {
+      setLocalName(data.name);
+    }
+  }, [data.name, isEditingName, localName]);
 
   const handleSave = () => {
     console.log('[DEBUG] Salvando landing page...');
@@ -2355,8 +2378,12 @@ const EditorContent = () => {
                     <div>
                       <Label>Nome da Landing Page</Label>
                       <Input
-                        value={data.name}
-                        onChange={(e) => setData(prev => ({ ...prev, name: e.target.value }))}
+                        value={isEditingName ? localName : data.name}
+                        onChange={(e) => {
+                          setLocalName(e.target.value);
+                          setIsEditingName(true);
+                          debouncedNameUpdate(e.target.value);
+                        }}
                         placeholder="Digite o nome da página"
                       />
                       <p className="text-xs text-gray-500 mt-1">
