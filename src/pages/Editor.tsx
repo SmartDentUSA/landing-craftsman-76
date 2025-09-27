@@ -32,7 +32,7 @@ import { ProductSelector } from "@/components/ProductSelector";
 import { SelectedProductsPanel } from "@/components/SelectedProductsPanel";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
 import { useToast } from "@/hooks/use-toast";
-import useLandingPages from "@/hooks/useLandingPages"; // Default export
+import { useLandingPagesSupabase } from "@/hooks/useLandingPagesSupabase";
 import { cn } from "@/lib/utils";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useProductSync } from "@/hooks/useProductSync";
@@ -806,7 +806,8 @@ const EditorContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
-  const { getLandingPage, updateLandingPage, addLandingPage, updateSelectedProducts, getSelectedProducts } = useLandingPages();
+  const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPagesSupabase();
+  const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
@@ -867,7 +868,6 @@ const EditorContent = () => {
   
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const { getProductsForTemplate } = useSelectedProducts();
   
   // Sincronização automática entre produtos selecionados e schema.offers
   useEffect(() => {
@@ -931,23 +931,25 @@ const EditorContent = () => {
     syncSelectedProductsToOffers();
   }, [selectedProductIds]);
 
-  // Carregar produtos selecionados do store quando a página carregar
+  // Carregar produtos selecionados da landing page quando carregar
   useEffect(() => {
     if (id) {
-      const storedProductIds = getSelectedProducts(id);
-      setSelectedProductIds(storedProductIds);
-      console.log('🔄 Produtos selecionados carregados do store:', storedProductIds);
+      const landingPage = getLandingPage(id);
+      if (landingPage?.selected_product_ids) {
+        setSelectedProductIds(landingPage.selected_product_ids);
+        console.log('🔄 Produtos selecionados carregados da landing page:', landingPage.selected_product_ids);
+      }
     }
-  }, [id, getSelectedProducts]);
+  }, [id, getLandingPage]);
 
   // Handler para mudanças na seleção de produtos
   const handleProductSelectionChange = useCallback((productIds: string[]) => {
     setSelectedProductIds(productIds);
     if (id) {
-      updateSelectedProducts(id, productIds);
-      console.log('✅ Produtos selecionados atualizados:', productIds);
+      updateLandingPage(id, { selected_product_ids: productIds });
+      console.log('✅ Produtos selecionados atualizados na landing page:', productIds);
     }
-  }, [id, updateSelectedProducts]);
+  }, [id, updateLandingPage]);
 
   // Monitorar mudanças nas flags dos produtos para atualizar seções
   useEffect(() => {
@@ -1662,8 +1664,8 @@ const EditorContent = () => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
-        // Carregar produtos selecionados
-        const selectedIds = getSelectedProducts(id);
+        // Carregar produtos selecionados da landing page
+        const selectedIds = landingPage.selected_product_ids || [];
         setSelectedProductIds(selectedIds);
         // Se há dados estruturados, usar direto mas garantir campos obrigatórios
         if (landingPage.data && typeof landingPage.data === 'object') {
@@ -1998,7 +2000,7 @@ const EditorContent = () => {
     if (id) {
       updateLandingPage(id, storeData);
     } else {
-      landingPageId = addLandingPage(storeData);
+      landingPageId = await addLandingPage(storeData);
       navigate(`/editor/${landingPageId}`);
     }
     
@@ -2006,7 +2008,8 @@ const EditorContent = () => {
     
     // Automatically publish blog when landing page is approved
     try {
-      const selectedProductIds = getSelectedProducts(landingPageId);
+      const landingPageData = getLandingPage(landingPageId);
+      const selectedProductIds = landingPageData?.selected_product_ids || [];
       
       console.log('🚀 Iniciando geração automática de blog para landing page:', landingPageId);
       console.log('📦 Produtos selecionados:', selectedProductIds);
@@ -4832,7 +4835,7 @@ const EditorContent = () => {
                   onOrderChange={(newOrder) => {
                     setSelectedProductIds(newOrder);
                     if (id) {
-                      updateSelectedProducts(id, newOrder);
+                      updateLandingPage(id, { selected_product_ids: newOrder });
                     }
                   }}
                   onEditInRepository={(productId) => {
