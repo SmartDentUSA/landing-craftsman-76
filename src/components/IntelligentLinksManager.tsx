@@ -6,8 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Link, Edit, Trash2, Plus, ExternalLink, Eye } from "lucide-react";
+import { Link, Edit, Trash2, Plus, ExternalLink, Eye, Package } from "lucide-react";
 import { toast } from "sonner";
+import { ProductKeywordsImportModal } from "./ProductKeywordsImportModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLinksRepository } from "@/hooks/useLinksRepository";
 
 interface IntelligentLink {
   keyword: string;
@@ -34,6 +37,9 @@ export function IntelligentLinksManager({
   const [newKeyword, setNewKeyword] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  
+  const { allLinks } = useLinksRepository();
 
   const analyzeLinks = (): IntelligentLink[] => {
     const links: IntelligentLink[] = [];
@@ -115,6 +121,14 @@ export function IntelligentLinksManager({
   const resetChanges = () => {
     setEditingLinks(existingLinks);
     toast.info("Alterações descartadas");
+  };
+
+  const handleImportKeywords = (keywordUrlPairs: Record<string, string>) => {
+    setEditingLinks(prev => ({
+      ...prev,
+      ...keywordUrlPairs
+    }));
+    toast.success(`${Object.keys(keywordUrlPairs).length} palavras-chave importadas dos produtos`);
   };
 
   const analyzedLinks = analyzeLinks();
@@ -285,9 +299,20 @@ export function IntelligentLinksManager({
 
         {/* Adicionar Novo Link */}
         <div className="space-y-4 p-4 border border-dashed border-muted-foreground/25 rounded-lg bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-primary" />
-            <h4 className="text-sm font-semibold text-foreground">Adicionar Novo Link</h4>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              <h4 className="text-sm font-semibold text-foreground">Adicionar Novo Link</h4>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowImportModal(true)}
+              className="h-8 text-xs"
+            >
+              <Package className="h-3 w-3 mr-1" />
+              Importar dos Produtos
+            </Button>
           </div>
           <div className="space-y-3">
             <div className="space-y-2">
@@ -305,12 +330,42 @@ export function IntelligentLinksManager({
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 URL de destino
               </label>
-              <Input
-                placeholder="https://exemplo.com/pagina"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                className="h-9 font-mono text-sm"
-              />
+              <Select value={newUrl} onValueChange={setNewUrl}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Selecionar da lista ou inserir URL personalizada..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <ExternalLink className="h-3 w-3" />
+                      URL personalizada...
+                    </div>
+                  </SelectItem>
+                  {allLinks.map((link) => (
+                    <SelectItem key={link.id} value={link.url}>
+                      <div className="flex items-center gap-2">
+                        {link.type === 'internal' ? (
+                          <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        ) : (
+                          <div className="h-2 w-2 rounded-full bg-green-500" />
+                        )}
+                        <span className="truncate">{link.name}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {link.category}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newUrl === "custom" && (
+                <Input
+                  placeholder="https://exemplo.com/pagina"
+                  value=""
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  className="h-9 font-mono text-sm mt-2"
+                />
+              )}
             </div>
             <Button 
               onClick={addNewLink} 
@@ -346,6 +401,14 @@ export function IntelligentLinksManager({
             Descartar
           </Button>
         </div>
+
+        {/* Modal de Importação */}
+        <ProductKeywordsImportModal
+          open={showImportModal}
+          onOpenChange={setShowImportModal}
+          blogContent={blogContent}
+          onImportKeywords={handleImportKeywords}
+        />
       </CardContent>
     </Card>
   );
