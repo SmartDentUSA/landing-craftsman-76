@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSelectedProducts } from '@/hooks/useSelectedProducts';
+import { useLinksRepository } from '@/hooks/useLinksRepository';
 import { toast } from '@/hooks/use-toast';
-import { Search, ExternalLink, Package } from 'lucide-react';
+import { Search, ExternalLink, Package, Globe, Link } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -35,10 +37,13 @@ export const ProductLinkModal: React.FC<ProductLinkModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
   const [externalText, setExternalText] = useState('');
+  const [selectedLinkId, setSelectedLinkId] = useState('');
+  const [linkText, setLinkText] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   
   const { loadProductsByIds } = useSelectedProducts();
+  const { allLinks } = useLinksRepository();
 
   useEffect(() => {
     if (open) {
@@ -106,6 +111,44 @@ export const ProductLinkModal: React.FC<ProductLinkModalProps> = ({
     });
   };
 
+  const handleInsertCentralizedLink = () => {
+    const selectedLink = allLinks.find(link => link.id === selectedLinkId);
+    if (!selectedLink) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um link.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    onInsertLink(selectedLink.url, linkText || selectedLink.name);
+    setSelectedLinkId('');
+    setLinkText('');
+    setOpen(false);
+    toast({
+      title: "Link inserido!",
+      description: `Link "${selectedLink.name}" adicionado com sucesso.`
+    });
+  };
+
+  const getCategoryIcon = (type: 'internal' | 'external') => {
+    return type === 'internal' ? Globe : Link;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      'landing-page': 'bg-green-100 text-green-800',
+      produto: 'bg-blue-100 text-blue-800',
+      empresa: 'bg-green-100 text-green-800',
+      parceiro: 'bg-purple-100 text-purple-800',
+      recurso: 'bg-orange-100 text-orange-800',
+      documentacao: 'bg-gray-100 text-gray-800',
+      outro: 'bg-yellow-100 text-yellow-800'
+    };
+    return colors[category as keyof typeof colors] || colors.outro;
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -116,17 +159,73 @@ export const ProductLinkModal: React.FC<ProductLinkModalProps> = ({
           <DialogTitle>Inserir Link</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="centralized" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="centralized" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Links Centralizados
+            </TabsTrigger>
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Produtos
             </TabsTrigger>
             <TabsTrigger value="external" className="flex items-center gap-2">
               <ExternalLink className="h-4 w-4" />
-              Link Externo
+              Link Personalizado
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="centralized" className="space-y-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="centralized-link">URL de Destino</Label>
+                <Select value={selectedLinkId} onValueChange={setSelectedLinkId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um link..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {allLinks.map((link) => {
+                      const Icon = getCategoryIcon(link.type);
+                      return (
+                        <SelectItem key={link.id} value={link.id}>
+                          <div className="flex items-center space-x-2">
+                            <Icon className="h-4 w-4" />
+                            <span className="truncate">{link.name}</span>
+                            <Badge className={getCategoryColor(link.category)} variant="outline">
+                              {link.category === 'landing-page' ? 'Interno' : link.category}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {selectedLinkId && (
+                  <p className="text-sm text-muted-foreground">
+                    {allLinks.find(l => l.id === selectedLinkId)?.url}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="centralized-text">Texto do Link (opcional)</Label>
+                <Input
+                  id="centralized-text"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Deixe vazio para usar o nome do link"
+                />
+              </div>
+
+              <Button
+                onClick={handleInsertCentralizedLink}
+                disabled={!selectedLinkId}
+                className="w-full"
+              >
+                Inserir Link
+              </Button>
+            </div>
+          </TabsContent>
 
           <TabsContent value="products" className="space-y-4">
             <div className="relative">

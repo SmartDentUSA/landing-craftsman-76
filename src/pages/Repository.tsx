@@ -8,10 +8,11 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
 import { PromptsAIManager } from '@/components/PromptsAIManager';
+import { LinksManager } from '@/components/LinksManager';
 
 const Repository = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -35,13 +36,16 @@ const Repository = () => {
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
                     {activeView === 'repository' ? 'Repositório Central de Dados' : 
-                     activeView === 'categories' ? 'Gerenciar Categorias' : 'Prompts IA'}
+                     activeView === 'categories' ? 'Gerenciar Categorias' : 
+                     activeView === 'links' ? 'Gerenciador de Links' : 'Prompts IA'}
                   </h1>
                   <p className="text-muted-foreground mt-2">
                     {activeView === 'repository' 
                       ? 'Gerencie produtos, avaliações e depoimentos centralizados para suas landing pages'
                       : activeView === 'categories'
                       ? 'Configure campos padrões para categorias e subcategorias'
+                      : activeView === 'links'
+                      ? 'Gerencie URLs centralizadas para uso em blogs e landing pages'
                       : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                     }
                   </p>
@@ -65,6 +69,14 @@ const Repository = () => {
                     Categorias
                   </Button>
                   <Button
+                    variant={activeView === 'links' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('links')}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Links
+                  </Button>
+                  <Button
                     variant={activeView === 'prompts' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setActiveView('prompts')}
@@ -85,6 +97,8 @@ const Repository = () => {
               />
             ) : activeView === 'categories' ? (
               <CategoryManager />
+            ) : activeView === 'links' ? (
+              <LinksManager />
             ) : (
               <PromptsAIManager />
             )}
