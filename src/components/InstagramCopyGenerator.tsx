@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Copy, Edit, Save, X, Zap } from "lucide-react";
+import { Loader2, Copy, Edit, Save, X, Zap, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -187,6 +187,136 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
     }
   };
 
+  const copyHTMLVersion = async (text: string, type: 'feed' | 'story' | 'reels') => {
+    try {
+      // Generate SEO optimized HTML version for Instagram post preview
+      const htmlContent = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instagram ${type.charAt(0).toUpperCase() + type.slice(1)} - ${productName}</title>
+  <meta name="description" content="Copy para Instagram ${type} do produto ${productName}">
+  <meta name="robots" content="noindex, nofollow">
+  <meta property="og:title" content="Instagram ${type.charAt(0).toUpperCase() + type.slice(1)} - ${productName}">
+  <meta property="og:description" content="Copy para Instagram ${type} do produto ${productName}">
+  <meta property="og:type" content="article">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
+      min-height: 100vh;
+    }
+    .instagram-container {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .instagram-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #efefef;
+    }
+    .instagram-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 15px;
+    }
+    .type-badge {
+      background: #0095f6;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .instagram-content {
+      font-size: 16px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: #262626;
+    }
+    .hashtag {
+      color: #0095f6;
+      font-weight: 500;
+    }
+    .timestamp {
+      text-align: center;
+      font-size: 12px;
+      color: #8e8e8e;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #efefef;
+    }
+    .engagement {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 15px;
+      padding: 10px 0;
+      border-top: 1px solid #efefef;
+    }
+    .engagement-item {
+      display: flex;
+      align-items: center;
+      color: #8e8e8e;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="instagram-container">
+    <div class="instagram-header">
+      <div class="instagram-icon">📸</div>
+      <div>
+        <strong>${productName}</strong>
+        <div class="type-badge">${type}</div>
+      </div>
+    </div>
+    <div class="instagram-content">
+      ${text.replace(/#(\w+)/g, '<span class="hashtag">#$1</span>')}
+    </div>
+    <div class="engagement">
+      <div class="engagement-item">❤️ Curtir</div>
+      <div class="engagement-item">💬 Comentar</div>
+      <div class="engagement-item">📤 Compartilhar</div>
+    </div>
+    <div class="timestamp">
+      ${new Date().toLocaleDateString('pt-BR')} • Visualização de Copy
+    </div>
+  </div>
+</body>
+</html>`;
+
+      await navigator.clipboard.writeText(htmlContent);
+      toast({
+        title: "HTML Copiado!",
+        description: `Versão HTML da copy ${type} copiada para visualização web.`,
+      });
+    } catch (error) {
+      console.error('Erro ao copiar HTML:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar a versão HTML.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const saveCopy = async (type: 'feed' | 'story' | 'reels', content: string) => {
     try {
       // Carregar dados existentes
@@ -290,13 +420,22 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                     </span>
                     <div className="flex gap-2">
                       {feedCopy && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(feedCopy)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(feedCopy)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyHTMLVersion(feedCopy, 'feed')}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                       {!editingFeed ? (
                         <Button
@@ -353,13 +492,22 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                     </span>
                     <div className="flex gap-2">
                       {storyCopy && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(storyCopy)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(storyCopy)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyHTMLVersion(storyCopy, 'story')}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                       {!editingStory ? (
                         <Button
@@ -416,13 +564,22 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                     </span>
                     <div className="flex gap-2">
                       {reelsCopy && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(reelsCopy)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(reelsCopy)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyHTMLVersion(reelsCopy, 'reels')}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                       {!editingReels ? (
                         <Button

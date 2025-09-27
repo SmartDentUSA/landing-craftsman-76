@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History } from 'lucide-react';
+import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -121,6 +121,94 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
     }
   };
 
+  const copyHTMLVersion = async (content: string) => {
+    try {
+      // Generate SEO optimized HTML version for web sharing
+      const htmlContent = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mensagem WhatsApp - ${productName}</title>
+  <meta name="description" content="Mensagem WhatsApp sobre ${productName}">
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    .whatsapp-container {
+      background: #25d366;
+      border-radius: 15px;
+      padding: 20px;
+      color: white;
+      position: relative;
+    }
+    .whatsapp-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    .whatsapp-message {
+      background: #dcf8c6;
+      color: #000;
+      padding: 15px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.4;
+      position: relative;
+    }
+    .whatsapp-message::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      right: 15px;
+      border: 8px solid transparent;
+      border-top-color: #dcf8c6;
+    }
+    .timestamp {
+      text-align: right;
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="whatsapp-container">
+    <div class="whatsapp-header">
+      💬 Mensagem WhatsApp - ${productName}
+    </div>
+    <div class="whatsapp-message">
+      ${content}
+    </div>
+    <div class="timestamp">
+      ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+    </div>
+  </div>
+</body>
+</html>`;
+
+      await navigator.clipboard.writeText(htmlContent);
+      toast({
+        title: "HTML Copiado!",
+        description: "Versão HTML da mensagem copiada para visualização web.",
+      });
+    } catch (error) {
+      console.error('Erro ao copiar HTML:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar a versão HTML.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const startEditing = (message: WhatsAppMessage) => {
     setEditingId(message.id);
     setEditingContent(message.content);
@@ -229,7 +317,15 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                       onClick={() => copyToClipboard(currentMessage)}
                     >
                       <Copy className="h-4 w-4 mr-1" />
-                      Copiar
+                      Copiar Texto
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyHTMLVersion(currentMessage)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Copiar HTML
                     </Button>
                   </div>
                 </div>
