@@ -361,6 +361,7 @@ export const LinksManager = () => {
         onOpenChange={setIsImportModalOpen}
         blogContent=""
         onImportKeywords={handleImportKeywords}
+        showAllKeywords={true}
       />
     </div>
   );

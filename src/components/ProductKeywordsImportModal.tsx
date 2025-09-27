@@ -33,13 +33,15 @@ interface ProductKeywordsImportModalProps {
   onOpenChange: (open: boolean) => void;
   blogContent: string;
   onImportKeywords: (keywordUrlPairs: Record<string, string>) => void;
+  showAllKeywords?: boolean; // Nova prop para mostrar todas as keywords independente de ocorrências
 }
 
 export function ProductKeywordsImportModal({
   open,
   onOpenChange,
   blogContent,
-  onImportKeywords
+  onImportKeywords,
+  showAllKeywords = false
 }: ProductKeywordsImportModalProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
@@ -96,11 +98,11 @@ export function ProductKeywordsImportModal({
     return keywords
       .filter(keyword => keyword && keyword.trim())
       .map(keyword => {
-        const occurrences = countOccurrences(keyword.trim());
+        const occurrences = showAllKeywords ? 1 : countOccurrences(keyword.trim()); // Se showAllKeywords for true, simula 1 ocorrência
         return {
           keyword: keyword.trim(),
           occurrences,
-          selected: occurrences > 0,
+          selected: showAllKeywords ? false : occurrences > 0, // Se showAllKeywords, deixa desmarcado por padrão
           selectedUrl: ''
         };
       })
@@ -143,7 +145,7 @@ export function ProductKeywordsImportModal({
     
     Object.values(keywordsByType).forEach(keywords => {
       keywords.forEach(kw => {
-        if (kw.selected && kw.selectedUrl && kw.occurrences > 0) {
+        if (kw.selected && kw.selectedUrl && (showAllKeywords || kw.occurrences > 0)) {
           keywordUrlPairs[kw.keyword.toLowerCase()] = kw.selectedUrl;
         }
       });
@@ -165,7 +167,7 @@ export function ProductKeywordsImportModal({
 
   const renderKeywordTab = (type: keyof typeof keywordsByType, title: string, icon: React.ReactNode) => {
     const keywords = keywordsByType[type];
-    const filteredKeywords = keywords.filter(kw => kw.occurrences > 0);
+    const filteredKeywords = showAllKeywords ? keywords : keywords.filter(kw => kw.occurrences > 0);
 
     return (
       <div className="space-y-4">
@@ -179,7 +181,9 @@ export function ProductKeywordsImportModal({
 
         {filteredKeywords.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">Nenhuma palavra-chave encontrada no conteúdo</p>
+            <p className="text-sm">
+              {showAllKeywords ? 'Nenhuma palavra-chave cadastrada para este produto' : 'Nenhuma palavra-chave encontrada no conteúdo'}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -195,9 +199,11 @@ export function ProductKeywordsImportModal({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="font-medium text-sm">{kw.keyword}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {kw.occurrences}× no texto
-                    </Badge>
+                    {!showAllKeywords && (
+                      <Badge variant="outline" className="text-xs">
+                        {kw.occurrences}× no texto
+                      </Badge>
+                    )}
                   </div>
                   
                   {kw.selected && (
