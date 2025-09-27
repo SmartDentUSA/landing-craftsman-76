@@ -31,6 +31,8 @@ export const LinksManager = () => {
     url: ''
   });
 
+  console.log('LinksManager - externalLinks:', externalLinks?.length || 0);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
