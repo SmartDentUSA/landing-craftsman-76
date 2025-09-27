@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useProductSchemaGenerator } from './useProductSchemaGenerator';
 import { processContentWithIntelligentLinks } from '@/lib/intelligent-links';
+import { useLinksRepository } from './useLinksRepository';
 
 interface SEOHTMLOptions {
   title: string;
@@ -56,6 +57,7 @@ interface ConsolidatedBlogOptions {
 
 export const useSEOHTMLGenerator = () => {
   const { generateProductSchema, combineSchemas } = useProductSchemaGenerator();
+  const { allLinks } = useLinksRepository();
 
   const generateOptimizedHTML = useCallback((options: SEOHTMLOptions): string => {
     const {
@@ -72,8 +74,16 @@ export const useSEOHTMLGenerator = () => {
       includeSchema = true
     } = options;
 
+    // Criar mapeamento de links inteligentes
+    const intelligentLinks: Record<string, string> = {};
+    allLinks.forEach(link => {
+      if (link.name) {
+        intelligentLinks[link.name.toLowerCase()] = link.url;
+      }
+    });
+
     // Processar conteúdo com links inteligentes
-    const processedContent = processContentWithIntelligentLinks(content);
+    const processedContent = processContentWithIntelligentLinks(content, intelligentLinks);
 
     // Gerar Schema.org se solicitado
     let schemaJson = '';

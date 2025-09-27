@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLinksRepository } from '@/hooks/useLinksRepository';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface WhatsAppMessage {
   id: string;
@@ -36,6 +38,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
+  const { allLinks, isLoading: linksLoading } = useLinksRepository();
 
   useEffect(() => {
     if (isOpen) {
@@ -443,6 +446,38 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
               </CardContent>
             </Card>
           )}
+
+          {/* Seção de Links Disponíveis */}
+          <Card className="mt-4">
+            <CardContent className="p-4">
+              <h3 className="text-lg font-semibold mb-2">Links Disponíveis</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Use estes links para personalizar suas mensagens do WhatsApp.
+              </p>
+              
+              {linksLoading ? (
+                <div className="text-sm text-muted-foreground">Carregando links...</div>
+              ) : allLinks.length > 0 ? (
+                <ScrollArea className="h-32 w-full border rounded p-3">
+                  <div className="space-y-2">
+                    {allLinks.map((link) => (
+                      <div key={link.id} className="text-xs border-b pb-1">
+                        <div className="font-medium">{link.name}</div>
+                        <div className="text-muted-foreground break-all">{link.url}</div>
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {link.category}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Nenhum link disponível. Configure links no repositório.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </DialogContent>
     </Dialog>

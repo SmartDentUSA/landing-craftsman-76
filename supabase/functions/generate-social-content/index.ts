@@ -59,6 +59,29 @@ serve(async (req) => {
       console.warn('Dados da empresa não encontrados:', companyError.message);
     }
 
+    // Buscar links externos aprovados para WhatsApp
+    const { data: externalLinks, error: linksError } = await supabase
+      .from('external_links')
+      .select('name, url, category')
+      .eq('approved', true)
+      .order('category', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (linksError) {
+      console.warn('Erro ao carregar links externos:', linksError.message);
+    }
+
+    // Buscar landing pages publicadas para links internos
+    const { data: landingPages, error: landingPagesError } = await supabase
+      .from('landing_pages')
+      .select('id, name, data')
+      .eq('status', 'published')
+      .order('name', { ascending: true });
+
+    if (landingPagesError) {
+      console.warn('Erro ao carregar landing pages:', landingPagesError.message);
+    }
+
     // Buscar configuração de prompt personalizado
     let finalPrompt: string = customPrompt || '';
     if (!finalPrompt) {
@@ -99,7 +122,7 @@ serve(async (req) => {
     }
 
     // Processar variáveis no prompt
-    const processedPrompt = processPromptVariables(finalPrompt, product, company);
+    const processedPrompt = processPromptVariables(finalPrompt, product, company, externalLinks || [], landingPages || []);
 
     // Gerar conteúdo com DeepSeek
     const generatedContent = await generateWithDeepSeek(deepseekApiKey, processedPrompt, type, product);
@@ -219,6 +242,9 @@ Instruções:
 5. Use hashtags da empresa e categoria
 6. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
    - Se configuradas, inclua frases como: "💬 Responda com '{random_trigger_word}' que envio mais detalhes!"
+7. Links Personalizados: {available_links}
+   - Inclua links relevantes quando apropriado para enriquecer a mensagem
+   - Use os links com moderação, apenas quando agregarem valor real
 
 Retorne apenas o texto da mensagem formatada, sem explicações.`;
   } else if (type === 'youtube') {
@@ -387,7 +413,7 @@ Formato JSON obrigatório:
   throw new Error(`Tipo não suportado: ${type}`);
 }
 
-function processPromptVariables(prompt: string, product: any, company: any): string {
+function processPromptVariables(prompt: string, product: any, company: any, externalLinks: any[] = [], landingPages: any[] = []): string {
   let processedPrompt = prompt;
 
   // Variáveis do produto
@@ -425,6 +451,31 @@ function processPromptVariables(prompt: string, product: any, company: any): str
     ? `Exemplos de palavras gatilho configuradas: ${botTriggerWordsArray.slice(0, 3).map((word: string) => `"${word}"`).join(', ')}`
     : '';
   processedPrompt = processedPrompt.replace(/{trigger_word_examples}/g, triggerWordExamples);
+
+  // Processar links disponíveis
+  const availableLinks: string[] = [];
+  
+  // Adicionar links externos
+  if (externalLinks?.length > 0) {
+    externalLinks.forEach(link => {
+      availableLinks.push(`• ${link.name}: ${link.url} (categoria: ${link.category})`);
+    });
+  }
+  
+  // Adicionar links internos (landing pages)
+  if (landingPages?.length > 0) {
+    landingPages.forEach(page => {
+      const pageData = page.data as any;
+      const url = pageData?.seo?.canonical_url || `/${page.id}`;
+      availableLinks.push(`• ${page.name}: ${url} (página interna)`);
+    });
+  }
+  
+  const linksText = availableLinks.length > 0 
+    ? `\n\nLINKS DISPONÍVEIS PARA INCLUIR NA MENSAGEM:\n${availableLinks.join('\n')}\n`
+    : '';
+  
+  processedPrompt = processedPrompt.replace(/{available_links}/g, linksText);
 
   // Processar preço
   const priceText = product.price ? `${product.currency || 'R$'} ${product.price}` : 'Não informado';
