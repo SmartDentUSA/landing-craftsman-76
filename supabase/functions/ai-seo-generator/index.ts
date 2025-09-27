@@ -43,12 +43,109 @@ serve(async (req) => {
 
     console.log(`🤖 Gerando SEO com IA - Tipo: ${type}, Modo: ${speed}`);
 
-    // Verificar se há prompt customizado
+    // Initialize Supabase client and fetch products context
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient('https://pgfgripuanuwwolmtknn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZmdyaXB1YW51d3dvbG10a25uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjE0OTE3MywiZXhwIjoyMDcxNzI1MTczfQ.vn4PJ2fNqyPjuJyEv1Ln8fGpTT0r5L7pQu_V3M4HnEA');
     
-    // Mapear tipos da API para nomes de prompts na UI
+    // Fetch products context for enhanced SEO generation
+    let productsContext = '';
+    try {
+      // Extract landing page ID from content if present, or check for selected products
+      let landingPageId = null;
+      
+      // Try to extract landing page ID from various sources
+      if (landingPageData?.id) {
+        landingPageId = landingPageData.id;
+      } else if (typeof content === 'string' && content.includes('landing_page_id')) {
+        const match = content.match(/landing_page_id['":\s]*([^"',\s}]+)/);
+        if (match) landingPageId = match[1];
+      }
+      
+      // If we have a specific landing page, get its products
+      if (landingPageId) {
+        const { data: landingPage } = await supabase
+          .from('landing_pages')
+          .select('selected_product_ids')
+          .eq('id', landingPageId)
+          .single();
+          
+        if (landingPage && landingPage.selected_product_ids && landingPage.selected_product_ids.length > 0) {
+          const { data: products } = await supabase
+            .from('products_repository')
+            .select(`
+              id, name, description, price, currency, category, subcategory,
+              sales_pitch, benefits, features, target_audience, keywords,
+              search_intent_keywords, market_keywords, tags, image_url, product_url
+            `)
+            .in('id', landingPage.selected_product_ids)
+            .eq('approved', true)
+            .eq('use_in_ai_generation', true);
+
+          if (products && products.length > 0) {
+            productsContext = `
+
+INFORMAÇÕES DOS PRODUTOS SELECIONADOS:
+${products.map(product => `
+PRODUTO: ${product.name}
+CATEGORIA: ${product.category || 'N/A'} ${product.subcategory ? `> ${product.subcategory}` : ''}
+DESCRIÇÃO: ${product.description || 'N/A'}
+PREÇO: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'N/A'}
+DISCURSO COMERCIAL/PITCH: ${product.sales_pitch || 'N/A'}
+BENEFÍCIOS: ${Array.isArray(product.benefits) ? product.benefits.join(', ') : 'N/A'}
+CARACTERÍSTICAS: ${Array.isArray(product.features) ? product.features.join(', ') : 'N/A'}
+PÚBLICO-ALVO: ${Array.isArray(product.target_audience) ? product.target_audience.join(', ') : 'N/A'}
+PALAVRAS-CHAVE: ${Array.isArray(product.keywords) ? product.keywords.join(', ') : 'N/A'}
+KEYWORDS DE INTENÇÃO DE BUSCA: ${Array.isArray(product.search_intent_keywords) ? product.search_intent_keywords.join(', ') : 'N/A'}
+KEYWORDS DE MERCADO: ${Array.isArray(product.market_keywords) ? product.market_keywords.join(', ') : 'N/A'}
+TAGS: ${Array.isArray(product.tags) ? product.tags.join(', ') : 'N/A'}
+URL DO PRODUTO: ${product.product_url || 'N/A'}
+`).join('\n')}
+
+IMPORTANTE: Use essas informações dos produtos para criar SEO mais preciso e contextual. Inclua o discurso comercial/pitch de vendas nas meta descriptions quando relevante, e utilize as palavras-chave específicas dos produtos nos títulos e conteúdos SEO.`;
+          }
+        }
+      } else {
+        // Fallback: Get recent landing pages with selected products
+        const { data: landingPages } = await supabase
+          .from('landing_pages')
+          .select('id, selected_product_ids')
+          .not('selected_product_ids', 'is', null)
+          .limit(5);
+
+        if (landingPages && landingPages.length > 0) {
+          const allProductIds = landingPages.flatMap(lp => lp.selected_product_ids || []);
+          const uniqueProductIds = [...new Set(allProductIds)];
+
+          if (uniqueProductIds.length > 0) {
+            const { data: products } = await supabase
+              .from('products_repository')
+              .select(`
+                id, name, description, price, currency, category, subcategory,
+                sales_pitch, benefits, features, target_audience, keywords,
+                search_intent_keywords, market_keywords, tags
+              `)
+              .in('id', uniqueProductIds)
+              .eq('approved', true)
+              .eq('use_in_ai_generation', true)
+              .limit(10);
+
+            if (products && products.length > 0) {
+              productsContext = `
+
+CONTEXTO DOS PRODUTOS DISPONÍVEIS (para referência):
+${products.map(product => `• ${product.name} (${product.category || 'N/A'}): ${product.sales_pitch || product.description || 'N/A'}`).join('\n')}
+
+Use essas informações como contexto adicional quando relevante para o SEO.`;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching products context:', error);
+    }
+    
+    // Map API types to UI prompt names
     const promptNameMap: Record<string, string> = {
       'meta_description': 'Meta Description',
       'seo_title': 'Título SEO', 
@@ -81,12 +178,12 @@ serve(async (req) => {
       switch (type) {
         case 'meta_description':
           systemPrompt = 'Você é um especialista em SEO. Gere uma meta description otimizada, persuasiva e que incentive cliques. Máximo 160 caracteres.';
-          userPrompt = `Baseado no conteúdo da página: "${content}"\n\nGere uma meta description atrativa que:\n1. Destaque o principal benefício\n2. Inclua palavras-chave relevantes\n3. Tenha call-to-action implícito\n4. Seja única e persuasiva\n\nResponda APENAS com a meta description, sem aspas ou explicações.`;
+          userPrompt = `Baseado no conteúdo da página: "${content}"${productsContext}\n\nGere uma meta description atrativa que:\n1. Destaque o principal benefício\n2. Inclua palavras-chave relevantes dos produtos quando disponíveis\n3. Use informações do discurso comercial/pitch para persuasão\n4. Tenha call-to-action implícito\n5. Seja única e persuasiva\n\nResponda APENAS com a meta description, sem aspas ou explicações.`;
           break;
 
       case 'seo_title':
         systemPrompt = 'Você é um especialista em SEO. Gere títulos otimizados para CTR e posicionamento. Máximo 60 caracteres.';
-        userPrompt = `Baseado no conteúdo: "${content}"\n\nGere um título SEO que:\n1. Seja clicável e persuasivo\n2. Inclua palavra-chave principal\n3. Transmita valor/benefício\n4. Seja único e relevante\n\nResponda APENAS com o título, sem aspas ou explicações.`;
+        userPrompt = `Baseado no conteúdo: "${content}"${productsContext}\n\nGere um título SEO que:\n1. Seja clicável e persuasivo\n2. Inclua palavra-chave principal dos produtos quando disponível\n3. Transmita valor/benefício usando informações dos produtos\n4. Aproveite o público-alvo e características dos produtos\n5. Seja único e relevante\n\nResponda APENAS com o título, sem aspas ou explicações.`;
         break;
 
       case 'keywords':
@@ -107,7 +204,7 @@ Formato EXATO:
 }`;
         userPrompt = `Analise EXCLUSIVAMENTE este conteúdo do produto e gere palavras-chave baseadas SOMENTE nas informações fornecidas, PRIORIZANDO CATEGORIAS:
 
-${content}
+${content}${productsContext}
 
 INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 1. **PRIORIZE categoria e subcategoria como palavras primárias se presentes**
@@ -126,7 +223,7 @@ Gere: 3-5 primárias (incluindo categorias se presentes), 4-6 secundárias, 4-6 
 
       case 'hidden_content':
         systemPrompt = 'Você é um especialista em SEO técnico. Gere conteúdo contextual que ajude mecanismos de busca a entender melhor a página.';
-        userPrompt = `Baseado no conteúdo: "${content}"\n\nGere um texto contextual (50-100 palavras) que:\n1. Descreva o nicho/categoria da página\n2. Inclua termos semânticos relacionados\n3. Forneça contexto sobre o produto/serviço\n4. Use linguagem natural e relevante\n\nEste texto será usado apenas para SEO (invisível ao usuário). Responda APENAS com o texto contextual.`;
+        userPrompt = `Baseado no conteúdo: "${content}"${productsContext}\n\nGere um texto contextual (50-100 palavras) que:\n1. Descreva o nicho/categoria da página usando informações dos produtos\n2. Inclua termos semânticos dos produtos selecionados\n3. Incorpore benefits e features dos produtos para contexto\n4. Use o discurso comercial/pitch quando relevante\n5. Use linguagem natural e relevante\n\nEste texto será usado apenas para SEO (invisível ao usuário). Responda APENAS com o texto contextual.`;
         break;
 
       case 'faq_keywords':
