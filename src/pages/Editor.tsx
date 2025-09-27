@@ -355,6 +355,7 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     hasAdvisory: !!data.advisory,
     hasEmail: !!data.email,
     hasSeo: !!data.seo,
+    hasFooter: !!data.footer,
     solutionsLength: data.solutions?.length || 0
   });
   
@@ -384,6 +385,13 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   }
   if (!processedData.seo) {
     processedData.seo = {} as any; // Usar any para evitar erro de tipo extenso
+  }
+  if (!processedData.footer) {
+    processedData.footer = {
+      locations: [],
+      links: [],
+      social: []
+    };
   }
   
   processedData.logo_url = resolveImageSrc(data.logo_url);
@@ -1971,6 +1979,15 @@ const EditorContent = () => {
               link_descadastro: '',
               link_preferencias: ''
             } as any;
+          }
+          
+          // Garantir bloco footer
+          if (!migratedData.footer) {
+            migratedData.footer = {
+              locations: [],
+              links: [],
+              social: []
+            };
           }
           
           // Only update name if not currently editing

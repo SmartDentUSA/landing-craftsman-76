@@ -2191,7 +2191,7 @@ export const generateHTML = (data: any): string => {
     }),
     footer: {
       ...data.footer,
-      social: data.footer.social.map((social: any) => ({
+      social: (data.footer?.social || []).map((social: any) => ({
         ...social,
         iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website
       }))
