@@ -333,6 +333,7 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   // Substituir ACCOUNT_HASH_PLACEHOLDER pela hash real
   const resolveImageSrc = (image: ImageData | undefined): ImageData => {
     if (!image || !image.mode) {
+      console.log('🚨 Warning: Undefined or invalid image object, creating default:', image);
       return createImageData('', '');
     }
     
@@ -349,13 +350,16 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   // Aplicar resolução em todas as imagens
   const processedData = { ...data };
   processedData.logo_url = resolveImageSrc(data.logo_url);
-  processedData.banner.images = data.banner.images.map(resolveImageSrc);
-  processedData.solutions = data.solutions.map(s => ({ ...s, image: resolveImageSrc(s.image) }));
-  processedData.advisory.image = resolveImageSrc(data.advisory.image);
-  processedData.email.logo_src = resolveImageSrc(data.email.logo_src);
-  processedData.email.imagem_src = resolveImageSrc(data.email.imagem_src);
-  processedData.seo.og_image = resolveImageSrc(data.seo.og_image);
-  processedData.seo.twitter_image = resolveImageSrc(data.seo.twitter_image);
+  processedData.banner.images = data.banner?.images?.map(resolveImageSrc) || [];
+  processedData.solutions = data.solutions?.map(s => ({ 
+    ...s, 
+    image: resolveImageSrc(s?.image) 
+  })) || [];
+  processedData.advisory.image = resolveImageSrc(data.advisory?.image);
+  processedData.email.logo_src = resolveImageSrc(data.email?.logo_src);
+  processedData.email.imagem_src = resolveImageSrc(data.email?.imagem_src);
+  processedData.seo.og_image = resolveImageSrc(data.seo?.og_image);
+  processedData.seo.twitter_image = resolveImageSrc(data.seo?.twitter_image);
 
   // Sincronizar campos SEO na preparação para preview
   if (processedData.seo_title && processedData.seo_title !== processedData.seo.seo_title) {
@@ -750,9 +754,9 @@ const onSave = (data: LandingPageData): LandingPageData => {
   // (A geração do schema já está implementada no template-engine.ts)
   
   // 🎯 CORREÇÃO 5: Fallback automático para imagem OG - Priorizar Soluções 1
-  if (!processedData.seo.og_image.src) {
+  if (!processedData.seo?.og_image?.src) {
     // 1ª prioridade: Imagem da Soluções 1
-    if (processedData.solutions && processedData.solutions.length > 0 && processedData.solutions[0].image.src) {
+    if (processedData.solutions && processedData.solutions.length > 0 && processedData.solutions[0]?.image?.src) {
       processedData.seo.og_image = {
         ...processedData.solutions[0].image,
         alt: 'Imagem OG - ' + processedData.solutions[0].text.substring(0, 50)
@@ -1392,9 +1396,9 @@ const EditorContent = () => {
           return {
             ...s,
             image: {
-              src: s.image.src,
-              alt: s.image.alt,
-              scale: s.image.scale
+              src: s.image?.src || '',
+              alt: s.image?.alt || '',
+              scale: s.image?.scale || 1
             },
             size,
             sizeType
@@ -1403,9 +1407,9 @@ const EditorContent = () => {
         advisory: {
           ...processedData.advisory,
           image: {
-            src: processedData.advisory.image.src,
-            alt: processedData.advisory.image.alt,
-            scale: processedData.advisory.image.scale
+            src: processedData.advisory?.image?.src || '',
+            alt: processedData.advisory?.image?.alt || '',
+            scale: processedData.advisory?.image?.scale || 1
           }
         }
       });
@@ -1443,9 +1447,9 @@ const EditorContent = () => {
         return {
           ...s,
           image: {
-            src: s.image.src,
-            alt: s.image.alt,
-            scale: s.image.scale
+            src: s.image?.src || '',
+            alt: s.image?.alt || '',
+            scale: s.image?.scale || 1
           },
           size,
           sizeType
@@ -1454,9 +1458,9 @@ const EditorContent = () => {
       advisory: {
         ...processedData.advisory,
         image: {
-          src: processedData.advisory.image.src,
-          alt: processedData.advisory.image.alt,
-          scale: processedData.advisory.image.scale
+          src: processedData.advisory?.image?.src || '',
+          alt: processedData.advisory?.image?.alt || '',
+          scale: processedData.advisory?.image?.scale || 1
         }
       }
     });
@@ -2833,12 +2837,12 @@ const EditorContent = () => {
                               />
                               <div className="text-sm text-muted-foreground">
                                 Atual: {(solution.containerScale || 1.0).toFixed(1)}x
-                                {!solution.image.src && solution.containerScale && solution.containerScale > 0.6 && (
+                                {!solution.image?.src && solution.containerScale && solution.containerScale > 0.6 && (
                                   <span className="text-orange-600 ml-2">
                                     ⚠️ Sugestão: Use escala menor (≤0.5) para containers sem imagem
                                   </span>
                                 )}
-                                {solution.image.src && solution.containerScale && solution.containerScale < 0.7 && (
+                                {solution.image?.src && solution.containerScale && solution.containerScale < 0.7 && (
                                   <span className="text-blue-600 ml-2">
                                     💡 Sugestão: Use escala maior (≥0.8) para destacar conteúdo com imagem
                                   </span>
