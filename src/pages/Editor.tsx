@@ -349,6 +349,43 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
 
   // Aplicar resolução em todas as imagens
   const processedData = { ...data };
+  
+  console.log('🔍 beforePreview: Validating data structure', {
+    hasBanner: !!data.banner,
+    hasAdvisory: !!data.advisory,
+    hasEmail: !!data.email,
+    hasSeo: !!data.seo,
+    solutionsLength: data.solutions?.length || 0
+  });
+  
+  // Garantir que objetos pai existem antes de definir propriedades
+  if (!processedData.banner) {
+    processedData.banner = {
+      badge_text: '',
+      title: '',
+      subtitle: '',
+      cta_primary: { label: '', href: '' },
+      cta_secondary: { label: '', href: '' },
+      images: []
+    };
+  }
+  if (!processedData.advisory) {
+    processedData.advisory = {
+      title: '',
+      paragraph: '',
+      visible_desktop: true,
+      visible_mobile: true,
+      cta: { label: '', href: '' },
+      image: createImageData('', '')
+    };
+  }
+  if (!processedData.email) {
+    processedData.email = {} as any; // Usar any para evitar erro de tipo extenso
+  }
+  if (!processedData.seo) {
+    processedData.seo = {} as any; // Usar any para evitar erro de tipo extenso
+  }
+  
   processedData.logo_url = resolveImageSrc(data.logo_url);
   processedData.banner.images = data.banner?.images?.map(resolveImageSrc) || [];
   processedData.solutions = data.solutions?.map(s => ({ 
@@ -356,6 +393,13 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     image: resolveImageSrc(s?.image) 
   })) || [];
   processedData.advisory.image = resolveImageSrc(data.advisory?.image);
+  
+  // Garantir que email e seo existem antes de definir propriedades
+  if (!processedData.email.logo_src) processedData.email.logo_src = createImageData('', '');
+  if (!processedData.email.imagem_src) processedData.email.imagem_src = createImageData('', '');
+  if (!processedData.seo.og_image) processedData.seo.og_image = createImageData('', '');
+  if (!processedData.seo.twitter_image) processedData.seo.twitter_image = createImageData('', '');
+  
   processedData.email.logo_src = resolveImageSrc(data.email?.logo_src);
   processedData.email.imagem_src = resolveImageSrc(data.email?.imagem_src);
   processedData.seo.og_image = resolveImageSrc(data.seo?.og_image);
@@ -1872,6 +1916,63 @@ const EditorContent = () => {
               images: Array.isArray(migratedData.banner.images) && migratedData.banner.images.length ? migratedData.banner.images : [createImageData()]
             } as any;
           }
+          
+          // Garantir bloco advisory
+          if (!migratedData.advisory) {
+            migratedData.advisory = {
+              title: '',
+              paragraph: '',
+              visible_desktop: true,
+              visible_mobile: true,
+              cta: { label: '', href: '' },
+              image: createImageData('', '')
+            };
+          }
+          
+          // Garantir bloco email
+          if (!migratedData.email) {
+            migratedData.email = {
+              sections: {
+                header: { enabled: true },
+                content: { enabled: true },
+                ctas: { enabled: true },
+                highlights: { enabled: true },
+                benefits: { enabled: true },
+                main_image: { enabled: true },
+                solutions: { enabled: false },
+                footer: { enabled: true }
+              },
+              assunto_email: '',
+              preheader_texto: '',
+              url_site: '',
+              logo_src: createImageData('', ''),
+              selo: '',
+              titulo_principal: '',
+              subtitulo: '',
+              cta_label: '',
+              cta_href: '',
+              cta_subcopy: '',
+              cta2_label: '',
+              cta2_href: '',
+              bloco1_titulo: '',
+              bloco1_texto: '',
+              bloco2_titulo: '',
+              bloco2_texto: '',
+              beneficio_1: '',
+              beneficio_2: '',
+              beneficio_3: '',
+              imagem_href: '',
+              imagem_src: createImageData('', ''),
+              show_solutions_in_email: false,
+              solutions_title: '',
+              brand_name: '',
+              endereco_completo: '',
+              link_suporte: '',
+              link_descadastro: '',
+              link_preferencias: ''
+            } as any;
+          }
+          
           // Only update name if not currently editing
           if (!isEditingName) {
             setLocalName(landingPage.name);
