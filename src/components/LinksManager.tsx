@@ -8,10 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, ExternalLink, Edit, Trash2, Package, Link } from 'lucide-react';
+import { Plus, ExternalLink, Edit, Trash2, Package, Link, Download } from 'lucide-react';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
-import { ProductKeywordsImportModal } from '@/components/ProductKeywordsImportModal';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface KeywordLink {
   id: string;
@@ -25,7 +25,7 @@ export const LinksManager = () => {
   const { allLinks, isLoading } = useLinksRepository();
   const [keywordLinks, setKeywordLinks] = useState<KeywordLink[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  
   const [editingKeyword, setEditingKeyword] = useState<KeywordLink | null>(null);
   const [formData, setFormData] = useState({
     keyword: '',
@@ -82,20 +82,74 @@ export const LinksManager = () => {
     toast.success('Palavra-chave removida com sucesso');
   };
 
-  const handleImportKeywords = (keywordUrlPairs: Record<string, string>) => {
-    const importedKeywords: KeywordLink[] = Object.entries(keywordUrlPairs).map(([keyword, url]) => ({
-      id: crypto.randomUUID(),
-      keyword,
-      url,
-      source: 'imported',
-      created_at: new Date().toISOString()
-    }));
+  const handleImportKeywords = async () => {
+    try {
+      // Buscar todos os produtos aprovados
+      const { data: products, error } = await supabase
+        .from('products_repository')
+        .select('name, keywords, search_intent_keywords')
+        .eq('approved', true);
 
-    setKeywordLinks(prev => {
-      const existingKeywords = new Set(prev.map(kw => kw.keyword.toLowerCase()));
-      const newKeywords = importedKeywords.filter(kw => !existingKeywords.has(kw.keyword.toLowerCase()));
-      return [...prev, ...newKeywords];
-    });
+      if (error) {
+        console.error('Erro ao buscar produtos:', error);
+        toast.error('Não foi possível buscar os produtos.');
+        return;
+      }
+
+      if (!products || products.length === 0) {
+        toast.error('Não há produtos aprovados para importar keywords.');
+        return;
+      }
+
+      // Extrair todas as keywords únicas
+      const allKeywords = new Set<string>();
+      
+      products.forEach(product => {
+        // Adicionar keywords principais
+        if (product.keywords && Array.isArray(product.keywords)) {
+          product.keywords.forEach((keyword: string) => {
+            if (keyword && keyword.trim()) {
+              allKeywords.add(keyword.trim().toLowerCase());
+            }
+          });
+        }
+        
+        // Adicionar search intent keywords
+        if (product.search_intent_keywords && Array.isArray(product.search_intent_keywords)) {
+          product.search_intent_keywords.forEach((keyword: string) => {
+            if (keyword && keyword.trim()) {
+              allKeywords.add(keyword.trim().toLowerCase());
+            }
+          });
+        }
+      });
+
+      // Filtrar keywords que já existem
+      const existingKeywords = new Set(keywordLinks.map(link => link.keyword.toLowerCase()));
+      const newKeywords = Array.from(allKeywords).filter(keyword => !existingKeywords.has(keyword));
+
+      if (newKeywords.length === 0) {
+        toast.error('Todas as keywords dos produtos já estão na lista.');
+        return;
+      }
+
+      // Criar as novas entradas de keywords
+      const newKeywordLinks = newKeywords.map(keyword => ({
+        id: crypto.randomUUID(),
+        keyword,
+        url: '', // URL em branco para o usuário preencher depois
+        source: 'imported' as const,
+        created_at: new Date().toISOString()
+      }));
+
+      setKeywordLinks(prev => [...prev, ...newKeywordLinks]);
+      
+      toast.success(`${newKeywordLinks.length} keywords importadas. Defina as URLs para cada uma.`);
+
+    } catch (error) {
+      console.error('Erro ao importar keywords:', error);
+      toast.error('Ocorreu um erro inesperado.');
+    }
   };
 
   if (isLoading) {
@@ -117,8 +171,8 @@ export const LinksManager = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={() => setIsImportModalOpen(true)} variant="outline">
-            <Package className="h-4 w-4 mr-2" />
+          <Button onClick={handleImportKeywords} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
             Importar Keywords dos Produtos
           </Button>
 
@@ -356,13 +410,6 @@ export const LinksManager = () => {
       </Dialog>
 
       {/* Import Keywords Modal */}
-      <ProductKeywordsImportModal
-        open={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
-        blogContent=""
-        onImportKeywords={handleImportKeywords}
-        showAllKeywords={true}
-      />
     </div>
   );
 };
