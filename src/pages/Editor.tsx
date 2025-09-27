@@ -394,6 +394,20 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     };
   }
   
+  // Garantir arrays básicos
+  if (!processedData.solutions) processedData.solutions = [];
+  if (!processedData.banner) {
+    processedData.banner = {
+      badge_text: '',
+      title: '',
+      subtitle: '',
+      cta_primary: { label: '', href: '' },
+      cta_secondary: { label: '', href: '' },
+      images: []
+    };
+  }
+  if (!processedData.banner.images) processedData.banner.images = [];
+  
   processedData.logo_url = resolveImageSrc(data.logo_url);
   processedData.banner.images = data.banner?.images?.map(resolveImageSrc) || [];
   processedData.solutions = data.solutions?.map(s => ({ 
@@ -1925,6 +1939,11 @@ const EditorContent = () => {
             } as any;
           }
           
+          // Garantir array de soluções
+          if (!migratedData.solutions) {
+            migratedData.solutions = [];
+          }
+          
           // Garantir bloco advisory
           if (!migratedData.advisory) {
             migratedData.advisory = {
@@ -2762,10 +2781,10 @@ const EditorContent = () => {
                       <div className="flex items-center justify-between mb-2">
                         <Label>Imagens do Banner</Label>
                         <span className="text-sm text-muted-foreground">
-                          {data.banner.images.length}/3 imagens
+                          {(data.banner?.images?.length || 0)}/3 imagens
                         </span>
                       </div>
-                      {data.banner.images.map((image, index) => (
+                      {(data.banner?.images || []).map((image, index) => (
                         <div key={index} className="mt-4 p-4 border rounded-lg">
                           <div className="flex justify-between items-center mb-2">
                             <Label>Imagem {index + 1} do Banner</Label>
@@ -2811,10 +2830,10 @@ const EditorContent = () => {
                           }));
                         }}
                         className="mt-2"
-                        disabled={data.banner.images.length >= 3}
+                        disabled={(data.banner?.images?.length || 0) >= 3}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        {data.banner.images.length >= 3 ? "Máximo de 3 imagens atingido" : "Adicionar Imagem"}
+                        {(data.banner?.images?.length || 0) >= 3 ? "Máximo de 3 imagens atingido" : "Adicionar Imagem"}
                       </Button>
                     </div>
                   </AccordionContent>
@@ -2876,11 +2895,11 @@ const EditorContent = () => {
                     
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">
-                        {data.solutions.length}/5 soluções
+                        {(data.solutions?.length || 0)}/5 soluções
                       </span>
                     </div>
                     
-                    {data.solutions.map((solution, index) => {
+                    {(data.solutions || []).map((solution, index) => {
                       // Determinar a proporção baseada no índice
                       const getProportionInfo = (idx: number) => {
                         if (idx <= 2) {
@@ -2981,10 +3000,10 @@ const EditorContent = () => {
                           solutions: [...prev.solutions, { text: '', image: createImageData(), containerScale: 1.0 }]
                         }));
                       }}
-                      disabled={data.solutions.length >= 5}
+                      disabled={(data.solutions?.length || 0) >= 5}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      {data.solutions.length >= 5 ? "Máximo de 5 soluções atingido" : "Adicionar Solução"}
+                      {(data.solutions?.length || 0) >= 5 ? "Máximo de 5 soluções atingido" : "Adicionar Solução"}
                     </Button>
                       </>
                     )}
