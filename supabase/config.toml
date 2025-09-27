@@ -1,5 +1,8 @@
 project_id = "pgfgripuanuwwolmtknn"
 
+[functions.generate-merchant-feed]
+verify_jwt = false
+
 [functions.strategic-blog-generator]
 verify_jwt = false
 
