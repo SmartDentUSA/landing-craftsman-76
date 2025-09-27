@@ -40,6 +40,7 @@ import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
+import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
 
 // SelFlux mode completely removed - using only standard template engine
 
@@ -347,7 +348,7 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     return image;
   };
 
-  // Aplicar resolução em todas as imagens
+// Aplicar resolução em todas as imagens
   const processedData = { ...data };
   
   console.log('🔍 beforePreview: Validating data structure', {
@@ -879,6 +880,7 @@ const EditorContent = () => {
   const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPagesSupabase();
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
+  const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
   
@@ -1421,6 +1423,32 @@ const EditorContent = () => {
       solutions_title: 'Nossos Serviços'
     }
   });
+
+  // 🏢 AUTO-POPULAÇÃO DO FOOTER COM DADOS DA EMPRESA
+  useEffect(() => {
+    if (hasCompanyData && 
+        (!data.footer.locations?.length && 
+         !data.footer.links?.length && 
+         !data.footer.social?.length)) {
+      
+      const autoFooter = generateAutoFooter();
+      console.log('🏢 Auto-populando footer com dados da empresa:', autoFooter);
+      
+      setData(prev => ({
+        ...prev,
+        footer: {
+          locations: autoFooter.locations,
+          links: autoFooter.links,
+          social: autoFooter.social
+        }
+      }));
+      
+      toast({
+        title: "Footer auto-populado",
+        description: "Dados da empresa foram carregados automaticamente no footer.",
+      });
+    }
+  }, [hasCompanyData, generateAutoFooter, toast]);
 
   // Gerar HTML baseado nos dados processados
   const generatedHTML = useMemo(() => {
@@ -3792,6 +3820,19 @@ const EditorContent = () => {
                         placeholder="Título da seção de links"
                       />
                     </div>
+                    
+                    {hasCompanyData && (data.footer.locations?.length > 0 || data.footer.social?.length > 0) && (
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            Auto-populado
+                          </Badge>
+                          <span className="text-sm text-blue-700">
+                            Dados da empresa carregados automaticamente
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     
                     <div>
                       <Label>Localizações</Label>
