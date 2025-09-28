@@ -5785,33 +5785,6 @@ const EditorContent = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Políticas - Integração com Perfil da Empresa */}
-                    <AccordionItem value="policies">
-                      <AccordionTrigger>Políticas e Documentos</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div className="p-4 bg-muted rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            ℹ️ Os links institucionais agora são gerenciados centralmente no <strong>Perfil da Empresa</strong>.
-                            <br />
-                            Eles serão aplicados automaticamente em:
-                          </p>
-                          <ul className="text-sm text-muted-foreground mt-2 list-disc list-inside">
-                            <li>SEO structured data das landing pages</li>
-                            <li>Sitelinks do Google Ads</li>
-                            <li>Footer das landing pages (se configurado)</li>
-                          </ul>
-                          <div className="mt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => window.open('/dashboard', '_blank')}
-                            >
-                              Gerenciar Links Institucionais
-                            </Button>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
                   </Accordion>
                 </CardContent>
               </Card>
