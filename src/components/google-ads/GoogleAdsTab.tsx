@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import { WarningsPanel } from './WarningsPanel';
 import { VideoCollector } from '@/lib/google-ads/collectors/VideoCollector';
 import { SitelinksCollector } from '@/lib/google-ads/collectors/SitelinksCollector';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface GoogleAdsTabProps {
   landingPageId: string;
@@ -62,99 +63,8 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
   
   const [previewData, setPreviewData] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
-  const [previewKey, setPreviewKey] = useState<number>(0);
 
-  // Always auto-generate preview when data changes, regardless of enabled status
-  useEffect(() => {
-    if (data) {
-      validateAndPreview();
-    }
-  }, [campaignConfig, data]);
-
-  // Auto-generate preview on component mount
-  useEffect(() => {
-    if (data && !previewData) {
-      validateAndPreview();
-    }
-  }, []);
-
-  const generateAdCopies = async () => {
-    // Enhanced fallback data with better coverage
-    const seoTitle = data?.seo?.title || data?.banner?.title || data?.brand?.name || 'Nossos Serviços Especializados';
-    const seoDescription = data?.seo?.description || data?.banner?.subtitle || data?.seo?.meta_description || 'Soluções de alta qualidade para suas necessidades. Entre em contato conosco.';
-    
-    // Always try to generate, even with basic fallback data
-    console.log('Generating ads with title:', seoTitle, 'description:', seoDescription);
-
-    setIsGeneratingAds(true);
-    try {
-      console.log('Generating ad copies with unified AI generator for landing page:', landingPageId);
-      
-      // Use the new unified ai-content-generator function
-      const { data: result, error } = await supabase.functions.invoke('ai-content-generator', {
-        body: {
-          type: 'google_ads',
-          landingPageId: landingPageId,
-          seoTitle,
-          seoDescription,
-          primaryKeyword: data.seo?.keywords?.[0] || seoTitle,
-          targetAudience: data.banner?.subtitle || 'público geral',
-          contentData: data, // Pass the full landing page data for context
-          selectedProductIds: selectedProductIds || [] // Pass selected product IDs
-        }
-      });
-
-      if (error) {
-        console.error('Error generating ad copies:', error);
-        throw error;
-      }
-
-      setLastGeneratedAt(new Date());
-      console.log('Generated ads result:', result);
-      
-      // Unwrap envelope and return content directly
-      if (result && result.content) {
-        console.log(`✅ Ad copies received - Headlines: ${result.content.headlines?.length || 0}, Descriptions: ${result.content.descriptions?.length || 0}, Paths: ${result.content.paths?.length || 0}`);
-        return result.content; // Return the actual AdCopy object
-      }
-      
-      // Fallback if content is empty
-      console.log('⚠️ No content in result, using fallback');
-      return {
-        headlines: ['Nossos Serviços Especializados', 'Qualidade Garantida', 'Solicite Orçamento'],
-        descriptions: ['Soluções personalizadas para suas necessidades específicas.', 'Entre em contato e descubra nossos diferenciais.'],
-        paths: ['servicos', 'contato']
-      };
-    } catch (error) {
-      console.error('Error generating ad copies:', error);
-      toast({
-        title: 'Erro ao gerar anúncios',
-        description: 'Não foi possível gerar as cópias. Usando dados padrão.',
-        variant: 'destructive'
-      });
-      
-      // Enhanced fallback with better data coverage
-      return {
-        headlines: [
-          (seoTitle || 'Nossos Serviços').substring(0, 30),
-          (data?.brand?.name || data?.banner?.title || 'Empresa Confiável').substring(0, 30),
-          'Qualidade Garantida',
-          'Solicite Orçamento',
-          'Atendimento Especializado'
-        ],
-        descriptions: [
-          (seoDescription || 'Soluções personalizadas para suas necessidades.').substring(0, 90),
-          'Entre em contato e descubra como podemos ajudar você a alcançar seus objetivos.',
-          'Profissionais qualificados prontos para atender você com excelência.'
-        ],
-        paths: ['servicos', 'contato', 'orcamento']
-      };
-    } finally {
-      setIsGeneratingAds(false);
-    }
-  };
-
-  const validateAndPreview = async () => {
+  const validateAndPreview = useCallback(async () => {
     const newWarnings: ValidationWarning[] = [];
     
     // Basic validation
@@ -233,39 +143,125 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
         warnings: newWarnings
       });
     }
-  };
+  }, [campaignConfig, data, landingPageId]);
 
-  const handleRegenerateAds = async () => {
-    console.log('🔄 Manual regeneration triggered');
+  // Debounced validation to prevent excessive calls
+  const debouncedValidateAndPreview = useDebounce(validateAndPreview, 500);
+
+  // Single useEffect for auto-generating preview
+  useEffect(() => {
+    if (data) {
+      debouncedValidateAndPreview();
+    }
+  }, [data, debouncedValidateAndPreview]);
+
+  const generateAdCopies = async () => {
+    // Enhanced fallback data with better coverage
+    const seoTitle = data?.seo?.title || data?.banner?.title || data?.brand?.name || 'Nossos Serviços Especializados';
+    const seoDescription = data?.seo?.description || data?.banner?.subtitle || data?.seo?.meta_description || 'Soluções de alta qualidade para suas necessidades. Entre em contato conosco.';
     
-    // Clear current preview to force re-render
-    setPreviewData(null);
-    
-    // Force new key to re-render AdPreviewCards component
-    setPreviewKey(prev => prev + 1);
-    
-    // Generate new ad copies
-    const adCopies = await generateAdCopies();
-    
-    if (adCopies && previewData) {
-      const newPreviewData = {
-        ...previewData,
-        adCopies
-      };
+    // Always try to generate, even with basic fallback data
+    console.log('Generating ads with title:', seoTitle, 'description:', seoDescription);
+
+    setIsGeneratingAds(true);
+    try {
+      console.log('Generating ad copies with unified AI generator for landing page:', landingPageId);
       
-      console.log('✅ Preview updated with new ads:', {
-        headlines: adCopies.headlines?.length || 0,
-        descriptions: adCopies.descriptions?.length || 0,
-        paths: adCopies.paths?.length || 0,
-        timestamp: new Date().toISOString()
+      // Use the new unified ai-content-generator function
+      const { data: result, error } = await supabase.functions.invoke('ai-content-generator', {
+        body: {
+          type: 'google_ads',
+          landingPageId: landingPageId,
+          seoTitle,
+          seoDescription,
+          primaryKeyword: data.seo?.keywords?.[0] || seoTitle,
+          targetAudience: data.banner?.subtitle || 'público geral',
+          contentData: data, // Pass the full landing page data for context
+          selectedProductIds: selectedProductIds || [] // Pass selected product IDs
+        }
+      });
+
+      if (error) {
+        console.error('Error generating ad copies:', error);
+        throw error;
+      }
+
+      setLastGeneratedAt(new Date());
+      console.log('Generated ads result:', result);
+      
+      // Unwrap envelope and return content directly
+      if (result && result.content) {
+        console.log(`✅ Ad copies received - Headlines: ${result.content.headlines?.length || 0}, Descriptions: ${result.content.descriptions?.length || 0}, Paths: ${result.content.paths?.length || 0}`);
+        return result.content; // Return the actual AdCopy object
+      }
+      
+      // Fallback if content is empty
+      console.log('⚠️ No content in result, using fallback');
+      return {
+        headlines: ['Nossos Serviços Especializados', 'Qualidade Garantida', 'Solicite Orçamento'],
+        descriptions: ['Soluções personalizadas para suas necessidades específicas.', 'Entre em contato e descubra nossos diferenciais.'],
+        paths: ['servicos', 'contato']
+      };
+    } catch (error) {
+      console.error('Error generating ad copies:', error);
+      toast({
+        title: 'Erro ao gerar anúncios',
+        description: 'Não foi possível gerar as cópias. Usando dados padrão.',
+        variant: 'destructive'
       });
       
-      setPreviewData(newPreviewData);
-    } else if (adCopies) {
-      // If no previous preview data, regenerate complete preview
-      await validateAndPreview();
+      // Enhanced fallback with better data coverage
+      return {
+        headlines: [
+          (seoTitle || 'Nossos Serviços').substring(0, 30),
+          (data?.brand?.name || data?.banner?.title || 'Empresa Confiável').substring(0, 30),
+          'Qualidade Garantida',
+          'Solicite Orçamento',
+          'Atendimento Especializado'
+        ],
+        descriptions: [
+          (seoDescription || 'Soluções personalizadas para suas necessidades.').substring(0, 90),
+          'Entre em contato e descubra como podemos ajudar você a alcançar seus objetivos.',
+          'Profissionais qualificados prontos para atender você com excelência.'
+        ],
+        paths: ['servicos', 'contato', 'orcamento']
+      };
+    } finally {
+      setIsGeneratingAds(false);
     }
   };
+
+
+  const handleRegenerateAds = useCallback(async () => {
+    console.log('🔄 Manual regeneration triggered');
+    setIsGeneratingAds(true);
+    
+    try {
+      // Generate new ad copies
+      const adCopies = await generateAdCopies();
+      
+      if (adCopies && previewData) {
+        const newPreviewData = {
+          ...previewData,
+          adCopies
+        };
+        
+        console.log('✅ Preview updated with new ads:', {
+          headlines: adCopies.headlines?.length || 0,
+          descriptions: adCopies.descriptions?.length || 0,
+          paths: adCopies.paths?.length || 0,
+          timestamp: new Date().toISOString()
+        });
+        
+        setPreviewData(newPreviewData);
+      } else if (adCopies) {
+        // If no previous preview data, regenerate complete preview
+        await validateAndPreview();
+      }
+    } finally {
+      setIsGeneratingAds(false);
+    }
+  }, [generateAdCopies, previewData, validateAndPreview]);
 
   const handleExportCSV = async () => {
     setIsLoading(true);
@@ -569,13 +565,12 @@ export const GoogleAdsTab = ({ landingPageId, data, selectedProductIds, onUpdate
             </CardContent>
           </Card>
         ) : previewData ? (
-          <AdPreviewCards
-            key={previewKey}
-            adCopies={previewData.adCopies}
-            finalUrl={previewData.finalUrl}
-            sitelinks={previewData.sitelinks}
-            videos={previewData.videos}
-          />
+                  <AdPreviewCards
+                    adCopies={previewData.adCopies}
+                    finalUrl={previewData.finalUrl}
+                    sitelinks={previewData.sitelinks}
+                    videos={previewData.videos}
+                  />
         ) : (
           <Card>
             <CardContent className="pt-6">

@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Monitor, Smartphone, ExternalLink, Play } from 'lucide-react';
@@ -10,17 +11,17 @@ interface AdPreviewCardsProps {
   videos?: VideoExtension[];
 }
 
-export const AdPreviewCards = ({ adCopies, finalUrl, sitelinks, videos = [] }: AdPreviewCardsProps) => {
-  const formatUrl = (url: string) => {
+export const AdPreviewCards = React.memo(({ adCopies, finalUrl, sitelinks, videos = [] }: AdPreviewCardsProps) => {
+  const formatUrl = useMemo(() => (url: string) => {
     try {
       const urlObj = new URL(url);
       return urlObj.hostname + urlObj.pathname;
     } catch {
       return url;
     }
-  };
+  }, []);
 
-  const AdCard = ({ headline, description, paths }: { headline: string; description: string; paths: string[] }) => (
+  const AdCard = useMemo(() => ({ headline, description, paths }: { headline: string; description: string; paths: string[] }) => (
     <div className="border rounded-lg p-4 bg-white shadow-sm">
       <div className="space-y-1">
         <div className="text-blue-600 text-lg font-medium leading-tight">
@@ -39,7 +40,7 @@ export const AdPreviewCards = ({ adCopies, finalUrl, sitelinks, videos = [] }: A
         </div>
       </div>
     </div>
-  );
+  ), [finalUrl, formatUrl]);
 
   return (
     <div className="space-y-6">
@@ -160,4 +161,4 @@ export const AdPreviewCards = ({ adCopies, finalUrl, sitelinks, videos = [] }: A
       </Card>
     </div>
   );
-};
+});
