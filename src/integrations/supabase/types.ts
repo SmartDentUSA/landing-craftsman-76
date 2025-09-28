@@ -350,30 +350,44 @@ export type Database = {
       }
       google_ads_campaigns: {
         Row: {
+          campaign_type: string | null
           config: Json
           created_at: string
           id: string
-          landing_page_id: string
+          landing_page_id: string | null
           last_exported: string | null
+          product_id: string | null
           updated_at: string
         }
         Insert: {
+          campaign_type?: string | null
           config: Json
           created_at?: string
           id?: string
-          landing_page_id: string
+          landing_page_id?: string | null
           last_exported?: string | null
+          product_id?: string | null
           updated_at?: string
         }
         Update: {
+          campaign_type?: string | null
           config?: Json
           created_at?: string
           id?: string
-          landing_page_id?: string
+          landing_page_id?: string | null
           last_exported?: string | null
+          product_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "google_ads_campaigns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       key_opinion_leaders: {
         Row: {

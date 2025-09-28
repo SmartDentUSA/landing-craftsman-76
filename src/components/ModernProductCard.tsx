@@ -18,7 +18,8 @@ import {
   FileText,
   MessageCircle,
   PlayCircle,
-  Instagram
+  Instagram,
+  Target
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
@@ -26,6 +27,7 @@ import { WhatsAppMessageGenerator } from "./WhatsAppMessageGenerator";
 import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
 import { TikTokContentGenerator } from "./TikTokContentGenerator";
+import { ProductGoogleAdsModal } from "./google-ads/ProductGoogleAdsModal";
 import { useState } from "react";
 
 interface Product {
@@ -89,6 +91,7 @@ export function ModernProductCard({
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [showInstagramModal, setShowInstagramModal] = useState(false);
   const [showTikTokModal, setShowTikTokModal] = useState(false);
+  const [showGoogleAdsModal, setShowGoogleAdsModal] = useState(false);
   const score = calculateProductScore(product);
   
   const formatPrice = (price?: number, currency?: string) => {
@@ -232,6 +235,15 @@ export function ModernProductCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowGoogleAdsModal(true)}
+            className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+            title="Google Ads"
+          >
+            <Target className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowBlogModal(true)}
             className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
             title="Gerar Blog IA"
@@ -334,6 +346,13 @@ export function ModernProductCard({
         productName={product.name}
         isOpen={showTikTokModal}
         onClose={() => setShowTikTokModal(false)}
+      />
+
+      {/* Modal de Google Ads */}
+      <ProductGoogleAdsModal
+        open={showGoogleAdsModal}
+        onOpenChange={setShowGoogleAdsModal}
+        product={product}
       />
     </Card>
   );
