@@ -2525,11 +2525,10 @@ const EditorContent = () => {
           */}
 
           <Tabs defaultValue="landing-page" className="w-full">
-            <TabsList className={`grid w-full ${data.status === 'approved' ? 'grid-cols-6' : 'grid-cols-5'}`}>
+            <TabsList className={`grid w-full ${data.status === 'approved' ? 'grid-cols-5' : 'grid-cols-4'}`}>
               <TabsTrigger value="landing-page">Conteúdo</TabsTrigger>
               <TabsTrigger value="seo-social">SEO & Social</TabsTrigger>
               <TabsTrigger value="schema-offers">Schema & Offers</TabsTrigger>
-              <TabsTrigger value="email">Email Marketing</TabsTrigger>
               <TabsTrigger value="email">Email Marketing</TabsTrigger>
               {data.status === 'approved' && (
                 <TabsTrigger value="google-ads">Google Ads</TabsTrigger>
