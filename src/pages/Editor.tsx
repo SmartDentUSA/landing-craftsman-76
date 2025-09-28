@@ -2529,7 +2529,7 @@ const EditorContent = () => {
               <TabsTrigger value="landing-page">Conteúdo</TabsTrigger>
               <TabsTrigger value="seo-social">SEO & Social</TabsTrigger>
               <TabsTrigger value="schema-offers">Schema & Offers</TabsTrigger>
-              <TabsTrigger value="brand-trust">Marca & Confiança</TabsTrigger>
+              <TabsTrigger value="email">Email Marketing</TabsTrigger>
               <TabsTrigger value="email">Email Marketing</TabsTrigger>
               {data.status === 'approved' && (
                 <TabsTrigger value="google-ads">Google Ads</TabsTrigger>
@@ -5680,115 +5680,6 @@ const EditorContent = () => {
               </Card>
             </TabsContent>
 
-            {/* Aba Marca & Confiança */}
-            <TabsContent value="brand-trust" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Marca & Confiança</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Accordion type="single" collapsible defaultValue="brand-info">
-                    
-                    {/* Informações da Marca */}
-                    <AccordionItem value="brand-info">
-                      <AccordionTrigger>Informações da Marca</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div>
-                          <Label>Nome Legal da Empresa</Label>
-                          <Input
-                            value={data.brand.legal_name}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              brand: { ...prev.brand, legal_name: e.target.value }
-                            }))}
-                            placeholder="Exemplo Tecnologia Ltda"
-                          />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* SameAs (Presença Digital) */}
-                    <AccordionItem value="same-as">
-                      <AccordionTrigger>Presença Digital (SameAs)</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        {data.brand.same_as.map((sameAs, index) => (
-                          <div key={index} className="flex gap-2">
-                            <Select
-                              value={sameAs.platform}
-                              onValueChange={(value) => {
-                                const newSameAs = [...data.brand.same_as];
-                                newSameAs[index].platform = value;
-                                setData(prev => ({
-                                  ...prev,
-                                  brand: { ...prev.brand, same_as: newSameAs }
-                                }));
-                              }}
-                            >
-                              <SelectTrigger className="w-40">
-                                <SelectValue placeholder="Plataforma" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="website">Website</SelectItem>
-                                <SelectItem value="linkedin">LinkedIn</SelectItem>
-                                <SelectItem value="facebook">Facebook</SelectItem>
-                                <SelectItem value="instagram">Instagram</SelectItem>
-                                <SelectItem value="twitter">Twitter</SelectItem>
-                                <SelectItem value="youtube">YouTube</SelectItem>
-                                <SelectItem value="wikipedia">Wikipedia</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              placeholder="URL completa"
-                              value={sameAs.url}
-                              onChange={(e) => {
-                                const newSameAs = [...data.brand.same_as];
-                                newSameAs[index].url = e.target.value;
-                                setData(prev => ({
-                                  ...prev,
-                                  brand: { ...prev.brand, same_as: newSameAs }
-                                }));
-                              }}
-                              className="flex-1"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newSameAs = data.brand.same_as.filter((_, i) => i !== index);
-                                setData(prev => ({
-                                  ...prev,
-                                  brand: { ...prev.brand, same_as: newSameAs }
-                                }));
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setData(prev => ({
-                              ...prev,
-                              brand: {
-                                ...prev.brand,
-                                same_as: [...prev.brand.same_as, { platform: '', url: '' }]
-                              }
-                            }));
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Presença Digital
-                        </Button>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                  </Accordion>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             {/* Aba Email Marketing */}
             <TabsContent value="email" className="space-y-4">
