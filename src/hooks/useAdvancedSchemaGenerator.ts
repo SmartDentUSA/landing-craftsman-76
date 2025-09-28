@@ -27,6 +27,21 @@ interface ProductData {
   instagram_videos?: string[];
   technical_videos?: string[];
   testimonial_videos?: string[];
+  // ✨ NOVOS CAMPOS GOOGLE MERCHANT + SEO
+  gtin?: string;
+  mpn?: string;
+  brand?: string;
+  google_product_category?: string;
+  condition?: string;
+  availability?: string;
+  color?: string;
+  size?: string;
+  material?: string;
+  age_group?: string;
+  gender?: string;
+  seo_title_override?: string;
+  seo_description_override?: string;
+  canonical_url?: string;
 }
 
 interface CompanyData {
@@ -57,24 +72,48 @@ interface ReviewData {
 export const useAdvancedSchemaGenerator = () => {
   const { toast } = useToast();
 
-  // Gerar Schema de Produto único com TODOS os campos
+  // Gerar Schema de Produto único com TODOS os campos + GOOGLE MERCHANT
   const generateAdvancedProductSchema = useCallback((product: ProductData, companyData?: CompanyData) => {
     const schema: any = {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": product.name,
       "identifier": product.id,
-      "description": product.description || product.sales_pitch || `${product.name} - Solução de qualidade`
+      "description": product.seo_description_override || product.description || product.sales_pitch || `${product.name} - Solução de qualidade`
     };
 
-    // ✨ Preço e ofertas comerciais COMPLETAS
+    // ✨ IDENTIFICADORES ÚNICOS GOOGLE MERCHANT
+    if (product.gtin) {
+      schema.gtin = product.gtin;
+    }
+    if (product.mpn) {
+      schema.mpn = product.mpn;
+    }
+    if (product.gtin || product.mpn) {
+      schema.identifier = [
+        ...(product.gtin ? [{ "@type": "PropertyValue", "name": "GTIN", "value": product.gtin }] : []),
+        ...(product.mpn ? [{ "@type": "PropertyValue", "name": "MPN", "value": product.mpn }] : []),
+        { "@type": "PropertyValue", "name": "ID", "value": product.id }
+      ];
+    }
+
+    // ✨ Preço e ofertas comerciais COMPLETAS + DISPONIBILIDADE REAL
     if (product.price && product.price > 0) {
+      const availabilityMap: Record<string, string> = {
+        'in stock': 'https://schema.org/InStock',
+        'out of stock': 'https://schema.org/OutOfStock',
+        'preorder': 'https://schema.org/PreOrder'
+      };
+      
       schema.offers = {
         "@type": "Offer",
         "price": product.price,
         "priceCurrency": product.currency || "BRL",
-        "availability": "https://schema.org/InStock",
-        "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        "availability": availabilityMap[product.availability || 'in stock'] || "https://schema.org/InStock",
+        "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        "itemCondition": product.condition === 'new' ? 'https://schema.org/NewCondition' : 
+                        product.condition === 'used' ? 'https://schema.org/UsedCondition' : 
+                        'https://schema.org/RefurbishedCondition'
       };
 
       // Oferta especial com desconto
@@ -135,11 +174,43 @@ export const useAdvancedSchemaGenerator = () => {
       }));
     }
 
-    // ✨ Marca/Empresa
-    if (companyData?.company_name) {
+    // ✨ Marca/Empresa (priorizar brand extraído)
+    if (product.brand || companyData?.company_name) {
       schema.brand = {
         "@type": "Brand",
-        "name": companyData.company_name
+        "name": product.brand || companyData.company_name
+      };
+    }
+
+    // ✨ ATRIBUTOS FÍSICOS DO PRODUTO
+    if (product.color) {
+      schema.color = product.color;
+    }
+    if (product.size) {
+      schema.size = product.size;
+    }
+    if (product.material) {
+      schema.material = product.material;
+    }
+
+    // ✨ CATEGORIA GOOGLE MERCHANT
+    if (product.google_product_category) {
+      schema.googleProductCategory = product.google_product_category;
+    }
+
+    // ✨ CONDIÇÃO E DISPONIBILIDADE
+    if (product.condition) {
+      schema.itemCondition = product.condition === 'new' ? 'https://schema.org/NewCondition' : 
+                            product.condition === 'used' ? 'https://schema.org/UsedCondition' : 
+                            'https://schema.org/RefurbishedCondition';
+    }
+
+    // ✨ SEGMENTAÇÃO DEMOGRÁFICA
+    if (product.age_group || product.gender) {
+      schema.audience = {
+        "@type": "PeopleAudience",
+        ...(product.age_group && { "suggestedMinAge": product.age_group === 'adult' ? 18 : 0 }),
+        ...(product.gender && { "suggestedGender": product.gender })
       };
     }
 

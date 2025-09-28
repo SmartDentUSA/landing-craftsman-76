@@ -15,6 +15,18 @@ interface ProductData {
   description: string;
   image?: string;
   available?: boolean;
+  // ✨ NOVOS CAMPOS GOOGLE MERCHANT + SEO
+  gtin?: string;
+  mpn?: string;
+  brand?: string;
+  google_product_category?: string;
+  condition?: 'new' | 'used' | 'refurbished';
+  availability?: 'in stock' | 'out of stock' | 'preorder';
+  color?: string;
+  size?: string;
+  material?: string;
+  age_group?: string;
+  gender?: string;
 }
 
 serve(async (req) => {
@@ -78,7 +90,19 @@ serve(async (req) => {
                     installmentText: item.offers?.priceSpecification?.priceCurrency ? `ou ${item.offers?.priceSpecification?.maxPrice || ''} em até 12x` : '',
                     description: item.description || '',
                     image: normalizedImage,
-                    available: item.offers?.availability !== 'OutOfStock'
+                    available: item.offers?.availability !== 'OutOfStock',
+                    // ✨ EXTRAIR DADOS GOOGLE MERCHANT DO JSON-LD
+                    gtin: item.gtin13 || item.gtin14 || item.gtin || item.ean || item.upc || '',
+                    mpn: item.mpn || item.sku || item.model || '',
+                    brand: item.brand?.name || item.brand || '',
+                    google_product_category: item.category || '',
+                    condition: item.itemCondition === 'NewCondition' ? 'new' : (item.itemCondition === 'UsedCondition' ? 'used' : 'new'),
+                    availability: item.offers?.availability === 'InStock' ? 'in stock' : (item.offers?.availability === 'OutOfStock' ? 'out of stock' : 'in stock'),
+                    color: item.color || '',
+                    size: item.size || '',
+                    material: item.material || '',
+                    age_group: item.audience?.suggestedMinAge ? 'adult' : '',
+                    gender: item.audience?.suggestedGender || ''
                   },
                   extracted_at: new Date().toISOString()
                 }),
@@ -227,12 +251,48 @@ serve(async (req) => {
       console.log('Fallback image (normalized):', { rawImg, normalized: productData.image });
     }
 
-    // Verificar disponibilidade
-    const unavailableKeywords = ['indisponível', 'esgotado', 'fora de estoque', 'sem estoque'];
+    // ✨ EXTRAIR CAMPOS GOOGLE MERCHANT VIA META TAGS E REGEX
+    
+    // Extrair GTIN/EAN/UPC
+    const gtinMatch = html.match(/<meta[^>]*property=["']product:gtin["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                      html.match(/<meta[^>]*name=["']gtin["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                      html.match(/EAN[:\s]*(\d{13})/i) ||
+                      html.match(/GTIN[:\s]*(\d{8,14})/i);
+    if (gtinMatch) productData.gtin = gtinMatch[1];
+
+    // Extrair MPN/SKU
+    const mpnMatch = html.match(/<meta[^>]*property=["']product:mpn["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                     html.match(/<meta[^>]*name=["']mpn["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                     html.match(/SKU[:\s]*([A-Z0-9\-_]+)/i) ||
+                     html.match(/Código[:\s]*([A-Z0-9\-_]+)/i);
+    if (mpnMatch) productData.mpn = mpnMatch[1];
+
+    // Extrair Marca
+    const brandMatch = html.match(/<meta[^>]*property=["']product:brand["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                       html.match(/<meta[^>]*name=["']brand["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                       html.match(/Marca[:\s]*([A-Za-z0-9\s]+)/i);
+    if (brandMatch) productData.brand = brandMatch[1].trim();
+
+    // Extrair Cor
+    const colorMatch = html.match(/<meta[^>]*property=["']product:color["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                       html.match(/Cor[:\s]*([A-Za-z\s]+)/i);
+    if (colorMatch) productData.color = colorMatch[1].trim();
+
+    // Extrair Tamanho
+    const sizeMatch = html.match(/<meta[^>]*property=["']product:size["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
+                      html.match(/Tamanho[:\s]*([A-Za-z0-9\s]+)/i);
+    if (sizeMatch) productData.size = sizeMatch[1].trim();
+
+    // Verificar disponibilidade (melhorado)
+    const unavailableKeywords = ['indisponível', 'esgotado', 'fora de estoque', 'sem estoque', 'out of stock'];
     const isUnavailable = unavailableKeywords.some(keyword => 
       html.toLowerCase().includes(keyword)
     );
     productData.available = !isUnavailable;
+    productData.availability = isUnavailable ? 'out of stock' : 'in stock';
+    
+    // Definir condição padrão
+    productData.condition = 'new';
 
     console.log('Dados extraídos:', productData);
 

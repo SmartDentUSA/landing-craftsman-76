@@ -160,6 +160,18 @@ export const useSEOHTMLGenerator = () => {
   <meta name="generator" content="SEO Generator">
   <meta name="theme-color" content="#007bff">
   
+  <!-- ✨ META TAGS GOOGLE MERCHANT + E-COMMERCE -->
+  ${products.length > 0 && products[0] ? `
+  ${products[0].gtin ? `<meta property="product:retailer_item_id" content="${products[0].gtin}">` : ''}
+  ${products[0].brand ? `<meta property="product:brand" content="${products[0].brand}">` : ''}
+  ${products[0].condition ? `<meta property="product:condition" content="${products[0].condition}">` : ''}
+  ${products[0].availability ? `<meta property="product:availability" content="${products[0].availability}">` : ''}
+  ${products[0].color ? `<meta property="product:color" content="${products[0].color}">` : ''}
+  ${products[0].google_product_category ? `<meta property="product:category" content="${products[0].google_product_category}">` : ''}
+  <meta property="product:price:amount" content="${products[0].price || 0}">
+  <meta property="product:price:currency" content="${products[0].currency || 'BRL'}">
+  ` : ''}
+  
   ${schemaJson}
   
   <!-- CSS Styling -->

@@ -54,9 +54,14 @@ export const GoogleMerchantManager = () => {
 
   const fetchFeedStats = async () => {
     try {
+      // Buscar produtos aprovados com campos SEO
       const { data: products } = await supabase
         .from('products_repository')
-        .select('*')
+        .select(`
+          id, name, price, image_url, gtin, mpn, brand, 
+          google_product_category, condition, availability, 
+          seo_enhanced
+        `)
         .eq('approved', true);
 
       const { data: company } = await supabase
@@ -64,10 +69,22 @@ export const GoogleMerchantManager = () => {
         .select('company_name, website_url')
         .single();
 
+      // ✨ ESTATÍSTICAS GOOGLE MERCHANT COMPLETAS
+      const seoEnhancedProducts = products?.filter(p => p.seo_enhanced) || [];
+      const productsWithGTIN = products?.filter(p => p.gtin) || [];
+      const productsWithBrand = products?.filter(p => p.brand) || [];
+      const productsWithMPN = products?.filter(p => p.mpn) || [];
+
       setFeedStats({
         totalProducts: products?.length || 0,
         productsWithImages: products?.filter(p => p.image_url).length || 0,
         productsWithPrices: products?.filter(p => p.price).length || 0,
+        // ✨ NOVAS ESTATÍSTICAS SEO
+        seoEnhancedProducts: seoEnhancedProducts.length,
+        productsWithGTIN: productsWithGTIN.length,
+        productsWithBrand: productsWithBrand.length,
+        productsWithMPN: productsWithMPN.length,
+        seoCompletionRate: products?.length ? Math.round((seoEnhancedProducts.length / products.length) * 100) : 0,
         companyName: company?.company_name || 'Não configurado',
         websiteUrl: company?.website_url || 'Não configurado'
       });
@@ -159,24 +176,50 @@ export const GoogleMerchantManager = () => {
             </CardHeader>
             <CardContent>
               {feedStats ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{feedStats.totalProducts}</div>
-                    <div className="text-sm text-muted-foreground">Produtos Aprovados</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{feedStats.productsWithImages}</div>
-                    <div className="text-sm text-muted-foreground">Com Imagens</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{feedStats.productsWithPrices}</div>
-                    <div className="text-sm text-muted-foreground">Com Preços</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {Math.round((feedStats.productsWithPrices / feedStats.totalProducts) * 100) || 0}%
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary">{feedStats.totalProducts}</div>
+                      <div className="text-sm text-muted-foreground">Produtos Aprovados</div>
                     </div>
-                    <div className="text-sm text-muted-foreground">Completude</div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{feedStats.productsWithImages}</div>
+                      <div className="text-sm text-muted-foreground">Com Imagens</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{feedStats.productsWithPrices}</div>
+                      <div className="text-sm text-muted-foreground">Com Preços</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">{feedStats.seoCompletionRate}%</div>
+                      <div className="text-sm text-muted-foreground">SEO Completo</div>
+                    </div>
+                  </div>
+
+                  {/* ✨ ESTATÍSTICAS GOOGLE MERCHANT */}
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Otimização Google Merchant
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-emerald-600">{feedStats.seoEnhancedProducts}</div>
+                        <div className="text-xs text-gray-600">SEO Aprimorado</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-indigo-600">{feedStats.productsWithGTIN}</div>
+                        <div className="text-xs text-gray-600">Com GTIN</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-pink-600">{feedStats.productsWithBrand}</div>
+                        <div className="text-xs text-gray-600">Com Marca</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-teal-600">{feedStats.productsWithMPN}</div>
+                        <div className="text-xs text-gray-600">Com MPN</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -289,13 +332,16 @@ export const GoogleMerchantManager = () => {
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Campos Opcionais:</h4>
+                  <h4 className="font-semibold mb-2">Campos SEO Automáticos:</h4>
                   <ul className="space-y-1 text-muted-foreground">
-                    <li>• Categoria do Google</li>
-                    <li>• Tipo de produto</li>
-                    <li>• GTIN/EAN</li>
-                    <li>• MPN</li>
-                    <li>• Labels customizados</li>
+                    <li>• GTIN/EAN (extraído automaticamente)</li>
+                    <li>• MPN/SKU (extraído automaticamente)</li>
+                    <li>• Marca (extraída automaticamente)</li>
+                    <li>• Cor (extraída automaticamente)</li>
+                    <li>• Tamanho (extraído automaticamente)</li>
+                    <li>• Material (extraído automaticamente)</li>
+                    <li>• Categoria Google (mapeada automaticamente)</li>
+                    <li>• Condição e Disponibilidade (detectadas automaticamente)</li>
                   </ul>
                 </div>
               </div>

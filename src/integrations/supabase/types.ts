@@ -509,18 +509,27 @@ export type Database = {
       }
       products_repository: {
         Row: {
+          age_group: string | null
           ai_generated_benefits: boolean | null
           ai_generated_category: boolean | null
           ai_generated_keywords: boolean | null
           approved: boolean | null
+          availability: string | null
           benefits: Json | null
           bot_trigger_words: Json | null
+          brand: string | null
+          canonical_url: string | null
           category: string | null
+          color: string | null
+          condition: string | null
           created_at: string
           currency: string | null
           description: string | null
           display_order: number | null
           features: Json | null
+          gender: string | null
+          google_product_category: string | null
+          gtin: string | null
           id: string
           image_url: string | null
           individual_blog_content: Json | null
@@ -528,6 +537,8 @@ export type Database = {
           instagram_videos: Json | null
           keywords: Json | null
           market_keywords: Json | null
+          material: string | null
+          mpn: string | null
           name: string
           offer_discount_cta: Json | null
           original_data: Json | null
@@ -540,7 +551,11 @@ export type Database = {
           sales_pitch: string | null
           search_intent_keywords: Json | null
           selected: boolean | null
+          seo_description_override: string | null
+          seo_enhanced: boolean | null
+          seo_title_override: string | null
           show_in_resources: boolean | null
+          size: string | null
           source_landing_page_id: string | null
           source_type: string
           subcategory: string | null
@@ -556,18 +571,27 @@ export type Database = {
           youtube_videos: Json | null
         }
         Insert: {
+          age_group?: string | null
           ai_generated_benefits?: boolean | null
           ai_generated_category?: boolean | null
           ai_generated_keywords?: boolean | null
           approved?: boolean | null
+          availability?: string | null
           benefits?: Json | null
           bot_trigger_words?: Json | null
+          brand?: string | null
+          canonical_url?: string | null
           category?: string | null
+          color?: string | null
+          condition?: string | null
           created_at?: string
           currency?: string | null
           description?: string | null
           display_order?: number | null
           features?: Json | null
+          gender?: string | null
+          google_product_category?: string | null
+          gtin?: string | null
           id?: string
           image_url?: string | null
           individual_blog_content?: Json | null
@@ -575,6 +599,8 @@ export type Database = {
           instagram_videos?: Json | null
           keywords?: Json | null
           market_keywords?: Json | null
+          material?: string | null
+          mpn?: string | null
           name: string
           offer_discount_cta?: Json | null
           original_data?: Json | null
@@ -587,7 +613,11 @@ export type Database = {
           sales_pitch?: string | null
           search_intent_keywords?: Json | null
           selected?: boolean | null
+          seo_description_override?: string | null
+          seo_enhanced?: boolean | null
+          seo_title_override?: string | null
           show_in_resources?: boolean | null
+          size?: string | null
           source_landing_page_id?: string | null
           source_type: string
           subcategory?: string | null
@@ -603,18 +633,27 @@ export type Database = {
           youtube_videos?: Json | null
         }
         Update: {
+          age_group?: string | null
           ai_generated_benefits?: boolean | null
           ai_generated_category?: boolean | null
           ai_generated_keywords?: boolean | null
           approved?: boolean | null
+          availability?: string | null
           benefits?: Json | null
           bot_trigger_words?: Json | null
+          brand?: string | null
+          canonical_url?: string | null
           category?: string | null
+          color?: string | null
+          condition?: string | null
           created_at?: string
           currency?: string | null
           description?: string | null
           display_order?: number | null
           features?: Json | null
+          gender?: string | null
+          google_product_category?: string | null
+          gtin?: string | null
           id?: string
           image_url?: string | null
           individual_blog_content?: Json | null
@@ -622,6 +661,8 @@ export type Database = {
           instagram_videos?: Json | null
           keywords?: Json | null
           market_keywords?: Json | null
+          material?: string | null
+          mpn?: string | null
           name?: string
           offer_discount_cta?: Json | null
           original_data?: Json | null
@@ -634,7 +675,11 @@ export type Database = {
           sales_pitch?: string | null
           search_intent_keywords?: Json | null
           selected?: boolean | null
+          seo_description_override?: string | null
+          seo_enhanced?: boolean | null
+          seo_title_override?: string | null
           show_in_resources?: boolean | null
+          size?: string | null
           source_landing_page_id?: string | null
           source_type?: string
           subcategory?: string | null
