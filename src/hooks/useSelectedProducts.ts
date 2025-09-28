@@ -22,6 +22,7 @@ interface Product {
   instagram_videos?: any[];
   testimonial_videos?: any[];
   technical_videos?: any[];
+  tiktok_videos?: any[];
   offer_discount_cta?: { label: string; url: string; visible: boolean };
   // Blog content gerado por IA
   individual_blog_content?: {
@@ -79,6 +80,7 @@ export const useSelectedProducts = () => {
           instagram_videos: (product.instagram_videos as unknown as any[]) || [],
           testimonial_videos: (product.testimonial_videos as unknown as any[]) || [],
           technical_videos: (product.technical_videos as unknown as any[]) || [],
+          tiktok_videos: (product.tiktok_videos as unknown as any[]) || [],
           offer_discount_cta: (product as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
           // Incluir blog content para curadoria
           individual_blog_content: (product.individual_blog_content as any) || { commercial: null, technical: null, generated_at: null },

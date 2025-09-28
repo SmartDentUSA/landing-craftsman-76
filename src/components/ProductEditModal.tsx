@@ -52,6 +52,7 @@ interface Product {
   youtube_videos?: Video[];
   testimonial_videos?: Video[];
   technical_videos?: Video[];
+  tiktok_videos?: Video[];
   video_captions?: any;
   original_data?: any;
   // Landing Page Section controls
@@ -142,6 +143,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [youtubeVideos, setYoutubeVideos] = useState<Video[]>([]);
   const [testimonialVideos, setTestimonialVideos] = useState<Video[]>([]);
   const [technicalVideos, setTechnicalVideos] = useState<Video[]>([]);
+  const [tiktokVideos, setTiktokVideos] = useState<Video[]>([]);
   
   // Caption states
   const [videoCaptions, setVideoCaptions] = useState<any>({});
@@ -237,6 +239,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setYoutubeVideos(product.youtube_videos || []);
       setTestimonialVideos(product.testimonial_videos || []);
       setTechnicalVideos(product.technical_videos || []);
+      setTiktokVideos(product.tiktok_videos || []);
       setVideoCaptions(product.video_captions || {});
     } else {
       setFormData({
@@ -323,7 +326,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   };
 
   // Video management functions
-  const addVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical', url: string, description: string) => {
+  const addVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical' | 'tiktok', url: string, description: string) => {
     if (!url.trim()) return;
 
     const newVideo: Video = { url: url.trim(), description: description.trim() };
@@ -384,10 +387,24 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         setTechnicalVideos(updatedTechnical);
         setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
         break;
+        
+      case 'tiktok':
+        if (tiktokVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos TikTok permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedTiktok = [...tiktokVideos, newVideo];
+        setTiktokVideos(updatedTiktok);
+        setFormData(prev => ({ ...prev, tiktok_videos: updatedTiktok }));
+        break;
     }
   };
 
-  const removeVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical', index: number) => {
+  const removeVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical' | 'tiktok', index: number) => {
     switch (type) {
       case 'instagram':
         const updatedInstagram = instagramVideos.filter((_, i) => i !== index);
@@ -411,6 +428,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         const updatedTechnical = technicalVideos.filter((_, i) => i !== index);
         setTechnicalVideos(updatedTechnical);
         setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
+        break;
+        
+      case 'tiktok':
+        const updatedTiktok = tiktokVideos.filter((_, i) => i !== index);
+        setTiktokVideos(updatedTiktok);
+        setFormData(prev => ({ ...prev, tiktok_videos: updatedTiktok }));
         break;
     }
   };
@@ -642,6 +665,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         youtube_videos: youtubeVideos as any,
         testimonial_videos: testimonialVideos as any,
         technical_videos: technicalVideos as any,
+        tiktok_videos: tiktokVideos as any,
         use_in_ai_generation: formData.use_in_ai_generation,
         approved: formData.approved,
         keywords: formData.keywords || [],
@@ -1078,6 +1102,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 />
               )}
             </div>
+
+            {/* TikTok Videos */}
+            <VideoSection
+              title="Vídeos TikTok"
+              videos={tiktokVideos}
+              onAdd={(url, description) => addVideo('tiktok', url, description)}
+              onRemove={(index) => removeVideo('tiktok', index)}
+              maxVideos={5}
+            />
           </div>
 
           <div className="space-y-2">

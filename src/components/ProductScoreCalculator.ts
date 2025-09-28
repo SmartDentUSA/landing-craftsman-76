@@ -18,6 +18,7 @@ interface Product {
   instagram_videos?: any[];
   technical_videos?: any[];
   testimonial_videos?: any[];
+  tiktok_videos?: any[];
 }
 
 export interface ScoreBreakdown {
@@ -107,7 +108,8 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
   const totalVideos = (product.youtube_videos?.length || 0) + 
                      (product.instagram_videos?.length || 0) + 
                      (product.technical_videos?.length || 0) + 
-                     (product.testimonial_videos?.length || 0);
+                     (product.testimonial_videos?.length || 0) + 
+                     (product.tiktok_videos?.length || 0);
   
   if (totalVideos > 0) {
     multimedia += 10;

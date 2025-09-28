@@ -51,6 +51,7 @@ interface Product {
   instagram_videos?: any[];
   technical_videos?: any[];
   testimonial_videos?: any[];
+  tiktok_videos?: any[];
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;

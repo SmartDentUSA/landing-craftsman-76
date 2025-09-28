@@ -25,6 +25,7 @@ interface Product {
   instagram_videos?: any[];
   technical_videos?: any[];
   testimonial_videos?: any[];
+  tiktok_videos?: any[];
   product_url?: string;
   tags?: string[];
 }
@@ -85,11 +86,13 @@ export function CompletionBadges({ product, score, compact = false }: Completion
       count: (product.youtube_videos?.length || 0) + 
             (product.instagram_videos?.length || 0) + 
             (product.technical_videos?.length || 0) + 
-            (product.testimonial_videos?.length || 0),
+            (product.testimonial_videos?.length || 0) + 
+            (product.tiktok_videos?.length || 0),
       present: ((product.youtube_videos?.length || 0) + 
                (product.instagram_videos?.length || 0) + 
                (product.technical_videos?.length || 0) + 
-               (product.testimonial_videos?.length || 0)) > 0
+               (product.testimonial_videos?.length || 0) + 
+               (product.tiktok_videos?.length || 0)) > 0
     },
     {
       icon: ShoppingCart,
