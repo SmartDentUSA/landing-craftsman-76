@@ -16,7 +16,7 @@ interface OptimizedImageProps {
   blurDataURL?: string;
 }
 
-export const OptimizedImage: React.FC<OptimizedImageProps> = ({
+export const OptimizedImage: React.FC<OptimizedImageProps> = React.memo(({
   src,
   alt,
   className,
@@ -127,6 +127,6 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default OptimizedImage;

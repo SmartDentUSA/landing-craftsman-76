@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 
 interface ImageDebugPreviewProps {
@@ -9,7 +9,7 @@ interface ImageDebugPreviewProps {
   debugLabel?: string;
 }
 
-export const ImageDebugPreview: React.FC<ImageDebugPreviewProps> = ({
+export const ImageDebugPreview: React.FC<ImageDebugPreviewProps> = React.memo(({
   src,
   alt,
   size = 48,
@@ -18,15 +18,19 @@ export const ImageDebugPreview: React.FC<ImageDebugPreviewProps> = ({
 }) => {
   const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
 
-  const handleLoad = () => {
+  const handleLoad = useMemo(() => () => {
     setStatus("ok");
-    console.info("[ImageDebug] loaded", { label: debugLabel, src });
-  };
+    if (process.env.NODE_ENV === 'development') {
+      console.info("[ImageDebug] loaded", { label: debugLabel, src });
+    }
+  }, [debugLabel, src]);
 
-  const handleError = () => {
+  const handleError = useMemo(() => () => {
     setStatus("error");
-    console.warn("[ImageDebug] error", { label: debugLabel, src });
-  };
+    if (process.env.NODE_ENV === 'development') {
+      console.warn("[ImageDebug] error", { label: debugLabel, src });
+    }
+  }, [debugLabel, src]);
 
   return (
     <div
@@ -66,6 +70,6 @@ export const ImageDebugPreview: React.FC<ImageDebugPreviewProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default ImageDebugPreview;

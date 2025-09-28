@@ -1,3 +1,4 @@
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,7 +11,7 @@ interface ProductScoreIndicatorProps {
   showDetails?: boolean;
 }
 
-export function ProductScoreIndicator({ score, size = 'md', showDetails = false }: ProductScoreIndicatorProps) {
+export const ProductScoreIndicator = React.memo(function ProductScoreIndicator({ score, size = 'md', showDetails = false }: ProductScoreIndicatorProps) {
   const colorVariant = getScoreColor(score.percentage);
   const label = getScoreLabel(score.percentage);
   
@@ -90,4 +91,4 @@ export function ProductScoreIndicator({ score, size = 'md', showDetails = false 
       </Tooltip>
     </TooltipProvider>
   );
-}
+});
