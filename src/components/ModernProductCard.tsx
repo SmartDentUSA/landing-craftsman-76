@@ -25,6 +25,7 @@ import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
 import { WhatsAppMessageGenerator } from "./WhatsAppMessageGenerator";
 import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
+import { TikTokContentGenerator } from "./TikTokContentGenerator";
 import { useState } from "react";
 
 interface Product {
@@ -87,6 +88,7 @@ export function ModernProductCard({
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [showInstagramModal, setShowInstagramModal] = useState(false);
+  const [showTikTokModal, setShowTikTokModal] = useState(false);
   const score = calculateProductScore(product);
   
   const formatPrice = (price?: number, currency?: string) => {
@@ -266,6 +268,15 @@ export function ModernProductCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowTikTokModal(true)}
+            className="h-8 w-8 p-0 text-gray-900 hover:text-black"
+            title="Gerar Conteúdo TikTok"
+          >
+            <span className="text-lg font-bold">🎵</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onEdit(product)}
             className="h-8 w-8 p-0"
           >
@@ -315,6 +326,14 @@ export function ModernProductCard({
         onClose={() => setShowInstagramModal(false)}
         productId={product.id}
         productName={product.name}
+      />
+
+      {/* Modal de Geração TikTok */}
+      <TikTokContentGenerator
+        productId={product.id}
+        productName={product.name}
+        isOpen={showTikTokModal}
+        onClose={() => setShowTikTokModal(false)}
       />
     </Card>
   );

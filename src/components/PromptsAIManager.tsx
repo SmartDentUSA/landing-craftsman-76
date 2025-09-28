@@ -143,6 +143,20 @@ const EDGE_FUNCTIONS = [
       "products_repository",
       "company_profile"
     ]
+  },
+  {
+    id: "generate-tiktok-content",
+    name: "Gerador de Conteúdo TikTok",
+    description: "Gera scripts virais, hooks e CTAs otimizados para TikTok",
+    icon: () => <span className="text-lg">🎵</span>,
+    status: "active" as const,
+    prompts: [
+      "Script TikTok"
+    ],
+    dataSources: [
+      "products_repository",
+      "company_profile"
+    ]
   }
 ];
 

@@ -563,6 +563,7 @@ export type Database = {
           target_audience: Json | null
           technical_videos: Json | null
           testimonial_videos: Json | null
+          tiktok_content: Json | null
           tiktok_videos: Json | null
           updated_at: string
           use_in_ai_generation: boolean | null
@@ -626,6 +627,7 @@ export type Database = {
           target_audience?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
+          tiktok_content?: Json | null
           tiktok_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
@@ -689,6 +691,7 @@ export type Database = {
           target_audience?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
+          tiktok_content?: Json | null
           tiktok_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
