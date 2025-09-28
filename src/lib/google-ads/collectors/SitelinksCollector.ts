@@ -1,4 +1,5 @@
 import { Sitelink } from '@/types/google-ads';
+import { supabase } from '@/integrations/supabase/client';
 
 export class SitelinksCollector {
   static collectFromIntelligentLinks(intelligentLinks: Record<string, string> = {}): Sitelink[] {
@@ -34,6 +35,74 @@ export class SitelinksCollector {
     return sitelinks.filter(sitelink => this.isValidSitelink(sitelink));
   }
   
+  static async collectFromCompanyProfile(): Promise<Sitelink[]> {
+    try {
+      const { data, error } = await supabase
+        .from('company_profile')
+        .select('institutional_links, website_url, social_media_links, youtube_channel, instagram_profile')
+        .maybeSingle();
+
+      if (error || !data) {
+        return [];
+      }
+
+      const sitelinks: Sitelink[] = [];
+
+      // Add institutional links
+      if (data.institutional_links && Array.isArray(data.institutional_links)) {
+        data.institutional_links.forEach((link: any) => {
+          if (link.label && link.url) {
+            sitelinks.push({
+              label: this.formatSitelinkLabel(link.label),
+              url: this.ensureHttps(link.url)
+            });
+          }
+        });
+      }
+
+      // Add main website
+      if (data.website_url) {
+        sitelinks.push({
+          label: 'Website',
+          url: this.ensureHttps(data.website_url)
+        });
+      }
+
+      // Add social media links
+      if (data.social_media_links && Array.isArray(data.social_media_links)) {
+        data.social_media_links.forEach((social: any) => {
+          if (social.platform && social.url) {
+            sitelinks.push({
+              label: this.formatSitelinkLabel(social.platform),
+              url: this.ensureHttps(social.url)
+            });
+          }
+        });
+      }
+
+      // Add YouTube channel
+      if (data.youtube_channel) {
+        sitelinks.push({
+          label: 'YouTube',
+          url: this.ensureHttps(data.youtube_channel)
+        });
+      }
+
+      // Add Instagram profile
+      if (data.instagram_profile) {
+        sitelinks.push({
+          label: 'Instagram',
+          url: this.ensureHttps(data.instagram_profile)
+        });
+      }
+
+      return sitelinks.filter(sitelink => this.isValidSitelink(sitelink)).slice(0, 6);
+    } catch (error) {
+      console.error('Error collecting company sitelinks:', error);
+      return [];
+    }
+  }
+
   static collectBrandPolicies(baseUrl: string, landingPageUrl?: string): Sitelink[] {
     const extractedBaseUrl = this.extractBaseUrl(baseUrl);
     const normalizedLandingUrl = landingPageUrl ? this.normalizeBaseUrl(landingPageUrl) : null;

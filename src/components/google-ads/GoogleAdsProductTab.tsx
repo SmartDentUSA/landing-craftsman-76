@@ -135,15 +135,17 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
     setIsLoading(true);
     
     try {
-      // Collect sitelinks
+      // Auto-collect sitelinks from various sources
       const intelligentLinks = product.product_url ? { [product.name]: product.product_url } : {};
       const ecommerceSitelinks = SitelinksCollector.collectFromIntelligentLinks(intelligentLinks);
-      const brandSitelinks = config.include_brand_policies 
-        ? SitelinksCollector.collectBrandPolicies('https://example.com')
-        : [];
-      const configSitelinks = config.custom_institutional_links;
       
-      const allSitelinks = [...ecommerceSitelinks, ...brandSitelinks, ...configSitelinks];
+      // Collect from company profile
+      const companySitelinks = await SitelinksCollector.collectFromCompanyProfile();
+      
+      // Collect from product CTAs
+      const productCTASitelinks = SitelinksCollector.collectFromResourceCTAs([product]);
+      
+      const allSitelinks = [...ecommerceSitelinks, ...companySitelinks, ...productCTASitelinks];
       const { valid: validSitelinks, warnings: sitelinkWarnings } = SitelinksCollector.validateSitelinks(
         allSitelinks, 
         product.product_url || 'https://example.com'
@@ -371,12 +373,11 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
 
       {campaignConfig.enabled && (
         <>
-          {/* Configuration Tabs */}
+          {/* Configuration Tabs - Simplificado */}
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="general">Geral</TabsTrigger>
-              <TabsTrigger value="keywords">Keywords</TabsTrigger>
-              <TabsTrigger value="sitelinks">Sitelinks</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="general">Configurações</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="utm">UTM</TabsTrigger>
             </TabsList>
 

@@ -33,6 +33,7 @@ interface CompanyProfile {
   contact_email?: string;
   contact_phone?: string;
   social_media_links?: Array<{ platform: string; url: string }>;
+  institutional_links?: Array<{ label: string; url: string; category: string }>;
 }
 
 interface CompanyProfileManagerProps {
@@ -486,6 +487,95 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </div>
+
+        {/* Links Institucionais */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Links Institucionais</h4>
+          <p className="text-sm text-muted-foreground">
+            Links para páginas importantes da empresa (usados automaticamente no Google Ads e SEO de landing pages)
+          </p>
+          
+          <div className="space-y-3">
+            {(profile.institutional_links || []).map((link: any, index: number) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 border rounded-lg">
+                <div>
+                  <Label htmlFor={`link-label-${index}`}>Rótulo</Label>
+                  <Input
+                    id={`link-label-${index}`}
+                    value={link.label || ''}
+                    onChange={(e) => {
+                      const newLinks = [...(profile.institutional_links || [])];
+                      newLinks[index] = { ...newLinks[index], label: e.target.value };
+                      updateProfile('institutional_links', newLinks);
+                    }}
+                    placeholder="Ex: Sobre Nós"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor={`link-url-${index}`}>URL</Label>
+                  <Input
+                    id={`link-url-${index}`}
+                    value={link.url || ''}
+                    onChange={(e) => {
+                      const newLinks = [...(profile.institutional_links || [])];
+                      newLinks[index] = { ...newLinks[index], url: e.target.value };
+                      updateProfile('institutional_links', newLinks);
+                    }}
+                    placeholder="https://site.com/sobre"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor={`link-category-${index}`}>Categoria</Label>
+                  <Select
+                    value={link.category || 'institutional'}
+                    onValueChange={(value) => {
+                      const newLinks = [...(profile.institutional_links || [])];
+                      newLinks[index] = { ...newLinks[index], category: value };
+                      updateProfile('institutional_links', newLinks);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="institutional">Institucional</SelectItem>
+                      <SelectItem value="support">Suporte</SelectItem>
+                      <SelectItem value="legal">Legal</SelectItem>
+                      <SelectItem value="policy">Política</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="md:col-span-3 flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newLinks = [...(profile.institutional_links || [])];
+                      newLinks.splice(index, 1);
+                      updateProfile('institutional_links', newLinks);
+                    }}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              </div>
+            ))}
+            
+            <Button
+              variant="outline"
+              onClick={() => {
+                const newLinks = [...(profile.institutional_links || []), { label: '', url: '', category: 'institutional' }];
+                updateProfile('institutional_links', newLinks);
+              }}
+              className="w-full"
+            >
+              + Adicionar Link Institucional
+            </Button>
           </div>
         </div>
 

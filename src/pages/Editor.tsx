@@ -5785,68 +5785,30 @@ const EditorContent = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Políticas */}
+                    {/* Políticas - Integração com Perfil da Empresa */}
                     <AccordionItem value="policies">
                       <AccordionTrigger>Políticas e Documentos</AccordionTrigger>
                       <AccordionContent className="space-y-4">
-                        <div>
-                          <Label>Política de Privacidade</Label>
-                          <Input
-                            value={data.brand.policies.privacy_url}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              brand: {
-                                ...prev.brand,
-                                policies: { ...prev.brand.policies, privacy_url: e.target.value }
-                              }
-                            }))}
-                            placeholder="https://exemplo.com/privacidade"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Termos de Uso</Label>
-                          <Input
-                            value={data.brand.policies.terms_url}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              brand: {
-                                ...prev.brand,
-                                policies: { ...prev.brand.policies, terms_url: e.target.value }
-                              }
-                            }))}
-                            placeholder="https://exemplo.com/termos"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Política de Segurança</Label>
-                          <Input
-                            value={data.brand.policies.security_url}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              brand: {
-                                ...prev.brand,
-                                policies: { ...prev.brand.policies, security_url: e.target.value }
-                              }
-                            }))}
-                            placeholder="https://exemplo.com/seguranca"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Política de Cookies</Label>
-                          <Input
-                            value={data.brand.policies.cookies_url}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              brand: {
-                                ...prev.brand,
-                                policies: { ...prev.brand.policies, cookies_url: e.target.value }
-                              }
-                            }))}
-                            placeholder="https://exemplo.com/cookies"
-                          />
+                        <div className="p-4 bg-muted rounded-lg">
+                          <p className="text-sm text-muted-foreground">
+                            ℹ️ Os links institucionais agora são gerenciados centralmente no <strong>Perfil da Empresa</strong>.
+                            <br />
+                            Eles serão aplicados automaticamente em:
+                          </p>
+                          <ul className="text-sm text-muted-foreground mt-2 list-disc list-inside">
+                            <li>SEO structured data das landing pages</li>
+                            <li>Sitelinks do Google Ads</li>
+                            <li>Footer das landing pages (se configurado)</li>
+                          </ul>
+                          <div className="mt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open('/dashboard', '_blank')}
+                            >
+                              Gerenciar Links Institucionais
+                            </Button>
+                          </div>
                         </div>
                       </AccordionContent>
                     </AccordionItem>

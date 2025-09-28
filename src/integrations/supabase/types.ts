@@ -182,6 +182,7 @@ export type Database = {
           founded_year: number | null
           id: string
           instagram_profile: string | null
+          institutional_links: Json | null
           location: string | null
           main_products_services: string | null
           mission_statement: string | null
@@ -217,6 +218,7 @@ export type Database = {
           founded_year?: number | null
           id?: string
           instagram_profile?: string | null
+          institutional_links?: Json | null
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           founded_year?: number | null
           id?: string
           instagram_profile?: string | null
+          institutional_links?: Json | null
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
