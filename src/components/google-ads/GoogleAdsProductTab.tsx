@@ -79,7 +79,7 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
   const [adPreview, setAdPreview] = useState<AdPreview | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
 
-  const debouncedConfig = useDebounce(campaignConfig, 1000);
+  // Remove useDebounce - usar campaignConfig diretamente
 
   // Enhanced product keywords for Google Ads
   const getProductKeywords = useCallback(() => {
@@ -170,7 +170,7 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
         sitelinks: validSitelinks,
         videos,
         finalUrl,
-        warnings: sitelinkWarnings
+        warnings: sitelinkWarnings.map(msg => ({ type: 'warning' as const, message: msg }))
       });
 
       const formattedWarnings: ValidationWarning[] = (sitelinkWarnings || []).map(w => 
@@ -192,10 +192,14 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
   // Remove this problematic debounce, use direct call
 
   useEffect(() => {
-    if (debouncedConfig.enabled) {
-      validateAndPreview(debouncedConfig);
-    }
-  }, [debouncedConfig, validateAndPreview]);
+    const timeoutId = setTimeout(() => {
+      if (campaignConfig.enabled) {
+        validateAndPreview(campaignConfig);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [campaignConfig, validateAndPreview]);
 
   const generateAdCopies = useCallback(async () => {
     setIsGeneratingAds(true);

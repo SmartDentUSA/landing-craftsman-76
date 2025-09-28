@@ -47,7 +47,7 @@ export function ProductGoogleAdsModal({
         .upsert({
           product_id: product.id,
           campaign_type: 'product',
-          config
+          config: config as any
         });
 
       if (error) {
