@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -11,39 +9,51 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    // Use native fetch instead of Supabase client to avoid dependency issues
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase configuration')
+    }
 
     console.log('🛒 Generating Google Merchant feed...')
 
-    // Buscar dados da empresa
-    const { data: companyProfile } = await supabase
-      .from('company_profile')
-      .select('*')
-      .single()
+    // Fetch company profile
+    const companyResponse = await fetch(`${supabaseUrl}/rest/v1/company_profile?select=*`, {
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': supabaseKey,
+        'Content-Type': 'application/json'
+      }
+    })
 
-    // Buscar produtos aprovados
-    const { data: products, error: productsError } = await supabase
-      .from('products_repository')
-      .select('*')
-      .eq('approved', true)
-      .order('display_order', { ascending: true })
+    const companyData = await companyResponse.json()
+    const companyProfile = companyData?.[0] || {}
 
-    if (productsError) {
-      console.error('Error fetching products:', productsError)
-      throw productsError
+    // Fetch approved products
+    const productsResponse = await fetch(`${supabaseUrl}/rest/v1/products_repository?approved=eq.true&order=display_order.asc&select=*`, {
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': supabaseKey,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    const products = await productsResponse.json()
+
+    if (!Array.isArray(products)) {
+      throw new Error('Failed to fetch products')
     }
 
-    console.log(`📦 Found ${products?.length || 0} approved products`)
+    console.log(`📦 Found ${products.length} approved products`)
 
     const baseUrl = companyProfile?.website_url || 'https://example.com'
     const companyName = companyProfile?.company_name || 'Loja'
     const companyDescription = companyProfile?.company_description || 'Produtos de qualidade'
 
-    // Gerar feed XML
-    const xmlFeed = generateMerchantFeed(products || [], baseUrl, companyName, companyDescription)
+    // Generate XML feed
+    const xmlFeed = generateMerchantFeed(products, baseUrl, companyName, companyDescription)
 
     console.log('✅ Google Merchant feed generated successfully')
 
@@ -57,8 +67,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error generating merchant feed:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
-      JSON.stringify({ error: 'Failed to generate merchant feed', details: error.message }),
+      JSON.stringify({ error: 'Failed to generate merchant feed', details: errorMessage }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -97,7 +108,7 @@ function generateMerchantItem(product: any, baseUrl: string): string {
   const category = product.category || 'Geral'
   const productType = `${product.category || 'Geral'}${product.subcategory ? ' > ' + product.subcategory : ''}`
 
-  // Extrair GTIN/UPC se disponível nos dados originais
+  // Extract GTIN/UPC if available in original data
   const gtin = extractGTIN(product.original_data)
   const mpn = extractMPN(product.original_data) || productId
 
@@ -117,8 +128,8 @@ function generateMerchantItem(product: any, baseUrl: string): string {
       ${gtin ? `<g:gtin>${escapeXML(gtin)}</g:gtin>` : ''}
       <g:mpn>${escapeXML(mpn)}</g:mpn>
       ${product.features && product.features.length > 0 ? 
-        product.features.slice(0, 3).map((feature: string) => 
-          `<g:custom_label_${product.features.indexOf(feature)}>${escapeXML(feature.substring(0, 100))}</g:custom_label_${product.features.indexOf(feature)}>`
+        product.features.slice(0, 3).map((feature: string, index: number) => 
+          `<g:custom_label_${index}>${escapeXML(feature.substring(0, 100))}</g:custom_label_${index}>`
         ).join('\n      ') : ''
       }
     </item>`
@@ -137,7 +148,7 @@ function escapeXML(str: string): string {
 function extractBrandFromName(name: string): string {
   if (!name) return 'Marca'
   
-  // Tentar extrair marca do nome do produto
+  // Try to extract brand from product name
   const words = name.split(' ')
   return words[0] || 'Marca'
 }
@@ -145,22 +156,28 @@ function extractBrandFromName(name: string): string {
 function extractGTIN(originalData: any): string | null {
   if (!originalData) return null
   
-  // Buscar por GTIN, EAN, UPC nos dados originais
-  const data = typeof originalData === 'string' ? JSON.parse(originalData) : originalData
-  
-  return data?.gtin || data?.ean || data?.upc || null
+  try {
+    // Search for GTIN, EAN, UPC in original data
+    const data = typeof originalData === 'string' ? JSON.parse(originalData) : originalData
+    return data?.gtin || data?.ean || data?.upc || null
+  } catch {
+    return null
+  }
 }
 
 function extractMPN(originalData: any): string | null {
   if (!originalData) return null
   
-  const data = typeof originalData === 'string' ? JSON.parse(originalData) : originalData
-  
-  return data?.mpn || data?.sku || data?.model || null
+  try {
+    const data = typeof originalData === 'string' ? JSON.parse(originalData) : originalData
+    return data?.mpn || data?.sku || data?.model || null
+  } catch {
+    return null
+  }
 }
 
 function mapToGoogleCategory(category: string): string {
-  // Mapeamento básico para Google Product Categories
+  // Basic mapping to Google Product Categories
   const categoryMap: { [key: string]: string } = {
     'odontologia': 'Health & Beauty > Health Care',
     'equipamentos': 'Business & Industrial > Medical',
@@ -183,5 +200,5 @@ function mapToGoogleCategory(category: string): string {
     }
   }
   
-  return 'Health & Beauty > Health Care' // Default para odontologia
+  return 'Health & Beauty > Health Care' // Default for dentistry
 }

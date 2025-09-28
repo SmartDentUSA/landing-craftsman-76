@@ -9,10 +9,11 @@ import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
 import { PromptsAIManager } from '@/components/PromptsAIManager';
 import { LinksManager } from '@/components/LinksManager';
+import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
 
 const Repository = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -37,7 +38,8 @@ const Repository = () => {
                   <h1 className="text-3xl font-bold tracking-tight">
                     {activeView === 'repository' ? 'Repositório Central de Dados' : 
                      activeView === 'categories' ? 'Gerenciar Categorias' : 
-                     activeView === 'links' ? 'Gerenciador de Links' : 'Prompts IA'}
+                     activeView === 'links' ? 'Gerenciador de Links' : 
+                     activeView === 'merchant' ? 'Google Merchant Center' : 'Prompts IA'}
                   </h1>
                   <p className="text-muted-foreground mt-2">
                     {activeView === 'repository' 
@@ -46,6 +48,8 @@ const Repository = () => {
                       ? 'Configure campos padrões para categorias e subcategorias'
                       : activeView === 'links'
                       ? 'Gerencie URLs centralizadas para uso em blogs e landing pages'
+                      : activeView === 'merchant'
+                      ? 'Gerencie seu feed de produtos para Google Shopping'
                       : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                     }
                   </p>
@@ -84,6 +88,13 @@ const Repository = () => {
                     <Settings className="h-4 w-4 mr-2" />
                     Prompts IA
                   </Button>
+                  <Button
+                    variant={activeView === 'merchant' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('merchant')}
+                  >
+                    Google Merchant
+                  </Button>
                 </div>
                 <AdminStatusBadge />
               </div>
@@ -99,6 +110,8 @@ const Repository = () => {
               <CategoryManager />
             ) : activeView === 'links' ? (
               <LinksManager />
+            ) : activeView === 'merchant' ? (
+              <GoogleMerchantManager />
             ) : (
               <PromptsAIManager />
             )}
