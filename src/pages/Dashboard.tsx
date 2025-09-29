@@ -42,7 +42,7 @@ const DashboardContent = () => {
     generatedBlogsCount, 
     publishedBlogsCount,
     approvedLandingPagesWithBlogs
-  } = useBlogStatusMonitor();
+  } = useBlogStatusMonitor(landingPages);
   
   const { 
     productBlogsForHTML, 

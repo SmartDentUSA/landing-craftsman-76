@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useSelectedProducts } from './useSelectedProducts';
 
-export const useBlogStatusMonitor = () => {
-  const landingPages = useLandingPages((state) => state.landingPages);
+export const useBlogStatusMonitor = (supabaseLandingPages?: any[]) => {
+  const zustandLandingPages = useLandingPages((state) => state.landingPages);
+  // Use Supabase landing pages if provided, otherwise fallback to Zustand
+  const landingPages = supabaseLandingPages || zustandLandingPages;
   const [publishedBlogs, setPublishedBlogs] = useState<any[]>([]);
   const [productsWithBlogs, setProductsWithBlogs] = useState<any[]>([]);
   const { loadProductsByIds } = useSelectedProducts();
@@ -64,7 +66,7 @@ export const useBlogStatusMonitor = () => {
   useEffect(() => {
     console.log('🔄 Blog monitor detected landing page changes:', {
       approvedCount: approvedLandingPagesWithBlogs.length,
-      withBlogGenerated: approvedLandingPagesWithBlogs.filter(lp => lp.blogGenerated).length
+      withBlogGenerated: approvedLandingPagesWithBlogs.filter(lp => (lp.blog_generated ?? lp.blogGenerated)).length
     });
   }, [approvedLandingPagesWithBlogs]);
 
@@ -88,11 +90,12 @@ export const useBlogStatusMonitor = () => {
   const consolidatedBlogs = useMemo(() => {
     const consolidated = landingPages.filter(lp => {
       const hasPublishedBlog = publishedBlogs.some(blog => blog.landing_page_id === lp.id);
-      const isApprovedWithBlog = lp.status === 'approved' && (lp.blogGenerated || hasPublishedBlog);
+      const blogGenerated = lp.blog_generated ?? lp.blogGenerated ?? false;
+      const isApprovedWithBlog = lp.status === 'approved' && (blogGenerated || hasPublishedBlog);
       
       if (isApprovedWithBlog) {
         console.log(`✅ Blog consolidated for LP ${lp.id}:`, {
-          blogGenerated: lp.blogGenerated,
+          blogGenerated,
           hasPublishedBlog,
           name: lp.name
         });
@@ -129,7 +132,7 @@ export const useBlogStatusMonitor = () => {
 
   const generatedBlogsCount = useMemo(() => {
     const generatedCount = landingPages.filter(lp => 
-      lp.status === 'approved' && lp.blogGenerated
+      lp.status === 'approved' && (lp.blog_generated ?? lp.blogGenerated ?? false)
     ).length;
     console.log('🎯 Generated blogs count:', generatedCount);
     return generatedCount;
@@ -143,18 +146,19 @@ export const useBlogStatusMonitor = () => {
 
   const fetchProductsWithBlogs = async () => {
     try {
-      // Get all selected product IDs from approved landing pages
+      // Get all selected product IDs from approved landing pages with fallback for property names
       const allSelectedProductIds = approvedLandingPagesWithBlogs
         .filter(lp => {
-          const productIds = lp.selectedProductIds || [];
+          const productIds = lp.selected_product_ids ?? lp.selectedProductIds ?? [];
           return productIds.length > 0;
         })
-        .flatMap(lp => lp.selectedProductIds || []);
+        .flatMap(lp => lp.selected_product_ids ?? lp.selectedProductIds ?? []);
         
       console.log('🔍 Debug: Blog status monitor processing landing pages:', {
         totalPages: approvedLandingPagesWithBlogs.length,
-        pagesWithProducts: approvedLandingPagesWithBlogs.filter(lp => (lp.selectedProductIds || []).length > 0).length,
-        allSelectedProductIds: allSelectedProductIds.length
+        pagesWithProducts: approvedLandingPagesWithBlogs.filter(lp => (lp.selected_product_ids ?? lp.selectedProductIds ?? []).length > 0).length,
+        allSelectedProductIds: allSelectedProductIds.length,
+        sourcedFromSupabase: !!supabaseLandingPages
       });
 
       if (allSelectedProductIds.length === 0) {

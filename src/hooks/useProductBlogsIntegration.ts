@@ -30,17 +30,17 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
 
   const fetchProductsWithBlogs = async () => {
     try {
-      // Get all selected product IDs from approved landing pages
+      // Get all selected product IDs from approved landing pages with fallback for property names
       const allSelectedProductIds = approvedLandingPages
         .filter(lp => {
-          const productIds = lp.selected_product_ids || [];
+          const productIds = lp.selected_product_ids ?? lp.selectedProductIds ?? [];
           return productIds.length > 0;
         })
-        .flatMap(lp => lp.selected_product_ids || []);
+        .flatMap(lp => lp.selected_product_ids ?? lp.selectedProductIds ?? []);
         
       console.log('🔍 Debug: Processing approved landing pages for blogs:', {
         totalPages: approvedLandingPages.length,
-        pagesWithProducts: approvedLandingPages.filter(lp => (lp.selected_product_ids || []).length > 0).length,
+        pagesWithProducts: approvedLandingPages.filter(lp => (lp.selected_product_ids ?? lp.selectedProductIds ?? []).length > 0).length,
         allSelectedProductIds: allSelectedProductIds.length
       });
 
