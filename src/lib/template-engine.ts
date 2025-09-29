@@ -2277,11 +2277,28 @@ export const generateHTML = (data: any): string => {
   // Processa os dados para adicionar os ícones SVG corretos e lógica de duas colunas
   const processedData = {
     ...data,
-    // Mapear campos SEO para nível raiz onde o template espera
+    // 🔧 CORREÇÃO CRÍTICA: Mapear TODOS os campos SEO para nível raiz onde o template espera
     publish_date: data.seo?.publish_date,
     lastmod: data.seo?.lastmod,
     seo_hidden_content: data.seo?.seo_hidden_content,
     ai_keywords: processAIKeywords(data.seo?.ai_keywords),
+    // Campos SEO essenciais
+    canonical_url: data.seo?.canonical_url,
+    meta_robots: data.seo?.meta_robots,
+    hreflang: data.seo?.hreflang,
+    // Open Graph
+    og_title: data.seo?.og_title,
+    og_description: data.seo?.og_description,
+    og_image: data.seo?.og_image,
+    og_type: data.seo?.og_type,
+    og_site_name: data.seo?.og_site_name,
+    og_url: data.seo?.og_url,
+    // Twitter Cards
+    twitter_card: data.seo?.twitter_card,
+    twitter_title: data.seo?.twitter_title,
+    twitter_description: data.seo?.twitter_description,
+    twitter_image: data.seo?.twitter_image,
+    twitter_site: data.seo?.twitter_site,
     solutions: data.solutions?.map((solution: any, index: number) => {
       // Define tamanhos para layout assimétrico
       let size, sizeType, gridColumn = '';
@@ -2669,8 +2686,8 @@ export const generateHTML = (data: any): string => {
     processedData.twitter_description = processedData.og_description || data.seo_description || '';
   }
 
-  // Gerar Schema Markup automaticamente se há produtos ou dados relevantes
-  if (data.selectedProductsForSEO?.length > 0 || data.schema?.manual_reviews?.length > 0 || data.schema?.google_reviews?.reviews?.length > 0) {
+  // 🔧 CORREÇÃO: Restaurar condição original + novos dados relevantes para Schema Markup
+  if (data.seo?.hreflang_auto || data.selectedProductsForSEO?.length > 0 || data.schema?.manual_reviews?.length > 0 || data.schema?.google_reviews?.reviews?.length > 0) {
     const schemaGraph = [];
     
     // Include selected products in schema if available
@@ -2979,6 +2996,30 @@ export const generateHTML = (data: any): string => {
       "@graph": schemaGraph
     });
   }
+
+  // 🔧 CORREÇÃO: Validação final antes de gerar HTML completo
+  const validateFinalSEO = (data: any) => {
+    const criticalSEO = {
+      canonical_url: data.canonical_url,
+      og_title: data.og_title,
+      og_description: data.og_description,
+      twitter_title: data.twitter_title,
+      twitter_description: data.twitter_description,
+      meta_robots: data.meta_robots
+    };
+    
+    const emptySEO = Object.entries(criticalSEO).filter(([key, value]) => !value || value.trim() === '');
+    
+    if (emptySEO.length > 0) {
+      console.warn('⚠️ ALERTA: Campos SEO críticos vazios antes de gerar HTML:', emptySEO.map(([key]) => key));
+    } else {
+      console.info('✅ Todos os campos SEO críticos preenchidos');
+    }
+    
+    console.info('🔍 Debug final SEO state:', criticalSEO);
+  };
+  
+  validateFinalSEO(processedData);
 
   return Mustache.render(TEMPLATE_HTML, processedData);
 };

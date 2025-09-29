@@ -450,7 +450,28 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   processedData.seo.og_image = resolveImageSrc(data.seo?.og_image);
   processedData.seo.twitter_image = resolveImageSrc(data.seo?.twitter_image);
 
-  // Sincronizar campos SEO na preparação para preview
+  // 🔧 CORREÇÃO: Validação de integridade SEO antes de processar
+  const validateSEOIntegrity = (data: any) => {
+    const seoFields = ['canonical_url', 'og_title', 'og_description', 'twitter_title', 'twitter_description'];
+    const missingSEO = seoFields.filter(field => !data.seo?.[field] || data.seo[field].trim() === '');
+    
+    if (missingSEO.length > 0) {
+      console.warn('⚠️ Campos SEO em falta:', missingSEO);
+    }
+    
+    console.info('🔍 Debug SEO integrity:', {
+      hasCanonical: !!data.seo?.canonical_url,
+      hasOGTitle: !!data.seo?.og_title,
+      hasOGDescription: !!data.seo?.og_description,
+      hasTwitterTitle: !!data.seo?.twitter_title,
+      hasTwitterDescription: !!data.seo?.twitter_description,
+      hreflangAuto: !!data.seo?.hreflang_auto
+    });
+  };
+  
+  validateSEOIntegrity(processedData);
+
+  // Sincronizar campos SEO na preparação para preview (preservando dados existentes)
   if (processedData.seo_title && processedData.seo_title !== processedData.seo.seo_title) {
     processedData.seo.seo_title = processedData.seo_title;
   }
@@ -458,7 +479,7 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     processedData.seo_title = processedData.seo.seo_title;
   }
   
-  // Sincronizar descrição SEO
+  // Sincronizar descrição SEO (preservando dados existentes)
   if (processedData.seo_description && processedData.seo_description !== processedData.seo.seo_description) {
     processedData.seo.seo_description = processedData.seo_description;
   }
