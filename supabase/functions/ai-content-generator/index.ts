@@ -770,8 +770,9 @@ function validateContentAgainstProducts(content: string, products: any[]): { isV
   const errors: string[] = [];
   const contentLower = content.toLowerCase();
   
-  // Lista negra de termos que indicam alucinação comum
+  // Sistema Universal Anti-Alucinação v1.0 - Lista expandida de termos de alucinação
   const hallucinationTerms = [
+    // Termos técnicos genéricos
     'biocompatível', 'biocompatibilidade',
     'precisão milimétrica', 'precisão micrométrica',
     'scanner intraoral', 'scanner digital',
@@ -780,7 +781,25 @@ function validateContentAgainstProducts(content: string, products: any[]): { isV
     'material avançado', 'tecnologia avançada',
     'resistência mecânica', 'durabilidade excepcional',
     'propriedades físicas', 'características físicas',
-    'resinas 3d', 'material fotopolimerizável'
+    'resinas 3d', 'material fotopolimerizável',
+    
+    // Novos termos de alucinação universal
+    'qualidade premium', 'qualidade excepcional',
+    'padrão de excelência', 'materiais premium',
+    'fabricação artesanal', 'controle de qualidade rigoroso',
+    'testes extensivos', 'aprovado por especialistas',
+    'recomendado por profissionais', 'líder de mercado',
+    'anos de experiência', 'tradição familiar',
+    'empresa consolidada', 'referência no setor',
+    'confiança do mercado', 'satisfação garantida',
+    'resultado comprovado', 'eficácia testada',
+    'certificação internacional', 'normas rígidas',
+    'processo patenteado', 'fórmula exclusiva',
+    'tecnologia proprietária', 'desenvolvido especialmente',
+    'pesquisa avançada', 'inovação única',
+    'tecnologia de ponta', 'design inovador',
+    'última geração', 'estado da arte',
+    'revolucionário', 'performance superior'
   ];
   
   // Verificar se conteúdo contém termos de alucinação
@@ -801,6 +820,7 @@ function validateContentAgainstProducts(content: string, products: any[]): { isV
       
       if (!termFoundInData) {
         errors.push(`ALUCINAÇÃO DETECTADA: "${term}" não está nos dados dos produtos`);
+        console.error('🚨 SISTEMA ANTI-ALUCINAÇÃO v1.0: Detectado termo proibido:', term);
       }
     }
   }
