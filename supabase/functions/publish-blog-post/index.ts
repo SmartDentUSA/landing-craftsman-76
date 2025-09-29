@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { blog_post_id, domains } = await req.json();
+    const { blog_post_id, domains, product_id } = await req.json();
 
     if (!blog_post_id || !domains || !Array.isArray(domains)) {
       return new Response(
@@ -76,6 +76,23 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
+     }
+
+    // Fetch product data if product_id is provided
+    let productData = null;
+    if (product_id) {
+      const { data: product, error: productError } = await supabase
+        .from('products_repository')
+        .select('*')
+        .eq('id', product_id)
+        .single();
+
+      if (!productError && product) {
+        productData = product;
+        console.log('📦 Product data fetched for schema:', product.name);
+      } else {
+        console.log('⚠️ Product not found or error:', productError);
+      }
     }
 
     // Normalizar campos vazios para facilitar validação
@@ -98,7 +115,7 @@ serve(async (req) => {
         if (domain === 'eodonto.com') {
           // Publicar via FTP
           console.log(`📤 Publicando no FTP (${domain})...`);
-          const ftpResult = await publishToFTP(blogPost, normalizedSettings);
+          const ftpResult = await publishToFTP(blogPost, normalizedSettings, productData);
           if (ftpResult.success) {
             publishedDomains.push(domain);
             console.log(`✅ Publicado com sucesso no ${domain}`);
@@ -108,7 +125,7 @@ serve(async (req) => {
         } else if (domain === 'dentala.com.br') {
           // Publicar via WordPress API
           console.log(`📤 Publicando no WordPress (${domain})...`);
-          const wpResult = await publishToWordPress(blogPost, normalizedSettings);
+          const wpResult = await publishToWordPress(blogPost, normalizedSettings, productData);
           if (wpResult.success) {
             publishedDomains.push(domain);
             console.log(`✅ Publicado com sucesso no ${domain}`);
@@ -175,11 +192,11 @@ serve(async (req) => {
   }
 });
 
-async function publishToFTP(blogPost: any, settings: any) {
+async function publishToFTP(blogPost: any, settings: any, productData: any = null) {
   try {
     console.log(`📁 Criando arquivo HTML para FTP...`);
     
-    const htmlContent = generateHTMLContent(blogPost);
+    const htmlContent = generateHTMLContent(blogPost, productData);
     const fileName = `${blogPost.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-')}.html`;
     
     // Verificar configurações FTP
@@ -288,7 +305,7 @@ async function uploadToFTPServer(fileName: string, content: string, settings: an
   return await uploader.uploadFile(fileName, content);
 }
 
-async function publishToWordPress(blogPost: any, settings: any) {
+async function publishToWordPress(blogPost: any, settings: any, productData: any = null) {
   try {
     console.log(`📝 Publicando no WordPress...`);
     
@@ -460,8 +477,8 @@ async function createOrGetWordPressTags(keywords: string[], baseUrl: string, set
   return tagIds;
 }
 
-function generateHTMLContent(blogPost: any): string {
-  const schema = generateSchemaLD(blogPost);
+function generateHTMLContent(blogPost: any, productData: any = null): string {
+  const schema = generateSchemaLD(blogPost, productData);
   
   // Incluir ofertas se habilitado
   let finalContent = addCrossLinks(blogPost.content);
@@ -557,8 +574,8 @@ function addCrossLinks(content: string): string {
   return processedContent;
 }
 
-function generateSchemaLD(blogPost: any) {
-  return {
+async function generateSchemaLD(blogPost: any, productData: any = null) {
+  const blogSchema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     "headline": blogPost.title,
@@ -576,4 +593,67 @@ function generateSchemaLD(blogPost: any) {
       "url": "https://eodonto.com"
     }
   };
+
+  // Se há dados do produto, criar schema combinado em @graph
+  if (productData) {
+    const productSchema = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "@id": "#product",
+      "name": productData.name,
+      "description": productData.description || '',
+      "brand": productData.brand ? {
+        "@type": "Brand",
+        "name": productData.brand
+      } : undefined,
+      "gtin": productData.gtin || undefined,
+      "mpn": productData.mpn || undefined,
+      "category": productData.category || undefined,
+      "image": productData.image_url || undefined,
+      "url": productData.product_url || undefined,
+      "offers": productData.price ? {
+        "@type": "Offer",
+        "price": productData.price,
+        "priceCurrency": productData.currency || "BRL",
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/NewCondition"
+      } : undefined,
+      "keywords": productData.keywords?.join(', ') || undefined,
+      "additionalProperty": [
+        ...(productData.features || []).map((feature: any) => ({
+          "@type": "PropertyValue",
+          "name": "Característica",
+          "value": feature
+        })),
+        ...(productData.technical_specifications || []).map((spec: any) => ({
+          "@type": "PropertyValue",
+          "name": spec.property || "Especificação",
+          "value": spec.value
+        }))
+      ].filter(Boolean)
+    };
+
+    // Adicionar referências ao produto no blog
+    (blogSchema as any)["about"] = { "@id": "#product" };
+    (blogSchema as any)["mainEntity"] = { "@id": "#product" };
+
+    return {
+      "@context": "https://schema.org",
+      "@graph": [blogSchema, productSchema].filter(Boolean)
+    };
+  }
+
+  // Schema do blog atual se já existir
+  if (blogPost.schema_json_ld) {
+    try {
+      const existingSchema = JSON.parse(blogPost.schema_json_ld);
+      if (existingSchema['@graph']) {
+        return existingSchema;
+      }
+    } catch (e) {
+      console.log('Erro ao processar schema existente:', e);
+    }
+  }
+
+  return blogSchema;
 }

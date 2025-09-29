@@ -640,7 +640,7 @@ export const useSEOHTMLGenerator = () => {
     // Remover duplicatas e limitar para melhor performance SEO
     const uniqueKeywords = [...new Set(allKeywords)].slice(0, 30);
 
-    // Gerar schema para múltiplos artigos
+    // Gerar schema para múltiplos artigos com relações para produtos
     const blogSchemas = blogs.map((blog, index) => {
       // Converter markdown para HTML inline e depois limpar para JSON-LD
       const htmlTitle = convertInlineMarkdownToHTML(blog.title);
@@ -649,7 +649,16 @@ export const useSEOHTMLGenerator = () => {
       const htmlContent = convertMarkdownToHTML(blog.content);
       const cleanDescription = stripHtmlTags(htmlContent.substring(0, 160));
       
-      return {
+      // Encontrar produto relacionado se existir
+      let relatedProduct = null;
+      if (selectedProducts && blog.productName) {
+        relatedProduct = selectedProducts.find(product => 
+          product.name.toLowerCase().includes(blog.productName.toLowerCase()) ||
+          blog.productName.toLowerCase().includes(product.name.toLowerCase())
+        );
+      }
+      
+      const articleSchema = {
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": cleanTitle,
@@ -661,28 +670,36 @@ export const useSEOHTMLGenerator = () => {
           "name": domain
         }
       };
+
+      // Adicionar relação com produto se encontrado
+      if (relatedProduct) {
+        articleSchema["about"] = { "@id": `#product-${relatedProduct.id}` };
+        articleSchema["mainEntity"] = { "@id": `#product-${relatedProduct.id}` };
+      }
+      
+      return articleSchema;
     });
 
     // Generate complete schema including products for SEO
     let completeSchema;
     
     if (selectedProducts && selectedProducts.length > 0) {
-      // Convert selectedProducts to ProductData format for advanced schema
-      const productDataArray = selectedProducts.map(product => ({
+      // Convert selectedProducts to ProductData format for advanced schema with @id
+      const productDataArray = selectedProducts.map((product: any) => ({
         id: product.id,
         name: product.name,
         description: product.description || '',
         price: typeof product.price === 'number' ? product.price : parseFloat(product.price?.toString() || '0'),
         currency: 'BRL',
         category: product.category || '',
-        brand: '',
-        image_url: '',
+        brand: product.brand || '',
+        image_url: product.image_url || '',
         product_url: product.productUrl || '',
         keywords: [...(product.keywords || []), ...(product.market_keywords || []), ...(product.search_intent_keywords || [])],
         availability: 'in stock',
         condition: 'new',
-        gtin: '',
-        mpn: ''
+        gtin: product.gtin || '',
+        mpn: product.mpn || ''
       }));
 
       // Use advanced schema generator for complete page schema
@@ -708,13 +725,30 @@ export const useSEOHTMLGenerator = () => {
         }))
       };
       
-      // Combine schemas in @graph format
+      // Combine schemas in @graph format and add @id to products
+      let productSchemas: any[] = [];
       if (Array.isArray(schemas)) {
-        completeSchema = [...schemas, blogsItemList];
-      } else if (schemas['@graph']) {
-        completeSchema = { "@graph": [...schemas['@graph'], blogsItemList] };
+        productSchemas = schemas.map((schema: any) => {
+          if (schema['@type'] === 'Product') {
+            const product = selectedProducts.find((p: any) => p.name === schema.name);
+            return { ...schema, "@id": `#product-${product?.id || schema.name}` };
+          }
+          return schema;
+        });
+        completeSchema = [...productSchemas, blogsItemList];
+      } else if ((schemas as any)['@graph']) {
+        productSchemas = (schemas as any)['@graph'].map((schema: any) => {
+          if (schema['@type'] === 'Product') {
+            const product = selectedProducts.find((p: any) => p.name === schema.name);
+            return { ...schema, "@id": `#product-${product?.id || schema.name}` };
+          }
+          return schema;
+        });
+        completeSchema = { "@graph": [...productSchemas, blogsItemList] };
       } else {
-        completeSchema = { "@graph": [schemas, blogsItemList] };
+        const updatedSchema = (schemas as any)['@type'] === 'Product' ? 
+          { ...(schemas as any), "@id": `#product-${selectedProducts[0]?.id || (schemas as any).name}` } : schemas;
+        completeSchema = { "@graph": [updatedSchema, blogsItemList] };
       }
     } else {
       // Only blogs schema
