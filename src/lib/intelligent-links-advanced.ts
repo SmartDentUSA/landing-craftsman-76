@@ -137,8 +137,8 @@ export function processContentWithAdvancedIntelligentLinks(
             // Generate contextual anchor text
             const anchorText = generateContextualAnchorText(match, keyword);
             
-            // Return markdown link format for blog content
-            return `[${anchorText}](${url})`;
+            // Return HTML link format for processed content
+            return `<a href="${url}" title="Saiba mais sobre ${keyword}">${anchorText}</a>`;
           });
         }
       }

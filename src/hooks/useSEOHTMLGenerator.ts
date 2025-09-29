@@ -14,7 +14,10 @@ const convertMarkdownToHTML = (content: string): string => {
   let listItems: string[] = [];
 
   const processLine = (line: string): string => {
-    // Headers
+    // Headers (processo com ordem correta para evitar conflitos)
+    if (line.match(/^#### /)) {
+      return `<h4>${line.replace(/^#### /, '').trim()}</h4>`;
+    }
     if (line.match(/^### /)) {
       return `<h3>${line.replace(/^### /, '').trim()}</h3>`;
     }
@@ -25,8 +28,9 @@ const convertMarkdownToHTML = (content: string): string => {
       return `<h1>${line.replace(/^# /, '').trim()}</h1>`;
     }
 
-    // Links markdown [texto](url "título")
-    line = line.replace(/\[([^\]]+)\]\(([^)]+?)(?:\s+"([^"]*)")?\)/g, '<a href="$2" title="$3">$1</a>');
+    // Links markdown [texto](url "título") - com melhor handling
+    line = line.replace(/\[([^\]]+)\]\(([^)]+?)\s+"([^"]*)"\)/g, '<a href="$2" title="$3">$1</a>');
+    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
     
     // Bold **texto**
     line = line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -531,7 +535,7 @@ export const useSEOHTMLGenerator = () => {
     const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage } = options;
 
     // Define canonical URL at the beginning
-    const canonicalUrl = `https://${domain}`;
+    const canonicalUrl = `https://${domain}.com.br`;
 
     // Use aggregated keywords from landing pages + products + blogs if provided
     const allKeywords = aggregatedKeywords && aggregatedKeywords.length > 0 
