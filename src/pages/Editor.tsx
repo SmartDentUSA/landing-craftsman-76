@@ -458,9 +458,19 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     processedData.seo_title = processedData.seo.seo_title;
   }
   
+  // Sincronizar descrição SEO
+  if (processedData.seo_description && processedData.seo_description !== processedData.seo.seo_description) {
+    processedData.seo.seo_description = processedData.seo_description;
+  }
+  if (processedData.seo.seo_description && processedData.seo.seo_description !== processedData.seo_description) {
+    processedData.seo_description = processedData.seo.seo_description;
+  }
+  
   console.info('🎯 Preview preparado com:', {
     seo_title: processedData.seo_title,
     seo_seo_title: processedData.seo.seo_title,
+    seo_description: processedData.seo_description,
+    seo_seo_description: processedData.seo.seo_description,
     domain: processedData.seo.domain,
     canonical_url: processedData.seo.canonical_url,
     manual_reviews: processedData.schema?.manual_reviews?.length || 0
