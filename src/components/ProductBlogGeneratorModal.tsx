@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { FileText, Settings, Sparkles, Clock, Link, ExternalLink, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +51,7 @@ export const ProductBlogGeneratorModal = ({
   const [isEditingCommercial, setIsEditingCommercial] = useState(false);
   const [isEditingTechnical, setIsEditingTechnical] = useState(false);
   const [editingContent, setEditingContent] = useState('');
+  const [useIntelligentLinks, setUseIntelligentLinks] = useState(true);
   const { toast } = useToast();
 
   // Sincronizar dados do produto quando props mudam
@@ -164,7 +167,8 @@ export const ProductBlogGeneratorModal = ({
       const response = await supabase.functions.invoke('generate-product-blog', {
         body: {
           productId: currentProduct.id,
-          blogType: selectedType
+          blogType: selectedType,
+          useIntelligentLinks: useIntelligentLinks
         }
       });
 
@@ -354,6 +358,24 @@ export const ProductBlogGeneratorModal = ({
                     <div className="text-xs mb-4">
                       <strong>Variáveis utilizadas:</strong> Nome, benefícios, keywords, CTAs, preço
                     </div>
+                    
+                    {/* Controle de Links Inteligentes */}
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md mb-4">
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="intelligent-links" className="text-sm font-medium">
+                          Usar Links Inteligentes
+                        </Label>
+                        <Switch
+                          id="intelligent-links"
+                          checked={useIntelligentLinks}
+                          onCheckedChange={setUseIntelligentLinks}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {useIntelligentLinks ? 'Ativado' : 'Desativado'}
+                      </div>
+                    </div>
+                    
                     <Button 
                       onClick={handleGenerateBlog}
                       disabled={isGenerating}
@@ -482,6 +504,24 @@ export const ProductBlogGeneratorModal = ({
                     <div className="text-xs mb-4">
                       <strong>Variáveis utilizadas:</strong> Nome, características, especificações, categoria
                     </div>
+                    
+                    {/* Controle de Links Inteligentes */}
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md mb-4">
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="intelligent-links-tech" className="text-sm font-medium">
+                          Usar Links Inteligentes
+                        </Label>
+                        <Switch
+                          id="intelligent-links-tech"
+                          checked={useIntelligentLinks}
+                          onCheckedChange={setUseIntelligentLinks}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {useIntelligentLinks ? 'Ativado' : 'Desativado'}
+                      </div>
+                    </div>
+                    
                     <Button 
                       onClick={handleGenerateBlog}
                       disabled={isGenerating}

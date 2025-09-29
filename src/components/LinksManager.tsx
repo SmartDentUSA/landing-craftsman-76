@@ -104,15 +104,42 @@ export const LinksManager = () => {
     }
   };
 
-  const handleEdit = (keyword: KeywordLink) => {
+  const handleEdit = async (keyword: KeywordLink) => {
     setEditingKeyword(keyword);
     // Find the actual link data to get category and subcategory
     const linkData = externalLinks.find(link => link.id === keyword.id);
+    
+    let category = linkData?.category || 'produto';
+    let subcategory = linkData?.subcategory || 'geral';
+    
+    // Se a keyword foi importada de um produto, extrair categoria/subcategoria do produto original
+    if (linkData?.description?.includes('Keyword do produto:')) {
+      try {
+        // Extrair ID do produto da URL se for um link interno
+        const productIdMatch = linkData.url.match(/\/produto\/([a-f0-9-]+)/);
+        if (productIdMatch) {
+          const productId = productIdMatch[1];
+          const { data: product } = await supabase
+            .from('products_repository')
+            .select('category, subcategory')
+            .eq('id', productId)
+            .single();
+          
+          if (product) {
+            category = product.category || category;
+            subcategory = product.subcategory || subcategory;
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar categoria do produto:', error);
+      }
+    }
+    
     setFormData({
       keyword: keyword.keyword,
       url: keyword.url,
-      category: linkData?.category || 'produto',
-      subcategory: linkData?.subcategory || 'geral',
+      category,
+      subcategory,
       description: linkData?.description || ''
     });
   };

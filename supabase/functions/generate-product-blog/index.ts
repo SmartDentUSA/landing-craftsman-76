@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     console.log('🚀 Generate Product Blog - Starting request');
     
-    const { productId, blogType } = await req.json();
+    const { productId, blogType, useIntelligentLinks = true } = await req.json();
     
     if (!productId || !blogType) {
       throw new Error('productId e blogType são obrigatórios');
@@ -58,17 +58,27 @@ serve(async (req) => {
     // Gerar blog com IA
     const blogContent = await generateProductBlog(deepSeekApiKey, product, companyProfile, blogType);
     
-    // Gerar links inteligentes para o blog
-    const intelligentLinks = await generateIntelligentLinks(supabase, product, blogContent, blogType);
-    const blogWithLinks = await processContentWithIntelligentLinks(blogContent, intelligentLinks);
+    let intelligentLinks = {};
+    let finalBlogContent = blogContent;
+    
+    // Aplicar links inteligentes apenas se habilitado
+    if (useIntelligentLinks) {
+      console.log('🔗 Generating intelligent links...');
+      intelligentLinks = await generateIntelligentLinks(supabase, product, blogContent, blogType);
+      finalBlogContent = await processContentWithIntelligentLinks(blogContent, intelligentLinks);
+      console.log(`✅ Applied ${Object.keys(intelligentLinks).length} intelligent links`);
+    } else {
+      console.log('🚫 Intelligent links disabled by user');
+    }
     
     // Atualizar produto com o novo blog e links
     const updatedBlogContent = {
       ...product.individual_blog_content,
-      [blogType]: blogWithLinks,
+      [blogType]: finalBlogContent,
       [`${blogType}_links`]: intelligentLinks,
       [`${blogType}_links_generated_at`]: new Date().toISOString(),
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
+      use_intelligent_links: useIntelligentLinks
     };
 
     const { error: updateError } = await supabase
@@ -86,8 +96,9 @@ serve(async (req) => {
       success: true,
       productId,
       blogType,
-      contentLength: blogWithLinks.length,
+      contentLength: finalBlogContent.length,
       linksApplied: Object.keys(intelligentLinks).length,
+      useIntelligentLinks,
       generatedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
