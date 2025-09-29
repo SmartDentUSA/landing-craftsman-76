@@ -7,7 +7,7 @@ import { ArrowLeft, Settings } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
-import { PromptsAIManager } from '@/components/PromptsAIManager';
+import { EnhancedPromptsManager } from '@/components/EnhancedPromptsManager';
 import { LinksManager } from '@/components/LinksManager';
 import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
 
@@ -113,7 +113,7 @@ const Repository = () => {
             ) : activeView === 'merchant' ? (
               <GoogleMerchantManager />
             ) : (
-              <PromptsAIManager />
+              <EnhancedPromptsManager />
             )}
           </div>
         </main>

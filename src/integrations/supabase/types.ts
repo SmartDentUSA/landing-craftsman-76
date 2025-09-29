@@ -276,6 +276,45 @@ export type Database = {
         }
         Relationships: []
       }
+      content_analytics: {
+        Row: {
+          action_type: string
+          content_id: string
+          content_type: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          performance_score: number | null
+          quality_metrics: Json | null
+          updated_at: string | null
+          user_feedback: Json | null
+        }
+        Insert: {
+          action_type: string
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          performance_score?: number | null
+          quality_metrics?: Json | null
+          updated_at?: string | null
+          user_feedback?: Json | null
+        }
+        Update: {
+          action_type?: string
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          performance_score?: number | null
+          quality_metrics?: Json | null
+          updated_at?: string | null
+          user_feedback?: Json | null
+        }
+        Relationships: []
+      }
       external_links: {
         Row: {
           approved: boolean
@@ -757,43 +796,70 @@ export type Database = {
       }
       prompts_configuration: {
         Row: {
+          analytics_enabled: boolean | null
+          backup_prompt: string | null
+          content_validation_rules: Json | null
           created_at: string
           custom_prompt: string
           edge_function_id: string
           id: string
+          is_active: boolean | null
+          performance_metrics: Json | null
+          priority: number | null
           prompt_name: string
           selected_data_sources: Json
           selected_fields: Json
           style_guidelines: Json | null
+          tags: Json | null
+          template_category: string | null
           tone: string | null
           updated_at: string
           use_intelligent_links: boolean | null
+          version_number: number | null
         }
         Insert: {
+          analytics_enabled?: boolean | null
+          backup_prompt?: string | null
+          content_validation_rules?: Json | null
           created_at?: string
           custom_prompt: string
           edge_function_id: string
           id?: string
+          is_active?: boolean | null
+          performance_metrics?: Json | null
+          priority?: number | null
           prompt_name: string
           selected_data_sources?: Json
           selected_fields?: Json
           style_guidelines?: Json | null
+          tags?: Json | null
+          template_category?: string | null
           tone?: string | null
           updated_at?: string
           use_intelligent_links?: boolean | null
+          version_number?: number | null
         }
         Update: {
+          analytics_enabled?: boolean | null
+          backup_prompt?: string | null
+          content_validation_rules?: Json | null
           created_at?: string
           custom_prompt?: string
           edge_function_id?: string
           id?: string
+          is_active?: boolean | null
+          performance_metrics?: Json | null
+          priority?: number | null
           prompt_name?: string
           selected_data_sources?: Json
           selected_fields?: Json
           style_guidelines?: Json | null
+          tags?: Json | null
+          template_category?: string | null
           tone?: string | null
           updated_at?: string
           use_intelligent_links?: boolean | null
+          version_number?: number | null
         }
         Relationships: []
       }
@@ -896,6 +962,48 @@ export type Database = {
           review_date?: string | null
           review_likes?: number | null
           review_text?: string | null
+        }
+        Relationships: []
+      }
+      system_monitoring: {
+        Row: {
+          component_name: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          performance_data: Json | null
+          resolved: boolean | null
+          session_id: string | null
+          severity: string | null
+          tags: Json | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component_name: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          performance_data?: Json | null
+          resolved?: boolean | null
+          session_id?: string | null
+          severity?: string | null
+          tags?: Json | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component_name?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          performance_data?: Json | null
+          resolved?: boolean | null
+          session_id?: string | null
+          severity?: string | null
+          tags?: Json | null
+          timestamp?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

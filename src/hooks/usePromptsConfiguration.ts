@@ -19,6 +19,27 @@ export interface PromptConfiguration {
     estrutura_h1_h2?: boolean;
     incluir_cta_natural?: boolean;
   };
+  // Novos campos de monitoring e analytics
+  version_number?: number;
+  performance_metrics?: {
+    success_rate: number;
+    avg_response_time: number;
+    usage_count: number;
+    last_used: string | null;
+  };
+  template_category?: string;
+  tags?: string[];
+  priority?: number;
+  is_active?: boolean;
+  backup_prompt?: string;
+  content_validation_rules?: {
+    min_length: number;
+    max_length: number;
+    required_keywords: string[];
+    forbidden_words: string[];
+    tone_requirements: string[];
+  };
+  analytics_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
