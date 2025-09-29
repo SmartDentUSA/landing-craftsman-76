@@ -380,6 +380,33 @@ const DashboardContent = () => {
     return status === 'approved' ? 'Aprovado' : 'Rascunho';
   };
 
+  // Function to extract clean text from HTML for preview
+  const extractCleanText = useCallback((html: string): string => {
+    if (!html) return '';
+    
+    // Remove style, script, and other non-content tags
+    let cleanText = html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<meta[^>]*>/gi, '')
+      .replace(/<link[^>]*>/gi, '')
+      .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    
+    // Convert HTML to text by removing all tags
+    cleanText = cleanText
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
+    
+    return cleanText;
+  }, []);
+
   const generateConsolidatedHTML = useCallback((blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
     console.log(`🎨 Generating ${domainName} HTML with ${blogs.length} blogs`);
@@ -1045,14 +1072,17 @@ const DashboardContent = () => {
                     {eodontoHTML && eodontoHTML.length > 0 ? (
                       <>
                         <div className="text-xs leading-relaxed">
-                          {eodontoHTML.length > 200 ? eodontoHTML.substring(0, 200) + '...' : eodontoHTML}
+                          {(() => {
+                            const cleanText = extractCleanText(eodontoHTML);
+                            return cleanText.length > 200 ? cleanText.substring(0, 200) + '...' : cleanText;
+                          })()}
                         </div>
-                        {eodontoHTML.length > 200 && (
+                        {extractCleanText(eodontoHTML).length > 200 && (
                           <>
                             <div className="full-content text-xs leading-relaxed">
                               <div 
                                 dangerouslySetInnerHTML={{ 
-                                  __html: eodontoHTML.substring(200, Math.min(eodontoHTML.length, 1500)) + (eodontoHTML.length > 1500 ? '...' : '') 
+                                  __html: eodontoHTML 
                                 }}
                               />
                             </div>
@@ -1126,14 +1156,17 @@ const DashboardContent = () => {
                     {dentalaHTML && dentalaHTML.length > 0 ? (
                       <>
                         <div className="text-xs leading-relaxed">
-                          {dentalaHTML.length > 200 ? dentalaHTML.substring(0, 200) + '...' : dentalaHTML}
+                          {(() => {
+                            const cleanText = extractCleanText(dentalaHTML);
+                            return cleanText.length > 200 ? cleanText.substring(0, 200) + '...' : cleanText;
+                          })()}
                         </div>
-                        {dentalaHTML.length > 200 && (
+                        {extractCleanText(dentalaHTML).length > 200 && (
                           <>
                             <div className="full-content text-xs leading-relaxed">
                               <div 
                                 dangerouslySetInnerHTML={{ 
-                                  __html: dentalaHTML.substring(200, Math.min(dentalaHTML.length, 1500)) + (dentalaHTML.length > 1500 ? '...' : '') 
+                                  __html: dentalaHTML 
                                 }}
                               />
                             </div>
