@@ -24,7 +24,8 @@ import {
   PlayCircle,
   Settings,
   Instagram,
-  Target
+  Target,
+  Database
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
@@ -106,6 +107,7 @@ export function ModernProductCard({
   const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [showGoogleAdsModal, setShowGoogleAdsModal] = useState(false);
   const [showTechnicalSpecs, setShowTechnicalSpecs] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const score = calculateProductScore(product);
 
@@ -156,6 +158,58 @@ export function ModernProductCard({
   const categoryPath = product.category 
     ? `${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`
     : 'Categoria não definida';
+
+  const handleExportAIPlaybook = async () => {
+    setIsExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('export-product-ai-playbook', {
+        body: { productId: product.id, format: 'both' }
+      });
+
+      if (error) throw error;
+
+      // Create and download JSON file
+      if (data.json) {
+        const jsonBlob = new Blob([JSON.stringify(data.json, null, 2)], { type: 'application/json' });
+        const jsonUrl = URL.createObjectURL(jsonBlob);
+        const jsonLink = document.createElement('a');
+        jsonLink.href = jsonUrl;
+        jsonLink.download = `${data.metadata.filename_base}.json`;
+        document.body.appendChild(jsonLink);
+        jsonLink.click();
+        document.body.removeChild(jsonLink);
+        URL.revokeObjectURL(jsonUrl);
+      }
+
+      // Create and download TXT file
+      if (data.txt) {
+        const txtBlob = new Blob([data.txt], { type: 'text/plain' });
+        const txtUrl = URL.createObjectURL(txtBlob);
+        const txtLink = document.createElement('a');
+        txtLink.href = txtUrl;
+        txtLink.download = `${data.metadata.filename_base}.txt`;
+        document.body.appendChild(txtLink);
+        txtLink.click();
+        document.body.removeChild(txtLink);
+        URL.revokeObjectURL(txtUrl);
+      }
+
+      toast({
+        title: "Export concluído",
+        description: "Arquivos AI Playbook baixados com sucesso",
+      });
+
+    } catch (error) {
+      console.error('Error exporting AI playbook:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro no export",
+        description: "Não foi possível exportar o playbook do produto",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <>
@@ -283,6 +337,16 @@ export function ModernProductCard({
 
         {/* Ações */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportAIPlaybook}
+            disabled={isExporting}
+            className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
+            title="Exportar para IA/Playbook"
+          >
+            <Database className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

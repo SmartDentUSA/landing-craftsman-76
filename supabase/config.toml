@@ -1,5 +1,8 @@
 project_id = "pgfgripuanuwwolmtknn"
 
+[functions.export-product-ai-playbook]
+verify_jwt = false
+
 [functions.generate-merchant-feed]
 verify_jwt = false
 
