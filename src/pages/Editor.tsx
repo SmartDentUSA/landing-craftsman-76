@@ -2663,7 +2663,7 @@ const EditorContent = () => {
                     
                     <div>
                       <Label>Menu de Navegação</Label>
-                      {data.menu.map((item, index) => (
+                      {(data.menu || []).map((item, index) => (
                         <div key={index} className="flex gap-2 mt-2">
                           <Input
                             placeholder="Label"
@@ -3385,7 +3385,7 @@ const EditorContent = () => {
                                    <table className="w-full border border-border rounded-md">
                                      <thead className="bg-muted">
                                        <tr>
-                                         {data.desktop_info.table_headers.map((header, index) => (
+                                         {(data.desktop_info?.table_headers ?? []).map((header, index) => (
                                            <th key={index} className="border border-border px-3 py-2 text-left text-sm font-medium">
                                              {header}
                                            </th>
@@ -3393,9 +3393,9 @@ const EditorContent = () => {
                                        </tr>
                                      </thead>
                                      <tbody>
-                                       {data.desktop_info.table_data.map((row, rowIndex) => (
+                                       {(data.desktop_info?.table_data ?? []).map((row, rowIndex) => (
                                          <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
-                                           {data.desktop_info.table_headers.map((header, colIndex) => (
+                                           {(data.desktop_info?.table_headers ?? []).map((header, colIndex) => (
                                              <td key={colIndex} className="border border-border px-3 py-2 text-sm">
                                                {row[header] || '-'}
                                              </td>
@@ -3749,7 +3749,7 @@ const EditorContent = () => {
                       />
                     </div>
                     
-                    {data.faq.map((faqItem, index) => (
+                    {(data.faq || []).map((faqItem, index) => (
                       <div key={index} className="p-4 border rounded-lg space-y-4">
                         <div className="flex justify-between items-center">
                           <Label>FAQ {index + 1}</Label>
@@ -3977,7 +3977,7 @@ const EditorContent = () => {
                     
                     <div>
                       <Label>Localizações</Label>
-                      {data.footer.locations.map((location, index) => (
+                      {(data.footer?.locations || []).map((location, index) => (
                         <div key={index} className="flex gap-2 mt-2">
                           <Input
                             placeholder="Título"
@@ -4039,7 +4039,7 @@ const EditorContent = () => {
                     
                     <div>
                       <Label>Links do Footer</Label>
-                      {data.footer.links.map((link, index) => (
+                      {(data.footer?.links || []).map((link, index) => (
                         <div key={index} className="flex gap-2 mt-2">
                           <Input
                             placeholder="Label"
@@ -4101,7 +4101,7 @@ const EditorContent = () => {
                     
                     <div>
                       <Label>Redes Sociais</Label>
-                      {data.footer.social.map((social, index) => (
+                      {(data.footer?.social || []).map((social, index) => (
                         <div key={index} className="flex gap-2 mt-2 items-center">
                           <Select
                             value={social.platform}
@@ -5056,7 +5056,7 @@ const EditorContent = () => {
                             <div className="text-sm text-gray-600 p-3 bg-yellow-50 rounded-lg">
                               Configure manualmente as variantes de idioma ou ative a geração automática acima.
                             </div>
-                            {data.seo.hreflang.map((hreflang, index) => (
+                            {(data.seo.hreflang || []).map((hreflang, index) => (
                           <div key={index} className="flex gap-2">
                             <Input
                               placeholder="Idioma (ex: pt-BR)"
@@ -5755,7 +5755,7 @@ const EditorContent = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {data.schema.breadcrumb.map((crumb, index) => (
+                  {(data.schema?.breadcrumb || []).map((crumb, index) => (
                     <div key={index} className="flex gap-2 p-3 bg-muted/30 rounded-lg">
                       <div className="flex-1 grid grid-cols-2 gap-2">
                         <Input
@@ -6459,9 +6459,9 @@ const EditorContent = () => {
                             "ratingCount": processedData.schema.software_app.rating_count
                           }
                         },
-                        ...(processedData.faq.length > 0 ? [{
+                        ...((processedData.faq?.length || 0) > 0 ? [{
                           "@type": "FAQPage",
-                          "mainEntity": processedData.faq.map(faq => ({
+                          "mainEntity": (processedData.faq || []).map(faq => ({
                             "@type": "Question",
                             "name": faq.question,
                             "acceptedAnswer": {
