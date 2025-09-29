@@ -3002,7 +3002,7 @@ const EditorContent = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                const newSolutions = data.solutions.filter((_, i) => i !== index);
+                                const newSolutions = (data.solutions || []).filter((_, i) => i !== index);
                                 setData(prev => ({ ...prev, solutions: newSolutions }));
                               }}
                             >
@@ -3014,7 +3014,7 @@ const EditorContent = () => {
                             <Textarea
                               value={solution.text}
                               onChange={(e) => {
-                                const newSolutions = [...data.solutions];
+                                const newSolutions = [...(data.solutions || [])];
                                 newSolutions[index].text = e.target.value;
                                 setData(prev => ({ ...prev, solutions: newSolutions }));
                               }}
@@ -3027,7 +3027,7 @@ const EditorContent = () => {
                             <ImageUploader
                               value={solution.image}
                               onChange={(imageData) => {
-                                const newSolutions = [...data.solutions];
+                                const newSolutions = [...(data.solutions || [])];
                                 newSolutions[index].image = imageData;
                                 setData(prev => ({ ...prev, solutions: newSolutions }));
                               }}
@@ -3046,7 +3046,7 @@ const EditorContent = () => {
                               <Slider
                                 value={[solution.containerScale || 1.0]}
                                 onValueChange={(value) => {
-                                  const newSolutions = [...data.solutions];
+                                  const newSolutions = [...(data.solutions || [])];
                                   newSolutions[index].containerScale = value[0];
                                   setData(prev => ({ ...prev, solutions: newSolutions }));
                                 }}
@@ -3080,7 +3080,7 @@ const EditorContent = () => {
                       onClick={() => {
                         setData(prev => ({
                           ...prev,
-                          solutions: [...prev.solutions, { text: '', image: createImageData(), containerScale: 1.0 }]
+                          solutions: [...(prev.solutions || []), { text: '', image: createImageData(), containerScale: 1.0 }]
                         }));
                       }}
                       disabled={(data.solutions?.length || 0) >= 5}
