@@ -6478,10 +6478,34 @@ const EditorContent = () => {
                   variant="outline" 
                   size="sm" 
                   className="bg-blue-50 hover:bg-blue-100 border-blue-200"
-                  onClick={() => {
-                    const completeHTML = generateHTML(beforePreview(onSave(data)));
-                    navigator.clipboard.writeText(completeHTML);
-                    toast({ title: "HTML Completo Copiado!", description: "Código pronto para editor web" });
+                  onClick={async () => {
+                    try {
+                      console.log('🔄 Gerando HTML completo...', { 
+                        hasData: !!data, 
+                        exportEnabled: data.seo.export_panel_enabled 
+                      });
+                      
+                      const processedData = beforePreview(onSave(data));
+                      console.log('✅ Dados processados com sucesso');
+                      
+                      const completeHTML = generateHTML(processedData);
+                      console.log('✅ HTML gerado com sucesso, comprimento:', completeHTML.length);
+                      
+                      await navigator.clipboard.writeText(completeHTML);
+                      console.log('✅ HTML copiado para clipboard');
+                      
+                      toast({ 
+                        title: "HTML Completo Copiado!", 
+                        description: "Código pronto para editor web" 
+                      });
+                    } catch (error) {
+                      console.error('❌ Erro ao gerar HTML completo:', error);
+                      toast({ 
+                        title: "Erro", 
+                        description: `Falha ao gerar HTML: ${error.message}`,
+                        variant: "destructive"
+                      });
+                    }
                   }}
                 >
                   <Code className="h-4 w-4 mr-2" />
@@ -6492,36 +6516,59 @@ const EditorContent = () => {
                   variant="outline" 
                   size="sm"
                   className="bg-purple-50 hover:bg-purple-100 border-purple-200"
-                  onClick={() => {
-                    const processedData = beforePreview(onSave(data));
-                    const schemaData = {
-                      "@context": "https://schema.org",
-                      "@graph": [
-                        {
-                          "@type": "SoftwareApplication",
-                          "name": processedData.schema.software_app.name,
-                          "applicationCategory": processedData.schema.software_app.application_category,
-                          "aggregateRating": {
-                            "@type": "AggregateRating",
-                            "ratingValue": processedData.schema.software_app.rating_value,
-                            "ratingCount": processedData.schema.software_app.rating_count
-                          }
-                        },
-                        ...((processedData.faq?.length || 0) > 0 ? [{
-                          "@type": "FAQPage",
-                          "mainEntity": (processedData.faq || []).map(faq => ({
-                            "@type": "Question",
-                            "name": faq.question,
-                            "acceptedAnswer": {
-                              "@type": "Answer",
-                              "text": faq.answer
+                  onClick={async () => {
+                    try {
+                      console.log('🔄 Gerando Schema JSON-LD...', { 
+                        hasData: !!data, 
+                        hasFaq: !!data.faq?.length 
+                      });
+                      
+                      const processedData = beforePreview(onSave(data));
+                      console.log('✅ Dados processados para schema');
+                      
+                      const schemaData = {
+                        "@context": "https://schema.org",
+                        "@graph": [
+                          {
+                            "@type": "SoftwareApplication",
+                            "name": processedData.schema.software_app.name,
+                            "applicationCategory": processedData.schema.software_app.application_category,
+                            "aggregateRating": {
+                              "@type": "AggregateRating",
+                              "ratingValue": processedData.schema.software_app.rating_value,
+                              "ratingCount": processedData.schema.software_app.rating_count
                             }
-                          }))
-                        }] : [])
-                      ]
-                    };
-                    navigator.clipboard.writeText(JSON.stringify(schemaData, null, 2));
-                    toast({ title: "Schema Markup Copiado!", description: "Dados estruturados JSON-LD prontos" });
+                          },
+                          ...((processedData.faq?.length || 0) > 0 ? [{
+                            "@type": "FAQPage",
+                            "mainEntity": (processedData.faq || []).map(faq => ({
+                              "@type": "Question",
+                              "name": faq.question,
+                              "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": faq.answer
+                              }
+                            }))
+                          }] : [])
+                        ]
+                      };
+                      
+                      console.log('✅ Schema gerado com sucesso');
+                      await navigator.clipboard.writeText(JSON.stringify(schemaData, null, 2));
+                      console.log('✅ Schema copiado para clipboard');
+                      
+                      toast({ 
+                        title: "Schema Markup Copiado!", 
+                        description: "Dados estruturados JSON-LD prontos" 
+                      });
+                    } catch (error) {
+                      console.error('❌ Erro ao gerar Schema:', error);
+                      toast({ 
+                        title: "Erro", 
+                        description: `Falha ao gerar Schema: ${error.message}`,
+                        variant: "destructive"
+                      });
+                    }
                   }}
                 >
                   <Settings className="h-4 w-4 mr-2" />
@@ -6532,9 +6579,14 @@ const EditorContent = () => {
                   variant="outline" 
                   size="sm"
                   className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
-                  onClick={() => {
-                    const processedData = beforePreview(onSave(data));
-                    const metaTags = `
+                  onClick={async () => {
+                    try {
+                      console.log('🔄 Gerando Meta Tags...', { hasData: !!data });
+                      
+                      const processedData = beforePreview(onSave(data));
+                      console.log('✅ Dados processados para meta tags');
+                      
+                      const metaTags = `
 <!-- SEO Meta Tags -->
 <title>${processedData.seo_title}</title>
 <meta name="description" content="${processedData.seo_description}">
@@ -6552,8 +6604,23 @@ const EditorContent = () => {
 <meta name="twitter:title" content="${processedData.seo.twitter_title || processedData.seo_title}">
 <meta name="twitter:description" content="${processedData.seo.twitter_description || processedData.seo_description}">
 <meta name="twitter:image" content="${processedData.seo.twitter_image.src || processedData.seo.og_image.src}">`;
-                    navigator.clipboard.writeText(metaTags);
-                    toast({ title: "Meta Tags Copiadas!", description: "Código para <head> do seu site" });
+                      
+                      console.log('✅ Meta tags geradas');
+                      await navigator.clipboard.writeText(metaTags);
+                      console.log('✅ Meta tags copiadas para clipboard');
+                      
+                      toast({ 
+                        title: "Meta Tags Copiadas!", 
+                        description: "Código para <head> do seu site" 
+                      });
+                    } catch (error) {
+                      console.error('❌ Erro ao gerar Meta Tags:', error);
+                      toast({ 
+                        title: "Erro", 
+                        description: `Falha ao gerar Meta Tags: ${error.message}`,
+                        variant: "destructive"
+                      });
+                    }
                   }}
                 >
                   <Globe className="h-4 w-4 mr-2" />
@@ -6564,9 +6631,14 @@ const EditorContent = () => {
                   variant="outline" 
                   size="sm"
                   className="bg-red-50 hover:bg-red-100 border-red-200"
-                  onClick={() => {
-                    const processedData = beforePreview(onSave(data));
-                    const gtmCode = `
+                  onClick={async () => {
+                    try {
+                      console.log('🔄 Gerando GTM Code...', { hasData: !!data });
+                      
+                      const processedData = beforePreview(onSave(data));
+                      console.log('✅ Dados processados para GTM');
+                      
+                      const gtmCode = `
 <!-- Google Tag Manager - Data Layer -->
 <script>
 dataLayer = [{
@@ -6579,8 +6651,23 @@ dataLayer = [{
   }
 }];
 </script>`;
-                    navigator.clipboard.writeText(gtmCode);
-                    toast({ title: "GTM Code Copiado!", description: "Código para Google Tag Manager" });
+                      
+                      console.log('✅ GTM Code gerado');
+                      await navigator.clipboard.writeText(gtmCode);
+                      console.log('✅ GTM Code copiado para clipboard');
+                      
+                      toast({ 
+                        title: "GTM Code Copiado!", 
+                        description: "Código para Google Tag Manager" 
+                      });
+                    } catch (error) {
+                      console.error('❌ Erro ao gerar GTM Code:', error);
+                      toast({ 
+                        title: "Erro", 
+                        description: `Falha ao gerar GTM Code: ${error.message}`,
+                        variant: "destructive"
+                      });
+                    }
                   }}
                 >
                   📊 GTM Code
@@ -6592,8 +6679,12 @@ dataLayer = [{
                   className="bg-blue-50 hover:bg-blue-100 border-blue-200"
                   onClick={async () => {
                     try {
+                      console.log('🔄 Validando Schema...', { hasData: !!data });
+                      
                       const processedData = beforePreview(onSave(data));
                       const html = generateHTML(processedData);
+                      
+                      console.log('✅ HTML gerado para validação, comprimento:', html.length);
                       
                       const response = await supabase.functions.invoke('validate-schema', {
                         body: { 
@@ -6603,6 +6694,7 @@ dataLayer = [{
                       });
                       
                       if (response.error) {
+                        console.error('❌ Erro na API de validação:', response.error);
                         toast({ 
                           title: "Erro na Validação", 
                           description: "Falha ao validar schema markup",
@@ -6612,6 +6704,8 @@ dataLayer = [{
                       }
                       
                       const result = response.data;
+                      console.log('✅ Resultado da validação:', result);
+                      
                       if (result.isValid) {
                         toast({ 
                           title: "✅ Schema Válido!", 
@@ -6625,9 +6719,10 @@ dataLayer = [{
                         });
                       }
                     } catch (error) {
+                      console.error('❌ Erro ao validar schema:', error);
                       toast({ 
                         title: "Erro", 
-                        description: "Falha ao validar schema",
+                        description: `Falha ao validar schema: ${error.message}`,
                         variant: "destructive" 
                       });
                     }
