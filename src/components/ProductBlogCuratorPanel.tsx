@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown, RefreshCw, AlertCircle, Plus } from "lucide-react";
+import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown, RefreshCw, AlertCircle } from "lucide-react";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { IntelligentLinksManager } from "./IntelligentLinksManager";
 import { supabase } from "@/integrations/supabase/client";
@@ -301,32 +301,22 @@ export function ProductBlogCuratorPanel({
                 <CardContent>
                   <div className="space-y-4">
                     {productsWithoutBlogs.map((product) => (
-                      <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg bg-orange-50">
-                        <div className="flex items-center gap-3">
-                          {product.image_url && (
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                              <img 
-                                src={product.image_url} 
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <h4 className="font-medium">{product.name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {product.category} {product.category && '•'} {product.category || 'Sem categoria'}
-                            </p>
+                      <div key={product.id} className="flex items-center gap-3 p-4 border rounded-lg bg-orange-50">
+                        {product.image_url && (
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                            <img 
+                              src={product.image_url} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
+                        )}
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {product.category} {product.category && '•'} {product.category || 'Sem categoria'}
+                          </p>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-orange-600 border-orange-200 hover:bg-orange-100"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Gerar Blog
-                        </Button>
                       </div>
                     ))}
                   </div>
