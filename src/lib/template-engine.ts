@@ -2200,16 +2200,20 @@ export const generateHTML = (data: any): string => {
 
   // Process desktop info section
   if (data.desktop_info && (data.desktop_info.visible_desktop || data.desktop_info.visible_mobile)) {
+    console.log('🔧 [TEMPLATE-ENGINE] Processando desktop_info:', {
+      visible_desktop: data.desktop_info.visible_desktop,
+      visible_mobile: data.desktop_info.visible_mobile,
+      show_table: data.desktop_info.show_table,
+      table_headers: data.desktop_info.table_headers,
+      table_data: data.desktop_info.table_data
+    });
+    
     // Pre-process table data to be arrays ordered by headers
     const table_rows = data.desktop_info.table_data?.map((row: any) => 
       data.desktop_info.table_headers?.map((header: string) => row[header] || '') || []
     ) || [];
     
-    // CRITICAL: Add table_rows to desktop_info context for Mustache
-    processedData.desktop_info = {
-      ...data.desktop_info,
-      table_rows: table_rows
-    };
+    console.log('🔧 [TEMPLATE-ENGINE] table_rows processado:', table_rows);
     
     // Determine visibility class
     let visibility_class = '';
@@ -2225,6 +2229,14 @@ export const generateHTML = (data: any): string => {
       visibility_class: visibility_class,
       table_rows: table_rows
     };
+    
+    console.log('🔧 [TEMPLATE-ENGINE] processedData.desktop_info final:', processedData.desktop_info);
+  } else {
+    console.log('🚨 [TEMPLATE-ENGINE] desktop_info não processado:', {
+      hasDesktopInfo: !!data.desktop_info,
+      visible_desktop: data.desktop_info?.visible_desktop,
+      visible_mobile: data.desktop_info?.visible_mobile
+    });
   }
   
   // Process offers section

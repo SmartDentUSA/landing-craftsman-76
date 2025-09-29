@@ -39,6 +39,7 @@ import { useProductSync } from "@/hooks/useProductSync";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
+import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
@@ -882,7 +883,7 @@ const EditorContent = () => {
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
-  const { saveDesktopInfo } = useDesktopInfoAutoSave(updateLandingPage, id);
+  const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
   
@@ -1560,7 +1561,14 @@ const EditorContent = () => {
         }
       }
     });
-  }, [data]);
+  }, [
+    data,
+    data.desktop_info?.show_table,
+    data.desktop_info?.table_headers,
+    data.desktop_info?.table_data,
+    data.desktop_info?.visible_desktop,
+    data.desktop_info?.visible_mobile
+  ]);
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {
@@ -3043,7 +3051,15 @@ const EditorContent = () => {
 
                 {/* Informações Desktop */}
                 <AccordionItem value="desktop-info">
-                  <AccordionTrigger>Informações Desktop</AccordionTrigger>
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      Informações Desktop
+                      <AutoSaveIndicator 
+                        lastSaved={lastSave}
+                        className="ml-auto"
+                      />
+                    </div>
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                      <div className="space-y-3">
                        <div className="flex items-center space-x-2">
@@ -3105,56 +3121,73 @@ const EditorContent = () => {
                     
                     {((data.desktop_info?.visible_desktop ?? false) || (data.desktop_info?.visible_mobile ?? false)) && (
                       <>
-                        <div>
-                          <Label>Título</Label>
-                          <Input
-                            value={data.desktop_info?.title ?? ''}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              desktop_info: { ...prev.desktop_info!, title: e.target.value }
-                            }))}
-                            placeholder="Título da seção desktop"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Texto</Label>
-                          <Textarea
-                            value={data.desktop_info?.text ?? ''}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              desktop_info: { ...prev.desktop_info!, text: e.target.value }
-                            }))}
-                            placeholder="Texto descritivo para preencher a página"
-                            rows={4}
-                          />
-                        </div>
+                         <div>
+                           <Label>Título</Label>
+                           <Input
+                             value={data.desktop_info?.title ?? ''}
+                             onChange={(e) => {
+                               const updatedData = {
+                                 ...data,
+                                 desktop_info: { ...data.desktop_info!, title: e.target.value }
+                               };
+                               setData(updatedData);
+                               saveDesktopInfo(updatedData);
+                             }}
+                             placeholder="Título da seção desktop"
+                           />
+                         </div>
+                         
+                         <div>
+                           <Label>Texto</Label>
+                           <Textarea
+                             value={data.desktop_info?.text ?? ''}
+                             onChange={(e) => {
+                               const updatedData = {
+                                 ...data,
+                                 desktop_info: { ...data.desktop_info!, text: e.target.value }
+                               };
+                               setData(updatedData);
+                               saveDesktopInfo(updatedData);
+                             }}
+                             placeholder="Texto descritivo para preencher a página"
+                             rows={4}
+                           />
+                         </div>
 
-                        <Separator />
+                         <Separator />
 
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={data.desktop_info?.show_table ?? false}
-                            onCheckedChange={(checked) => setData(prev => ({
-                              ...prev,
-                              desktop_info: { ...prev.desktop_info!, show_table: checked }
-                            }))}
-                          />
-                          <Label className="font-medium">Mostrar tabela</Label>
-                        </div>
+                         <div className="flex items-center space-x-2">
+                           <Switch
+                             checked={data.desktop_info?.show_table ?? false}
+                             onCheckedChange={(checked) => {
+                               console.log('🔧 [DESKTOP-INFO] Alterando show_table:', checked);
+                               const updatedData = {
+                                 ...data,
+                                 desktop_info: { ...data.desktop_info!, show_table: checked }
+                               };
+                               setData(updatedData);
+                               saveDesktopInfo(updatedData);
+                             }}
+                           />
+                           <Label className="font-medium">Mostrar tabela</Label>
+                         </div>
 
                         {(data.desktop_info?.show_table ?? false) && (
                           <>
                             <div>
                               <Label>Título da Tabela</Label>
-                              <Input
-                                value={data.desktop_info?.table_title ?? ''}
-                                onChange={(e) => setData(prev => ({
-                                  ...prev,
-                                  desktop_info: { ...prev.desktop_info!, table_title: e.target.value }
-                                }))}
-                                placeholder="Título da tabela"
-                              />
+                               <Input
+                                 value={data.desktop_info?.table_title ?? ''}
+                                 onChange={(e) => {
+                                   const updatedData = {
+                                     ...data,
+                                     desktop_info: { ...data.desktop_info!, table_title: e.target.value }
+                                   };
+                                   setData(updatedData);
+                                   saveDesktopInfo(updatedData);
+                                 }}
+                                 placeholder="Título da tabela"
+                               />
                             </div>
 
                             <div>
@@ -3162,18 +3195,20 @@ const EditorContent = () => {
                               <div className="space-y-2">
                                 {(data.desktop_info?.table_headers ?? []).map((header, index) => (
                                   <div key={index} className="flex items-center space-x-2">
-                                    <Input
-                                      value={header}
-                                      onChange={(e) => {
-                                        const newHeaders = [...(data.desktop_info?.table_headers ?? [])];
-                                        newHeaders[index] = e.target.value;
-                                        setData(prev => ({
-                                          ...prev,
-                                          desktop_info: { ...prev.desktop_info!, table_headers: newHeaders }
-                                        }));
-                                      }}
-                                      placeholder={`Cabeçalho ${index + 1}`}
-                                    />
+                                     <Input
+                                       value={header}
+                                       onChange={(e) => {
+                                         const newHeaders = [...(data.desktop_info?.table_headers ?? [])];
+                                         newHeaders[index] = e.target.value;
+                                         const updatedData = {
+                                           ...data,
+                                           desktop_info: { ...data.desktop_info!, table_headers: newHeaders }
+                                         };
+                                         setData(updatedData);
+                                         saveDesktopInfo(updatedData);
+                                       }}
+                                       placeholder={`Cabeçalho ${index + 1}`}
+                                     />
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -3184,14 +3219,16 @@ const EditorContent = () => {
                                           delete newRow[header];
                                           return newRow;
                                         });
-                                        setData(prev => ({
-                                          ...prev,
-                                          desktop_info: { 
-                                            ...prev.desktop_info!, 
-                                            table_headers: newHeaders,
-                                            table_data: newData
-                                          }
-                                        }));
+                                         const updatedData = {
+                                           ...data,
+                                           desktop_info: { 
+                                             ...data.desktop_info!, 
+                                             table_headers: newHeaders,
+                                             table_data: newData
+                                           }
+                                         };
+                                         setData(updatedData);
+                                         saveDesktopInfo(updatedData);
                                       }}
                                     >
                                       <Trash2 className="h-4 w-4" />
@@ -3203,10 +3240,12 @@ const EditorContent = () => {
                                   size="sm"
                                   onClick={() => {
                                     const newHeaders = [...(data.desktop_info?.table_headers ?? []), `Coluna ${(data.desktop_info?.table_headers?.length ?? 0) + 1}`];
-                                    setData(prev => ({
-                                      ...prev,
-                                      desktop_info: { ...prev.desktop_info!, table_headers: newHeaders }
-                                    }));
+                                     const updatedData = {
+                                       ...data,
+                                       desktop_info: { ...data.desktop_info!, table_headers: newHeaders }
+                                     };
+                                     setData(updatedData);
+                                     saveDesktopInfo(updatedData);
                                   }}
                                 >
                                   <Plus className="h-4 w-4 mr-2" />
@@ -3228,10 +3267,12 @@ const EditorContent = () => {
                                           size="sm"
                                           onClick={() => {
                                             const newData = (data.desktop_info?.table_data ?? []).filter((_, i) => i !== rowIndex);
-                                            setData(prev => ({
-                                              ...prev,
-                                              desktop_info: { ...prev.desktop_info!, table_data: newData }
-                                            }));
+                                             const updatedData = {
+                                               ...data,
+                                               desktop_info: { ...data.desktop_info!, table_data: newData }
+                                             };
+                                             setData(updatedData);
+                                             saveDesktopInfo(updatedData);
                                           }}
                                         >
                                           <Trash2 className="h-4 w-4" />
@@ -3248,14 +3289,13 @@ const EditorContent = () => {
                                                 const newData = [...(data.desktop_info?.table_data ?? [])];
                                                 newData[rowIndex] = { ...newData[rowIndex], [header]: e.target.value };
                                                 console.log('Dados atualizados da tabela:', newData);
-                                                setData(prev => {
-                                                  const updated = {
-                                                    ...prev,
-                                                    desktop_info: { ...prev.desktop_info!, table_data: newData }
-                                                  };
-                                                  console.log('Estado atualizado - desktop_info:', updated.desktop_info);
-                                                  return updated;
-                                                });
+                                                 const updatedData = {
+                                                   ...data,
+                                                   desktop_info: { ...data.desktop_info!, table_data: newData }
+                                                 };
+                                                 console.log('Estado atualizado - desktop_info:', updatedData.desktop_info);
+                                                 setData(updatedData);
+                                                 saveDesktopInfo(updatedData);
                                               }}
                                               placeholder={`Valor para ${header}`}
                                             />
@@ -3277,27 +3317,57 @@ const EditorContent = () => {
                                     const newData = [...(data.desktop_info?.table_data ?? []), newRow];
                                     console.log('Nova linha criada:', newRow);
                                     console.log('Novos dados da tabela:', newData);
-                                    setData(prev => {
-                                      const updated = {
-                                        ...prev,
-                                        desktop_info: { ...prev.desktop_info!, table_data: newData }
-                                      };
-                                      console.log('Estado atualizado - desktop_info:', updated.desktop_info);
-                                      return updated;
-                                    });
+                                     const updatedData = {
+                                       ...data,
+                                       desktop_info: { ...data.desktop_info!, table_data: newData }
+                                     };
+                                     console.log('Estado atualizado - desktop_info:', updatedData.desktop_info);
+                                     setData(updatedData);
+                                     saveDesktopInfo(updatedData);
                                   }}
                                 >
                                   <Plus className="h-4 w-4 mr-2" />
                                   Adicionar Linha
                                 </Button>
                               </div>
-                            </div>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </AccordionContent>
-                 </AccordionItem>
+                             </div>
+
+                             {/* Preview da Tabela */}
+                             {(data.desktop_info?.table_headers?.length ?? 0) > 0 && (data.desktop_info?.table_data?.length ?? 0) > 0 && (
+                               <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                                 <Label className="font-medium text-sm mb-2 block">Preview da Tabela</Label>
+                                 <div className="overflow-x-auto">
+                                   <table className="w-full border border-border rounded-md">
+                                     <thead className="bg-muted">
+                                       <tr>
+                                         {data.desktop_info.table_headers.map((header, index) => (
+                                           <th key={index} className="border border-border px-3 py-2 text-left text-sm font-medium">
+                                             {header}
+                                           </th>
+                                         ))}
+                                       </tr>
+                                     </thead>
+                                     <tbody>
+                                       {data.desktop_info.table_data.map((row, rowIndex) => (
+                                         <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                                           {data.desktop_info.table_headers.map((header, colIndex) => (
+                                             <td key={colIndex} className="border border-border px-3 py-2 text-sm">
+                                               {row[header] || '-'}
+                                             </td>
+                                           ))}
+                                         </tr>
+                                       ))}
+                                     </tbody>
+                                   </table>
+                                 </div>
+                               </div>
+                             )}
+                           </>
+                         )}
+                       </>
+                     )}
+                   </AccordionContent>
+                  </AccordionItem>
 
                   {/* Ofertas na Landing Page */}
                   {((data.schema?.offers && data.schema.offers.length > 0) || selectedProductIds.length > 0) && (

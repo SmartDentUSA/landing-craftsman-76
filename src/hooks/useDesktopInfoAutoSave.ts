@@ -26,7 +26,10 @@ export const useDesktopInfoAutoSave = (
     
     console.log('🔧 [AUTO-SAVE] Salvando alterações automaticamente...', { 
       desktop_info: updatedData.desktop_info,
-      pageId 
+      pageId,
+      show_table: updatedData.desktop_info?.show_table,
+      table_headers: updatedData.desktop_info?.table_headers,
+      table_data: updatedData.desktop_info?.table_data
     });
     
     try {
@@ -37,7 +40,9 @@ export const useDesktopInfoAutoSave = (
         }
       });
       lastSaveRef.current = new Date();
-      console.log('✅ [AUTO-SAVE] Dados salvos com sucesso');
+      console.log('✅ [AUTO-SAVE] Dados salvos com sucesso', {
+        desktop_info_saved: updatedData.desktop_info
+      });
     } catch (error) {
       console.error('❌ [AUTO-SAVE] Erro ao salvar:', error);
     }
