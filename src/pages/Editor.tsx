@@ -1460,9 +1460,9 @@ const EditorContent = () => {
   // 🏢 AUTO-POPULAÇÃO DO FOOTER COM DADOS DA EMPRESA
   useEffect(() => {
     if (hasCompanyData && 
-        (!data.footer.locations?.length && 
-         !data.footer.links?.length && 
-         !data.footer.social?.length)) {
+        (!(data.footer?.locations?.length) && 
+         !(data.footer?.links?.length) && 
+         !(data.footer?.social?.length))) {
       
       const autoFooter = generateAutoFooter();
       console.log('🏢 Auto-populando footer com dados da empresa:', autoFooter);
@@ -4010,7 +4010,7 @@ const EditorContent = () => {
                       />
                     </div>
                     
-                    {hasCompanyData && (data.footer.locations?.length > 0 || data.footer.social?.length > 0) && (
+                    {hasCompanyData && (((data.footer?.locations?.length || 0) > 0) || ((data.footer?.social?.length || 0) > 0)) && (
                       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="bg-blue-100 text-blue-800">
@@ -4031,11 +4031,11 @@ const EditorContent = () => {
                             placeholder="Título"
                             value={location.title}
                             onChange={(e) => {
-                              const newLocations = [...data.footer.locations];
+                              const newLocations = [...(data.footer?.locations || [])];
                               newLocations[index].title = e.target.value;
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, locations: newLocations }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), locations: newLocations }
                               }));
                             }}
                           />
@@ -4043,11 +4043,11 @@ const EditorContent = () => {
                             placeholder="Endereço"
                             value={location.address}
                             onChange={(e) => {
-                              const newLocations = [...data.footer.locations];
+                              const newLocations = [...(data.footer?.locations || [])];
                               newLocations[index].address = e.target.value;
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, locations: newLocations }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), locations: newLocations }
                               }));
                             }}
                           />
@@ -4055,10 +4055,10 @@ const EditorContent = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const newLocations = data.footer.locations.filter((_, i) => i !== index);
+                              const newLocations = (data.footer?.locations || []).filter((_, i) => i !== index);
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, locations: newLocations }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), locations: newLocations }
                               }));
                             }}
                           >
@@ -4073,8 +4073,8 @@ const EditorContent = () => {
                           setData(prev => ({
                             ...prev,
                             footer: {
-                              ...prev.footer,
-                              locations: [...prev.footer.locations, { title: '', address: '' }]
+                              ...(prev.footer || { locations: [], links: [], social: [] }),
+                              locations: [...(prev.footer?.locations || []), { title: '', address: '' }]
                             }
                           }));
                         }}
@@ -4093,11 +4093,11 @@ const EditorContent = () => {
                             placeholder="Label"
                             value={link.label}
                             onChange={(e) => {
-                              const newLinks = [...data.footer.links];
+                              const newLinks = [...(data.footer?.links || [])];
                               newLinks[index].label = e.target.value;
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, links: newLinks }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), links: newLinks }
                               }));
                             }}
                           />
@@ -4105,11 +4105,11 @@ const EditorContent = () => {
                             placeholder="URL"
                             value={link.href}
                             onChange={(e) => {
-                              const newLinks = [...data.footer.links];
+                              const newLinks = [...(data.footer?.links || [])];
                               newLinks[index].href = e.target.value;
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, links: newLinks }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), links: newLinks }
                               }));
                             }}
                           />
@@ -4117,10 +4117,10 @@ const EditorContent = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const newLinks = data.footer.links.filter((_, i) => i !== index);
+                              const newLinks = (data.footer?.links || []).filter((_, i) => i !== index);
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, links: newLinks }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), links: newLinks }
                               }));
                             }}
                           >
@@ -4135,8 +4135,8 @@ const EditorContent = () => {
                           setData(prev => ({
                             ...prev,
                             footer: {
-                              ...prev.footer,
-                              links: [...prev.footer.links, { label: '', href: '' }]
+                              ...(prev.footer || { locations: [], links: [], social: [] }),
+                              links: [...(prev.footer?.links || []), { label: '', href: '' }]
                             }
                           }));
                         }}
@@ -4154,7 +4154,7 @@ const EditorContent = () => {
                           <Select
                             value={social.platform}
                             onValueChange={(value) => {
-                              const newSocial = [...data.footer.social];
+                              const newSocial = [...(data.footer?.social || [])];
                               const platform = SOCIAL_PLATFORMS.find(p => p.value === value);
                               newSocial[index] = {
                                 ...newSocial[index],
@@ -4163,7 +4163,7 @@ const EditorContent = () => {
                               };
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, social: newSocial }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), social: newSocial }
                               }));
                             }}
                           >
@@ -4185,11 +4185,11 @@ const EditorContent = () => {
                             placeholder="URL"
                             value={social.href}
                             onChange={(e) => {
-                              const newSocial = [...data.footer.social];
+                              const newSocial = [...(data.footer?.social || [])];
                               newSocial[index].href = e.target.value;
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, social: newSocial }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), social: newSocial }
                               }));
                             }}
                             className="flex-1"
@@ -4198,10 +4198,10 @@ const EditorContent = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const newSocial = data.footer.social.filter((_, i) => i !== index);
+                              const newSocial = (data.footer?.social || []).filter((_, i) => i !== index);
                               setData(prev => ({
                                 ...prev,
-                                footer: { ...prev.footer, social: newSocial }
+                                footer: { ...(prev.footer || { locations: [], links: [], social: [] }), social: newSocial }
                               }));
                             }}
                           >
