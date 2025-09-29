@@ -170,16 +170,20 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     productsWithBlogs.forEach(product => {
       const productPrefs = preferences[product.id];
       
+      // Usar valores padrão quando não há preferências salvas
+      const useCommercial = productPrefs ? productPrefs.useCommercial : !!product.individual_blog_content?.commercial;
+      const useTechnical = productPrefs ? productPrefs.useTechnical : !!product.individual_blog_content?.technical;
+      
       console.log(`🔍 Debug: Processing product ${product.name}:`, {
         productId: product.id,
         hasPrefs: !!productPrefs,
-        useCommercial: productPrefs?.useCommercial,
-        useTechnical: productPrefs?.useTechnical,
+        useCommercial,
+        useTechnical,
         hasCommercialContent: !!product.individual_blog_content?.commercial,
         hasTechnicalContent: !!product.individual_blog_content?.technical
       });
       
-      if (productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
+      if (useCommercial && product.individual_blog_content?.commercial) {
         const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
         productBlogs.push({
           id: `${product.id}-commercial`,
@@ -192,7 +196,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         });
       }
       
-      if (productPrefs?.useTechnical && product.individual_blog_content?.technical) {
+      if (useTechnical && product.individual_blog_content?.technical) {
         const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
         productBlogs.push({
           id: `${product.id}-technical`,
@@ -229,17 +233,21 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       productsWithBlogs.forEach(product => {
         const productPrefs = preferences[product.id];
         
+        // Usar valores padrão quando não há preferências salvas
+        const useCommercial = productPrefs ? productPrefs.useCommercial : !!product.individual_blog_content?.commercial;
+        const useTechnical = productPrefs ? productPrefs.useTechnical : !!product.individual_blog_content?.technical;
+        
         console.log(`🔍 Debug: Processing product ${product.name} for domain ${domain}:`, {
           productId: product.id,
           hasPrefs: !!productPrefs,
-          useCommercial: productPrefs?.useCommercial,
-          useTechnical: productPrefs?.useTechnical,
+          useCommercial,
+          useTechnical,
           hasCommercialContent: !!product.individual_blog_content?.commercial,
           hasTechnicalContent: !!product.individual_blog_content?.technical
         });
         
         // For Eodonto: only commercial blogs
-        if (domain === 'eodonto' && productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
+        if (domain === 'eodonto' && useCommercial && product.individual_blog_content?.commercial) {
           const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
           productBlogs.push({
             id: `${product.id}-commercial`,
@@ -254,7 +262,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         }
         
         // For Dentala: only technical blogs
-        if (domain === 'dentala' && productPrefs?.useTechnical && product.individual_blog_content?.technical) {
+        if (domain === 'dentala' && useTechnical && product.individual_blog_content?.technical) {
           const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
           productBlogs.push({
             id: `${product.id}-technical`,
