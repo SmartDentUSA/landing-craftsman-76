@@ -18,6 +18,7 @@ interface ProductBlog {
   productId: string;
   productName: string;
   created_at: string;
+  sourceLandingPageId?: string;
 }
 
 // Função para sanitizar conteúdo do blog removendo CTAs genéricos
@@ -99,34 +100,54 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
 
   const fetchProductsWithBlogs = async () => {
     try {
-      // Get all selected product IDs from approved landing pages with fallback for property names
-      const allSelectedProductIds = approvedLandingPages
-        .filter(lp => {
-          const productIds = lp.selected_product_ids ?? lp.selectedProductIds ?? [];
-          return productIds.length > 0;
-        })
-        .flatMap(lp => lp.selected_product_ids ?? lp.selectedProductIds ?? []);
+      // Create a map to track products with their source landing pages
+      const productLandingPageMap = new Map<string, string[]>();
+      const allSelectedProductIds = new Set<string>();
+
+      // Collect products from each landing page with their context
+      approvedLandingPages.forEach(lp => {
+        const productIds = lp.selected_product_ids ?? lp.selectedProductIds ?? [];
+        if (productIds.length > 0) {
+          productIds.forEach((productId: string) => {
+            allSelectedProductIds.add(productId);
+            
+            if (!productLandingPageMap.has(productId)) {
+              productLandingPageMap.set(productId, []);
+            }
+            productLandingPageMap.get(productId)!.push(lp.id);
+          });
+        }
+      });
         
       console.log('🔍 Debug: Processing approved landing pages for blogs:', {
         totalPages: approvedLandingPages.length,
         pagesWithProducts: approvedLandingPages.filter(lp => (lp.selected_product_ids ?? lp.selectedProductIds ?? []).length > 0).length,
-        allSelectedProductIds: allSelectedProductIds.length
+        uniqueProductIds: allSelectedProductIds.size,
+        totalProductReferences: Array.from(allSelectedProductIds).reduce((acc, pid) => acc + (productLandingPageMap.get(pid)?.length || 0), 0)
       });
 
-      if (allSelectedProductIds.length === 0) {
+      if (allSelectedProductIds.size === 0) {
         setProductsWithBlogs([]);
         return;
       }
 
-      const products = await loadProductsByIds(allSelectedProductIds);
+      const products = await loadProductsByIds(Array.from(allSelectedProductIds));
       
-      // Filter only products that have generated individual blogs
-      const productsWithBlogContent = products.filter(product => 
-        product.individual_blog_content?.commercial || product.individual_blog_content?.technical
-      );
+      // Filter only products that have generated individual blogs and add landing page context
+      const productsWithBlogContent = products
+        .filter(product => 
+          product.individual_blog_content?.commercial || product.individual_blog_content?.technical
+        )
+        .map(product => ({
+          ...product,
+          source_landing_page_ids: productLandingPageMap.get(product.id) || [],
+          primary_landing_page_id: productLandingPageMap.get(product.id)?.[0] || null
+        }));
 
       setProductsWithBlogs(productsWithBlogContent);
-      console.log('🎯 Products with individual blogs loaded:', productsWithBlogContent.length);
+      console.log('🎯 Products with individual blogs loaded:', productsWithBlogContent.length, {
+        productsWithMultipleLandingPages: productsWithBlogContent.filter(p => p.source_landing_page_ids.length > 1).length
+      });
     } catch (error) {
       console.error('❌ Error fetching products with blogs:', error);
     }
@@ -220,13 +241,14 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         const sanitizedCommercialContent = sanitizeBlogContent(product.individual_blog_content.commercial);
         const extractedTitle = extractTitleFromMarkdown(sanitizedCommercialContent);
         productBlogs.push({
-          id: `${product.id}-commercial`,
+          id: `${product.id}-commercial-${product.primary_landing_page_id || 'global'}`,
           title: extractedTitle || `Descubra o ${product.name}`,
           content: sanitizedCommercialContent,
           type: 'commercial',
           productId: product.id,
           productName: product.name,
-          created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+          created_at: product.individual_blog_content.generated_at || new Date().toISOString(),
+          sourceLandingPageId: product.primary_landing_page_id
         });
       }
       
@@ -234,13 +256,14 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         const sanitizedTechnicalContent = sanitizeBlogContent(product.individual_blog_content.technical);
         const extractedTitle = extractTitleFromMarkdown(sanitizedTechnicalContent);
         productBlogs.push({
-          id: `${product.id}-technical`,
+          id: `${product.id}-technical-${product.primary_landing_page_id || 'global'}`,
           title: extractedTitle || `Especificações do ${product.name}`,
           content: sanitizedTechnicalContent,
           type: 'technical',
           productId: product.id,
           productName: product.name,
-          created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+          created_at: product.individual_blog_content.generated_at || new Date().toISOString(),
+          sourceLandingPageId: product.primary_landing_page_id
         });
       }
     });
@@ -254,18 +277,25 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     return productBlogs;
   }, [productsWithBlogs]);
 
-  // Create blog entries filtered by domain
+  // Create blog entries filtered by domain with landing page context
   const getProductBlogsForHTMLByDomain = useMemo(() => {
-    return (domain: string): ProductBlog[] => {
+    return (domain: string, landingPageId?: string): ProductBlog[] => {
       const preferences = getBlogPreferences();
       const productBlogs: ProductBlog[] = [];
 
-      console.log(`🔍 Debug: Creating blogs for domain "${domain}":`, {
+      console.log(`🔍 Debug: Creating blogs for domain "${domain}" ${landingPageId ? `from landing page "${landingPageId}"` : '(all landing pages)'}:`, {
         productsWithBlogs: productsWithBlogs.length,
         preferences: Object.keys(preferences).length
       });
 
-      productsWithBlogs.forEach(product => {
+      // Filter products by landing page if specified
+      const relevantProducts = landingPageId 
+        ? productsWithBlogs.filter(product => 
+            product.source_landing_page_ids?.includes(landingPageId)
+          )
+        : productsWithBlogs;
+
+      relevantProducts.forEach(product => {
         const productPrefs = preferences[product.id];
         
         // Usar valores padrão quando não há preferências salvas
@@ -274,6 +304,8 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         
         console.log(`🔍 Debug: Processing product ${product.name} for domain ${domain}:`, {
           productId: product.id,
+          sourceLandingPages: product.source_landing_page_ids,
+          primaryLandingPage: product.primary_landing_page_id,
           hasPrefs: !!productPrefs,
           useCommercial,
           useTechnical,
@@ -286,15 +318,16 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
           const sanitizedCommercialContent = sanitizeBlogContent(product.individual_blog_content.commercial);
           const extractedTitle = extractTitleFromMarkdown(sanitizedCommercialContent);
           productBlogs.push({
-            id: `${product.id}-commercial`,
+            id: `${product.id}-commercial-${product.primary_landing_page_id || 'global'}`,
             title: extractedTitle || `Por que escolher o ${product.name}`,
             content: sanitizedCommercialContent,
             type: 'commercial',
             productId: product.id,
             productName: product.name,
-            created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+            created_at: product.individual_blog_content.generated_at || new Date().toISOString(),
+            sourceLandingPageId: product.primary_landing_page_id
           });
-          console.log(`✅ Added commercial blog for ${product.name} to Eodonto`);
+          console.log(`✅ Added commercial blog for ${product.name} to Eodonto from LP ${product.primary_landing_page_id}`);
         }
         
         // For Dentala: only technical blogs
@@ -302,19 +335,20 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
           const sanitizedTechnicalContent = sanitizeBlogContent(product.individual_blog_content.technical);
           const extractedTitle = extractTitleFromMarkdown(sanitizedTechnicalContent);
           productBlogs.push({
-            id: `${product.id}-technical`,
+            id: `${product.id}-technical-${product.primary_landing_page_id || 'global'}`,
             title: extractedTitle || `Como funciona o ${product.name}`,
             content: sanitizedTechnicalContent,
             type: 'technical',
             productId: product.id,
             productName: product.name,
-            created_at: product.individual_blog_content.generated_at || new Date().toISOString()
+            created_at: product.individual_blog_content.generated_at || new Date().toISOString(),
+            sourceLandingPageId: product.primary_landing_page_id
           });
-          console.log(`✅ Added technical blog for ${product.name} to Dentala`);
+          console.log(`✅ Added technical blog for ${product.name} to Dentala from LP ${product.primary_landing_page_id}`);
         }
       });
 
-      console.log(`📊 Debug: Generated ${productBlogs.length} blogs for domain "${domain}"`);
+      console.log(`📊 Debug: Generated ${productBlogs.length} blogs for domain "${domain}" ${landingPageId ? `from landing page "${landingPageId}"` : '(all landing pages)'}`);
       return productBlogs;
     };
   }, [productsWithBlogs]);

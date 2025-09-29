@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,12 +28,12 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
   
   const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
 
-  const generateConsolidatedHTML = async (domain: 'dentala' | 'eodonto') => {
+  const generateConsolidatedHTML = async (domain: 'dentala' | 'eodonto', landingPageId?: string) => {
     try {
       setGenerating(true);
       
-      // Get blogs for the specific domain
-      const blogsForDomain = productBlogsForHTMLByDomain(domain);
+      // Get blogs for the specific domain, optionally filtered by landing page
+      const blogsForDomain = productBlogsForHTMLByDomain(domain, landingPageId);
       
       if (blogsForDomain.length === 0) {
         toast({
@@ -132,6 +132,24 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
   const dentalaCount = activeProductBlogsCountByDomain('dentala');
   const eodontoCount = activeProductBlogsCountByDomain('eodonto');
 
+  // Group blogs by landing page for statistics
+  const landingPageStats = useMemo(() => {
+    const stats: Record<string, { dentala: number; eodonto: number; name: string }> = {};
+    
+    approvedLandingPages.forEach(lp => {
+      const dentalaBlogs = productBlogsForHTMLByDomain('dentala', lp.id);
+      const eodontoBlogs = productBlogsForHTMLByDomain('eodonto', lp.id);
+      
+      stats[lp.id] = {
+        dentala: dentalaBlogs.length,
+        eodonto: eodontoBlogs.length,
+        name: lp.name || lp.id
+      };
+    });
+    
+    return stats;
+  }, [approvedLandingPages, productBlogsForHTMLByDomain]);
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -178,6 +196,28 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
               </p>
             </div>
           </div>
+
+          {/* Landing Page Statistics */}
+          {Object.keys(landingPageStats).length > 0 && (
+            <div className="mt-4 p-4 bg-slate-50 border rounded-lg">
+              <h4 className="font-medium mb-3">📊 Blogs por Landing Page:</h4>
+              <div className="space-y-2">
+                {Object.entries(landingPageStats).map(([lpId, stats]) => (
+                  <div key={lpId} className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{stats.name}</span>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="text-blue-600">
+                        {stats.dentala} Dentala
+                      </Badge>
+                      <Badge variant="outline" className="text-green-600">
+                        {stats.eodonto} Eodonto
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Aviso se não há blogs */}
           {dentalaCount === 0 && eodontoCount === 0 && (

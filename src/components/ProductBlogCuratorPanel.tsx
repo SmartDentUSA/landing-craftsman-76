@@ -20,6 +20,8 @@ interface Product {
   description?: string;
   category?: string;
   image_url?: string;
+  source_landing_page_ids?: string[];
+  primary_landing_page_id?: string;
   individual_blog_content?: {
     commercial?: string | null;
     technical?: string | null;
@@ -362,15 +364,25 @@ export function ProductBlogCuratorPanel({
                           )}
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm leading-5 mb-2">
-                              {product.name}
-                            </h4>
-                            
-                            {product.category && (
-                              <Badge variant="secondary" className="text-xs mb-3">
-                                {product.category}
-                              </Badge>
-                            )}
+                             <h4 className="font-medium text-sm leading-5 mb-2">
+                               {product.name}
+                             </h4>
+                             
+                             <div className="flex items-center gap-2 mb-3">
+                               {product.category && (
+                                 <Badge variant="secondary" className="text-xs">
+                                   {product.category}
+                                 </Badge>
+                               )}
+                               {product.source_landing_page_ids && product.source_landing_page_ids.length > 0 && (
+                                 <Badge variant="outline" className="text-xs">
+                                   {product.source_landing_page_ids.length > 1 
+                                     ? `${product.source_landing_page_ids.length} Landing Pages`
+                                     : `LP: ${product.primary_landing_page_id}`
+                                   }
+                                 </Badge>
+                               )}
+                             </div>
 
                             <div className="space-y-3">
                               {/* Header com botão de expandir */}
