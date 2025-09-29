@@ -530,6 +530,9 @@ export const useSEOHTMLGenerator = () => {
   const generateConsolidatedBlogHTML = useCallback((options: ConsolidatedBlogOptions): string => {
     const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage } = options;
 
+    // Define canonical URL at the beginning
+    const canonicalUrl = `https://${domain}`;
+
     // Use aggregated keywords from landing pages + products + blogs if provided
     const allKeywords = aggregatedKeywords && aggregatedKeywords.length > 0 
       ? aggregatedKeywords 
@@ -633,8 +636,6 @@ export const useSEOHTMLGenerator = () => {
         </section>
       `;
     }).join('\n');
-
-    const canonicalUrl = `https://${domain}`;
     
     // Add SEO summary from landing pages if available
     let seoSummary = '';
