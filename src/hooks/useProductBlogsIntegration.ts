@@ -20,6 +20,39 @@ interface ProductBlog {
   created_at: string;
 }
 
+// Função para sanitizar conteúdo do blog removendo CTAs genéricos
+const sanitizeBlogContent = (content: string): string => {
+  if (!content) return '';
+  
+  let sanitized = content;
+  
+  // Remove CTAs genéricos específicos
+  sanitized = sanitized.replace(/\[Solicite uma Demonstração[^\]]*\]/gi, '');
+  sanitized = sanitized.replace(/\[Fale com Nossos Especialistas\]/gi, '');
+  sanitized = sanitized.replace(/\[Baixe o Catálogo Completo\]/gi, '');
+  
+  // Remove frases específicas sobre futuro da odontologia
+  sanitized = sanitized.replace(/O futuro da odontologia digital é simples[^.]*\./gi, '');
+  
+  // Remove rodapé Smart Dent completo
+  sanitized = sanitized.replace(/---\s*\*?Smart Dent[^]*$/gi, '');
+  
+  // Remove informações de contato genérico
+  sanitized = sanitized.replace(/Telefone:\s*\(XX\)[^]*$/gi, '');
+  sanitized = sanitized.replace(/WhatsApp:\s*\(XX\)[^]*$/gi, '');
+  sanitized = sanitized.replace(/Horário de Atendimento:[^]*$/gi, '');
+  
+  // Remove seções de CTA com heading
+  sanitized = sanitized.replace(/###?\s*\[Solicite[^\]]*\][^]*?(?=###?|$)/gi, '');
+  sanitized = sanitized.replace(/###?\s*\[Fale com[^\]]*\][^]*?(?=###?|$)/gi, '');
+  sanitized = sanitized.replace(/###?\s*\[Baixe[^\]]*\][^]*?(?=###?|$)/gi, '');
+  
+  // Remove linhas vazias excessivas
+  sanitized = sanitized.replace(/\n{3,}/g, '\n\n');
+  
+  return sanitized.trim();
+};
+
 export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
   const [productsWithBlogs, setProductsWithBlogs] = useState<any[]>([]);
   const { loadProductsByIds } = useSelectedProducts();
@@ -184,11 +217,12 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       });
       
       if (useCommercial && product.individual_blog_content?.commercial) {
-        const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
+        const sanitizedCommercialContent = sanitizeBlogContent(product.individual_blog_content.commercial);
+        const extractedTitle = extractTitleFromMarkdown(sanitizedCommercialContent);
         productBlogs.push({
           id: `${product.id}-commercial`,
           title: extractedTitle || `Descubra o ${product.name}`,
-          content: product.individual_blog_content.commercial,
+          content: sanitizedCommercialContent,
           type: 'commercial',
           productId: product.id,
           productName: product.name,
@@ -197,11 +231,12 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       }
       
       if (useTechnical && product.individual_blog_content?.technical) {
-        const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
+        const sanitizedTechnicalContent = sanitizeBlogContent(product.individual_blog_content.technical);
+        const extractedTitle = extractTitleFromMarkdown(sanitizedTechnicalContent);
         productBlogs.push({
           id: `${product.id}-technical`,
           title: extractedTitle || `Especificações do ${product.name}`,
-          content: product.individual_blog_content.technical,
+          content: sanitizedTechnicalContent,
           type: 'technical',
           productId: product.id,
           productName: product.name,
@@ -248,11 +283,12 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         
         // For Eodonto: only commercial blogs
         if (domain === 'eodonto' && useCommercial && product.individual_blog_content?.commercial) {
-          const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
+          const sanitizedCommercialContent = sanitizeBlogContent(product.individual_blog_content.commercial);
+          const extractedTitle = extractTitleFromMarkdown(sanitizedCommercialContent);
           productBlogs.push({
             id: `${product.id}-commercial`,
             title: extractedTitle || `Por que escolher o ${product.name}`,
-            content: product.individual_blog_content.commercial,
+            content: sanitizedCommercialContent,
             type: 'commercial',
             productId: product.id,
             productName: product.name,
@@ -263,11 +299,12 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         
         // For Dentala: only technical blogs
         if (domain === 'dentala' && useTechnical && product.individual_blog_content?.technical) {
-          const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
+          const sanitizedTechnicalContent = sanitizeBlogContent(product.individual_blog_content.technical);
+          const extractedTitle = extractTitleFromMarkdown(sanitizedTechnicalContent);
           productBlogs.push({
             id: `${product.id}-technical`,
             title: extractedTitle || `Como funciona o ${product.name}`,
-            content: product.individual_blog_content.technical,
+            content: sanitizedTechnicalContent,
             type: 'technical',
             productId: product.id,
             productName: product.name,
