@@ -1005,20 +1005,6 @@ export const useSEOHTMLGenerator = () => {
       box-shadow: var(--shadow-md);
     }
     
-    .summary-box {
-      background: linear-gradient(135deg, hsl(221, 83%, 98%), hsl(221, 83%, 95%));
-      padding: 2rem;
-      border-radius: var(--border-radius);
-      margin: 3rem 0;
-      border-left: 4px solid var(--primary-color);
-      box-shadow: var(--shadow-md);
-    }
-    
-    .summary-box h3 {
-      color: var(--primary-color);
-      margin-bottom: 1rem;
-      font-weight: 600;
-    }
     
     .seo-summary {
       background: linear-gradient(135deg, hsl(291, 64%, 98%), hsl(291, 64%, 95%));
@@ -1144,7 +1130,7 @@ export const useSEOHTMLGenerator = () => {
         margin: 0 1.5rem 1.25rem;
       }
       
-      .summary-box, .seo-summary, .products-summary, .keywords-section {
+      .seo-summary, .products-summary, .keywords-section {
         margin: 2rem 0;
         padding: 1.5rem;
       }
@@ -1165,10 +1151,6 @@ export const useSEOHTMLGenerator = () => {
       </div>
     </div>
     
-    <div class="summary-box">
-      <h3>📋 Resumo do Conteúdo</h3>
-      <p>Este documento consolida ${blogs.length} artigo${blogs.length > 1 ? 's especializados' : ' especializado'} sobre produtos e serviços relevantes. Cada seção aborda aspectos técnicos e comerciais importantes para profissionais da área.</p>
-    </div>
     
     
     <main class="blog-section">
