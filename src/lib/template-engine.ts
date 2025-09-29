@@ -2109,6 +2109,18 @@ export const generatePreviewHTML = (data: any): string => {
     // Map schema offers to template-level offers and resources_products
     offers: (data.schema?.offers || []).map((offer: any) => ({
       ...offer,
+      // ✨ COMPLETE PRODUCT DATA MAPPINGS
+      features: offer.features || [],
+      benefits: offer.benefits || [],
+      technical_specifications: offer.technical_specifications || [],
+      target_audience: offer.target_audience || [],
+      market_keywords: offer.market_keywords || [],
+      search_intent_keywords: offer.search_intent_keywords || [],
+      // Resource CTAs with complete mapping
+      resource_cta1: offer.resource_cta1 || { url: '', label: '', visible: false },
+      resource_cta2: offer.resource_cta2 || { url: '', label: '', visible: false },
+      resource_cta3: offer.resource_cta3 || { url: '', label: '', visible: false },
+      resource_descriptions: offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
       // Ensure required template fields
       discount_percentage: offer.discount_percentage || '',
       isPriceZero: parseFloat((offer.price || '0').toString().replace(/[^\d.,]/g, '').replace(',', '.')) === 0
@@ -2118,6 +2130,18 @@ export const generatePreviewHTML = (data: any): string => {
       .filter((offer: any) => offer.show_in_resources === true)
       .map((offer: any, index: number) => ({
         ...offer,
+        // ✨ COMPLETE PRODUCT DATA MAPPINGS FOR RESOURCES
+        features: offer.features || [],
+        benefits: offer.benefits || [],
+        technical_specifications: offer.technical_specifications || [],
+        target_audience: offer.target_audience || [],
+        market_keywords: offer.market_keywords || [],
+        search_intent_keywords: offer.search_intent_keywords || [],
+        // Resource CTAs with complete mapping
+        resource_cta1: offer.resource_cta1 || { url: '', label: '', visible: false },
+        resource_cta2: offer.resource_cta2 || { url: '', label: '', visible: false },
+        resource_cta3: offer.resource_cta3 || { url: '', label: '', visible: false },
+        resource_descriptions: offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
         first: index === 0 // Flag for carousel dots
       })),
     
@@ -2371,6 +2395,20 @@ export const generateHTML = (data: any): string => {
     processedData.offers = data.schema?.offers?.filter((offer: any) => offer.selected !== false).map((offer: any) => {
       let processedOffer = { ...offer };
       
+      // ✨ COMPLETE PRODUCT DATA MAPPINGS
+      processedOffer.features = offer.features || [];
+      processedOffer.benefits = offer.benefits || [];
+      processedOffer.technical_specifications = offer.technical_specifications || [];
+      processedOffer.target_audience = offer.target_audience || [];
+      processedOffer.market_keywords = offer.market_keywords || [];
+      processedOffer.search_intent_keywords = offer.search_intent_keywords || [];
+      
+      // ✨ COMPLETE RESOURCE CTAs MAPPINGS
+      processedOffer.resource_cta1 = offer.resource_cta1 || { url: '', label: '', visible: false };
+      processedOffer.resource_cta2 = offer.resource_cta2 || { url: '', label: '', visible: false };
+      processedOffer.resource_cta3 = offer.resource_cta3 || { url: '', label: '', visible: false };
+      processedOffer.resource_descriptions = offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' };
+      
       // Check if price is zero for "Pedir orçamento" logic
       const priceValue = parseFloat(offer.price?.toString().replace(/[^\d.,]/g, '').replace(',', '.') || '0');
       processedOffer.isPriceZero = priceValue === 0;
@@ -2379,12 +2417,10 @@ export const generateHTML = (data: any): string => {
       if (offer.original_price && offer.price) {
         const original = parseFloat(offer.original_price.replace(/[^\d.,]/g, '').replace(',', '.'));
         const current = parseFloat(offer.price.replace(/[^\d.,]/g, '').replace(',', '.'));
-        if (original > current) {
+        if (original > current) {  
           processedOffer.discount_percentage = Math.round(((original - current) / original) * 100);
         }
       }
-      
-      // Ratings removidos para layout simplificado
       
       // Handle image URL processing (Cloudflare support)
       if (offer.image) {
@@ -2420,7 +2456,21 @@ export const generateHTML = (data: any): string => {
     processedData.resources_products = data.schema?.offers?.filter((offer: any) => offer.show_in_resources === true).map((offer: any, index: number) => {
       let processedOffer = { ...offer };
       
-      // Check if price is zero for "Pedir orçamento" logic
+      // ✨ COMPLETE PRODUCT DATA MAPPINGS FOR RESOURCES
+      processedOffer.features = offer.features || [];
+      processedOffer.benefits = offer.benefits || [];
+      processedOffer.technical_specifications = offer.technical_specifications || [];
+      processedOffer.target_audience = offer.target_audience || [];
+      processedOffer.market_keywords = offer.market_keywords || [];
+      processedOffer.search_intent_keywords = offer.search_intent_keywords || [];
+      
+      // ✨ COMPLETE RESOURCE CTAs MAPPINGS  
+      processedOffer.resource_cta1 = offer.resource_cta1 || { url: '', label: '', visible: false };
+      processedOffer.resource_cta2 = offer.resource_cta2 || { url: '', label: '', visible: false };
+      processedOffer.resource_cta3 = offer.resource_cta3 || { url: '', label: '', visible: false };
+      processedOffer.resource_descriptions = offer.resource_descriptions || { cta1: '', cta2: '', cta3: '' };
+      
+      // Check if price is zero for "Pedir orçamento" logic  
       const priceValue = parseFloat(offer.price?.toString().replace(/[^\d.,]/g, '').replace(',', '.') || '0');
       processedOffer.isPriceZero = priceValue === 0;
       
@@ -2722,6 +2772,32 @@ export const generateHTML = (data: any): string => {
             ...(offer.valid_through && { "validThrough": offer.valid_through }),
             ...(offer.productUrl && { "url": offer.productUrl })
           };
+
+          // ✨ ADD TECHNICAL SPECIFICATIONS AS ADDITIONAL PROPERTIES
+          if (offer.technical_specifications && offer.technical_specifications.length > 0) {
+            offerSchema.additionalProperty = offer.technical_specifications.map((spec: any) => ({
+              "@type": "PropertyValue",
+              "name": spec.label || spec.name || "Especificação",
+              "value": spec.value || spec.description || ""
+            }));
+          }
+
+          // ✨ ADD PRODUCT FEATURES AND BENEFITS
+          if (offer.features && offer.features.length > 0) {
+            offerSchema.hasFeature = offer.features.map((feature: string) => ({
+              "@type": "Thing",
+              "name": feature
+            }));
+          }
+
+          // ✨ ADD GOOGLE MERCHANT CENTER FIELDS  
+          if (offer.gtin) offerSchema.gtin = offer.gtin;
+          if (offer.mpn) offerSchema.mpn = offer.mpn;
+          if (offer.brand) offerSchema.brand = { "@type": "Brand", "name": offer.brand };
+          if (offer.condition) offerSchema.itemCondition = `https://schema.org/${offer.condition === 'new' ? 'NewCondition' : 'UsedCondition'}`;
+          if (offer.color) offerSchema.color = offer.color;
+          if (offer.size) offerSchema.size = offer.size;
+          if (offer.material) offerSchema.material = offer.material;
 
           // Adicionar vídeos se disponíveis
           const videos = [];

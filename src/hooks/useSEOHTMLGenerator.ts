@@ -74,6 +74,17 @@ export const useSEOHTMLGenerator = () => {
       includeSchema = true
     } = options;
 
+    // ✨ APPLY SEO OVERRIDES FROM PRODUCTS
+    const seoTitle = products.length > 0 && products[0].seo_title_override 
+      ? products[0].seo_title_override 
+      : title;
+    const seoDescription = products.length > 0 && products[0].seo_description_override 
+      ? products[0].seo_description_override 
+      : description;
+    const seoCanonicalUrl = products.length > 0 && products[0].canonical_url 
+      ? products[0].canonical_url 
+      : canonicalUrl;
+
     // Criar mapeamento de links inteligentes
     const intelligentLinks: Record<string, string> = {};
     allLinks.forEach(link => {
@@ -89,11 +100,54 @@ export const useSEOHTMLGenerator = () => {
     let schemaJson = '';
     if (includeSchema) {
       if (type === 'product' && products.length > 0) {
-        const { schemas } = generateCompletePageSchema(products, undefined, undefined, undefined, title, description);
-        schemaJson = `
-        <script type="application/ld+json">
-        ${JSON.stringify(schemas, null, 2)}
-        </script>`;
+        // ✨ GENERATE SCHEMA FOR MULTIPLE PRODUCTS
+        if (products.length === 1) {
+          const { schemas } = generateCompletePageSchema(products, undefined, undefined, undefined, seoTitle, seoDescription);
+          schemaJson = `
+          <script type="application/ld+json">
+          ${JSON.stringify(schemas, null, 2)}
+          </script>`;
+        } else {
+          // Generate ItemList schema for multiple products
+          const itemListSchema = {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "name": seoTitle,
+            "description": seoDescription,
+            "numberOfItems": products.length,
+            "itemListElement": products.map((product, index) => ({
+              "@type": "ListItem",
+              "position": index + 1,
+              "item": {
+                "@type": "Product",
+                "name": product.name,
+                "description": product.description,
+                "image": product.image_url,
+                ...(product.gtin && { "gtin": product.gtin }),
+                ...(product.mpn && { "mpn": product.mpn }),
+                ...(product.brand && { "brand": { "@type": "Brand", "name": product.brand } }),
+                ...(product.technical_specifications && product.technical_specifications.length > 0 && {
+                  "additionalProperty": product.technical_specifications.map((spec: any) => ({
+                    "@type": "PropertyValue",
+                    "name": spec.label || spec.name,
+                    "value": spec.value || spec.description
+                  }))
+                }),
+                "offers": {
+                  "@type": "Offer",
+                  "price": product.price,
+                  "priceCurrency": product.currency || "BRL",
+                  "availability": `https://schema.org/${product.availability === 'in stock' ? 'InStock' : 'OutOfStock'}`,
+                  "itemCondition": `https://schema.org/${product.condition === 'new' ? 'NewCondition' : 'UsedCondition'}`
+                }
+              }
+            }))
+          };
+          schemaJson = `
+          <script type="application/ld+json">
+          ${JSON.stringify(itemListSchema, null, 2)}
+          </script>`;
+        }
       } else if (type === 'article') {
         const articleSchema = {
           "@context": "https://schema.org",
@@ -123,8 +177,53 @@ export const useSEOHTMLGenerator = () => {
       }
     }
 
-    // URL canônica
-    const canonical = canonicalUrl || (domain ? `https://${domain}` : window.location.href);
+    // ✨ AGGREGATE KEYWORDS FROM PRODUCTS 
+    const aggregatedKeywords = [...keywords];
+    if (products.length > 0) {
+      products.forEach(product => {
+        if (product.keywords) aggregatedKeywords.push(...product.keywords);
+        if (product.market_keywords) aggregatedKeywords.push(...product.market_keywords);
+        if (product.search_intent_keywords) aggregatedKeywords.push(...product.search_intent_keywords);
+      });
+    }
+    // Remove duplicates and limit to top 50 keywords
+    const uniqueKeywords = [...new Set(aggregatedKeywords)].slice(0, 50);
+
+    // URL canônica com SEO override
+    const canonical = seoCanonicalUrl || (domain ? `https://${domain}` : window.location.href);
+
+    // ✨ GENERATE GOOGLE MERCHANT META TAGS FOR ALL PRODUCTS
+    const generateGoogleMerchantTags = () => {
+      if (products.length === 0) return '';
+      
+      // For single product, use product:* tags
+      if (products.length === 1) {
+        const product = products[0];
+        return `
+  ${product.gtin ? `<meta property="product:retailer_item_id" content="${product.gtin}">` : ''}
+  ${product.mpn ? `<meta property="product:sku" content="${product.mpn}">` : ''}
+  ${product.brand ? `<meta property="product:brand" content="${product.brand}">` : ''}
+  ${product.condition ? `<meta property="product:condition" content="${product.condition}">` : ''}
+  ${product.availability ? `<meta property="product:availability" content="${product.availability}">` : ''}
+  ${product.color ? `<meta property="product:color" content="${product.color}">` : ''}
+  ${product.google_product_category ? `<meta property="product:category" content="${product.google_product_category}">` : ''}
+  <meta property="product:price:amount" content="${product.price || 0}">
+  <meta property="product:price:currency" content="${product.currency || 'BRL'}">`;
+      }
+      
+      // For multiple products, generate tags for each
+      return products.map((product, index) => `
+  <!-- Product ${index + 1} -->
+  ${product.gtin ? `<meta property="product:retailer_item_id:${index}" content="${product.gtin}">` : ''}
+  ${product.mpn ? `<meta property="product:sku:${index}" content="${product.mpn}">` : ''}
+  ${product.brand ? `<meta property="product:brand:${index}" content="${product.brand}">` : ''}
+  ${product.condition ? `<meta property="product:condition:${index}" content="${product.condition}">` : ''}
+  ${product.availability ? `<meta property="product:availability:${index}" content="${product.availability}">` : ''}
+  ${product.color ? `<meta property="product:color:${index}" content="${product.color}">` : ''}
+  ${product.google_product_category ? `<meta property="product:category:${index}" content="${product.google_product_category}">` : ''}
+  <meta property="product:price:amount:${index}" content="${product.price || 0}">
+  <meta property="product:price:currency:${index}" content="${product.currency || 'BRL'}">`).join('');
+    };
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -134,16 +233,16 @@ export const useSEOHTMLGenerator = () => {
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
   <!-- SEO Meta Tags -->
-  <title>${title}</title>
-  <meta name="description" content="${description}">
-  ${keywords.length > 0 ? `<meta name="keywords" content="${keywords.join(', ')}">` : ''}
+  <title>${seoTitle}</title>
+  <meta name="description" content="${seoDescription}">
+  ${uniqueKeywords.length > 0 ? `<meta name="keywords" content="${uniqueKeywords.join(', ')}">` : ''}
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="${canonical}">
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="${type === 'product' ? 'product' : 'article'}">
-  <meta property="og:title" content="${title}">
-  <meta property="og:description" content="${description}">
+  <meta property="og:title" content="${seoTitle}">
+  <meta property="og:description" content="${seoDescription}">
   <meta property="og:url" content="${canonical}">
   <meta property="og:site_name" content="${domain || 'Nossa Empresa'}">
   ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
@@ -151,8 +250,8 @@ export const useSEOHTMLGenerator = () => {
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${title}">
-  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:title" content="${seoTitle}">
+  <meta name="twitter:description" content="${seoDescription}">
   ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : ''}
   
   <!-- Additional SEO Meta Tags -->
@@ -160,17 +259,8 @@ export const useSEOHTMLGenerator = () => {
   <meta name="generator" content="SEO Generator">
   <meta name="theme-color" content="#007bff">
   
-  <!-- ✨ META TAGS GOOGLE MERCHANT + E-COMMERCE -->
-  ${products.length > 0 && products[0] ? `
-  ${products[0].gtin ? `<meta property="product:retailer_item_id" content="${products[0].gtin}">` : ''}
-  ${products[0].brand ? `<meta property="product:brand" content="${products[0].brand}">` : ''}
-  ${products[0].condition ? `<meta property="product:condition" content="${products[0].condition}">` : ''}
-  ${products[0].availability ? `<meta property="product:availability" content="${products[0].availability}">` : ''}
-  ${products[0].color ? `<meta property="product:color" content="${products[0].color}">` : ''}
-  ${products[0].google_product_category ? `<meta property="product:category" content="${products[0].google_product_category}">` : ''}
-  <meta property="product:price:amount" content="${products[0].price || 0}">
-  <meta property="product:price:currency" content="${products[0].currency || 'BRL'}">
-  ` : ''}
+  <!-- ✨ GOOGLE MERCHANT META TAGS FOR ALL PRODUCTS -->
+  ${generateGoogleMerchantTags()}
   
   ${schemaJson}
   
