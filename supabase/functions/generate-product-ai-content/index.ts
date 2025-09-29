@@ -336,17 +336,9 @@ Inclua NESTA ORDEM DE PRIORIDADE:
   });
 
   return await parseAIArrayResponse(response, 'keywords');
-Descrição: ${product.description || 'Não informada'}
-Categoria: ${product.category || 'Não informada'}
-Subcategoria: ${product.subcategory || 'Não informada'}
-Público-alvo: ${product.target_audience || 'Não informado'}
+}
 
-${instruction}
-
-["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]
-
-INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
-1. **PRIORIZE categoria e subcategoria como palavras-chave primárias**
+async function generateProductFeatures(apiKey: string, product: any, existingFeatures: string[] = [], complementOnly: boolean = false): Promise<string[]> {
 2. **Gere variações da categoria (plural, singular, sinônimos)**
 3. **Combine categoria + subcategoria + nome do produto**
 

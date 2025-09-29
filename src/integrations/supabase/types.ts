@@ -356,6 +356,7 @@ export type Database = {
       }
       google_ads_campaigns: {
         Row: {
+          campaign_history: Json | null
           campaign_type: string | null
           config: Json
           created_at: string
@@ -366,6 +367,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          campaign_history?: Json | null
           campaign_type?: string | null
           config: Json
           created_at?: string
@@ -376,6 +378,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          campaign_history?: Json | null
           campaign_type?: string | null
           config?: Json
           created_at?: string
