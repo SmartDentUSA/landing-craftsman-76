@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { productId, config, productData } = await req.json();
+    console.log('📊 Iniciando export Google Ads CSV para produto:', { productId, config: config?.utm });
 
     if (!productId || !config || !productData) {
       return new Response(
@@ -35,8 +36,11 @@ serve(async (req) => {
       .single();
 
     if (productError || !product) {
+      console.error('Produto não encontrado:', { productId, error: productError });
       throw new Error('Product not found');
     }
+
+    console.log('✅ Produto encontrado:', { name: product.name, category: product.category });
 
     // Collect keywords specific to product
     const keywords = collectProductKeywords(product, productData);
@@ -50,20 +54,24 @@ serve(async (req) => {
     // Generate ad copies using AI
     const adCopies = await generateProductAdCopies(productData, keywords);
 
-    // Build CSV for Google Ads Editor
-    const finalUrl = product.product_url || 'https://example.com';
-    const csv = buildGoogleAdsCSV({
-      campaignName: `Campaign_${product.name.replace(/\s+/g, '_')}`,
-      campaignConfig: config,
-      adGroups: [{
-        name: `AG_${product.category || 'Product'}_${product.name}`.replace(/\s+/g, '_'),
-        keywords: keywords.map(keyword => ({
-          text: keyword,
-          match_type: 'BROAD',
-          theme: product.category || 'product'
-        })),
+    // Build CSV using the standardized GoogleAdsCSVBuilder
+    const finalUrl = applyUTM(product.product_url || 'https://example.com', config.utm);
+    const campaignName = `Campaign_${product.name.replace(/\s+/g, '_')}`;
+    
+    const adGroups = [{
+      name: `AG_${product.category || 'Product'}_${product.name}`.replace(/\s+/g, '_'),
+      keywords: keywords.map(keyword => ({
+        text: keyword,
+        match_type: 'BROAD' as const,
         theme: product.category || 'product'
-      }],
+      })),
+      theme: product.category || 'product'
+    }];
+
+    const csv = GoogleAdsCSVBuilder.buildFullCSV({
+      campaignName,
+      campaignConfig: config,
+      adGroups,
       adCopies,
       sitelinks,
       videos,
@@ -79,6 +87,8 @@ serve(async (req) => {
         config,
         last_exported: new Date().toISOString()
       });
+
+    console.log('✅ CSV gerado com sucesso para produto:', product.name);
 
     return new Response(
       JSON.stringify({ 
@@ -248,47 +258,107 @@ async function generateProductAdCopies(productData: any, keywords: string[]) {
   };
 }
 
-// Simple CSV builder for product campaigns
-function buildGoogleAdsCSV(params: any): string {
-  const { campaignName, campaignConfig, adGroups, adCopies, sitelinks, videos, finalUrl } = params;
-  
-  let csv = '';
-  
-  // Campaign section
-  csv += `Campaign,Ad Group,Keyword,Match Type,Max CPC,Ad Title,Description Line 1,Description Line 2,Display URL,Final URL,Sitelink,Sitelink URL,Video URL\n`;
-  
-  // Add campaign data
-  for (const adGroup of adGroups) {
-    for (const keyword of adGroup.keywords) {
-      // Add keyword row
-      csv += `${campaignName},${adGroup.name},${csvEscape(keyword.text)},${keyword.match_type},,,,,${csvEscape(finalUrl)},${csvEscape(finalUrl)},,\n`;
+// Standardized Google Ads CSV Builder (copied from lib/google-ads/csv-builder.ts)
+class GoogleAdsCSVBuilder {
+  static buildFullCSV(params: {
+    campaignName: string;
+    campaignConfig: any;
+    adGroups: any[];
+    adCopies: any;
+    sitelinks: any[];
+    videos: any[];
+    finalUrl: string;
+  }): string {
+    const sections = [
+      this.buildCampaignsSection(params.campaignName, params.campaignConfig),
+      this.buildAdGroupsSection(params.adGroups, params.campaignName),
+      this.buildAdsSection(params.adGroups, params.adCopies, params.campaignName, params.finalUrl),
+      this.buildKeywordsSection(params.adGroups, params.campaignName),
+      this.buildSitelinksSection(params.sitelinks, params.campaignName),
+      this.buildVideoExtensionsSection(params.videos, params.campaignName)
+    ];
+
+    return sections.filter(section => section.trim()).join('\n\n');
+  }
+
+  private static buildCampaignsSection(campaignName: string, config: any): string {
+    let csv = 'Campaign,Status,Budget,Bid Strategy,Location,Language\n';
+    csv += `${this.csvEscape(campaignName)},Active,${config.daily_budget_brl || 30},${config.bidding?.strategy || 'MAX_CONV'},"${config.locations?.join(', ') || 'Brazil'}","${config.languages?.join(', ') || 'pt-BR'}"\n`;
+    return csv;
+  }
+
+  private static buildAdGroupsSection(adGroups: any[], campaignName: string): string {
+    let csv = 'Campaign,Ad Group,Status\n';
+    for (const adGroup of adGroups) {
+      csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},Active\n`;
     }
+    return csv;
+  }
+
+  private static buildAdsSection(adGroups: any[], adCopies: any, campaignName: string, finalUrl: string): string {
+    let csv = 'Campaign,Ad Group,Headlines,Descriptions,Paths,Final URL\n';
     
-    // Add ad copies
-    if (adCopies.headlines && adCopies.descriptions) {
-      for (let i = 0; i < Math.min(adCopies.headlines.length, 3); i++) {
-        for (let j = 0; j < Math.min(adCopies.descriptions.length, 2); j++) {
-          csv += `${campaignName},${adGroup.name},,,,${csvEscape(adCopies.headlines[i] || '')},${csvEscape(adCopies.descriptions[j] || '')},${csvEscape(adCopies.descriptions[j+1] || '')},${csvEscape(finalUrl)},${csvEscape(finalUrl)},,\n`;
-        }
+    for (const adGroup of adGroups) {
+      if (adCopies.headlines && adCopies.descriptions) {
+        const headlines = adCopies.headlines.slice(0, 15).map((h: string) => this.csvEscape(h)).join('|');
+        const descriptions = adCopies.descriptions.slice(0, 4).map((d: string) => this.csvEscape(d)).join('|');
+        const paths = (adCopies.paths || []).slice(0, 2).map((p: string) => this.csvEscape(p)).join('|');
+        
+        csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},"${headlines}","${descriptions}","${paths}",${this.csvEscape(finalUrl)}\n`;
       }
     }
-    
-    // Add sitelinks
-    for (const sitelink of sitelinks.slice(0, 6)) {
-      csv += `${campaignName},${adGroup.name},,,,,,,,${csvEscape(finalUrl)},${csvEscape(sitelink.label)},${csvEscape(sitelink.url)},\n`;
-    }
+    return csv;
   }
-  
-  return csv;
+
+  private static buildKeywordsSection(adGroups: any[], campaignName: string): string {
+    let csv = 'Campaign,Ad Group,Keyword,Match Type\n';
+    for (const adGroup of adGroups) {
+      for (const keyword of adGroup.keywords) {
+        csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},${this.csvEscape(keyword.text)},${keyword.match_type}\n`;
+      }
+    }
+    return csv;
+  }
+
+  private static buildSitelinksSection(sitelinks: any[], campaignName: string): string {
+    if (!sitelinks.length) return '';
+    
+    let csv = 'Campaign,Sitelink Text,Sitelink URL\n';
+    for (const sitelink of sitelinks.slice(0, 6)) {
+      csv += `${this.csvEscape(campaignName)},${this.csvEscape(sitelink.label)},${this.csvEscape(sitelink.url)}\n`;
+    }
+    return csv;
+  }
+
+  private static buildVideoExtensionsSection(videos: any[], campaignName: string): string {
+    if (!videos.length) return '';
+    
+    let csv = 'Campaign,Video Extension,YouTube Video ID\n';
+    for (const video of videos.slice(0, 5)) {
+      csv += `${this.csvEscape(campaignName)},${this.csvEscape(video.label || 'Video')},${this.csvEscape(video.youtube_id)}\n`;
+    }
+    return csv;
+  }
+
+  private static csvEscape(value: string): string {
+    if (!value) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
 }
 
-function csvEscape(value: string): string {
-  if (!value) return '';
+function applyUTM(url: string, utm: any): string {
+  if (!utm || !url) return url;
   
-  // Convert to string and handle quotes/commas/newlines
-  const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
+  const urlObj = new URL(url);
+  if (utm.source) urlObj.searchParams.set('utm_source', utm.source);
+  if (utm.medium) urlObj.searchParams.set('utm_medium', utm.medium);
+  if (utm.campaign) urlObj.searchParams.set('utm_campaign', utm.campaign);
+  if (utm.content) urlObj.searchParams.set('utm_content', utm.content);
+  if (utm.term) urlObj.searchParams.set('utm_term', utm.term);
+  
+  return urlObj.toString();
 }

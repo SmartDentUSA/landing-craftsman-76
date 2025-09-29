@@ -296,7 +296,7 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
     try {
       const productData = getProductData();
       
-      const { data, error } = await supabase.functions.invoke('export-google-ads-csv', {
+      const { data, error } = await supabase.functions.invoke('export-product-google-ads-csv', {
         body: {
           productId: product.id,
           config: campaignConfig,
