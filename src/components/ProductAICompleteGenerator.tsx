@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Wand2, CheckCircle, AlertCircle, History } from "lucide-react";
+import { Loader2, Sparkles, Wand2, CheckCircle, AlertCircle, History, Video } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface GenerationResult {
@@ -41,7 +41,7 @@ export function ProductAICompleteGenerator() {
     { id: 'whatsapp', name: 'WhatsApp Messages', icon: '💬' },
     { id: 'youtube', name: 'YouTube Descriptions', icon: '🎥' },
     { id: 'instagram', name: 'Instagram Copy', icon: '📸' },
-    { id: 'tiktok', name: 'TikTok Content', icon: '🎵' },
+    { id: 'tiktok', name: 'TikTok Content', icon: <Video className="w-4 h-4" /> },
     { id: 'blog', name: 'Blog Posts', icon: '📝' },
     { id: 'google-ads', name: 'Google Ads', icon: '📢' }
   ];
@@ -312,7 +312,7 @@ export function ProductAICompleteGenerator() {
                 return (
                   <Card key={type.id} className={`p-3 ${hasResults ? 'border-primary/20' : ''}`}>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">{type.icon}</span>
+                      <span className="text-lg flex items-center justify-center">{type.icon}</span>
                       <span className="text-sm font-medium">{type.name}</span>
                     </div>
                     
@@ -349,7 +349,10 @@ export function ProductAICompleteGenerator() {
 
                       return (
                         <div key={type.id}>
-                          <h4 className="font-medium text-sm mb-2">{type.icon} {type.name}</h4>
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                            <span className="flex items-center justify-center">{type.icon}</span>
+                            {type.name}
+                          </h4>
                           <div className="space-y-1 ml-4">
                             {results.map((result, index) => (
                               <div key={index} className="flex items-center gap-2 text-xs">
