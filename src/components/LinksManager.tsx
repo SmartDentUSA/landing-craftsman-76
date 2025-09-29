@@ -118,6 +118,82 @@ export const LinksManager = () => {
       loadProductCategories();
     }
   }, [externalLinks]);
+
+  // Helper functions defined before use
+  const formatOrigin = (link: ExternalLinkType) => {
+    // Detectar origem baseado na descrição, URL ou categoria legacy
+    if (link.description?.includes('Keyword do produto:') || 
+        link.description?.includes('Importado do produto:') ||
+        link.description?.includes('keyword-import') ||
+        link.category?.includes('keyword') ||
+        link.url.match(/\/produto\/[a-f0-9-]{36}/)) {
+      return 'Importação (keyword-import)';
+    }
+    return 'Manual';
+  };
+
+  const formatCategory = (link: ExternalLinkType) => {
+    // Extract from description pattern: "Keyword do produto: ... (Category • Subcategory)"
+    if (link.description?.includes('Keyword do produto:')) {
+      const categoryMatch = link.description.match(/\(([^)]+)\)$/);
+      if (categoryMatch) {
+        const categoryInfo = categoryMatch[1];
+        const categoryPart = categoryInfo.split(' • ')[0];
+        return categoryPart;
+      }
+    }
+    
+    // Use productCategoryMap for /produto/{id} URLs
+    const productMatch = link.url.match(/\/produto\/([a-f0-9-]{36})/);
+    if (productMatch && productCategoryMap[productMatch[1]]) {
+      return productCategoryMap[productMatch[1]].category;
+    }
+    
+    // Only show link.category if it exists in dynamicCategories
+    if (link.category && dynamicCategories.some(cat => cat.value === link.category)) {
+      return link.category;
+    }
+    
+    return '—';
+  };
+
+  const formatSubcategory = (link: ExternalLinkType) => {
+    // Extract from description pattern: "Keyword do produto: ... (Category • Subcategory)"
+    if (link.description?.includes('Keyword do produto:')) {
+      const categoryMatch = link.description.match(/\(([^)]+)\)$/);
+      if (categoryMatch) {
+        const categoryInfo = categoryMatch[1];
+        const parts = categoryInfo.split(' • ');
+        if (parts.length > 1) {
+          const subcategory = parts[1];
+          // Don't show generic subcategories
+          if (subcategory && !['geral', 'outros', 'geral'].includes(subcategory.toLowerCase())) {
+            return subcategory;
+          }
+        }
+      }
+    }
+    
+    // Use productCategoryMap for /produto/{id} URLs
+    const productMatch = link.url.match(/\/produto\/([a-f0-9-]{36})/);
+    if (productMatch && productCategoryMap[productMatch[1]]) {
+      const subcategory = productCategoryMap[productMatch[1]].subcategory;
+      if (subcategory && !['geral', 'outros'].includes(subcategory.toLowerCase())) {
+        return subcategory;
+      }
+    }
+    
+    // Only show subcategory if it's valid for the category
+    const category = formatCategory(link);
+    if (link.subcategory && 
+        dynamicSubcategories[category]?.includes(link.subcategory) &&
+        !['geral', 'outros'].includes(link.subcategory.toLowerCase())) {
+      return link.subcategory;
+    }
+    
+    return '—';
+  };
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingKeyword, setEditingKeyword] = useState<KeywordLink | null>(null);
   const [formData, setFormData] = useState({
@@ -353,79 +429,6 @@ export const LinksManager = () => {
     }
   };
 
-  const formatOrigin = (link: ExternalLinkType) => {
-    // Detectar origem baseado na descrição, URL ou categoria legacy
-    if (link.description?.includes('Keyword do produto:') || 
-        link.description?.includes('Importado do produto:') ||
-        link.description?.includes('keyword-import') ||
-        link.category?.includes('keyword') ||
-        link.url.match(/\/produto\/[a-f0-9-]{36}/)) {
-      return 'Importação (keyword-import)';
-    }
-    return 'Manual';
-  };
-
-  const formatCategory = (link: ExternalLinkType) => {
-    // Extract from description pattern: "Keyword do produto: ... (Category • Subcategory)"
-    if (link.description?.includes('Keyword do produto:')) {
-      const categoryMatch = link.description.match(/\(([^)]+)\)$/);
-      if (categoryMatch) {
-        const categoryInfo = categoryMatch[1];
-        const categoryPart = categoryInfo.split(' • ')[0];
-        return categoryPart;
-      }
-    }
-    
-    // Use productCategoryMap for /produto/{id} URLs
-    const productMatch = link.url.match(/\/produto\/([a-f0-9-]{36})/);
-    if (productMatch && productCategoryMap[productMatch[1]]) {
-      return productCategoryMap[productMatch[1]].category;
-    }
-    
-    // Only show link.category if it exists in dynamicCategories
-    if (link.category && dynamicCategories.some(cat => cat.value === link.category)) {
-      return link.category;
-    }
-    
-    return '—';
-  };
-
-  const formatSubcategory = (link: ExternalLinkType) => {
-    // Extract from description pattern: "Keyword do produto: ... (Category • Subcategory)"
-    if (link.description?.includes('Keyword do produto:')) {
-      const categoryMatch = link.description.match(/\(([^)]+)\)$/);
-      if (categoryMatch) {
-        const categoryInfo = categoryMatch[1];
-        const parts = categoryInfo.split(' • ');
-        if (parts.length > 1) {
-          const subcategory = parts[1];
-          // Don't show generic subcategories
-          if (subcategory && !['geral', 'outros', 'geral'].includes(subcategory.toLowerCase())) {
-            return subcategory;
-          }
-        }
-      }
-    }
-    
-    // Use productCategoryMap for /produto/{id} URLs
-    const productMatch = link.url.match(/\/produto\/([a-f0-9-]{36})/);
-    if (productMatch && productCategoryMap[productMatch[1]]) {
-      const subcategory = productCategoryMap[productMatch[1]].subcategory;
-      if (subcategory && !['geral', 'outros'].includes(subcategory.toLowerCase())) {
-        return subcategory;
-      }
-    }
-    
-    // Only show subcategory if it's valid for the category
-    const category = formatCategory(link);
-    if (link.subcategory && 
-        dynamicSubcategories[category]?.includes(link.subcategory) &&
-        !['geral', 'outros'].includes(link.subcategory.toLowerCase())) {
-      return link.subcategory;
-    }
-    
-    return '—';
-  };
 
   const resetFilters = () => {
     setSearchTerm('');
