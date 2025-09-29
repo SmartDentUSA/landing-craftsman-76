@@ -197,6 +197,8 @@ interface ConsolidatedBlogOptions {
     id: string;
     name: string;
     description: string;
+    price?: string | number;
+    productUrl?: string;
     keywords?: string[];
     market_keywords?: string[];
     search_intent_keywords?: string[];
@@ -1220,6 +1222,55 @@ export const useSEOHTMLGenerator = () => {
       ${seoSummary}
       ${blogContents}
     </main>
+    
+    ${selectedProducts && selectedProducts.length > 0 ? `
+    <section class="products-summary">
+      <h2>💼 Ofertas Estruturadas para SEO</h2>
+      <p class="offers-description">Produtos selecionados automaticamente para otimização de buscas e melhor indexação</p>
+      <div class="products-grid">
+        ${selectedProducts.map(product => `
+          <div class="product-card">
+            <div class="product-header">
+              <h3>${product.name}</h3>
+              ${product.category ? `<span class="product-category">${product.category}</span>` : ''}
+            </div>
+            
+            <div class="product-details">
+              ${product.description ? `<p class="product-description">${product.description}</p>` : ''}
+              
+              ${product.price && product.price !== 'Pedir orçamento' ? `
+                <div class="product-price">
+                  <span class="price-label">Preço:</span>
+                  <span class="price-value">R$ ${product.price}</span>
+                </div>
+              ` : `
+                <div class="product-price">
+                  <span class="price-quote">Solicite seu orçamento</span>
+                </div>
+              `}
+              
+              ${product.keywords && product.keywords.length > 0 ? `
+                <div class="product-keywords">
+                  <span class="keywords-label">Tags:</span>
+                  <div class="keywords-tags">
+                    ${product.keywords.slice(0, 8).map(keyword => `<span class="tag">${keyword}</span>`).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${product.productUrl ? `
+                <div class="product-action">
+                  <a href="${product.productUrl}" class="product-link" target="_blank" rel="noopener noreferrer">
+                    Ver Produto →
+                  </a>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+    ` : ''}
     
     ${uniqueKeywords.length > 0 ? `
     <section class="keywords-section">
