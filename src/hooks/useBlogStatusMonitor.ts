@@ -145,8 +145,17 @@ export const useBlogStatusMonitor = () => {
     try {
       // Get all selected product IDs from approved landing pages
       const allSelectedProductIds = approvedLandingPagesWithBlogs
-        .filter(lp => lp.selectedProductIds && lp.selectedProductIds.length > 0)
-        .flatMap(lp => lp.selectedProductIds);
+        .filter(lp => {
+          const productIds = lp.selectedProductIds || [];
+          return productIds.length > 0;
+        })
+        .flatMap(lp => lp.selectedProductIds || []);
+        
+      console.log('🔍 Debug: Blog status monitor processing landing pages:', {
+        totalPages: approvedLandingPagesWithBlogs.length,
+        pagesWithProducts: approvedLandingPagesWithBlogs.filter(lp => (lp.selectedProductIds || []).length > 0).length,
+        allSelectedProductIds: allSelectedProductIds.length
+      });
 
       if (allSelectedProductIds.length === 0) {
         setProductsWithBlogs([]);

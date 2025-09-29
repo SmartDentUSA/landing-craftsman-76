@@ -32,8 +32,17 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     try {
       // Get all selected product IDs from approved landing pages
       const allSelectedProductIds = approvedLandingPages
-        .filter(lp => lp.selectedProductIds && lp.selectedProductIds.length > 0)
-        .flatMap(lp => lp.selectedProductIds);
+        .filter(lp => {
+          const productIds = lp.selected_product_ids || [];
+          return productIds.length > 0;
+        })
+        .flatMap(lp => lp.selected_product_ids || []);
+        
+      console.log('🔍 Debug: Processing approved landing pages for blogs:', {
+        totalPages: approvedLandingPages.length,
+        pagesWithProducts: approvedLandingPages.filter(lp => (lp.selected_product_ids || []).length > 0).length,
+        allSelectedProductIds: allSelectedProductIds.length
+      });
 
       if (allSelectedProductIds.length === 0) {
         setProductsWithBlogs([]);
@@ -60,10 +69,32 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     return titleMatch ? titleMatch[1].trim() : null;
   };
 
-  // Get blog consolidation preferences from localStorage
+  // Get blog consolidation preferences from localStorage with defaults
   const getBlogPreferences = (): BlogConsolidationPreferences => {
     const savedPreferences = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
-    return savedPreferences ? JSON.parse(savedPreferences) : {};
+    const preferences = savedPreferences ? JSON.parse(savedPreferences) : {};
+    
+    // Set default preferences for products with blogs if none exist
+    const defaultPreferences: BlogConsolidationPreferences = {};
+    productsWithBlogs.forEach(product => {
+      if (!preferences[product.id]) {
+        defaultPreferences[product.id] = {
+          useCommercial: !!product.individual_blog_content?.commercial,
+          useTechnical: !!product.individual_blog_content?.technical
+        };
+      }
+    });
+    
+    // Merge defaults with existing preferences
+    const mergedPreferences = { ...defaultPreferences, ...preferences };
+    
+    // Save merged preferences back to localStorage if we added defaults
+    if (Object.keys(defaultPreferences).length > 0) {
+      localStorage.setItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES, JSON.stringify(mergedPreferences));
+      console.log('📝 Set default blog preferences for products:', Object.keys(defaultPreferences));
+    }
+    
+    return mergedPreferences;
   };
 
   // Create blog entries for HTML generation based on preferences
