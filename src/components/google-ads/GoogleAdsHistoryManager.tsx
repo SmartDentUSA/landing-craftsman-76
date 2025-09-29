@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { History, Copy, Edit, Save, X, Trash2 } from 'lucide-react';
+import { Trash2, Edit, Copy, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
+
+interface CampaignHistory {
+  campaigns: GoogleAdsCampaign[];
+  last_generated: string | null;
+}
 
 interface GoogleAdsCampaign {
   id: string;
@@ -20,31 +25,37 @@ interface GoogleAdsCampaign {
 interface GoogleAdsHistoryManagerProps {
   productId?: string;
   landingPageId?: string;
-  campaignType: 'product' | 'landing_page';
+  campaignType: string;
   onCampaignSelect?: (campaign: GoogleAdsCampaign) => void;
 }
 
-export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = ({
+export interface GoogleAdsHistoryManagerRef {
+  addToHistory: (newCampaign: Omit<GoogleAdsCampaign, 'generated_at' | 'id'>) => Promise<GoogleAdsCampaign>;
+}
+
+const GoogleAdsHistoryManager = forwardRef<GoogleAdsHistoryManagerRef, GoogleAdsHistoryManagerProps>(({
   productId,
   landingPageId,
   campaignType,
-  onCampaignSelect
-}) => {
+  onCampaignSelect,
+}, ref) => {
   const [campaigns, setCampaigns] = useState<GoogleAdsCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState<GoogleAdsCampaign | null>(null);
-  const { toast } = useToast();
+  const [editingContent, setEditingContent] = useState<{
+    headlines: string[];
+    descriptions: string[];
+    paths: string[];
+  }>({ headlines: [], descriptions: [], paths: [] });
 
   useEffect(() => {
-    if ((productId || landingPageId)) {
-      loadCampaigns();
-    }
+    loadCampaigns();
   }, [productId, landingPageId]);
 
   const loadCampaigns = async () => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
+      
       let query = supabase
         .from('google_ads_campaigns')
         .select('*')
@@ -56,7 +67,7 @@ export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = (
         query = query.eq('landing_page_id', landingPageId);
       }
 
-      const { data, error } = await query.order('last_exported', { ascending: false });
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -64,8 +75,9 @@ export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = (
       const campaignHistory: GoogleAdsCampaign[] = [];
       
       data?.forEach(campaign => {
-        if (campaign.campaign_history?.campaigns) {
-          campaignHistory.push(...campaign.campaign_history.campaigns);
+        const history = campaign.campaign_history as unknown as CampaignHistory;
+        if (history?.campaigns) {
+          campaignHistory.push(...history.campaigns);
         }
       });
 
@@ -73,25 +85,25 @@ export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = (
     } catch (error) {
       console.error('Erro ao carregar campanhas:', error);
       toast({
-        title: "Erro",
+        title: "Erro ao carregar histórico",
         description: "Não foi possível carregar o histórico de campanhas.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addToHistory = async (newCampaign: Omit<GoogleAdsCampaign, 'id' | 'generated_at'>) => {
+  const addToHistory = async (newCampaign: Omit<GoogleAdsCampaign, 'generated_at' | 'id'>): Promise<GoogleAdsCampaign> => {
     try {
+      // Criar campanha com ID e timestamp
       const campaignWithId: GoogleAdsCampaign = {
         ...newCampaign,
         id: crypto.randomUUID(),
-        generated_at: new Date().toISOString(),
-        editable: true
+        generated_at: new Date().toISOString()
       };
 
-      // Buscar campanha existente ou criar nova
+      // Buscar campanha existente
       let query = supabase
         .from('google_ads_campaigns')
         .select('*')
@@ -105,171 +117,214 @@ export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = (
 
       const { data: existingCampaigns, error: fetchError } = await query.single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+      if (fetchError && fetchError.code !== 'PGRST116') {
         throw fetchError;
       }
 
-      const currentHistory = existingCampaigns?.campaign_history || { campaigns: [], last_generated: null };
+      const currentHistory = (existingCampaigns?.campaign_history as unknown as CampaignHistory) || { campaigns: [], last_generated: null };
       const updatedHistory = {
         campaigns: [campaignWithId, ...currentHistory.campaigns.slice(0, 9)], // Manter últimas 10
         last_generated: new Date().toISOString()
-      };
+      } as unknown as any;
 
       if (existingCampaigns) {
         // Atualizar existente
         const { error: updateError } = await supabase
           .from('google_ads_campaigns')
-          .update({ campaign_history: updatedHistory })
+          .update({ 
+            campaign_history: updatedHistory,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', existingCampaigns.id);
 
         if (updateError) throw updateError;
       } else {
-        // Criar nova
+        // Criar novo
+        const campaignData: any = {
+          campaign_type: campaignType,
+          config: {},
+          campaign_history: updatedHistory
+        };
+
+        if (productId) {
+          Object.assign(campaignData, { product_id: productId });
+        } else if (landingPageId) {
+          Object.assign(campaignData, { landing_page_id: landingPageId });
+        }
+
         const { error: insertError } = await supabase
           .from('google_ads_campaigns')
-          .insert({
-            product_id: productId,
-            landing_page_id: landingPageId,
-            campaign_type: campaignType,
-            config: {} as any,
-            campaign_history: updatedHistory
-          });
+          .insert(campaignData);
 
         if (insertError) throw insertError;
       }
 
       // Atualizar estado local
-      setCampaigns([campaignWithId, ...campaigns.slice(0, 9)]);
-
-      toast({
-        title: "Campanha salva",
-        description: "Campanha adicionada ao histórico com sucesso.",
-      });
+      setCampaigns(prev => [campaignWithId, ...prev.slice(0, 9)]);
 
       return campaignWithId;
     } catch (error) {
-      console.error('Erro ao salvar campanha:', error);
+      console.error('Erro ao adicionar ao histórico:', error);
       toast({
-        title: "Erro",
+        title: "Erro ao salvar",
         description: "Não foi possível salvar a campanha no histórico.",
-        variant: "destructive",
+        variant: "destructive"
       });
-      return null;
+      throw error;
     }
   };
 
   const startEditing = (campaign: GoogleAdsCampaign) => {
     setEditingId(campaign.id);
-    setEditingContent({ ...campaign });
+    setEditingContent({
+      headlines: [...campaign.headlines],
+      descriptions: [...campaign.descriptions],
+      paths: [...campaign.paths]
+    });
   };
 
   const saveEdit = async () => {
-    if (!editingId || !editingContent) return;
+    if (!editingId) return;
 
     try {
-      const updatedCampaigns = campaigns.map(camp => 
-        camp.id === editingId ? editingContent : camp
+      // Atualizar campanha no histórico
+      const updatedCampaigns = campaigns.map(campaign => 
+        campaign.id === editingId
+          ? { ...campaign, ...editingContent }
+          : campaign
       );
-      
-      // Atualizar no banco
-      const { error } = await supabase
-        .from('google_ads_campaigns')
-        .update({ 
-          campaign_history: { 
-            campaigns: updatedCampaigns, 
-            last_generated: new Date().toISOString() 
-          } as any
-        })
-        .eq(productId ? 'product_id' : 'landing_page_id', productId || landingPageId);
-
-      if (error) throw error;
 
       setCampaigns(updatedCampaigns);
-      setEditingId(null);
-      setEditingContent(null);
 
+      // Buscar e atualizar no banco
+      let query = supabase
+        .from('google_ads_campaigns')
+        .select('*')
+        .eq('campaign_type', campaignType);
+
+      if (productId) {
+        query = query.eq('product_id', productId);
+      } else if (landingPageId) {
+        query = query.eq('landing_page_id', landingPageId);
+      }
+
+      const { data: existingCampaigns, error: fetchError } = await query.single();
+
+      if (fetchError) throw fetchError;
+
+      const currentHistory = (existingCampaigns?.campaign_history as unknown as CampaignHistory) || { campaigns: [], last_generated: null };
+      const updatedHistory = {
+        ...currentHistory,
+        campaigns: updatedCampaigns
+      } as unknown as any;
+
+      const { error: updateError } = await supabase
+        .from('google_ads_campaigns')
+        .update({ 
+          campaign_history: updatedHistory,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingCampaigns.id);
+
+      if (updateError) throw updateError;
+
+      setEditingId(null);
       toast({
         title: "Campanha atualizada",
-        description: "Campanha editada com sucesso.",
+        description: "As alterações foram salvas com sucesso."
       });
     } catch (error) {
       console.error('Erro ao salvar edição:', error);
       toast({
-        title: "Erro",
+        title: "Erro ao salvar",
         description: "Não foi possível salvar as alterações.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditingContent(null);
+    setEditingContent({ headlines: [], descriptions: [], paths: [] });
   };
 
   const deleteCampaign = async (campaignId: string) => {
     try {
-      const updatedCampaigns = campaigns.filter(camp => camp.id !== campaignId);
-      
-      const { error } = await supabase
+      const updatedCampaigns = campaigns.filter(campaign => campaign.id !== campaignId);
+      setCampaigns(updatedCampaigns);
+
+      // Buscar e atualizar no banco
+      let query = supabase
+        .from('google_ads_campaigns')
+        .select('*')
+        .eq('campaign_type', campaignType);
+
+      if (productId) {
+        query = query.eq('product_id', productId);
+      } else if (landingPageId) {
+        query = query.eq('landing_page_id', landingPageId);
+      }
+
+      const { data: existingCampaigns, error: fetchError } = await query.single();
+
+      if (fetchError) throw fetchError;
+
+      const currentHistory = (existingCampaigns?.campaign_history as unknown as CampaignHistory) || { campaigns: [], last_generated: null };
+      const updatedHistory = {
+        ...currentHistory,
+        campaigns: updatedCampaigns
+      } as unknown as any;
+
+      const { error: updateError } = await supabase
         .from('google_ads_campaigns')
         .update({ 
-          campaign_history: { 
-            campaigns: updatedCampaigns, 
-            last_generated: new Date().toISOString() 
-          } as any
+          campaign_history: updatedHistory,
+          updated_at: new Date().toISOString()
         })
-        .eq(productId ? 'product_id' : 'landing_page_id', productId || landingPageId);
+        .eq('id', existingCampaigns.id);
 
-      if (error) throw error;
-
-      setCampaigns(updatedCampaigns);
+      if (updateError) throw updateError;
 
       toast({
         title: "Campanha removida",
-        description: "Campanha deletada do histórico.",
+        description: "A campanha foi removida do histórico."
       });
     } catch (error) {
       console.error('Erro ao deletar campanha:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível deletar a campanha.",
-        variant: "destructive",
+        title: "Erro ao deletar",
+        description: "Não foi possível remover a campanha.",
+        variant: "destructive"
       });
     }
   };
 
-  const copyToClipboard = async (content: string) => {
+  const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(text);
       toast({
         title: "Copiado!",
-        description: "Conteúdo copiado para a área de transferência.",
+        description: "Texto copiado para a área de transferência."
       });
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível copiar o conteúdo.",
-        variant: "destructive",
-      });
+      console.error('Erro ao copiar:', error);
     }
   };
 
   // Expor função addToHistory para componentes pai
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
+  useImperativeHandle(ref, () => ({
     addToHistory
-  }));
+  }), [addToHistory]);
 
   if (campaigns.length === 0 && !isLoading) {
     return (
       <Card>
-        <CardContent className="p-4">
-          <div className="text-center py-8 text-muted-foreground">
-            <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhuma campanha gerada ainda.</p>
-            <p className="text-sm">As campanhas geradas aparecerão aqui para reutilização.</p>
-          </div>
-        </CardContent>
+        <CardHeader>
+          <CardTitle>Histórico de Campanhas</CardTitle>
+          <CardDescription>
+            Nenhuma campanha foi gerada ainda
+          </CardDescription>
+        </CardHeader>
       </Card>
     );
   }
@@ -277,145 +332,141 @@ export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = (
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <History className="h-5 w-5" />
-          Histórico de Campanhas ({campaigns.length})
-        </CardTitle>
+        <CardTitle>Histórico de Campanhas ({campaigns.length})</CardTitle>
+        <CardDescription>
+          Campanhas geradas anteriormente
+        </CardDescription>
       </CardHeader>
-      <CardContent className="p-4">
-        <ScrollArea className="max-h-96">
+      <CardContent>
+        <ScrollArea className="h-96">
           <div className="space-y-4">
-            {campaigns.map((campaign, index) => (
-              <div key={campaign.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      Campanha {index + 1}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(campaign.generated_at).toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                  
-                  <div className="flex gap-1">
-                    {editingId === campaign.id ? (
-                      <>
-                        <Button size="sm" onClick={saveEdit}>
-                          <Save className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={cancelEdit}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onCampaignSelect?.(campaign)}
-                        >
-                          Usar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => startEditing(campaign)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteCampaign(campaign.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+            {campaigns.map((campaign) => (
+              <div key={campaign.id} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(campaign.generated_at).toLocaleString()}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onCampaignSelect?.(campaign)}
+                    >
+                      Usar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => startEditing(campaign)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteCampaign(campaign.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
 
-                {editingId === campaign.id && editingContent ? (
+                {editingId === campaign.id ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium">Headlines:</label>
+                      <label className="text-sm font-medium">Títulos:</label>
                       <Textarea
                         value={editingContent.headlines.join('\n')}
-                        onChange={(e) => setEditingContent({
-                          ...editingContent,
-                          headlines: e.target.value.split('\n')
-                        })}
-                        className="min-h-20 text-sm"
+                        onChange={(e) => setEditingContent(prev => ({
+                          ...prev,
+                          headlines: e.target.value.split('\n').filter(Boolean)
+                        }))}
+                        rows={3}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Descriptions:</label>
+                      <label className="text-sm font-medium">Descrições:</label>
                       <Textarea
                         value={editingContent.descriptions.join('\n')}
-                        onChange={(e) => setEditingContent({
-                          ...editingContent,
-                          descriptions: e.target.value.split('\n')
-                        })}
-                        className="min-h-16 text-sm"
+                        onChange={(e) => setEditingContent(prev => ({
+                          ...prev,
+                          descriptions: e.target.value.split('\n').filter(Boolean)
+                        }))}
+                        rows={3}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Paths:</label>
+                      <label className="text-sm font-medium">Caminhos:</label>
                       <Textarea
                         value={editingContent.paths.join('\n')}
-                        onChange={(e) => setEditingContent({
-                          ...editingContent,
-                          paths: e.target.value.split('\n')
-                        })}
-                        className="min-h-12 text-sm"
+                        onChange={(e) => setEditingContent(prev => ({
+                          ...prev,
+                          paths: e.target.value.split('\n').filter(Boolean)
+                        }))}
+                        rows={2}
                       />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveEdit}>
+                        <Check className="h-4 w-4 mr-2" />
+                        Salvar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={cancelEdit}>
+                        Cancelar
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2">
                     <div>
-                      <strong>Headlines ({campaign.headlines.length}):</strong>
-                      <div className="ml-2 space-y-1">
-                        {campaign.headlines.map((headline, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-muted-foreground">•</span>
-                            <span>{headline}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(headline)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Títulos:</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(campaign.headlines.join('\n'))}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {campaign.headlines.slice(0, 2).map((headline, idx) => (
+                          <div key={idx}>• {headline}</div>
                         ))}
+                        {campaign.headlines.length > 2 && (
+                          <div className="text-xs">+{campaign.headlines.length - 2} mais...</div>
+                        )}
                       </div>
                     </div>
                     
                     <div>
-                      <strong>Descriptions ({campaign.descriptions.length}):</strong>
-                      <div className="ml-2 space-y-1">
-                        {campaign.descriptions.map((desc, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-muted-foreground">•</span>
-                            <span>{desc}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(desc)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Descrições:</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(campaign.descriptions.join('\n'))}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {campaign.descriptions.slice(0, 2).map((desc, idx) => (
+                          <div key={idx}>• {desc}</div>
                         ))}
+                        {campaign.descriptions.length > 2 && (
+                          <div className="text-xs">+{campaign.descriptions.length - 2} mais...</div>
+                        )}
                       </div>
                     </div>
 
                     <div>
-                      <strong>Paths ({campaign.paths.length}):</strong>
-                      <div className="ml-2 flex gap-2">
-                        {campaign.paths.map((path, i) => (
-                          <Badge key={i} variant="secondary">{path}</Badge>
+                      <span className="text-sm font-medium">Caminhos:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {campaign.paths.map((path, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {path}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -428,4 +479,8 @@ export const GoogleAdsHistoryManager: React.FC<GoogleAdsHistoryManagerProps> = (
       </CardContent>
     </Card>
   );
-};
+});
+
+GoogleAdsHistoryManager.displayName = 'GoogleAdsHistoryManager';
+
+export default GoogleAdsHistoryManager;
