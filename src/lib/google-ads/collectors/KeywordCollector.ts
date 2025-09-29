@@ -40,6 +40,9 @@ export class KeywordCollector {
           // Extrair de video_captions
           ...(product.video_captions ? this.extractFromVideoCaptions(product.video_captions) : []),
           
+          // ✨ NOVO: Extrair de technical_specifications
+          ...(product.technical_specifications ? this.extractFromTechnicalSpecs(product.technical_specifications) : []),
+          
           // Extrair de CTAs
           ...(this.extractFromCTAs(product))
         ];
@@ -258,6 +261,34 @@ export class KeywordCollector {
     });
     
     return ctaKeywords;
+  }
+
+  // ✨ NOVA FUNÇÃO: Extrair keywords de especificações técnicas
+  private static extractFromTechnicalSpecs(technicalSpecs: any[]): string[] {
+    if (!Array.isArray(technicalSpecs)) return [];
+    
+    const keywords: string[] = [];
+    
+    technicalSpecs.forEach((spec: any) => {
+      // Label da especificação
+      if (spec.label && typeof spec.label === 'string') {
+        keywords.push(spec.label.trim());
+        keywords.push(...this.extractKeywordsFromText(spec.label));
+      }
+      
+      // Valor da especificação
+      if (spec.value && typeof spec.value === 'string') {
+        keywords.push(spec.value.trim());
+        keywords.push(...this.extractKeywordsFromText(spec.value));
+      }
+      
+      // Combinação label + value
+      if (spec.label && spec.value) {
+        keywords.push(`${spec.label} ${spec.value}`.trim());
+      }
+    });
+    
+    return [...new Set(keywords.filter(k => k && k.length > 1))];
   }
 
   static normalizeKeywords(keywords: string[]): string[] {

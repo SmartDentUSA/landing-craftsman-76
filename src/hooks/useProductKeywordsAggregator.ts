@@ -16,6 +16,7 @@ interface KeywordAggregation {
     targetAudienceKeywords: string[];
     tags: string[];
     videoCaptionsKeywords: string[];
+    technicalSpecsKeywords: string[];
   };
   productCount: number;
   commercialData: {
@@ -41,10 +42,11 @@ export const useProductKeywordsAggregator = () => {
             salesPitchKeywords: [],
             featuresKeywords: [],
             benefitsKeywords: [],
-            targetAudienceKeywords: [],
-            tags: [],
-            videoCaptionsKeywords: []
-          },
+          targetAudienceKeywords: [],
+          tags: [],
+          videoCaptionsKeywords: [],
+          technicalSpecsKeywords: []
+        },
           productCount: 0,
           commercialData: {
             ctaUrls: [],
@@ -80,6 +82,7 @@ export const useProductKeywordsAggregator = () => {
           technical_videos,
           youtube_videos,
           instagram_videos,
+          technical_specifications,
           price,
           currency
         `)
@@ -105,10 +108,11 @@ export const useProductKeywordsAggregator = () => {
             salesPitchKeywords: [],
             featuresKeywords: [],
             benefitsKeywords: [],
-            targetAudienceKeywords: [],
-            tags: [],
-            videoCaptionsKeywords: []
-          },
+          targetAudienceKeywords: [],
+          tags: [],
+          videoCaptionsKeywords: [],
+          technicalSpecsKeywords: []
+        },
           productCount: 0,
           commercialData: {
             ctaUrls: [],
@@ -129,7 +133,8 @@ export const useProductKeywordsAggregator = () => {
         benefitsKeywords: [] as string[],
         targetAudienceKeywords: [] as string[],
         tags: [] as string[],
-        videoCaptionsKeywords: [] as string[]
+        videoCaptionsKeywords: [] as string[],
+        technicalSpecsKeywords: [] as string[]
       };
 
       const commercialData = {
@@ -202,6 +207,12 @@ export const useProductKeywordsAggregator = () => {
         const resourceDescriptions = extractKeywordsFromResourceDescriptions(product);
         keywordsBySource.salesPitchKeywords.push(...resourceDescriptions);
 
+        // ✨ NOVO: Extrair keywords de especificações técnicas
+        if (product.technical_specifications && Array.isArray(product.technical_specifications)) {
+          const technicalKeywords = extractKeywordsFromTechnicalSpecs(product.technical_specifications);
+          keywordsBySource.technicalSpecsKeywords.push(...technicalKeywords);
+        }
+
         // ✨ Coletar dados comerciais (com type safety)
         if (product.offer_discount_cta && typeof product.offer_discount_cta === 'object') {
           const cta = product.offer_discount_cta as any;
@@ -243,7 +254,8 @@ export const useProductKeywordsAggregator = () => {
         ...keywordsBySource.benefitsKeywords,
         ...keywordsBySource.targetAudienceKeywords,
         ...keywordsBySource.tags,
-        ...keywordsBySource.videoCaptionsKeywords
+        ...keywordsBySource.videoCaptionsKeywords,
+        ...keywordsBySource.technicalSpecsKeywords
       ];
 
       // Normalizar e remover duplicatas
@@ -266,7 +278,8 @@ export const useProductKeywordsAggregator = () => {
           benefits: keywordsBySource.benefitsKeywords.length,
           targetAudience: keywordsBySource.targetAudienceKeywords.length,
           tags: keywordsBySource.tags.length,
-          videoCaptions: keywordsBySource.videoCaptionsKeywords.length
+          videoCaptions: keywordsBySource.videoCaptionsKeywords.length,
+          technicalSpecs: keywordsBySource.technicalSpecsKeywords.length
         },
         commercialData,
         sample: normalizedKeywords.slice(0, 10)
@@ -301,7 +314,8 @@ export const useProductKeywordsAggregator = () => {
           benefitsKeywords: [],
           targetAudienceKeywords: [],
           tags: [],
-          videoCaptionsKeywords: []
+          videoCaptionsKeywords: [],
+          technicalSpecsKeywords: []
         },
         productCount: 0,
         commercialData: {
@@ -483,4 +497,36 @@ function extractKeywordsFromResourceDescriptions(product: any): string[] {
   }
   
   return [...new Set(keywords)]; // Remove duplicates
+}
+
+/**
+ * Helper function to extract keywords from technical specifications
+ */
+function extractKeywordsFromTechnicalSpecs(technicalSpecs: any[]): string[] {
+  if (!Array.isArray(technicalSpecs)) return [];
+  
+  const keywords: string[] = [];
+  
+  technicalSpecs.forEach((spec: any) => {
+    // Extract from label (specification name)
+    if (spec.label && typeof spec.label === 'string') {
+      keywords.push(spec.label.trim());
+      // Also extract keywords from the label text
+      keywords.push(...extractKeywordsFromText(spec.label));
+    }
+    
+    // Extract from value (specification value)
+    if (spec.value && typeof spec.value === 'string') {
+      keywords.push(spec.value.trim());
+      // Also extract keywords from the value text
+      keywords.push(...extractKeywordsFromText(spec.value));
+    }
+    
+    // Create combined keywords (label + value)
+    if (spec.label && spec.value) {
+      keywords.push(`${spec.label} ${spec.value}`.trim());
+    }
+  });
+  
+  return [...new Set(keywords.filter(k => k && k.length > 1))]; // Remove duplicates and empty
 }

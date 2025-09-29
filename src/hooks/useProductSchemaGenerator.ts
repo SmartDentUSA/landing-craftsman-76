@@ -24,6 +24,8 @@ interface ProductSchemaData {
   keywords?: string[];
   market_keywords?: string[];
   search_intent_keywords?: string[];
+  // ✨ NOVO CAMPO: Technical Specifications
+  technical_specifications?: Array<{ label: string; value: string }>;
 }
 
 interface SchemaResult {
@@ -105,13 +107,30 @@ export const useProductSchemaGenerator = () => {
       "category": product.category || "Produtos e Serviços"
     };
 
-    // ✨ NOVOS CAMPOS: Adicionar features se disponíveis
+    // ✨ NOVOS CAMPOS: Adicionar features e technical specifications como PropertyValue
+    const additionalProperties: any[] = [];
+    
+    // Features
     if (product.features && Array.isArray(product.features) && product.features.length > 0) {
-      baseSchema.additionalProperty = product.features.map((feature: string) => ({
+      additionalProperties.push(...product.features.map((feature: string) => ({
         "@type": "PropertyValue",
         "name": "Feature",
         "value": feature
-      }));
+      })));
+    }
+    
+    // ✨ NOVO: Technical Specifications
+    if (product.technical_specifications && Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0) {
+      additionalProperties.push(...product.technical_specifications.map((spec: any) => ({
+        "@type": "PropertyValue",
+        "name": spec.label || "Specification",
+        "value": spec.value || ""
+      })));
+    }
+    
+    // Adicionar todas as propriedades adicionais ao schema
+    if (additionalProperties.length > 0) {
+      baseSchema.additionalProperty = additionalProperties;
     }
 
     // ✨ Adicionar benefits como hasEnergyConsumptionDetails ou similar
