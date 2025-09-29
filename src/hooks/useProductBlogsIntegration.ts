@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSelectedProducts } from './useSelectedProducts';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BlogConsolidationPreferences {
   [productId: string]: {
@@ -26,6 +27,41 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
   // Load products with individual blogs when approved landing pages change
   useEffect(() => {
     fetchProductsWithBlogs();
+  }, [approvedLandingPages]);
+
+  // Realtime subscription para mudanças na tabela products_repository
+  useEffect(() => {
+    // Get all selected product IDs from approved landing pages
+    const allSelectedProductIds = approvedLandingPages
+      .filter(lp => {
+        const productIds = lp.selected_product_ids ?? lp.selectedProductIds ?? [];
+        return productIds.length > 0;
+      })
+      .flatMap(lp => lp.selected_product_ids ?? lp.selectedProductIds ?? []);
+
+    if (allSelectedProductIds.length === 0) return;
+
+    const channel = supabase
+      .channel('products-blog-integration-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products_repository',
+          filter: `id=in.(${allSelectedProductIds.join(',')})`,
+        },
+        (payload) => {
+          console.log('🔄 Product blog content updated (integration):', payload);
+          // Recarregar produtos quando houver mudanças no individual_blog_content
+          fetchProductsWithBlogs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [approvedLandingPages]);
 
   const fetchProductsWithBlogs = async () => {
