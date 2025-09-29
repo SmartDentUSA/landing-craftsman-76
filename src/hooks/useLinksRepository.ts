@@ -8,6 +8,7 @@ export interface ExternalLink {
   url: string;
   description?: string;
   category: string;
+  subcategory?: string;
   approved: boolean;
   created_at: string;
   updated_at: string;

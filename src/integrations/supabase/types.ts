@@ -284,6 +284,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          subcategory: string | null
           updated_at: string
           url: string
         }
@@ -294,6 +295,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          subcategory?: string | null
           updated_at?: string
           url: string
         }
@@ -304,6 +306,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          subcategory?: string | null
           updated_at?: string
           url?: string
         }

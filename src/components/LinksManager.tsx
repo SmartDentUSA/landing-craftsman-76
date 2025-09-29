@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, ExternalLink, Edit, Trash2, Package, Link, Download } from 'lucide-react';
-import { useLinksRepository } from '@/hooks/useLinksRepository';
+import { Plus, ExternalLink, Edit, Trash2, Search, Filter, Download } from 'lucide-react';
+import { useLinksRepository, ExternalLink as ExternalLinkType } from '@/hooks/useLinksRepository';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,17 +21,49 @@ interface KeywordLink {
   created_at: string;
 }
 
+const categoryOptions = [
+  { value: 'produto', label: 'Produto' },
+  { value: 'servico', label: 'Serviço' },
+  { value: 'tecnico', label: 'Técnico' },
+  { value: 'comercial', label: 'Comercial' },
+  { value: 'institucional', label: 'Institucional' },
+  { value: 'outros', label: 'Outros' }
+];
+
+const subcategoryOptions = {
+  produto: ['geral', 'equipamentos', 'materiais', 'instrumentos'],
+  servico: ['geral', 'consultoria', 'treinamento', 'suporte'],
+  tecnico: ['geral', 'especificacoes', 'manuais', 'tutoriais'],
+  comercial: ['geral', 'vendas', 'promocoes', 'descontos'],
+  institucional: ['geral', 'sobre', 'missao', 'valores'],
+  outros: ['geral', 'diversos']
+};
+
 export const LinksManager = () => {
   const { allLinks, isLoading, addExternalLink, updateExternalLink, deleteExternalLink, externalLinks } = useLinksRepository();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
   const [editingKeyword, setEditingKeyword] = useState<KeywordLink | null>(null);
   const [formData, setFormData] = useState({
     keyword: '',
-    url: ''
+    url: '',
+    category: 'produto',
+    subcategory: 'geral',
+    description: ''
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [subcategoryFilter, setSubcategoryFilter] = useState('all');
 
-  console.log('LinksManager - externalLinks:', externalLinks?.length || 0);
+  const filteredLinks = externalLinks
+    .filter(link => link.category?.includes('keyword'))
+    .filter(link => {
+      const matchesSearch = link.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           link.url.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || link.category === categoryFilter;
+      const matchesSubcategory = subcategoryFilter === 'all' || link.subcategory === subcategoryFilter;
+      
+      return matchesSearch && matchesCategory && matchesSubcategory;
+    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,29 +75,30 @@ export const LinksManager = () => {
 
     try {
       if (editingKeyword) {
-        // Atualizar keyword existente no Supabase
         const linkId = editingKeyword.id;
         await updateExternalLink(linkId, {
           name: formData.keyword.trim(),
           url: formData.url.trim() || '#',
-          category: 'keyword-manual'
+          category: formData.category,
+          subcategory: formData.subcategory,
+          description: formData.description.trim() || undefined
         });
         setEditingKeyword(null);
         toast.success('Palavra-chave atualizada com sucesso');
       } else {
-        // Adicionar nova keyword no Supabase
         await addExternalLink({
           name: formData.keyword.trim(),
           url: formData.url.trim() || '#',
-          category: 'keyword-manual',
-          description: 'Keyword adicionada manualmente',
+          category: formData.category,
+          subcategory: formData.subcategory,
+          description: formData.description.trim() || 'Keyword adicionada manualmente',
           approved: true
         });
         setIsAddModalOpen(false);
         toast.success('Palavra-chave adicionada com sucesso');
       }
       
-      setFormData({ keyword: '', url: '' });
+      setFormData({ keyword: '', url: '', category: 'produto', subcategory: 'geral', description: '' });
     } catch (error) {
       toast.error('Erro ao salvar palavra-chave');
     }
@@ -73,9 +106,14 @@ export const LinksManager = () => {
 
   const handleEdit = (keyword: KeywordLink) => {
     setEditingKeyword(keyword);
+    // Find the actual link data to get category and subcategory
+    const linkData = externalLinks.find(link => link.id === keyword.id);
     setFormData({
       keyword: keyword.keyword,
-      url: keyword.url
+      url: keyword.url,
+      category: linkData?.category || 'produto',
+      subcategory: linkData?.subcategory || 'geral',
+      description: linkData?.description || ''
     });
   };
 
@@ -90,10 +128,9 @@ export const LinksManager = () => {
 
   const handleImportKeywords = async () => {
     try {
-      // Buscar todos os produtos aprovados
       const { data: products, error } = await supabase
         .from('products_repository')
-        .select('name, keywords, search_intent_keywords')
+        .select('id, name, keywords, search_intent_keywords, category, subcategory')
         .eq('approved', true);
 
       if (error) {
@@ -107,11 +144,9 @@ export const LinksManager = () => {
         return;
       }
 
-      // Extrair todas as keywords únicas
       const allKeywords = new Set<string>();
       
       products.forEach(product => {
-        // Adicionar keywords principais
         if (product.keywords && Array.isArray(product.keywords)) {
           product.keywords.forEach((keyword: string) => {
             if (keyword && keyword.trim()) {
@@ -120,7 +155,6 @@ export const LinksManager = () => {
           });
         }
         
-        // Adicionar search intent keywords
         if (product.search_intent_keywords && Array.isArray(product.search_intent_keywords)) {
           product.search_intent_keywords.forEach((keyword: string) => {
             if (keyword && keyword.trim()) {
@@ -130,7 +164,6 @@ export const LinksManager = () => {
         }
       });
 
-      // Filtrar keywords que já existem no Supabase
       const existingKeywords = new Set(
         externalLinks
           .filter(link => link.category?.includes('keyword'))
@@ -143,16 +176,24 @@ export const LinksManager = () => {
         return;
       }
 
-      // Salvar as novas keywords no Supabase
-      const promises = newKeywords.map(keyword => 
-        addExternalLink({
+      const promises = newKeywords.map(keyword => {
+        const sourceProduct = products.find(p => {
+          const keywords = Array.isArray(p.keywords) ? p.keywords : [];
+          const searchIntentKeywords = Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [];
+          
+          return keywords.some((k: string) => k.toLowerCase() === keyword) ||
+                 searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
+        });
+        
+        return addExternalLink({
           name: keyword,
-          url: '#', // URL padrão, usuário pode editar depois
-          category: 'keyword-import',
-          description: 'Keyword importada dos produtos',
+          url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
+          category: sourceProduct?.category || 'produto',
+          subcategory: sourceProduct?.subcategory || 'geral',
+          description: `Importado do produto: ${sourceProduct?.name || 'Produto não identificado'}`,
           approved: true
-        })
-      );
+        });
+      });
 
       await Promise.all(promises);
       
@@ -164,10 +205,26 @@ export const LinksManager = () => {
     }
   };
 
+  const formatOrigin = (link: ExternalLinkType) => {
+    if (link.description?.includes('Importado do produto:')) {
+      return link.description;
+    }
+    return 'Manual';
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('all');
+    setSubcategoryFilter('all');
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Carregando dados...</div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando dados...</p>
+        </div>
       </div>
     );
   }
@@ -178,84 +235,133 @@ export const LinksManager = () => {
         <div>
           <h2 className="text-2xl font-bold">Gerenciador de Links</h2>
           <p className="text-muted-foreground">
-            Gerencie palavras-chave e seus links de destino para auto-linkagem
+            Gerencie palavras-chave e seus links de destino para uso em blogs e conteúdos.
           </p>
         </div>
-
         <div className="flex gap-2">
-          <Button onClick={handleImportKeywords} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Importar Keywords dos Produtos
+          <Button 
+            onClick={handleImportKeywords}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Importar dos Produtos
           </Button>
-
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Palavra
+              <Button 
+                onClick={() => {
+                  setEditingKeyword(null);
+                  setFormData({ keyword: '', url: '', category: 'produto', subcategory: 'geral', description: '' });
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar Link
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Adicionar Palavra-chave</DialogTitle>
+                <DialogTitle>Adicionar Novo Link</DialogTitle>
+                <DialogDescription>
+                  Adicione uma nova palavra-chave com seu link de destino.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="keyword">Palavra-chave</Label>
+                  <Label htmlFor="keyword">Palavra-chave *</Label>
                   <Input
                     id="keyword"
                     value={formData.keyword}
                     onChange={(e) => setFormData(prev => ({ ...prev, keyword: e.target.value }))}
-                    placeholder="Ex: implante dental"
+                    placeholder="Ex: implante dentário"
                     required
                   />
                 </div>
-
-                <div>
-                  <Label htmlFor="url">URL de Destino</Label>
-                  <div className="space-y-2">
-                    <Input
-                      id="url"
-                      type="url"
-                      value={formData.url}
-                      onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                      placeholder="https://exemplo.com ou deixe em branco"
-                    />
-                    {allLinks.length > 0 && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Ou selecione de um link existente:</Label>
-                        <Select onValueChange={(value) => setFormData(prev => ({ ...prev, url: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecionar link..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allLinks.map((link) => (
-                              <SelectItem key={link.id} value={link.url}>
-                                <div className="flex items-center gap-2">
-                                  {link.type === 'internal' ? (
-                                    <Link className="h-3 w-3 text-blue-500" />
-                                  ) : (
-                                    <ExternalLink className="h-3 w-3 text-green-500" />
-                                  )}
-                                  <span className="truncate">{link.name}</span>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {link.category}
-                                  </Badge>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="category">Categoria *</Label>
+                    <Select value={formData.category} onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, category: value, subcategory: 'geral' }));
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="subcategory">Subcategoria</Label>
+                    <Select value={formData.subcategory} onValueChange={(value) => 
+                      setFormData(prev => ({ ...prev, subcategory: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subcategoryOptions[formData.category as keyof typeof subcategoryOptions]?.map(sub => (
+                          <SelectItem key={sub} value={sub}>
+                            {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                <div>
+                  <Label htmlFor="url">URL de Destino *</Label>
+                  <div className="space-y-2">
+                    <Input
+                      id="url"
+                      value={formData.url}
+                      onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                      placeholder="https://exemplo.com/pagina"
+                    />
+                    <Select value={formData.url} onValueChange={(value) => 
+                      setFormData(prev => ({ ...prev, url: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Ou selecione um link existente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allLinks.map(link => (
+                          <SelectItem key={link.id} value={link.url}>
+                            {link.name} ({link.type === 'internal' ? 'Interno' : 'Externo'})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Descrição (opcional)</Label>
+                  <Input
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Descrição adicional sobre o link"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsAddModalOpen(false)}
+                  >
                     Cancelar
                   </Button>
-                  <Button type="submit">Salvar</Button>
+                  <Button type="submit">Adicionar</Button>
                 </div>
               </form>
             </DialogContent>
@@ -263,114 +369,202 @@ export const LinksManager = () => {
         </div>
       </div>
 
+      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Link className="h-5 w-5" />
-            Palavras para Hiperlink
+            <Filter className="w-4 h-4" />
+            Filtros e Busca
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!externalLinks.filter(link => link.category?.includes('keyword')).length ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Link className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground text-center">
-                Nenhuma palavra-chave cadastrada ainda.
-                <br />
-                Adicione palavras-chave manualmente ou importe dos produtos.
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="search">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar palavra-chave ou URL..."
+                  className="pl-10"
+                />
+              </div>
             </div>
-          ) : (
+            
+            <div>
+              <Label htmlFor="categoryFilter">Categoria</Label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  {categoryOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="subcategoryFilter">Subcategoria</Label>
+              <Select value={subcategoryFilter} onValueChange={setSubcategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as subcategorias</SelectItem>
+                  {categoryFilter !== 'all' && 
+                    subcategoryOptions[categoryFilter as keyof typeof subcategoryOptions]?.map(sub => (
+                      <SelectItem key={sub} value={sub}>
+                        {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-end">
+              <Button variant="outline" onClick={resetFilters} className="w-full">
+                Limpar Filtros
+              </Button>
+            </div>
+          </div>
+          
+          <div className="mt-4 text-sm text-muted-foreground">
+            Mostrando {filteredLinks.length} de {externalLinks.filter(link => link.category?.includes('keyword')).length} links
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela de Links */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Palavras para Hiperlink</CardTitle>
+          <CardDescription>
+            Lista de todas as palavras-chave e seus respectivos links de destino.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Palavra-chave</TableHead>
-                  <TableHead>URL de Destino</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Subcategoria</TableHead>
                   <TableHead>Origem</TableHead>
+                  <TableHead>URL de Destino</TableHead>
                   <TableHead className="w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {externalLinks
-                  .filter(link => link.category?.includes('keyword'))
-                  .map((link) => (
-                  <TableRow key={link.id}>
-                    <TableCell className="font-medium">{link.name}</TableCell>
-                    <TableCell>
-                      {link.url && link.url !== '#' ? (
-                        <a 
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1 truncate max-w-[300px]"
-                        >
-                          {link.url}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground italic">Em branco</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={link.category === 'keyword-import' ? 'default' : 'secondary'}>
-                        {link.category === 'keyword-import' ? 'Importada' : 'Manual'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit({ 
-                            id: link.id, 
-                            keyword: link.name, 
-                            url: link.url, 
-                            source: link.category === 'keyword-import' ? 'imported' : 'manual',
-                            created_at: link.created_at 
-                          })}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remover Palavra-chave</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja remover a palavra-chave "{link.name}"? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(link.id)}>
-                                Remover
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                {filteredLinks.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {searchTerm || categoryFilter !== 'all' || subcategoryFilter !== 'all' 
+                        ? 'Nenhum link encontrado com os filtros aplicados.'
+                        : 'Nenhum link cadastrado ainda. Adicione o primeiro link ou importe dos produtos.'
+                      }
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredLinks.map((link) => (
+                    <TableRow key={link.id}>
+                      <TableCell className="font-medium">{link.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {categoryOptions.find(cat => cat.value === link.category)?.label || link.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {link.subcategory?.charAt(0).toUpperCase() + link.subcategory?.slice(1) || 'Geral'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatOrigin(link)}
+                      </TableCell>
+                      <TableCell>
+                        {link.url && link.url !== '#' ? (
+                          <a 
+                            href={link.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline max-w-[200px] truncate block"
+                            title={link.url}
+                          >
+                            {link.url}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground italic">Em branco</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit({ 
+                              id: link.id, 
+                              keyword: link.name, 
+                              url: link.url, 
+                              source: link.category?.includes('import') ? 'imported' : 'manual',
+                              created_at: link.created_at 
+                            })}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir a palavra-chave "{link.name}"? 
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(link.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
-          )}
+          </div>
         </CardContent>
       </Card>
 
       {/* Edit Keyword Modal */}
       <Dialog open={!!editingKeyword} onOpenChange={() => setEditingKeyword(null)}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Palavra-chave</DialogTitle>
+            <DialogDescription>
+              Edite as informações do link existente.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="edit-keyword">Palavra-chave</Label>
+              <Label htmlFor="edit-keyword">Palavra-chave *</Label>
               <Input
                 id="edit-keyword"
                 value={formData.keyword}
@@ -379,48 +573,86 @@ export const LinksManager = () => {
               />
             </div>
 
-            <div>
-              <Label htmlFor="edit-url">URL de Destino</Label>
-              <div className="space-y-2">
-                <Input
-                  id="edit-url"
-                  type="url"
-                  value={formData.url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                  placeholder="https://exemplo.com ou deixe em branco"
-                />
-                {allLinks.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Ou selecione de um link existente:</Label>
-                    <Select onValueChange={(value) => setFormData(prev => ({ ...prev, url: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecionar link..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allLinks.map((link) => (
-                          <SelectItem key={link.id} value={link.url}>
-                            <div className="flex items-center gap-2">
-                              {link.type === 'internal' ? (
-                                <Link className="h-3 w-3 text-blue-500" />
-                              ) : (
-                                <ExternalLink className="h-3 w-3 text-green-500" />
-                              )}
-                              <span className="truncate">{link.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {link.category}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-category">Categoria *</Label>
+                <Select value={formData.category} onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, category: value, subcategory: 'geral' }));
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-subcategory">Subcategoria</Label>
+                <Select value={formData.subcategory} onValueChange={(value) => 
+                  setFormData(prev => ({ ...prev, subcategory: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategoryOptions[formData.category as keyof typeof subcategoryOptions]?.map(sub => (
+                      <SelectItem key={sub} value={sub}>
+                        {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setEditingKeyword(null)}>
+            <div>
+              <Label htmlFor="edit-url">URL de Destino *</Label>
+              <div className="space-y-2">
+                <Input
+                  id="edit-url"
+                  value={formData.url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://exemplo.com/pagina"
+                />
+                <Select value={formData.url} onValueChange={(value) => 
+                  setFormData(prev => ({ ...prev, url: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ou selecione um link existente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allLinks.map(link => (
+                      <SelectItem key={link.id} value={link.url}>
+                        {link.name} ({link.type === 'internal' ? 'Interno' : 'Externo'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-description">Descrição (opcional)</Label>
+              <Input
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descrição adicional sobre o link"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setEditingKeyword(null)}
+              >
                 Cancelar
               </Button>
               <Button type="submit">Salvar Alterações</Button>
@@ -428,8 +660,6 @@ export const LinksManager = () => {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Import Keywords Modal */}
     </div>
   );
 };
