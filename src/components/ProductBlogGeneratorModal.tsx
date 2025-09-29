@@ -11,6 +11,7 @@ import { FileText, Settings, Sparkles, Clock, Link, ExternalLink, Edit, Save, X 
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { IntelligentLinksManager } from "@/components/IntelligentLinksManager";
+import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 
 interface Product {
   id: string;
@@ -53,11 +54,20 @@ export const ProductBlogGeneratorModal = ({
   const [editingContent, setEditingContent] = useState('');
   const [useIntelligentLinks, setUseIntelligentLinks] = useState(true);
   const { toast } = useToast();
+  const { getConfigurationByFunction } = usePromptsConfiguration();
 
   // Sincronizar dados do produto quando props mudam
   useEffect(() => {
     setCurrentProduct(product);
-  }, [product]);
+    
+    // Carregar configuração de links inteligentes da configuração salva
+    if (product) {
+      const savedConfig = getConfigurationByFunction('generate-product-blog', 'Blog Comercial');
+      if (savedConfig && savedConfig.use_intelligent_links !== undefined) {
+        setUseIntelligentLinks(savedConfig.use_intelligent_links);
+      }
+    }
+  }, [product, getConfigurationByFunction]);
 
   const hasExistingBlog = (type: 'commercial' | 'technical') => {
     return currentProduct.individual_blog_content?.[type] != null;

@@ -759,6 +759,7 @@ export type Database = {
           selected_data_sources: Json
           selected_fields: Json
           updated_at: string
+          use_intelligent_links: boolean | null
         }
         Insert: {
           created_at?: string
@@ -769,6 +770,7 @@ export type Database = {
           selected_data_sources?: Json
           selected_fields?: Json
           updated_at?: string
+          use_intelligent_links?: boolean | null
         }
         Update: {
           created_at?: string
@@ -779,6 +781,7 @@ export type Database = {
           selected_data_sources?: Json
           selected_fields?: Json
           updated_at?: string
+          use_intelligent_links?: boolean | null
         }
         Relationships: []
       }

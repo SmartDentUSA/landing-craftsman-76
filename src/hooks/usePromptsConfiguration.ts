@@ -9,6 +9,7 @@ export interface PromptConfiguration {
   custom_prompt: string;
   selected_data_sources: string[];
   selected_fields: Record<string, string[]>;
+  use_intelligent_links?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -68,18 +69,25 @@ export const usePromptsConfiguration = () => {
     promptName: string,
     customPrompt: string,
     selectedDataSources: string[],
-    selectedFields: Record<string, string[]>
+    selectedFields: Record<string, string[]>,
+    useIntelligentLinks?: boolean
   ) => {
     try {
+      const configData: any = {
+        edge_function_id: edgeFunctionId,
+        prompt_name: promptName,
+        custom_prompt: customPrompt,
+        selected_data_sources: selectedDataSources,
+        selected_fields: selectedFields
+      };
+
+      if (useIntelligentLinks !== undefined) {
+        configData.use_intelligent_links = useIntelligentLinks;
+      }
+
       const { error } = await supabase
         .from('prompts_configuration')
-        .upsert({
-          edge_function_id: edgeFunctionId,
-          prompt_name: promptName,
-          custom_prompt: customPrompt,
-          selected_data_sources: selectedDataSources,
-          selected_fields: selectedFields
-        }, {
+        .upsert(configData, {
           onConflict: 'edge_function_id,prompt_name'
         });
 

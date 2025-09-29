@@ -1140,6 +1140,7 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
   const [previewPrompt, setPreviewPrompt] = useState('');
   const [tokenCount, setTokenCount] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [useIntelligentLinks, setUseIntelligentLinks] = useState(true);
   const { toast } = useToast();
   const { saveConfiguration, getConfigurationByFunction, loading } = usePromptsConfiguration();
 
@@ -1157,6 +1158,11 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
           
           // Carregar campos selecionados da configuração
           setSelectedFields(savedConfig.selected_fields || {});
+          
+          // Carregar configuração de links inteligentes (apenas para generate-product-blog)
+          if (edgeFunction.id === 'generate-product-blog') {
+            setUseIntelligentLinks(savedConfig.use_intelligent_links !== undefined ? savedConfig.use_intelligent_links : true);
+          }
           
           // Carregar prompts customizados (buscar todas as configurações dessa função)
           const savedPrompts: Record<string, string> = {};
@@ -1306,7 +1312,8 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
             promptName,
             customPrompt,
             selectedDataSources,
-            selectedFields
+            selectedFields,
+            edgeFunction.id === 'generate-product-blog' ? useIntelligentLinks : undefined
           );
         }
       }
@@ -1442,6 +1449,29 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
                     Personalize os prompts utilizados por esta função IA. Use variáveis como {'{dados_produto}'} para inserir dados dinâmicos.
                   </AlertDescription>
                 </Alert>
+
+                {edgeFunction.id === 'generate-product-blog' && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">🔗 Configurações de Links Inteligentes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="use-intelligent-links"
+                          checked={useIntelligentLinks}
+                          onCheckedChange={(checked) => setUseIntelligentLinks(checked as boolean)}
+                        />
+                        <Label htmlFor="use-intelligent-links" className="text-sm font-normal cursor-pointer">
+                          Usar Links Inteligentes por Padrão
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Quando habilitado, os blogs gerados incluirão automaticamente links inteligentes para produtos e páginas relacionadas.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {edgeFunction.prompts.map(prompt => (
                   <Card key={prompt}>
