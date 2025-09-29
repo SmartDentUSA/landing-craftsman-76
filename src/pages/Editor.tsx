@@ -1020,6 +1020,9 @@ const EditorContent = () => {
   const debouncedNameUpdate = useDebounce((name: string) => {
     setData(prev => ({ ...prev, name }));
     setIsEditingName(false);
+    // Marcar como editado para prevenir sobrescrita do backend
+    dirtyRef.current = true;
+    console.info('✏️ Nome sendo digitado, preservando edição local:', name);
   }, 300);
 
   
@@ -1869,7 +1872,7 @@ const EditorContent = () => {
             // 🔧 CORREÇÃO CRÍTICA: Incluir name, status e template no loadedData
             const loadedData = { 
               ...landingPage.data, 
-              name: landingPage.name,
+              name: isEditingName ? data.name : landingPage.name, // Preservar nome local durante edição
               status: landingPage.status,
               template: landingPage.template 
             } as LandingPageData;
@@ -1878,7 +1881,9 @@ const EditorContent = () => {
               hasName: !!loadedData.name,
               pageName: loadedData.name,
               pageStatus: loadedData.status,
-              pageTemplate: loadedData.template
+              pageTemplate: loadedData.template,
+              isEditingName,
+              preservingLocalName: isEditingName
             });
           
           // Garantir que todos os campos obrigatórios existam (defaults seguros)
@@ -2709,6 +2714,17 @@ const EditorContent = () => {
                           setLocalName(e.target.value);
                           setIsEditingName(true);
                           debouncedNameUpdate(e.target.value);
+                        }}
+                        onBlur={async () => {
+                          // Persistir nome imediatamente no blur se há ID
+                          if (id && localName.trim()) {
+                            try {
+                              await updateLandingPage(id, { name: localName.trim() });
+                              console.info('✅ Nome persistido no blur:', localName.trim());
+                            } catch (error) {
+                              console.error('❌ Erro ao persistir nome no blur:', error);
+                            }
+                          }
                         }}
                         placeholder="Digite o nome da página"
                       />

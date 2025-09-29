@@ -217,12 +217,12 @@ const DashboardContent = () => {
     }
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
     try {
       console.log('🚀 Creating new landing page');
       
       // Criar nova landing page com dados mínimos padrão
-      const newId = addLandingPage({
+      const newId = await addLandingPage({
         name: "Nova Landing Page",
         status: "draft",
         template: "default"
