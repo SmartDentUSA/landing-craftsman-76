@@ -185,7 +185,9 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
               <FileText className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
               <h3 className="font-medium text-yellow-800 mb-2">Nenhum blog individual encontrado</h3>
               <p className="text-sm text-yellow-700">
-                Configure os blogs individuais nos produtos primeiro, usando as preferências de consolidação.
+                Configure os blogs individuais nos produtos primeiro. As preferências de consolidação são definidas automaticamente quando há conteúdo disponível.
+                <br />
+                <strong>Verifique no console</strong> os logs detalhados sobre produtos com blogs.
               </p>
             </div>
           )}
@@ -207,12 +209,15 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
                   ) : (
                     <Globe className="h-5 w-5" />
                   )}
-                  <div className="text-center">
-                    <div className="font-medium">Dentala HTML</div>
-                    <div className="text-xs opacity-75">
-                      {dentalaCount} blog{dentalaCount !== 1 ? 's' : ''} técnico{dentalaCount !== 1 ? 's' : ''}
+                    <div className="text-center">
+                      <div className="font-medium">Dentala HTML</div>
+                      <div className="text-xs opacity-75">
+                        {dentalaCount > 0 
+                          ? `${dentalaCount} blog${dentalaCount !== 1 ? 's' : ''} técnico${dentalaCount !== 1 ? 's' : ''} disponíve${dentalaCount !== 1 ? 'is' : 'l'}`
+                          : "Nenhum blog técnico encontrado"
+                        }
+                      </div>
                     </div>
-                  </div>
                 </Button>
 
                 <Button
@@ -229,7 +234,10 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
                   <div className="text-center">
                     <div className="font-medium">Eodonto HTML</div>
                     <div className="text-xs opacity-75">
-                      {eodontoCount} blog{eodontoCount !== 1 ? 's' : ''} comercial{eodontoCount !== 1 ? 's' : ''}
+                      {eodontoCount > 0 
+                        ? `${eodontoCount} blog${eodontoCount !== 1 ? 's' : ''} comercial${eodontoCount !== 1 ? 's' : ''} disponíve${eodontoCount !== 1 ? 'is' : 'l'}`
+                        : "Nenhum blog comercial encontrado"
+                      }
                     </div>
                   </div>
                 </Button>

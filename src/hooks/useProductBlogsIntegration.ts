@@ -69,32 +69,43 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     return titleMatch ? titleMatch[1].trim() : null;
   };
 
-  // Get blog consolidation preferences from localStorage with defaults
+  // Initialize default preferences for products with blogs
+  useEffect(() => {
+    if (productsWithBlogs.length > 0) {
+      const savedPreferences = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
+      const preferences = savedPreferences ? JSON.parse(savedPreferences) : {};
+      
+      let hasChanges = false;
+      const defaultPreferences: BlogConsolidationPreferences = { ...preferences };
+      
+      productsWithBlogs.forEach(product => {
+        if (!preferences[product.id]) {
+          defaultPreferences[product.id] = {
+            useCommercial: !!product.individual_blog_content?.commercial,
+            useTechnical: !!product.individual_blog_content?.technical
+          };
+          hasChanges = true;
+        }
+      });
+      
+      if (hasChanges) {
+        localStorage.setItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES, JSON.stringify(defaultPreferences));
+        console.log('📝 Initialized default blog preferences for products:', 
+          productsWithBlogs.map(p => ({ 
+            id: p.id, 
+            name: p.name,
+            hasCommercial: !!p.individual_blog_content?.commercial,
+            hasTechnical: !!p.individual_blog_content?.technical
+          }))
+        );
+      }
+    }
+  }, [productsWithBlogs]);
+
+  // Get blog consolidation preferences from localStorage
   const getBlogPreferences = (): BlogConsolidationPreferences => {
     const savedPreferences = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
-    const preferences = savedPreferences ? JSON.parse(savedPreferences) : {};
-    
-    // Set default preferences for products with blogs if none exist
-    const defaultPreferences: BlogConsolidationPreferences = {};
-    productsWithBlogs.forEach(product => {
-      if (!preferences[product.id]) {
-        defaultPreferences[product.id] = {
-          useCommercial: !!product.individual_blog_content?.commercial,
-          useTechnical: !!product.individual_blog_content?.technical
-        };
-      }
-    });
-    
-    // Merge defaults with existing preferences
-    const mergedPreferences = { ...defaultPreferences, ...preferences };
-    
-    // Save merged preferences back to localStorage if we added defaults
-    if (Object.keys(defaultPreferences).length > 0) {
-      localStorage.setItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES, JSON.stringify(mergedPreferences));
-      console.log('📝 Set default blog preferences for products:', Object.keys(defaultPreferences));
-    }
-    
-    return mergedPreferences;
+    return savedPreferences ? JSON.parse(savedPreferences) : {};
   };
 
   // Create blog entries for HTML generation based on preferences
@@ -102,8 +113,23 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     const preferences = getBlogPreferences();
     const productBlogs: ProductBlog[] = [];
 
+    console.log('🔍 Debug: Creating blogs for HTML generation:', {
+      productsWithBlogs: productsWithBlogs.length,
+      preferences: Object.keys(preferences).length,
+      preferenceDetails: preferences
+    });
+
     productsWithBlogs.forEach(product => {
       const productPrefs = preferences[product.id];
+      
+      console.log(`🔍 Debug: Processing product ${product.name}:`, {
+        productId: product.id,
+        hasPrefs: !!productPrefs,
+        useCommercial: productPrefs?.useCommercial,
+        useTechnical: productPrefs?.useTechnical,
+        hasCommercialContent: !!product.individual_blog_content?.commercial,
+        hasTechnicalContent: !!product.individual_blog_content?.technical
+      });
       
       if (productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
         const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
@@ -132,8 +158,14 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       }
     });
 
+    console.log('📊 Debug: Generated blogs summary:', {
+      totalBlogs: productBlogs.length,
+      commercialBlogs: productBlogs.filter(b => b.type === 'commercial').length,
+      technicalBlogs: productBlogs.filter(b => b.type === 'technical').length
+    });
+
     return productBlogs;
-  }, [productsWithBlogs, getBlogPreferences]);
+  }, [productsWithBlogs]);
 
   // Create blog entries filtered by domain
   const getProductBlogsForHTMLByDomain = useMemo(() => {
@@ -141,8 +173,22 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       const preferences = getBlogPreferences();
       const productBlogs: ProductBlog[] = [];
 
+      console.log(`🔍 Debug: Creating blogs for domain "${domain}":`, {
+        productsWithBlogs: productsWithBlogs.length,
+        preferences: Object.keys(preferences).length
+      });
+
       productsWithBlogs.forEach(product => {
         const productPrefs = preferences[product.id];
+        
+        console.log(`🔍 Debug: Processing product ${product.name} for domain ${domain}:`, {
+          productId: product.id,
+          hasPrefs: !!productPrefs,
+          useCommercial: productPrefs?.useCommercial,
+          useTechnical: productPrefs?.useTechnical,
+          hasCommercialContent: !!product.individual_blog_content?.commercial,
+          hasTechnicalContent: !!product.individual_blog_content?.technical
+        });
         
         // For Eodonto: only commercial blogs
         if (domain === 'eodonto' && productPrefs?.useCommercial && product.individual_blog_content?.commercial) {
@@ -156,6 +202,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
             productName: product.name,
             created_at: product.individual_blog_content.generated_at || new Date().toISOString()
           });
+          console.log(`✅ Added commercial blog for ${product.name} to Eodonto`);
         }
         
         // For Dentala: only technical blogs
@@ -170,12 +217,14 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
             productName: product.name,
             created_at: product.individual_blog_content.generated_at || new Date().toISOString()
           });
+          console.log(`✅ Added technical blog for ${product.name} to Dentala`);
         }
       });
 
+      console.log(`📊 Debug: Generated ${productBlogs.length} blogs for domain "${domain}"`);
       return productBlogs;
     };
-  }, [productsWithBlogs, getBlogPreferences]);
+  }, [productsWithBlogs]);
 
   // Count active product blogs based on preferences
   const getActiveProductBlogsCount = useMemo((): number => {
