@@ -909,7 +909,7 @@ const EditorContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
-  const { getLandingPage, updateLandingPage, addLandingPage } = useLandingPagesSupabase();
+  const { getLandingPage, updateLandingPage, addLandingPage, landingPages } = useLandingPagesSupabase();
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
@@ -932,6 +932,7 @@ const EditorContent = () => {
   // Estados para preview em tempo real
   const [previewVersion, setPreviewVersion] = useState(0);
   const prevHTMLRef = useRef('');
+  const autoFooterAppliedRef = useRef(false);
 
   // Helper functions for keywords management
   const parseKeywords = (keywords: any): string[] => {
@@ -1065,7 +1066,7 @@ const EditorContent = () => {
         console.log('🔄 Produtos selecionados carregados da landing page:', landingPage.selected_product_ids);
       }
     }
-  }, [id, getLandingPage]);
+  }, [id, landingPages, getLandingPage]);
 
   // Handler para mudanças na seleção de produtos
   const handleProductSelectionChange = useCallback((productIds: string[]) => {
@@ -1487,6 +1488,7 @@ const EditorContent = () => {
   // 🏢 AUTO-POPULAÇÃO DO FOOTER COM DADOS DA EMPRESA
   useEffect(() => {
     if (hasCompanyData && 
+        !autoFooterAppliedRef.current &&
         (!(data.footer?.locations?.length) && 
          !(data.footer?.links?.length) && 
          !(data.footer?.social?.length))) {
@@ -1503,12 +1505,14 @@ const EditorContent = () => {
         }
       }));
       
+      autoFooterAppliedRef.current = true;
+      
       toast({
         title: "Footer auto-populado",
         description: "Dados da empresa foram carregados automaticamente no footer.",
       });
     }
-  }, [hasCompanyData, generateAutoFooter, toast]);
+  }, [hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
 
   // Generate optimized preview HTML for real-time updates
   const generatedHTML = useMemo(() => {
@@ -2126,7 +2130,7 @@ const EditorContent = () => {
       // Caso seja nova landing page (sem ID), usar dados padrão do estado inicial
       console.log('Nova landing page - usando dados padrão do estado inicial');
     }
-  }, [id, getLandingPage]);
+  }, [id, landingPages, getLandingPage]);
 
   // Initialize localName when data.name changes (but not when editing)
   useEffect(() => {
@@ -6790,7 +6794,7 @@ dataLayer = [{
             <TabsContent value="email-preview" className="flex-1 p-4">
               <div className="h-full border rounded-lg overflow-hidden">
                 <iframe
-                  key={`email-${generatedEmailHTML.length}-${Date.now()}`}
+                  key="email-preview"
                   srcDoc={generatedEmailHTML}
                   className="w-full h-full"
                   title="Email Preview"

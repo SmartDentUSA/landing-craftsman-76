@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CompanyProfile {
@@ -41,7 +41,7 @@ export const useAutoFooterPopulation = () => {
     loadCompanyProfile();
   }, []);
 
-  const generateAutoFooter = (): FooterData => {
+  const generateAutoFooter = useCallback((): FooterData => {
     if (!companyProfile) {
       return { locations: [], links: [], social: [] };
     }
@@ -106,7 +106,7 @@ export const useAutoFooterPopulation = () => {
     }
 
     return footer;
-  };
+  }, [companyProfile]);
 
   return {
     companyProfile,

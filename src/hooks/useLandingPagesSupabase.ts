@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,7 +23,7 @@ export const useLandingPagesSupabase = () => {
   const { toast } = useToast();
 
   // Carregar landing pages do Supabase
-  const loadLandingPages = async () => {
+  const loadLandingPages = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -50,7 +50,7 @@ export const useLandingPagesSupabase = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   // Migrar dados do localStorage para Supabase
   const migrateFromLocalStorage = async () => {
@@ -114,7 +114,7 @@ export const useLandingPagesSupabase = () => {
   };
 
   // Adicionar nova landing page
-  const addLandingPage = async (landingPage: Omit<LandingPage, 'id' | 'last_modified' | 'version' | 'user_id'>): Promise<string> => {
+  const addLandingPage = useCallback(async (landingPage: Omit<LandingPage, 'id' | 'last_modified' | 'version' | 'user_id'>): Promise<string> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -151,10 +151,10 @@ export const useLandingPagesSupabase = () => {
       });
       return '';
     }
-  };
+  }, [loadLandingPages, toast]);
 
   // Atualizar landing page
-  const updateLandingPage = async (id: string, updates: Partial<LandingPage>) => {
+  const updateLandingPage = useCallback(async (id: string, updates: Partial<LandingPage>) => {
     try {
       // Preparar updates com conversões necessárias
       const supabaseUpdates: any = {
@@ -183,10 +183,10 @@ export const useLandingPagesSupabase = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [loadLandingPages, toast]);
 
   // Deletar landing page
-  const deleteLandingPage = async (id: string) => {
+  const deleteLandingPage = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('landing_pages')
@@ -204,12 +204,14 @@ export const useLandingPagesSupabase = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [loadLandingPages, toast]);
 
-  // Buscar uma landing page específica
-  const getLandingPage = (id: string): LandingPage | undefined => {
-    return landingPages.find(page => page.id === id);
-  };
+  // Obter landing page específica por ID
+  const getLandingPage = useMemo(() => {
+    return (id: string): LandingPage | undefined => {
+      return landingPages.find(page => page.id === id);
+    };
+  }, [landingPages]);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -237,7 +239,7 @@ export const useLandingPagesSupabase = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadLandingPages]);
 
   return {
     landingPages,
