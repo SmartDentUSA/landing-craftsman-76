@@ -2030,18 +2030,28 @@ const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.
 
 // Lightweight preview function for real-time updates
 export const generatePreviewHTML = (data: any): string => {
-  // Helper function to calculate section visibility
+  // Helper function to calculate section visibility - using template's expected format
   const calculateSectionVisibility = (section: any) => {
-    if (!section) return { visible_any: false, visibility_class: 'hidden' };
+    if (!section) return { visible_any: false, visibility_class: '' };
     
-    const isVisible = section.visible_desktop || section.visible_mobile;
+    const hasDesktop = section.visible_desktop;
+    const hasMobile = section.visible_mobile;
+    
+    let visibility_class = '';
+    if (hasDesktop && !hasMobile) {
+      visibility_class = 'desktop-only';
+    } else if (!hasDesktop && hasMobile) {
+      visibility_class = 'mobile-only';
+    }
+    // If both or neither, visibility_class remains empty string
+    
     return {
-      visible_any: isVisible,
-      visibility_class: isVisible ? 'visible' : 'hidden'
+      visible_any: hasDesktop || hasMobile,
+      visibility_class
     };
   };
 
-  // Calculate desktop_info table_rows from headers and data
+  // Calculate desktop_info table_rows as arrays of strings (template format)
   const processDesktopInfoTable = (desktop_info: any) => {
     if (!desktop_info?.show_table || !desktop_info?.table_headers || !desktop_info?.table_data) {
       return desktop_info;
@@ -2052,13 +2062,10 @@ export const generatePreviewHTML = (data: any): string => {
       header.replace(/Padrão ISOx/g, 'Padrão ISO')
     );
 
-    // Generate table_rows from headers and data
-    const table_rows = desktop_info.table_data.map((row: any) => {
-      const cells = correctedHeaders.map((header: string) => ({
-        value: row[header] || ''
-      }));
-      return { cells };
-    });
+    // Generate table_rows as arrays of strings (not objects)
+    const table_rows = desktop_info.table_data.map((row: any) => 
+      correctedHeaders.map((header: string) => row[header] || '')
+    );
 
     return {
       ...desktop_info,
@@ -2074,16 +2081,24 @@ export const generatePreviewHTML = (data: any): string => {
     og_image_url: data.seo?.og_image?.src || '',
     twitter_image_url: data.seo?.twitter_image?.src || '',
     
-    // Section visibility calculations
+    // Section visibility calculations with correct format
     desktop_info: {
       ...processDesktopInfoTable(data.desktop_info),
       ...calculateSectionVisibility(data.desktop_info)
     },
-    solutions_section: calculateSectionVisibility(data.solutions_section),
+    solutions_section: {
+      ...data.solutions_section,
+      ...calculateSectionVisibility(data.solutions_section),
+      // Ensure solutions have slideIndex for carousel
+      solutions: data.solutions_section?.solutions?.map((s: any, i: number) => ({ ...s, slideIndex: i })) || []
+    },
     resources_section: calculateSectionVisibility(data.resources_section),
     offers_section: calculateSectionVisibility(data.offers_section),
     faq_section: calculateSectionVisibility(data.faq_section),
-    advisory: calculateSectionVisibility(data.advisory),
+    advisory: {
+      ...data.advisory,
+      ...calculateSectionVisibility(data.advisory)
+    },
     
     // Skip heavy processing for preview
     schema_json_ld: '',

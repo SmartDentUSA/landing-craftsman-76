@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -928,6 +928,10 @@ const EditorContent = () => {
   
   // Estados para campos editáveis da Automação SEO
   const [autoKeywords, setAutoKeywords] = useState<string[]>([]);
+
+  // Estados para preview em tempo real
+  const [previewVersion, setPreviewVersion] = useState(0);
+  const prevHTMLRef = useRef('');
 
   // Helper functions for keywords management
   const parseKeywords = (keywords: any): string[] => {
@@ -6775,7 +6779,7 @@ dataLayer = [{
             <TabsContent value="landing-preview" className="flex-1 p-4">
               <div className="h-full border rounded-lg overflow-hidden">
                 <iframe
-                  key={`landing-${generatedHTML.length}-${Date.now()}`}
+                  key={`landing-${previewVersion}`}
                   srcDoc={generatedHTML}
                   className="w-full h-full"
                   title="Landing Page Preview"
