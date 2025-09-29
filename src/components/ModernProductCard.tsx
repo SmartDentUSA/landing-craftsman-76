@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
+import { TechnicalSpecsPreview } from './TechnicalSpecsPreview';
 import { WhatsAppMessageGenerator } from "./WhatsAppMessageGenerator";
 import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
@@ -109,6 +110,8 @@ export function ModernProductCard({
 
   const handleSaveTechnicalSpecs = async (specs: any[]) => {
     try {
+      console.log('Saving technical specs:', specs, 'for product:', product.id);
+      
       const { error } = await supabase
         .from('products_repository')
         .update({ technical_specifications: specs })
@@ -116,12 +119,18 @@ export function ModernProductCard({
 
       if (error) throw error;
 
+      // Update local product state immediately
+      const updatedProduct = { ...product, technical_specifications: specs };
+      console.log('Technical specs saved successfully, triggering update');
+
       toast({
         title: "Especificações atualizadas",
         description: "As especificações técnicas foram salvas com sucesso",
       });
       
+      // Force refresh of the product data
       if (onProductUpdate) {
+        console.log('Calling onProductUpdate to refresh data');
         onProductUpdate();
       }
     } catch (error) {
@@ -412,6 +421,13 @@ export function ModernProductCard({
         productName={product.name}
         initialSpecs={product.technical_specifications || []}
         onSave={handleSaveTechnicalSpecs}
+      />
+
+      {/* Preview das Especificações Técnicas */}
+      <TechnicalSpecsPreview
+        specs={product.technical_specifications || []}
+        onEdit={() => setShowTechnicalSpecs(true)}
+        productName={product.name}
       />
     </Card>
   );

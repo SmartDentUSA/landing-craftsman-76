@@ -31,6 +31,7 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
 }) => {
   const [specs, setSpecs] = useState<TechnicalSpec[]>(initialSpecs);
   const [newSpec, setNewSpec] = useState<TechnicalSpec>({ label: '', value: '' });
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,14 +56,26 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
     setSpecs(updatedSpecs);
   };
 
-  const handleSave = () => {
-    const validSpecs = specs.filter(spec => spec.label.trim() && spec.value.trim());
-    onSave(validSpecs);
-    toast({
-      title: "Especificações salvas",
-      description: "As especificações técnicas foram atualizadas com sucesso",
-    });
-    onClose();
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      const validSpecs = specs.filter(spec => spec.label.trim() && spec.value.trim());
+      await onSave(validSpecs);
+      toast({
+        title: "Especificações salvas",
+        description: "As especificações técnicas foram atualizadas com sucesso",
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error in handleSave:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as especificações técnicas",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -154,11 +167,11 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
 
           {/* Botões de ação */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button onClick={handleSave}>
-              Salvar Especificações
+            <Button onClick={handleSave} disabled={isLoading}>
+              {isLoading ? "Salvando..." : "Salvar Especificações"}
             </Button>
           </div>
         </div>

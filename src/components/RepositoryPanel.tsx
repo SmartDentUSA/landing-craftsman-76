@@ -58,6 +58,7 @@ interface Product {
   testimonial_videos?: Video[];
   video_captions?: any;
   original_data?: any;
+  technical_specifications?: Array<{ label: string; value: string }>;
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;
@@ -315,6 +316,9 @@ export function RepositoryPanel({
         testimonial_videos: Array.isArray(data.testimonial_videos) ? data.testimonial_videos as unknown as Video[] : [],
         video_captions: data.video_captions || {},
         original_data: data.original_data || null,
+        technical_specifications: Array.isArray(data.technical_specifications) 
+          ? (data.technical_specifications as Array<{ label: string; value: string }>)
+          : [],
         // Landing page sections and CTAs
         selected: data.selected ?? false,
         show_in_resources: data.show_in_resources ?? false,
