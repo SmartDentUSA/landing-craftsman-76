@@ -932,7 +932,7 @@ const EditorContent = () => {
   // Estados para preview em tempo real
   const [previewVersion, setPreviewVersion] = useState(0);
   const prevHTMLRef = useRef('');
-  const autoFooterAppliedRef = useRef(false);
+  const autoFooterAppliedRef = useRef(!!sessionStorage.getItem('autoFooterApplied'));
   const dirtyRef = useRef(false);
 
   // Helper functions for keywords management
@@ -1497,21 +1497,36 @@ const EditorContent = () => {
       const autoFooter = generateAutoFooter();
       console.log('🏢 Auto-populando footer com dados da empresa:', autoFooter);
       
-      setData(prev => ({
-        ...prev,
+      const newData = {
+        ...data,
         footer: {
           locations: autoFooter.locations,
           links: autoFooter.links,
           social: autoFooter.social
         }
-      }));
+      };
       
-      autoFooterAppliedRef.current = true;
+      setData(newData);
       
-      toast({
-        title: "Footer auto-populado",
-        description: "Dados da empresa foram carregados automaticamente no footer.",
-      });
+      // Persistir no Supabase se há ID
+      if (id) {
+        updateLandingPage(id, { data: newData }).then(() => {
+          autoFooterAppliedRef.current = true;
+          sessionStorage.setItem('autoFooterApplied', 'true');
+          toast({
+            title: "Footer auto-populado",
+            description: "Dados da empresa foram carregados automaticamente no footer.",
+          });
+        });
+      } else {
+        // Fallback para quando não há ID ainda
+        autoFooterAppliedRef.current = true;
+        sessionStorage.setItem('autoFooterApplied', 'true');
+        toast({
+          title: "Footer auto-populado", 
+          description: "Dados da empresa foram carregados automaticamente no footer.",
+        });
+      }
     }
   }, [hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
 

@@ -2106,13 +2106,20 @@ export const generatePreviewHTML = (data: any): string => {
       ...calculateSectionVisibility(data.advisory)
     },
     
-    // Include schema data for offers and resources
-    schema: {
-      ...data.schema,
-      offers: data.schema?.offers || [],
-      // Filter resources from offers where show_in_resources is true
-      resources: data.schema?.offers?.filter((offer: any) => offer.show_in_resources) || []
-    },
+    // Map schema offers to template-level offers and resources_products
+    offers: (data.schema?.offers || []).map((offer: any) => ({
+      ...offer,
+      // Ensure required template fields
+      discount_percentage: offer.discount_percentage || '',
+      isPriceZero: parseFloat((offer.price || '0').toString().replace(/[^\d.,]/g, '').replace(',', '.')) === 0
+    })),
+    
+    resources_products: (data.schema?.offers || [])
+      .filter((offer: any) => offer.show_in_resources === true)
+      .map((offer: any, index: number) => ({
+        ...offer,
+        first: index === 0 // Flag for carousel dots
+      })),
     
     // Skip heavy processing for preview
     schema_json_ld: '',
