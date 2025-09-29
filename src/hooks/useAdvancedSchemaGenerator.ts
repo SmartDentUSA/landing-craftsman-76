@@ -42,6 +42,10 @@ interface ProductData {
   seo_title_override?: string;
   seo_description_override?: string;
   canonical_url?: string;
+  // ✨ NOVOS CAMPOS PHASE 1 - UTILIZAÇÃO MÁXIMA DE DADOS
+  technical_specifications?: Array<{ property: string; value: string }>;
+  faq?: Array<{ question: string; answer: string }>;
+  bot_trigger_words?: string[];
 }
 
 interface CompanyData {
@@ -56,6 +60,14 @@ interface CompanyData {
   seo_competitive_advantages?: string;
   seo_technical_expertise?: string;
   seo_service_areas?: string;
+  // ✨ PHASE 1: Campos adicionais do perfil da empresa
+  brand_values?: string;
+  mission_statement?: string;
+  vision_statement?: string;
+  differentiators?: string;
+  working_methodology?: string;
+  company_culture?: string;
+  institutional_links?: Array<{ name: string; url: string }>;
 }
 
 interface FAQItem {
@@ -137,12 +149,27 @@ export const useAdvancedSchemaGenerator = () => {
     }
 
     // ✨ Features como PropertyValue
+    const additionalProperties = [];
+    
     if (product.features && product.features.length > 0) {
-      schema.additionalProperty = product.features.map(feature => ({
+      additionalProperties.push(...product.features.map(feature => ({
         "@type": "PropertyValue",
         "name": "Feature",
         "value": feature
-      }));
+      })));
+    }
+
+    // ✨ PHASE 1: Technical Specifications como PropertyValue
+    if (product.technical_specifications && product.technical_specifications.length > 0) {
+      additionalProperties.push(...product.technical_specifications.map(spec => ({
+        "@type": "PropertyValue",
+        "name": spec.property,
+        "value": spec.value
+      })));
+    }
+
+    if (additionalProperties.length > 0) {
+      schema.additionalProperty = additionalProperties;
     }
 
     // ✨ Benefits integrados na descrição
@@ -158,7 +185,7 @@ export const useAdvancedSchemaGenerator = () => {
       };
     }
 
-    // ✨ Vídeos associados
+    // ✨ Vídeos associados com captions
     const videos = [
       ...(product.youtube_videos || []),
       ...(product.instagram_videos || []),
@@ -167,11 +194,24 @@ export const useAdvancedSchemaGenerator = () => {
     ].filter(Boolean);
 
     if (videos.length > 0) {
-      schema.video = videos.map(url => ({
-        "@type": "VideoObject",
-        "contentUrl": url,
-        "name": `${product.name} - Vídeo Demonstrativo`
-      }));
+      schema.video = videos.map((url, index) => {
+        const videoObj: any = {
+          "@type": "VideoObject",
+          "contentUrl": url,
+          "name": `${product.name} - Vídeo Demonstrativo ${index + 1}`
+        };
+        
+        // ✨ PHASE 1: Adicionar captions se disponíveis
+        if (product.video_captions && typeof product.video_captions === 'object') {
+          const caption = product.video_captions[url];
+          if (caption) {
+            videoObj.caption = caption;
+            videoObj.accessibilityFeature = "captions";
+          }
+        }
+        
+        return videoObj;
+      });
     }
 
     // ✨ Marca/Empresa (priorizar brand extraído)
@@ -214,12 +254,13 @@ export const useAdvancedSchemaGenerator = () => {
       };
     }
 
-    // ✨ Keywords como tags
+    // ✨ PHASE 1: Keywords expandidas + bot_trigger_words
     const allKeywords = [
       ...(product.keywords || []),
       ...(product.market_keywords || []),
       ...(product.search_intent_keywords || []),
-      ...(product.tags || [])
+      ...(product.tags || []),
+      ...(product.bot_trigger_words || []) // ✨ NOVO: palavras-gatilho para SEO
     ].filter(Boolean);
 
     if (allKeywords.length > 0) {
@@ -320,7 +361,52 @@ export const useAdvancedSchemaGenerator = () => {
       schema.knowsAbout = companyData.seo_technical_expertise;
     }
 
+    // ✨ PHASE 1: Campos adicionais da empresa para SEO
+    if (companyData.brand_values) {
+      schema.slogan = companyData.brand_values;
+    }
+
+    if (companyData.mission_statement) {
+      schema.mission = companyData.mission_statement;
+    }
+
+    if (companyData.seo_competitive_advantages) {
+      schema.additionalProperty = schema.additionalProperty || [];
+      schema.additionalProperty.push({
+        "@type": "PropertyValue",
+        "name": "Diferenciais Competitivos",
+        "value": companyData.seo_competitive_advantages
+      });
+    }
+
+    // ✨ PHASE 1: Links institucionais como sameAs
+    if (companyData.institutional_links && companyData.institutional_links.length > 0) {
+      schema.sameAs = companyData.institutional_links.map(link => link.url);
+    }
+
     return schema;
+  }, []);
+
+  // ✨ PHASE 1: Gerar Schema de FAQ para produtos individuais
+  const generateProductFAQSchema = useCallback((productFaq: Array<{ question: string; answer: string }>, productName: string) => {
+    if (!productFaq || productFaq.length === 0) return null;
+
+    return {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "about": {
+        "@type": "Product",
+        "name": productName
+      },
+      "mainEntity": productFaq.map(faq => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
   }, []);
 
   // Combinar TODOS os schemas em um estruturado
@@ -353,6 +439,15 @@ export const useAdvancedSchemaGenerator = () => {
         const productSchema = generateAdvancedProductSchema(product, companyData);
         productSchema["@id"] = `#product-${product.id}`;
         schemas.push(productSchema);
+
+        // ✨ PHASE 1: FAQ individual por produto
+        if (product.faq && product.faq.length > 0) {
+          const productFaqSchema = generateProductFAQSchema(product.faq, product.name);
+          if (productFaqSchema) {
+            productFaqSchema["@id"] = `#faq-${product.id}`;
+            schemas.push(productFaqSchema);
+          }
+        }
       });
       
       // Se múltiplos produtos, adicionar também ItemList
@@ -371,20 +466,34 @@ export const useAdvancedSchemaGenerator = () => {
       }
     }
 
-    // FAQ schema
+    // FAQ schema geral da página
     const faqSchema = generateFAQSchema(faqItems || []);
     if (faqSchema) schemas.push(faqSchema);
+
+    // ✨ PHASE 1: Coletar FAQs de todos os produtos para schema consolidado
+    const allProductFaqs = products?.flatMap(p => p.faq || []) || [];
+    if (allProductFaqs.length > 0) {
+      const consolidatedFaqSchema = generateFAQSchema(allProductFaqs);
+      if (consolidatedFaqSchema) {
+        consolidatedFaqSchema["@id"] = "#consolidated-product-faq";
+        schemas.push(consolidatedFaqSchema);
+      }
+    }
 
     // Reviews schema
     const reviewsSchema = generateReviewsSchema(reviews || [], pageTitle);
     if (reviewsSchema) schemas.push(reviewsSchema);
 
-    console.log('🎯 Schema JSON-LD COMPLETO gerado:', {
+    console.log('🎯 Schema JSON-LD COMPLETO gerado (PHASE 1):', {
       totalSchemas: schemas.length,
       types: schemas.map(s => s['@type']),
       productsCount: products?.length || 0,
+      individualProductFaqs: products?.filter(p => p.faq?.length > 0).length || 0,
+      allProductFaqsCount: allProductFaqs.length,
       faqCount: faqItems?.length || 0,
-      reviewsCount: reviews?.length || 0
+      reviewsCount: reviews?.length || 0,
+      technicalSpecsProducts: products?.filter(p => p.technical_specifications?.length > 0).length || 0,
+      botTriggerWordsProducts: products?.filter(p => p.bot_trigger_words?.length > 0).length || 0
     });
 
     return {
@@ -392,13 +501,14 @@ export const useAdvancedSchemaGenerator = () => {
       formatted: JSON.stringify(schemas, null, 2),
       preview: `${schemas.length} schemas gerados: ${schemas.map(s => s['@type']).join(', ')}`
     };
-  }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema]);
+  }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema, generateProductFAQSchema]);
 
   return {
     generateAdvancedProductSchema,
     generateFAQSchema,
     generateReviewsSchema,
     generateLocalBusinessSchema,
-    generateCompletePageSchema
+    generateCompletePageSchema,
+    generateProductFAQSchema // ✨ PHASE 1: Nova função para FAQ de produtos
   };
 };

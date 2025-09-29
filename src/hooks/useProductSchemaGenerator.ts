@@ -1,5 +1,9 @@
 import { useCallback } from 'react';
 
+// ⚠️ DEPRECATED: Este hook está sendo substituído pelo useAdvancedSchemaGenerator
+// Use useAdvancedSchemaGenerator.generateCompletePageSchema() para funcionalidade completa
+console.warn('⚠️ useProductSchemaGenerator está DEPRECATED. Use useAdvancedSchemaGenerator para melhor performance e mais funcionalidades.');
+
 // Interface para dados do produto usado no schema
 interface ProductSchemaData {
   id: string;
