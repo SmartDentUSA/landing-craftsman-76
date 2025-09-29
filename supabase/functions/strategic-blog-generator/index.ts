@@ -210,6 +210,8 @@ async function loadCustomPrompts(supabase: any, edgeFunctionId: string) {
 async function generateStrategicBlog(context: any, customPrompts: any): Promise<string> {
   const defaultPrompt = `Você é um especialista em marketing de conteúdo estratégico e SEO.
 
+IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamais use espanhol ou outros idiomas.
+
 Crie um artigo de blog abrangente e estratégico que combine todos os elementos fornecidos de forma natural e persuasiva.
 
 CONTEXTO DISPONÍVEL:
@@ -272,7 +274,7 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
       model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: prompt },
-        { role: 'user', content: 'Gere um artigo estratégico completo baseado no contexto fornecido' }
+        { role: 'user', content: 'Gere um artigo estratégico completo em PORTUGUÊS BRASILEIRO baseado no contexto fornecido. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.' }
       ],
       max_tokens: 3000,
       temperature: 0.7,
@@ -310,7 +312,7 @@ async function generateWithDeepSeek(prompt: string): Promise<string> {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: prompt },
-        { role: 'user', content: 'Gere um artigo estratégico completo baseado no contexto fornecido' }
+        { role: 'user', content: 'Gere um artigo estratégico completo em PORTUGUÊS BRASILEIRO baseado no contexto fornecido. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.' }
       ],
       max_tokens: 3000,
       temperature: 0.7,

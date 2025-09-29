@@ -282,6 +282,8 @@ INSTRUÇÕES CRÍTICAS:
   } else {
     systemPrompt = `${currentPrompt.role}
 
+IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamais use espanhol ou outros idiomas.
+
 OBJETIVO: ${currentPrompt.objective}
 
 DADOS DO PRODUTO:
@@ -341,7 +343,7 @@ Gere o blog post completo agora:`;
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Gere um blog ${blogType} completo para o produto ${product.name}` }
+        { role: 'user', content: `Gere um blog ${blogType} completo em PORTUGUÊS BRASILEIRO para o produto ${product.name}. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.` }
       ],
       max_tokens: 2500,
       temperature: 0.7,
