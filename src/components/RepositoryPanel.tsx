@@ -52,6 +52,7 @@ interface Product {
   search_intent_keywords?: string[];
   market_keywords?: string[];
   tags?: string[];
+  bot_trigger_words?: string[];
   youtube_videos?: Video[];
   instagram_videos?: Video[];
   technical_videos?: Video[];
@@ -310,6 +311,7 @@ export function RepositoryPanel({
         search_intent_keywords: Array.isArray(data.search_intent_keywords) ? data.search_intent_keywords.map(s => String(s)) : [],
         market_keywords: Array.isArray(data.market_keywords) ? data.market_keywords.map(m => String(m)) : [],
         tags: Array.isArray(data.tags) ? data.tags.map(t => String(t)) : [],
+        bot_trigger_words: Array.isArray(data.bot_trigger_words) ? data.bot_trigger_words.map(b => String(b)) : [],
         youtube_videos: Array.isArray(data.youtube_videos) ? data.youtube_videos as unknown as Video[] : [],
         instagram_videos: Array.isArray(data.instagram_videos) ? data.instagram_videos as unknown as Video[] : [],
         technical_videos: Array.isArray(data.technical_videos) ? data.technical_videos as unknown as Video[] : [],
