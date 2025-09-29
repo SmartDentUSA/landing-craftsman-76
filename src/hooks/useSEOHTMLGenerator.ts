@@ -3,6 +3,84 @@ import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
 
+// Função para converter markdown para HTML
+const convertMarkdownToHTML = (content: string): string => {
+  if (!content) return '';
+
+  // Processar conteúdo linha por linha para manter estrutura
+  const lines = content.split('\n');
+  const processedLines: string[] = [];
+  let inList = false;
+  let listItems: string[] = [];
+
+  const processLine = (line: string): string => {
+    // Headers
+    if (line.match(/^### /)) {
+      return `<h3>${line.replace(/^### /, '').trim()}</h3>`;
+    }
+    if (line.match(/^## /)) {
+      return `<h2>${line.replace(/^## /, '').trim()}</h2>`;
+    }
+    if (line.match(/^# /)) {
+      return `<h1>${line.replace(/^# /, '').trim()}</h1>`;
+    }
+
+    // Links markdown [texto](url "título")
+    line = line.replace(/\[([^\]]+)\]\(([^)]+?)(?:\s+"([^"]*)")?\)/g, '<a href="$2" title="$3">$1</a>');
+    
+    // Bold **texto**
+    line = line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Italic *texto*
+    line = line.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+    return line;
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    
+    // Lista com -
+    if (trimmed.match(/^- /)) {
+      if (!inList) {
+        inList = true;
+        listItems = [];
+      }
+      listItems.push(`<li>${processLine(trimmed.replace(/^- /, ''))}</li>`);
+      return;
+    }
+    
+    // Finalizar lista se necessário
+    if (inList && !trimmed.match(/^- /)) {
+      processedLines.push(`<ul>${listItems.join('')}</ul>`);
+      inList = false;
+      listItems = [];
+    }
+
+    // Linha vazia
+    if (trimmed === '') {
+      if (!inList) {
+        processedLines.push('');
+      }
+      return;
+    }
+
+    // Linha normal
+    if (!trimmed.match(/^#/)) {
+      processedLines.push(`<p>${processLine(trimmed)}</p>`);
+    } else {
+      processedLines.push(processLine(trimmed));
+    }
+  });
+
+  // Finalizar lista pendente
+  if (inList) {
+    processedLines.push(`<ul>${listItems.join('')}</ul>`);
+  }
+
+  return processedLines.join('\n');
+};
+
 interface SEOHTMLOptions {
   title: string;
   description: string;
@@ -93,8 +171,9 @@ export const useSEOHTMLGenerator = () => {
       }
     });
 
-    // Processar conteúdo com links inteligentes
-    const processedContent = processContentWithAdvancedIntelligentLinks(content, intelligentLinks);
+    // Converter markdown para HTML e processar com links inteligentes
+    const htmlContent = convertMarkdownToHTML(content);
+    const processedContent = processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks);
 
     // Gerar Schema.org se solicitado
     let schemaJson = '';
@@ -515,7 +594,11 @@ export const useSEOHTMLGenerator = () => {
     // Processar conteúdo dos blogs com links clicáveis
     const blogContents = blogs.map((blog, index) => {
       const blogCanonicalUrl = `${canonicalUrl}/blog/${domain}-${index + 1}`;
-      const processedContent = processContentWithAdvancedIntelligentLinks(blog.content, intelligentLinks);
+      
+      // Converter markdown para HTML primeiro
+      const htmlContent = convertMarkdownToHTML(blog.content);
+      // Depois aplicar links inteligentes
+      const processedContent = processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks);
       
       // Truncate content for preview (first 300 characters)
       const previewLength = 300;
