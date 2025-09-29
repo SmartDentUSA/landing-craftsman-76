@@ -40,7 +40,7 @@ import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
-import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
+import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
 
@@ -914,6 +914,11 @@ const EditorContent = () => {
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
   const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
+  
+  // Debounced auto-save for desktop info
+  const debouncedDesktopSave = useDebounce((updatedData: any) => {
+    saveDesktopInfo(updatedData);
+  }, 1500);
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
   
@@ -1457,6 +1462,24 @@ const EditorContent = () => {
     }
   });
 
+  // Optimized handler for desktop info updates  
+  const updateDesktopInfo = useCallback((updates: any) => {
+    console.time('desktop-info-update');
+    const updatedData = {
+      ...data,
+      desktop_info: { ...data.desktop_info, ...updates }
+    };
+    
+    // Immediate preview update
+    setData(updatedData);
+    
+    // Debounced persistence
+    debouncedDesktopSave(updatedData);
+    console.timeEnd('desktop-info-update');
+  }, [data, debouncedDesktopSave, setData]);
+
+  // Auto-população do footer quando dados da empresa estão disponíveis
+
   // 🏢 AUTO-POPULAÇÃO DO FOOTER COM DADOS DA EMPRESA
   useEffect(() => {
     if (hasCompanyData && 
@@ -1483,66 +1506,12 @@ const EditorContent = () => {
     }
   }, [hasCompanyData, generateAutoFooter, toast]);
 
-  // Gerar HTML baseado nos dados processados
+  // Generate optimized preview HTML for real-time updates
   const generatedHTML = useMemo(() => {
+    console.time('preview-generation');
     const processedData = beforePreview(data);
     
-    console.log('🎯 Using standard HTML generation - desktop_info:', data.desktop_info?.show_table, data.desktop_info?.visible_desktop, data.desktop_info?.visible_mobile);
-    
-    return generateHTML({
-      ...processedData,
-      // Converter ImageData para formato compatível com template
-      logo_url: processedData.logo_url.src,
-      banner: {
-        ...processedData.banner,
-        images: processedData.banner.images.map(img => ({
-          image: {
-            src: img.src,
-            alt: img.alt,
-              scale: img.scale,
-              href: img.href
-            }
-          }))
-        },
-        solutions: processedData.solutions.map((s, index) => {
-          // Auto-generate size and sizeType based on index for asymmetric grid layout
-          let size = "control-item-medium";
-          let sizeType = "medium";
-          
-          if (index === 0) {
-            size = "control-item-large";
-            sizeType = "large";
-          } else if (index < 6) {
-            size = "control-item-medium";
-            sizeType = "medium";
-          } else {
-            size = "control-item-small";
-            sizeType = "small";
-          }
-          
-          return {
-            ...s,
-            image: {
-              src: s.image?.src || '',
-              alt: s.image?.alt || '',
-              scale: s.image?.scale || 1
-            },
-            size,
-            sizeType
-          };
-        }),
-        advisory: {
-          ...processedData.advisory,
-          image: {
-            src: processedData.advisory?.image?.src || '',
-            alt: processedData.advisory?.image?.alt || '',
-            scale: processedData.advisory?.image?.scale || 1
-          }
-        }
-      });
-    
-    console.log('🚀 Editor: Using standard HTML generation');
-    return generateHTML({
+    const previewData = {
       ...processedData,
       // Converter ImageData para formato compatível com template
       logo_url: processedData.logo_url.src,
@@ -1590,17 +1559,12 @@ const EditorContent = () => {
           scale: processedData.advisory?.image?.scale || 1
         }
       }
-    });
-  }, [
-    data,
-    data.desktop_info?.show_table,
-    data.desktop_info?.table_headers,
-    data.desktop_info?.table_data,
-    data.desktop_info?.visible_desktop,
-    data.desktop_info?.visible_mobile,
-    data.desktop_info?.table_title,
-    JSON.stringify(data.desktop_info) // Força atualização quando qualquer campo desktop_info muda
-  ]);
+    };
+    
+    const html = generatePreviewHTML(previewData);
+    console.timeEnd('preview-generation');
+    return html;
+  }, [data]);
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {

@@ -2028,6 +2028,26 @@ const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.
   ];
 };
 
+// Lightweight preview function for real-time updates
+export const generatePreviewHTML = (data: any): string => {
+  console.time('preview-generation');
+  
+  // Skip heavy processing - use data as-is without expensive transformations
+  const previewData = {
+    ...data,
+    // Skip schema generation for preview
+    schema_json_ld: '',
+    // Skip hreflang generation for preview
+    hreflang_tags: '',
+    // Use simple column layout for preview
+    columnWidths: [25, 25, 25, 25]
+  };
+  
+  const html = Mustache.render(TEMPLATE_HTML, previewData);
+  console.timeEnd('preview-generation');
+  return html;
+};
+
 export const generateHTML = (data: any): string => {
   // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
   const calculateColumnWidths = (solutions: any[]) => {
