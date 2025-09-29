@@ -1037,13 +1037,23 @@ const DashboardContent = () => {
                     </div>
                   )}
                 </div>
-                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-hidden">
-                  <div 
-                    className="text-xs leading-relaxed"
-                    dangerouslySetInnerHTML={{ 
-                      __html: eodontoHTML.substring(0, 600) + '...' 
-                    }}
-                  />
+                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-auto">
+                  <div className="post-card-content">
+                    <div className="text-xs leading-relaxed mb-2">
+                      <strong>Preview do Blog Consolidado Eodonto</strong>
+                    </div>
+                    <div className="text-xs leading-relaxed">
+                      {eodontoHTML.substring(0, 200)}...
+                    </div>
+                    <div className="full-content text-xs leading-relaxed">
+                      <div 
+                        dangerouslySetInnerHTML={{ 
+                          __html: eodontoHTML.substring(200, 1500) + '...' 
+                        }}
+                      />
+                    </div>
+                    <button className="read-more-btn text-xs mt-2">Leia mais →</button>
+                  </div>
                 </div>
                 <Button 
                   onClick={() => copyConsolidatedHTML('eodonto')}
@@ -1096,13 +1106,23 @@ const DashboardContent = () => {
                     </div>
                   )}
                 </div>
-                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-hidden">
-                  <div 
-                    className="text-xs leading-relaxed"
-                    dangerouslySetInnerHTML={{ 
-                      __html: dentalaHTML.substring(0, 600) + '...' 
-                    }}
-                  />
+                <div className="bg-muted rounded-lg p-4 mb-4 h-48 overflow-auto">
+                  <div className="post-card-content">
+                    <div className="text-xs leading-relaxed mb-2">
+                      <strong>Preview do Blog Consolidado Dentala</strong>
+                    </div>
+                    <div className="text-xs leading-relaxed">
+                      {dentalaHTML.substring(0, 200)}...
+                    </div>
+                    <div className="full-content text-xs leading-relaxed">
+                      <div 
+                        dangerouslySetInnerHTML={{ 
+                          __html: dentalaHTML.substring(200, 1500) + '...' 
+                        }}
+                      />
+                    </div>
+                    <button className="read-more-btn text-xs mt-2">Leia mais →</button>
+                  </div>
                 </div>
                 <Button 
                   onClick={() => copyConsolidatedHTML('dentala')}
