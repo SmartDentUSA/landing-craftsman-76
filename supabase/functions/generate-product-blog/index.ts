@@ -163,13 +163,19 @@ async function generateProductBlog(
 [Informações sobre garantia, suporte e confiança na compra]
 
 ## Não Deixe Essa Oportunidade Passar
-[Call-to-action urgente e persuasivo]`
+[Call-to-action urgente e persuasivo]
+
+INSTRUÇÕES CRÍTICAS:
+- O título H1 deve ser comercial e atrativo, NUNCA genérico como "Análise comercial"
+- Use títulos que despertem desejo e interesse de compra
+- Foque nos benefícios e resultados que o produto oferece
+- Evite linguagem analítica ou técnica demais no título`
     },
     technical: {
       role: "Você é um especialista técnico em equipamentos odontológicos e engenharia biomédica.",
       objective: "Criar um blog post técnico que comece de forma envolvente, despertando curiosidade sobre os aspectos técnicos do produto.",
       structure: `
-# ${product.name}: [Título Técnico Intrigante sobre Inovação ou Tecnologia]
+# ${product.name}: [Título Técnico Intrigante sobre Inovação ou Tecnologia - NUNCA use palavras como "Análise", "Estudo" ou "Avaliação"]
 
 [Inicie com uma pergunta técnica interessante, uma descoberta recente, ou um problema técnico que este produto resolve de forma inovadora]
 
@@ -192,7 +198,13 @@ async function generateProductBlog(
 [Aspectos técnicos de implementação e cuidados]
 
 ## O Futuro da Odontologia Está Aqui
-[Conclusão técnica inspiradora sobre o impacto da tecnologia]`
+[Conclusão técnica inspiradora sobre o impacto da tecnologia]
+
+INSTRUÇÕES CRÍTICAS:
+- O título H1 deve ser atrativo e específico, NUNCA genérico como "Análise técnica"
+- Use títulos que despertem curiosidade e interesse
+- Evite linguagem acadêmica ou analítica no título
+- Foque nos benefícios e características únicas do produto`
     }
   };
 

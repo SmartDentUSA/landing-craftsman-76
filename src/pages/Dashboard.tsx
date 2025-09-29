@@ -389,7 +389,9 @@ const DashboardContent = () => {
       status: 'published',
       landing_page_id: `product-${productBlog.productId}`,
       content: productBlog.content,
-      meta_description: `${productBlog.type === 'commercial' ? 'Análise comercial' : 'Análise técnica'} do produto ${productBlog.productName}`,
+      meta_description: productBlog.type === 'commercial' 
+        ? `Descubra todas as vantagens e benefícios do ${productBlog.productName}. Saiba por que é a melhor escolha para seu consultório.`
+        : `Conheça as especificações técnicas e funcionamento detalhado do ${productBlog.productName}. Tecnologia avançada para odontologia.`,
       keywords: [],
       intelligent_links: {}
     } as BlogPost));

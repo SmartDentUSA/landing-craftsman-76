@@ -99,10 +99,22 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     }
   };
 
-  // Extract title from markdown content
+  // Extract title from markdown content with improved patterns
   const extractTitleFromMarkdown = (content: string): string | null => {
-    const titleMatch = content.match(/^# (.+)$/m);
-    return titleMatch ? titleMatch[1].trim() : null;
+    // Try different title patterns
+    const h1Match = content.match(/^# (.+)$/m);
+    if (h1Match) return h1Match[1].trim();
+    
+    const h2Match = content.match(/^## (.+)$/m);
+    if (h2Match) return h2Match[1].trim();
+    
+    // Try to find title-like patterns at the beginning
+    const firstLineMatch = content.match(/^(.{10,80}[.!?]?)\s*\n/);
+    if (firstLineMatch && !firstLineMatch[1].toLowerCase().includes('análise')) {
+      return firstLineMatch[1].trim();
+    }
+    
+    return null;
   };
 
   // Initialize default preferences for products with blogs
@@ -171,7 +183,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
         productBlogs.push({
           id: `${product.id}-commercial`,
-          title: extractedTitle || `${product.name} - Análise Comercial`,
+          title: extractedTitle || `Descubra o ${product.name}`,
           content: product.individual_blog_content.commercial,
           type: 'commercial',
           productId: product.id,
@@ -184,7 +196,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
         productBlogs.push({
           id: `${product.id}-technical`,
-          title: extractedTitle || `${product.name} - Análise Técnica`,
+          title: extractedTitle || `Especificações do ${product.name}`,
           content: product.individual_blog_content.technical,
           type: 'technical',
           productId: product.id,
@@ -231,7 +243,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
           const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.commercial);
           productBlogs.push({
             id: `${product.id}-commercial`,
-            title: extractedTitle || `${product.name} - Análise Comercial`,
+            title: extractedTitle || `Por que escolher o ${product.name}`,
             content: product.individual_blog_content.commercial,
             type: 'commercial',
             productId: product.id,
@@ -246,7 +258,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
           const extractedTitle = extractTitleFromMarkdown(product.individual_blog_content.technical);
           productBlogs.push({
             id: `${product.id}-technical`,
-            title: extractedTitle || `${product.name} - Análise Técnica`,
+            title: extractedTitle || `Como funciona o ${product.name}`,
             content: product.individual_blog_content.technical,
             type: 'technical',
             productId: product.id,
