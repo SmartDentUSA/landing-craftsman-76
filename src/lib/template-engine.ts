@@ -2669,8 +2669,8 @@ export const generateHTML = (data: any): string => {
     processedData.twitter_description = processedData.og_description || data.seo_description || '';
   }
 
-  // Gerar Schema Markup automaticamente se habilitado
-  if (data.seo?.hreflang_auto) {
+  // Gerar Schema Markup automaticamente se há produtos ou dados relevantes
+  if (data.selectedProductsForSEO?.length > 0 || data.schema?.manual_reviews?.length > 0 || data.schema?.google_reviews?.reviews?.length > 0) {
     const schemaGraph = [];
     
     // Include selected products in schema if available

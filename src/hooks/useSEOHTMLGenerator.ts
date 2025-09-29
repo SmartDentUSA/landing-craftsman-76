@@ -705,9 +705,9 @@ export const useSEOHTMLGenerator = () => {
       // Use advanced schema generator for complete page schema
       const { schemas } = generateCompletePageSchema(
         productDataArray,
+        undefined, // companyData
         undefined, // faqItems
         undefined, // reviewsData
-        undefined, // companyData
         title,
         description
       );
@@ -725,30 +725,11 @@ export const useSEOHTMLGenerator = () => {
         }))
       };
       
-      // Combine schemas in @graph format and add @id to products
-      let productSchemas: any[] = [];
+      // Schemas já vem com @id correto do generateCompletePageSchema
       if (Array.isArray(schemas)) {
-        productSchemas = schemas.map((schema: any) => {
-          if (schema['@type'] === 'Product') {
-            const product = selectedProducts.find((p: any) => p.name === schema.name);
-            return { ...schema, "@id": `#product-${product?.id || schema.name}` };
-          }
-          return schema;
-        });
-        completeSchema = [...productSchemas, blogsItemList];
-      } else if ((schemas as any)['@graph']) {
-        productSchemas = (schemas as any)['@graph'].map((schema: any) => {
-          if (schema['@type'] === 'Product') {
-            const product = selectedProducts.find((p: any) => p.name === schema.name);
-            return { ...schema, "@id": `#product-${product?.id || schema.name}` };
-          }
-          return schema;
-        });
-        completeSchema = { "@graph": [...productSchemas, blogsItemList] };
+        completeSchema = [...schemas, blogsItemList];
       } else {
-        const updatedSchema = (schemas as any)['@type'] === 'Product' ? 
-          { ...(schemas as any), "@id": `#product-${selectedProducts[0]?.id || (schemas as any).name}` } : schemas;
-        completeSchema = { "@graph": [updatedSchema, blogsItemList] };
+        completeSchema = [schemas, blogsItemList];
       }
     } else {
       // Only blogs schema

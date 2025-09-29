@@ -347,11 +347,16 @@ export const useAdvancedSchemaGenerator = () => {
     const businessSchema = generateLocalBusinessSchema(companyData || {});
     if (businessSchema) schemas.push(businessSchema);
 
-    // Produtos individuais ou lista
+    // Produtos individuais ou lista - TODOS os produtos com @id
     if (products && products.length > 0) {
-      if (products.length === 1) {
-        schemas.push(generateAdvancedProductSchema(products[0], companyData));
-      } else {
+      products.forEach((product, index) => {
+        const productSchema = generateAdvancedProductSchema(product, companyData);
+        productSchema["@id"] = `#product-${product.id}`;
+        schemas.push(productSchema);
+      });
+      
+      // Se múltiplos produtos, adicionar também ItemList
+      if (products.length > 1) {
         schemas.push({
           "@context": "https://schema.org",
           "@type": "ItemList",
@@ -360,7 +365,7 @@ export const useAdvancedSchemaGenerator = () => {
           "itemListElement": products.map((product, index) => ({
             "@type": "ListItem",
             "position": index + 1,
-            "item": generateAdvancedProductSchema(product, companyData)
+            "item": { "@id": `#product-${product.id}` }
           }))
         });
       }
