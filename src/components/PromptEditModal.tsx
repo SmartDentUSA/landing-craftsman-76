@@ -45,6 +45,7 @@ const FIELD_FRIENDLY_NAMES = {
   "keywords": "Palavras-chave",
   "target_audience": "Público-alvo",
   "sales_pitch": "Pitch de Vendas",
+  "faq": "Perguntas Frequentes (FAQ)",
   
   // === URLs E IMAGENS ===
   "product_url": "URL do Produto",
@@ -254,7 +255,7 @@ const DATA_SOURCES = {
       "name", "description", "price", "category", "subcategory", "currency",
       
       // Campos de marketing ✅ UTILIZADOS  
-      "benefits", "features", "keywords", "target_audience", "sales_pitch",
+      "benefits", "features", "keywords", "target_audience", "sales_pitch", "faq",
       
       // URLs e dados comerciais ✅ UTILIZADOS
       "product_url", "image_url",
