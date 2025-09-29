@@ -2208,12 +2208,21 @@ export const generateHTML = (data: any): string => {
       table_data: data.desktop_info.table_data
     });
     
-    // Pre-process table data to be arrays ordered by headers
-    const table_rows = data.desktop_info.table_data?.map((row: any) => 
-      data.desktop_info.table_headers?.map((header: string) => row[header] || '') || []
+    // Corrigir headers inconsistentes automaticamente
+    const correctedHeaders = data.desktop_info.table_headers?.map((header: string) => 
+      header === "Padrão ISOx" ? "Padrão ISO" : header
     ) || [];
     
-    console.log('🔧 [TEMPLATE-ENGINE] table_rows processado:', table_rows);
+    // Pre-process table data to be arrays ordered by corrected headers
+    const table_rows = data.desktop_info.table_data?.map((row: any) => 
+      correctedHeaders.map((header: string) => row[header] || '') || []
+    ) || [];
+    
+    console.log('🔧 [TEMPLATE-ENGINE] Headers corrigidos e table_rows processado:', {
+      original_headers: data.desktop_info.table_headers,
+      corrected_headers: correctedHeaders,
+      table_rows: table_rows
+    });
     
     // Determine visibility class
     let visibility_class = '';
@@ -2225,6 +2234,7 @@ export const generateHTML = (data: any): string => {
     
     processedData.desktop_info = {
       ...data.desktop_info,
+      table_headers: correctedHeaders,
       visible_any: true,
       visibility_class: visibility_class,
       table_rows: table_rows

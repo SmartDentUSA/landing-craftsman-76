@@ -1457,7 +1457,7 @@ const EditorContent = () => {
   const generatedHTML = useMemo(() => {
     const processedData = beforePreview(data);
     
-    console.log('🎯 Using standard HTML generation');
+    console.log('🎯 Using standard HTML generation - desktop_info:', data.desktop_info?.show_table, data.desktop_info?.visible_desktop, data.desktop_info?.visible_mobile);
     
     return generateHTML({
       ...processedData,
@@ -1567,7 +1567,9 @@ const EditorContent = () => {
     data.desktop_info?.table_headers,
     data.desktop_info?.table_data,
     data.desktop_info?.visible_desktop,
-    data.desktop_info?.visible_mobile
+    data.desktop_info?.visible_mobile,
+    data.desktop_info?.table_title,
+    JSON.stringify(data.desktop_info) // Força atualização quando qualquer campo desktop_info muda
   ]);
 
   // Função para gerar blog post usando IA
@@ -3077,7 +3079,7 @@ const EditorContent = () => {
                                     visible_mobile: false, 
                                     show_table: false, 
                                     table_title: 'Especificações Técnicas',
-                                    table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+                                     table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
                                     table_data: []
                                   }), 
                                   visible_desktop: checked 
@@ -3197,16 +3199,17 @@ const EditorContent = () => {
                                   <div key={index} className="flex items-center space-x-2">
                                      <Input
                                        value={header}
-                                       onChange={(e) => {
-                                         const newHeaders = [...(data.desktop_info?.table_headers ?? [])];
-                                         newHeaders[index] = e.target.value;
-                                         const updatedData = {
-                                           ...data,
-                                           desktop_info: { ...data.desktop_info!, table_headers: newHeaders }
-                                         };
-                                         setData(updatedData);
-                                         saveDesktopInfo(updatedData);
-                                       }}
+                                        onChange={(e) => {
+                                          const newHeaders = [...(data.desktop_info?.table_headers ?? [])];
+                                          newHeaders[index] = e.target.value;
+                                          const updatedData = {
+                                            ...data,
+                                            desktop_info: { ...data.desktop_info!, table_headers: newHeaders }
+                                          };
+                                          setData(updatedData);
+                                          saveDesktopInfo(updatedData);
+                                          console.log('🔧 [EDITOR] Header atualizado:', { index, new_value: e.target.value, all_headers: newHeaders });
+                                        }}
                                        placeholder={`Cabeçalho ${index + 1}`}
                                      />
                                     <Button
