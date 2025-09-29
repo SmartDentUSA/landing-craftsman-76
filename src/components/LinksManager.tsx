@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, ExternalLink, Edit, Trash2, Search, Filter, Download } from 'lucide-react';
 import { useLinksRepository, ExternalLink as ExternalLinkType } from '@/hooks/useLinksRepository';
+import { useProductCategories } from '@/hooks/useProductCategories';
+import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,26 +23,64 @@ interface KeywordLink {
   created_at: string;
 }
 
-const categoryOptions = [
-  { value: 'produto', label: 'Produto' },
-  { value: 'servico', label: 'Serviço' },
-  { value: 'tecnico', label: 'Técnico' },
-  { value: 'comercial', label: 'Comercial' },
-  { value: 'institucional', label: 'Institucional' },
-  { value: 'outros', label: 'Outros' }
-];
-
-const subcategoryOptions = {
-  produto: ['geral', 'equipamentos', 'materiais', 'instrumentos'],
-  servico: ['geral', 'consultoria', 'treinamento', 'suporte'],
-  tecnico: ['geral', 'especificacoes', 'manuais', 'tutoriais'],
-  comercial: ['geral', 'vendas', 'promocoes', 'descontos'],
-  institucional: ['geral', 'sobre', 'missao', 'valores'],
-  outros: ['geral', 'diversos']
-};
-
 export const LinksManager = () => {
   const { allLinks, isLoading, addExternalLink, updateExternalLink, deleteExternalLink, externalLinks } = useLinksRepository();
+  const { categories, getSubcategoriesForCategory, loading: categoriesLoading } = useProductCategories();
+  const { configs: categoryConfigs, loading: configsLoading } = useCategoryConfig();
+  
+  // Estado para categorias dinâmicas
+  const [dynamicCategories, setDynamicCategories] = useState<{ value: string; label: string }[]>([]);
+  const [dynamicSubcategories, setDynamicSubcategories] = useState<Record<string, string[]>>({});
+
+  // Combinar categorias do sistema com as configuradas
+  useEffect(() => {
+    const combinedCategories = new Set<string>();
+    
+    // Adicionar categorias dos produtos
+    categories.forEach(cat => combinedCategories.add(cat));
+    
+    // Adicionar categorias das configurações
+    categoryConfigs.forEach(config => combinedCategories.add(config.category));
+    
+    // Adicionar categorias padrão como fallback
+    const defaultCategories = ['produto', 'servico', 'tecnico', 'comercial', 'institucional', 'outros'];
+    defaultCategories.forEach(cat => combinedCategories.add(cat));
+    
+    const categoryOptions = Array.from(combinedCategories)
+      .filter(Boolean)
+      .sort()
+      .map(cat => ({
+        value: cat,
+        label: cat.charAt(0).toUpperCase() + cat.slice(1)
+      }));
+    
+    setDynamicCategories(categoryOptions);
+    
+    // Criar mapeamento de subcategorias
+    const subcategoryMap: Record<string, string[]> = {};
+    
+    // Para cada categoria, buscar suas subcategorias
+    Array.from(combinedCategories).forEach(category => {
+      const subcats = new Set<string>();
+      
+      // Subcategorias dos produtos
+      const productSubcats = getSubcategoriesForCategory(category);
+      productSubcats.forEach(sub => subcats.add(sub));
+      
+      // Subcategorias das configurações
+      const configSubcats = categoryConfigs
+        .filter(config => config.category === category)
+        .map(config => config.subcategory);
+      configSubcats.forEach(sub => subcats.add(sub));
+      
+      // Adicionar "geral" como fallback
+      subcats.add('geral');
+      
+      subcategoryMap[category] = Array.from(subcats).filter(Boolean).sort();
+    });
+    
+    setDynamicSubcategories(subcategoryMap);
+  }, [categories, categoryConfigs, getSubcategoriesForCategory]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingKeyword, setEditingKeyword] = useState<KeywordLink | null>(null);
   const [formData, setFormData] = useState({
@@ -203,51 +243,94 @@ export const LinksManager = () => {
         return;
       }
 
-        const promises = newKeywords.map(keyword => {
-          const sourceProduct = products.find(p => {
-            const keywords = Array.isArray(p.keywords) ? p.keywords : [];
-            const searchIntentKeywords = Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [];
-            
-            return keywords.some((k: string) => k.toLowerCase() === keyword) ||
-                   searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
-          });
+      const promises = newKeywords.map(keyword => {
+        const sourceProduct = products.find(p => {
+          const keywords = Array.isArray(p.keywords) ? p.keywords : [];
+          const searchIntentKeywords = Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [];
           
-          return addExternalLink({
-            name: keyword,
-            url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
-            category: sourceProduct?.category || 'produto',
-            subcategory: sourceProduct?.subcategory || 'geral',
-            description: `Keyword do produto: ${sourceProduct?.name || 'Produto não identificado'} (${sourceProduct?.category || 'categoria'}${sourceProduct?.subcategory ? ` • ${sourceProduct.subcategory}` : ''})`,
-            approved: true
-          });
+          return keywords.some((k: string) => k.toLowerCase() === keyword) ||
+                 searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
         });
+        
+        // Usar categoria/subcategoria originais do produto, ou fallback para 'produto/geral'
+        const originalCategory = sourceProduct?.category || 'produto';
+        const originalSubcategory = sourceProduct?.subcategory || 'geral';
+        
+        // Formato da descrição atualizado para facilitar a detecção
+        const description = sourceProduct 
+          ? `Keyword do produto: ${sourceProduct.name} (${originalCategory}${originalSubcategory && originalSubcategory !== 'geral' ? ` • ${originalSubcategory}` : ''})`
+          : 'Keyword importada dos produtos (origem não identificada)';
+        
+        return addExternalLink({
+          name: keyword,
+          url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
+          category: originalCategory,
+          subcategory: originalSubcategory,
+          description,
+          approved: true
+        });
+      });
 
       await Promise.all(promises);
       
-      toast.success(`${newKeywords.length} keywords importadas com suas categorias originais. Verifique os links de destino.`);
+      toast.success(`${newKeywords.length} keywords importadas com suas categorias originais dos produtos.`);
 
     } catch (error) {
       console.error('Erro ao importar keywords:', error);
-      toast.error('Ocorreu um erro inesperado.');
+      toast.error('Ocorreu um erro inesperado ao importar keywords.');
     }
   };
 
   const formatOrigin = (link: ExternalLinkType) => {
-    if (link.description?.includes('Importado do produto:')) {
-      return 'Importação de Keywords';
+    // Detectar origem baseado na descrição
+    if (link.description?.includes('Keyword do produto:') || 
+        link.description?.includes('Importado do produto:') ||
+        link.description?.includes('keyword-import')) {
+      return 'Importação (keyword-import)';
     }
     return 'Manual';
   };
 
   const formatCategory = (link: ExternalLinkType) => {
-    // Se é uma keyword importada, extrair a categoria real do produto da descrição
-    if (link.description?.includes('Importado do produto:')) {
-      // Extrair categoria da descrição se disponível
-      const match = link.description.match(/categoria: ([^,)]+)/);
-      return match ? match[1] : link.category;
+    // Se é uma keyword importada, tentar extrair a categoria original da descrição
+    if (link.description?.includes('Keyword do produto:')) {
+      // Buscar padrão: (categoria • subcategoria) ou (categoria)
+      const categoryMatch = link.description.match(/\(([^)]+)\)$/);
+      if (categoryMatch) {
+        const categoryInfo = categoryMatch[1];
+        // Se tem subcategoria, pegar só a categoria (primeira parte antes do •)
+        const categoryPart = categoryInfo.split(' • ')[0];
+        return categoryPart || link.category;
+      }
     }
-    // Se é manual, mostrar a categoria escolhida pelo usuário
-    return link.category;
+    
+    // Se é uma keyword antiga com padrão "categoria: ..."
+    if (link.description?.includes('categoria:')) {
+      const match = link.description.match(/categoria: ([^,)]+)/);
+      if (match) return match[1];
+    }
+    
+    // Fallback para a categoria salva no link
+    return link.category || 'produto';
+  };
+
+  const formatSubcategory = (link: ExternalLinkType) => {
+    // Se é uma keyword importada, tentar extrair a subcategoria original da descrição
+    if (link.description?.includes('Keyword do produto:')) {
+      // Buscar padrão: (categoria • subcategoria)
+      const categoryMatch = link.description.match(/\(([^)]+)\)$/);
+      if (categoryMatch) {
+        const categoryInfo = categoryMatch[1];
+        // Se tem subcategoria, pegar a segunda parte depois do •
+        const parts = categoryInfo.split(' • ');
+        if (parts.length > 1) {
+          return parts[1];
+        }
+      }
+    }
+    
+    // Fallback para a subcategoria salva no link
+    return link.subcategory || 'geral';
   };
 
   const resetFilters = () => {
@@ -256,7 +339,7 @@ export const LinksManager = () => {
     setSubcategoryFilter('all');
   };
 
-  if (isLoading) {
+  if (isLoading || categoriesLoading || configsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -327,7 +410,7 @@ export const LinksManager = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {categoryOptions.map(option => (
+                        {dynamicCategories.map(option => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -345,7 +428,7 @@ export const LinksManager = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {subcategoryOptions[formData.category as keyof typeof subcategoryOptions]?.map(sub => (
+                        {dynamicSubcategories[formData.category]?.map(sub => (
                           <SelectItem key={sub} value={sub}>
                             {sub.charAt(0).toUpperCase() + sub.slice(1)}
                           </SelectItem>
@@ -439,7 +522,7 @@ export const LinksManager = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as categorias</SelectItem>
-                  {categoryOptions.map(option => (
+                  {dynamicCategories.map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -457,7 +540,7 @@ export const LinksManager = () => {
                 <SelectContent>
                   <SelectItem value="all">Todas as subcategorias</SelectItem>
                   {categoryFilter !== 'all' && 
-                    subcategoryOptions[categoryFilter as keyof typeof subcategoryOptions]?.map(sub => (
+                    dynamicSubcategories[categoryFilter]?.map(sub => (
                       <SelectItem key={sub} value={sub}>
                         {sub.charAt(0).toUpperCase() + sub.slice(1)}
                       </SelectItem>
@@ -521,11 +604,9 @@ export const LinksManager = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {link.subcategory && !link.description?.includes('Importado do produto:') && (
-                          <Badge variant="outline">
-                            {link.subcategory?.charAt(0).toUpperCase() + link.subcategory?.slice(1) || 'Geral'}
-                          </Badge>
-                        )}
+                        <Badge variant="outline">
+                          {formatSubcategory(link)?.charAt(0).toUpperCase() + formatSubcategory(link)?.slice(1) || 'Geral'}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatOrigin(link)}
@@ -623,7 +704,7 @@ export const LinksManager = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {categoryOptions.map(option => (
+                    {dynamicCategories.map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -641,7 +722,7 @@ export const LinksManager = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {subcategoryOptions[formData.category as keyof typeof subcategoryOptions]?.map(sub => (
+                    {dynamicSubcategories[formData.category]?.map(sub => (
                       <SelectItem key={sub} value={sub}>
                         {sub.charAt(0).toUpperCase() + sub.slice(1)}
                       </SelectItem>
