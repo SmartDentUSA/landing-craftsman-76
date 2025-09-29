@@ -1042,17 +1042,29 @@ const DashboardContent = () => {
                     <div className="text-xs leading-relaxed mb-2">
                       <strong>Preview do Blog Consolidado Eodonto</strong>
                     </div>
-                    <div className="text-xs leading-relaxed">
-                      {eodontoHTML.substring(0, 200)}...
-                    </div>
-                    <div className="full-content text-xs leading-relaxed">
-                      <div 
-                        dangerouslySetInnerHTML={{ 
-                          __html: eodontoHTML.substring(200, 1500) + '...' 
-                        }}
-                      />
-                    </div>
-                    <button className="read-more-btn text-xs mt-2">Leia mais →</button>
+                    {eodontoHTML && eodontoHTML.length > 0 ? (
+                      <>
+                        <div className="text-xs leading-relaxed">
+                          {eodontoHTML.length > 200 ? eodontoHTML.substring(0, 200) + '...' : eodontoHTML}
+                        </div>
+                        {eodontoHTML.length > 200 && (
+                          <>
+                            <div className="full-content text-xs leading-relaxed">
+                              <div 
+                                dangerouslySetInnerHTML={{ 
+                                  __html: eodontoHTML.substring(200, Math.min(eodontoHTML.length, 1500)) + (eodontoHTML.length > 1500 ? '...' : '') 
+                                }}
+                              />
+                            </div>
+                            <button className="read-more-btn text-xs mt-2">Leia mais →</button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">
+                        Gerando HTML consolidado...
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Button 
@@ -1111,17 +1123,29 @@ const DashboardContent = () => {
                     <div className="text-xs leading-relaxed mb-2">
                       <strong>Preview do Blog Consolidado Dentala</strong>
                     </div>
-                    <div className="text-xs leading-relaxed">
-                      {dentalaHTML.substring(0, 200)}...
-                    </div>
-                    <div className="full-content text-xs leading-relaxed">
-                      <div 
-                        dangerouslySetInnerHTML={{ 
-                          __html: dentalaHTML.substring(200, 1500) + '...' 
-                        }}
-                      />
-                    </div>
-                    <button className="read-more-btn text-xs mt-2">Leia mais →</button>
+                    {dentalaHTML && dentalaHTML.length > 0 ? (
+                      <>
+                        <div className="text-xs leading-relaxed">
+                          {dentalaHTML.length > 200 ? dentalaHTML.substring(0, 200) + '...' : dentalaHTML}
+                        </div>
+                        {dentalaHTML.length > 200 && (
+                          <>
+                            <div className="full-content text-xs leading-relaxed">
+                              <div 
+                                dangerouslySetInnerHTML={{ 
+                                  __html: dentalaHTML.substring(200, Math.min(dentalaHTML.length, 1500)) + (dentalaHTML.length > 1500 ? '...' : '') 
+                                }}
+                              />
+                            </div>
+                            <button className="read-more-btn text-xs mt-2">Leia mais →</button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">
+                        Gerando HTML consolidado...
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Button 
