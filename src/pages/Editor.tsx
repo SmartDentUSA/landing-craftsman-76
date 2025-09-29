@@ -384,7 +384,27 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
     };
   }
   if (!processedData.email) {
-    processedData.email = {} as any; // Usar any para evitar erro de tipo extenso
+    console.log('⚠️ processedData.email não existe, criando objeto padrão');
+    processedData.email = {
+      show_solutions_in_email: false,
+      solutions_title: "Nossos Serviços",
+      assunto_email: "",
+      preheader_texto: "",
+      url_site: "",
+      logo_src: createImageData('', ''),
+      imagem_src: createImageData('', ''),
+      logo_alt: "",
+      sections: {
+        header: { enabled: false },
+        content: { enabled: false },
+        ctas: { enabled: false },
+        highlights: { enabled: false },
+        benefits: { enabled: false },
+        main_image: { enabled: false },
+        solutions: { enabled: false },
+        footer: { enabled: false }
+      }
+    } as any;
   }
   if (!processedData.seo) {
     processedData.seo = {} as any; // Usar any para evitar erro de tipo extenso
@@ -1668,6 +1688,12 @@ const EditorContent = () => {
   const generatedEmailHTML = useMemo(() => {
     const processedData = beforePreview(data);
     
+    // Garantir que processedData.email existe
+    if (!processedData.email) {
+      console.error('❌ processedData.email é undefined no generatedEmailHTML');
+      return '';
+    }
+    
     console.log("🔄 Regenerando email HTML...", {
       timestamp: Date.now(),
       show_solutions: processedData.email.show_solutions_in_email,
@@ -1687,6 +1713,12 @@ const EditorContent = () => {
       image_src: solution.image?.src || '',
       image_alt: solution.image?.alt || solution.title || `Solução ${index + 1}`
     })) || [];
+    
+    // Garantir que solutionsList é um array válido
+    if (!Array.isArray(solutionsList)) {
+      console.error('❌ solutionsList não é um array válido:', solutionsList);
+      return '';
+    }
     
     console.log("📧 Dados do email processados:", {
       solutions_enabled: processedData.email.show_solutions_in_email,
