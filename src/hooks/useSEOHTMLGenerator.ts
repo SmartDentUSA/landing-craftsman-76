@@ -22,12 +22,74 @@ const convertInlineMarkdownToHTML = (content: string): string => {
   return processedContent.trim();
 };
 
+// Função para sanitizar conteúdo do blog antes da conversão HTML
+const sanitizeBlogContent = (content: string): string => {
+  if (!content) return '';
+  
+  let sanitized = content;
+  
+  // Remove primeiro H1 (título principal que gera duplicação)
+  sanitized = sanitized.replace(/^# .+\n+/m, '');
+  
+  // Remove seções com "Análise Técnica"
+  sanitized = sanitized.replace(/^#+\s*.*Análise Técnica( Completa)?[^\n]*$/gmi, '');
+  
+  // Substitui "Introdução Técnica" por apenas "Introdução"
+  sanitized = sanitized.replace(/^##\s*Introdução Técnica(?::)?/gmi, '## Introdução');
+  
+  // Remove linhas vazias excessivas
+  sanitized = sanitized.replace(/\n{3,}/g, '\n\n');
+  
+  return sanitized.trim();
+};
+
+// Função para extrair título do markdown (com filtro de termos banidos)
+const extractTitleFromMarkdown = (content: string): string => {
+  if (!content) return '';
+  
+  const bannedTerms = ['análise técnica', 'introdução técnica', 'informativo técnico', 'informativo comercial'];
+  const lines = content.split('\n');
+  
+  // Procurar por H1 válido
+  for (const line of lines) {
+    const h1Match = line.match(/^# (.+)$/);
+    if (h1Match) {
+      const title = h1Match[1].trim();
+      const isBanned = bannedTerms.some(term => 
+        title.toLowerCase().includes(term)
+      );
+      if (!isBanned) {
+        return title;
+      }
+    }
+  }
+  
+  // Procurar por H2 válido se H1 não encontrado ou é banido
+  for (const line of lines) {
+    const h2Match = line.match(/^## (.+)$/);
+    if (h2Match) {
+      const title = h2Match[1].trim();
+      const isBanned = bannedTerms.some(term => 
+        title.toLowerCase().includes(term)
+      );
+      if (!isBanned) {
+        return title;
+      }
+    }
+  }
+  
+  return 'Especificações do Produto';
+};
+
 // Função para converter markdown para HTML completo
 const convertMarkdownToHTML = (content: string): string => {
   if (!content) return '';
 
+  // Sanitizar conteúdo antes da conversão
+  const sanitizedContent = sanitizeBlogContent(content);
+  
   // Processar conteúdo linha por linha para manter estrutura
-  const lines = content.split('\n');
+  const lines = sanitizedContent.split('\n');
   const processedLines: string[] = [];
   let inList = false;
   let listItems: string[] = [];
@@ -655,8 +717,9 @@ export const useSEOHTMLGenerator = () => {
         previewContent = processedContent.substring(0, processedContent.indexOf(truncatedText) + truncatedText.length);
       }
       
-      // Converter título e produto para HTML (inline, sem tags <p>)
-      const htmlTitle = convertInlineMarkdownToHTML(blog.title);
+      // Extrair título sanitizado do conteúdo markdown
+      const sanitizedTitle = extractTitleFromMarkdown(blog.content) || blog.title;
+      const htmlTitle = convertInlineMarkdownToHTML(sanitizedTitle);
       const processedTitle = processContentWithAdvancedIntelligentLinks(htmlTitle, intelligentLinks);
       
       const htmlProductName = blog.productName ? convertInlineMarkdownToHTML(blog.productName) : '';
