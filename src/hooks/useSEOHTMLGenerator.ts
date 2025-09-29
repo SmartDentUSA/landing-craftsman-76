@@ -138,6 +138,11 @@ interface ConsolidatedBlogOptions {
 }
 
 export const useSEOHTMLGenerator = () => {
+  // Função helper para limpar tags HTML do texto (para JSON-LD)
+  const stripHtmlTags = (html: string): string => {
+    return html.replace(/<[^>]*>/g, '').trim();
+  };
+
   const { generateAdvancedProductSchema, generateFAQSchema, generateCompletePageSchema } = useAdvancedSchemaGenerator();
   const { allLinks } = useLinksRepository();
 
@@ -551,18 +556,25 @@ export const useSEOHTMLGenerator = () => {
     const uniqueKeywords = [...new Set(allKeywords)].slice(0, 30);
 
     // Gerar schema para múltiplos artigos
-    const blogSchemas = blogs.map((blog, index) => ({
-      "@context": "https://schema.org",
-      "@type": "Article",
-      "headline": blog.title,
-      "description": blog.content.substring(0, 160),
-      "datePublished": new Date().toISOString(),
-      "position": index + 1,
-      "author": {
-        "@type": "Organization",
-        "name": domain
-      }
-    }));
+    const blogSchemas = blogs.map((blog, index) => {
+      // Converter markdown para HTML e depois limpar tags para JSON-LD
+      const htmlTitle = convertMarkdownToHTML(blog.title);
+      const cleanTitle = stripHtmlTags(htmlTitle);
+      const cleanDescription = stripHtmlTags(blog.content.substring(0, 160));
+      
+      return {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": cleanTitle,
+        "description": cleanDescription,
+        "datePublished": new Date().toISOString(),
+        "position": index + 1,
+        "author": {
+          "@type": "Organization",
+          "name": domain
+        }
+      };
+    });
 
     const itemListSchema = {
       "@context": "https://schema.org",
@@ -620,12 +632,19 @@ export const useSEOHTMLGenerator = () => {
         previewContent = processedContent.substring(0, processedContent.indexOf(truncatedText) + truncatedText.length);
       }
       
+      // Converter título e produto para HTML
+      const htmlTitle = convertMarkdownToHTML(blog.title);
+      const processedTitle = processContentWithAdvancedIntelligentLinks(htmlTitle, intelligentLinks);
+      
+      const htmlProductName = blog.productName ? convertMarkdownToHTML(blog.productName) : '';
+      const processedProductName = htmlProductName ? processContentWithAdvancedIntelligentLinks(htmlProductName, intelligentLinks) : '';
+
       return `
         <section class="blog-item">
           <a href="${blogCanonicalUrl}" class="blog-link">
-            <h2>${blog.title}</h2>
+            <h2>${processedTitle}</h2>
           </a>
-          ${blog.productName ? `<p class="product-reference"><strong>Produto:</strong> ${blog.productName}</p>` : ''}
+          ${processedProductName ? `<p class="product-reference"><strong>Produto:</strong> ${processedProductName}</p>` : ''}
           <div class="blog-content post-card-content">
             <div class="preview-content">
               ${shouldTruncate ? previewContent + '...' : processedContent}
@@ -1137,14 +1156,23 @@ export const useSEOHTMLGenerator = () => {
       <section class="products-summary">
         <h2>🛍️ Produtos Relacionados</h2>
         <div class="products-grid">
-          ${selectedProducts.map(product => `
+          ${selectedProducts.map(product => {
+            // Converter produto name e description para HTML
+            const htmlProductName = convertMarkdownToHTML(product.name);
+            const processedProductName = processContentWithAdvancedIntelligentLinks(htmlProductName, intelligentLinks);
+            
+            const htmlProductDescription = convertMarkdownToHTML(product.description || 'Produto especializado para sua área.');
+            const processedProductDescription = processContentWithAdvancedIntelligentLinks(htmlProductDescription, intelligentLinks);
+            
+            return `
             <div class="product-card">
-              <h3>${product.name}</h3>
-              <p>${product.description || 'Produto especializado para sua área.'}</p>
+              <h3>${processedProductName}</h3>
+              <p>${processedProductDescription}</p>
               ${product.category ? `<p><strong>Categoria:</strong> ${product.category}</p>` : ''}
               ${product.keywords && product.keywords.length > 0 ? `<p><strong>Keywords:</strong> ${product.keywords.slice(0, 5).join(', ')}</p>` : ''}
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </section>
       ` : ''}
