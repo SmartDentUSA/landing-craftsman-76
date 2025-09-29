@@ -115,6 +115,39 @@ serve(async (req) => {
   }
 });
 
+// Função para sanitizar conteúdo do blog removendo CTAs genéricos
+function sanitizeBlogContent(content: string): string {
+  if (!content) return '';
+  
+  let sanitized = content;
+  
+  // Remove CTAs genéricos específicos
+  sanitized = sanitized.replace(/\[Solicite uma Demonstração[^\]]*\]/gi, '');
+  sanitized = sanitized.replace(/\[Fale com Nossos Especialistas\]/gi, '');
+  sanitized = sanitized.replace(/\[Baixe o Catálogo Completo\]/gi, '');
+  
+  // Remove frases específicas sobre futuro da odontologia
+  sanitized = sanitized.replace(/O futuro da odontologia digital é simples[^.]*\./gi, '');
+  
+  // Remove rodapé Smart Dent completo
+  sanitized = sanitized.replace(/---\s*\*?Smart Dent[^]*$/gi, '');
+  
+  // Remove informações de contato genérico
+  sanitized = sanitized.replace(/Telefone:\s*\(XX\)[^]*$/gi, '');
+  sanitized = sanitized.replace(/WhatsApp:\s*\(XX\)[^]*$/gi, '');
+  sanitized = sanitized.replace(/Horário de Atendimento:[^]*$/gi, '');
+  
+  // Remove seções de CTA com heading
+  sanitized = sanitized.replace(/###?\s*\[Solicite[^\]]*\][^]*?(?=###?|$)/gi, '');
+  sanitized = sanitized.replace(/###?\s*\[Fale com[^\]]*\][^]*?(?=###?|$)/gi, '');
+  sanitized = sanitized.replace(/###?\s*\[Baixe[^\]]*\][^]*?(?=###?|$)/gi, '');
+  
+  // Remove linhas vazias excessivas
+  sanitized = sanitized.replace(/\n{3,}/g, '\n\n');
+  
+  return sanitized.trim();
+}
+
 async function generateProductBlog(
   apiKey: string, 
   product: any, 
@@ -285,6 +318,14 @@ INSTRUÇÕES ESPECÍFICAS:
 11. Use formato markdown limpo e envolvente
 12. EVITE linguagem corporativa ou muito formal no início - seja mais humano e direto
 
+IMPORTANTE - NÃO INCLUIR NO CONTEÚDO:
+- CTAs genéricos como "Solicite uma Demonstração Personalizada", "Fale com Nossos Especialistas", "Baixe o Catálogo Completo"
+- Rodapés com informações de contato (telefones, WhatsApp, horários)
+- Frases como "O futuro da odontologia digital é simples, rápido e confiável"
+- Assinaturas padronizadas da empresa como "Smart Dent - Soluções Inteligentes"
+- Terminar o blog com informações de contato genéricas
+- Informações de telefone no formato "(XX) XXXX-XXXX"
+
 Gere o blog post completo agora:`;
   }
 
@@ -321,7 +362,11 @@ Gere o blog post completo agora:`;
 
   console.log(`✅ Blog content generated: ${blogContent.length} characters`);
   
-  return blogContent.trim();
+  // Sanitizar conteúdo antes de retornar
+  const sanitizedContent = sanitizeBlogContent(blogContent);
+  console.log(`🧼 Content sanitized, removed ${blogContent.length - sanitizedContent.length} characters`);
+  
+  return sanitizedContent;
 }
 
 // Função para processar variáveis no prompt customizado
