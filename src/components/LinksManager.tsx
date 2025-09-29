@@ -31,6 +31,9 @@ export const LinksManager = () => {
   // Estado para categorias dinâmicas
   const [dynamicCategories, setDynamicCategories] = useState<{ value: string; label: string }[]>([]);
   const [dynamicSubcategories, setDynamicSubcategories] = useState<Record<string, string[]>>({});
+  
+  // Estado para mapear produtos e suas categorias
+  const [productCategoryMap, setProductCategoryMap] = useState<Record<string, { category: string; subcategory: string }>>({});
 
   // Combinar categorias do sistema com as configuradas
   useEffect(() => {
@@ -74,6 +77,47 @@ export const LinksManager = () => {
     
     setDynamicSubcategories(subcategoryMap);
   }, [categories, categoryConfigs, getSubcategoriesForCategory]);
+
+  // Preload product categories for links pointing to /produto/{id}
+  useEffect(() => {
+    const loadProductCategories = async () => {
+      const productIds = new Set<string>();
+      
+      // Extract product IDs from URLs
+      externalLinks.forEach(link => {
+        const match = link.url.match(/\/produto\/([a-f0-9-]{36})/);
+        if (match) {
+          productIds.add(match[1]);
+        }
+      });
+
+      if (productIds.size > 0) {
+        try {
+          const { data: products } = await supabase
+            .from('products_repository')
+            .select('id, category, subcategory')
+            .in('id', Array.from(productIds));
+
+          if (products) {
+            const categoryMap: Record<string, { category: string; subcategory: string }> = {};
+            products.forEach(product => {
+              categoryMap[product.id] = {
+                category: product.category || '',
+                subcategory: product.subcategory || ''
+              };
+            });
+            setProductCategoryMap(categoryMap);
+          }
+        } catch (error) {
+          console.error('Error loading product categories:', error);
+        }
+      }
+    };
+
+    if (externalLinks.length > 0) {
+      loadProductCategories();
+    }
+  }, [externalLinks]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingKeyword, setEditingKeyword] = useState<KeywordLink | null>(null);
   const [formData, setFormData] = useState({
@@ -87,13 +131,44 @@ export const LinksManager = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [subcategoryFilter, setSubcategoryFilter] = useState('all');
 
+  // Helper function to identify keyword links
+  const isKeywordLink = (link: ExternalLinkType) => {
+    // Check if category exists in registered categories
+    if (dynamicCategories.some(cat => cat.value === link.category)) {
+      return true;
+    }
+    
+    // Check if description indicates it's a keyword
+    if (link.description?.includes('Keyword do produto:') || 
+        link.description?.includes('Importado do produto:')) {
+      return true;
+    }
+    
+    // Check if URL points to a product (imported)
+    if (link.url.match(/\/produto\/[a-f0-9-]{36}/)) {
+      return true;
+    }
+    
+    // Legacy compatibility - check if category contains "keyword"
+    if (link.category?.includes('keyword')) {
+      return true;
+    }
+    
+    return false;
+  };
+
   const filteredLinks = externalLinks
-    .filter(link => link.category?.includes('keyword'))
+    .filter(link => isKeywordLink(link))
     .filter(link => {
       const matchesSearch = link.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            link.url.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || link.category === categoryFilter;
-      const matchesSubcategory = subcategoryFilter === 'all' || link.subcategory === subcategoryFilter;
+      
+      // Use formatted values for filtering
+      const formattedCategory = formatCategory(link);
+      const formattedSubcategory = formatSubcategory(link);
+      
+      const matchesCategory = categoryFilter === 'all' || formattedCategory === categoryFilter;
+      const matchesSubcategory = subcategoryFilter === 'all' || formattedSubcategory === subcategoryFilter;
       
       return matchesSearch && matchesCategory && matchesSubcategory;
     });
@@ -279,56 +354,77 @@ export const LinksManager = () => {
   };
 
   const formatOrigin = (link: ExternalLinkType) => {
-    // Detectar origem baseado na descrição
+    // Detectar origem baseado na descrição, URL ou categoria legacy
     if (link.description?.includes('Keyword do produto:') || 
         link.description?.includes('Importado do produto:') ||
-        link.description?.includes('keyword-import')) {
+        link.description?.includes('keyword-import') ||
+        link.category?.includes('keyword') ||
+        link.url.match(/\/produto\/[a-f0-9-]{36}/)) {
       return 'Importação (keyword-import)';
     }
     return 'Manual';
   };
 
   const formatCategory = (link: ExternalLinkType) => {
-    // Se é uma keyword importada, tentar extrair a categoria original da descrição
+    // Extract from description pattern: "Keyword do produto: ... (Category • Subcategory)"
     if (link.description?.includes('Keyword do produto:')) {
-      // Buscar padrão: (categoria • subcategoria) ou (categoria)
       const categoryMatch = link.description.match(/\(([^)]+)\)$/);
       if (categoryMatch) {
         const categoryInfo = categoryMatch[1];
-        // Se tem subcategoria, pegar só a categoria (primeira parte antes do •)
         const categoryPart = categoryInfo.split(' • ')[0];
-        return categoryPart || link.category;
+        return categoryPart;
       }
     }
     
-    // Se é uma keyword antiga com padrão "categoria: ..."
-    if (link.description?.includes('categoria:')) {
-      const match = link.description.match(/categoria: ([^,)]+)/);
-      if (match) return match[1];
+    // Use productCategoryMap for /produto/{id} URLs
+    const productMatch = link.url.match(/\/produto\/([a-f0-9-]{36})/);
+    if (productMatch && productCategoryMap[productMatch[1]]) {
+      return productCategoryMap[productMatch[1]].category;
     }
     
-    // Use first available category as fallback instead of hardcoded
-    return link.category || dynamicCategories[0]?.value || '';
+    // Only show link.category if it exists in dynamicCategories
+    if (link.category && dynamicCategories.some(cat => cat.value === link.category)) {
+      return link.category;
+    }
+    
+    return '—';
   };
 
   const formatSubcategory = (link: ExternalLinkType) => {
-    // Se é uma keyword importada, tentar extrair a subcategoria original da descrição
+    // Extract from description pattern: "Keyword do produto: ... (Category • Subcategory)"
     if (link.description?.includes('Keyword do produto:')) {
-      // Buscar padrão: (categoria • subcategoria)
       const categoryMatch = link.description.match(/\(([^)]+)\)$/);
       if (categoryMatch) {
         const categoryInfo = categoryMatch[1];
-        // Se tem subcategoria, pegar a segunda parte depois do •
         const parts = categoryInfo.split(' • ');
         if (parts.length > 1) {
-          return parts[1];
+          const subcategory = parts[1];
+          // Don't show generic subcategories
+          if (subcategory && !['geral', 'outros', 'geral'].includes(subcategory.toLowerCase())) {
+            return subcategory;
+          }
         }
       }
     }
     
-    // Use first available subcategory for the link's category as fallback
-    const linkCategory = link.category || dynamicCategories[0]?.value || '';
-    return link.subcategory || (linkCategory ? dynamicSubcategories[linkCategory]?.[0] || '' : '');
+    // Use productCategoryMap for /produto/{id} URLs
+    const productMatch = link.url.match(/\/produto\/([a-f0-9-]{36})/);
+    if (productMatch && productCategoryMap[productMatch[1]]) {
+      const subcategory = productCategoryMap[productMatch[1]].subcategory;
+      if (subcategory && !['geral', 'outros'].includes(subcategory.toLowerCase())) {
+        return subcategory;
+      }
+    }
+    
+    // Only show subcategory if it's valid for the category
+    const category = formatCategory(link);
+    if (link.subcategory && 
+        dynamicSubcategories[category]?.includes(link.subcategory) &&
+        !['geral', 'outros'].includes(link.subcategory.toLowerCase())) {
+      return link.subcategory;
+    }
+    
+    return '—';
   };
 
   const resetFilters = () => {
@@ -365,6 +461,13 @@ export const LinksManager = () => {
           >
             <Download className="w-4 h-4" />
             Importar dos Produtos
+          </Button>
+          <Button 
+            onClick={() => window.location.reload()}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            Recarregar
           </Button>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
@@ -561,7 +664,7 @@ export const LinksManager = () => {
           </div>
           
           <div className="mt-4 text-sm text-muted-foreground">
-            Mostrando {filteredLinks.length} de {externalLinks.filter(link => link.category?.includes('keyword')).length} links
+            Mostrando {filteredLinks.length} de {externalLinks.filter(link => isKeywordLink(link)).length} links
           </div>
         </CardContent>
       </Card>
@@ -606,11 +709,12 @@ export const LinksManager = () => {
                           {formatCategory(link)}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {formatSubcategory(link)?.charAt(0).toUpperCase() + formatSubcategory(link)?.slice(1) || 'Geral'}
-                        </Badge>
-                      </TableCell>
+                       <TableCell>
+                         <Badge variant="outline">
+                           {formatSubcategory(link) === '—' ? '—' : 
+                            formatSubcategory(link)?.charAt(0).toUpperCase() + formatSubcategory(link)?.slice(1)}
+                         </Badge>
+                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatOrigin(link)}
                       </TableCell>
