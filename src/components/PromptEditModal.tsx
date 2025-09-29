@@ -112,7 +112,7 @@ const FIELD_FRIENDLY_NAMES = {
   "ai_generated_benefits": "Benefícios Gerados por IA",
   "seo_enhanced": "SEO Aprimorado",
   "individual_blog_content": "Conteúdo de Blog Individual",
-  "original_data": "Dados Originais",
+  "original_data": "Especificações técnicas",
   
   // === EMPRESA ===
   "company_name": "Nome da Empresa",
