@@ -86,8 +86,34 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Lista de especificações existentes */}
+          {/* Tabela de visualização das especificações existentes */}
+          {specs.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium">Especificações Atuais</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Especificação</th>
+                      <th className="text-left p-3 font-medium">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {specs.map((spec, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="p-3 font-medium">{spec.label}</td>
+                        <td className="p-3">{spec.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de especificações para edição */}
           <div className="space-y-2">
+            <h3 className="text-lg font-medium">Editar Especificações</h3>
             {specs.map((spec, index) => (
               <Card key={index}>
                 <CardContent className="p-4">
