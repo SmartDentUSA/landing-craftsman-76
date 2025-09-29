@@ -933,6 +933,7 @@ const EditorContent = () => {
   const [previewVersion, setPreviewVersion] = useState(0);
   const prevHTMLRef = useRef('');
   const autoFooterAppliedRef = useRef(false);
+  const dirtyRef = useRef(false);
 
   // Helper functions for keywords management
   const parseKeywords = (keywords: any): string[] => {
@@ -947,21 +948,17 @@ const EditorContent = () => {
     return keywords.join(', ');
   };
 
-  // Handle navigation issues - redirect to valid ID if undefined
+  // Handle navigation issues - redirect to valid ID if undefined or [object Promise]
   useEffect(() => {
-    if (id === 'undefined' || !id) {
-      // Try to get first available landing page
-      const landingPages = Object.keys(localStorage).filter(key => 
-        key.startsWith('landing_page_') && !key.includes('undefined')
-      );
-      
-      if (landingPages.length > 0) {
-        const firstValidId = landingPages[0].replace('landing_page_', '');
-        navigate(`/editor/${firstValidId}`, { replace: true });
+    if (id === 'undefined' || !id || id === '[object Promise]') {
+      // Try to get first available landing page from Supabase
+      if (landingPages && landingPages.length > 0) {
+        const firstValidPage = landingPages[0];
+        navigate(`/editor/${firstValidPage.id}`, { replace: true });
         return;
       } else {
         toast({
-          title: "ID inválido",
+          title: "ID inválido", 
           description: "Redirecionando para o dashboard...",
           variant: "destructive"
         });
@@ -969,7 +966,7 @@ const EditorContent = () => {
         return;
       }
     }
-  }, [id, navigate, toast]);
+  }, [id, navigate, toast, landingPages]);
   const [autoMetaDesc, setAutoMetaDesc] = useState('');
   const [autoSeoTitle, setAutoSeoTitle] = useState('');
   const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false, faqKeywords: false, blog: false });
@@ -1796,16 +1793,30 @@ const EditorContent = () => {
     data.faq?.length
   ]);
 
+  // Update preview version when generatedHTML changes to force iframe repaint
+  useEffect(() => {
+    if (generatedHTML !== prevHTMLRef.current) {
+      prevHTMLRef.current = generatedHTML;
+      setPreviewVersion(v => v + 1);
+    }
+  }, [generatedHTML]);
+
   useEffect(() => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
-        // Carregar produtos selecionados da landing page
-        const selectedIds = landingPage.selected_product_ids || [];
-        setSelectedProductIds(selectedIds);
-        // Se há dados estruturados, usar direto mas garantir campos obrigatórios
-        if (landingPage.data && typeof landingPage.data === 'object') {
-          const loadedData = { ...landingPage.data, template: landingPage.template } as LandingPageData;
+        // Check if backend data is newer than current state to prevent overwriting local edits
+        const backendLastModified = new Date(landingPage.last_modified || 0).getTime();
+        const currentLastModified = new Date(data.seo?.lastmod || 0).getTime();
+        
+        // Only update if backend is newer or if this is the initial load
+        if (!dirtyRef.current || backendLastModified > currentLastModified) {
+          // Carregar produtos selecionados da landing page
+          const selectedIds = landingPage.selected_product_ids || [];
+          setSelectedProductIds(selectedIds);
+          // Se há dados estruturados, usar direto mas garantir campos obrigatórios
+          if (landingPage.data && typeof landingPage.data === 'object') {
+            const loadedData = { ...landingPage.data, template: landingPage.template } as LandingPageData;
           
           // Garantir que todos os campos obrigatórios existam (defaults seguros)
           if (!loadedData.desktop_info) {
@@ -2124,13 +2135,18 @@ const EditorContent = () => {
             status: landingPage.status,
             template: landingPage.template
           });
+          dirtyRef.current = false; // Reset dirty flag after loading
+          }
         }
+      } else {
+        dirtyRef.current = true; // Mark as dirty if we have local changes but no backend match
       }
     } else {
       // Caso seja nova landing page (sem ID), usar dados padrão do estado inicial
       console.log('Nova landing page - usando dados padrão do estado inicial');
+      dirtyRef.current = true;
     }
-  }, [id, landingPages, getLandingPage]);
+  }, [id, getLandingPage]);
 
   // Initialize localName when data.name changes (but not when editing)
   useEffect(() => {
@@ -2139,7 +2155,7 @@ const EditorContent = () => {
     }
   }, [data.name, isEditingName, localName]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('[DEBUG] Salvando landing page...');
     console.log('[DEBUG] Dados originais:', data);
     console.log('[DEBUG] Desktop info antes do processamento:', data.desktop_info);
@@ -2161,20 +2177,22 @@ const EditorContent = () => {
     console.log('[DEBUG] Dados da store:', storeData);
     
     if (id) {
-      updateLandingPage(id, storeData);
+      await updateLandingPage(id, storeData);
       console.log('[DEBUG] Landing page atualizada com ID:', id);
       toast({
         title: "Alterações salvas",
         description: "Landing page atualizada com sucesso!",
       });
+      dirtyRef.current = false; // Reset dirty flag after save
     } else {
-      const newId = addLandingPage(storeData);
+      const newId = await addLandingPage(storeData);
       console.log('[DEBUG] Nova landing page criada com ID:', newId);
       navigate(`/editor/${newId}`);
       toast({
         title: "Landing page criada",
         description: "Nova landing page salva com sucesso!",
       });
+      dirtyRef.current = false; // Reset dirty flag after save
     }
   };
 
@@ -2643,24 +2661,30 @@ const EditorContent = () => {
                   <AccordionTrigger>SEO Básico</AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <div>
-                      <Label>Título SEO</Label>
-                      <Input
-                        value={data.seo_title}
-                        onChange={(e) => setData(prev => ({ ...prev, seo_title: e.target.value }))}
-                        placeholder="Título otimizado para SEO"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {(data.seo_title || '').length}/60 caracteres
-                      </p>
+                       <Label>Título SEO</Label>
+                       <Input
+                         value={data.seo_title}
+                         onChange={(e) => {
+                           setData(prev => ({ ...prev, seo_title: e.target.value }));
+                           dirtyRef.current = true;
+                         }}
+                         placeholder="Título otimizado para SEO"
+                       />
+                       <p className="text-xs text-gray-500 mt-1">
+                         {(data.seo_title || '').length}/60 caracteres • Afeta apenas o &lt;title&gt; e metadados, não o título visível da página
+                       </p>
                     </div>
                     <div>
-                      <Label>Descrição SEO</Label>
-                      <Textarea
-                        value={data.seo_description}
-                        onChange={(e) => setData(prev => ({ ...prev, seo_description: e.target.value }))}
-                        placeholder="Descrição otimizada para SEO"
-                        rows={3}
-                      />
+                       <Label>Descrição SEO</Label>
+                       <Textarea
+                         value={data.seo_description}
+                         onChange={(e) => {
+                           setData(prev => ({ ...prev, seo_description: e.target.value }));
+                           dirtyRef.current = true;
+                         }}
+                         placeholder="Descrição otimizada para SEO"
+                         rows={3}
+                       />
                       <p className="text-xs text-gray-500 mt-1">
                         {(data.seo_description || '').length}/160 caracteres
                       </p>
