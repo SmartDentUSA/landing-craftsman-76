@@ -1866,7 +1866,20 @@ const EditorContent = () => {
           setSelectedProductIds(selectedIds);
           // Se há dados estruturados, usar direto mas garantir campos obrigatórios
           if (landingPage.data && typeof landingPage.data === 'object') {
-            const loadedData = { ...landingPage.data, template: landingPage.template } as LandingPageData;
+            // 🔧 CORREÇÃO CRÍTICA: Incluir name, status e template no loadedData
+            const loadedData = { 
+              ...landingPage.data, 
+              name: landingPage.name,
+              status: landingPage.status,
+              template: landingPage.template 
+            } as LandingPageData;
+            
+            console.info('🔍 Debug loading page data:', {
+              hasName: !!loadedData.name,
+              pageName: loadedData.name,
+              pageStatus: loadedData.status,
+              pageTemplate: loadedData.template
+            });
           
           // Garantir que todos os campos obrigatórios existam (defaults seguros)
           if (!loadedData.desktop_info) {
