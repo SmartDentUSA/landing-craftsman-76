@@ -2629,7 +2629,7 @@ const EditorContent = () => {
                         placeholder="Título otimizado para SEO"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        {data.seo_title.length}/60 caracteres
+                        {(data.seo_title || '').length}/60 caracteres
                       </p>
                     </div>
                     <div>
@@ -2641,7 +2641,7 @@ const EditorContent = () => {
                         rows={3}
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        {data.seo_description.length}/160 caracteres
+                        {(data.seo_description || '').length}/160 caracteres
                       </p>
                     </div>
                   </AccordionContent>
@@ -3421,7 +3421,7 @@ const EditorContent = () => {
                        <div className="flex items-center gap-2">
                          <Tag className="h-4 w-4" />
                          Ofertas na Landing Page
-                         <Badge variant="secondary">{data.schema.offers.length}</Badge>
+                         <Badge variant="secondary">{(data.schema?.offers?.length || 0)}</Badge>
                        </div>
                      </AccordionTrigger>
                      <AccordionContent className="space-y-4">
@@ -3503,7 +3503,7 @@ const EditorContent = () => {
                         <div className="flex items-center gap-2">
                           <Folder className="h-4 w-4" />
                           Recursos e Downloads
-                          <Badge variant="secondary">{data.schema.offers.filter(offer => offer.show_in_resources).length}</Badge>
+                          <Badge variant="secondary">{(data.schema?.offers?.filter(offer => offer.show_in_resources).length || 0)}</Badge>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4">
@@ -4243,7 +4243,7 @@ const EditorContent = () => {
                              placeholder="Título otimizado para SEO"
                            />
                            <p className="text-xs text-gray-500 mt-1">
-                             {data.seo.seo_title.length}/60 caracteres
+                             {(data.seo?.seo_title || '').length}/60 caracteres
                            </p>
                         </div>
                         
@@ -4527,7 +4527,7 @@ const EditorContent = () => {
                                             }));
                                            toast({ 
                                              title: "✨ Keywords do FAQ geradas!", 
-                                             description: `${data.faq.length} perguntas analisadas com sucesso.` 
+                                             description: `${(data.faq?.length || 0)} perguntas analisadas com sucesso.` 
                                            });
                                          }
                                        } catch (error) {
@@ -4553,7 +4553,7 @@ const EditorContent = () => {
                                  </div>
                                   <div className="text-xs text-green-700 bg-white/50 p-2 rounded border mb-2">
                                     {data.faq?.length ? (
-                                      <span>✅ {data.faq.length} perguntas no FAQ prontas para análise</span>
+                                      <span>✅ {(data.faq?.length || 0)} perguntas no FAQ prontas para análise</span>
                                     ) : (
                                       <span>⚠️ Adicione perguntas no FAQ primeiro</span>
                                     )}
@@ -5728,7 +5728,7 @@ const EditorContent = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                        {data.schema.breadcrumb.length} itens
+                        {(data.schema?.breadcrumb?.length || 0)} itens
                       </Badge>
                       <Button
                         type="button"
