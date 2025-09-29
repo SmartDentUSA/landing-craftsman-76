@@ -167,4 +167,26 @@
   .transition-bounce {
     transition: var(--transition-bounce);
   }
+
+  /* Blog "Leia mais" functionality */
+  .full-content {
+    display: none;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid hsl(var(--border));
+  }
+  
+  .full-content.expanded {
+    display: block;
+  }
+  
+  .read-more-btn {
+    @apply inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm font-medium 
+           text-primary-foreground bg-primary hover:bg-primary-hover 
+           rounded-lg transition-smooth cursor-pointer border-0;
+  }
+  
+  .read-more-btn:hover {
+    background-color: hsl(var(--primary-hover));
+  }
 }

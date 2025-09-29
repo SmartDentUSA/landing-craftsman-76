@@ -17,6 +17,7 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
 import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
+import { useBlogReadMore } from "@/hooks/useBlogReadMore";
 
 // Interface for blog posts
 interface BlogPost {
@@ -55,6 +56,9 @@ const DashboardContent = () => {
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  
+  // Ativar funcionalidade "Leia mais" para blogs
+  useBlogReadMore();
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
