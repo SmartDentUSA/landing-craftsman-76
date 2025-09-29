@@ -1708,7 +1708,7 @@ const EditorContent = () => {
       timestamp: Date.now(),
       show_solutions: processedData.email.show_solutions_in_email,
       solutions_count: processedData.solutions?.length || 0,
-      solutions_with_images: processedData.solutions?.filter(s => s.image?.src).length || 0
+      solutions_with_images: (processedData.solutions || []).filter(s => s.image?.src).length
     });
     
     // Validar soluções quando habilitadas
