@@ -128,54 +128,58 @@ async function generateProductBlog(
   const prompts = {
     commercial: {
       role: "Você é um especialista em marketing digital e copywriting comercial para produtos odontológicos.",
-      objective: "Criar um blog post comercial persuasivo que destaque os benefícios do produto e incentive a compra.",
+      objective: "Criar um blog post comercial envolvente que comece com um gancho irresistível e mantenha o leitor interessado até o final.",
       structure: `
-# ${product.name}: [Título Comercial Atrativo]
+# ${product.name}: [Título Irresistível que Desperta Curiosidade]
 
-## Por que Escolher o ${product.name}?
-[Benefícios principais que resolvem problemas específicos]
+[Comece com uma situação problema que o dentista enfrenta diariamente ou uma pergunta provocativa que faça o leitor querer continuar lendo]
 
-## Principais Vantagens
-[Lista dos benefícios mais importantes]
+## A Solução Que Você Estava Procurando
+[Apresente o produto como a resposta para o problema mencionado]
 
-## Especificações Técnicas Relevantes
-[Características técnicas que importam para o cliente]
+## Por Que Este Produto é Diferente?
+[Destaque os diferenciais únicos e benefícios exclusivos]
 
-## Como Este Produto Vai Transformar Seu Consultório
-[Casos de uso práticos e resultados esperados]
+## Resultados Que Você Pode Esperar
+[Casos de uso práticos e transformações reais no consultório]
 
-## Garantia e Suporte
-[Informações sobre garantia, suporte e pós-venda]
+## Especificações Que Realmente Importam
+[Características técnicas relevantes explicadas de forma simples]
 
-## Adquira Agora
-[Call-to-action persuasivo]`
+## Garantia Total da Sua Satisfação
+[Informações sobre garantia, suporte e confiança na compra]
+
+## Não Deixe Essa Oportunidade Passar
+[Call-to-action urgente e persuasivo]`
     },
     technical: {
       role: "Você é um especialista técnico em equipamentos odontológicos e engenharia biomédica.",
-      objective: "Criar um blog post técnico detalhado sobre o funcionamento, especificações e aplicações profissionais do produto.",
+      objective: "Criar um blog post técnico que comece de forma envolvente, despertando curiosidade sobre os aspectos técnicos do produto.",
       structure: `
-# ${product.name}: Análise Técnica Completa
+# ${product.name}: [Título Técnico Intrigante sobre Inovação ou Tecnologia]
 
-## Introdução Técnica
-[Apresentação técnica do produto e sua função]
+[Inicie com uma pergunta técnica interessante, uma descoberta recente, ou um problema técnico que este produto resolve de forma inovadora]
 
-## Especificações Técnicas Detalhadas
-[Características técnicas precisas e medições]
+## A Tecnologia Por Trás da Inovação
+[Explique a tecnologia de forma envolvente, começando pelo 'por que' antes do 'como']
 
-## Tecnologia e Funcionamento
-[Como o produto funciona tecnicamente]
+## Especificações Técnicas Avançadas
+[Características técnicas detalhadas e precisas]
 
-## Aplicações Clínicas
-[Usos específicos na prática odontológica]
+## Como Funciona na Prática Clínica
+[Funcionamento técnico aplicado a casos reais]
 
-## Comparativo Técnico
-[Vantagens técnicas em relação a outros produtos]
+## Aplicações Profissionais Específicas
+[Usos técnicos especializados na odontologia moderna]
 
-## Instalação e Manutenção
-[Requisitos técnicos e cuidados necessários]
+## Vantagens Técnicas Comprovadas
+[Comparativo técnico baseado em dados e performance]
 
-## Conclusão Técnica
-[Avaliação técnica final do produto]`
+## Requisitos de Instalação e Manutenção
+[Aspectos técnicos de implementação e cuidados]
+
+## O Futuro da Odontologia Está Aqui
+[Conclusão técnica inspiradora sobre o impacto da tecnologia]`
     }
   };
 
@@ -234,15 +238,18 @@ ESTRUTURA OBRIGATÓRIA:
 ${currentPrompt.structure}
 
 INSTRUÇÕES ESPECÍFICAS:
-1. Use APENAS as informações fornecidas sobre o produto
-2. Mantenha um tom ${blogType === 'commercial' ? 'persuasivo e orientado a vendas' : 'técnico e informativo'}
-3. Inclua naturalmente as keywords do produto no texto
-4. O blog deve ter entre 800-1200 palavras
-5. Use subtítulos em markdown (##, ###)
-6. Inclua listas quando apropriado
-7. ${blogType === 'commercial' ? 'Foque nos benefícios e resultados para o cliente' : 'Foque em especificações técnicas e funcionamento'}
-8. NÃO invente informações que não estão nos dados fornecidos
-9. Use formato markdown limpo e profissional
+1. COMECE DE FORMA ENVOLVENTE: Nunca use frases formais como "Análise comercial" ou "Análise técnica" no início
+2. DESPERTE CURIOSIDADE: O primeiro parágrafo deve fazer o leitor querer continuar lendo
+3. Use APENAS as informações fornecidas sobre o produto
+4. Mantenha um tom ${blogType === 'commercial' ? 'conversacional e persuasivo, como se estivesse falando com um amigo dentista' : 'técnico mas acessível, explicando complexidade de forma interessante'}
+5. Inclua naturalmente as keywords do produto no texto
+6. O blog deve ter entre 800-1200 palavras
+7. Use subtítulos em markdown (##, ###) que sejam intrigantes, não apenas informativos
+8. Inclua listas quando apropriado
+9. ${blogType === 'commercial' ? 'Conte uma história sobre como o produto resolve problemas reais' : 'Explique a tecnologia como uma descoberta fascinante'}
+10. NÃO invente informações que não estão nos dados fornecidos
+11. Use formato markdown limpo e envolvente
+12. EVITE linguagem corporativa ou muito formal no início - seja mais humano e direto
 
 Gere o blog post completo agora:`;
   }
