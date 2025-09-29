@@ -29,6 +29,123 @@ interface PromptEditModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Mapeamento de nomes amigáveis para campos
+const FIELD_FRIENDLY_NAMES = {
+  // === DADOS BÁSICOS ===
+  "name": "Nome do Produto",
+  "description": "Descrição",
+  "price": "Preço",
+  "category": "Categoria",
+  "subcategory": "Subcategoria", 
+  "currency": "Moeda",
+  
+  // === MARKETING E VENDAS ===
+  "benefits": "Benefícios",
+  "features": "Características",
+  "keywords": "Palavras-chave",
+  "target_audience": "Público-alvo",
+  "sales_pitch": "Pitch de Vendas",
+  
+  // === URLs E IMAGENS ===
+  "product_url": "URL do Produto",
+  "image_url": "URL da Imagem",
+  
+  // === ESPECIFICAÇÕES ===
+  "technical_specifications": "Especificações Técnicas",
+  
+  // === VÍDEOS E MULTIMÍDIA ===
+  "youtube_videos": "Vídeos YouTube",
+  "instagram_videos": "Vídeos Instagram", 
+  "technical_videos": "Vídeos Técnicos",
+  "testimonial_videos": "Vídeos de Depoimentos",
+  "tiktok_videos": "Vídeos TikTok",
+  "video_captions": "Legendas de Vídeos",
+  
+  // === CONTEÚDO GERADO POR IA ===
+  "whatsapp_messages": "Mensagens WhatsApp",
+  "youtube_descriptions": "Descrições YouTube",
+  "instagram_copies": "Copies Instagram",
+  "tiktok_content": "Conteúdo TikTok",
+  
+  // === INTERAÇÃO E BOT ===
+  "bot_trigger_words": "Palavras-gatilho do Bot",
+  
+  // === RECURSOS E CTAs ===
+  "resource_descriptions": "Descrições de Recursos",
+  "resource_cta1": "CTA Recurso 1",
+  "resource_cta2": "CTA Recurso 2", 
+  "resource_cta3": "CTA Recurso 3",
+  "offer_discount_cta": "CTA de Desconto",
+  
+  // === GOOGLE MERCHANT E SEO ===
+  "brand": "Marca",
+  "google_product_category": "Categoria Google",
+  "condition": "Condição",
+  "availability": "Disponibilidade",
+  "color": "Cor",
+  "size": "Tamanho",
+  "material": "Material",
+  "age_group": "Faixa Etária",
+  "gender": "Gênero",
+  "gtin": "GTIN/EAN",
+  "mpn": "Código do Fabricante",
+  "seo_title_override": "Título SEO Personalizado",
+  "seo_description_override": "Descrição SEO Personalizada",
+  "canonical_url": "URL Canônica",
+  
+  // === CATEGORIZAÇÃO AVANÇADA ===
+  "market_keywords": "Palavras-chave de Mercado",
+  "search_intent_keywords": "Palavras-chave de Intenção",
+  
+  // === CONTROLES INTERNOS ===
+  "tags": "Tags",
+  "source_type": "Tipo de Origem",
+  "source_landing_page_id": "ID da Landing Page",
+  "approved": "Aprovado",
+  "display_order": "Ordem de Exibição",
+  "use_in_ai_generation": "Usar na Geração IA",
+  "show_in_resources": "Mostrar em Recursos",
+  "selected": "Selecionado",
+  "ai_generated_category": "Categoria Gerada por IA",
+  "ai_generated_keywords": "Keywords Geradas por IA",
+  "ai_generated_benefits": "Benefícios Gerados por IA",
+  "seo_enhanced": "SEO Aprimorado",
+  "individual_blog_content": "Conteúdo de Blog Individual",
+  "original_data": "Dados Originais",
+  
+  // === EMPRESA ===
+  "company_name": "Nome da Empresa",
+  "company_description": "Descrição da Empresa",
+  "business_sector": "Setor de Negócio",
+  "mission_statement": "Missão",
+  "vision_statement": "Visão",
+  "brand_values": "Valores da Marca",
+  "differentiators": "Diferenciais",
+  "seo_technical_expertise": "Expertise Técnica SEO",
+  "working_methodology": "Metodologia de Trabalho",
+  "seo_competitive_advantages": "Vantagens Competitivas SEO",
+  "seo_market_positioning": "Posicionamento de Mercado",
+  "youtube_company_footer": "Rodapé YouTube da Empresa",
+  "contact_email": "Email de Contato",
+  "contact_phone": "Telefone de Contato",
+  "location": "Localização",
+  "website_url": "URL do Website",
+  "founded_year": "Ano de Fundação",
+  "team_size": "Tamanho da Equipe",
+  "company_logo_url": "URL do Logo",
+  "company_culture": "Cultura da Empresa",
+  "delivery_approach": "Abordagem de Entrega",
+  "seo_service_areas": "Áreas de Serviço SEO",
+  
+  // === CATEGORIAS ===
+  "category_config": "Configuração de Categoria",
+  "parent_category": "Categoria Pai",
+  "category_description": "Descrição da Categoria",
+  "seo_keywords": "Palavras-chave SEO",
+  "content_pillars": "Pilares de Conteúdo",
+  "target_pain_points": "Pontos de Dor do Público"
+};
+
 // Mapeamento de fontes de dados disponíveis - EXPANSÃO COMPLETA
 const DATA_SOURCES = {
   products_repository: {
@@ -1198,12 +1315,13 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
                                   checked={selectedFields[source]?.includes(field) || false}
                                   onCheckedChange={() => handleFieldToggle(source, field)}
                                 />
-                                <Label 
-                                  htmlFor={`${source}-${field}`} 
-                                  className="text-sm font-normal cursor-pointer"
-                                >
-                                  {field}
-                                </Label>
+                                 <Label 
+                                   htmlFor={`${source}-${field}`} 
+                                   className="text-sm font-normal cursor-pointer"
+                                   title={`Campo técnico: ${field}`}
+                                 >
+                                   {FIELD_FRIENDLY_NAMES[field] || field}
+                                 </Label>
                               </div>
                             ))}
                           </div>
