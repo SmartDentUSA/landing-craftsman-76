@@ -2717,7 +2717,7 @@ const EditorContent = () => {
                             placeholder="Label"
                             value={item.label}
                             onChange={(e) => {
-                              const newMenu = [...data.menu];
+                              const newMenu = [...(data.menu || [])];
                               newMenu[index].label = e.target.value;
                               setData(prev => ({ ...prev, menu: newMenu }));
                             }}
@@ -2726,7 +2726,7 @@ const EditorContent = () => {
                             placeholder="URL"
                             value={item.href}
                             onChange={(e) => {
-                              const newMenu = [...data.menu];
+                              const newMenu = [...(data.menu || [])];
                               newMenu[index].href = e.target.value;
                               setData(prev => ({ ...prev, menu: newMenu }));
                             }}
@@ -2735,7 +2735,7 @@ const EditorContent = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const newMenu = data.menu.filter((_, i) => i !== index);
+                              const newMenu = (data.menu || []).filter((_, i) => i !== index);
                               setData(prev => ({ ...prev, menu: newMenu }));
                             }}
                           >
@@ -2749,7 +2749,7 @@ const EditorContent = () => {
                         onClick={() => {
                           setData(prev => ({
                             ...prev,
-                            menu: [...prev.menu, { label: '', href: '' }]
+                            menu: [...(prev.menu || []), { label: '', href: '' }]
                           }));
                         }}
                         className="mt-2"
