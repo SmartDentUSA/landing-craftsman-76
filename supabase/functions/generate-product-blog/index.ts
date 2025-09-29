@@ -336,7 +336,25 @@ async function generateIntelligentLinks(supabase: any, product: any, blogContent
       Object.assign(intelligentLinks, existingLinks);
       console.log(`📎 Loaded ${Object.keys(existingLinks).length} existing custom links`);
     }
-    // 2. Buscar landing page relacionada ao produto (prioridade média)
+
+    // 2. Buscar links do repositório (external_links) - PRIORIDADE ALTA
+    const { data: repositoryLinks } = await supabase
+      .from('external_links')
+      .select('name, url')
+      .eq('approved', true);
+    
+    if (repositoryLinks && repositoryLinks.length > 0) {
+      repositoryLinks.forEach((link: any) => {
+        const keyword = link.name.toLowerCase();
+        // Só adiciona se não existe link customizado para a mesma keyword
+        if (!intelligentLinks[keyword] && isKeywordInContent(keyword, blogContent)) {
+          intelligentLinks[keyword] = link.url;
+        }
+      });
+      console.log(`🔗 Loaded ${repositoryLinks.length} repository links, applied ${Object.keys(intelligentLinks).length - Object.keys(existingLinks).length} new ones`);
+    }
+    
+    // 3. Buscar landing page relacionada ao produto (prioridade média)
     if (product.source_landing_page_id) {
       const { data: landingPage } = await supabase
         .from('landing_pages')
