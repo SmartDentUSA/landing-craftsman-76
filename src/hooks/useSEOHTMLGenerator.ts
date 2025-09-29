@@ -1313,12 +1313,6 @@ export const useSEOHTMLGenerator = () => {
       ${blogContents}
     </main>
     
-    ${selectedProducts && selectedProducts.length > 0 ? `
-    <section class="products-summary">
-      <h2>💼 Ofertas Estruturadas para SEO</h2>
-      <p class="offers-description">Produtos selecionados automaticamente para otimização de buscas e melhor indexação</p>
-    </section>
-    ` : ''}
     
     ${uniqueKeywords.length > 0 ? `
     <section class="keywords-section">

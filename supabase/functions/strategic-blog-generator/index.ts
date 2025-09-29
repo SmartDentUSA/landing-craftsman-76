@@ -25,7 +25,6 @@ serve(async (req) => {
     // Configurar Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -37,8 +36,8 @@ serve(async (req) => {
     // Carregar prompts customizados
     const customPrompts = await loadCustomPrompts(supabase, 'strategic-blog-generator');
     
-    // Gerar blog estratégico
-    const blogContent = await generateStrategicBlog(deepSeekApiKey, strategicContext, customPrompts);
+    // Gerar blog estratégico com sistema de redundância dual-AI
+    const blogContent = await generateStrategicBlog(strategicContext, customPrompts);
     
     console.log(`✅ Strategic blog generated: ${blogContent.length} characters`);
 
@@ -208,8 +207,7 @@ async function loadCustomPrompts(supabase: any, edgeFunctionId: string) {
   return customPrompts;
 }
 
-async function generateStrategicBlog(apiKey: string, context: any, customPrompts: any): Promise<string> {
-  // Usar prompt customizado se disponível, senão usar o padrão
+async function generateStrategicBlog(context: any, customPrompts: any): Promise<string> {
   const defaultPrompt = `Você é um especialista em marketing de conteúdo estratégico e SEO.
 
 Crie um artigo de blog abrangente e estratégico que combine todos os elementos fornecidos de forma natural e persuasiva.
@@ -239,18 +237,41 @@ Gere o artigo estratégico completo agora:`;
 
   const promptToUse = customPrompts['Artigo Estratégico Contextual'] || defaultPrompt;
 
-  console.log('🤖 Generating strategic blog with custom prompts');
+  console.log('🤖 Iniciating dual-AI generation system');
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
+  // Chamadas simultâneas para ambas as APIs
+  const [lovableResult, deepSeekResult] = await Promise.allSettled([
+    generateWithLovableAI(promptToUse),
+    generateWithDeepSeek(promptToUse)
+  ]);
+
+  console.log('🔍 Comparing AI responses...');
+
+  // Analisar e comparar as respostas
+  const comparison = await compareAndSelectBestResponse(lovableResult, deepSeekResult);
+  
+  console.log(`✅ Selected ${comparison.selectedAPI} response (score: ${comparison.score})`);
+  console.log(`📊 Metrics: Lovable=${comparison.metrics.lovable}, DeepSeek=${comparison.metrics.deepSeek}`);
+
+  return comparison.selectedContent;
+}
+
+async function generateWithLovableAI(prompt: string): Promise<string> {
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!lovableApiKey) {
+    throw new Error('LOVABLE_API_KEY não configurado');
+  }
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${lovableApiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: 'google/gemini-2.5-flash',
       messages: [
-        { role: 'system', content: promptToUse },
+        { role: 'system', content: prompt },
         { role: 'user', content: 'Gere um artigo estratégico completo baseado no contexto fornecido' }
       ],
       max_tokens: 3000,
@@ -260,15 +281,167 @@ Gere o artigo estratégico completo agora:`;
 
   if (!response.ok) {
     const errorData = await response.text();
-    throw new Error(`Erro na API DeepSeek: ${response.status} - ${errorData}`);
+    throw new Error(`Erro Lovable AI: ${response.status} - ${errorData}`);
   }
 
   const data = await response.json();
-  const blogContent = data.choices[0]?.message?.content;
-
-  if (!blogContent) {
-    throw new Error('Resposta vazia da API DeepSeek');
+  const content = data.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error('Resposta vazia da Lovable AI');
   }
 
-  return blogContent.trim();
+  return content.trim();
+}
+
+async function generateWithDeepSeek(prompt: string): Promise<string> {
+  const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+  if (!deepSeekApiKey) {
+    throw new Error('DEEPSEEK_API_KEY não configurado');
+  }
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepSeekApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: 'Gere um artigo estratégico completo baseado no contexto fornecido' }
+      ],
+      max_tokens: 3000,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`Erro DeepSeek: ${response.status} - ${errorData}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error('Resposta vazia da DeepSeek');
+  }
+
+  return content.trim();
+}
+
+async function compareAndSelectBestResponse(
+  lovableResult: PromiseSettledResult<string>, 
+  deepSeekResult: PromiseSettledResult<string>
+) {
+  const metrics = { lovable: 0, deepSeek: 0 };
+  let selectedContent = '';
+  let selectedAPI = '';
+
+  // Verificar se ambas falharam
+  if (lovableResult.status === 'rejected' && deepSeekResult.status === 'rejected') {
+    throw new Error(`Ambas APIs falharam: Lovable=${lovableResult.reason}, DeepSeek=${deepSeekResult.reason}`);
+  }
+
+  // Se apenas uma funcionou, usar ela
+  if (lovableResult.status === 'rejected') {
+    console.log(`⚠️ Lovable AI failed: ${lovableResult.reason}. Using DeepSeek.`);
+    return {
+      selectedContent: (deepSeekResult as PromiseFulfilledResult<string>).value,
+      selectedAPI: 'DeepSeek (fallback)',
+      score: 100,
+      metrics: { lovable: 0, deepSeek: 100 }
+    };
+  }
+
+  if (deepSeekResult.status === 'rejected') {
+    console.log(`⚠️ DeepSeek failed: ${deepSeekResult.reason}. Using Lovable AI.`);
+    return {
+      selectedContent: (lovableResult as PromiseFulfilledResult<string>).value,
+      selectedAPI: 'Lovable AI (fallback)',
+      score: 100,
+      metrics: { lovable: 100, deepSeek: 0 }
+    };
+  }
+
+  // Ambas funcionaram - comparar qualidade
+  const lovableContent = (lovableResult as PromiseFulfilledResult<string>).value;
+  const deepSeekContent = (deepSeekResult as PromiseFulfilledResult<string>).value;
+
+  // Critérios de avaliação
+  const lovableScore = evaluateContent(lovableContent);
+  const deepSeekScore = evaluateContent(deepSeekContent);
+
+  metrics.lovable = lovableScore;
+  metrics.deepSeek = deepSeekScore;
+
+  // Selecionar a melhor
+  if (lovableScore >= deepSeekScore) {
+    selectedContent = lovableContent;
+    selectedAPI = 'Lovable AI';
+  } else {
+    selectedContent = deepSeekContent;
+    selectedAPI = 'DeepSeek';
+  }
+
+  return {
+    selectedContent,
+    selectedAPI,
+    score: Math.max(lovableScore, deepSeekScore),
+    metrics
+  };
+}
+
+function evaluateContent(content: string): number {
+  let score = 0;
+
+  // Critério 1: Tamanho (20 pontos)
+  const wordCount = content.split(/\s+/).length;
+  if (wordCount >= 1200 && wordCount <= 1800) {
+    score += 20;
+  } else if (wordCount >= 800) {
+    score += 10;
+  }
+
+  // Critério 2: Estrutura em markdown (20 pontos)
+  const hasH1 = content.includes('# ');
+  const hasH2 = content.includes('## ');
+  const hasH3 = content.includes('### ');
+  if (hasH1 && hasH2) score += 15;
+  if (hasH3) score += 5;
+
+  // Critério 3: Presença de elementos-chave (30 pontos)
+  const keyElements = [
+    /introdução|apresent|context/i,
+    /soluç|produto|serviço/i,
+    /conclusão|contato|saiba mais/i,
+    /benefício|vantag|resultado/i
+  ];
+  
+  keyElements.forEach(pattern => {
+    if (pattern.test(content)) score += 7.5;
+  });
+
+  // Critério 4: Qualidade do texto (30 pontos)
+  const sentences = content.split(/[.!?]+/).length;
+  const avgWordsPerSentence = wordCount / sentences;
+  
+  if (avgWordsPerSentence >= 15 && avgWordsPerSentence <= 25) {
+    score += 15;
+  } else if (avgWordsPerSentence >= 10) {
+    score += 10;
+  }
+
+  // Penalizar conteúdo muito repetitivo
+  const uniqueWords = new Set(content.toLowerCase().split(/\s+/)).size;
+  const repetitionRatio = uniqueWords / wordCount;
+  if (repetitionRatio > 0.6) {
+    score += 15;
+  } else if (repetitionRatio > 0.4) {
+    score += 10;
+  }
+
+  return Math.min(score, 100);
 }
