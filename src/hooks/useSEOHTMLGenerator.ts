@@ -425,14 +425,37 @@ export const useSEOHTMLGenerator = () => {
     // Processar conteúdo dos blogs com links clicáveis
     const blogContents = blogs.map((blog, index) => {
       const blogCanonicalUrl = `${canonicalUrl}/blog/${domain}-${index + 1}`;
+      const processedContent = processContentWithIntelligentLinks(blog.content, intelligentLinks);
+      
+      // Truncate content for preview (first 300 characters)
+      const previewLength = 300;
+      const contentText = processedContent.replace(/<[^>]*>/g, ''); // Remove HTML tags for length calculation
+      const shouldTruncate = contentText.length > previewLength;
+      
+      let previewContent = processedContent;
+      if (shouldTruncate) {
+        // Find a good break point near the preview length
+        const truncateAt = contentText.substring(0, previewLength).lastIndexOf(' ');
+        const truncatedText = contentText.substring(0, truncateAt > 0 ? truncateAt : previewLength);
+        previewContent = processedContent.substring(0, processedContent.indexOf(truncatedText) + truncatedText.length);
+      }
+      
       return `
         <section class="blog-item">
           <a href="${blogCanonicalUrl}" class="blog-link">
             <h2>${blog.title}</h2>
           </a>
           ${blog.productName ? `<p class="product-reference"><strong>Produto:</strong> ${blog.productName}</p>` : ''}
-          <div class="blog-content">
-            ${processContentWithIntelligentLinks(blog.content, intelligentLinks)}
+          <div class="blog-content post-card-content">
+            <div class="preview-content">
+              ${shouldTruncate ? previewContent + '...' : processedContent}
+            </div>
+            ${shouldTruncate ? `
+              <button class="read-more-btn">Leia mais →</button>
+              <div class="full-content">
+                ${processedContent}
+              </div>
+            ` : ''}
           </div>
         </section>
       `;
@@ -633,9 +656,41 @@ export const useSEOHTMLGenerator = () => {
       font-style: italic;
     }
     
-    .blog-content strong {
-      color: #2c3e50;
-    }
+     .blog-content strong {
+       color: #2c3e50;
+     }
+     
+     .read-more-btn {
+       background: none;
+       border: none;
+       padding: 0;
+       cursor: pointer;
+       color: #007bff;
+       font-weight: 600;
+       font-family: inherit;
+       font-size: 1rem;
+       margin-top: 1rem;
+       display: inline-block;
+       transition: color 0.3s ease;
+     }
+     
+     .read-more-btn:hover {
+       color: #0056b3;
+       text-decoration: underline;
+     }
+     
+     .full-content {
+       display: none;
+       margin-top: 1rem;
+     }
+     
+     .full-content.expanded {
+       display: block;
+     }
+     
+     .preview-content {
+       margin-bottom: 0;
+     }
     
     .keywords-section {
       margin-top: 40px;
@@ -793,6 +848,35 @@ export const useSEOHTMLGenerator = () => {
       <p><small>URL: ${canonicalUrl}</small></p>
     </footer>
   </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const readMoreButtons = document.querySelectorAll('.read-more-btn');
+
+      readMoreButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          // Encontrar o elemento .full-content no mesmo container
+          const cardContent = this.closest('.post-card-content');
+          const fullContent = cardContent.querySelector('.full-content');
+          const previewContent = cardContent.querySelector('.preview-content');
+          
+          if (fullContent && previewContent) {
+            const isExpanded = fullContent.classList.contains('expanded');
+
+            if (isExpanded) {
+              fullContent.classList.remove('expanded');
+              previewContent.style.display = 'block';
+              this.textContent = 'Leia mais →';
+            } else {
+              fullContent.classList.add('expanded');
+              previewContent.style.display = 'none';
+              this.textContent = 'Fechar ↑';
+            }
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>`;
   }, []);
