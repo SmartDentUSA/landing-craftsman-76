@@ -1151,31 +1151,6 @@ export const useSEOHTMLGenerator = () => {
     <main class="blog-section">
       ${seoSummary}
       ${blogContents}
-      
-      ${selectedProducts && selectedProducts.length > 0 ? `
-      <section class="products-summary">
-        <h2>🛍️ Produtos Relacionados</h2>
-        <div class="products-grid">
-          ${selectedProducts.map(product => {
-            // Converter produto name e description para HTML
-            const htmlProductName = convertMarkdownToHTML(product.name);
-            const processedProductName = processContentWithAdvancedIntelligentLinks(htmlProductName, intelligentLinks);
-            
-            const htmlProductDescription = convertMarkdownToHTML(product.description || 'Produto especializado para sua área.');
-            const processedProductDescription = processContentWithAdvancedIntelligentLinks(htmlProductDescription, intelligentLinks);
-            
-            return `
-            <div class="product-card">
-              <h3>${processedProductName}</h3>
-              <p>${processedProductDescription}</p>
-              ${product.category ? `<p><strong>Categoria:</strong> ${product.category}</p>` : ''}
-              ${product.keywords && product.keywords.length > 0 ? `<p><strong>Keywords:</strong> ${product.keywords.slice(0, 5).join(', ')}</p>` : ''}
-            </div>
-            `;
-          }).join('')}
-        </div>
-      </section>
-      ` : ''}
     </main>
     
     ${uniqueKeywords.length > 0 ? `
