@@ -49,6 +49,7 @@ const FIELD_FRIENDLY_NAMES = {
   // === URLs E IMAGENS ===
   "product_url": "URL do Produto",
   "image_url": "URL da Imagem",
+  "url": "URL",
   
   // === ESPECIFICAÇÕES ===
   "technical_specifications": "Especificações Técnicas",
@@ -128,7 +129,7 @@ const FIELD_FRIENDLY_NAMES = {
   "youtube_company_footer": "Rodapé YouTube da Empresa",
   "contact_email": "Email de Contato",
   "contact_phone": "Telefone de Contato",
-  "location": "Localização",
+  "location": "Localização da Empresa",
   "website_url": "URL do Website",
   "founded_year": "Ano de Fundação",
   "team_size": "Tamanho da Equipe",
@@ -136,14 +137,112 @@ const FIELD_FRIENDLY_NAMES = {
   "company_culture": "Cultura da Empresa",
   "delivery_approach": "Abordagem de Entrega",
   "seo_service_areas": "Áreas de Serviço SEO",
+  "instagram_profile": "Perfil Instagram",
+  "youtube_channel": "Canal YouTube",
+  "social_media_links": "Links Redes Sociais",
+  "institutional_links": "Links Institucionais",
+  "company_videos": "Vídeos da Empresa",
+  "seo_context_keywords": "Keywords de Contexto SEO",
   
-  // === CATEGORIAS ===
-  "category_config": "Configuração de Categoria",
-  "parent_category": "Categoria Pai",
-  "category_description": "Descrição da Categoria",
-  "seo_keywords": "Palavras-chave SEO",
-  "content_pillars": "Pilares de Conteúdo",
-  "target_pain_points": "Pontos de Dor do Público"
+  // === DEPOIMENTOS E AVALIAÇÕES ===
+  "client_name": "Nome do Cliente",
+  "profession": "Profissão",
+  "testimonial_text": "Texto do Depoimento",
+  "youtube_url": "URL YouTube",
+  "instagram_url": "URL Instagram",
+  "ai_keywords": "Palavras-chave IA",
+  "sentiment_score": "Score de Sentimento",
+  "ai_extracted_benefits": "Benefícios Extraídos por IA",
+  "state": "Estado",
+  "specialty": "Especialidade",
+  "author_name": "Nome do Autor",
+  "rating": "Avaliação",
+  "review_text": "Texto da Avaliação",
+  "contextual_seo_info": "Informação SEO Contextual",
+  "notes": "Observações",
+  "landing_page_id": "ID da Landing Page",
+  "approved_at": "Aprovado em",
+  "approved_by": "Aprovado por",
+  
+  // === KOLs (KEY OPINION LEADERS) ===
+  "full_name": "Nome Completo",
+  "mini_cv": "Mini CV",
+  "photo_url": "URL da Foto",
+  "lattes_url": "URL Lattes",
+  
+  // === AVALIAÇÕES BRUTAS (GOOGLE) ===
+  "profile_photo_url": "URL Foto do Perfil",
+  "author_url": "URL do Autor",
+  "is_local_guide": "É Guia Local",
+  "review_date": "Data da Avaliação",
+  "relative_time": "Tempo Relativo",
+  "review_likes": "Curtidas da Avaliação",
+  "response_from_owner": "Resposta do Proprietário",
+  "response_date": "Data da Resposta",
+  
+  // === JOBS DE EXTRAÇÃO ===
+  "place_id": "ID do Local",
+  "google_maps_url": "URL Google Maps",
+  "business_name": "Nome do Negócio",
+  "status": "Status",
+  "total_reviews_found": "Total de Avaliações Encontradas",
+  "reviews_extracted": "Avaliações Extraídas",
+  "started_at": "Iniciado em",
+  "completed_at": "Completado em",
+  "error_message": "Mensagem de Erro",
+  
+  // === CAMPANHAS GOOGLE ADS ===
+  "campaign_type": "Tipo de Campanha",
+  "config": "Configuração",
+  "last_exported": "Última Exportação",
+  "product_id": "ID do Produto",
+  
+  // === BLOG POSTS ===
+  "title": "Título",
+  "content": "Conteúdo",
+  "meta_description": "Meta Descrição",
+  "published_at": "Publicado em",
+  "published_domains": "Domínios Publicados",
+  "youtube_video_url": "URL do Vídeo YouTube",
+  "intelligent_links": "Links Inteligentes",
+  "include_offers": "Incluir Ofertas",
+  "author_kol_id": "ID do Autor KOL",
+  "schema_json_ld": "Schema JSON-LD",
+  
+  // === LANDING PAGES ===
+  "template": "Template",
+  "data": "Dados",
+  "selected_product_ids": "IDs dos Produtos Selecionados",
+  "blog_generated": "Blog Gerado",
+  "blog_generated_at": "Blog Gerado em",
+  "embed": "Embed",
+  "version": "Versão",
+  "last_modified": "Última Modificação",
+  "user_id": "ID do Usuário",
+  
+  // === CONFIGURAÇÕES DE PUBLICAÇÃO ===
+  "wordpress_url": "URL WordPress",
+  "wordpress_user": "Usuário WordPress",
+  "wordpress_app_password_encrypted": "Senha App WordPress (Criptografada)",
+  "ftp_host": "Host FTP",
+  "ftp_port": "Porta FTP",
+  "ftp_user": "Usuário FTP",
+  "ftp_password_encrypted": "Senha FTP (Criptografada)",
+  "ftp_remote_path": "Caminho Remoto FTP",
+  "ftp_protocol": "Protocolo FTP",
+  
+  // === CONFIGURAÇÕES DE PROMPTS ===
+  "edge_function_id": "ID da Função Edge",
+  "prompt_name": "Nome do Prompt",
+  "custom_prompt": "Prompt Personalizado",
+  "selected_data_sources": "Fontes de Dados Selecionadas",
+  "selected_fields": "Campos Selecionados",
+  
+  // === CAMPOS DE SISTEMA ===
+  "id": "ID",
+  "created_at": "Criado em",
+  "updated_at": "Atualizado em",
+  "extracted_at": "Extraído em"
 };
 
 // Mapeamento de fontes de dados disponíveis - EXPANSÃO COMPLETA
