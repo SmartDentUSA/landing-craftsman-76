@@ -658,7 +658,14 @@ const computeSEOScore = (data: LandingPageData) => {
 const analyzeContent = (data: LandingPageData) => {
   // Incluir conteúdo de FAQ na análise
   const faqContent = data.faq?.map(faq => `${faq.question} ${faq.answer}`).join(' ') || '';
-  const content = `${data.banner.title} ${data.banner.subtitle} ${data.solutions_title} ${data.solutions.map(s => s.text).join(' ')} ${data.desktop_info.text} ${data.advisory.title} ${data.advisory.paragraph} ${faqContent}`;
+  const bannerTitle = data.banner?.title || '';
+  const bannerSubtitle = data.banner?.subtitle || '';
+  const solutionsTitle = data.solutions_title || '';
+  const solutionsText = (data.solutions || []).map(s => s.text || '').join(' ');
+  const desktopText = data.desktop_info?.text || '';
+  const advisoryTitle = data.advisory?.title || '';
+  const advisoryParagraph = data.advisory?.paragraph || '';
+  const content = `${bannerTitle} ${bannerSubtitle} ${solutionsTitle} ${solutionsText} ${desktopText} ${advisoryTitle} ${advisoryParagraph} ${faqContent}`;
   
   // Extrair palavras-chave principais
   const words = content.toLowerCase().match(/\b\w{4,}\b/g) || [];
@@ -679,13 +686,15 @@ const analyzeContent = (data: LandingPageData) => {
 const generateMetaDescription = (data: LandingPageData, customKeywords?: string[]): string => {
   const { keywords } = analyzeContent(data);
   const finalKeywords = customKeywords && customKeywords.length > 0 ? customKeywords : keywords;
-  const mainKeyword = finalKeywords[0] || 'tecnologia';
   
-  if (data.banner.subtitle.length <= 150) {
-    return data.banner.subtitle;
+  const subtitle = data.banner?.subtitle || '';
+  if (subtitle.length <= 150 && subtitle.trim().length > 0) {
+    return subtitle;
   }
   
-  const shortDesc = `${data.banner.title.split(':')[0]} - ${finalKeywords.slice(0, 3).join(', ')} com qualidade profissional e resultados garantidos.`;
+  const title = data.banner?.title || '';
+  const baseTitle = title.split(':')[0] || title;
+  const shortDesc = `${baseTitle} - ${finalKeywords.slice(0, 3).join(', ')} com qualidade profissional e resultados garantidos.`;
   return shortDesc.length <= 160 ? shortDesc : shortDesc.substring(0, 157) + '...';
 };
 
@@ -693,9 +702,10 @@ const generateMetaDescription = (data: LandingPageData, customKeywords?: string[
 const generateSEOTitle = (data: LandingPageData, customKeywords?: string[]): string => {
   const { keywords } = analyzeContent(data);
   const finalKeywords = customKeywords && customKeywords.length > 0 ? customKeywords : keywords;
-  const mainKeyword = finalKeywords[0] || 'tecnologia';
+  const mainKeyword = (finalKeywords[0] || 'tecnologia').toString();
   
-  const baseTitle = data.banner.title.split(':')[0] || data.banner.title;
+  const rawTitle = data.banner?.title || '';
+  const baseTitle = rawTitle.split(':')[0] || rawTitle;
   const titleWithKeyword = `${baseTitle} - ${mainKeyword.charAt(0).toUpperCase() + mainKeyword.slice(1)} Profissional`;
   
   return titleWithKeyword.length <= 60 ? titleWithKeyword : baseTitle;
