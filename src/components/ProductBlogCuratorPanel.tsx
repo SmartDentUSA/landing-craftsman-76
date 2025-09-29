@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown, RefreshCw } from "lucide-react";
+import { FileText, Sparkles, Eye, Package, Settings, Link, ChevronDown, RefreshCw, AlertCircle, Plus } from "lucide-react";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { IntelligentLinksManager } from "./IntelligentLinksManager";
 import { supabase } from "@/integrations/supabase/client";
@@ -140,6 +140,10 @@ export function ProductBlogCuratorPanel({
 
   const productsWithBlogs = products.filter(product => 
     product.individual_blog_content?.commercial || product.individual_blog_content?.technical
+  );
+
+  const productsWithoutBlogs = products.filter(product => 
+    !product.individual_blog_content?.commercial && !product.individual_blog_content?.technical
   );
 
   const toggleBlogUse = (productId: string, blogType: 'commercial' | 'technical', enabled: boolean) => {
@@ -282,17 +286,66 @@ export function ProductBlogCuratorPanel({
       <CardContent className="p-0">
         <ScrollArea className="h-[500px]">
           <div className="p-4">
-            {productsWithBlogs.length === 0 ? (
+            {/* Produtos sem blogs disponíveis */}
+            {productsWithoutBlogs.length > 0 && (
+              <Card className="mb-6 border-orange-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-orange-600">
+                    <AlertCircle className="h-5 w-5" />
+                    Produtos sem Blog Gerado ({productsWithoutBlogs.length})
+                  </CardTitle>
+                  <div className="text-sm text-muted-foreground">
+                    Produtos selecionados que ainda não possuem blogs gerados
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {productsWithoutBlogs.map((product) => (
+                      <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg bg-orange-50">
+                        <div className="flex items-center gap-3">
+                          {product.image_url && (
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-medium">{product.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {product.category} {product.category && '•'} {product.category || 'Sem categoria'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-orange-600 border-orange-200 hover:bg-orange-100"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Gerar Blog
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Produtos com blogs disponíveis */}
+            {productsWithBlogs.length === 0 && productsWithoutBlogs.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Nenhum produto selecionado possui blogs gerados
+                  Nenhum produto selecionado
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Use o gerador de blogs individuais nos produtos primeiro
+                  Selecione produtos no repositório para começar
                 </p>
               </div>
-            ) : (
+            ) : productsWithBlogs.length > 0 && (
               <div className="space-y-4">
                 {productsWithBlogs.map((product) => {
                   const prefs = preferences[product.id] || { useCommercial: false, useTechnical: false };

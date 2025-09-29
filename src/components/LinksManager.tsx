@@ -176,28 +176,28 @@ export const LinksManager = () => {
         return;
       }
 
-      const promises = newKeywords.map(keyword => {
-        const sourceProduct = products.find(p => {
-          const keywords = Array.isArray(p.keywords) ? p.keywords : [];
-          const searchIntentKeywords = Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [];
+        const promises = newKeywords.map(keyword => {
+          const sourceProduct = products.find(p => {
+            const keywords = Array.isArray(p.keywords) ? p.keywords : [];
+            const searchIntentKeywords = Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [];
+            
+            return keywords.some((k: string) => k.toLowerCase() === keyword) ||
+                   searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
+          });
           
-          return keywords.some((k: string) => k.toLowerCase() === keyword) ||
-                 searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
+          return addExternalLink({
+            name: keyword,
+            url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
+            category: sourceProduct?.category || 'produto',
+            subcategory: sourceProduct?.subcategory || 'geral',
+            description: `Keyword do produto: ${sourceProduct?.name || 'Produto não identificado'} (${sourceProduct?.category || 'categoria'}${sourceProduct?.subcategory ? ` • ${sourceProduct.subcategory}` : ''})`,
+            approved: true
+          });
         });
-        
-        return addExternalLink({
-          name: keyword,
-          url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
-          category: sourceProduct?.category || 'produto',
-          subcategory: 'keyword-import',
-          description: `Importado do produto: ${sourceProduct?.name || 'Produto não identificado'}`,
-          approved: true
-        });
-      });
 
       await Promise.all(promises);
       
-      toast.success(`${newKeywords.length} keywords importadas. Defina as URLs para cada uma.`);
+      toast.success(`${newKeywords.length} keywords importadas com suas categorias originais. Verifique os links de destino.`);
 
     } catch (error) {
       console.error('Erro ao importar keywords:', error);
