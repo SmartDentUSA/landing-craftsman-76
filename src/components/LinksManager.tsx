@@ -79,8 +79,8 @@ export const LinksManager = () => {
   const [formData, setFormData] = useState({
     keyword: '',
     url: '',
-    category: 'produto',
-    subcategory: 'geral',
+    category: '',
+    subcategory: '',
     description: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,7 +131,10 @@ export const LinksManager = () => {
         toast.success('Palavra-chave adicionada com sucesso');
       }
       
-      setFormData({ keyword: '', url: '', category: 'produto', subcategory: 'geral', description: '' });
+      // Reset form with first available category/subcategory or empty
+      const firstCategory = dynamicCategories[0]?.value || '';
+      const firstSubcategory = firstCategory ? dynamicSubcategories[firstCategory]?.[0] || '' : '';
+      setFormData({ keyword: '', url: '', category: firstCategory, subcategory: firstSubcategory, description: '' });
     } catch (error) {
       toast.error('Erro ao salvar palavra-chave');
     }
@@ -142,8 +145,9 @@ export const LinksManager = () => {
     // Find the actual link data to get category and subcategory
     const linkData = externalLinks.find(link => link.id === keyword.id);
     
-    let category = linkData?.category || 'produto';
-    let subcategory = linkData?.subcategory || 'geral';
+    // Use actual registered data as fallback instead of hardcoded values
+    let category = linkData?.category || dynamicCategories[0]?.value || '';
+    let subcategory = linkData?.subcategory || (category ? dynamicSubcategories[category]?.[0] || '' : '');
     
     // Se a keyword foi importada de um produto, extrair categoria/subcategoria do produto original
     if (linkData?.description?.includes('Keyword do produto:')) {
@@ -245,9 +249,9 @@ export const LinksManager = () => {
                  searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
         });
         
-        // Usar categoria/subcategoria originais do produto, ou fallback para 'produto/geral'
-        const originalCategory = sourceProduct?.category || 'produto';
-        const originalSubcategory = sourceProduct?.subcategory || 'geral';
+        // Use actual registered categories as fallback instead of hardcoded values
+        const originalCategory = sourceProduct?.category || dynamicCategories[0]?.value || '';
+        const originalSubcategory = sourceProduct?.subcategory || (originalCategory ? dynamicSubcategories[originalCategory]?.[0] || '' : '');
         
         // Formato da descrição atualizado para facilitar a detecção
         const description = sourceProduct 
@@ -303,8 +307,8 @@ export const LinksManager = () => {
       if (match) return match[1];
     }
     
-    // Fallback para a categoria salva no link
-    return link.category || 'produto';
+    // Use first available category as fallback instead of hardcoded
+    return link.category || dynamicCategories[0]?.value || '';
   };
 
   const formatSubcategory = (link: ExternalLinkType) => {
@@ -322,8 +326,9 @@ export const LinksManager = () => {
       }
     }
     
-    // Fallback para a subcategoria salva no link
-    return link.subcategory || 'geral';
+    // Use first available subcategory for the link's category as fallback
+    const linkCategory = link.category || dynamicCategories[0]?.value || '';
+    return link.subcategory || (linkCategory ? dynamicSubcategories[linkCategory]?.[0] || '' : '');
   };
 
   const resetFilters = () => {
@@ -366,7 +371,10 @@ export const LinksManager = () => {
               <Button 
                 onClick={() => {
                   setEditingKeyword(null);
-                  setFormData({ keyword: '', url: '', category: 'produto', subcategory: 'geral', description: '' });
+                  // Initialize with first available category/subcategory
+                  const firstCategory = dynamicCategories[0]?.value || '';
+                  const firstSubcategory = firstCategory ? dynamicSubcategories[firstCategory]?.[0] || '' : '';
+                  setFormData({ keyword: '', url: '', category: firstCategory, subcategory: firstSubcategory, description: '' });
                 }}
                 className="flex items-center gap-2"
               >
@@ -397,7 +405,9 @@ export const LinksManager = () => {
                   <div>
                     <Label htmlFor="category">Categoria *</Label>
                     <Select value={formData.category} onValueChange={(value) => {
-                      setFormData(prev => ({ ...prev, category: value, subcategory: 'geral' }));
+                      // Set subcategory to first available for selected category
+                      const firstSubcategory = dynamicSubcategories[value]?.[0] || '';
+                      setFormData(prev => ({ ...prev, category: value, subcategory: firstSubcategory }));
                     }}>
                       <SelectTrigger>
                         <SelectValue />
@@ -691,7 +701,9 @@ export const LinksManager = () => {
               <div>
                 <Label htmlFor="edit-category">Categoria *</Label>
                 <Select value={formData.category} onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, category: value, subcategory: 'geral' }));
+                  // Set subcategory to first available for selected category
+                  const firstSubcategory = dynamicSubcategories[value]?.[0] || '';
+                  setFormData(prev => ({ ...prev, category: value, subcategory: firstSubcategory }));
                 }}>
                   <SelectTrigger>
                     <SelectValue />
