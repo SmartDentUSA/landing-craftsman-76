@@ -1029,25 +1029,29 @@ const EditorContent = () => {
               offer_discount_cta: product.offer_discount_cta as any || { label: 'Comprar com Desconto', url: '', visible: false },
             }));
 
-            // Atualizar data.schema.offers sem duplicar
-            setData(prev => {
-              const existingOfferIds = new Set(prev.schema.offers.map(offer => offer.name));
-              const uniqueNewOffers = newOffers.filter(offer => !existingOfferIds.has(offer.name));
-              
-              return {
-                ...prev,
-                schema: {
-                  ...prev.schema,
-                  offers: [...prev.schema.offers, ...uniqueNewOffers]
-                }
-              };
-            });
+            // Atualizar data.schema.offers - substituir completamente para garantir sincronização
+            setData(prev => ({
+              ...prev,
+              schema: {
+                ...prev.schema,
+                offers: newOffers // Sempre usar os produtos mais recentes
+              }
+            }));
 
             console.log('✅ Produtos sincronizados para offers:', newOffers.length);
           }
         } catch (error) {
           console.error('❌ Erro ao sincronizar produtos:', error);
         }
+      } else {
+        // Se não há produtos selecionados, limpar as offers
+        setData(prev => ({
+          ...prev,
+          schema: {
+            ...prev.schema,
+            offers: []
+          }
+        }));
       }
     };
 
@@ -1845,8 +1849,8 @@ const EditorContent = () => {
           }
           if (!loadedData.resources_section) {
             loadedData.resources_section = {
-              visible_desktop: false,
-              visible_mobile: false,
+              visible_desktop: true,
+              visible_mobile: true,
               title: 'Recursos e Downloads',
               subtitle: 'Materiais técnicos e informações dos produtos'
             };

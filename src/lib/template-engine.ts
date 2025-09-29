@@ -2092,12 +2092,26 @@ export const generatePreviewHTML = (data: any): string => {
       // Ensure solutions have slideIndex for carousel
       solutions: data.solutions_section?.solutions?.map((s: any, i: number) => ({ ...s, slideIndex: i })) || []
     },
-    resources_section: calculateSectionVisibility(data.resources_section),
-    offers_section: calculateSectionVisibility(data.offers_section),
+    resources_section: {
+      ...data.resources_section,
+      ...calculateSectionVisibility(data.resources_section)
+    },
+    offers_section: {
+      ...data.offers_section,
+      ...calculateSectionVisibility(data.offers_section)
+    },
     faq_section: calculateSectionVisibility(data.faq_section),
     advisory: {
       ...data.advisory,
       ...calculateSectionVisibility(data.advisory)
+    },
+    
+    // Include schema data for offers and resources
+    schema: {
+      ...data.schema,
+      offers: data.schema?.offers || [],
+      // Filter resources from offers where show_in_resources is true
+      resources: data.schema?.offers?.filter((offer: any) => offer.show_in_resources) || []
     },
     
     // Skip heavy processing for preview
