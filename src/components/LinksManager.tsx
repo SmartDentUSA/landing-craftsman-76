@@ -207,9 +207,20 @@ export const LinksManager = () => {
 
   const formatOrigin = (link: ExternalLinkType) => {
     if (link.description?.includes('Importado do produto:')) {
-      return link.description;
+      return 'Importação de Keywords';
     }
     return 'Manual';
+  };
+
+  const formatCategory = (link: ExternalLinkType) => {
+    // Se é uma keyword importada, extrair a categoria real do produto da descrição
+    if (link.description?.includes('Importado do produto:')) {
+      // Extrair categoria da descrição se disponível
+      const match = link.description.match(/categoria: ([^,)]+)/);
+      return match ? match[1] : link.category;
+    }
+    // Se é manual, mostrar a categoria escolhida pelo usuário
+    return link.category;
   };
 
   const resetFilters = () => {
@@ -479,13 +490,15 @@ export const LinksManager = () => {
                       <TableCell className="font-medium">{link.name}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {categoryOptions.find(cat => cat.value === link.category)?.label || link.category}
+                          {formatCategory(link)}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {link.subcategory?.charAt(0).toUpperCase() + link.subcategory?.slice(1) || 'Geral'}
-                        </Badge>
+                        {link.subcategory && !link.description?.includes('Importado do produto:') && (
+                          <Badge variant="outline">
+                            {link.subcategory?.charAt(0).toUpperCase() + link.subcategory?.slice(1) || 'Geral'}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatOrigin(link)}

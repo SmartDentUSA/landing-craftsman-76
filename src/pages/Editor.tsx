@@ -38,6 +38,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { useProductSync } from "@/hooks/useProductSync";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
 import { generateHTML, generateEmailHTML, generateBlogHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
@@ -881,6 +882,7 @@ const EditorContent = () => {
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
+  const { saveDesktopInfo } = useDesktopInfoAutoSave(updateLandingPage, id);
   const [extractingProduct, setExtractingProduct] = useState<number | null>(null);
   const [editingOffer, setEditingOffer] = useState<number | null>(null);
   
@@ -3045,50 +3047,60 @@ const EditorContent = () => {
                   <AccordionContent className="space-y-4">
                      <div className="space-y-3">
                        <div className="flex items-center space-x-2">
-                         <Switch
-                           checked={data.desktop_info?.visible_desktop ?? false}
-                           onCheckedChange={(checked) => setData(prev => ({
-                             ...prev,
-                             desktop_info: { 
-                               ...(prev.desktop_info || { 
-                                 title: '', 
-                                 text: '', 
-                                 visible_desktop: false,
-                                 visible_mobile: false, 
-                                 show_table: false, 
-                                 table_title: 'Especificações Técnicas',
-                                 table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
-                                 table_data: []
-                               }), 
-                               visible_desktop: checked 
-                             }
-                           }))}
-                         />
-                         <Label className="font-medium">Visível no desktop</Label>
-                       </div>
-                       
-                       <div className="flex items-center space-x-2">
-                         <Switch
-                           checked={data.desktop_info?.visible_mobile ?? false}
-                           onCheckedChange={(checked) => setData(prev => ({
-                             ...prev,
-                             desktop_info: { 
-                               ...(prev.desktop_info || { 
-                                 title: '', 
-                                 text: '', 
-                                 visible_desktop: false,
-                                 visible_mobile: false, 
-                                 show_table: false, 
-                                 table_title: 'Especificações Técnicas',
-                                 table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
-                                 table_data: []
-                               }), 
-                               visible_mobile: checked 
-                             }
-                           }))}
-                         />
-                         <Label className="font-medium">Visível no mobile</Label>
-                       </div>
+                          <Switch
+                            checked={data.desktop_info?.visible_desktop ?? false}
+                            onCheckedChange={(checked) => {
+                              console.log('🔧 [DESKTOP-INFO] Alterando visible_desktop:', checked);
+                              const updatedData = {
+                                ...data,
+                                desktop_info: { 
+                                  ...(data.desktop_info || { 
+                                    title: '', 
+                                    text: '', 
+                                    visible_desktop: false,
+                                    visible_mobile: false, 
+                                    show_table: false, 
+                                    table_title: 'Especificações Técnicas',
+                                    table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+                                    table_data: []
+                                  }), 
+                                  visible_desktop: checked 
+                                }
+                              };
+                              setData(updatedData);
+                              saveDesktopInfo(updatedData);
+                            }}
+                          />
+                          <Label className="font-medium">Visível no desktop</Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={data.desktop_info?.visible_mobile ?? false}
+                            onCheckedChange={(checked) => {
+                              console.log('🔧 [DESKTOP-INFO] Alterando visible_mobile:', checked);
+                              const updatedData = {
+                                ...data,
+                                desktop_info: { 
+                                  ...(data.desktop_info || { 
+                                    title: '', 
+                                    text: '', 
+                                    visible_desktop: false,
+                                    visible_mobile: false, 
+                                    show_table: false, 
+                                    table_title: 'Especificações Técnicas',
+                                    table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+                                    table_data: []
+                                  }), 
+                                  visible_mobile: checked
+                                }
+                              };
+                              setData(updatedData);
+                              saveDesktopInfo(updatedData);
+                            }}
+                          />
+                          <Label className="font-medium">Visível no mobile</Label>
+                        </div>
                      </div>
                     
                     {((data.desktop_info?.visible_desktop ?? false) || (data.desktop_info?.visible_mobile ?? false)) && (
