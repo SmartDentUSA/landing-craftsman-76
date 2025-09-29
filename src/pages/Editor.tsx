@@ -1938,6 +1938,54 @@ const EditorContent = () => {
               images: Array.isArray(loadedData.banner.images) && loadedData.banner.images.length ? loadedData.banner.images : [createImageData()]
             } as any;
           }
+
+          // Garantir CTA Final existente
+          if (!(loadedData as any).cta_final) {
+            (loadedData as any).cta_final = {
+              title: '',
+              paragraph: '',
+              primary: { label: '', href: '', visible: true },
+              secondary: { label: '', href: '', visible: false }
+            };
+          } else {
+            (loadedData as any).cta_final = {
+              ...((loadedData as any).cta_final),
+              title: (loadedData as any).cta_final.title || '',
+              paragraph: (loadedData as any).cta_final.paragraph || '',
+              primary: {
+                label: (loadedData as any).cta_final?.primary?.label || '',
+                href: (loadedData as any).cta_final?.primary?.href || '',
+                visible: (loadedData as any).cta_final?.primary?.visible !== false
+              },
+              secondary: {
+                label: (loadedData as any).cta_final?.secondary?.label || '',
+                href: (loadedData as any).cta_final?.secondary?.href || '',
+                visible: (loadedData as any).cta_final?.secondary?.visible === true
+              }
+            };
+          }
+
+          // Garantir bloco advisory existente
+          if (!(loadedData as any).advisory) {
+            (loadedData as any).advisory = {
+              title: '',
+              paragraph: '',
+              visible_desktop: true,
+              visible_mobile: true,
+              cta: { label: '', href: '' },
+              image: createImageData()
+            };
+          } else {
+            (loadedData as any).advisory = {
+              ...((loadedData as any).advisory),
+              title: (loadedData as any).advisory.title || '',
+              paragraph: (loadedData as any).advisory.paragraph || '',
+              visible_desktop: (loadedData as any).advisory.visible_desktop !== false,
+              visible_mobile: (loadedData as any).advisory.visible_mobile !== false,
+              cta: (loadedData as any).advisory.cta || { label: '', href: '' },
+              image: (loadedData as any).advisory.image || createImageData()
+            };
+          }
           
           setData(loadedData);
         } else {
