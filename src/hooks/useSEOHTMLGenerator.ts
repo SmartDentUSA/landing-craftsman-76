@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
-import { processContentWithIntelligentLinks } from '@/lib/intelligent-links';
+import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
 
 interface SEOHTMLOptions {
@@ -94,7 +94,7 @@ export const useSEOHTMLGenerator = () => {
     });
 
     // Processar conteúdo com links inteligentes
-    const processedContent = processContentWithIntelligentLinks(content, intelligentLinks);
+    const processedContent = processContentWithAdvancedIntelligentLinks(content, intelligentLinks);
 
     // Gerar Schema.org se solicitado
     let schemaJson = '';
@@ -515,7 +515,7 @@ export const useSEOHTMLGenerator = () => {
     // Processar conteúdo dos blogs com links clicáveis
     const blogContents = blogs.map((blog, index) => {
       const blogCanonicalUrl = `${canonicalUrl}/blog/${domain}-${index + 1}`;
-      const processedContent = processContentWithIntelligentLinks(blog.content, intelligentLinks);
+      const processedContent = processContentWithAdvancedIntelligentLinks(blog.content, intelligentLinks);
       
       // Truncate content for preview (first 300 characters)
       const previewLength = 300;
@@ -608,281 +608,419 @@ export const useSEOHTMLGenerator = () => {
   
   <!-- CSS Styling -->
   <style>
+    :root {
+      --primary-color: hsl(221, 83%, 53%);
+      --primary-hover: hsl(221, 83%, 43%);
+      --secondary-color: hsl(215, 25%, 27%);
+      --text-color: hsl(224, 71%, 4%);
+      --text-muted: hsl(215, 16%, 47%);
+      --background: hsl(0, 0%, 100%);
+      --background-alt: hsl(210, 40%, 98%);
+      --border-color: hsl(214, 32%, 91%);
+      --card-background: hsl(0, 0%, 100%);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --gradient-primary: linear-gradient(135deg, var(--primary-color), hsl(221, 83%, 63%));
+      --gradient-soft: linear-gradient(135deg, var(--background-alt), hsl(210, 40%, 96%));
+      --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --border-radius: 0.75rem;
+      --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
     * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
     
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.7;
-      color: #333;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #ffffff;
+      font-family: var(--font-family);
+      background: var(--background-alt);
+      color: var(--text-color);
+      line-height: 1.6;
     }
     
     .container {
-      max-width: 100%;
+      width: 100%;
+      max-width: 1200px;
       margin: 0 auto;
+      padding: 4rem 1rem;
     }
     
     .header {
       text-align: center;
-      margin-bottom: 50px;
-      padding-bottom: 30px;
-      border-bottom: 3px solid #007bff;
+      margin-bottom: 4rem;
+      padding: 3rem 2rem;
+      background: var(--card-background);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient-primary);
     }
     
     .header h1 {
-      color: #1a1a1a;
-      font-size: 3rem;
+      color: var(--text-color);
+      font-size: clamp(2rem, 5vw, 3.5rem);
       font-weight: 700;
-      margin-bottom: 15px;
-      line-height: 1.2;
+      margin-bottom: 1rem;
+      line-height: 1.1;
     }
     
     .header .subtitle {
-      color: #666;
-      font-size: 1.2rem;
-      margin-bottom: 20px;
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      font-weight: 400;
     }
     
     .header .meta-info {
-      color: #888;
-      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    
+    .blog-section {
+      display: grid;
+      gap: 2rem;
     }
     
     .blog-item {
-      margin-bottom: 60px;
-      padding-bottom: 40px;
-      border-bottom: 2px solid #f0f0f0;
+      background: var(--card-background);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      transition: var(--transition-smooth);
+      border: 1px solid var(--border-color);
     }
     
-    .blog-item:last-child {
-      border-bottom: none;
+    .blog-item:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-xl);
     }
     
     .blog-link {
       text-decoration: none;
       color: inherit;
       display: block;
-      transition: all 0.3s ease;
-    }
-    
-    .blog-link:hover {
-      transform: translateY(-2px);
     }
     
     .blog-item h2 {
-      color: #2c3e50;
-      font-size: 2rem;
-      margin-bottom: 20px;
-      border-left: 4px solid #007bff;
-      padding-left: 15px;
-      transition: color 0.3s ease;
+      color: var(--text-color);
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding: 2rem 2rem 0;
+      transition: var(--transition-smooth);
     }
     
     .blog-link:hover h2 {
-      color: #007bff;
+      color: var(--primary-color);
     }
     
     .product-reference {
-      background: #e3f2fd;
-      padding: 10px 15px;
-      border-radius: 6px;
-      margin-bottom: 20px;
-      border-left: 4px solid #2196f3;
+      background: linear-gradient(135deg, hsl(221, 83%, 98%), hsl(221, 83%, 95%));
+      padding: 0.875rem 1.25rem;
+      margin: 0 2rem 1.5rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid var(--primary-color);
+      font-weight: 500;
+      color: var(--secondary-color);
     }
     
     .blog-content {
-      font-size: 1.1rem;
+      padding: 0 2rem 2rem;
+      font-size: 1rem;
       line-height: 1.7;
+      color: var(--text-color);
+    }
+    
+    .post-card-content {
+      padding: 0 2rem 2rem;
     }
     
     .blog-content h3 {
-      color: #34495e;
-      font-size: 1.5rem;
-      margin: 25px 0 15px 0;
+      color: var(--secondary-color);
+      font-size: 1.375rem;
+      font-weight: 600;
+      margin: 2rem 0 1rem 0;
     }
     
     .blog-content h4 {
-      color: #2c3e50;
-      font-size: 1.2rem;
-      margin: 20px 0 10px 0;
+      color: var(--text-color);
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.75rem 0;
     }
     
     .blog-content p {
-      margin-bottom: 18px;
+      margin-bottom: 1.25rem;
       text-align: justify;
     }
     
     .blog-content ul, .blog-content ol {
-      margin: 15px 0 15px 30px;
+      margin: 1rem 0 1.25rem 2rem;
     }
     
     .blog-content li {
-      margin-bottom: 8px;
+      margin-bottom: 0.5rem;
     }
     
     .blog-content a {
-      color: #007bff;
+      color: var(--primary-color);
       text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: all 0.3s ease;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-smooth);
     }
     
     .blog-content a:hover {
-      border-bottom-color: #007bff;
+      border-bottom-color: var(--primary-color);
     }
     
     .blog-content blockquote {
-      background: #f8f9fa;
-      border-left: 4px solid #007bff;
-      margin: 20px 0;
-      padding: 15px 20px;
+      background: var(--background-alt);
+      border-left: 4px solid var(--primary-color);
+      margin: 1.5rem 0;
+      padding: 1.25rem 1.5rem;
       font-style: italic;
+      border-radius: 0.5rem;
     }
     
-     .blog-content strong {
-       color: #2c3e50;
-     }
-     
-     .read-more-btn {
-       background: none;
-       border: none;
-       padding: 0;
-       cursor: pointer;
-       color: #007bff;
-       font-weight: 600;
-       font-family: inherit;
-       font-size: 1rem;
-       margin-top: 1rem;
-       display: inline-block;
-       transition: color 0.3s ease;
-     }
-     
-     .read-more-btn:hover {
-       color: #0056b3;
-       text-decoration: underline;
-     }
-     
-     .full-content {
-       display: none;
-       margin-top: 1rem;
-     }
-     
-     .full-content.expanded {
-       display: block;
-     }
-     
-     .preview-content {
-       margin-bottom: 0;
-     }
+    .blog-content strong {
+      color: var(--secondary-color);
+      font-weight: 600;
+    }
+    
+    .read-more-btn {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 500;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .read-more-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .full-content {
+      display: none;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .full-content.expanded {
+      display: block;
+    }
+    
+    .preview-content {
+      margin-bottom: 0;
+    }
     
     .keywords-section {
-      margin-top: 40px;
-      padding: 25px;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border-radius: 12px;
-      border-left: 4px solid #28a745;
+      margin-top: 3rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, hsl(142, 76%, 98%), hsl(142, 76%, 95%));
+      border-radius: var(--border-radius);
+      border-left: 4px solid hsl(142, 76%, 36%);
+      box-shadow: var(--shadow-md);
     }
     
     .keywords-section h3 {
-      color: #28a745;
-      margin-bottom: 15px;
-      font-size: 1.3rem;
+      color: hsl(142, 76%, 36%);
+      margin-bottom: 1.25rem;
+      font-size: 1.25rem;
+      font-weight: 600;
     }
     
     .keywords-section .tag {
       display: inline-block;
-      background: #fff;
-      color: #495057;
-      padding: 6px 12px;
-      margin: 4px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      border: 1px solid #dee2e6;
+      background: var(--card-background);
+      color: var(--text-color);
+      padding: 0.5rem 1rem;
+      margin: 0.25rem;
+      border-radius: 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: var(--transition-smooth);
+    }
+    
+    .keywords-section .tag:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
     }
     
     .summary-box {
-      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-      padding: 25px;
-      border-radius: 12px;
-      margin: 40px 0;
-      border-left: 4px solid #2196f3;
+      background: linear-gradient(135deg, hsl(221, 83%, 98%), hsl(221, 83%, 95%));
+      padding: 2rem;
+      border-radius: var(--border-radius);
+      margin: 3rem 0;
+      border-left: 4px solid var(--primary-color);
+      box-shadow: var(--shadow-md);
     }
     
     .summary-box h3 {
-      color: #1976d2;
-      margin-bottom: 15px;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+      font-weight: 600;
     }
     
     .seo-summary {
-      background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-      padding: 25px;
-      border-radius: 12px;
-      margin: 40px 0;
-      border-left: 4px solid #9c27b0;
+      background: linear-gradient(135deg, hsl(291, 64%, 98%), hsl(291, 64%, 95%));
+      padding: 2rem;
+      border-radius: var(--border-radius);
+      margin: 3rem 0;
+      border-left: 4px solid hsl(291, 64%, 42%);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .seo-summary h2 {
+      color: hsl(291, 64%, 42%);
+      margin-bottom: 1.5rem;
+      font-weight: 600;
     }
     
     .landing-page-context {
-      margin-bottom: 20px;
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color);
+    }
+    
+    .landing-page-context h3 {
+      color: var(--text-color);
+      margin-bottom: 0.75rem;
+      font-size: 1.125rem;
     }
     
     .products-summary {
-      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-      padding: 25px;
-      border-radius: 12px;
-      margin: 40px 0;
-      border-left: 4px solid #ff9800;
+      background: linear-gradient(135deg, hsl(35, 100%, 98%), hsl(35, 100%, 95%));
+      padding: 2rem;
+      border-radius: var(--border-radius);
+      margin: 3rem 0;
+      border-left: 4px solid hsl(35, 100%, 50%);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .products-summary h2 {
+      color: hsl(35, 100%, 40%);
+      margin-bottom: 1.5rem;
+      font-weight: 600;
     }
     
     .products-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-      margin-top: 20px;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
     }
     
     .product-card {
       background: rgba(255, 255, 255, 0.9);
-      padding: 20px;
-      border-radius: 8px;
-      border: 1px solid #e0e0e0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-smooth);
+    }
+    
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .product-card h3 {
+      color: var(--text-color);
+      margin-bottom: 0.75rem;
+      font-size: 1.125rem;
+      font-weight: 600;
     }
 
     footer {
-      margin-top: 60px;
-      padding-top: 40px;
-      border-top: 3px solid #eee;
+      margin-top: 4rem;
+      padding: 2rem;
+      background: var(--card-background);
+      border-radius: var(--border-radius);
       text-align: center;
-      color: #666;
-      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      box-shadow: var(--shadow-md);
+      border-top: 4px solid var(--primary-color);
+    }
+    
+    footer p {
+      margin-bottom: 0.5rem;
+    }
+    
+    footer p:last-child {
+      margin-bottom: 0;
     }
     
     @media (max-width: 768px) {
-      body {
-        padding: 15px;
+      .container {
+        padding: 2rem 1rem;
+      }
+      
+      .header {
+        padding: 2rem 1rem;
+        margin-bottom: 2rem;
       }
       
       .header h1 {
-        font-size: 2.2rem;
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+      }
+      
+      .header .subtitle {
+        font-size: 1.125rem;
       }
       
       .blog-item h2 {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
+        padding: 1.5rem 1.5rem 0;
       }
       
-      .blog-content {
-        font-size: 1rem;
+      .blog-content, .post-card-content {
+        padding: 0 1.5rem 1.5rem;
+        font-size: 0.95rem;
+      }
+      
+      .product-reference {
+        margin: 0 1.5rem 1.25rem;
+      }
+      
+      .summary-box, .seo-summary, .products-summary, .keywords-section {
+        margin: 2rem 0;
+        padding: 1.5rem;
+      }
+      
+      .products-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -902,18 +1040,19 @@ export const useSEOHTMLGenerator = () => {
       <p>Este documento consolida ${blogs.length} artigo${blogs.length > 1 ? 's especializados' : ' especializado'} sobre produtos e serviços relevantes. Cada seção aborda aspectos técnicos e comerciais importantes para profissionais da área.</p>
     </div>
     
-    <main>
+    
+    <main class="blog-section">
       ${seoSummary}
       ${blogContents}
       
       ${selectedProducts && selectedProducts.length > 0 ? `
       <section class="products-summary">
-        <h2>Produtos Relacionados</h2>
+        <h2>🛍️ Produtos Relacionados</h2>
         <div class="products-grid">
           ${selectedProducts.map(product => `
             <div class="product-card">
               <h3>${product.name}</h3>
-              <p>${product.description}</p>
+              <p>${product.description || 'Produto especializado para sua área.'}</p>
               ${product.category ? `<p><strong>Categoria:</strong> ${product.category}</p>` : ''}
               ${product.keywords && product.keywords.length > 0 ? `<p><strong>Keywords:</strong> ${product.keywords.slice(0, 5).join(', ')}</p>` : ''}
             </div>
