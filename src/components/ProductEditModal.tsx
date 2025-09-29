@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -986,13 +987,16 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 className="flex-1"
               />
               {formData.image_url && (
-                <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                  <img 
-                    src={formData.image_url} 
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                 <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                   <OptimizedImage 
+                     src={formData.image_url} 
+                     alt="Preview"
+                     className="w-full h-full object-cover"
+                     width={48}
+                     height={48}
+                     priority={false}
+                   />
+                 </div>
               )}
             </div>
           </div>

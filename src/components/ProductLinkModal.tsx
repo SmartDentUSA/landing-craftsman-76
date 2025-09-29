@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -250,13 +251,16 @@ export const ProductLinkModal: React.FC<ProductLinkModalProps> = ({
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        {product.image_url && (
-                          <img 
-                            src={product.image_url} 
-                            alt={product.name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
-                        )}
+                         {product.image_url && (
+                           <OptimizedImage 
+                             src={product.image_url} 
+                             alt={product.name}
+                             className="w-12 h-12 object-cover rounded"
+                             width={48}
+                             height={48}
+                             priority={false}
+                           />
+                         )}
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-sm truncate">{product.name}</h4>
                           {product.description && (

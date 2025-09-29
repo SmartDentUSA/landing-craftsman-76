@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -303,13 +304,16 @@ export function ProductBlogCuratorPanel({
                     {productsWithoutBlogs.map((product) => (
                       <div key={product.id} className="flex items-center gap-3 p-4 border rounded-lg bg-orange-50">
                         {product.image_url && (
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                            <img 
-                              src={product.image_url} 
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
+                           <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                             <OptimizedImage 
+                               src={product.image_url} 
+                               alt={product.name}
+                               className="w-full h-full object-cover"
+                               width={48}
+                               height={48}
+                               priority={false}
+                             />
+                           </div>
                         )}
                         <div>
                           <h4 className="font-medium">{product.name}</h4>
@@ -345,13 +349,16 @@ export function ProductBlogCuratorPanel({
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           {product.image_url && (
-                            <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                              <img 
-                                src={product.image_url} 
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
+                             <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                               <OptimizedImage 
+                                 src={product.image_url} 
+                                 alt={product.name}
+                                 className="w-full h-full object-cover"
+                                 width={48}
+                                 height={48}
+                                 priority={false}
+                               />
+                             </div>
                           )}
                           
                           <div className="flex-1 min-w-0">

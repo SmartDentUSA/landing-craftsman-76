@@ -129,12 +129,14 @@ async function generateProductBlog(
   
   const { data: promptConfig } = await supabase
     .from('prompts_configuration')
-    .select('custom_prompt, selected_fields, selected_data_sources')
+    .select('custom_prompt, selected_fields, selected_data_sources, tone, style_guidelines, use_intelligent_links')
     .eq('edge_function_id', 'generate-product-blog')
     .eq('prompt_name', blogType === 'commercial' ? 'Blog Comercial' : 'Blog Técnico')
     .single();
 
   const customPrompt = promptConfig?.custom_prompt;
+  const tone = promptConfig?.tone || 'professional';
+  const styleGuidelines = promptConfig?.style_guidelines || {};
   
   const prompts = {
     commercial: {

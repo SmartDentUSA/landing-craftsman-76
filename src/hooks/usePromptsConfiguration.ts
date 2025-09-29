@@ -10,6 +10,15 @@ export interface PromptConfiguration {
   selected_data_sources: string[];
   selected_fields: Record<string, string[]>;
   use_intelligent_links?: boolean;
+  tone?: string;
+  style_guidelines?: {
+    frases_curtas?: boolean;
+    evitar_robotico?: boolean;
+    incluir_keywords_naturalmente?: boolean;
+    usar_linguagem_humana?: boolean;
+    estrutura_h1_h2?: boolean;
+    incluir_cta_natural?: boolean;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -48,8 +57,11 @@ export const usePromptsConfiguration = () => {
                   : []
               ])
             )
-          : {}
-      }));
+          : {},
+        style_guidelines: typeof item.style_guidelines === 'object' && item.style_guidelines !== null 
+          ? item.style_guidelines as PromptConfiguration['style_guidelines']
+          : undefined
+      })) as PromptConfiguration[];
       
       setConfigurations(processedData);
     } catch (error) {
@@ -70,7 +82,9 @@ export const usePromptsConfiguration = () => {
     customPrompt: string,
     selectedDataSources: string[],
     selectedFields: Record<string, string[]>,
-    useIntelligentLinks?: boolean
+    useIntelligentLinks?: boolean,
+    tone: string = 'professional',
+    styleGuidelines: PromptConfiguration['style_guidelines'] = {}
   ) => {
     try {
       const configData: any = {
@@ -78,7 +92,9 @@ export const usePromptsConfiguration = () => {
         prompt_name: promptName,
         custom_prompt: customPrompt,
         selected_data_sources: selectedDataSources,
-        selected_fields: selectedFields
+        selected_fields: selectedFields,
+        tone: tone,
+        style_guidelines: styleGuidelines
       };
 
       if (useIntelligentLinks !== undefined) {

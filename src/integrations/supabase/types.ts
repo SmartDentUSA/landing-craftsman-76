@@ -764,6 +764,8 @@ export type Database = {
           prompt_name: string
           selected_data_sources: Json
           selected_fields: Json
+          style_guidelines: Json | null
+          tone: string | null
           updated_at: string
           use_intelligent_links: boolean | null
         }
@@ -775,6 +777,8 @@ export type Database = {
           prompt_name: string
           selected_data_sources?: Json
           selected_fields?: Json
+          style_guidelines?: Json | null
+          tone?: string | null
           updated_at?: string
           use_intelligent_links?: boolean | null
         }
@@ -786,6 +790,8 @@ export type Database = {
           prompt_name?: string
           selected_data_sources?: Json
           selected_fields?: Json
+          style_guidelines?: Json | null
+          tone?: string | null
           updated_at?: string
           use_intelligent_links?: boolean | null
         }
