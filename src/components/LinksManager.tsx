@@ -42,10 +42,6 @@ export const LinksManager = () => {
     // Adicionar categorias das configurações
     categoryConfigs.forEach(config => combinedCategories.add(config.category));
     
-    // Adicionar categorias padrão como fallback
-    const defaultCategories = ['produto', 'servico', 'tecnico', 'comercial', 'institucional', 'outros'];
-    defaultCategories.forEach(cat => combinedCategories.add(cat));
-    
     const categoryOptions = Array.from(combinedCategories)
       .filter(Boolean)
       .sort()
@@ -72,9 +68,6 @@ export const LinksManager = () => {
         .filter(config => config.category === category)
         .map(config => config.subcategory);
       configSubcats.forEach(sub => subcats.add(sub));
-      
-      // Adicionar "geral" como fallback
-      subcats.add('geral');
       
       subcategoryMap[category] = Array.from(subcats).filter(Boolean).sort();
     });
