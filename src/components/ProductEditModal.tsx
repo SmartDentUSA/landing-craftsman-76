@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -21,6 +21,7 @@ import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
 import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
+import { FAQEditor } from './FAQEditor';
 
 interface Video {
   url: string;
@@ -66,6 +67,8 @@ interface Product {
   resource_descriptions?: { cta1: string; cta2: string; cta3: string };
   // Offer discount CTA
   offer_discount_cta?: { label: string; url: string; visible: boolean };
+  // FAQ
+  faq?: Array<{ question: string; answer: string }>;
 }
 
 interface ProductEditModalProps {
@@ -121,7 +124,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // Resource descriptions
     resource_descriptions: { cta1: '', cta2: '', cta3: '' },
     // Offer discount CTA
-    offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false }
+    offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false },
+    // FAQ
+    faq: []
   });
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
@@ -227,7 +232,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // Resource descriptions
         resource_descriptions: product.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
         // Offer discount CTA
-        offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false }
+        offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
+        // FAQ
+        faq: product.faq || []
       });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -1254,6 +1261,26 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               Palavras que serão inseridas automaticamente nas copies do Instagram e WhatsApp para incentivar interação. 
               Ex: "Comente 'QUERO' e receba mais informações"
             </p>
+          </div>
+
+          {/* FAQ Section */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              FAQ do Produto
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Perguntas frequentes específicas deste produto que aparecerão com schema estruturado nos buscadores.
+            </p>
+            
+            <FAQEditor
+              faqs={formData.faq || []}
+              onChange={(faqs) => setFormData(prev => ({ ...prev, faq: faqs }))}
+              placeholder={{
+                question: "Ex: Como funciona este produto?",
+                answer: "Digite a resposta com formatação rica..."
+              }}
+            />
           </div>
 
           {/* Landing Page Sections Configuration */}

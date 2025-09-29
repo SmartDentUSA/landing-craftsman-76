@@ -549,6 +549,7 @@ export type Database = {
           currency: string | null
           description: string | null
           display_order: number | null
+          faq: Json | null
           features: Json | null
           gender: string | null
           google_product_category: string | null
@@ -614,6 +615,7 @@ export type Database = {
           currency?: string | null
           description?: string | null
           display_order?: number | null
+          faq?: Json | null
           features?: Json | null
           gender?: string | null
           google_product_category?: string | null
@@ -679,6 +681,7 @@ export type Database = {
           currency?: string | null
           description?: string | null
           display_order?: number | null
+          faq?: Json | null
           features?: Json | null
           gender?: string | null
           google_product_category?: string | null

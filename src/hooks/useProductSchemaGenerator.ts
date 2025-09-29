@@ -1,184 +1,138 @@
 import { useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
 
+// Interface para dados do produto usado no schema
 interface ProductSchemaData {
   id: string;
   name: string;
   description?: string;
+  image_url?: string;
+  product_url?: string;
   price?: number;
   currency?: string;
-  image_url?: string;
-  offer_discount_cta?: any;
-  category?: string;
-  subcategory?: string;
-  sales_pitch?: string;
-  // ✨ NOVOS CAMPOS PARA SCHEMA COMPLETO
   features?: string[];
-  benefits?: string[];
+  technical_specifications?: Array<{ property: string; value: string }>;
   target_audience?: string[];
-  tags?: string[];
-  video_captions?: any;
-  resource_cta1?: any;
-  resource_cta2?: any;
-  resource_cta3?: any;
-  keywords?: string[];
-  market_keywords?: string[];
-  search_intent_keywords?: string[];
-  // ✨ NOVO CAMPO: Technical Specifications
-  technical_specifications?: Array<{ label: string; value: string }>;
+  brand?: string;
+  faq?: Array<{ question: string; answer: string }>;
 }
 
+// Interface para resultado do schema
 interface SchemaResult {
-  jsonLD: object;
+  jsonLD: any;
   formatted: string;
   preview: string;
 }
 
 export const useProductSchemaGenerator = () => {
-  const { toast } = useToast();
-
+  // Função para gerar schema de múltiplos produtos
   const generateProductSchema = useCallback((products: ProductSchemaData[], pageTitle: string, pageDescription: string): SchemaResult => {
     if (!products || products.length === 0) {
-      const basicSchema = {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        "name": pageTitle,
-        "description": pageDescription,
-        "url": window.location.href,
-        "mainEntity": {
-          "@type": "Organization",
-          "name": pageTitle.split(' ')[0] || "Nossa Empresa",
-          "description": pageDescription
-        }
-      };
-
       return {
-        jsonLD: basicSchema,
-        formatted: JSON.stringify(basicSchema, null, 2),
-        preview: "Schema básico da página (sem produtos)"
+        jsonLD: {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": pageTitle || "Página",
+          "description": pageDescription || "Descrição da página"
+        },
+        formatted: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": pageTitle || "Página",
+          "description": pageDescription || "Descrição da página"
+        }, null, 2),
+        preview: 'Schema WebPage (sem produtos)'
       };
     }
 
-    // Determinar o tipo de schema baseado na quantidade de produtos
-    const isMultipleProducts = products.length > 1;
-    
-    if (isMultipleProducts) {
-      // ItemList schema para múltiplos produtos
-      const itemListSchema = {
-        "@context": "https://schema.org",
-        "@type": "ItemList",
-        "name": pageTitle,
-        "description": pageDescription,
-        "url": window.location.href,
-        "numberOfItems": products.length,
-        "itemListElement": products.map((product, index) => ({
-          "@type": "ListItem",
-          "position": index + 1,
-          "item": generateSingleProductSchema(product)
-        }))
-      };
-
-      return {
-        jsonLD: itemListSchema,
-        formatted: JSON.stringify(itemListSchema, null, 2),
-        preview: `Lista de ${products.length} produtos/serviços`
-      };
-    } else {
-      // Product schema para produto único
-      const singleProductSchema = {
-        "@context": "https://schema.org",
-        "@type": "Product",
-        ...generateSingleProductSchema(products[0])
-      };
-
-      return {
-        jsonLD: singleProductSchema,
-        formatted: JSON.stringify(singleProductSchema, null, 2),
-        preview: `Produto único: ${products[0].name}`
-      };
+    if (products.length === 1) {
+      const product = products[0];
+      const productSchema = generateSingleProductSchema(product);
+      
+      // Se o produto tem FAQ, combinar com schema FAQ
+      if (product.faq && product.faq.length > 0) {
+        const faqSchema = generateFAQSchema(product.faq);
+        return combineSchemas([productSchema.jsonLD, faqSchema.jsonLD]);
+      }
+      
+      return productSchema;
     }
-  }, []);
 
-  const generateSingleProductSchema = useCallback((product: ProductSchemaData) => {
-    const baseSchema: any = {
-      "@type": "Product",
-      "name": product.name,
-      "description": product.description || product.sales_pitch || `${product.name} - Solução de qualidade`,
-      "category": product.category || "Produtos e Serviços"
+    // Múltiplos produtos - criar ItemList
+    const itemListSchema = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": pageTitle || "Lista de Produtos",
+      "description": pageDescription || "Lista de produtos disponíveis",
+      "numberOfItems": products.length,
+      "itemListElement": products.map((product, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "item": generateSingleProductSchema(product).jsonLD
+      }))
     };
 
-    // ✨ NOVOS CAMPOS: Adicionar features e technical specifications como PropertyValue
-    const additionalProperties: any[] = [];
-    
-    // Features
-    if (product.features && Array.isArray(product.features) && product.features.length > 0) {
-      additionalProperties.push(...product.features.map((feature: string) => ({
-        "@type": "PropertyValue",
-        "name": "Feature",
-        "value": feature
-      })));
-    }
-    
-    // ✨ NOVO: Technical Specifications
-    if (product.technical_specifications && Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0) {
-      additionalProperties.push(...product.technical_specifications.map((spec: any) => ({
-        "@type": "PropertyValue",
-        "name": spec.label || "Specification",
-        "value": spec.value || ""
-      })));
-    }
-    
-    // Adicionar todas as propriedades adicionais ao schema
-    if (additionalProperties.length > 0) {
-      baseSchema.additionalProperty = additionalProperties;
+    // Coletar todos os FAQs dos produtos para criar um schema FAQ combinado
+    const allFaqs = products
+      .filter(product => product.faq && product.faq.length > 0)
+      .flatMap(product => product.faq || []);
+
+    if (allFaqs.length > 0) {
+      const faqSchema = generateFAQSchema(allFaqs);
+      return combineSchemas([itemListSchema, faqSchema.jsonLD]);
     }
 
-    // ✨ Adicionar benefits como hasEnergyConsumptionDetails ou similar
-    if (product.benefits && Array.isArray(product.benefits) && product.benefits.length > 0) {
-      baseSchema.description += ` Benefícios: ${product.benefits.join(', ')}.`;
-    }
+    return {
+      jsonLD: itemListSchema,
+      formatted: JSON.stringify(itemListSchema, null, 2),
+      preview: `ItemList com ${products.length} produtos`
+    };
+  }, []);
 
-    // ✨ Adicionar target_audience como audience
-    if (product.target_audience && Array.isArray(product.target_audience) && product.target_audience.length > 0) {
-      baseSchema.audience = {
-        "@type": "Audience",
-        "audienceType": product.target_audience.join(', ')
-      };
-    }
-
-    // Adicionar preço se disponível
-    if (product.price && product.price > 0) {
-      baseSchema.offers = {
-        "@type": "Offer",
-        "price": product.price,
-        "priceCurrency": product.currency || "BRL",
-        "availability": "https://schema.org/InStock",
-        "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +1 ano
-      };
-
-      // Adicionar offer especial se houver desconto
-      if (product.offer_discount_cta?.visible && product.offer_discount_cta?.url) {
-        baseSchema.offers.url = product.offer_discount_cta.url;
-        if (product.offer_discount_cta.label) {
-          baseSchema.offers.description = product.offer_discount_cta.label;
+  // Função para gerar schema de produto individual
+  const generateSingleProductSchema = useCallback((product: ProductSchemaData): SchemaResult => {
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": product.name,
+      "description": product.description || `Produto ${product.name}`,
+      ...(product.image_url && { "image": product.image_url }),
+      ...(product.product_url && { "url": product.product_url }),
+      ...(product.brand && { "brand": { "@type": "Brand", "name": product.brand } }),
+      ...(product.features && product.features.length > 0 && {
+        "additionalProperty": product.features.map(feature => ({
+          "@type": "PropertyValue",
+          "name": "Característica",
+          "value": feature
+        }))
+      }),
+      ...(product.technical_specifications && product.technical_specifications.length > 0 && {
+        "additionalProperty": product.technical_specifications.map(spec => ({
+          "@type": "PropertyValue",
+          "name": spec.property,
+          "value": spec.value
+        }))
+      }),
+      ...(product.price && {
+        "offers": {
+          "@type": "Offer",
+          "price": product.price,
+          "priceCurrency": product.currency || "BRL",
+          "availability": "https://schema.org/InStock"
         }
-      }
-    }
+      }),
+      ...(product.target_audience && product.target_audience.length > 0 && {
+        "audience": {
+          "@type": "Audience",
+          "audienceType": product.target_audience.join(", ")
+        }
+      })
+    };
 
-    // Adicionar imagem se disponível
-    if (product.image_url) {
-      baseSchema.image = product.image_url;
-    }
-
-    // Adicionar categoria hierárquica
-    if (product.subcategory) {
-      baseSchema.category = `${product.category} > ${product.subcategory}`;
-    }
-
-    // Adicionar identificador único
-    baseSchema.identifier = product.id;
-
-    return baseSchema;
+    return {
+      jsonLD: schema,
+      formatted: JSON.stringify(schema, null, 2),
+      preview: `Produto: ${product.name}`
+    };
   }, []);
 
   const generateFAQSchema = useCallback((faqItems: { question: string; answer: string }[]): SchemaResult => {
