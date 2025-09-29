@@ -127,14 +127,14 @@ async function generateProductBlog(
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  const { data: customPromptData } = await supabase
+  const { data: promptConfig } = await supabase
     .from('prompts_configuration')
-    .select('custom_prompt')
+    .select('custom_prompt, selected_fields, selected_data_sources')
     .eq('edge_function_id', 'generate-product-blog')
     .eq('prompt_name', blogType === 'commercial' ? 'Blog Comercial' : 'Blog Técnico')
     .single();
 
-  const customPrompt = customPromptData?.custom_prompt;
+  const customPrompt = promptConfig?.custom_prompt;
   
   const prompts = {
     commercial: {
@@ -219,10 +219,19 @@ async function generateProductBlog(
   // Se há um prompt customizado, processa variáveis; senão usa o prompt padrão
   let systemPrompt;
   
-  if (customPrompt) {
-    // Processa variáveis no prompt customizado
-    systemPrompt = processPromptVariables(customPrompt, productData, companyData);
-    console.log('📝 Using custom prompt with variables processed');
+  if (customPrompt && promptConfig) {
+    // Usar prompt customizado com campos selecionados
+    const { extractSelectedData, processPromptWithSelectedData, extractExistingContent } = await import('../_shared/prompt-processor.ts');
+    const selectedData = extractSelectedData(product, companyProfile, {
+      selectedFields: promptConfig.selected_fields || {},
+      selectedDataSources: promptConfig.selected_data_sources || []
+    });
+    
+    // Extrair conteúdo existente para anti-duplicação
+    const existingContent = extractExistingContent(product, 'blog');
+    
+    systemPrompt = processPromptWithSelectedData(customPrompt, selectedData, existingContent);
+    console.log('📝 Using custom prompt with selected fields and anti-duplication');
   } else {
     systemPrompt = `${currentPrompt.role}
 

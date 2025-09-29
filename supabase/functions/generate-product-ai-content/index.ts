@@ -182,19 +182,31 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  // Buscar prompt customizado
-  const { data: customPrompts } = await supabase
+  // Buscar configuração de prompt customizado com selected_fields
+  const { data: promptConfig } = await supabase
     .from('prompts_configuration')
-    .select('custom_prompt')
+    .select('custom_prompt, selected_fields, selected_data_sources')
     .eq('edge_function_id', 'generate-product-ai-content')
     .eq('prompt_name', 'Benefícios do Produto')
-    .limit(1);
+    .single();
+  
+  // Buscar dados da empresa para contexto adicional
+  const { data: companyProfile } = await supabase
+    .from('company_profile')
+    .select('*')
+    .limit(1)
+    .single();
   
   let prompt = '';
   
-  if (customPrompts && customPrompts.length > 0) {
-    // Usar prompt customizado e processar variáveis
-    prompt = processPromptVariables(customPrompts[0].custom_prompt, product, existingBenefits, complementOnly);
+  if (promptConfig?.custom_prompt) {
+    // Usar prompt customizado com seleção de campos
+    const { extractSelectedData, processPromptWithSelectedData } = await import('../_shared/prompt-processor.ts');
+    const selectedData = extractSelectedData(product, companyProfile, {
+      selectedFields: promptConfig.selected_fields || {},
+      selectedDataSources: promptConfig.selected_data_sources || []
+    });
+    prompt = processPromptWithSelectedData(promptConfig.custom_prompt, selectedData, existingBenefits);
   } else {
     // Usar prompt padrão
     const existingContext = existingBenefits.length > 0 ? 
@@ -247,16 +259,83 @@ Foque em:
 }
 
 async function generateProductKeywords(apiKey: string, product: any, existingKeywords: string[] = [], complementOnly: boolean = false): Promise<string[]> {
-  const existingContext = existingKeywords.length > 0 ? 
-    `\n\nPALAVRAS-CHAVE MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingKeywords.join(', ')}` : '';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
   
-  const instruction = complementOnly && existingKeywords.length > 0 ? 
-    'Gere APENAS 3 palavras-chave complementares que NÃO duplicem as existentes:' :
-    'Gere APENAS um array JSON com 8-12 palavras-chave relevantes:';
+  // Buscar configuração de prompt customizado
+  const { data: promptConfig } = await supabase
+    .from('prompts_configuration')
+    .select('custom_prompt, selected_fields, selected_data_sources')
+    .eq('edge_function_id', 'generate-product-ai-content')
+    .eq('prompt_name', 'Palavras-chave do Produto')
+    .single();
   
-  const prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
+  // Buscar dados da empresa
+  const { data: companyProfile } = await supabase
+    .from('company_profile')
+    .select('*')
+    .limit(1)
+    .single();
+  
+  let prompt = '';
+  
+  if (promptConfig?.custom_prompt) {
+    const { extractSelectedData, processPromptWithSelectedData } = await import('../_shared/prompt-processor.ts');
+    const selectedData = extractSelectedData(product, companyProfile, {
+      selectedFields: promptConfig.selected_fields || {},
+      selectedDataSources: promptConfig.selected_data_sources || []
+    });
+    prompt = processPromptWithSelectedData(promptConfig.custom_prompt, selectedData, existingKeywords);
+  } else {
+    const existingContext = existingKeywords.length > 0 ? 
+      `\n\nPALAVRAS-CHAVE MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingKeywords.join(', ')}` : '';
+    
+    const instruction = complementOnly && existingKeywords.length > 0 ? 
+      'Gere APENAS 3 palavras-chave complementares que NÃO duplicem as existentes:' :
+      'Gere APENAS um array JSON com 8-12 palavras-chave relevantes:';
+    
+    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
 
 Produto: ${product.name}
+Descrição: ${product.description || 'Não informada'}
+Categoria: ${product.category || 'Não informada'}
+Subcategoria: ${product.subcategory || 'Não informada'}
+Público-alvo: ${product.target_audience || 'Não informado'}
+
+${instruction}
+
+["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]
+
+INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
+1. **PRIORIZE categoria e subcategoria como palavras-chave primárias**
+2. **Gere variações da categoria (plural, singular, sinônimos)**
+3. **Combine categoria + subcategoria + nome do produto**
+
+Inclua NESTA ORDEM DE PRIORIDADE:
+1. Categoria e subcategoria (primárias)
+2. Variações e sinônimos das categorias
+3. Categoria + subcategoria + benefícios
+4. Palavras-chave long-tail com categorias
+5. Termos técnicos da categoria
+6. Categoria + público-alvo`;
+  }
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+      max_tokens: 400,
+    }),
+  });
+
+  return await parseAIArrayResponse(response, 'keywords');
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategory || 'Não informada'}
@@ -301,19 +380,30 @@ async function generateProductFeatures(apiKey: string, product: any, existingFea
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  // Buscar prompt customizado
-  const { data: customPrompts } = await supabase
+  // Buscar configuração de prompt customizado
+  const { data: promptConfig } = await supabase
     .from('prompts_configuration')
-    .select('custom_prompt')
+    .select('custom_prompt, selected_fields, selected_data_sources')
     .eq('edge_function_id', 'generate-product-ai-content')
     .eq('prompt_name', 'Características do Produto')
-    .limit(1);
+    .single();
+  
+  // Buscar dados da empresa
+  const { data: companyProfile } = await supabase
+    .from('company_profile')
+    .select('*')
+    .limit(1)
+    .single();
   
   let prompt = '';
   
-  if (customPrompts && customPrompts.length > 0) {
-    // Usar prompt customizado e processar variáveis
-    prompt = processPromptVariables(customPrompts[0].custom_prompt, product, existingFeatures, complementOnly);
+  if (promptConfig?.custom_prompt) {
+    const { extractSelectedData, processPromptWithSelectedData } = await import('../_shared/prompt-processor.ts');
+    const selectedData = extractSelectedData(product, companyProfile, {
+      selectedFields: promptConfig.selected_fields || {},
+      selectedDataSources: promptConfig.selected_data_sources || []
+    });
+    prompt = processPromptWithSelectedData(promptConfig.custom_prompt, selectedData, existingFeatures);
   } else {
     // Usar prompt padrão
     const existingContext = existingFeatures.length > 0 ? 
@@ -345,6 +435,88 @@ Foque em:
 - Dimensões ou capacidades padrão da categoria
 - Compatibilidades dentro da categoria
 - Certificações ou padrões da categoria/subcategoria`;
+  }
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.6,
+      max_tokens: 400,
+    }),
+  });
+
+  return await parseAIArrayResponse(response, 'features');
+}
+
+// Função para processar variáveis nos prompts customizados
+function processPromptVariables(
+  prompt: string, 
+  product: any, 
+  existingItems: string[] = [], 
+  complementOnly: boolean = false
+): string {
+  let processedPrompt = prompt;
+  
+  // Substituir variáveis básicas do produto
+  processedPrompt = processedPrompt.replace(/{product\.name}/g, product.name || 'Não informado');
+  processedPrompt = processedPrompt.replace(/{product\.description}/g, product.description || 'Não informada');
+  processedPrompt = processedPrompt.replace(/{product\.category}/g, product.category || 'Não informada');
+  processedPrompt = processedPrompt.replace(/{product\.subcategory}/g, product.subcategory || 'Não informada');
+  processedPrompt = processedPrompt.replace(/{product\.price}/g, product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado');
+  processedPrompt = processedPrompt.replace(/{product\.target_audience}/g, product.target_audience || 'Não informado');
+  
+  // Contexto de itens existentes
+  const existingContext = existingItems.length > 0 ? 
+    `\n\nITENS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingItems.join(', ')}` : '';
+  processedPrompt = processedPrompt.replace(/{existingContext}/g, existingContext);
+  
+  // Instrução baseada no modo
+  const instruction = complementOnly && existingItems.length > 0 ? 
+    'Gere APENAS 3 itens complementares que NÃO duplicem os existentes:' :
+    'Gere APENAS um array JSON com os itens solicitados:';
+  processedPrompt = processedPrompt.replace(/{instruction}/g, instruction);
+  
+  return processedPrompt;
+}
+
+async function parseAIArrayResponse(response: Response, type: string): Promise<string[]> {
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
+  }
+
+  const content = data.choices[0].message.content;
+  
+  try {
+    let cleanContent = content.trim();
+    
+    // Remove markdown code blocks if present
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    const parsed = JSON.parse(cleanContent);
+    
+    if (Array.isArray(parsed)) {
+      return parsed.filter(item => typeof item === 'string' && item.trim().length > 0);
+    } else {
+      console.error(`Invalid AI response for ${type}:`, content);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Failed to parse AI ${type}:`, content);
+    return [];
+  }
+}
   }
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {

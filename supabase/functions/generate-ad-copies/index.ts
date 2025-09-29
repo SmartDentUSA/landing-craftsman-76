@@ -36,23 +36,44 @@ serve(async (req) => {
       throw new Error('DEEPSEEK_API_KEY não configurada');
     }
 
-    // Verificar se há prompt customizado
+    // Verificar se há prompt customizado com campos selecionados
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient('https://pgfgripuanuwwolmtknn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZmdyaXB1YW51d3dvbG10a25uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjE0OTE3MywiZXhwIjoyMDcxNzI1MTczfQ.vn4PJ2fNqyPjuJyEv1Ln8fGpTT0r5L7pQu_V3M4HnEA');
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { data: customPrompts } = await supabase
+    const { data: promptConfig } = await supabase
       .from('prompts_configuration')
-      .select('custom_prompt')
+      .select('custom_prompt, selected_fields, selected_data_sources')
       .eq('edge_function_id', 'generate-ad-copies')
       .eq('prompt_name', 'Cópias Google Ads')
-      .limit(1);
+      .single();
 
     let prompt = '';
 
-    if (customPrompts && customPrompts.length > 0) {
-      // Usar prompt customizado e processar variáveis
-      prompt = processPromptVariables(customPrompts[0].custom_prompt, { seoTitle, seoDescription, primaryKeyword, targetAudience });
+    if (promptConfig?.custom_prompt) {
+      // Usar prompt customizado com seleção de campos
+      const { extractSelectedData, processPromptWithSelectedData } = await import('../_shared/prompt-processor.ts');
+      
+      // Buscar dados da empresa para contexto adicional
+      const { data: companyProfile } = await supabase
+        .from('company_profile')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      const mockProduct = { 
+        name: seoTitle, 
+        description: seoDescription, 
+        keywords: [primaryKeyword],
+        target_audience: [targetAudience]
+      };
+      
+      const selectedData = extractSelectedData(mockProduct, companyProfile, {
+        selectedFields: promptConfig.selected_fields || {},
+        selectedDataSources: promptConfig.selected_data_sources || []
+      });
+      
+      prompt = processPromptWithSelectedData(promptConfig.custom_prompt, selectedData);
     } else {
       // Usar prompt padrão
       prompt = `Você é um especialista em copywriting para Google Ads com foco em campanhas para ${targetAudience}, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
