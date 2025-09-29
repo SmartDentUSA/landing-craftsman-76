@@ -3,7 +3,26 @@ import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
 
-// Função para converter markdown para HTML
+// Função para converter markdown inline para HTML (para títulos e textos inline)
+const convertInlineMarkdownToHTML = (content: string): string => {
+  if (!content) return '';
+  
+  let processedContent = content;
+  
+  // Links markdown [texto](url "título") - com melhor handling
+  processedContent = processedContent.replace(/\[([^\]]+)\]\(([^)]+?)\s+"([^"]*)"\)/g, '<a href="$2" title="$3">$1</a>');
+  processedContent = processedContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  
+  // Bold **texto**
+  processedContent = processedContent.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  
+  // Italic *texto*
+  processedContent = processedContent.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  return processedContent.trim();
+};
+
+// Função para converter markdown para HTML completo
 const convertMarkdownToHTML = (content: string): string => {
   if (!content) return '';
 
@@ -16,29 +35,20 @@ const convertMarkdownToHTML = (content: string): string => {
   const processLine = (line: string): string => {
     // Headers (processo com ordem correta para evitar conflitos)
     if (line.match(/^#### /)) {
-      return `<h4>${line.replace(/^#### /, '').trim()}</h4>`;
+      return `<h4>${convertInlineMarkdownToHTML(line.replace(/^#### /, '').trim())}</h4>`;
     }
     if (line.match(/^### /)) {
-      return `<h3>${line.replace(/^### /, '').trim()}</h3>`;
+      return `<h3>${convertInlineMarkdownToHTML(line.replace(/^### /, '').trim())}</h3>`;
     }
     if (line.match(/^## /)) {
-      return `<h2>${line.replace(/^## /, '').trim()}</h2>`;
+      return `<h2>${convertInlineMarkdownToHTML(line.replace(/^## /, '').trim())}</h2>`;
     }
     if (line.match(/^# /)) {
-      return `<h1>${line.replace(/^# /, '').trim()}</h1>`;
+      return `<h1>${convertInlineMarkdownToHTML(line.replace(/^# /, '').trim())}</h1>`;
     }
 
-    // Links markdown [texto](url "título") - com melhor handling
-    line = line.replace(/\[([^\]]+)\]\(([^)]+?)\s+"([^"]*)"\)/g, '<a href="$2" title="$3">$1</a>');
-    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-    
-    // Bold **texto**
-    line = line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
-    // Italic *texto*
-    line = line.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-    return line;
+    // Aplicar conversão inline para texto normal
+    return convertInlineMarkdownToHTML(line);
   };
 
   lines.forEach((line, index) => {
@@ -50,7 +60,7 @@ const convertMarkdownToHTML = (content: string): string => {
         inList = true;
         listItems = [];
       }
-      listItems.push(`<li>${processLine(trimmed.replace(/^- /, ''))}</li>`);
+      listItems.push(`<li>${convertInlineMarkdownToHTML(trimmed.replace(/^- /, ''))}</li>`);
       return;
     }
     
@@ -138,9 +148,20 @@ interface ConsolidatedBlogOptions {
 }
 
 export const useSEOHTMLGenerator = () => {
-  // Função helper para limpar tags HTML do texto (para JSON-LD)
+  // Função helper para limpar tags HTML e markdown do texto (para JSON-LD)
   const stripHtmlTags = (html: string): string => {
-    return html.replace(/<[^>]*>/g, '').trim();
+    let clean = html;
+    // Remover tags HTML
+    clean = clean.replace(/<[^>]*>/g, '');
+    // Remover markdown links [texto](url)
+    clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    // Remover markdown bold **texto**
+    clean = clean.replace(/\*\*([^*]+)\*\*/g, '$1');
+    // Remover markdown italic *texto*
+    clean = clean.replace(/\*([^*]+)\*/g, '$1');
+    // Remover markdown headers
+    clean = clean.replace(/^#+\s*/gm, '');
+    return clean.trim();
   };
 
   const { generateAdvancedProductSchema, generateFAQSchema, generateCompletePageSchema } = useAdvancedSchemaGenerator();
@@ -557,10 +578,12 @@ export const useSEOHTMLGenerator = () => {
 
     // Gerar schema para múltiplos artigos
     const blogSchemas = blogs.map((blog, index) => {
-      // Converter markdown para HTML e depois limpar tags para JSON-LD
-      const htmlTitle = convertMarkdownToHTML(blog.title);
+      // Converter markdown para HTML inline e depois limpar para JSON-LD
+      const htmlTitle = convertInlineMarkdownToHTML(blog.title);
       const cleanTitle = stripHtmlTags(htmlTitle);
-      const cleanDescription = stripHtmlTags(blog.content.substring(0, 160));
+      // Para descrição, primeiro converter markdown e depois limpar tags HTML
+      const htmlContent = convertMarkdownToHTML(blog.content);
+      const cleanDescription = stripHtmlTags(htmlContent.substring(0, 160));
       
       return {
         "@context": "https://schema.org",
@@ -632,11 +655,11 @@ export const useSEOHTMLGenerator = () => {
         previewContent = processedContent.substring(0, processedContent.indexOf(truncatedText) + truncatedText.length);
       }
       
-      // Converter título e produto para HTML
-      const htmlTitle = convertMarkdownToHTML(blog.title);
+      // Converter título e produto para HTML (inline, sem tags <p>)
+      const htmlTitle = convertInlineMarkdownToHTML(blog.title);
       const processedTitle = processContentWithAdvancedIntelligentLinks(htmlTitle, intelligentLinks);
       
-      const htmlProductName = blog.productName ? convertMarkdownToHTML(blog.productName) : '';
+      const htmlProductName = blog.productName ? convertInlineMarkdownToHTML(blog.productName) : '';
       const processedProductName = htmlProductName ? processContentWithAdvancedIntelligentLinks(htmlProductName, intelligentLinks) : '';
 
       return `
