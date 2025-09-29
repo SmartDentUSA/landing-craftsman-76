@@ -2030,22 +2030,68 @@ const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.
 
 // Lightweight preview function for real-time updates
 export const generatePreviewHTML = (data: any): string => {
-  console.time('preview-generation');
-  
-  // Skip heavy processing - use data as-is without expensive transformations
+  // Helper function to calculate section visibility
+  const calculateSectionVisibility = (section: any) => {
+    if (!section) return { visible_any: false, visibility_class: 'hidden' };
+    
+    const isVisible = section.visible_desktop || section.visible_mobile;
+    return {
+      visible_any: isVisible,
+      visibility_class: isVisible ? 'visible' : 'hidden'
+    };
+  };
+
+  // Calculate desktop_info table_rows from headers and data
+  const processDesktopInfoTable = (desktop_info: any) => {
+    if (!desktop_info?.show_table || !desktop_info?.table_headers || !desktop_info?.table_data) {
+      return desktop_info;
+    }
+
+    // Correct headers (fix common typos)
+    const correctedHeaders = desktop_info.table_headers.map((header: string) => 
+      header.replace(/Padrão ISOx/g, 'Padrão ISO')
+    );
+
+    // Generate table_rows from headers and data
+    const table_rows = desktop_info.table_data.map((row: any) => {
+      const cells = correctedHeaders.map((header: string) => ({
+        value: row[header] || ''
+      }));
+      return { cells };
+    });
+
+    return {
+      ...desktop_info,
+      table_headers: correctedHeaders,
+      table_rows
+    };
+  };
+
+  // Minimal processing for template compatibility
   const previewData = {
     ...data,
-    // Skip schema generation for preview
+    // SEO image URLs from image objects
+    og_image_url: data.seo?.og_image?.src || '',
+    twitter_image_url: data.seo?.twitter_image?.src || '',
+    
+    // Section visibility calculations
+    desktop_info: {
+      ...processDesktopInfoTable(data.desktop_info),
+      ...calculateSectionVisibility(data.desktop_info)
+    },
+    solutions_section: calculateSectionVisibility(data.solutions_section),
+    resources_section: calculateSectionVisibility(data.resources_section),
+    offers_section: calculateSectionVisibility(data.offers_section),
+    faq_section: calculateSectionVisibility(data.faq_section),
+    advisory: calculateSectionVisibility(data.advisory),
+    
+    // Skip heavy processing for preview
     schema_json_ld: '',
-    // Skip hreflang generation for preview
     hreflang_tags: '',
-    // Use simple column layout for preview
     columnWidths: [25, 25, 25, 25]
   };
   
-  const html = Mustache.render(TEMPLATE_HTML, previewData);
-  console.timeEnd('preview-generation');
-  return html;
+  return Mustache.render(TEMPLATE_HTML, previewData);
 };
 
 export const generateHTML = (data: any): string => {

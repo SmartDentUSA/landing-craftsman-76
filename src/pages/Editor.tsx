@@ -1561,6 +1561,7 @@ const EditorContent = () => {
       }
     };
     
+    console.time('preview-generation');
     const html = generatePreviewHTML(previewData);
     console.timeEnd('preview-generation');
     return html;
@@ -6774,6 +6775,7 @@ dataLayer = [{
             <TabsContent value="landing-preview" className="flex-1 p-4">
               <div className="h-full border rounded-lg overflow-hidden">
                 <iframe
+                  key={`landing-${generatedHTML.length}-${Date.now()}`}
                   srcDoc={generatedHTML}
                   className="w-full h-full"
                   title="Landing Page Preview"
