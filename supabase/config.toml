@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.generate-social-content]
 verify_jwt = false
+
+[functions.generate-tiktok-content]
+verify_jwt = false

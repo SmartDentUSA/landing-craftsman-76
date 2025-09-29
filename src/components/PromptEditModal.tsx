@@ -29,138 +29,208 @@ interface PromptEditModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Mapeamento de fontes de dados disponíveis
+// Mapeamento de fontes de dados disponíveis - EXPANSÃO COMPLETA
 const DATA_SOURCES = {
   products_repository: {
     label: "Repositório de Produtos",
     fields: [
-      "name", "description", "price", "category", "subcategory", "benefits", 
-      "features", "keywords", "target_audience", "sales_pitch", "youtube_videos", 
-      "instagram_videos", "technical_videos", "testimonial_videos"
+      // Campos básicos ✅ UTILIZADOS
+      "name", "description", "price", "category", "subcategory", "currency",
+      
+      // Campos de marketing ✅ UTILIZADOS  
+      "benefits", "features", "keywords", "target_audience", "sales_pitch",
+      
+      // URLs e dados comerciais ✅ UTILIZADOS
+      "product_url", "image_url",
+      
+      // Especificações técnicas ✅ RECÉM INTEGRADA
+      "technical_specifications",
+      
+      // Vídeos e conteúdo multimídia ✅ UTILIZADOS
+      "youtube_videos", "instagram_videos", "technical_videos", "testimonial_videos", "tiktok_videos",
+      
+      // Conteúdo gerado por IA ✅ UTILIZADOS
+      "whatsapp_messages", "youtube_descriptions", "instagram_copies", "tiktok_content",
+      
+      // Interação e bot ✅ UTILIZADOS
+      "bot_trigger_words",
+      
+      // Legendas de vídeo ❌ NÃO UTILIZADO
+      "video_captions",
+      
+      // Dados comerciais avançados ❌ NÃO UTILIZADO
+      "resource_descriptions", "resource_cta1", "resource_cta2", "resource_cta3", "offer_discount_cta",
+      
+      // Google Merchant e SEO ❌ NÃO UTILIZADO
+      "brand", "google_product_category", "condition", "availability", "color", "size", "material", "age_group", "gender",
+      "gtin", "mpn", "seo_title_override", "seo_description_override", "canonical_url",
+      
+      // Categorização avançada ❌ NÃO UTILIZADO
+      "market_keywords", "search_intent_keywords",
+      
+      // Outros campos ❌ NÃO UTILIZADO
+      "tags", "source_type", "source_landing_page_id", "approved", "display_order", "use_in_ai_generation",
+      "show_in_resources", "selected", "ai_generated_category", "ai_generated_keywords", "ai_generated_benefits",
+      "seo_enhanced", "individual_blog_content", "original_data"
     ]
   },
   company_profile: {
     label: "Perfil da Empresa",
     fields: [
-      "company_name", "company_description", "business_sector", "mission_statement", 
-      "vision_statement", "brand_values", "differentiators", "seo_technical_expertise", 
-      "working_methodology", "target_audience", "seo_competitive_advantages"
+      // Dados básicos ✅ UTILIZADOS
+      "company_name", "company_description", "business_sector", 
+      
+      // Missão e valores ✅ UTILIZADOS
+      "mission_statement", "vision_statement", "brand_values", 
+      
+      // Diferenciais ✅ UTILIZADOS
+      "differentiators", "seo_technical_expertise", "working_methodology", 
+      
+      // Público e posicionamento ✅ UTILIZADOS
+      "target_audience", "seo_competitive_advantages", "seo_market_positioning",
+      
+      // Rodapé YouTube ✅ UTILIZADO
+      "youtube_company_footer",
+      
+      // Dados de contato ❌ NÃO UTILIZADO
+      "contact_email", "contact_phone", "location", "website_url",
+      
+      // Dados institucionais ❌ NÃO UTILIZADO
+      "founded_year", "team_size", "company_logo_url", "company_culture", 
+      "delivery_approach", "seo_service_areas",
+      
+      // Social media ❌ NÃO UTILIZADO
+      "instagram_profile", "youtube_channel", "social_media_links",
+      
+      // Links institucionais ❌ NÃO UTILIZADO
+      "institutional_links",
+      
+      // Vídeos da empresa ❌ NÃO UTILIZADO
+      "company_videos",
+      
+      // Keywords SEO ❌ NÃO UTILIZADO
+      "seo_context_keywords"
     ]
   },
   categories_config: {
     label: "Configuração de Categorias",
     fields: [
-      "category", "subcategory", "keywords", "target_audience", 
+      // Campos básicos ✅ UTILIZADOS
+      "category", "subcategory", 
+      
+      // Keywords básicas ✅ UTILIZADOS
+      "keywords", "target_audience", 
+      
+      // Keywords avançadas ❌ NÃO UTILIZADO
       "search_intent_keywords", "market_keywords"
-    ]
-  },
-  landing_page_banner: {
-    label: "Banner da Landing Page",
-    fields: [
-      "banner_title", "banner_subtitle", "banner_description", "banner_image"
-    ]
-  },
-  landing_page_solutions_1: {
-    label: "Solução 1 da Landing Page",
-    fields: [
-      "solution_title", "solution_description", "solution_image", "solution_benefits"
-    ]
-  },
-  landing_page_solutions_2: {
-    label: "Solução 2 da Landing Page",
-    fields: [
-      "solution_title", "solution_description", "solution_image", "solution_benefits"
-    ]
-  },
-  landing_page_solutions_3: {
-    label: "Solução 3 da Landing Page",
-    fields: [
-      "solution_title", "solution_description", "solution_image", "solution_benefits"
-    ]
-  },
-  landing_page_solutions_4: {
-    label: "Solução 4 da Landing Page",
-    fields: [
-      "solution_title", "solution_description", "solution_image", "solution_benefits"
-    ]
-  },
-  landing_page_solutions_5: {
-    label: "Solução 5 da Landing Page",
-    fields: [
-      "solution_title", "solution_description", "solution_image", "solution_benefits"
-    ]
-  },
-  landing_page_desktop_info: {
-    label: "Informações Desktop",
-    fields: [
-      "desktop_title", "desktop_description", "desktop_features", "desktop_specifications"
-    ]
-  },
-  landing_page_consulting: {
-    label: "Consultoria",
-    fields: [
-      "consulting_title", "consulting_description", "consulting_services", "consulting_benefits"
-    ]
-  },
-  landing_page_faq: {
-    label: "FAQ (Perguntas e Respostas)",
-    fields: [
-      "question", "answer", "category", "keywords"
-    ]
-  },
-  landing_pages: {
-    label: "Landing Pages (Genérico)",
-    fields: [
-      "name", "template", "data", "selected_product_ids"
-    ]
-  },
-  keywords: {
-    label: "Palavras-chave",
-    fields: [
-      "primary_keyword", "secondary_keywords", "long_tail_keywords"
-    ]
-  },
-  target_audience: {
-    label: "Público-alvo",
-    fields: [
-      "demographics", "interests", "pain_points", "behaviors"
     ]
   },
   video_testimonials: {
     label: "Depoimentos em Vídeo",
     fields: [
-      "client_name", "profession", "testimonial_text", "youtube_url", 
-      "instagram_url", "ai_keywords", "sentiment_score"
-    ]
-  },
-  company_videos: {
-    label: "Vídeos da Empresa",
-    fields: [
-      "youtube_videos", "instagram_videos", "technical_videos", "testimonial_videos"
-    ]
-  },
-  video_captions: {
-    label: "Legendas de Vídeo",
-    fields: [
-      "caption_text", "video_url", "language", "extraction_method", "ai_analysis"
+      // Dados básicos ✅ UTILIZADOS
+      "client_name", "profession", "testimonial_text", 
+      
+      // URLs ❌ NÃO UTILIZADO
+      "youtube_url", "instagram_url", 
+      
+      // Dados gerados por IA ❌ NÃO UTILIZADO
+      "ai_keywords", "sentiment_score", "ai_extracted_benefits",
+      
+      // Localização ❌ NÃO UTILIZADO
+      "location", "state", "specialty"
     ]
   },
   approved_reviews: {
     label: "Avaliações Aprovadas",
     fields: [
-      "author_name", "rating", "review_text", "contextual_seo_info", "ai_keywords", "notes"
+      // Dados básicos ✅ UTILIZADOS
+      "author_name", "rating", "review_text", 
+      
+      // SEO ❌ NÃO UTILIZADO  
+      "contextual_seo_info", "ai_keywords", "notes"
     ]
   },
   key_opinion_leaders: {
     label: "Key Opinion Leaders (KOLs)",
     fields: [
-      "full_name", "specialty", "mini_cv", "photo_url", "website_url", "youtube_url", "instagram_url"
+      // Dados básicos ✅ UTILIZADOS
+      "full_name", "specialty", "mini_cv", 
+      
+      // URLs ❌ NÃO UTILIZADO
+      "photo_url", "website_url", "youtube_url", "instagram_url", "lattes_url"
     ]
   },
-  selected_product_blogs: {
-    label: "Blogs de Produtos Selecionados",
+  external_links: {
+    label: "Links Externos",
     fields: [
-      "commercial_blog_content", "technical_blog_content", "product_name", "product_category"
+      // Dados básicos ❌ NÃO UTILIZADO
+      "name", "url", "category", "subcategory", "description", "approved"
+    ]
+  },
+  raw_reviews: {
+    label: "Avaliações Brutas (Google)",
+    fields: [
+      // Dados do autor ❌ NÃO UTILIZADO
+      "author_name", "profile_photo_url", "author_url", "is_local_guide",
+      
+      // Dados da avaliação ❌ NÃO UTILIZADO
+      "rating", "review_text", "review_date", "relative_time", "review_likes",
+      
+      // Resposta do proprietário ❌ NÃO UTILIZADO
+      "response_from_owner", "response_date"
+    ]
+  },
+  manual_reviews: {
+    label: "Avaliações Manuais",
+    fields: [
+      // Dados básicos ❌ NÃO UTILIZADO
+      "author_name", "rating", "review_text", "approved"
+    ]
+  },
+  extraction_jobs: {
+    label: "Jobs de Extração",
+    fields: [
+      // Dados técnicos ❌ NÃO UTILIZADO
+      "place_id", "google_maps_url", "business_name", "status", "total_reviews_found", "reviews_extracted"
+    ]
+  },
+  google_ads_campaigns: {
+    label: "Campanhas Google Ads",
+    fields: [
+      // Configurações ❌ NÃO UTILIZADO
+      "campaign_type", "config", "last_exported"
+    ]
+  },
+  blog_posts: {
+    label: "Posts do Blog",
+    fields: [
+      // Conteúdo ❌ NÃO UTILIZADO
+      "title", "content", "meta_description", "keywords", "status", "published_at"
+    ]
+  },
+  landing_pages: {
+    label: "Landing Pages",
+    fields: [
+      // Dados básicos ❌ NÃO UTILIZADO
+      "name", "template", "data", "selected_product_ids", "status"
+    ]
+  },
+  publication_settings: {
+    label: "Configurações de Publicação",
+    fields: [
+      // WordPress ❌ NÃO UTILIZADO
+      "wordpress_url", "wordpress_user", 
+      
+      // FTP ❌ NÃO UTILIZADO
+      "ftp_host", "ftp_port", "ftp_user", "ftp_remote_path", "ftp_protocol"
+    ]
+  },
+  prompts_configuration: {
+    label: "Configurações de Prompts",
+    fields: [
+      // Configuração ❌ NÃO UTILIZADO
+      "edge_function_id", "prompt_name", "custom_prompt", "selected_data_sources", "selected_fields"
     ]
   }
 };
@@ -736,6 +806,72 @@ Retorne no formato JSON:
 }`
   },
 
+  "generate-tiktok-content": {
+    "Script TikTok": `Você é um especialista em criação de conteúdo viral para TikTok. Crie um script completo e estratégico para um vídeo TikTok que gere engajamento máximo.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+- Características: {product.features}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Valores da marca: {company.brand_values}
+
+PALAVRAS GATILHO BOT: {product.bot_trigger_words}
+
+INSTRUÇÕES ESPECÍFICAS PARA TIKTOK:
+
+1. HOOK (3 primeiros segundos): CRÍTICO para capturar atenção
+   - Deve ser extremamente impactante e visual
+   - Use padrões virais: "POV:", "Quando você...", "Ninguém te conta que..."
+   - Crie curiosidade imediata
+   - Máximo 15 palavras
+
+2. SCRIPT DO VÍDEO (15-60 segundos):
+   - Linguagem casual e autêntica da geração Z/Millennial
+   - Timing perfeito para cada cena
+   - Use trends atuais quando possível
+   - Inclua momentos de pausa para impact
+   - Máximo 150 palavras para facilitar memorização
+
+3. CALL-TO-ACTION FINAL:
+   - OBRIGATÓRIO: Deve usar uma palavra gatilho do bot se disponível
+   - Incentive comentários, shares e saves
+   - Crie senso de urgência ou FOMO
+
+TEMPLATES OBRIGATÓRIOS PARA CTA (escolha 1):
+- "💬 Comenta '{random_trigger_word}' que te mando o link!"
+- "💬 Salva o vídeo + comenta '{random_trigger_word}' para mais info!"
+- "💬 Marca 3 amigos + comenta '{random_trigger_word}' nos comentários!"
+
+Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
+
+4. ELEMENTOS VIRAIS A INCLUIR:
+   - Transições rápidas
+   - Música/som trending
+   - Texto na tela em momentos-chave
+   - Gestos expressivos
+   - Revelações ou plot twists
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+
+Formato JSON obrigatório:
+{
+  "hook": "Hook viral de 3 segundos (máximo 15 palavras)",
+  "video_script": "Script completo do vídeo com timing perfeito \\n\\nIncluir quebras de linha para diferentes cenas",
+  "call_to_action": "CTA final OBRIGATORIAMENTE usando palavra gatilho",
+  "hashtags": ["#viral", "#fyp", "#trending", "#categoria"],
+  "trending_references": ["trend1", "trend2", "trend3"],
+  "estimated_duration": "30-45 segundos"
+}`
+  },
+
   "extract-youtube-captions": {
     "Análise de Vídeos": `Analise o conteúdo das legendas do vídeo e extraia insights estruturados.
 
@@ -823,13 +959,37 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
         } else {
           console.log('ℹ️ Nenhuma configuração salva, usando defaults');
           
-          // Para novas funções, inicializar com configuração padrão útil
+          // Para novas funções, inicializar com configuração padrão baseada no uso atual
           const defaultFields: Record<string, string[]> = {};
           
-          // Configurações padrão baseadas na função
-          if (edgeFunction.id === 'generate-social-content') {
+          // Configurações padrão baseadas na função - CAMPOS ATUALMENTE UTILIZADOS
+          if (edgeFunction.id === 'generate-product-ai-content') {
+            defaultFields['products_repository'] = ['name', 'description', 'category', 'subcategory', 'price', 'target_audience'];
+          } else if (edgeFunction.id === 'strategic-blog-generator') {
+            defaultFields['products_repository'] = ['name', 'description', 'benefits', 'features', 'keywords'];
+            defaultFields['company_profile'] = ['company_name', 'working_methodology', 'differentiators'];
+            defaultFields['categories_config'] = ['keywords', 'target_audience'];
+          } else if (edgeFunction.id === 'generate-social-content') {
             defaultFields['products_repository'] = ['name', 'description', 'benefits'];
             defaultFields['company_profile'] = ['company_name', 'target_audience'];
+          } else if (edgeFunction.id === 'ai-seo-generator') {
+            defaultFields['products_repository'] = ['name', 'description', 'keywords'];
+          } else if (edgeFunction.id === 'generate-instagram-copy') {
+            defaultFields['products_repository'] = ['name', 'description', 'category', 'price', 'keywords', 'target_audience', 'benefits'];
+            defaultFields['company_profile'] = ['company_name'];
+          } else if (edgeFunction.id === 'generate-whatsapp-messages') {
+            defaultFields['products_repository'] = ['name', 'sales_pitch', 'benefits', 'product_url', 'category'];
+            defaultFields['company_profile'] = ['company_name'];
+          } else if (edgeFunction.id === 'generate-youtube-descriptions') {
+            defaultFields['products_repository'] = ['name', 'description', 'category', 'benefits'];
+            defaultFields['company_profile'] = ['company_name', 'youtube_company_footer'];
+          } else if (edgeFunction.id === 'generate-ad-copies') {
+            defaultFields['products_repository'] = ['name', 'description', 'keywords'];
+          } else if (edgeFunction.id === 'generate-tiktok-content') {
+            defaultFields['products_repository'] = ['name', 'description', 'category', 'price', 'keywords', 'target_audience', 'benefits', 'features', 'bot_trigger_words'];
+            defaultFields['company_profile'] = ['company_name', 'brand_values'];
+          } else if (edgeFunction.id === 'extract-youtube-captions') {
+            defaultFields['video_testimonials'] = ['testimonial_text'];
           }
           
           setSelectedFields(defaultFields);
