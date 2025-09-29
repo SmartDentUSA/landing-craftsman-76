@@ -2205,6 +2205,12 @@ export const generateHTML = (data: any): string => {
       data.desktop_info.table_headers?.map((header: string) => row[header] || '') || []
     ) || [];
     
+    // CRITICAL: Add table_rows to desktop_info context for Mustache
+    processedData.desktop_info = {
+      ...data.desktop_info,
+      table_rows: table_rows
+    };
+    
     // Determine visibility class
     let visibility_class = '';
     if (data.desktop_info.visible_desktop && !data.desktop_info.visible_mobile) {

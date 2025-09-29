@@ -157,14 +157,15 @@ export function ModernProductCard({
     : 'Categoria não definida';
 
   return (
-    <Card 
-      className={cn(
-        "group relative transition-all duration-200 hover:shadow-md p-4",
-        isSelected && "ring-2 ring-primary shadow-lg",
-        score.percentage < 50 && "border-destructive/20",
-        score.percentage >= 90 && "border-success/20"
-      )}
-    >
+    <>
+      <Card 
+        className={cn(
+          "group relative transition-all duration-200 hover:shadow-md p-4",
+          isSelected && "ring-2 ring-primary shadow-lg",
+          score.percentage < 50 && "border-destructive/20",
+          score.percentage >= 90 && "border-success/20"
+        )}
+      >
       <div className="flex items-center gap-4">
         {/* Checkbox */}
         <Checkbox
@@ -363,6 +364,16 @@ export function ModernProductCard({
         </div>
       </div>
 
+      {/* Preview das Especificações Técnicas dentro do Card */}
+      {(product.technical_specifications && product.technical_specifications.length > 0) && (
+        <TechnicalSpecsPreview
+          specs={product.technical_specifications}
+          onEdit={() => setShowTechnicalSpecs(true)}
+          productName={product.name}
+        />
+      )}
+    </Card>
+
       {/* Modal de Geração de Blog */}
       <ProductBlogGeneratorModal
         open={showBlogModal}
@@ -422,13 +433,6 @@ export function ModernProductCard({
         initialSpecs={product.technical_specifications || []}
         onSave={handleSaveTechnicalSpecs}
       />
-
-      {/* Preview das Especificações Técnicas */}
-      <TechnicalSpecsPreview
-        specs={product.technical_specifications || []}
-        onEdit={() => setShowTechnicalSpecs(true)}
-        productName={product.name}
-      />
-    </Card>
+    </>
   );
 }

@@ -24,75 +24,76 @@ export const TechnicalSpecsPreview: React.FC<TechnicalSpecsPreviewProps> = ({
 }) => {
   if (!specs || specs.length === 0) {
     return (
-      <Card className="mt-4">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Especificações Técnicas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="mb-2">Nenhuma especificação técnica cadastrada</div>
-            <Button onClick={onEdit} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Especificações
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-3 pt-3 border-t border-border/40">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-medium text-muted-foreground">Especificações Técnicas</div>
+          <Button onClick={onEdit} variant="ghost" size="sm" className="h-6 text-xs">
+            <Plus className="h-3 w-3 mr-1" />
+            Adicionar
+          </Button>
+        </div>
+        <div className="text-xs text-muted-foreground">Nenhuma especificação cadastrada</div>
+      </div>
     );
   }
 
   return (
-    <Card className="mt-4">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">
-            Especificações Técnicas
-            <Badge variant="secondary" className="ml-2">
-              {specs.length} {specs.length === 1 ? 'item' : 'itens'}
-            </Badge>
-          </CardTitle>
-          <Button onClick={onEdit} variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
+    <div className="mt-3 pt-3 border-t border-border/40">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-medium text-muted-foreground">Especificações Técnicas</div>
+          <Badge variant="secondary" className="text-xs h-5">
+            {specs.length}
+          </Badge>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
+        <Button onClick={onEdit} variant="ghost" size="sm" className="h-6 text-xs">
+          <Edit className="h-3 w-3 mr-1" />
+          Editar
+        </Button>
+      </div>
+      
+      {/* Tabela compacta similar ao construtor de landing page */}
+      <div className="border border-border/40 rounded-md overflow-hidden">
+        <div className="bg-muted/30 px-3 py-1.5 border-b border-border/40">
+          <div className="grid grid-cols-2 gap-2 text-xs font-medium text-muted-foreground">
+            <div>Especificação</div>
+            <div>Valor</div>
+          </div>
+        </div>
+        <div className="max-h-32 overflow-y-auto">
           {specs.map((spec, index) => (
             <div 
               key={index}
-              className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
+              className="grid grid-cols-2 gap-2 px-3 py-1.5 border-b last:border-b-0 border-border/20 hover:bg-muted/20 group"
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm truncate">{spec.label}</div>
-                    <div className="text-sm text-muted-foreground truncate">{spec.value}</div>
-                  </div>
-                </div>
+              <div className="text-xs font-medium truncate" title={spec.label}>
+                {spec.label}
               </div>
-              {onDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(index)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-muted-foreground truncate flex-1" title={spec.value}>
+                  {spec.value}
+                </div>
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(index)}
+                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
-        
-        <div className="mt-4 p-3 bg-muted/20 rounded-lg border-dashed border">
-          <div className="text-xs text-muted-foreground">
-            <strong>Integração SEO:</strong> Essas especificações serão incluídas automaticamente 
-            na geração de conteúdo para blogs, Google Ads e structured data do produto.
-          </div>
+      </div>
+      
+      <div className="mt-2 p-2 bg-muted/20 rounded-md border border-dashed border-border/40">
+        <div className="text-xs text-muted-foreground">
+          <strong>SEO:</strong> Incluídas automaticamente no conteúdo gerado
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
