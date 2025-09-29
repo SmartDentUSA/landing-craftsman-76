@@ -663,22 +663,78 @@ export const useSEOHTMLGenerator = () => {
       };
     });
 
-    const itemListSchema = {
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      "name": title,
-      "description": description,
-      "numberOfItems": blogs.length,
-      "itemListElement": blogSchemas.map((schema, index) => ({
-        "@type": "ListItem",
-        "position": index + 1,
-        "item": schema
-      }))
-    };
+    // Generate complete schema including products for SEO
+    let completeSchema;
+    
+    if (selectedProducts && selectedProducts.length > 0) {
+      // Convert selectedProducts to ProductData format for advanced schema
+      const productDataArray = selectedProducts.map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description || '',
+        price: typeof product.price === 'number' ? product.price : parseFloat(product.price?.toString() || '0'),
+        currency: 'BRL',
+        category: product.category || '',
+        brand: '',
+        image_url: '',
+        product_url: product.productUrl || '',
+        keywords: [...(product.keywords || []), ...(product.market_keywords || []), ...(product.search_intent_keywords || [])],
+        availability: 'in stock',
+        condition: 'new',
+        gtin: '',
+        mpn: ''
+      }));
+
+      // Use advanced schema generator for complete page schema
+      const { schemas } = generateCompletePageSchema(
+        productDataArray,
+        undefined, // faqItems
+        undefined, // reviewsData
+        undefined, // companyData
+        title,
+        description
+      );
+      
+      // Add blogs ItemList to the schema graph
+      const blogsItemList = {
+        "@type": "ItemList",
+        "name": "Artigos Relacionados",
+        "description": "Conteúdo informativo relacionado aos produtos",
+        "numberOfItems": blogs.length,
+        "itemListElement": blogSchemas.map((schema, index) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "item": schema
+        }))
+      };
+      
+      // Combine schemas in @graph format
+      if (Array.isArray(schemas)) {
+        completeSchema = [...schemas, blogsItemList];
+      } else if (schemas['@graph']) {
+        completeSchema = { "@graph": [...schemas['@graph'], blogsItemList] };
+      } else {
+        completeSchema = { "@graph": [schemas, blogsItemList] };
+      }
+    } else {
+      // Only blogs schema
+      completeSchema = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": title,
+        "description": description,
+        "numberOfItems": blogs.length,
+        "itemListElement": blogSchemas.map((schema, index) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "item": schema
+        }))
+      };
+    }
 
     const schemaJson = `
     <script type="application/ld+json">
-    ${JSON.stringify(itemListSchema, null, 2)}
+    ${JSON.stringify(completeSchema, null, 2)}
     </script>`;
 
     // Create intelligent links mapping from selected products
@@ -1227,48 +1283,6 @@ export const useSEOHTMLGenerator = () => {
     <section class="products-summary">
       <h2>💼 Ofertas Estruturadas para SEO</h2>
       <p class="offers-description">Produtos selecionados automaticamente para otimização de buscas e melhor indexação</p>
-      <div class="products-grid">
-        ${selectedProducts.map(product => `
-          <div class="product-card">
-            <div class="product-header">
-              <h3>${product.name}</h3>
-              ${product.category ? `<span class="product-category">${product.category}</span>` : ''}
-            </div>
-            
-            <div class="product-details">
-              ${product.description ? `<p class="product-description">${product.description}</p>` : ''}
-              
-              ${product.price && product.price !== 'Pedir orçamento' ? `
-                <div class="product-price">
-                  <span class="price-label">Preço:</span>
-                  <span class="price-value">R$ ${product.price}</span>
-                </div>
-              ` : `
-                <div class="product-price">
-                  <span class="price-quote">Solicite seu orçamento</span>
-                </div>
-              `}
-              
-              ${product.keywords && product.keywords.length > 0 ? `
-                <div class="product-keywords">
-                  <span class="keywords-label">Tags:</span>
-                  <div class="keywords-tags">
-                    ${product.keywords.slice(0, 8).map(keyword => `<span class="tag">${keyword}</span>`).join('')}
-                  </div>
-                </div>
-              ` : ''}
-              
-              ${product.productUrl ? `
-                <div class="product-action">
-                  <a href="${product.productUrl}" class="product-link" target="_blank" rel="noopener noreferrer">
-                    Ver Produto →
-                  </a>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>
     </section>
     ` : ''}
     
