@@ -2067,10 +2067,12 @@ const EditorContent = () => {
   const handleSave = () => {
     console.log('[DEBUG] Salvando landing page...');
     console.log('[DEBUG] Dados originais:', data);
+    console.log('[DEBUG] Desktop info antes do processamento:', data.desktop_info);
     
     const processedData = onSave(data);
     
     console.log('[DEBUG] Dados processados:', processedData);
+    console.log('[DEBUG] Desktop info após processamento:', processedData.desktop_info);
     
     const storeData = {
       name: processedData.name,
@@ -3230,12 +3232,18 @@ const EditorContent = () => {
                                             <Input
                                               value={row[header] ?? ''}
                                               onChange={(e) => {
+                                                console.log(`Atualizando célula [${rowIndex}][${header}] com valor:`, e.target.value);
                                                 const newData = [...(data.desktop_info?.table_data ?? [])];
                                                 newData[rowIndex] = { ...newData[rowIndex], [header]: e.target.value };
-                                                setData(prev => ({
-                                                  ...prev,
-                                                  desktop_info: { ...prev.desktop_info!, table_data: newData }
-                                                }));
+                                                console.log('Dados atualizados da tabela:', newData);
+                                                setData(prev => {
+                                                  const updated = {
+                                                    ...prev,
+                                                    desktop_info: { ...prev.desktop_info!, table_data: newData }
+                                                  };
+                                                  console.log('Estado atualizado - desktop_info:', updated.desktop_info);
+                                                  return updated;
+                                                });
                                               }}
                                               placeholder={`Valor para ${header}`}
                                             />
@@ -3249,15 +3257,22 @@ const EditorContent = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
+                                    console.log('Adicionando nova linha à tabela desktop_info');
                                     const newRow: { [key: string]: string } = {};
                                     (data.desktop_info?.table_headers ?? []).forEach(header => {
                                       newRow[header] = '';
                                     });
                                     const newData = [...(data.desktop_info?.table_data ?? []), newRow];
-                                    setData(prev => ({
-                                      ...prev,
-                                      desktop_info: { ...prev.desktop_info!, table_data: newData }
-                                    }));
+                                    console.log('Nova linha criada:', newRow);
+                                    console.log('Novos dados da tabela:', newData);
+                                    setData(prev => {
+                                      const updated = {
+                                        ...prev,
+                                        desktop_info: { ...prev.desktop_info!, table_data: newData }
+                                      };
+                                      console.log('Estado atualizado - desktop_info:', updated.desktop_info);
+                                      return updated;
+                                    });
                                   }}
                                 >
                                   <Plus className="h-4 w-4 mr-2" />

@@ -581,6 +581,7 @@ export type Database = {
           subcategory: string | null
           tags: Json | null
           target_audience: Json | null
+          technical_specifications: Json | null
           technical_videos: Json | null
           testimonial_videos: Json | null
           tiktok_content: Json | null
@@ -645,6 +646,7 @@ export type Database = {
           subcategory?: string | null
           tags?: Json | null
           target_audience?: Json | null
+          technical_specifications?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
           tiktok_content?: Json | null
@@ -709,6 +711,7 @@ export type Database = {
           subcategory?: string | null
           tags?: Json | null
           target_audience?: Json | null
+          technical_specifications?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
           tiktok_content?: Json | null

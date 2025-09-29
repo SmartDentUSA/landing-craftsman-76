@@ -189,7 +189,7 @@ export const LinksManager = () => {
           name: keyword,
           url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
           category: sourceProduct?.category || 'produto',
-          subcategory: sourceProduct?.subcategory || 'geral',
+          subcategory: 'keyword-import',
           description: `Importado do produto: ${sourceProduct?.name || 'Produto não identificado'}`,
           approved: true
         });

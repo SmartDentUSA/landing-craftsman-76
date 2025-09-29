@@ -1,11 +1,15 @@
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { ProductScoreIndicator } from './ProductScoreIndicator';
 import { CompletionBadges } from './CompletionBadges';
+import { ProductTechnicalSpecsModal } from './ProductTechnicalSpecsModal';
 import { calculateProductScore } from './ProductScoreCalculator';
 import { cn } from "@/lib/utils";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Edit, 
   Trash2, 
@@ -18,6 +22,7 @@ import {
   FileText,
   MessageCircle,
   PlayCircle,
+  Settings,
   Instagram,
   Target
 } from 'lucide-react';
@@ -28,7 +33,7 @@ import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
 import { TikTokContentGenerator } from "./TikTokContentGenerator";
 import { ProductGoogleAdsModal } from "./google-ads/ProductGoogleAdsModal";
-import { useState } from "react";
+
 
 interface Product {
   id: string;
@@ -67,6 +72,12 @@ interface Product {
     technical?: string;
     generated_at?: string;
   };
+  technical_specifications?: TechnicalSpec[];
+}
+
+interface TechnicalSpec {
+  label: string;
+  value: string;
 }
 
 interface ModernProductCardProps {
@@ -92,7 +103,36 @@ export function ModernProductCard({
   const [showInstagramModal, setShowInstagramModal] = useState(false);
   const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [showGoogleAdsModal, setShowGoogleAdsModal] = useState(false);
+  const [showTechnicalSpecs, setShowTechnicalSpecs] = useState(false);
+  const { toast } = useToast();
   const score = calculateProductScore(product);
+
+  const handleSaveTechnicalSpecs = async (specs: any[]) => {
+    try {
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ technical_specifications: specs })
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Especificações atualizadas",
+        description: "As especificações técnicas foram salvas com sucesso",
+      });
+      
+      if (onProductUpdate) {
+        onProductUpdate();
+      }
+    } catch (error) {
+      console.error('Error saving technical specs:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as especificações técnicas",
+      });
+    }
+  };
   
   const formatPrice = (price?: number, currency?: string) => {
     if (price === 0) return "Pedir orçamento";
@@ -297,6 +337,15 @@ export function ModernProductCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowTechnicalSpecs(true)}
+            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+            title="Especificações Técnicas"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onDelete(product.id)}
             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
           >
@@ -353,6 +402,16 @@ export function ModernProductCard({
         open={showGoogleAdsModal}
         onOpenChange={setShowGoogleAdsModal}
         product={product}
+      />
+
+      {/* Modal de Especificações Técnicas */}
+      <ProductTechnicalSpecsModal
+        isOpen={showTechnicalSpecs}
+        onClose={() => setShowTechnicalSpecs(false)}
+        productId={product.id}
+        productName={product.name}
+        initialSpecs={product.technical_specifications || []}
+        onSave={handleSaveTechnicalSpecs}
       />
     </Card>
   );
