@@ -364,14 +364,6 @@ export function ModernProductCard({
         </div>
       </div>
 
-      {/* Preview das Especificações Técnicas dentro do Card */}
-      {(product.technical_specifications && product.technical_specifications.length > 0) && (
-        <TechnicalSpecsPreview
-          specs={product.technical_specifications}
-          onEdit={() => setShowTechnicalSpecs(true)}
-          productName={product.name}
-        />
-      )}
     </Card>
 
       {/* Modal de Geração de Blog */}
