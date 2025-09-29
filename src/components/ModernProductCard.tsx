@@ -34,6 +34,7 @@ import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
 import { TikTokContentGenerator } from "./TikTokContentGenerator";
 import { ProductGoogleAdsModal } from "./google-ads/ProductGoogleAdsModal";
+import { TikTokIcon } from "./icons/TikTokIcon";
 
 
 interface Product {
@@ -334,7 +335,7 @@ export function ModernProductCard({
             className="h-8 w-8 p-0 text-gray-900 hover:text-black"
             title="Gerar Conteúdo TikTok"
           >
-            <span className="text-lg font-bold">🎵</span>
+            <TikTokIcon className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"

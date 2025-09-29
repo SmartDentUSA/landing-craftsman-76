@@ -6,6 +6,7 @@ import { Brain, FileText, Search, MessageSquare, Video, Zap, Edit3, Loader2, Mes
 import { PromptEditModal } from './PromptEditModal';
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import sistemaPromptsAI from '@/assets/sistema-prompts-ai.png';
+import { TikTokIcon } from './icons/TikTokIcon';
 
 const EDGE_FUNCTIONS = [
   {
@@ -148,7 +149,7 @@ const EDGE_FUNCTIONS = [
     id: "generate-tiktok-content",
     name: "Gerador de Conteúdo TikTok",
     description: "Gera scripts virais, hooks e CTAs otimizados para TikTok",
-    icon: () => <span className="text-lg">🎵</span>,
+    icon: () => <TikTokIcon className="h-5 w-5" />,
     status: "active" as const,
     prompts: [
       "Script TikTok"
