@@ -380,32 +380,308 @@ const DashboardContent = () => {
     return status === 'approved' ? 'Aprovado' : 'Rascunho';
   };
 
-  // Function to extract clean text from HTML for preview
+  // Optimized function to extract clean text from HTML for preview
   const extractCleanText = useCallback((html: string): string => {
     if (!html) return '';
     
-    // Remove style, script, and other non-content tags
-    let cleanText = html
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<meta[^>]*>/gi, '')
-      .replace(/<link[^>]*>/gi, '')
-      .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
-    
-    // Convert HTML to text by removing all tags
-    cleanText = cleanText
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .trim();
-    
-    return cleanText;
+    try {
+      // Simple and safe text extraction
+      let cleanText = html
+        // Remove non-content tags first
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<meta[^>]*>/gi, '')
+        .replace(/<link[^>]*>/gi, '')
+        .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+        // Remove all remaining HTML tags
+        .replace(/<[^>]*>/g, ' ')
+        // Clean up whitespace and entities
+        .replace(/\s+/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+      
+      return cleanText;
+    } catch (error) {
+      console.warn('Error extracting clean text:', error);
+      return 'Erro ao extrair texto';
+    }
   }, []);
+
+  // Function to generate clean HTML for copying (without preview structure)
+  const generateCleanHTML = useCallback((blogs: BlogPost[], domain: string) => {
+    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
+    console.log(`🎨 Generating clean ${domainName} HTML for copying`);
+    
+    // Create individual product blogs filtered by domain
+    const domainProductBlogs = productBlogsForHTMLByDomain(domain);
+    const productBlogs: BlogPost[] = domainProductBlogs.map(productBlog => ({
+      id: productBlog.id,
+      title: productBlog.title,
+      created_at: productBlog.created_at,
+      status: 'published',
+      landing_page_id: `product-${productBlog.productId}`,
+      content: productBlog.content,
+      meta_description: productBlog.type === 'commercial' 
+        ? `Descubra todas as vantagens e benefícios do ${productBlog.productName}. Saiba por que é a melhor escolha para seu consultório.`
+        : `Conheça as especificações técnicas e funcionamento detalhado do ${productBlog.productName}. Tecnologia avançada para odontologia.`,
+      keywords: [],
+      intelligent_links: {}
+    } as BlogPost));
+    
+    // If no published blogs, create fallback from consolidatedBlogs
+    const landingPageBlogs = blogs.length > 0 ? blogs : consolidatedBlogs.map(lp => ({
+      id: lp.id,
+      title: lp.name,
+      created_at: new Date().toISOString(),
+      status: 'draft',
+      landing_page_id: lp.id,
+      content: 'Conteúdo será gerado após a publicação do blog.',
+      meta_description: `Conteúdo sobre ${lp.name}`,
+      keywords: [],
+      intelligent_links: {}
+    } as BlogPost));
+    
+    // Combine landing page blogs and product blogs
+    const approvedBlogs = [...landingPageBlogs, ...productBlogs].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    const featuredBlog = approvedBlogs[0];
+    const recentBlogs = approvedBlogs.slice(1, 7);
+    const sidebarBlogs = approvedBlogs.slice(7);
+
+    if (!featuredBlog) {
+      return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog ${domainName} - Odontologia Digital</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --text-color: #333;
+            --background-color: #f8f9fa;
+            --white: #fff;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding: 2rem 0;
+        }
+        .no-content {
+            text-align: center;
+            padding: 3rem;
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <main class="container main-content">
+        <div class="no-content">
+            <h1>Blog ${domainName}</h1>
+            <h2>Nenhum blog aprovado encontrado para ${domainName}</h2>
+            <p>Aguarde a aprovação de landing pages para visualizar o conteúdo.</p>
+        </div>
+    </main>
+</body>
+</html>`;
+    }
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog ${domainName} - Odontologia Digital</title>
+    <meta name="description" content="Blog de odontologia digital do ${domainName} com conteúdo especializado e atualizado sobre tecnologia odontológica.">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --text-color: #333;
+            --background-color: #f8f9fa;
+            --white: #fff;
+            --light-gray: #e9ecef;
+            --dark-gray: #495057;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        a { text-decoration: none; color: var(--primary-color); }
+        a:hover { text-decoration: underline; }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        img { max-width: 100%; height: auto; display: block; }
+        
+        .posts-section {
+            display: grid;
+            gap: 2rem;
+        }
+        .featured-post {
+            background-color: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .featured-post-content {
+            padding: 1.5rem;
+        }
+        .featured-post-content h1 {
+            margin-top: 0;
+            font-size: 1.75rem;
+        }
+        .post-card {
+            background-color: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .post-card:hover {
+            transform: translateY(-5px);
+        }
+        .post-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .post-card-content {
+            padding: 1.5rem;
+        }
+        .post-card-content h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+        }
+        .post-meta {
+            color: var(--secondary-color);
+            font-size: 0.875rem;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .posts-grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        .sidebar-posts {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .sidebar-posts .post-card img {
+            height: 150px;
+        }
+        
+        .sidebar-posts .post-card-content h2 {
+            font-size: 1rem;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding: 2rem 0;
+        }
+        @media (min-width: 768px) {
+            .main-content {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container main-content">
+        <section class="posts-section">
+            <article class="featured-post">
+                <img src="https://via.placeholder.com/1200x600?text=${encodeURIComponent(featuredBlog.title.substring(0, 50))}" alt="Imagem do post de destaque">
+                <div class="featured-post-content">
+                    <p class="post-meta">${domainName} | ${new Date(featuredBlog.created_at).toLocaleDateString('pt-BR')}</p>
+                    <h1>${featuredBlog.title}</h1>
+                    <p>${featuredBlog.meta_description || 'Conteúdo sobre odontologia digital'}</p>
+                    <div class="content">
+                        ${processContentWithIntelligentLinks(featuredBlog.content || 'Conteúdo do blog gerado pela IA', featuredBlog.intelligent_links || {})}
+                    </div>
+                </div>
+            </article>
+
+            <div class="posts-grid">
+                ${recentBlogs.map(blog => `
+                <article class="post-card">
+                    <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 30))}" alt="Imagem do post">
+                    <div class="post-card-content">
+                        <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
+                        <h2>${blog.title}</h2>
+                        <p>${blog.meta_description || 'Descrição do blog'}</p>
+                        <div class="content">
+                            ${processContentWithIntelligentLinks(blog.content || 'Conteúdo do blog', blog.intelligent_links || {})}
+                        </div>
+                    </div>
+                </article>
+                `).join('')}
+            </div>
+        </section>
+
+        <aside class="sidebar">
+            <div class="sidebar-posts">
+                <h3>Mais Postagens (${sidebarBlogs.length})</h3>
+                ${sidebarBlogs.map(blog => `
+                <article class="post-card">
+                    <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(blog.title.substring(0, 20))}" alt="Imagem do post">
+                    <div class="post-card-content">
+                        <p class="post-meta">${domainName} | ${new Date(blog.created_at).toLocaleDateString('pt-BR')}</p>
+                        <h2>${blog.title}</h2>
+                        <p>${blog.meta_description || 'Descrição do blog'}</p>
+                        <div class="content">
+                            ${processContentWithIntelligentLinks(blog.content || 'Conteúdo do blog', blog.intelligent_links || {})}
+                        </div>
+                    </div>
+                </article>
+                `).join('')}
+            </div>
+        </aside>
+    </main>
+</body>
+</html>`;
+  }, [productBlogsForHTMLByDomain, consolidatedBlogs]);
 
   const generateConsolidatedHTML = useCallback((blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
@@ -721,6 +997,7 @@ const DashboardContent = () => {
     </script>`;
   }, [productBlogsForHTMLByDomain]);
 
+  // Generate HTML with preview structure for dashboard display
   const eodontoHTML = useMemo(() => 
     generateConsolidatedHTML(blogPosts, 'eodonto'), 
     [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
@@ -731,8 +1008,31 @@ const DashboardContent = () => {
     [blogPosts, generateConsolidatedHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
   );
 
+  // Generate clean HTML for copying (without preview structure)
+  const eodontoCleanHTML = useMemo(() => 
+    generateCleanHTML(blogPosts, 'eodonto'), 
+    [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
+  );
+
+  const dentalaCleanHTML = useMemo(() => 
+    generateCleanHTML(blogPosts, 'dentala'), 
+    [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
+  );
+
+  // Cached clean text extraction for preview
+  const eodontoCleanText = useMemo(() => 
+    extractCleanText(eodontoHTML), 
+    [eodontoHTML, extractCleanText]
+  );
+
+  const dentalaCleanText = useMemo(() => 
+    extractCleanText(dentalaHTML), 
+    [dentalaHTML, extractCleanText]
+  );
+
   const copyConsolidatedHTML = useCallback(async (domain: string) => {
-    const html = domain === 'eodonto' ? eodontoHTML : dentalaHTML;
+    // Use clean HTML for copying (without preview structure)
+    const html = domain === 'eodonto' ? eodontoCleanHTML : dentalaCleanHTML;
     
     try {
       await navigator.clipboard.writeText(html);
@@ -747,7 +1047,7 @@ const DashboardContent = () => {
         variant: "destructive",
       });
     }
-  }, [eodontoHTML, dentalaHTML, toast]);
+  }, [eodontoCleanHTML, dentalaCleanHTML, toast]);
 
   const getApprovedBlogsCount = (domain: string) => {
     // Calculate total blogs including products with individual blogs by domain
@@ -1072,12 +1372,9 @@ const DashboardContent = () => {
                     {eodontoHTML && eodontoHTML.length > 0 ? (
                       <>
                         <div className="text-xs leading-relaxed">
-                          {(() => {
-                            const cleanText = extractCleanText(eodontoHTML);
-                            return cleanText.length > 200 ? cleanText.substring(0, 200) + '...' : cleanText;
-                          })()}
+                          {eodontoCleanText.length > 200 ? eodontoCleanText.substring(0, 200) + '...' : eodontoCleanText}
                         </div>
-                        {extractCleanText(eodontoHTML).length > 200 && (
+                        {eodontoCleanText.length > 200 && (
                           <>
                             <div className="full-content text-xs leading-relaxed">
                               <div 
@@ -1156,12 +1453,9 @@ const DashboardContent = () => {
                     {dentalaHTML && dentalaHTML.length > 0 ? (
                       <>
                         <div className="text-xs leading-relaxed">
-                          {(() => {
-                            const cleanText = extractCleanText(dentalaHTML);
-                            return cleanText.length > 200 ? cleanText.substring(0, 200) + '...' : cleanText;
-                          })()}
+                          {dentalaCleanText.length > 200 ? dentalaCleanText.substring(0, 200) + '...' : dentalaCleanText}
                         </div>
-                        {extractCleanText(dentalaHTML).length > 200 && (
+                        {dentalaCleanText.length > 200 && (
                           <>
                             <div className="full-content text-xs leading-relaxed">
                               <div 
