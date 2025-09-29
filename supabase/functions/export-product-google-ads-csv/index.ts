@@ -2,6 +2,169 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 
+// Import SitelinksCollector functionality (copied to avoid module import issues)
+class SitelinksCollector {
+  static async collectFromCompanyProfile(): Promise<any[]> {
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+
+      const { data, error } = await supabase
+        .from('company_profile')
+        .select('institutional_links, website_url, social_media_links, youtube_channel, instagram_profile')
+        .maybeSingle();
+
+      if (error || !data) {
+        return [];
+      }
+
+      const sitelinks: any[] = [];
+
+      // Add institutional links
+      if (data.institutional_links && Array.isArray(data.institutional_links)) {
+        data.institutional_links.forEach((link: any) => {
+          if (link.label && link.url) {
+            sitelinks.push({
+              label: this.formatSitelinkLabel(link.label),
+              url: this.ensureHttps(link.url)
+            });
+          }
+        });
+      }
+
+      // Add main website
+      if (data.website_url) {
+        sitelinks.push({
+          label: 'Website',
+          url: this.ensureHttps(data.website_url)
+        });
+      }
+
+      // Add social media links
+      if (data.social_media_links && Array.isArray(data.social_media_links)) {
+        data.social_media_links.forEach((social: any) => {
+          if (social.platform && social.url) {
+            sitelinks.push({
+              label: this.formatSitelinkLabel(social.platform),
+              url: this.ensureHttps(social.url)
+            });
+          }
+        });
+      }
+
+      // Add YouTube channel
+      if (data.youtube_channel) {
+        sitelinks.push({
+          label: 'YouTube',
+          url: this.ensureHttps(data.youtube_channel)
+        });
+      }
+
+      // Add Instagram profile
+      if (data.instagram_profile) {
+        sitelinks.push({
+          label: 'Instagram',
+          url: this.ensureHttps(data.instagram_profile)
+        });
+      }
+
+      return sitelinks.filter(sitelink => this.isValidSitelink(sitelink)).slice(0, 6);
+    } catch (error) {
+      console.error('Error collecting company sitelinks:', error);
+      return [];
+    }
+  }
+
+  static collectBrandPolicies(baseUrl: string, landingPageUrl?: string): any[] {
+    const extractedBaseUrl = this.extractBaseUrl(baseUrl);
+    const normalizedLandingUrl = landingPageUrl ? this.normalizeBaseUrl(landingPageUrl) : null;
+    
+    const brandSitelinks = [
+      { 
+        label: 'Sobre Nós', 
+        path: '/sobre',
+        useCampaignPath: true
+      },
+      { 
+        label: 'Contato', 
+        path: '/contato',
+        useCampaignPath: false
+      },
+      { 
+        label: 'Política de Privacidade', 
+        path: '/privacidade',
+        useCampaignPath: false
+      },
+      { 
+        label: 'Termos de Uso', 
+        path: '/termos',
+        useCampaignPath: false
+      }
+    ];
+    
+    return brandSitelinks.map(({ label, path, useCampaignPath }) => {
+      const baseUrlToUse = useCampaignPath && normalizedLandingUrl ? normalizedLandingUrl : extractedBaseUrl;
+      return {
+        label,
+        url: `${baseUrlToUse}${path}`
+      };
+    });
+  }
+
+  private static extractBaseUrl(url: string): string {
+    try {
+      const urlObj = new URL(this.ensureHttps(url));
+      return `${urlObj.protocol}//${urlObj.hostname}`;
+    } catch {
+      return this.normalizeBaseUrl(url).split('/').slice(0, 3).join('/');
+    }
+  }
+
+  private static formatSitelinkLabel(label: string): string {
+    let formatted = label
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase())
+      .trim();
+    
+    if (formatted.length > 25) {
+      formatted = formatted.substring(0, 22) + '...';
+    }
+    
+    return formatted;
+  }
+  
+  private static ensureHttps(url: string): string {
+    if (!url.startsWith('http')) {
+      return `https://${url}`;
+    }
+    
+    if (url.startsWith('http://')) {
+      return url.replace('http://', 'https://');
+    }
+    
+    return url;
+  }
+  
+  private static normalizeBaseUrl(url: string): string {
+    const httpsUrl = this.ensureHttps(url);
+    return httpsUrl.endsWith('/') ? httpsUrl.slice(0, -1) : httpsUrl;
+  }
+  
+  private static isValidSitelink(sitelink: any): boolean {
+    try {
+      new URL(sitelink.url);
+    } catch {
+      return false;
+    }
+    
+    return sitelink.label.length > 0 && 
+           sitelink.label.length <= 30 && 
+           sitelink.url.startsWith('https://');
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -46,7 +209,7 @@ serve(async (req) => {
     const keywords = collectProductKeywords(product, productData);
     
     // Collect sitelinks specific to product
-    const sitelinks = collectProductSitelinks(product, config);
+    const sitelinks = await collectProductSitelinks(product, config);
     
     // Collect videos specific to product
     const videos = collectProductVideos(product);
@@ -134,8 +297,10 @@ function collectProductKeywords(product: any, productData: any): string[] {
   return Array.from(keywords).filter(k => k && k.length > 2);
 }
 
-function collectProductSitelinks(product: any, config: any) {
+async function collectProductSitelinks(product: any, config: any) {
   const sitelinks = [];
+  
+  console.log('🔗 Coletando sitelinks para produto:', product.name);
   
   // Product URL as primary sitelink
   if (product.product_url) {
@@ -145,12 +310,13 @@ function collectProductSitelinks(product: any, config: any) {
     });
   }
   
-  // Category sitelinks
-  if (product.category) {
-    sitelinks.push({
-      label: `Todos ${product.category}`,
-      url: `https://example.com/categoria/${product.category.toLowerCase()}`
-    });
+  // Collect real company sitelinks
+  try {
+    const companySitelinks = await SitelinksCollector.collectFromCompanyProfile();
+    console.log('✅ Company sitelinks coletados:', companySitelinks.length);
+    sitelinks.push(...companySitelinks);
+  } catch (error) {
+    console.error('❌ Erro ao coletar company sitelinks:', error);
   }
   
   // Custom institutional links from config
@@ -158,15 +324,37 @@ function collectProductSitelinks(product: any, config: any) {
     sitelinks.push(...config.custom_institutional_links);
   }
   
-  // Brand policy links if enabled
+  // Brand policy links if enabled - use real base URL
   if (config.include_brand_policies) {
-    sitelinks.push(
-      { label: 'Sobre Nós', url: 'https://example.com/sobre' },
-      { label: 'Contato', url: 'https://example.com/contato' },
-      { label: 'Garantia', url: 'https://example.com/garantia' }
-    );
+    try {
+      // Get base URL from company profile or use product URL as fallback
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      const { data: companyData } = await supabase
+        .from('company_profile')
+        .select('website_url')
+        .maybeSingle();
+      
+      const baseUrl = companyData?.website_url || product.product_url || 'https://example.com';
+      console.log('🌐 Base URL para brand policies:', baseUrl);
+      
+      const brandSitelinks = SitelinksCollector.collectBrandPolicies(baseUrl);
+      sitelinks.push(...brandSitelinks);
+    } catch (error) {
+      console.error('❌ Erro ao coletar brand policies:', error);
+      // Fallback para URLs genéricas apenas em caso de erro
+      sitelinks.push(
+        { label: 'Sobre Nós', url: 'https://example.com/sobre' },
+        { label: 'Contato', url: 'https://example.com/contato' },
+        { label: 'Garantia', url: 'https://example.com/garantia' }
+      );
+    }
   }
   
+  console.log('📊 Total sitelinks coletados:', sitelinks.length);
   return sitelinks.slice(0, 6); // Google Ads limit
 }
 

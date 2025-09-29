@@ -372,7 +372,7 @@ export const LinksManager = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {allLinks.map(link => (
-                          <SelectItem key={link.id} value={link.url}>
+                          <SelectItem key={`add-${link.id}`} value={link.url}>
                             {link.name} ({link.type === 'internal' ? 'Interno' : 'Externo'})
                           </SelectItem>
                         ))}
@@ -668,7 +668,7 @@ export const LinksManager = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {allLinks.map(link => (
-                      <SelectItem key={link.id} value={link.url}>
+                      <SelectItem key={`edit-${link.id}`} value={link.url}>
                         {link.name} ({link.type === 'internal' ? 'Interno' : 'Externo'})
                       </SelectItem>
                     ))}
