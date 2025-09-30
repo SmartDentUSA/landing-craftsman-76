@@ -95,6 +95,15 @@ const FIELD_FRIENDLY_NAMES = {
   "seo_description_override": "Descrição SEO Personalizada",
   "canonical_url": "URL Canônica",
   
+  // === ESPECIFICAÇÕES FÍSICAS ===
+  "variations": "Variações do Produto",
+  "package_size": "Tamanho da Embalagem",
+  "weight": "Peso (kg)",
+  "height": "Altura (cm)",
+  "width": "Largura (cm)",
+  "depth": "Profundidade (cm)",
+  "store_category": "Categoria da Loja",
+  
   // === CATEGORIZAÇÃO AVANÇADA ===
   "market_keywords": "Palavras-chave de Mercado",
   "search_intent_keywords": "Palavras-chave de Intenção",
@@ -260,7 +269,7 @@ const DATA_SOURCES = {
       // URLs e dados comerciais ✅ UTILIZADOS
       "product_url", "image_url",
       
-      // Especificações técnicas ✅ RECÉM INTEGRADA
+      // Especificações técnicas ✅ UTILIZADOS
       "technical_specifications",
       
       // Vídeos e conteúdo multimídia ✅ UTILIZADOS
@@ -272,18 +281,26 @@ const DATA_SOURCES = {
       // Interação e bot ✅ UTILIZADOS
       "bot_trigger_words",
       
-      // Legendas de vídeo ❌ NÃO UTILIZADO
-      "video_captions",
+      // ===== 📦 ESPECIFICAÇÕES FÍSICAS ✅ UTILIZADOS =====
+      "variations", "package_size", "weight", "height", "width", "depth",
       
-      // Dados comerciais avançados ❌ NÃO UTILIZADO
+      // ===== 🏷️ IDENTIFICAÇÃO COMERCIAL ✅ UTILIZADOS =====
+      "brand", "gtin", "mpn", "store_category",
+      
+      // ===== 🎨 VARIAÇÕES E OPÇÕES ✅ UTILIZADOS =====
+      "color", "size", "material",
+      
+      // ===== 🔍 SEO AVANÇADO ✅ UTILIZADOS =====
+      "market_keywords", "search_intent_keywords", "seo_title_override", "seo_description_override", "canonical_url",
+      
+      // ===== 💰 RECURSOS COMERCIAIS ✅ UTILIZADOS =====
       "resource_descriptions", "resource_cta1", "resource_cta2", "resource_cta3", "offer_discount_cta",
       
-      // Google Merchant e SEO ❌ NÃO UTILIZADO
-      "brand", "google_product_category", "condition", "availability", "color", "size", "material", "age_group", "gender",
-      "gtin", "mpn", "seo_title_override", "seo_description_override", "canonical_url",
+      // ===== 🎥 LEGENDAS DE VÍDEO ✅ UTILIZADOS =====
+      "video_captions",
       
-      // Categorização avançada ❌ NÃO UTILIZADO
-      "market_keywords", "search_intent_keywords",
+      // Google Merchant dados adicionais ✅ UTILIZADOS
+      "google_product_category", "condition", "availability", "age_group", "gender",
       
       // Outros campos ❌ NÃO UTILIZADO
       "tags", "source_type", "source_landing_page_id", "approved", "display_order", "use_in_ai_generation",
