@@ -28,7 +28,7 @@ interface ProductData {
   material?: string;
   age_group?: string;
   gender?: string;
-  variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
+  variations?: { name: string; price?: number; promo_price?: number; sku?: string; stock?: number; color?: string; size?: string }[];
   package_size?: string;
   weight?: number;
   height?: number;
@@ -40,26 +40,35 @@ interface ProductData {
 function parsePriceBRL(priceStr: string | number): number {
   if (!priceStr) return 0;
   
-  // Se for número, verifica se está em centavos (valores grandes)
+  // Se for número
   if (typeof priceStr === 'number') {
-    // Se maior que 1000, assume que está em centavos
-    return priceStr > 1000 ? priceStr / 100 : priceStr;
+    // Se >= 10000, assume centavos (ex: 185900 → 1859)
+    return priceStr >= 10000 ? priceStr / 100 : priceStr;
   }
   
   let cleaned = priceStr.trim().replace(/<[^>]*>/g, '');
   cleaned = cleaned.replace(/R\$|BRL/gi, '').trim();
   
-  if (cleaned.includes('.') && cleaned.includes(',')) {
+  // Formato brasileiro: 1.869,00 ou 1869,00 → 1869
+  if (cleaned.includes(',')) {
+    // Remove pontos de milhar e troca vírgula por ponto
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-  } else if (cleaned.includes(',')) {
-    cleaned = cleaned.replace(',', '.');
+  }
+  // Formato com apenas ponto: pode ser milhar (1.869) ou decimal (18.69)
+  else if (cleaned.includes('.')) {
+    // Se tem mais de um ponto, remove todos exceto o último
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+    }
+    // Se ponto está a 3 dígitos do fim (ex: 1.869), é separador de milhar
+    else if (parts[1]?.length === 3) {
+      cleaned = cleaned.replace('.', '');
+    }
   }
   
   const parsed = parseFloat(cleaned);
-  const value = isNaN(parsed) ? 0 : parsed;
-  
-  // Se valor muito grande, assume centavos
-  return value > 1000 ? value / 100 : value;
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 function isInvalidDescription(desc: string, productName: string): boolean {
@@ -141,31 +150,96 @@ function extractPhysicalSpecs(doc: Document | null, jsonLdData?: any) {
     return placeholderPatterns.some(pattern => pattern.test(lower));
   };
   
-  const weightPatterns = [
-    /(?:peso|weight)[\s:]*([0-9.,]+)\s*(?:kg|g|gramas?)/i,
-    /<td[^>]*>[^<]*(?:peso|weight)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)\s*(?:kg|g)/i
-  ];
+  // Buscar em tabelas estruturadas
+  const tables = doc.querySelectorAll('table');
+  tables.forEach(table => {
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('th, td');
+      if (cells.length >= 2) {
+        const label = cells[0].textContent?.trim().toLowerCase() || '';
+        const value = cells[1].textContent?.trim() || '';
+        
+        if (value && !isPlaceholderData(value)) {
+          // Peso (kg)
+          if (label.includes('peso') && !specs.weight) {
+            const match = value.match(/([0-9.,]+)\s*(?:kg|g|gramas?)?/i);
+            if (match) {
+              const weightValue = parseFloat(match[1].replace(',', '.'));
+              if (!isNaN(weightValue) && weightValue > 0) {
+                specs.weight = value.toLowerCase().includes('g') && !value.toLowerCase().includes('kg')
+                  ? weightValue / 1000
+                  : weightValue;
+              }
+            }
+          }
+          // Altura (cm)
+          if (label.includes('altura') && !specs.height) {
+            const match = value.match(/([0-9.,]+)\s*(?:cm|mm)?/i);
+            if (match) {
+              const heightValue = parseFloat(match[1].replace(',', '.'));
+              if (!isNaN(heightValue) && heightValue > 0) {
+                specs.height = value.toLowerCase().includes('mm') ? heightValue / 10 : heightValue;
+              }
+            }
+          }
+          // Largura (cm)
+          if (label.includes('largura') && !specs.width) {
+            const match = value.match(/([0-9.,]+)\s*(?:cm|mm)?/i);
+            if (match) {
+              const widthValue = parseFloat(match[1].replace(',', '.'));
+              if (!isNaN(widthValue) && widthValue > 0) {
+                specs.width = value.toLowerCase().includes('mm') ? widthValue / 10 : widthValue;
+              }
+            }
+          }
+          // Profundidade (cm)
+          if ((label.includes('profundidade') || label.includes('comprimento')) && !specs.depth) {
+            const match = value.match(/([0-9.,]+)\s*(?:cm|mm)?/i);
+            if (match) {
+              const depthValue = parseFloat(match[1].replace(',', '.'));
+              if (!isNaN(depthValue) && depthValue > 0) {
+                specs.depth = value.toLowerCase().includes('mm') ? depthValue / 10 : depthValue;
+              }
+            }
+          }
+          // Tamanho da Embalagem
+          if (label.includes('embalagem') || label.includes('dimensões') || label.includes('dimensoes')) {
+            specs.package_size = value;
+          }
+        }
+      }
+    });
+  });
   
-  for (const pattern of weightPatterns) {
-    const match = html.match(pattern);
-    if (match && match[1] && !isPlaceholderData(match[1])) {
-      const weightValue = parseFloat(match[1].replace(',', '.'));
-      if (!isNaN(weightValue) && weightValue > 0) {
-        specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
-          ? weightValue / 1000
-          : weightValue;
-        break;
+  // Fallback: buscar no HTML bruto se não encontrou nas tabelas
+  if (!specs.weight) {
+    const weightPatterns = [
+      /peso[\s:]*([0-9.,]+)\s*(?:kg|g|gramas?)/i,
+      /<dt[^>]*>[^<]*peso[^<]*<\/dt>[\s\S]*?<dd[^>]*>([0-9.,]+)\s*(?:kg|g)/i
+    ];
+    for (const pattern of weightPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && !isPlaceholderData(match[1])) {
+        const weightValue = parseFloat(match[1].replace(',', '.'));
+        if (!isNaN(weightValue) && weightValue > 0) {
+          specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
+            ? weightValue / 1000
+            : weightValue;
+          break;
+        }
       }
     }
   }
   
   const dimensionPatterns = {
-    height: [/(?:altura|height)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
-    width: [/(?:largura|width)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
-    depth: [/(?:profundidade|depth|comprimento|length)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i]
+    height: [/altura[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
+    width: [/largura[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
+    depth: [/(?:profundidade|comprimento)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i]
   };
   
   for (const [key, patterns] of Object.entries(dimensionPatterns)) {
+    if (specs[key]) continue; // Já encontrou na tabela
     for (const pattern of patterns) {
       const match = html.match(pattern);
       if (match && match[1] && !isPlaceholderData(match[1])) {
@@ -178,12 +252,15 @@ function extractPhysicalSpecs(doc: Document | null, jsonLdData?: any) {
     }
   }
   
+  console.info('📏 Specs físicas extraídas:', specs);
   return specs;
 }
 
 function extractVariations(jsonLdData?: any, doc?: Document): Array<{
   name: string;
   price?: number;
+  promo_price?: number;
+  sku?: string;
   stock?: number;
   color?: string;
   size?: string;
@@ -192,6 +269,8 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
   const variations: Array<{
     name: string;
     price?: number;
+    promo_price?: number;
+    sku?: string;
     stock?: number;
     color?: string;
     size?: string;
@@ -205,6 +284,7 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
         variations.push({
           name: offer.itemOffered?.name || offer.name,
           price: offer.price ? parsePriceBRL(offer.price) : undefined,
+          sku: offer.sku || offer.itemOffered?.sku,
           stock: offer.availability === 'https://schema.org/InStock' ? 999 : 0
         });
       }
@@ -216,15 +296,61 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
     return variations.length > 0 ? variations : undefined;
   }
 
-  // 2. Selects e Radios
+  // 2. Buscar JSON embutido em scripts (PRIORIDADE)
+  const scripts = doc.querySelectorAll('script:not([src])');
+  scripts.forEach(script => {
+    const content = script.textContent || '';
+    
+    // Procurar por objetos/arrays com variações
+    const patterns = [
+      /"variacoes"\s*:\s*\[([^\]]+)\]/gi,
+      /"variations"\s*:\s*\[([^\]]+)\]/gi,
+      /"opcoes"\s*:\s*\[([^\]]+)\]/gi,
+      /"options"\s*:\s*\[([^\]]+)\]/gi,
+      /"attributes"\s*:\s*\[([^\]]+)\]/gi
+    ];
+
+    patterns.forEach(pattern => {
+      const matches = content.matchAll(pattern);
+      for (const match of matches) {
+        try {
+          const jsonStr = `[${match[1]}]`;
+          const parsed = JSON.parse(jsonStr);
+          parsed.forEach((item: any) => {
+            if (item.nome || item.name || item.titulo || item.title) {
+              variations.push({
+                name: item.nome || item.name || item.titulo || item.title,
+                price: item.preco || item.price ? parsePriceBRL(item.preco || item.price) : undefined,
+                promo_price: item.preco_promocional || item.promo_price ? parsePriceBRL(item.preco_promocional || item.promo_price) : undefined,
+                sku: item.sku || item.codigo,
+                color: item.cor || item.color,
+                size: item.tamanho || item.size
+              });
+            }
+          });
+        } catch (e) {
+          // Ignora erros de parse
+        }
+      }
+    });
+  });
+
+  // 3. Selects e Radios
   const selectElements = doc.querySelectorAll('select[name*="variacao"], select[name*="opcao"], select.product-variant');
   selectElements.forEach(select => {
     const options = select.querySelectorAll('option');
     options.forEach(option => {
       const value = option.getAttribute('value');
       const text = option.textContent?.trim();
+      const dataPrice = option.getAttribute('data-price') || option.getAttribute('data-preco');
+      const dataSku = option.getAttribute('data-sku') || option.getAttribute('data-codigo');
+      
       if (value && text && value !== '' && text !== 'Selecione') {
-        variations.push({ name: text });
+        variations.push({ 
+          name: text,
+          price: dataPrice ? parsePriceBRL(dataPrice) : undefined,
+          sku: dataSku || undefined
+        });
       }
     });
   });
@@ -232,12 +358,19 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
   const radioElements = doc.querySelectorAll('input[type="radio"][name*="variacao"], input[type="radio"][name*="opcao"]');
   radioElements.forEach(radio => {
     const label = doc.querySelector(`label[for="${radio.id}"]`)?.textContent?.trim();
+    const dataPrice = radio.getAttribute('data-price') || radio.getAttribute('data-preco');
+    const dataSku = radio.getAttribute('data-sku') || radio.getAttribute('data-codigo');
+    
     if (label) {
-      variations.push({ name: label });
+      variations.push({ 
+        name: label,
+        price: dataPrice ? parsePriceBRL(dataPrice) : undefined,
+        sku: dataSku || undefined
+      });
     }
   });
 
-  // 3. Data attributes (Loja Integrada e similares)
+  // 4. Data attributes (Loja Integrada e similares)
   const dataSelectors = [
     '[data-value]',
     '[data-option]',
@@ -257,17 +390,23 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
                    el.getAttribute('data-nome') ||
                    el.getAttribute('data-valor');
       const text = el.textContent?.trim();
+      const dataPrice = el.getAttribute('data-price') || el.getAttribute('data-preco');
+      const dataSku = el.getAttribute('data-sku') || el.getAttribute('data-codigo');
       
       if ((value && value !== '') || (text && text.length > 0)) {
         const name = text || value || '';
         if (name.length > 0 && !name.includes('{{') && !name.includes('<%')) {
-          variations.push({ name });
+          variations.push({ 
+            name,
+            price: dataPrice ? parsePriceBRL(dataPrice) : undefined,
+            sku: dataSku || undefined
+          });
         }
       }
     });
   });
 
-  // 4. CSS classes comuns
+  // 5. CSS classes comuns
   const cssSelectors = [
     '.variacoes__lista li',
     '.variacao-item',
@@ -281,46 +420,15 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
     const elements = doc.querySelectorAll(selector);
     elements.forEach(el => {
       const text = el.textContent?.trim();
+      const dataPrice = el.getAttribute('data-price') || el.getAttribute('data-preco');
+      const dataSku = el.getAttribute('data-sku') || el.getAttribute('data-codigo');
+      
       if (text && text.length > 0 && !text.includes('{{') && !text.includes('<%')) {
-        variations.push({ name: text });
-      }
-    });
-  });
-
-  // 5. Buscar JSON embutido em scripts
-  const scripts = doc.querySelectorAll('script:not([src])');
-  scripts.forEach(script => {
-    const content = script.textContent || '';
-    
-    // Procurar por objetos/arrays com variações
-    const patterns = [
-      /"variacoes"\s*:\s*\[([^\]]+)\]/gi,
-      /"variations"\s*:\s*\[([^\]]+)\]/gi,
-      /"opcoes"\s*:\s*\[([^\]]+)\]/gi,
-      /"options"\s*:\s*\[([^\]]+)\]/gi,
-      /"attributes"\s*:\s*\[([^\]]+)\]/gi
-    ];
-
-    patterns.forEach(pattern => {
-      const matches = content.matchAll(pattern);
-      for (const match of matches) {
-        try {
-          // Tenta extrair objetos JSON válidos
-          const jsonStr = `[${match[1]}]`;
-          const parsed = JSON.parse(jsonStr);
-          parsed.forEach((item: any) => {
-            if (item.nome || item.name || item.titulo || item.title) {
-              variations.push({
-                name: item.nome || item.name || item.titulo || item.title,
-                price: item.preco || item.price ? parsePriceBRL(item.preco || item.price) : undefined,
-                color: item.cor || item.color,
-                size: item.tamanho || item.size
-              });
-            }
-          });
-        } catch (e) {
-          // Ignora erros de parse
-        }
+        variations.push({ 
+          name: text,
+          price: dataPrice ? parsePriceBRL(dataPrice) : undefined,
+          sku: dataSku || undefined
+        });
       }
     });
   });
@@ -352,7 +460,6 @@ function extractImagesGallery(
   // Helper para normalizar URLs
   const normalizeUrl = (url: string): string => {
     if (!url) return '';
-    // Remove query params de tamanho se houver versão maior disponível
     const cleaned = url.split('?')[0];
     return cleaned.replace(/\/(thumbnail|small|medium)\//, '/large/')
                  .replace(/_thumbnail|_small|_medium/, '_large');
@@ -362,8 +469,31 @@ function extractImagesGallery(
   const extractLargestFromSrcset = (srcset: string): string | null => {
     if (!srcset) return null;
     const urls = srcset.split(',').map(s => s.trim().split(' ')[0]);
-    // Retorna a última (geralmente a maior)
     return urls[urls.length - 1] || null;
+  };
+
+  // Helper para verificar se elemento está em container de produtos relacionados
+  const isInRelatedProducts = (element: Element): boolean => {
+    let parent = element.parentElement;
+    while (parent) {
+      const classList = parent.className?.toLowerCase() || '';
+      const id = parent.id?.toLowerCase() || '';
+      
+      if (
+        classList.includes('relacionados') ||
+        classList.includes('related-products') ||
+        classList.includes('produtos-relacionados') ||
+        classList.includes('compre-junto') ||
+        classList.includes('recomendados') ||
+        classList.includes('recommendations') ||
+        id.includes('relacionados') ||
+        id.includes('related')
+      ) {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+    return false;
   };
 
   // 1. Imagem principal do JSON-LD
@@ -414,8 +544,25 @@ function extractImagesGallery(
     }
   }
 
-  // 4. Galeria do DOM
+  // 4. Galeria do DOM (SOMENTE do container principal do produto)
   if (doc) {
+    // Primeiro, tentar encontrar o container principal do produto
+    const productContainerSelectors = [
+      '#produto',
+      '.produto',
+      '.product',
+      '.product-page',
+      '.product-main',
+      '[data-product-id]',
+      'main'
+    ];
+    
+    let productContainer: Element | null = null;
+    for (const selector of productContainerSelectors) {
+      productContainer = doc.querySelector(selector);
+      if (productContainer) break;
+    }
+    
     const gallerySelectors = [
       '.product-images img',
       '.produto-imagens img',
@@ -426,12 +573,19 @@ function extractImagesGallery(
       '[data-large_image]',
       '[data-zoom-image]',
       'picture source',
-      '.thumbs img'
+      '.thumbs img',
+      '.product-image img'
     ];
 
     gallerySelectors.forEach(selector => {
-      const elements = doc.querySelectorAll(selector);
+      const container = productContainer || doc;
+      const elements = container.querySelectorAll(selector);
       elements.forEach((img) => {
+        // SKIP se estiver em produtos relacionados
+        if (isInRelatedProducts(img)) {
+          return;
+        }
+        
         // Tentar pegar a maior versão disponível
         let url = img.getAttribute('data-large_image') ||
                  img.getAttribute('data-zoom-image') ||
@@ -637,6 +791,36 @@ serve(async (req) => {
         if (value && /^\d{13}$/.test(value)) {
           productData.ean = value;
           productData.gtin = value;
+        }
+      }
+    }
+
+    // Extrair categoria da loja (breadcrumb)
+    if (doc && !productData.store_category) {
+      const breadcrumbSelectors = [
+        '.breadcrumb a',
+        '[typeof="BreadcrumbList"] a',
+        '.breadcrumbs a',
+        'nav[aria-label="breadcrumb"] a',
+        '[itemtype*="BreadcrumbList"] a'
+      ];
+      
+      for (const selector of breadcrumbSelectors) {
+        const breadcrumbLinks = doc.querySelectorAll(selector);
+        if (breadcrumbLinks.length > 0) {
+          const categories: string[] = [];
+          breadcrumbLinks.forEach((link, index) => {
+            const text = link.textContent?.trim();
+            // Skip "Home" e última categoria (que geralmente é o produto)
+            if (text && text.toLowerCase() !== 'home' && text.toLowerCase() !== 'início' && index < breadcrumbLinks.length - 1) {
+              categories.push(text);
+            }
+          });
+          if (categories.length > 0) {
+            productData.store_category = categories.join(' > ');
+            console.info(`✅ Categoria da loja extraída: ${productData.store_category}`);
+            break;
+          }
         }
       }
     }

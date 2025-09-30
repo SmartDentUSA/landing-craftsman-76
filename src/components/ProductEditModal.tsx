@@ -875,6 +875,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         bot_trigger_words: finalBotWords,
         // Google Merchant Center fields
         gtin: formData.gtin,
+        ean: formData.ean,
         mpn: formData.mpn,
         brand: formData.brand,
         color: formData.color,
