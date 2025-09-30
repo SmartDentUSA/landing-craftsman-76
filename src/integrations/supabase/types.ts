@@ -586,6 +586,7 @@ export type Database = {
           condition: string | null
           created_at: string
           currency: string | null
+          depth: number | null
           description: string | null
           display_order: number | null
           faq: Json | null
@@ -593,6 +594,7 @@ export type Database = {
           gender: string | null
           google_product_category: string | null
           gtin: string | null
+          height: number | null
           id: string
           image_url: string | null
           individual_blog_content: Json | null
@@ -605,6 +607,7 @@ export type Database = {
           name: string
           offer_discount_cta: Json | null
           original_data: Json | null
+          package_size: string | null
           price: number | null
           product_url: string | null
           resource_cta1: Json | null
@@ -621,6 +624,7 @@ export type Database = {
           size: string | null
           source_landing_page_id: string | null
           source_type: string
+          store_category: string | null
           subcategory: string | null
           tags: Json | null
           target_audience: Json | null
@@ -631,8 +635,11 @@ export type Database = {
           tiktok_videos: Json | null
           updated_at: string
           use_in_ai_generation: boolean | null
+          variations: Json | null
           video_captions: Json | null
+          weight: number | null
           whatsapp_messages: Json | null
+          width: number | null
           youtube_descriptions: Json | null
           youtube_videos: Json | null
         }
@@ -652,6 +659,7 @@ export type Database = {
           condition?: string | null
           created_at?: string
           currency?: string | null
+          depth?: number | null
           description?: string | null
           display_order?: number | null
           faq?: Json | null
@@ -659,6 +667,7 @@ export type Database = {
           gender?: string | null
           google_product_category?: string | null
           gtin?: string | null
+          height?: number | null
           id?: string
           image_url?: string | null
           individual_blog_content?: Json | null
@@ -671,6 +680,7 @@ export type Database = {
           name: string
           offer_discount_cta?: Json | null
           original_data?: Json | null
+          package_size?: string | null
           price?: number | null
           product_url?: string | null
           resource_cta1?: Json | null
@@ -687,6 +697,7 @@ export type Database = {
           size?: string | null
           source_landing_page_id?: string | null
           source_type: string
+          store_category?: string | null
           subcategory?: string | null
           tags?: Json | null
           target_audience?: Json | null
@@ -697,8 +708,11 @@ export type Database = {
           tiktok_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
+          variations?: Json | null
           video_captions?: Json | null
+          weight?: number | null
           whatsapp_messages?: Json | null
+          width?: number | null
           youtube_descriptions?: Json | null
           youtube_videos?: Json | null
         }
@@ -718,6 +732,7 @@ export type Database = {
           condition?: string | null
           created_at?: string
           currency?: string | null
+          depth?: number | null
           description?: string | null
           display_order?: number | null
           faq?: Json | null
@@ -725,6 +740,7 @@ export type Database = {
           gender?: string | null
           google_product_category?: string | null
           gtin?: string | null
+          height?: number | null
           id?: string
           image_url?: string | null
           individual_blog_content?: Json | null
@@ -737,6 +753,7 @@ export type Database = {
           name?: string
           offer_discount_cta?: Json | null
           original_data?: Json | null
+          package_size?: string | null
           price?: number | null
           product_url?: string | null
           resource_cta1?: Json | null
@@ -753,6 +770,7 @@ export type Database = {
           size?: string | null
           source_landing_page_id?: string | null
           source_type?: string
+          store_category?: string | null
           subcategory?: string | null
           tags?: Json | null
           target_audience?: Json | null
@@ -763,8 +781,11 @@ export type Database = {
           tiktok_videos?: Json | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
+          variations?: Json | null
           video_captions?: Json | null
+          weight?: number | null
           whatsapp_messages?: Json | null
+          width?: number | null
           youtube_descriptions?: Json | null
           youtube_videos?: Json | null
         }

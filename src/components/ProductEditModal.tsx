@@ -67,6 +67,14 @@ interface Product {
   google_product_category?: string;
   condition?: string;
   availability?: string;
+  // Physical specifications
+  variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
+  package_size?: string;
+  weight?: number;
+  height?: number;
+  width?: number;
+  depth?: number;
+  store_category?: string;
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;
@@ -151,6 +159,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
   const [importing, setImporting] = useState(false);
+  
+  // Physical specifications state
+  const [variations, setVariations] = useState<{ name: string; price?: number; stock?: number; color?: string; size?: string }[]>([]);
+  const [packageSize, setPackageSize] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [width, setWidth] = useState('');
+  const [depth, setDepth] = useState('');
+  const [storeCategory, setStoreCategory] = useState('');
   
   const botTagRef = useRef<TagInputHandle>(null);
   
@@ -259,6 +276,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTechnicalVideos(product.technical_videos || []);
       setTiktokVideos(product.tiktok_videos || []);
       setVideoCaptions(product.video_captions || {});
+      
+      // Physical specifications
+      setVariations(product.variations || []);
+      setPackageSize(product.package_size || '');
+      setWeight(product.weight?.toString() || '');
+      setHeight(product.height?.toString() || '');
+      setWidth(product.width?.toString() || '');
+      setDepth(product.depth?.toString() || '');
+      setStoreCategory(product.store_category || '');
     } else {
       setFormData({
         name: '',
@@ -306,6 +332,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTestimonialVideos([]);
       setTechnicalVideos([]);
       setVideoCaptions({});
+      
+      // Reset physical specifications
+      setVariations([]);
+      setPackageSize('');
+      setWeight('');
+      setHeight('');
+      setWidth('');
+      setDepth('');
+      setStoreCategory('');
     }
   }, [product]);
 
@@ -649,6 +684,36 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           fieldsImported.push('Material');
         }
         
+        // Physical specifications
+        if (extractedData.variations && Array.isArray(extractedData.variations)) {
+          setVariations(extractedData.variations);
+          fieldsImported.push('Variações');
+        }
+        if (extractedData.package_size) {
+          setPackageSize(extractedData.package_size);
+          fieldsImported.push('Tamanho da Embalagem');
+        }
+        if (extractedData.weight) {
+          setWeight(extractedData.weight.toString());
+          fieldsImported.push('Peso');
+        }
+        if (extractedData.height) {
+          setHeight(extractedData.height.toString());
+          fieldsImported.push('Altura');
+        }
+        if (extractedData.width) {
+          setWidth(extractedData.width.toString());
+          fieldsImported.push('Largura');
+        }
+        if (extractedData.depth) {
+          setDepth(extractedData.depth.toString());
+          fieldsImported.push('Profundidade');
+        }
+        if (extractedData.store_category) {
+          setStoreCategory(extractedData.store_category);
+          fieldsImported.push('Categoria da Loja');
+        }
+        
         if (extractedData.google_product_category) {
           updates.google_product_category = extractedData.google_product_category;
           fieldsImported.push('Categoria Google');
@@ -754,6 +819,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         google_product_category: formData.google_product_category,
         condition: formData.condition || 'new',
         availability: formData.availability || 'in stock',
+        // Physical specifications
+        variations: variations.length > 0 ? variations : [],
+        package_size: packageSize || null,
+        weight: weight ? parseFloat(weight) : null,
+        height: height ? parseFloat(height) : null,
+        width: width ? parseFloat(width) : null,
+        depth: depth ? parseFloat(depth) : null,
+        store_category: storeCategory || null,
         // Landing Page Section controls
         show_in_resources: formData.show_in_resources,
         selected: formData.selected,
@@ -1361,6 +1434,166 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 answer: "Digite a resposta com formatação rica..."
               }}
             />
+          </div>
+
+          {/* Physical Specifications */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold">Especificações Físicas</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight">Peso (kg)</Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  step="0.01"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder="Ex: 2.5"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="package_size">Tamanho da Embalagem</Label>
+                <Input
+                  id="package_size"
+                  value={packageSize}
+                  onChange={(e) => setPackageSize(e.target.value)}
+                  placeholder="Ex: Caixa Média"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="height">Altura (cm)</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  step="0.1"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                  placeholder="Ex: 30"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="width">Largura (cm)</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  step="0.1"
+                  value={width}
+                  onChange={(e) => setWidth(e.target.value)}
+                  placeholder="Ex: 20"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="depth">Profundidade (cm)</Label>
+                <Input
+                  id="depth"
+                  type="number"
+                  step="0.1"
+                  value={depth}
+                  onChange={(e) => setDepth(e.target.value)}
+                  placeholder="Ex: 15"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="store_category">Categoria da Loja</Label>
+              <Input
+                id="store_category"
+                value={storeCategory}
+                onChange={(e) => setStoreCategory(e.target.value)}
+                placeholder="Categoria original da Loja Integrada"
+              />
+            </div>
+
+            {/* Product Variations */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Variações do Produto</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVariations([...variations, { name: '', price: undefined, stock: undefined, color: '', size: '' }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Variação
+                </Button>
+              </div>
+              
+              {variations.length > 0 && (
+                <div className="space-y-2">
+                  {variations.map((variation, index) => (
+                    <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-5 gap-2">
+                        <Input
+                          placeholder="Nome"
+                          value={variation.name}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].name = e.target.value;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Preço"
+                          type="number"
+                          step="0.01"
+                          value={variation.price || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].price = e.target.value ? parseFloat(e.target.value) : undefined;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Estoque"
+                          type="number"
+                          value={variation.stock || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].stock = e.target.value ? parseInt(e.target.value) : undefined;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Cor"
+                          value={variation.color || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].color = e.target.value;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Tamanho"
+                          value={variation.size || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].size = e.target.value;
+                            setVariations(newVariations);
+                          }}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setVariations(variations.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Google Merchant Center Data */}

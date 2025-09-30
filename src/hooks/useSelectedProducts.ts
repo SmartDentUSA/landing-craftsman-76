@@ -24,6 +24,14 @@ interface Product {
   technical_videos?: any[];
   tiktok_videos?: any[];
   offer_discount_cta?: { label: string; url: string; visible: boolean };
+  // Physical specifications
+  variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
+  package_size?: string;
+  weight?: number;
+  height?: number;
+  width?: number;
+  depth?: number;
+  store_category?: string;
   // Blog content gerado por IA
   individual_blog_content?: {
     commercial?: string | null;
