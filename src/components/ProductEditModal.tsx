@@ -741,11 +741,23 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       }
     } catch (error) {
       console.error('Error extracting product data:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao importar dados. Verifique a URL e tente novamente.",
-        variant: "destructive"
-      });
+      
+      // Check for specific error messages
+      const errorMessage = (error as any)?.message || error?.toString() || '';
+      
+      if (errorMessage.includes('404')) {
+        toast({
+          title: "Erro 404 - Página não encontrada",
+          description: "A URL informada não existe. Verifique se a URL está correta e completa, incluindo o protocolo (https://).",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao importar dados. Verifique a URL e tente novamente.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setImporting(false);
     }
