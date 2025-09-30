@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { ProductScoreIndicator } from './ProductScoreIndicator';
 import { CompletionBadges } from './CompletionBadges';
@@ -257,9 +258,26 @@ export function ModernProductCard({
               {product.name}
             </h3>
             {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
-              <Badge variant="secondary" className="text-xs shrink-0">
-                {product.variations.length} variações
-              </Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="text-xs shrink-0 cursor-help">
+                      {product.variations.length} variações
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-xs mb-2">Variações:</p>
+                      {product.variations.slice(0, 6).map((v, i) => (
+                        <p key={i} className="text-xs">• {v.name}</p>
+                      ))}
+                      {product.variations.length > 6 && (
+                        <p className="text-xs text-muted-foreground mt-1">+{product.variations.length - 6} mais</p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate mt-0.5">

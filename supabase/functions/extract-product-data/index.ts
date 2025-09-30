@@ -37,8 +37,14 @@ interface ProductData {
   store_category?: string;
 }
 
-function parsePriceBRL(priceStr: string): number {
-  if (!priceStr || typeof priceStr !== 'string') return 0;
+function parsePriceBRL(priceStr: string | number): number {
+  if (!priceStr) return 0;
+  
+  // Se for número, verifica se está em centavos (valores grandes)
+  if (typeof priceStr === 'number') {
+    // Se maior que 1000, assume que está em centavos
+    return priceStr > 1000 ? priceStr / 100 : priceStr;
+  }
   
   let cleaned = priceStr.trim().replace(/<[^>]*>/g, '');
   cleaned = cleaned.replace(/R\$|BRL/gi, '').trim();
@@ -50,39 +56,438 @@ function parsePriceBRL(priceStr: string): number {
   }
   
   const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
+  const value = isNaN(parsed) ? 0 : parsed;
+  
+  // Se valor muito grande, assume centavos
+  return value > 1000 ? value / 100 : value;
 }
 
 function isInvalidDescription(desc: string, productName: string): boolean {
-  if (!desc || desc.trim().length < 20) return true;
-  const normalized = desc.trim().toLowerCase();
-  const nameLower = productName.trim().toLowerCase();
-  return normalized === nameLower || normalized.includes('produto sem descrição');
+  if (!desc || desc.trim().length < 10) return true;
+  
+  const lowerDesc = desc.toLowerCase().trim();
+  const lowerName = productName.toLowerCase().trim();
+  
+  // Se a descrição é igual ao nome, é inválida
+  if (lowerDesc === lowerName) return true;
+  
+  // Se a descrição contém apenas o nome, é inválida
+  if (lowerDesc.replace(/[^\w\s]/g, '') === lowerName.replace(/[^\w\s]/g, '')) return true;
+  
+  // Placeholders comuns
+  const placeholders = [
+    'descrição do produto',
+    'sem descrição',
+    'produto sem descrição',
+    'em breve',
+    'lorem ipsum',
+    'adicionar descrição',
+    'insira a descrição'
+  ];
+  
+  return placeholders.some(p => lowerDesc.includes(p));
 }
 
 function extractDescriptionFromDOM(doc: Document, productName: string): string {
   const selectors = [
     'meta[property="og:description"]',
     'meta[name="description"]',
-    'div[itemprop="description"]',
+    'meta[name="twitter:description"]',
     '.product-description',
-    '#descricao',
+    '.produto-descricao',
+    '[itemprop="description"]',
+    '#product-description',
     '.descricao-produto',
-    '.description'
+    '.product-details-description',
+    '.description-content',
+    '[data-description]'
   ];
 
-  for (const sel of selectors) {
-    const el = doc.querySelector(sel);
-    if (!el) continue;
-    
-    const content = el.getAttribute('content') || el.textContent;
-    if (content && content.trim().length > 20 && !isInvalidDescription(content, productName)) {
-      console.log(`✅ Descrição extraída de ${sel}`);
-      return content.trim();
+  console.info('🔍 Buscando descrição com', selectors.length, 'seletores...');
+
+  for (const selector of selectors) {
+    const element = doc.querySelector(selector);
+    if (element) {
+      const content = element.getAttribute('content') || 
+                     element.getAttribute('data-description') ||
+                     element.textContent || '';
+      const cleaned = content.trim();
+      
+      if (!isInvalidDescription(cleaned, productName)) {
+        console.info(`✅ Descrição extraída de ${selector}`);
+        return cleaned;
+      }
+    }
+  }
+
+  console.warn('⚠️ Nenhuma descrição válida encontrada');
+  return '';
+}
+
+function extractPhysicalSpecs(doc: Document | null, jsonLdData?: any) {
+  const specs: any = {};
+  
+  if (!doc) return specs;
+  
+  const html = doc.documentElement?.outerHTML || '';
+  
+  const isPlaceholderData = (value: string): boolean => {
+    if (!value || typeof value !== 'string') return false;
+    const lower = value.toLowerCase().trim();
+    const placeholderPatterns = [
+      /^ex[:\s.]/i, /^exemplo[:\s.]/i, /^digite/i, /^preencha/i,
+      /^informe/i, /^\[/, /^{/, /exemplo\s*:/i, /\(exemplo\)/i
+    ];
+    return placeholderPatterns.some(pattern => pattern.test(lower));
+  };
+  
+  const weightPatterns = [
+    /(?:peso|weight)[\s:]*([0-9.,]+)\s*(?:kg|g|gramas?)/i,
+    /<td[^>]*>[^<]*(?:peso|weight)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)\s*(?:kg|g)/i
+  ];
+  
+  for (const pattern of weightPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1] && !isPlaceholderData(match[1])) {
+      const weightValue = parseFloat(match[1].replace(',', '.'));
+      if (!isNaN(weightValue) && weightValue > 0) {
+        specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
+          ? weightValue / 1000
+          : weightValue;
+        break;
+      }
     }
   }
   
-  return productName;
+  const dimensionPatterns = {
+    height: [/(?:altura|height)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
+    width: [/(?:largura|width)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
+    depth: [/(?:profundidade|depth|comprimento|length)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i]
+  };
+  
+  for (const [key, patterns] of Object.entries(dimensionPatterns)) {
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && !isPlaceholderData(match[1])) {
+        const value = parseFloat(match[1].replace(',', '.'));
+        if (!isNaN(value) && value > 0) {
+          specs[key] = match[0].toLowerCase().includes('mm') ? value / 10 : value;
+          break;
+        }
+      }
+    }
+  }
+  
+  return specs;
+}
+
+function extractVariations(jsonLdData?: any, doc?: Document): Array<{
+  name: string;
+  price?: number;
+  stock?: number;
+  color?: string;
+  size?: string;
+}> | undefined {
+  console.info('🎨 Iniciando extração de variações...');
+  const variations: Array<{
+    name: string;
+    price?: number;
+    stock?: number;
+    color?: string;
+    size?: string;
+  }> = [];
+
+  // 1. JSON-LD
+  if (jsonLdData?.offers) {
+    const offers = Array.isArray(jsonLdData.offers) ? jsonLdData.offers : [jsonLdData.offers];
+    offers.forEach((offer: any) => {
+      if (offer.itemOffered?.name || offer.name) {
+        variations.push({
+          name: offer.itemOffered?.name || offer.name,
+          price: offer.price ? parsePriceBRL(offer.price) : undefined,
+          stock: offer.availability === 'https://schema.org/InStock' ? 999 : 0
+        });
+      }
+    });
+  }
+
+  if (!doc) {
+    console.info(`  🎯 ${variations.length} variações do JSON-LD`);
+    return variations.length > 0 ? variations : undefined;
+  }
+
+  // 2. Selects e Radios
+  const selectElements = doc.querySelectorAll('select[name*="variacao"], select[name*="opcao"], select.product-variant');
+  selectElements.forEach(select => {
+    const options = select.querySelectorAll('option');
+    options.forEach(option => {
+      const value = option.getAttribute('value');
+      const text = option.textContent?.trim();
+      if (value && text && value !== '' && text !== 'Selecione') {
+        variations.push({ name: text });
+      }
+    });
+  });
+
+  const radioElements = doc.querySelectorAll('input[type="radio"][name*="variacao"], input[type="radio"][name*="opcao"]');
+  radioElements.forEach(radio => {
+    const label = doc.querySelector(`label[for="${radio.id}"]`)?.textContent?.trim();
+    if (label) {
+      variations.push({ name: label });
+    }
+  });
+
+  // 3. Data attributes (Loja Integrada e similares)
+  const dataSelectors = [
+    '[data-value]',
+    '[data-option]',
+    '[data-variant]',
+    '[data-titulo]',
+    '[data-nome]',
+    '[data-valor]'
+  ];
+  
+  dataSelectors.forEach(selector => {
+    const elements = doc.querySelectorAll(selector);
+    elements.forEach(el => {
+      const value = el.getAttribute('data-value') || 
+                   el.getAttribute('data-option') ||
+                   el.getAttribute('data-variant') ||
+                   el.getAttribute('data-titulo') ||
+                   el.getAttribute('data-nome') ||
+                   el.getAttribute('data-valor');
+      const text = el.textContent?.trim();
+      
+      if ((value && value !== '') || (text && text.length > 0)) {
+        const name = text || value || '';
+        if (name.length > 0 && !name.includes('{{') && !name.includes('<%')) {
+          variations.push({ name });
+        }
+      }
+    });
+  });
+
+  // 4. CSS classes comuns
+  const cssSelectors = [
+    '.variacoes__lista li',
+    '.variacao-item',
+    '.atributos .atributo__opcao',
+    '.option-item',
+    '.product-variant',
+    '.variant-option label'
+  ];
+  
+  cssSelectors.forEach(selector => {
+    const elements = doc.querySelectorAll(selector);
+    elements.forEach(el => {
+      const text = el.textContent?.trim();
+      if (text && text.length > 0 && !text.includes('{{') && !text.includes('<%')) {
+        variations.push({ name: text });
+      }
+    });
+  });
+
+  // 5. Buscar JSON embutido em scripts
+  const scripts = doc.querySelectorAll('script:not([src])');
+  scripts.forEach(script => {
+    const content = script.textContent || '';
+    
+    // Procurar por objetos/arrays com variações
+    const patterns = [
+      /"variacoes"\s*:\s*\[([^\]]+)\]/gi,
+      /"variations"\s*:\s*\[([^\]]+)\]/gi,
+      /"opcoes"\s*:\s*\[([^\]]+)\]/gi,
+      /"options"\s*:\s*\[([^\]]+)\]/gi,
+      /"attributes"\s*:\s*\[([^\]]+)\]/gi
+    ];
+
+    patterns.forEach(pattern => {
+      const matches = content.matchAll(pattern);
+      for (const match of matches) {
+        try {
+          // Tenta extrair objetos JSON válidos
+          const jsonStr = `[${match[1]}]`;
+          const parsed = JSON.parse(jsonStr);
+          parsed.forEach((item: any) => {
+            if (item.nome || item.name || item.titulo || item.title) {
+              variations.push({
+                name: item.nome || item.name || item.titulo || item.title,
+                price: item.preco || item.price ? parsePriceBRL(item.preco || item.price) : undefined,
+                color: item.cor || item.color,
+                size: item.tamanho || item.size
+              });
+            }
+          });
+        } catch (e) {
+          // Ignora erros de parse
+        }
+      }
+    });
+  });
+
+  // Sanitização e deduplicação
+  const seen = new Set<string>();
+  const validVariations = variations.filter(v => {
+    const normalized = v.name.trim().toLowerCase();
+    if (normalized.length < 2 || seen.has(normalized)) return false;
+    if (normalized.includes('selecione') || normalized.includes('escolha')) return false;
+    if (/^\d+$/.test(normalized)) return false; // apenas números
+    seen.add(normalized);
+    return true;
+  });
+
+  console.info(`  🎯 ${validVariations.length} variações válidas de ${variations.length} encontradas`);
+  return validVariations.length > 0 ? validVariations : undefined;
+}
+
+function extractImagesGallery(
+  jsonLdData?: any,
+  mainImageUrl?: string,
+  doc?: Document
+): Array<{ url: string; alt: string; order: number; is_main: boolean }> {
+  console.info('🖼️ Extraindo galeria de imagens...');
+  const images = new Map<string, { url: string; alt: string; order: number; is_main: boolean }>();
+  let order = 0;
+
+  // Helper para normalizar URLs
+  const normalizeUrl = (url: string): string => {
+    if (!url) return '';
+    // Remove query params de tamanho se houver versão maior disponível
+    const cleaned = url.split('?')[0];
+    return cleaned.replace(/\/(thumbnail|small|medium)\//, '/large/')
+                 .replace(/_thumbnail|_small|_medium/, '_large');
+  };
+
+  // Helper para extrair maior URL de srcset
+  const extractLargestFromSrcset = (srcset: string): string | null => {
+    if (!srcset) return null;
+    const urls = srcset.split(',').map(s => s.trim().split(' ')[0]);
+    // Retorna a última (geralmente a maior)
+    return urls[urls.length - 1] || null;
+  };
+
+  // 1. Imagem principal do JSON-LD
+  if (jsonLdData?.image) {
+    const imageUrls = Array.isArray(jsonLdData.image) ? jsonLdData.image : [jsonLdData.image];
+    imageUrls.forEach((url: string) => {
+      const normalized = normalizeUrl(url);
+      if (normalized && !images.has(normalized)) {
+        images.set(normalized, {
+          url: normalized,
+          alt: jsonLdData.name || 'Product image',
+          order: order++,
+          is_main: images.size === 0
+        });
+      }
+    });
+  }
+
+  // 2. Meta tags OG
+  if (doc) {
+    const ogImages = doc.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"]');
+    ogImages.forEach(meta => {
+      const url = meta.getAttribute('content');
+      if (url) {
+        const normalized = normalizeUrl(url);
+        if (!images.has(normalized)) {
+          images.set(normalized, {
+            url: normalized,
+            alt: 'Product image',
+            order: order++,
+            is_main: images.size === 0
+          });
+        }
+      }
+    });
+  }
+
+  // 3. Imagem principal fornecida
+  if (mainImageUrl) {
+    const normalized = normalizeUrl(mainImageUrl);
+    if (!images.has(normalized)) {
+      images.set(normalized, {
+        url: normalized,
+        alt: 'Product image',
+        order: order++,
+        is_main: images.size === 0
+      });
+    }
+  }
+
+  // 4. Galeria do DOM
+  if (doc) {
+    const gallerySelectors = [
+      '.product-images img',
+      '.produto-imagens img',
+      '[itemprop="image"]',
+      '.gallery-image',
+      '.product-gallery img',
+      '.imagens-produto img',
+      '[data-large_image]',
+      '[data-zoom-image]',
+      'picture source',
+      '.thumbs img'
+    ];
+
+    gallerySelectors.forEach(selector => {
+      const elements = doc.querySelectorAll(selector);
+      elements.forEach((img) => {
+        // Tentar pegar a maior versão disponível
+        let url = img.getAttribute('data-large_image') ||
+                 img.getAttribute('data-zoom-image') ||
+                 img.getAttribute('data-src') ||
+                 img.getAttribute('src') ||
+                 img.getAttribute('srcset');
+
+        // Se for srcset, extrair a maior
+        if (url?.includes(',')) {
+          url = extractLargestFromSrcset(url) || url;
+        }
+
+        if (url && url.startsWith('http')) {
+          const normalized = normalizeUrl(url);
+          const alt = img.getAttribute('alt') || img.getAttribute('title') || 'Product image';
+          
+          if (!images.has(normalized)) {
+            images.set(normalized, {
+              url: normalized,
+              alt,
+              order: order++,
+              is_main: false
+            });
+          }
+        }
+      });
+    });
+  }
+
+  // 5. Link tags
+  if (doc) {
+    const linkImages = doc.querySelectorAll('link[rel="image_src"]');
+    linkImages.forEach(link => {
+      const url = link.getAttribute('href');
+      if (url) {
+        const normalized = normalizeUrl(url);
+        if (!images.has(normalized)) {
+          images.set(normalized, {
+            url: normalized,
+            alt: 'Product image',
+            order: order++,
+            is_main: images.size === 0
+          });
+        }
+      }
+    });
+  }
+
+  const gallery = Array.from(images.values()).sort((a, b) => {
+    if (a.is_main) return -1;
+    if (b.is_main) return 1;
+    return a.order - b.order;
+  });
+
+  console.info(`✅ Galeria final: ${gallery.length} imagens`);
+  return gallery;
 }
 
 serve(async (req) => {
@@ -97,11 +502,14 @@ serve(async (req) => {
       throw new Error('URL é obrigatória');
     }
 
-    console.log('Extraindo dados da URL:', url);
+    console.info('Extraindo dados da URL:', url);
 
+    // Fetch da página com headers adequados
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
       }
     });
 
@@ -110,233 +518,9 @@ serve(async (req) => {
     }
 
     const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
     const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis);
-    
-    const isPlaceholderData = (value: string): boolean => {
-      if (!value || typeof value !== 'string') return false;
-      const lower = value.toLowerCase().trim();
-      const placeholderPatterns = [
-        /^ex[:\s.]/i, /^exemplo[:\s.]/i, /^digite/i, /^preencha/i,
-        /^informe/i, /^\[/, /^{/, /exemplo\s*:/i, /\(exemplo\)/i
-      ];
-      return placeholderPatterns.some(pattern => pattern.test(lower));
-    };
-    
-    const extractPhysicalSpecs = () => {
-      const specs: any = {};
-      
-      const weightPatterns = [
-        /(?:peso|weight)[\s:]*([0-9.,]+)\s*(?:kg|g|gramas?)/i,
-        /<td[^>]*>[^<]*(?:peso|weight)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)\s*(?:kg|g)/i
-      ];
-      
-      for (const pattern of weightPatterns) {
-        const match = html.match(pattern);
-        if (match && match[1] && !isPlaceholderData(match[1])) {
-          const weightValue = parseFloat(match[1].replace(',', '.'));
-          if (!isNaN(weightValue) && weightValue > 0) {
-            specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
-              ? weightValue / 1000
-              : weightValue;
-            break;
-          }
-        }
-      }
-      
-      const dimensionPatterns = {
-        height: [/(?:altura|height)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
-        width: [/(?:largura|width)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i],
-        depth: [/(?:profundidade|depth|comprimento|length)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i]
-      };
-      
-      for (const [key, patterns] of Object.entries(dimensionPatterns)) {
-        for (const pattern of patterns) {
-          const match = html.match(pattern);
-          if (match && match[1] && !isPlaceholderData(match[1])) {
-            const value = parseFloat(match[1].replace(',', '.'));
-            if (!isNaN(value) && value > 0) {
-              specs[key] = match[0].toLowerCase().includes('mm') ? value / 10 : value;
-              break;
-            }
-          }
-        }
-      }
-      
-      return specs;
-    };
-    
-    const extractVariations = (jsonLdData?: any, doc?: Document) => {
-      console.log('🎨 Iniciando extração de variações...');
-      const variations: { name: string; price?: number; stock?: number; color?: string; size?: string }[] = [];
-      const variationNames = new Set<string>();
-      
-      // 1. JSON-LD
-      if (jsonLdData?.hasVariant) {
-        const variants = Array.isArray(jsonLdData.hasVariant) ? jsonLdData.hasVariant : [jsonLdData.hasVariant];
-        variants.forEach((variant: any) => {
-          const name = variant.name;
-          if (name && !name.includes('{{') && !name.includes("' + ")) {
-            variationNames.add(name);
-            variations.push({
-              name,
-              price: variant.offers?.price ? parseFloat(variant.offers.price) : undefined,
-              stock: variant.offers?.availability === 'InStock' ? 999 : 0,
-              color: variant.color || '',
-              size: variant.size || ''
-            });
-          }
-        });
-      }
-      
-      if (!doc) return variations.length > 0 ? variations : undefined;
-      
-      // 2. Select elements
-      doc.querySelectorAll('select[name*="variacao"], select[name*="variation"], select.product-variants option').forEach((option) => {
-        const text = option.textContent?.trim();
-        if (text && text !== 'Selecione' && text !== 'Escolha' && !text.includes('{{') && !variationNames.has(text)) {
-          variationNames.add(text);
-          variations.push({ name: text });
-        }
-      });
-      
-      // 3. Radio buttons
-      doc.querySelectorAll('input[type="radio"][name*="variacao"], input[type="radio"][name*="variation"]').forEach((input) => {
-        const label = doc.querySelector(`label[for="${input.id}"]`)?.textContent?.trim();
-        const value = input.getAttribute('value');
-        const name = label || value;
-        if (name && !name.includes('{{') && !variationNames.has(name)) {
-          variationNames.add(name);
-          variations.push({ name });
-        }
-      });
-      
-      // 4. Loja Integrada: atributos data-* e listas
-      doc.querySelectorAll('[data-variation], [data-variacao], .variacao-item, ul.variacoes li').forEach((el) => {
-        const value = el.getAttribute('data-variation') || 
-                      el.getAttribute('data-variacao') || 
-                      el.textContent?.trim();
-        if (value && !value.includes('{{') && !value.includes("' + ") && value.length < 100 && !variationNames.has(value)) {
-          variationNames.add(value);
-          variations.push({ name: value });
-        }
-      });
-      
-      // 5. Botões ou links de variação
-      doc.querySelectorAll('.variant-option, .variation-item, .product-variant').forEach((el) => {
-        const text = el.textContent?.trim();
-        if (text && !text.includes('{{') && !variationNames.has(text)) {
-          variationNames.add(text);
-          variations.push({ name: text });
-        }
-      });
-      
-      // Filtrar placeholders finais
-      const cleaned = variations.filter(v => 
-        v.name && 
-        v.name.length > 0 && 
-        v.name.length < 100 && 
-        !v.name.includes("' + ") && 
-        !v.name.includes('value.value') &&
-        !v.name.includes('{{') &&
-        !v.name.includes('}}') &&
-        !v.name.match(/^[\d\s\-\.]+$/)
-      );
-      
-      console.log(`  🎯 ${cleaned.length} variações válidas`);
-      return cleaned.length > 0 ? cleaned : undefined;
-    };
-    
-    const extractImagesGallery = (jsonLdData?: any, mainImageUrl?: string, doc?: Document) => {
-      console.log('🖼️ Extraindo galeria de imagens...');
-      const images = new Set<string>();
-      const gallery: Array<{ url: string; alt: string; order: number; is_main: boolean }> = [];
-
-      if (mainImageUrl) images.add(mainImageUrl);
-
-      // 1. JSON-LD
-      if (jsonLdData?.image) {
-        const jsonImages = Array.isArray(jsonLdData.image) ? jsonLdData.image : [jsonLdData.image];
-        jsonImages.forEach((img: string) => {
-          try {
-            const normalizedUrl = new URL(img, url).href;
-            images.add(normalizedUrl);
-          } catch {
-            if (img) images.add(img);
-          }
-        });
-      }
-
-      if (!doc) {
-        images.forEach((imgUrl, index) => {
-          gallery.push({ url: imgUrl, alt: 'Imagem do produto', order: index, is_main: index === 0 });
-        });
-        return gallery;
-      }
-
-      // 2. Meta tags og:image e link[rel="image_src"]
-      doc.querySelectorAll('meta[property="og:image"], link[rel="image_src"]').forEach((meta) => {
-        const content = meta.getAttribute('content') || meta.getAttribute('href');
-        if (content) images.add(content);
-      });
-
-      // 3. Imagens no DOM
-      doc.querySelectorAll('img[itemprop="image"], .product-image img, .product-gallery img, img[data-zoom-image], .imagem-produto img').forEach((img) => {
-        const src = img.getAttribute('src') || 
-                    img.getAttribute('data-src') || 
-                    img.getAttribute('data-zoom-image') ||
-                    img.getAttribute('data-image');
-        if (src) images.add(src);
-      });
-
-      // 4. Links CDN
-      doc.querySelectorAll('a[href*="cdn.awsli.com.br"], a[href*="/produtos/"]').forEach((link) => {
-        const href = link.getAttribute('href');
-        if (href && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(href)) {
-          images.add(href);
-        }
-      });
-
-      // 5. JSON embutido
-      const scripts = doc.querySelectorAll('script[type="application/ld+json"], script');
-      scripts.forEach((script) => {
-        const content = script.textContent || '';
-        const imageMatches = content.match(/(https?:\/\/[^\s"']+\.(jpg|jpeg|png|webp|gif))/gi);
-        if (imageMatches) {
-          imageMatches.forEach(imgUrl => images.add(imgUrl));
-        }
-      });
-
-      // Filtrar e normalizar
-      const validImages = Array.from(images).filter(imgUrl => {
-        if (!imgUrl || imgUrl.length < 10) return false;
-        
-        if (imgUrl.includes('placeholder') || 
-            imgUrl.includes('--PRODUTO_IMAGEM--') ||
-            imgUrl.includes('no-image') ||
-            imgUrl === '/64x64/') {
-          return false;
-        }
-
-        const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(imgUrl);
-        const hasSizePattern = /\/\d+x\d+\//i.test(imgUrl);
-        
-        return hasImageExtension || hasSizePattern || imgUrl.startsWith('http');
-      }).map(imgUrl => {
-        if (imgUrl.startsWith('//')) return `https:${imgUrl}`;
-        if (imgUrl.startsWith('/') && !imgUrl.startsWith('//')) {
-          const baseUrl = new URL(url);
-          return `${baseUrl.protocol}//${baseUrl.host}${imgUrl}`;
-        }
-        return imgUrl;
-      });
-
-      validImages.forEach((imgUrl, index) => {
-        gallery.push({ url: imgUrl, alt: 'Imagem do produto', order: index, is_main: index === 0 });
-      });
-
-      console.log(`✅ Galeria final: ${gallery.length} imagens`);
-      return gallery;
-    };
 
     let productData: ProductData = {
       name: '',
@@ -347,9 +531,7 @@ serve(async (req) => {
       availability: 'in stock'
     };
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-
+    // Processar JSON-LD
     if (jsonLdMatches && jsonLdMatches.length > 0) {
       for (const match of jsonLdMatches) {
         try {
@@ -360,52 +542,83 @@ serve(async (req) => {
             
             productData.name = product.name || '';
             
+            // Extrair preço
+            let price = 0;
+            let promo_price: number | undefined;
+
             if (product.offers) {
-              const offers = Array.isArray(product.offers) ? product.offers[0] : product.offers;
-              const priceStr = offers.price?.toString() || '';
-              const lowPriceStr = offers.lowPrice?.toString() || '';
+              const offers = Array.isArray(product.offers) ? product.offers : [product.offers];
+              const mainOffer = offers[0];
               
-              const regularPrice = parsePriceBRL(priceStr);
-              const promoPrice = parsePriceBRL(lowPriceStr);
-              
-              if (promoPrice > 0 && promoPrice < regularPrice) {
-                productData.price = regularPrice;
-                productData.promo_price = promoPrice;
-              } else {
-                productData.price = regularPrice;
+              if (mainOffer?.price) {
+                price = parsePriceBRL(mainOffer.price);
               }
               
-              productData.availability = offers.availability?.includes('InStock') ? 'in stock' : 'out of stock';
+              // Buscar preço promocional
+              if (mainOffer?.priceValidUntil) {
+                promo_price = price;
+              }
+              
+              productData.availability = mainOffer.availability?.includes('InStock') ? 'in stock' : 'out of stock';
             }
+
+            productData.price = price;
+            productData.promo_price = promo_price;
             
+            // Extrair descrição
             let description = product.description || '';
-            if (isInvalidDescription(description, productData.name)) {
+            
+            if (!description || isInvalidDescription(description, productData.name)) {
               description = extractDescriptionFromDOM(doc!, productData.name);
             }
-            productData.description = description;
+
+            // Se ainda não tiver descrição válida, deixar vazio
+            if (isInvalidDescription(description, productData.name)) {
+              description = '';
+            }
             
+            productData.description = description;
             productData.image = product.image?.[0] || product.image || '';
             productData.brand = product.brand?.name || product.brand || '';
-            productData.gtin = product.gtin13 || product.gtin || '';
-            productData.ean = product.gtin13 || product.ean || '';
+            
+            // Extrair EAN/GTIN
+            let ean: string | undefined;
+            let gtin: string | undefined;
+            
+            if (product.gtin13) {
+              ean = product.gtin13;
+              gtin = product.gtin13;
+            } else if (product.gtin) {
+              gtin = product.gtin;
+              if (product.gtin.length === 13) {
+                ean = product.gtin;
+              }
+            }
+            
+            productData.gtin = gtin;
+            productData.ean = ean;
             productData.mpn = product.mpn || product.sku || '';
             
-            const physicalSpecs = extractPhysicalSpecs();
+            // Extrair dados físicos
+            const physicalSpecs = extractPhysicalSpecs(doc, product);
             productData = { ...productData, ...physicalSpecs };
             
+            // Extrair variações
             productData.variations = extractVariations(product, doc);
+            
+            // Extrair galeria de imagens
             productData.images_gallery = extractImagesGallery(product, productData.image, doc);
             
-            console.log('✅ Dados extraídos do JSON-LD');
+            console.info('✅ Dados extraídos do JSON-LD');
             break;
           }
         } catch (e) {
-          console.log('Erro ao processar JSON-LD:', e);
+          console.error('Erro ao processar JSON-LD:', e);
         }
       }
     }
 
-    // Fallbacks
+    // Fallbacks DOM
     if (!productData.name) {
       const nameMatch = html.match(/<h1[^>]*class="[^"]*(?:product|nome|title)[^"]*"[^>]*>([^<]+)<\/h1>/i) ||
                        html.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
@@ -413,46 +626,81 @@ serve(async (req) => {
       if (nameMatch) productData.name = nameMatch[1].trim();
     }
 
-    if (!productData.price || productData.price === 0) {
-      const pricePatterns = [
-        /[R\$]\s*([0-9.,]+)/i,
-        /<span[^>]*itemprop="price"[^>]*>([^<]+)<\/span>/i,
-        /<meta[^>]*property="og:price:amount"[^>]*content="([^"]+)"/i,
-        /price["\s:]+([0-9.,]+)/i
-      ];
-      
-      for (const pattern of pricePatterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-          productData.price = parsePriceBRL(match[1]);
-          if (productData.price > 0) break;
+    // Buscar EAN no DOM se não encontrou
+    if (!productData.ean && doc) {
+      const eanElement = doc.querySelector('[itemprop="gtin13"], [itemprop="gtin"], [data-ean], [data-gtin]');
+      if (eanElement) {
+        const value = eanElement.getAttribute('content') || 
+                     eanElement.getAttribute('data-ean') ||
+                     eanElement.getAttribute('data-gtin') ||
+                     eanElement.textContent?.trim();
+        if (value && /^\d{13}$/.test(value)) {
+          productData.ean = value;
+          productData.gtin = value;
         }
       }
     }
 
-    if (!productData.description || isInvalidDescription(productData.description, productData.name)) {
-      productData.description = extractDescriptionFromDOM(doc!, productData.name);
+    // Fallback preço DOM
+    if (!productData.price || productData.price === 0) {
+      const priceSelectors = [
+        '[itemprop="price"]',
+        '.price',
+        '.preco',
+        '.product-price',
+        '.preco-atual',
+        '[data-price]',
+        'meta[property="product:price:amount"]'
+      ];
+
+      for (const selector of priceSelectors) {
+        const element = doc!.querySelector(selector);
+        if (element) {
+          const priceText = element.getAttribute('content') || 
+                           element.getAttribute('data-price') ||
+                           element.textContent || '';
+          const parsedPrice = parsePriceBRL(priceText);
+          if (parsedPrice > 0) {
+            productData.price = parsedPrice;
+            break;
+          }
+        }
+      }
+      
+      // Buscar preço promocional
+      const promoSelectors = ['.preco-promocional', '.price-promo', '.sale-price', '[data-promo-price]'];
+      for (const selector of promoSelectors) {
+        const element = doc!.querySelector(selector);
+        if (element) {
+          const priceText = element.getAttribute('data-promo-price') || element.textContent || '';
+          const parsedPrice = parsePriceBRL(priceText);
+          if (parsedPrice > 0 && parsedPrice < productData.price) {
+            productData.promo_price = parsedPrice;
+            break;
+          }
+        }
+      }
     }
 
+    // Fallback descrição DOM
+    if (!productData.description || isInvalidDescription(productData.description, productData.name)) {
+      const desc = extractDescriptionFromDOM(doc!, productData.name);
+      if (desc && !isInvalidDescription(desc, productData.name)) {
+        productData.description = desc;
+      }
+    }
+
+    // Fallback variações
     if (!productData.variations) {
       productData.variations = extractVariations(undefined, doc);
     }
 
+    // Fallback galeria
     if (!productData.images_gallery || productData.images_gallery.length === 0) {
       productData.images_gallery = extractImagesGallery(undefined, productData.image, doc);
     }
 
-    console.log('Dados extraídos:', {
-      name: productData.name,
-      price: productData.price,
-      description: productData.description,
-      available: productData.available,
-      condition: productData.condition,
-      availability: productData.availability,
-      brand: productData.brand,
-      variations: productData.variations?.map(v => v.name),
-      images_gallery: productData.images_gallery?.map(i => i.url)
-    });
+    console.info('Dados extraídos:', productData);
 
     return new Response(
       JSON.stringify({ success: true, data: productData }),
