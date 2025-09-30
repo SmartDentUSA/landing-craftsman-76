@@ -34,7 +34,8 @@ const FIELD_FRIENDLY_NAMES = {
   // === DADOS BÁSICOS ===
   "name": "Nome do Produto",
   "description": "Descrição",
-  "price": "Preço",
+  "price": "Preço de venda",
+  "promo_price": "Preço Promocional",
   "category": "Categoria",
   "subcategory": "Subcategoria", 
   "currency": "Moeda",
@@ -294,7 +295,7 @@ const DATA_SOURCES = {
       "market_keywords", "search_intent_keywords", "seo_title_override", "seo_description_override", "canonical_url",
       
       // ===== 💰 RECURSOS COMERCIAIS ✅ UTILIZADOS =====
-      "resource_descriptions", "resource_cta1", "resource_cta2", "resource_cta3", "offer_discount_cta",
+      "promo_price", "resource_descriptions", "resource_cta1", "resource_cta2", "resource_cta3", "offer_discount_cta",
       
       // ===== 🎥 LEGENDAS DE VÍDEO ✅ UTILIZADOS =====
       "video_captions",

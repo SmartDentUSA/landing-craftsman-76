@@ -11,6 +11,7 @@ interface ProductData {
   price: string;
   originalPrice?: string;
   promoPrice?: string;
+  promo_price?: number;
   installmentText?: string;
   description: string;
   image?: string;
@@ -192,6 +193,10 @@ serve(async (req) => {
               const physicalSpecs = extractPhysicalSpecs();
               const variations = extractVariations(item);
               
+              // Preparar dados com conversão de promo_price
+              const promoPrice = item.offers?.lowPrice || item.offers?.price || '';
+              const promoPriceNumeric = promoPrice ? parseFloat(promoPrice.toString().replace(/[^\d.,]/g, '').replace(',', '.')) : undefined;
+              
               return new Response(
                 JSON.stringify({
                   success: true,
@@ -199,7 +204,8 @@ serve(async (req) => {
                     name: item.name,
                     price: item.offers?.price || item.offers?.priceRange || '',
                     originalPrice: item.offers?.highPrice || '',
-                    promoPrice: item.offers?.lowPrice || item.offers?.price || '',
+                    promoPrice: promoPrice,
+                    promo_price: (promoPriceNumeric && !isNaN(promoPriceNumeric) && promoPriceNumeric > 0) ? promoPriceNumeric : undefined,
                     installmentText: item.offers?.priceSpecification?.priceCurrency ? `ou ${item.offers?.priceSpecification?.maxPrice || ''} em até 12x` : '',
                     description: item.description || '',
                     image: normalizedImage,
@@ -333,17 +339,37 @@ serve(async (req) => {
       }
     }
     
-    // 6. Definir preço principal - CORRIGIDO: usar preço promocional como principal se existir
-    if (productData.promoPrice) {
-      // Se temos preço promocional, ele é o preço principal
-      if (!productData.originalPrice && productData.price && productData.price !== productData.promoPrice) {
-        // O preço atual vira o preço original se for diferente do promocional
-        productData.originalPrice = productData.price;
-      }
-      productData.price = productData.promoPrice;
-    } else if (!productData.price && productData.originalPrice) {
-      // Se só temos preço original, ele vira o preço principal
+    // 6. Organizar preços: price = normal, promoPrice = promocional
+    // Se existe originalPrice, ele é o preço de venda normal
+    if (productData.originalPrice && !productData.price) {
       productData.price = productData.originalPrice;
+    }
+    
+    // Se temos promoPrice e price, verificar qual é maior para garantir que price seja o normal
+    if (productData.promoPrice && productData.price) {
+      const priceNum = parseFloat(productData.price);
+      const promoNum = parseFloat(productData.promoPrice);
+      
+      // Se o "promoPrice" for maior que o "price", inverter
+      if (promoNum > priceNum) {
+        const temp = productData.price;
+        productData.price = productData.promoPrice;
+        productData.promoPrice = temp;
+      }
+    }
+    
+    // Se só temos promoPrice mas não temos price, promoPrice vira price (não há promoção)
+    if (productData.promoPrice && !productData.price) {
+      productData.price = productData.promoPrice;
+      productData.promoPrice = undefined; // Limpar promoPrice pois não há diferença
+    }
+    
+    // Converter promoPrice para número (promo_price) se existir
+    if (productData.promoPrice) {
+      const promoNumeric = parseFloat(productData.promoPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
+      if (!isNaN(promoNumeric) && promoNumeric > 0) {
+        productData.promo_price = promoNumeric;
+      }
     }
 
     // Extrair descrição

@@ -147,6 +147,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // FAQ
     faq: []
   });
+  const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
   const [targetAudience, setTargetAudience] = useState<string[]>([]);
@@ -276,6 +277,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTechnicalVideos(product.technical_videos || []);
       setTiktokVideos(product.tiktok_videos || []);
       setVideoCaptions(product.video_captions || {});
+      setPromoPrice((product as any).promo_price);
       
       // Physical specifications
       setVariations(product.variations || []);
@@ -341,6 +343,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setWidth('');
       setDepth('');
       setStoreCategory('');
+      setPromoPrice(undefined);
     }
   }, [product]);
 
@@ -634,7 +637,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           const priceValue = parseFloat(extractedData.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
           if (!isNaN(priceValue) && priceValue > 0) {
             updates.price = priceValue;
-            fieldsImported.push('Preço');
+            fieldsImported.push('Preço de venda');
+          }
+        }
+        
+        if (extractedData.promoPrice) {
+          const promoPriceValue = parseFloat(extractedData.promoPrice.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (!isNaN(promoPriceValue) && promoPriceValue > 0) {
+            setPromoPrice(promoPriceValue);
+            fieldsImported.push('Preço promocional');
           }
         }
         
@@ -801,6 +812,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         description: formData.description,
         sales_pitch: formData.sales_pitch,
         price: formData.price,
+        promo_price: promoPrice,
         currency: formData.currency || 'BRL',
         category: formData.category,
         subcategory: formData.subcategory,
@@ -1051,13 +1063,25 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Preço</Label>
+              <Label htmlFor="price">Preço de venda *</Label>
               <Input
                 id="price"
                 type="number"
                 step="0.01"
                 value={formData.price || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promo_price">Preço promocional</Label>
+              <Input
+                id="promo_price"
+                type="number"
+                step="0.01"
+                value={promoPrice || ''}
+                onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="0.00"
               />
             </div>

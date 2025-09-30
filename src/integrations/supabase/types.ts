@@ -610,6 +610,7 @@ export type Database = {
           package_size: string | null
           price: number | null
           product_url: string | null
+          promo_price: number | null
           resource_cta1: Json | null
           resource_cta2: Json | null
           resource_cta3: Json | null
@@ -683,6 +684,7 @@ export type Database = {
           package_size?: string | null
           price?: number | null
           product_url?: string | null
+          promo_price?: number | null
           resource_cta1?: Json | null
           resource_cta2?: Json | null
           resource_cta3?: Json | null
@@ -756,6 +758,7 @@ export type Database = {
           package_size?: string | null
           price?: number | null
           product_url?: string | null
+          promo_price?: number | null
           resource_cta1?: Json | null
           resource_cta2?: Json | null
           resource_cta3?: Json | null
