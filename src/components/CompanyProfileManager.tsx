@@ -6,10 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Save, Loader2, RefreshCw } from "lucide-react";
+import { Building2, Save, Loader2, RefreshCw, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
+import { ImageUploader } from "@/components/ImageUploader";
 
 interface CompanyProfile {
   id?: string;
@@ -323,6 +324,31 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               placeholder="Descreva sua empresa, o que faz e como atua no mercado"
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="company_logo_url">Logo da Empresa</Label>
+            <ImageUploader
+              value={profile.company_logo_url || ''}
+              onChange={(imageData) => updateProfile('company_logo_url', typeof imageData === 'string' ? imageData : imageData.src)}
+              placeholder="URL do logo da empresa"
+              proportionInfo="Ideal: 1200x630px para Open Graph, ou quadrado 400x400px para logo padrão"
+            />
+            <p className="text-xs text-muted-foreground">
+              ✨ Este logo será usado como imagem padrão em compartilhamentos sociais (Open Graph) quando as landing pages não tiverem imagem específica.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <ImageUploader
+              value={profile.company_logo_url || ''}
+              onChange={(imageData) => updateProfile('company_logo_url', typeof imageData === 'string' ? imageData : imageData.src)}
+              placeholder="URL do logo da empresa"
+              proportionInfo="Ideal: 1200x630px para Open Graph, ou quadrado 400x400px para logo padrão"
+            />
+            <p className="text-xs text-muted-foreground">
+              ✨ Este logo será usado como imagem padrão em compartilhamentos sociais (Open Graph) quando as landing pages não tiverem imagem específica.
+            </p>
           </div>
 
           <div className="space-y-2">

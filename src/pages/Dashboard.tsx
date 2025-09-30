@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Building2 } from "lucide-react";
+import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Building2, Share2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
 import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 import { useBlogReadMore } from "@/hooks/useBlogReadMore";
+import { OpenGraphDashboard } from "@/components/OpenGraphDashboard";
 
 // Interface for blog posts
 interface BlogPost {
@@ -1279,6 +1280,15 @@ const DashboardContent = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Open Graph Dashboard */}
+        <div className="mt-8 mb-8">
+          <div className="flex items-center gap-2 mb-6">
+            <Share2 className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold">Status Open Graph</h2>
+          </div>
+          <OpenGraphDashboard />
         </div>
       </main>
       

@@ -1,7 +1,8 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
+import { supabase } from '@/integrations/supabase/client';
 
 // Função para converter markdown inline para HTML (para títulos e textos inline)
 const convertInlineMarkdownToHTML = (content: string): string => {
@@ -230,6 +231,29 @@ export const useSEOHTMLGenerator = () => {
 
   const { generateAdvancedProductSchema, generateFAQSchema, generateCompletePageSchema } = useAdvancedSchemaGenerator();
   const { allLinks } = useLinksRepository();
+  
+  // Hook para obter o perfil da empresa (logo)
+  const [companyProfile, setCompanyProfile] = useState<{ company_logo_url?: string } | null>(null);
+  
+  useEffect(() => {
+    const loadCompanyProfile = async () => {
+      try {
+        const { data } = await supabase
+          .from('company_profile')
+          .select('company_logo_url')
+          .limit(1)
+          .maybeSingle();
+        
+        if (data) {
+          setCompanyProfile(data);
+        }
+      } catch (error) {
+        console.error('Error loading company profile for SEO:', error);
+      }
+    };
+    
+    loadCompanyProfile();
+  }, []);
 
   const generateOptimizedHTML = useCallback((options: SEOHTMLOptions): string => {
     const {
@@ -364,6 +388,12 @@ export const useSEOHTMLGenerator = () => {
 
     // URL canônica com SEO override
     const canonical = seoCanonicalUrl || (domain ? `https://${domain}` : window.location.href);
+    
+    // ✨ INTELLIGENT OPEN GRAPH IMAGE HIERARCHY
+    const finalOGImage = ogImage || 
+                        (products.length > 0 && products[0].image_url) || 
+                        companyProfile?.company_logo_url || 
+                        '';
 
     // ✨ GENERATE GOOGLE MERCHANT META TAGS FOR ALL PRODUCTS
     const generateGoogleMerchantTags = () => {
@@ -418,14 +448,16 @@ export const useSEOHTMLGenerator = () => {
   <meta property="og:description" content="${seoDescription}">
   <meta property="og:url" content="${canonical}">
   <meta property="og:site_name" content="${domain || 'Nossa Empresa'}">
-  ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
+  ${finalOGImage ? `<meta property="og:image" content="${finalOGImage}">` : ''}
+  ${finalOGImage ? `<meta property="og:image:width" content="1200">` : ''}
+  ${finalOGImage ? `<meta property="og:image:height" content="630">` : ''}
   <meta property="og:locale" content="pt_BR">
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${seoTitle}">
   <meta name="twitter:description" content="${seoDescription}">
-  ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : ''}
+  ${finalOGImage ? `<meta name="twitter:image" content="${finalOGImage}">` : ''}
   
   <!-- Additional SEO Meta Tags -->
   <meta name="author" content="${author?.name || domain || 'Nossa Empresa'}">
