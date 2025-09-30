@@ -24,6 +24,7 @@ import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
+import { VariationCard } from './VariationCard';
 
 interface Video {
   url: string;
@@ -1753,83 +1754,43 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             </div>
 
             {/* Product Variations */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label>Variações do Produto</Label>
+                <div>
+                  <Label className="text-base font-semibold">Variações do Produto</Label>
+                  {variations.length > 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Total: {variations.length} variações
+                    </p>
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setVariations([...variations, { name: '', price: undefined, stock: undefined, color: '', size: '' }])}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Adicionar Variação
                 </Button>
               </div>
               
               {variations.length > 0 && (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {variations.map((variation, index) => (
-                    <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
-                      <div className="flex-1 grid grid-cols-5 gap-2">
-                        <Input
-                          placeholder="Nome"
-                          value={variation.name}
-                          onChange={(e) => {
-                            const newVariations = [...variations];
-                            newVariations[index].name = e.target.value;
-                            setVariations(newVariations);
-                          }}
-                        />
-                        <Input
-                          placeholder="Preço"
-                          type="number"
-                          step="0.01"
-                          value={variation.price || ''}
-                          onChange={(e) => {
-                            const newVariations = [...variations];
-                            newVariations[index].price = e.target.value ? parseFloat(e.target.value) : undefined;
-                            setVariations(newVariations);
-                          }}
-                        />
-                        <Input
-                          placeholder="Estoque"
-                          type="number"
-                          value={variation.stock || ''}
-                          onChange={(e) => {
-                            const newVariations = [...variations];
-                            newVariations[index].stock = e.target.value ? parseInt(e.target.value) : undefined;
-                            setVariations(newVariations);
-                          }}
-                        />
-                        <Input
-                          placeholder="Cor"
-                          value={variation.color || ''}
-                          onChange={(e) => {
-                            const newVariations = [...variations];
-                            newVariations[index].color = e.target.value;
-                            setVariations(newVariations);
-                          }}
-                        />
-                        <Input
-                          placeholder="Tamanho"
-                          value={variation.size || ''}
-                          onChange={(e) => {
-                            const newVariations = [...variations];
-                            newVariations[index].size = e.target.value;
-                            setVariations(newVariations);
-                          }}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setVariations(variations.filter((_, i) => i !== index))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <VariationCard
+                      key={index}
+                      variation={variation}
+                      index={index}
+                      onUpdate={(idx, field, value) => {
+                        const newVariations = [...variations];
+                        newVariations[idx] = { ...newVariations[idx], [field]: value };
+                        setVariations(newVariations);
+                      }}
+                      onRemove={(idx) => {
+                        setVariations(variations.filter((_, i) => i !== idx));
+                      }}
+                    />
                   ))}
                 </div>
               )}
