@@ -777,17 +777,68 @@ export const useSEOHTMLGenerator = () => {
       // Depois aplicar links inteligentes
       const processedContent = processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks);
       
-      // Truncate content for preview (first 300 characters)
+      // Smart HTML-aware truncation for preview
       const previewLength = 300;
-      const contentText = processedContent.replace(/<[^>]*>/g, ''); // Remove HTML tags for length calculation
-      const shouldTruncate = contentText.length > previewLength;
-      
       let previewContent = processedContent;
-      if (shouldTruncate) {
+      
+      // Extract text content without HTML for length calculation
+      const textContent = processedContent.replace(/<[^>]*>/g, '');
+      
+      if (textContent.length > previewLength) {
         // Find a good break point near the preview length
-        const truncateAt = contentText.substring(0, previewLength).lastIndexOf(' ');
-        const truncatedText = contentText.substring(0, truncateAt > 0 ? truncateAt : previewLength);
-        previewContent = processedContent.substring(0, processedContent.indexOf(truncatedText) + truncatedText.length);
+        const truncateAt = textContent.substring(0, previewLength).lastIndexOf(' ');
+        const targetLength = truncateAt > 0 ? truncateAt : previewLength;
+        
+        // Smart truncation that preserves HTML structure
+        let textCount = 0;
+        let htmlIndex = 0;
+        let insideTag = false;
+        
+        for (let i = 0; i < processedContent.length; i++) {
+          const char = processedContent[i];
+          
+          if (char === '<') {
+            insideTag = true;
+          } else if (char === '>') {
+            insideTag = false;
+          } else if (!insideTag) {
+            textCount++;
+            if (textCount >= targetLength) {
+              htmlIndex = i + 1;
+              break;
+            }
+          }
+        }
+        
+        if (htmlIndex > 0) {
+          let truncatedHTML = processedContent.substring(0, htmlIndex);
+          
+          // Ensure all opened tags are properly closed
+          const openTags: string[] = [];
+          const tagRegex = /<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
+          let match;
+          
+          while ((match = tagRegex.exec(truncatedHTML)) !== null) {
+            const tagName = match[1].toLowerCase();
+            if (match[0].startsWith('</')) {
+              // Closing tag
+              const lastOpenTag = openTags.lastIndexOf(tagName);
+              if (lastOpenTag !== -1) {
+                openTags.splice(lastOpenTag, 1);
+              }
+            } else if (!match[0].endsWith('/>') && !['br', 'hr', 'img', 'input'].includes(tagName)) {
+              // Opening tag (not self-closing)
+              openTags.push(tagName);
+            }
+          }
+          
+          // Close any remaining open tags
+          for (let i = openTags.length - 1; i >= 0; i--) {
+            truncatedHTML += `</${openTags[i]}>`;
+          }
+          
+          previewContent = truncatedHTML + '...';
+        }
       }
       
       // Extrair título sanitizado do conteúdo markdown
@@ -806,9 +857,9 @@ export const useSEOHTMLGenerator = () => {
           ${processedProductName ? `<p class="product-reference"><strong>Produto:</strong> ${processedProductName}</p>` : ''}
           <div class="blog-content post-card-content">
             <div class="preview-content">
-              ${shouldTruncate ? previewContent + '...' : processedContent}
+              ${previewContent}
             </div>
-            ${shouldTruncate ? `
+            ${previewContent !== processedContent ? `
               <button class="read-more-btn">Leia mais →</button>
               <div class="full-content">
                 ${processedContent}
