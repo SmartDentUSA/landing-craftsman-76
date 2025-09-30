@@ -57,6 +57,16 @@ interface Product {
   tiktok_videos?: Video[];
   video_captions?: any;
   original_data?: any;
+  // Google Merchant Center fields
+  gtin?: string;
+  mpn?: string;
+  brand?: string;
+  color?: string;
+  size?: string;
+  material?: string;
+  google_product_category?: string;
+  condition?: string;
+  availability?: string;
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;
@@ -573,24 +583,29 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         
         // Mapear dados extraídos para o formulário
         const updates: Partial<Product> = {};
+        let fieldsImported: string[] = [];
         
         if (extractedData.name && !formData.name?.trim()) {
           updates.name = extractedData.name;
+          fieldsImported.push('Nome');
         }
         
         if (extractedData.description && !formData.description?.trim()) {
           updates.description = extractedData.description;
+          fieldsImported.push('Descrição');
         }
         
         if (extractedData.price) {
           const priceValue = parseFloat(extractedData.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
           if (!isNaN(priceValue) && priceValue > 0) {
             updates.price = priceValue;
+            fieldsImported.push('Preço');
           }
         }
         
         if (extractedData.image && !formData.image_url?.trim()) {
           updates.image_url = extractedData.image;
+          fieldsImported.push('Imagem');
         }
         
         // Combinar installmentText com sales_pitch existente
@@ -600,6 +615,53 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             `${currentSalesPitch}\n\n${extractedData.installmentText}` : 
             extractedData.installmentText;
           updates.sales_pitch = newSalesPitch;
+          fieldsImported.push('Parcelamento');
+        }
+
+        // ✨ MAPEAR CAMPOS GOOGLE MERCHANT
+        if (extractedData.gtin) {
+          updates.gtin = extractedData.gtin;
+          fieldsImported.push('GTIN/EAN');
+        }
+        
+        if (extractedData.mpn) {
+          updates.mpn = extractedData.mpn;
+          fieldsImported.push('MPN/SKU');
+        }
+        
+        if (extractedData.brand) {
+          updates.brand = extractedData.brand;
+          fieldsImported.push('Marca');
+        }
+        
+        if (extractedData.color) {
+          updates.color = extractedData.color;
+          fieldsImported.push('Cor');
+        }
+        
+        if (extractedData.size) {
+          updates.size = extractedData.size;
+          fieldsImported.push('Tamanho');
+        }
+        
+        if (extractedData.material) {
+          updates.material = extractedData.material;
+          fieldsImported.push('Material');
+        }
+        
+        if (extractedData.google_product_category) {
+          updates.google_product_category = extractedData.google_product_category;
+          fieldsImported.push('Categoria Google');
+        }
+        
+        if (extractedData.condition) {
+          updates.condition = extractedData.condition;
+          fieldsImported.push('Condição');
+        }
+        
+        if (extractedData.availability) {
+          updates.availability = extractedData.availability;
+          fieldsImported.push('Disponibilidade');
         }
 
         // Aplicar atualizações
@@ -607,7 +669,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
         toast({
           title: "Sucesso",
-          description: "Dados da loja integrada importados com sucesso!"
+          description: `${fieldsImported.length} campos importados: ${fieldsImported.join(', ')}`
         });
       } else {
         throw new Error(data?.error || 'Erro ao extrair dados do produto');
@@ -682,6 +744,16 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         benefits: benefits,
         features: features,
         bot_trigger_words: finalBotWords,
+        // Google Merchant Center fields
+        gtin: formData.gtin,
+        mpn: formData.mpn,
+        brand: formData.brand,
+        color: formData.color,
+        size: formData.size,
+        material: formData.material,
+        google_product_category: formData.google_product_category,
+        condition: formData.condition || 'new',
+        availability: formData.availability || 'in stock',
         // Landing Page Section controls
         show_in_resources: formData.show_in_resources,
         selected: formData.selected,
@@ -691,6 +763,10 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         resource_cta3: formData.resource_cta3,
         // Offer Discount CTA
         offer_discount_cta: formData.offer_discount_cta,
+        // FAQ
+        faq: formData.faq,
+        // Resource Descriptions
+        resource_descriptions: formData.resource_descriptions,
         updated_at: new Date().toISOString()
       };
 
@@ -1285,6 +1361,159 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 answer: "Digite a resposta com formatação rica..."
               }}
             />
+          </div>
+
+          {/* Google Merchant Center Data */}
+          <div className="space-y-4 border-t pt-6 bg-gradient-to-br from-primary/5 to-primary/10 p-6 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1 5v5h5v2h-5v5h-2v-5H4v-2h5V7h2z"/>
+                  </svg>
+                  Dados Google Merchant Center
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Campos extraídos automaticamente da Loja Integrada. Editáveis manualmente.
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                SEO Otimizado
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* GTIN/EAN */}
+              <div className="space-y-2">
+                <Label htmlFor="gtin" className="flex items-center gap-2">
+                  GTIN / EAN
+                  <span className="text-xs text-muted-foreground">(código de barras)</span>
+                </Label>
+                <Input
+                  id="gtin"
+                  value={formData.gtin || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, gtin: e.target.value }))}
+                  placeholder="Ex: 7891234567890"
+                  className="font-mono"
+                />
+              </div>
+
+              {/* MPN/SKU */}
+              <div className="space-y-2">
+                <Label htmlFor="mpn" className="flex items-center gap-2">
+                  MPN / SKU
+                  <span className="text-xs text-muted-foreground">(código fabricante)</span>
+                </Label>
+                <Input
+                  id="mpn"
+                  value={formData.mpn || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, mpn: e.target.value }))}
+                  placeholder="Ex: PROD-12345"
+                  className="font-mono"
+                />
+              </div>
+
+              {/* Marca */}
+              <div className="space-y-2">
+                <Label htmlFor="brand">Marca</Label>
+                <Input
+                  id="brand"
+                  value={formData.brand || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                  placeholder="Ex: Apple, Samsung, Nike"
+                />
+              </div>
+
+              {/* Cor */}
+              <div className="space-y-2">
+                <Label htmlFor="color">Cor</Label>
+                <Input
+                  id="color"
+                  value={formData.color || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                  placeholder="Ex: Azul, Vermelho, Preto"
+                />
+              </div>
+
+              {/* Tamanho */}
+              <div className="space-y-2">
+                <Label htmlFor="size">Tamanho</Label>
+                <Input
+                  id="size"
+                  value={formData.size || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, size: e.target.value }))}
+                  placeholder="Ex: M, G, 42, 10ml"
+                />
+              </div>
+
+              {/* Material */}
+              <div className="space-y-2">
+                <Label htmlFor="material">Material</Label>
+                <Input
+                  id="material"
+                  value={formData.material || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
+                  placeholder="Ex: Algodão, Plástico, Aço"
+                />
+              </div>
+
+              {/* Categoria Google */}
+              <div className="space-y-2">
+                <Label htmlFor="google_product_category">Categoria Google</Label>
+                <Input
+                  id="google_product_category"
+                  value={formData.google_product_category || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, google_product_category: e.target.value }))}
+                  placeholder="Ex: Eletrônicos > Celulares"
+                />
+              </div>
+
+              {/* Condição */}
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condição</Label>
+                <Select
+                  value={formData.condition || 'new'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+                >
+                  <SelectTrigger id="condition">
+                    <SelectValue placeholder="Selecione a condição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">Novo</SelectItem>
+                    <SelectItem value="used">Usado</SelectItem>
+                    <SelectItem value="refurbished">Recondicionado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Disponibilidade */}
+              <div className="space-y-2">
+                <Label htmlFor="availability">Disponibilidade</Label>
+                <Select
+                  value={formData.availability || 'in stock'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value }))}
+                >
+                  <SelectTrigger id="availability">
+                    <SelectValue placeholder="Selecione a disponibilidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in stock">Em Estoque</SelectItem>
+                    <SelectItem value="out of stock">Fora de Estoque</SelectItem>
+                    <SelectItem value="preorder">Pré-venda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 p-3 rounded-md border border-blue-200 dark:border-blue-900">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <strong>Dica:</strong> Estes dados são importados automaticamente da Loja Integrada quando você clica em "Importar Dados". 
+                Produtos com GTIN, MPN e Marca têm melhor ranqueamento no Google Shopping e Google Merchant Center.
+              </p>
+            </div>
           </div>
 
           {/* Landing Page Sections Configuration */}
