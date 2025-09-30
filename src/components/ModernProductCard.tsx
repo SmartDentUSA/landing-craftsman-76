@@ -43,6 +43,7 @@ interface Product {
   name: string;
   description?: string;
   price?: number;
+  promo_price?: number;
   currency?: string;
   category?: string;
   subcategory?: string;
@@ -63,6 +64,13 @@ interface Product {
   technical_videos?: any[];
   testimonial_videos?: any[];
   tiktok_videos?: any[];
+  // Google Merchant fields
+  gtin?: string;
+  ean?: string;
+  mpn?: string;
+  brand?: string;
+  // Physical specifications
+  variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;

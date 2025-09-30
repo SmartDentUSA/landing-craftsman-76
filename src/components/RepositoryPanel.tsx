@@ -62,6 +62,13 @@ interface Product {
   original_data?: any;
   images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   technical_specifications?: Array<{ label: string; value: string }>;
+  // Google Merchant fields
+  gtin?: string;
+  ean?: string;
+  mpn?: string;
+  brand?: string;
+  // Physical specifications
+  variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;
@@ -299,6 +306,11 @@ export function RepositoryPanel({
         description: data.description || '',
         price: data.price || 0,
         promo_price: data.promo_price || undefined,
+        gtin: data.gtin || undefined,
+        ean: data.ean || undefined,
+        mpn: data.mpn || undefined,
+        brand: data.brand || undefined,
+        variations: Array.isArray(data.variations) ? data.variations as unknown as { name: string; price?: number; stock?: number; color?: string; size?: string }[] : undefined,
         currency: data.currency || 'BRL',
         category: data.category || '',
         subcategory: data.subcategory || '',

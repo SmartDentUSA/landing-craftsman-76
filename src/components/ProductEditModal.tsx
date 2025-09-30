@@ -61,6 +61,7 @@ interface Product {
   images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   // Google Merchant Center fields
   gtin?: string;
+  ean?: string;
   mpn?: string;
   brand?: string;
   color?: string;
@@ -1095,11 +1096,13 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               <Label htmlFor="price">Preço de venda *</Label>
               <Input
                 id="price"
-                type="number"
-                step="0.01"
+                type="text"
                 value={formData.price || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                placeholder="0.00"
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d.,]/g, '');
+                  setFormData(prev => ({ ...prev, price: value ? parseFloat(value.replace(',', '.')) : 0 }));
+                }}
+                placeholder="1859.00"
               />
             </div>
 
@@ -1107,7 +1110,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               <Label htmlFor="promo_price">Preço promocional</Label>
               <Input
                 id="promo_price"
-                type="number"
+                type="text"
                 step="0.01"
                 value={promoPrice || ''}
                 onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -1749,33 +1752,51 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               </Badge>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* GTIN/EAN */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* GTIN */}
               <div className="space-y-2">
                 <Label htmlFor="gtin" className="flex items-center gap-2">
-                  GTIN / EAN
-                  <span className="text-xs text-muted-foreground">(código de barras)</span>
+                  GTIN
+                  <span className="text-xs text-muted-foreground">(Global Trade Item Number)</span>
                 </Label>
                 <Input
                   id="gtin"
+                  type="text"
                   value={formData.gtin || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, gtin: e.target.value }))}
-                  placeholder="Ex: 7891234567890"
+                  placeholder="7891234567890"
                   className="font-mono"
                 />
               </div>
 
-              {/* MPN/SKU */}
+              {/* EAN */}
+              <div className="space-y-2">
+                <Label htmlFor="ean" className="flex items-center gap-2">
+                  EAN
+                  <span className="text-xs text-muted-foreground">(European Article Number)</span>
+                </Label>
+                <Input
+                  id="ean"
+                  type="text"
+                  value={(formData as any).ean || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ean: e.target.value } as any))}
+                  placeholder="5901234123457"
+                  className="font-mono"
+                />
+              </div>
+
+              {/* MPN */}
               <div className="space-y-2">
                 <Label htmlFor="mpn" className="flex items-center gap-2">
-                  MPN / SKU
-                  <span className="text-xs text-muted-foreground">(código fabricante)</span>
+                  MPN
+                  <span className="text-xs text-muted-foreground">(Manufacturer Part Number)</span>
                 </Label>
                 <Input
                   id="mpn"
+                  type="text"
                   value={formData.mpn || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, mpn: e.target.value }))}
-                  placeholder="Ex: PROD-12345"
+                  placeholder="PROD-12345"
                   className="font-mono"
                 />
               </div>

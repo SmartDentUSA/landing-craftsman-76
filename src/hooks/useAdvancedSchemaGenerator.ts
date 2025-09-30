@@ -29,6 +29,7 @@ interface ProductData {
   testimonial_videos?: string[];
   // ✨ NOVOS CAMPOS GOOGLE MERCHANT + SEO
   gtin?: string;
+  ean?: string;
   mpn?: string;
   brand?: string;
   google_product_category?: string;
@@ -42,6 +43,8 @@ interface ProductData {
   seo_title_override?: string;
   seo_description_override?: string;
   canonical_url?: string;
+  product_url?: string;
+  variations?: Array<{ name: string; price?: number; stock?: number }>;
   // ✨ NOVOS CAMPOS PHASE 1 - UTILIZAÇÃO MÁXIMA DE DADOS
   technical_specifications?: Array<{ property: string; value: string }>;
   faq?: Array<{ question: string; answer: string }>;
@@ -94,19 +97,51 @@ export const useAdvancedSchemaGenerator = () => {
       "description": product.seo_description_override || product.description || product.sales_pitch || `${product.name} - Solução de qualidade`
     };
 
-    // ✨ IDENTIFICADORES ÚNICOS GOOGLE MERCHANT
+    // 🔥 IDENTIFICADORES ÚNICOS SEPARADOS (GTIN, EAN, MPN)
+    const identifiers: any[] = [];
+    
     if (product.gtin) {
       schema.gtin = product.gtin;
+      identifiers.push({
+        "@type": "PropertyValue",
+        "propertyID": "gtin",
+        "value": product.gtin
+      });
     }
+    
+    if (product.ean) {
+      identifiers.push({
+        "@type": "PropertyValue",
+        "propertyID": "ean",
+        "value": product.ean
+      });
+    }
+    
     if (product.mpn) {
       schema.mpn = product.mpn;
+      identifiers.push({
+        "@type": "PropertyValue",
+        "propertyID": "mpn",
+        "value": product.mpn
+      });
     }
-    if (product.gtin || product.mpn) {
-      schema.identifier = [
-        ...(product.gtin ? [{ "@type": "PropertyValue", "name": "GTIN", "value": product.gtin }] : []),
-        ...(product.mpn ? [{ "@type": "PropertyValue", "name": "MPN", "value": product.mpn }] : []),
-        { "@type": "PropertyValue", "name": "ID", "value": product.id }
-      ];
+    
+    if (identifiers.length > 0) {
+      schema.identifier = identifiers;
+    }
+    
+    // 🔥 Variations como ofertas separadas
+    if (product.variations && product.variations.length > 0) {
+      schema.offers = product.variations.map((variation, index) => ({
+        "@type": "Offer",
+        "name": variation.name,
+        "price": variation.price || product.price || 0,
+        "priceCurrency": product.currency || "BRL",
+        "availability": variation.stock && variation.stock > 0 
+          ? "https://schema.org/InStock" 
+          : "https://schema.org/OutOfStock",
+        "url": `${product.product_url || ''}#variation-${index}`
+      }));
     }
 
     // ✨ Preço e ofertas comerciais COMPLETAS + DISPONIBILIDADE REAL

@@ -101,16 +101,23 @@ function generateMerchantItem(product: any, baseUrl: string): string {
   const description = product.description || product.sales_pitch || 'Produto de qualidade'
   const link = product.product_url || `${baseUrl}/produto/${productId}`
   const imageLink = product.image_url || `${baseUrl}/images/placeholder.jpg`
-  const availability = 'in stock'
+  const availability = product.availability || 'in stock'
   const price = product.price ? `${product.price} ${product.currency || 'BRL'}` : '0 BRL'
-  const brand = extractBrandFromName(product.name) || 'Marca'
-  const condition = 'new'
+  const promoPrice = product.promo_price
+  const brand = product.brand || extractBrandFromName(product.name) || 'Marca'
+  const condition = product.condition || 'new'
   const category = product.category || 'Geral'
   const productType = `${product.category || 'Geral'}${product.subcategory ? ' > ' + product.subcategory : ''}`
 
-  // Extract GTIN/UPC if available in original data
-  const gtin = extractGTIN(product.original_data)
-  const mpn = extractMPN(product.original_data) || productId
+  // 🔥 PRIORIZAR campos dedicados > original_data
+  const gtin = product.gtin || extractGTIN(product.original_data)
+  const ean = product.ean || product.original_data?.ean
+  const mpn = product.mpn || extractMPN(product.original_data) || productId
+  const color = product.color ? escapeXML(product.color) : ''
+  const size = product.size ? escapeXML(product.size) : ''
+  const material = product.material ? escapeXML(product.material) : ''
+
+  const availabilityStatus = availability.includes('stock') ? 'in_stock' : 'out_of_stock'
 
   return `
     <item>
@@ -119,14 +126,19 @@ function generateMerchantItem(product: any, baseUrl: string): string {
       <g:description>${escapeXML(description.substring(0, 5000))}</g:description>
       <g:link>${escapeXML(link)}</g:link>
       <g:image_link>${escapeXML(imageLink)}</g:image_link>
-      <g:availability>${availability}</g:availability>
+      <g:availability>${availabilityStatus}</g:availability>
       <g:price>${escapeXML(price)}</g:price>
-      <g:brand>${escapeXML(brand)}</g:brand>
+      ${promoPrice && promoPrice < product.price ? `<g:sale_price>${promoPrice} ${product.currency || 'BRL'}</g:sale_price>` : ''}
+      <g:brand>${brand}</g:brand>
       <g:condition>${condition}</g:condition>
+      ${gtin ? `<g:gtin>${escapeXML(gtin)}</g:gtin>` : ''}
+      ${ean ? `<g:ean>${escapeXML(ean)}</g:ean>` : ''}
+      <g:mpn>${escapeXML(mpn)}</g:mpn>
+      ${color ? `<g:color>${color}</g:color>` : ''}
+      ${size ? `<g:size>${size}</g:size>` : ''}
+      ${material ? `<g:material>${material}</g:material>` : ''}
       <g:google_product_category>${escapeXML(mapToGoogleCategory(category))}</g:google_product_category>
       <g:product_type>${escapeXML(productType)}</g:product_type>
-      ${gtin ? `<g:gtin>${escapeXML(gtin)}</g:gtin>` : ''}
-      <g:mpn>${escapeXML(mpn)}</g:mpn>
       ${product.features && product.features.length > 0 ? 
         product.features.slice(0, 3).map((feature: string, index: number) => 
           `<g:custom_label_${index}>${escapeXML(feature.substring(0, 100))}</g:custom_label_${index}>`

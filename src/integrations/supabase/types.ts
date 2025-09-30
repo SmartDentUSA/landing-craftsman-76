@@ -589,6 +589,7 @@ export type Database = {
           depth: number | null
           description: string | null
           display_order: number | null
+          ean: string | null
           faq: Json | null
           features: Json | null
           gender: string | null
@@ -664,6 +665,7 @@ export type Database = {
           depth?: number | null
           description?: string | null
           display_order?: number | null
+          ean?: string | null
           faq?: Json | null
           features?: Json | null
           gender?: string | null
@@ -739,6 +741,7 @@ export type Database = {
           depth?: number | null
           description?: string | null
           display_order?: number | null
+          ean?: string | null
           faq?: Json | null
           features?: Json | null
           gender?: string | null
