@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -1764,18 +1765,77 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                     </p>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setVariations([...variations, { name: '', price: undefined, stock: undefined, color: '', size: '' }])}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Variação
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setVariations([...variations, { 
+                      name: 'Variação Exemplo', 
+                      price: 99.90, 
+                      stock: 10, 
+                      color: 'Azul', 
+                      size: 'M' 
+                    }])}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Exemplo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVariations([...variations, { name: '', price: undefined, stock: undefined, color: '', size: '' }])}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Variação
+                  </Button>
+                </div>
               </div>
               
-              {variations.length > 0 && (
+              {variations.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                        <Package className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-lg">Nenhuma variação cadastrada</h3>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          Adicione variações do produto para gerenciar diferentes cores, tamanhos, 
+                          preços e estoques em cards individuais organizados.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          onClick={() => setVariations([{ 
+                            name: 'Variação Exemplo', 
+                            price: 99.90, 
+                            stock: 10, 
+                            color: 'Azul', 
+                            size: 'M' 
+                          }])}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ver Exemplo de Card
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setVariations([{ name: '', price: undefined, stock: undefined, color: '', size: '' }])}
+                        >
+                          Criar Variação Vazia
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {variations.map((variation, index) => (
                     <VariationCard
