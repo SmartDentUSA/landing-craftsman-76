@@ -1,5 +1,8 @@
 project_id = "pgfgripuanuwwolmtknn"
 
+[functions.import-loja-integrada-api]
+verify_jwt = true
+
 [functions.export-product-ai-playbook]
 verify_jwt = false
 
