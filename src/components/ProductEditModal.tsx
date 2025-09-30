@@ -166,7 +166,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [overwriteData, setOverwriteData] = useState(false);
   
   // Images gallery state
@@ -610,210 +609,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       });
     } finally {
       setGeneratingKeywords(false);
-    }
-  };
-
-  const extractProductDataFromUrl = async () => {
-    if (!formData.product_url?.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite uma URL válida para importar os dados",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('extract-product-data', {
-        body: {
-          url: formData.product_url
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success && data?.data) {
-        const extractedData = data.data;
-        
-        // Mapear dados extraídos para o formulário
-        const updates: Partial<Product> = {};
-        let fieldsImported: string[] = [];
-        
-        // Aplicar lógica de sobrescrita ou apenas campos vazios
-        const shouldUpdate = (currentValue: any) => {
-          return overwriteData || !currentValue || (typeof currentValue === 'string' && !currentValue.trim());
-        };
-        
-        if (extractedData.name && shouldUpdate(formData.name)) {
-          updates.name = extractedData.name;
-          fieldsImported.push('Nome');
-        }
-        
-        // Validar descrição antes de importar
-        const isDescValid = extractedData.description && 
-                           extractedData.description.trim().length > 20 && 
-                           extractedData.description.toLowerCase() !== extractedData.name?.toLowerCase();
-        
-        if (isDescValid && shouldUpdate(formData.description)) {
-          updates.description = extractedData.description;
-          fieldsImported.push('Descrição');
-        }
-        
-        if (extractedData.price) {
-          const priceValue = parseFloat(extractedData.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
-          if (!isNaN(priceValue) && priceValue > 0 && shouldUpdate(formData.price)) {
-            updates.price = priceValue;
-            fieldsImported.push('Preço de venda');
-          }
-        }
-        
-        if (extractedData.promoPrice) {
-          const promoPriceValue = parseFloat(extractedData.promoPrice.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
-          if (!isNaN(promoPriceValue) && promoPriceValue > 0 && (overwriteData || !promoPrice)) {
-            setPromoPrice(promoPriceValue);
-            fieldsImported.push('Preço promocional');
-          }
-        }
-        
-        // ✨ Importar galeria de imagens
-        if (extractedData.images_gallery && Array.isArray(extractedData.images_gallery) && extractedData.images_gallery.length > 0) {
-          setImagesGallery(extractedData.images_gallery);
-          fieldsImported.push(`Galeria (${extractedData.images_gallery.length} imagens)`);
-          
-          // Definir a primeira imagem (principal) como image_url para compatibilidade
-          const mainImage = extractedData.images_gallery.find((img: any) => img.is_main) || extractedData.images_gallery[0];
-          if (mainImage && shouldUpdate(formData.image_url)) {
-            updates.image_url = mainImage.url;
-          }
-        } else if (extractedData.image && shouldUpdate(formData.image_url)) {
-          // Fallback: imagem única
-          updates.image_url = extractedData.image;
-          fieldsImported.push('Imagem');
-        }
-        
-        // Combinar installmentText com sales_pitch existente
-        if (extractedData.installmentText) {
-          const currentSalesPitch = formData.sales_pitch || '';
-          const newSalesPitch = currentSalesPitch ? 
-            `${currentSalesPitch}\n\n${extractedData.installmentText}` : 
-            extractedData.installmentText;
-          updates.sales_pitch = newSalesPitch;
-          fieldsImported.push('Parcelamento');
-        }
-
-        // ✨ MAPEAR CAMPOS GOOGLE MERCHANT
-        if (extractedData.gtin && shouldUpdate(formData.gtin)) {
-          updates.gtin = extractedData.gtin;
-          fieldsImported.push('GTIN');
-        }
-        
-        if (extractedData.ean && shouldUpdate(formData.ean)) {
-          updates.ean = extractedData.ean;
-          fieldsImported.push('EAN');
-        }
-        
-        if (extractedData.mpn && shouldUpdate(formData.mpn)) {
-          updates.mpn = extractedData.mpn;
-          fieldsImported.push('MPN/SKU');
-        }
-        
-        if (extractedData.brand && shouldUpdate(formData.brand)) {
-          updates.brand = extractedData.brand;
-          fieldsImported.push('Marca');
-        }
-        
-        if (extractedData.color && shouldUpdate(formData.color)) {
-          updates.color = extractedData.color;
-          fieldsImported.push('Cor');
-        }
-        
-        if (extractedData.size && shouldUpdate(formData.size)) {
-          updates.size = extractedData.size;
-          fieldsImported.push('Tamanho');
-        }
-        
-        if (extractedData.material && shouldUpdate(formData.material)) {
-          updates.material = extractedData.material;
-          fieldsImported.push('Material');
-        }
-        
-        // Physical specifications
-        if (extractedData.variations && Array.isArray(extractedData.variations) && (overwriteData || variations.length === 0)) {
-          setVariations(extractedData.variations);
-          fieldsImported.push('Variações');
-        }
-        if (extractedData.package_size && shouldUpdate(packageSize)) {
-          setPackageSize(extractedData.package_size);
-          fieldsImported.push('Tamanho da Embalagem');
-        }
-        if (extractedData.weight && shouldUpdate(weight)) {
-          setWeight(extractedData.weight.toString());
-          fieldsImported.push('Peso');
-        }
-        if (extractedData.height && shouldUpdate(height)) {
-          setHeight(extractedData.height.toString());
-          fieldsImported.push('Altura');
-        }
-        if (extractedData.width && shouldUpdate(width)) {
-          setWidth(extractedData.width.toString());
-          fieldsImported.push('Largura');
-        }
-        if (extractedData.depth && shouldUpdate(depth)) {
-          setDepth(extractedData.depth.toString());
-          fieldsImported.push('Profundidade');
-        }
-        if (extractedData.store_category && shouldUpdate(storeCategory)) {
-          setStoreCategory(extractedData.store_category);
-          fieldsImported.push('Categoria da Loja');
-        }
-        
-        if (extractedData.google_product_category && shouldUpdate(formData.google_product_category)) {
-          updates.google_product_category = extractedData.google_product_category;
-          fieldsImported.push('Categoria Google');
-        }
-        
-        if (extractedData.condition && shouldUpdate(formData.condition)) {
-          updates.condition = extractedData.condition;
-          fieldsImported.push('Condição');
-        }
-        
-        if (extractedData.availability && shouldUpdate(formData.availability)) {
-          updates.availability = extractedData.availability;
-          fieldsImported.push('Disponibilidade');
-        }
-
-        // Aplicar atualizações
-        setFormData(prev => ({ ...prev, ...updates }));
-
-        toast({
-          title: "Sucesso",
-          description: `${fieldsImported.length} campos importados: ${fieldsImported.join(', ')}`
-        });
-      } else {
-        throw new Error(data?.error || 'Erro ao extrair dados do produto');
-      }
-    } catch (error) {
-      console.error('Error extracting product data:', error);
-      
-      // Check for specific error messages
-      const errorMessage = (error as any)?.message || error?.toString() || '';
-      
-      if (errorMessage.includes('404')) {
-        toast({
-          title: "Erro 404 - Página não encontrada",
-          description: "A URL informada não existe. Verifique se a URL está correta e completa, incluindo o protocolo (https://).",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Erro ao importar dados. Verifique a URL e tente novamente.",
-          variant: "destructive"
-        });
-      }
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -1376,56 +1171,63 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             )}
           </div>
 
-          <div className="space-y-3">
-            <Label htmlFor="product_url">URL do Produto</Label>
-            <div className="flex gap-2">
-              <Input
-                id="product_url"
-                type="url"
-                value={formData.product_url || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, product_url: e.target.value }))}
-                placeholder="https://..."
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={extractProductDataFromUrl}
-                disabled={importing || !formData.product_url?.trim()}
-                className="shrink-0"
-              >
-                {importing ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
-                    Importando...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Importar dados da loja integrada
-                  </>
-                )}
-              </Button>
-            </div>
-            
-            {/* ✨ Opção de sobrescrever dados existentes */}
-            <div className="flex items-center space-x-2 pt-1">
-              <Switch
-                id="overwrite-data"
-                checked={overwriteData}
-                onCheckedChange={setOverwriteData}
-              />
-              <Label htmlFor="overwrite-data" className="text-sm font-normal cursor-pointer">
-                Sobrescrever dados existentes ao importar
-              </Label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {overwriteData 
-                ? "⚠️ Todos os campos serão substituídos pelos dados importados da Loja Integrada" 
-                : "✓ Apenas campos vazios serão preenchidos com dados importados"}
-            </p>
+          {/* Loja Integrada Importer */}
+          <ProductLojaIntegradaImporter
+            productUrl={formData.product_url}
+            onImportSuccess={(importedData) => {
+              // Apply imported data to form
+              setFormData(prev => ({ ...prev, ...importedData }));
+              
+              // Handle special state fields
+              if (importedData.promo_price) setPromoPrice(importedData.promo_price);
+              if (importedData.images_gallery) setImagesGallery(importedData.images_gallery);
+              if (importedData.variations) setVariations(importedData.variations);
+              if (importedData.weight) setWeight(importedData.weight.toString());
+              if (importedData.height) setHeight(importedData.height.toString());
+              if (importedData.width) setWidth(importedData.width.toString());
+              if (importedData.depth) setDepth(importedData.depth.toString());
+              if (importedData.package_size) setPackageSize(importedData.package_size);
+              if (importedData.store_category) setStoreCategory(importedData.store_category);
+            }}
+            onImportError={(error) => {
+              toast({
+                title: "Erro na importação",
+                description: error,
+                variant: "destructive"
+              });
+            }}
+            mode="callback"
+            overwriteData={overwriteData}
+            currentFormData={{
+              ...formData,
+              promo_price: promoPrice,
+              images_gallery: imagesGallery,
+              variations,
+              weight,
+              height,
+              width,
+              depth,
+              package_size: packageSize,
+              store_category: storeCategory
+            }}
+          />
+
+          {/* Overwrite Toggle */}
+          <div className="flex items-center space-x-2 pt-1">
+            <Switch
+              id="overwrite-data"
+              checked={overwriteData}
+              onCheckedChange={setOverwriteData}
+            />
+            <Label htmlFor="overwrite-data" className="text-sm font-normal cursor-pointer">
+              Sobrescrever dados existentes ao importar
+            </Label>
           </div>
+          <p className="text-xs text-muted-foreground">
+            {overwriteData 
+              ? "⚠️ Todos os campos serão substituídos pelos dados importados" 
+              : "✓ Apenas campos vazios serão preenchidos"}
+          </p>
 
           {/* Video Collections */}
           <div className="space-y-6 border-t pt-6">

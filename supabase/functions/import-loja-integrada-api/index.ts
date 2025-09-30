@@ -269,7 +269,9 @@ async function fallbackToWebScraping(
     }
 
     console.log('✅ Web scraping fallback successful');
-    return { success: true, data };
+    // Unwrap nested data structure if present
+    const unwrappedData = data?.data ?? data;
+    return { success: true, data: unwrappedData };
   } catch (error) {
     console.error('❌ Web scraping fallback error:', error);
     return {

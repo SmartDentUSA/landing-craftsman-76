@@ -59,6 +59,8 @@ interface ProductLojaIntegradaImporterProps {
   onImportError?: (error: string) => void;
   mode?: 'callback' | 'direct-save';
   onImportComplete?: () => void;
+  overwriteData?: boolean;
+  currentFormData?: any;
 }
 
 export function ProductLojaIntegradaImporter({ 
@@ -66,7 +68,9 @@ export function ProductLojaIntegradaImporter({
   onImportSuccess,
   onImportError,
   mode = 'callback',
-  onImportComplete
+  onImportComplete,
+  overwriteData = false,
+  currentFormData = {}
 }: ProductLojaIntegradaImporterProps) {
   const [importMethod, setImportMethod] = useState<'api' | 'scraping'>('api');
   const [productUrl, setProductUrl] = useState(initialUrl || '');
@@ -76,6 +80,30 @@ export function ProductLojaIntegradaImporter({
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [circuitStatus, setCircuitStatus] = useState<'closed' | 'open'>('closed');
   const { toast } = useToast();
+
+  // Helper function to check if field should be updated
+  const shouldUpdate = (currentValue: any): boolean => {
+    if (overwriteData) return true;
+    if (currentValue === null || currentValue === undefined || currentValue === '') return true;
+    if (Array.isArray(currentValue) && currentValue.length === 0) return true;
+    return false;
+  };
+
+  // Normalize API response to unwrap nested structures
+  const normalizeEdgeResponse = (payload: any): any => {
+    // Try different unwrap paths
+    if (payload?.data?.data?.name) return payload.data.data;
+    if (payload?.data?.name) return payload.data;
+    if (payload?.product?.data?.name) return payload.product.data;
+    if (payload?.product?.name) return payload.product;
+    
+    // Map raw Loja Integrada "nome" field to "name"
+    if (payload?.nome && !payload?.name) {
+      return { ...payload, name: payload.nome };
+    }
+    
+    return payload;
+  };
 
   const handleImport = async () => {
     if (!productUrl && !productId) {
@@ -113,7 +141,7 @@ export function ProductLojaIntegradaImporter({
           throw new Error(data.error || 'Erro na importação');
         }
 
-        result = data.data || data.product;
+        result = normalizeEdgeResponse(data);
 
         // Update circuit breaker status
         if (data.metadata?.circuitBreakerStatus) {
@@ -138,7 +166,7 @@ export function ProductLojaIntegradaImporter({
         });
 
         if (error) throw error;
-        result = data;
+        result = normalizeEdgeResponse(data);
 
         toast({
           title: "Dados extraídos via Web Scraping",
@@ -196,19 +224,165 @@ export function ProductLojaIntegradaImporter({
 
         onImportComplete?.();
       } else {
-        // Callback mode
+        // Callback mode - build comprehensive update object
+        const updates: any = {};
+        const fieldsImported: string[] = [];
+
+        // Name (required)
+        if (result.name && shouldUpdate(currentFormData.name)) {
+          updates.name = result.name;
+          fieldsImported.push('Nome');
+        }
+
+        // Description with validation
+        const isDescValid = result.description && 
+                           result.description.trim().length > 20 && 
+                           result.description.toLowerCase() !== result.name?.toLowerCase();
+        if (isDescValid && shouldUpdate(currentFormData.description)) {
+          updates.description = result.description;
+          fieldsImported.push('Descrição');
+        }
+
+        // Prices with regex parsing
+        if (result.price) {
+          const priceValue = parseFloat(result.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (!isNaN(priceValue) && priceValue > 0 && shouldUpdate(currentFormData.price)) {
+            updates.price = priceValue;
+            fieldsImported.push('Preço');
+          }
+        }
+
+        if (result.promo_price) {
+          const promoPriceValue = parseFloat(result.promo_price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (!isNaN(promoPriceValue) && promoPriceValue > 0 && shouldUpdate(currentFormData.promo_price)) {
+            updates.promo_price = promoPriceValue;
+            fieldsImported.push('Preço Promocional');
+          }
+        }
+
+        // Images gallery
+        if (result.images_gallery && Array.isArray(result.images_gallery) && result.images_gallery.length > 0) {
+          if (overwriteData || !currentFormData.images_gallery?.length) {
+            updates.images_gallery = result.images_gallery;
+            fieldsImported.push(`Galeria (${result.images_gallery.length} imagens)`);
+            
+            // Set main image as image_url for compatibility
+            const mainImage = result.images_gallery.find((img: any) => img.is_main) || result.images_gallery[0];
+            if (mainImage && shouldUpdate(currentFormData.image_url)) {
+              updates.image_url = mainImage.url;
+            }
+          }
+        } else if (result.image_url && shouldUpdate(currentFormData.image_url)) {
+          updates.image_url = result.image_url;
+          fieldsImported.push('Imagem');
+        }
+
+        // Sales pitch (combine with installmentText if present)
+        if (result.installmentText || result.sales_pitch) {
+          const currentSalesPitch = currentFormData.sales_pitch || '';
+          const newSalesPitch = result.installmentText ? 
+            (currentSalesPitch ? `${currentSalesPitch}\n\n${result.installmentText}` : result.installmentText) :
+            result.sales_pitch;
+          if (shouldUpdate(currentFormData.sales_pitch)) {
+            updates.sales_pitch = newSalesPitch;
+            fieldsImported.push('Pitch de Vendas');
+          }
+        }
+
+        // Google Merchant fields
+        if (result.gtin && shouldUpdate(currentFormData.gtin)) {
+          updates.gtin = result.gtin;
+          fieldsImported.push('GTIN');
+        }
+        if (result.ean && shouldUpdate(currentFormData.ean)) {
+          updates.ean = result.ean;
+          fieldsImported.push('EAN');
+        }
+        if (result.mpn && shouldUpdate(currentFormData.mpn)) {
+          updates.mpn = result.mpn;
+          fieldsImported.push('MPN');
+        }
+        if (result.brand && shouldUpdate(currentFormData.brand)) {
+          updates.brand = result.brand;
+          fieldsImported.push('Marca');
+        }
+        if (result.color && shouldUpdate(currentFormData.color)) {
+          updates.color = result.color;
+          fieldsImported.push('Cor');
+        }
+        if (result.size && shouldUpdate(currentFormData.size)) {
+          updates.size = result.size;
+          fieldsImported.push('Tamanho');
+        }
+        if (result.material && shouldUpdate(currentFormData.material)) {
+          updates.material = result.material;
+          fieldsImported.push('Material');
+        }
+        if (result.google_product_category && shouldUpdate(currentFormData.google_product_category)) {
+          updates.google_product_category = result.google_product_category;
+          fieldsImported.push('Categoria Google');
+        }
+        if (result.condition && shouldUpdate(currentFormData.condition)) {
+          updates.condition = result.condition;
+          fieldsImported.push('Condição');
+        }
+        if (result.availability && shouldUpdate(currentFormData.availability)) {
+          updates.availability = result.availability;
+          fieldsImported.push('Disponibilidade');
+        }
+
+        // Physical specifications
+        if (result.weight && shouldUpdate(currentFormData.weight)) {
+          updates.weight = result.weight;
+          fieldsImported.push('Peso');
+        }
+        if (result.height && shouldUpdate(currentFormData.height)) {
+          updates.height = result.height;
+          fieldsImported.push('Altura');
+        }
+        if (result.width && shouldUpdate(currentFormData.width)) {
+          updates.width = result.width;
+          fieldsImported.push('Largura');
+        }
+        if (result.depth && shouldUpdate(currentFormData.depth)) {
+          updates.depth = result.depth;
+          fieldsImported.push('Profundidade');
+        }
+        if (result.package_size && shouldUpdate(currentFormData.package_size)) {
+          updates.package_size = result.package_size;
+          fieldsImported.push('Tamanho Embalagem');
+        }
+
+        // Variations
+        if (result.variations && Array.isArray(result.variations) && (overwriteData || !currentFormData.variations?.length)) {
+          updates.variations = result.variations;
+          fieldsImported.push('Variações');
+        }
+
+        // Store category
+        if (result.store_category && shouldUpdate(currentFormData.store_category)) {
+          updates.store_category = result.store_category;
+          fieldsImported.push('Categoria da Loja');
+        }
+
+        // Product URL
+        if (productUrl && shouldUpdate(currentFormData.product_url)) {
+          updates.product_url = productUrl;
+        }
+
         setImportResult({
           success: true,
           source: importMethod === 'api' ? 'API' : 'Web Scraping',
-          ...result
+          fieldsImported: fieldsImported.length,
+          ...updates
         });
 
         toast({
           title: "Importação concluída",
-          description: `Produto importado via ${importMethod === 'api' ? 'API' : 'Web Scraping'}`,
+          description: `${fieldsImported.length} campos importados: ${fieldsImported.join(', ')}`,
         });
 
-        onImportSuccess?.(result);
+        onImportSuccess?.(updates);
       }
 
     } catch (error: any) {
