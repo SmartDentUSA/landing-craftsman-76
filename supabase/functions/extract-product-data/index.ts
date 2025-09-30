@@ -71,6 +71,32 @@ serve(async (req) => {
     const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis);
     
     // Extract physical specifications and variations from HTML (needed for both JSON-LD and fallback)
+    // 🛡️ FUNÇÃO AUXILIAR: Validar se o dado é placeholder ou exemplo
+    const isPlaceholderData = (value: string): boolean => {
+      if (!value || typeof value !== 'string') return false;
+      
+      const lower = value.toLowerCase().trim();
+      const placeholderPatterns = [
+        /^ex[:\s.]/i,           // Ex: 2.5
+        /^exemplo[:\s.]/i,      // Exemplo: valor
+        /^digite/i,             // Digite aqui
+        /^preencha/i,           // Preencha este campo
+        /^informe/i,            // Informe o valor
+        /^\[/,                  // [placeholder]
+        /^{/,                   // {placeholder}
+        /exemplo\s*:/i,         // "exemplo: valor"
+        /\(exemplo\)/i          // "(exemplo)"
+      ];
+      
+      const isPlaceholder = placeholderPatterns.some(pattern => pattern.test(lower));
+      
+      if (isPlaceholder) {
+        console.log(`⚠️ PLACEHOLDER DETECTADO e REJEITADO: "${value}"`);
+      }
+      
+      return isPlaceholder;
+    };
+    
     const extractPhysicalSpecs = () => {
       console.log('🔍 Iniciando extração de especificações físicas...');
       const specs: any = {};
@@ -87,12 +113,18 @@ serve(async (req) => {
       for (const pattern of weightPatterns) {
         const match = html.match(pattern);
         if (match && match[1]) {
+          // 🛡️ VALIDAR se não é placeholder
+          if (isPlaceholderData(match[1])) {
+            console.log(`⚠️ Peso ignorado (placeholder): ${match[1]}`);
+            continue;
+          }
+          
           const weightValue = parseFloat(match[1].replace(',', '.'));
           if (!isNaN(weightValue) && weightValue > 0) {
             specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
               ? weightValue / 1000
               : weightValue;
-            console.log(`✅ Peso encontrado: ${specs.weight}kg (padrão: ${pattern})`);
+            console.log(`✅ Peso VÁLIDO encontrado: ${specs.weight}kg (origem: padrão regex)`);
             break;
           }
         }
@@ -124,10 +156,16 @@ serve(async (req) => {
         for (const pattern of patterns) {
           const match = html.match(pattern);
           if (match && match[1]) {
+            // 🛡️ VALIDAR se não é placeholder
+            if (isPlaceholderData(match[1])) {
+              console.log(`⚠️ ${key} ignorado (placeholder): ${match[1]}`);
+              continue;
+            }
+            
             const value = parseFloat(match[1].replace(',', '.'));
             if (!isNaN(value) && value > 0) {
               specs[key] = match[0].toLowerCase().includes('mm') ? value / 10 : value;
-              console.log(`✅ ${key} encontrado: ${specs[key]}cm (padrão: ${pattern})`);
+              console.log(`✅ ${key} VÁLIDO encontrado: ${specs[key]}cm (origem: padrão regex)`);
               break;
             }
           }
@@ -144,8 +182,16 @@ serve(async (req) => {
       for (const pattern of packagePatterns) {
         const match = html.match(pattern);
         if (match && match[1]) {
-          specs.package_size = match[1].trim();
-          console.log(`✅ Tamanho da embalagem: ${specs.package_size.substring(0, 50)}... (${specs.package_size.length} caracteres)`);
+          const packageValue = match[1].trim();
+          
+          // 🛡️ VALIDAR se não é placeholder
+          if (isPlaceholderData(packageValue)) {
+            console.log(`⚠️ Tamanho da embalagem ignorado (placeholder): ${packageValue}`);
+            continue;
+          }
+          
+          specs.package_size = packageValue;
+          console.log(`✅ Tamanho da embalagem VÁLIDO: ${specs.package_size.substring(0, 50)}... (${specs.package_size.length} caracteres, origem: regex)`);
           break;
         }
       }
@@ -223,12 +269,22 @@ serve(async (req) => {
       return variations.length > 0 ? variations : undefined;
     };
     
-    // ✨ NOVA FUNÇÃO: Extrair galeria completa de imagens
+    // ✨ FUNÇÃO CORRIGIDA: Extrair APENAS imagens do produto específico
     const extractImagesGallery = (jsonLdData?: any, mainImageUrl?: string) => {
       const imagesSet = new Set<string>();
       const gallery: Array<{ url: string; alt: string; order: number; is_main: boolean }> = [];
       
       console.log('🖼️ Iniciando extração de galeria de imagens...');
+      
+      // 🎯 EXTRAIR ID DO PRODUTO DA URL
+      const productIdMatch = url.match(/\/produto\/(\d+)|\/(\d+)\/|produto[/-](\d+)|[\/-](\d{5,})/i);
+      const productId = productIdMatch ? (productIdMatch[1] || productIdMatch[2] || productIdMatch[3] || productIdMatch[4]) : null;
+      
+      if (productId) {
+        console.log(`🔍 ID do produto identificado: ${productId}`);
+      } else {
+        console.log('⚠️ ID do produto não identificado na URL - filtragem será menos precisa');
+      }
       
       // 1. Extrair do JSON-LD
       if (jsonLdData?.image) {
@@ -325,20 +381,57 @@ serve(async (req) => {
         }
       });
       
-      // 4. Filtrar apenas imagens válidas de produtos
+      // 4. 🎯 FILTRAGEM RIGOROSA: apenas imagens DO PRODUTO ESPECÍFICO
       const validImages = Array.from(imagesSet).filter(imgUrl => {
         const lower = imgUrl.toLowerCase();
         
-        // Excluir: logos, ícones, banners, selos, badges
-        const excludePatterns = ['logo', 'icon', 'banner', 'selo', 'badge', 'sprite', 'favicon'];
-        if (excludePatterns.some(pattern => lower.includes(pattern))) return false;
+        // 🚫 EXCLUIR IMEDIATAMENTE: ícones, pagamentos, selos, badges
+        const criticalExclusions = [
+          'logo', 'icon', 'banner', 'selo', 'badge', 'sprite', 'favicon',
+          'payment', 'pagamento', 'payu', 'mercadopago', 'ssl', 'seguro',
+          'whatsapp', 'instagram', 'facebook', 'twitter', 'social',
+          'correios', 'sedex', 'frete', 'shipping',
+          'certificado', 'garantia', 'warranty'
+        ];
+        if (criticalExclusions.some(pattern => lower.includes(pattern))) {
+          console.log(`❌ Excluída imagem de serviço/pagamento: ${imgUrl.substring(0, 60)}...`);
+          return false;
+        }
         
-        // Incluir: imagens com padrões de produto
-        const includePatterns = ['product', 'cdn', '800x800', '1000x1000', '1200x1200', 'gallery', 'zoom'];
+        // 🚫 EXCLUIR: Produtos relacionados/sugeridos (URLs que indicam outros produtos)
+        if (lower.includes('relacionado') || lower.includes('sugerido') || lower.includes('similar')) {
+          console.log(`❌ Excluída imagem de produto relacionado: ${imgUrl.substring(0, 60)}...`);
+          return false;
+        }
+        
+        // 🎯 FILTRO POR ID: Se temos ID do produto, PRIORIZAR imagens que contenham esse ID
+        if (productId) {
+          const hasProductId = imgUrl.includes(`/${productId}/`) || 
+                               imgUrl.includes(`produto/${productId}`) ||
+                               imgUrl.includes(`product/${productId}`) ||
+                               imgUrl.includes(`${productId}.`) ||
+                               imgUrl.includes(`-${productId}-`) ||
+                               imgUrl.includes(`_${productId}_`);
+          
+          if (!hasProductId) {
+            // Se não tem o ID do produto na URL, é muito provável que seja de outro produto
+            // Vamos ser MUITO restritivos aqui
+            const hasOtherProductId = /\/\d{5,}[\/\.]/.test(imgUrl) && !imgUrl.includes(productId);
+            if (hasOtherProductId) {
+              console.log(`❌ Excluída imagem de OUTRO produto (ID diferente): ${imgUrl.substring(0, 60)}...`);
+              return false;
+            }
+          } else {
+            console.log(`✅ Imagem CONFIRMADA do produto ${productId}: ${imgUrl.substring(0, 60)}...`);
+          }
+        }
+        
+        // ✅ INCLUIR: imagens com padrões claros de produto
+        const includePatterns = ['product', 'produto', '800x800', '1000x1000', '1200x1200', '2500x2500', 'gallery', 'zoom'];
         if (includePatterns.some(pattern => lower.includes(pattern))) return true;
         
-        // Incluir se termina com extensão de imagem válida
-        if (/\.(jpg|jpeg|png|webp)(\?|$)/i.test(lower)) return true;
+        // ✅ INCLUIR: CDN com extensão válida
+        if (lower.includes('cdn') && /\.(jpg|jpeg|png|webp)(\?|$)/i.test(lower)) return true;
         
         return false;
       });
@@ -604,8 +697,34 @@ serve(async (req) => {
       console.log('Fallback image (normalized):', { rawImg, normalized: productData.image });
     }
 
-    // ✨ EXTRAIR CAMPOS GOOGLE MERCHANT VIA META TAGS E REGEX - EXPANDIDO
+    // ✨ EXTRAIR CAMPOS GOOGLE MERCHANT VIA META TAGS E REGEX - COM VALIDAÇÃO DE PLACEHOLDERS
     console.log('🏪 Iniciando extração de dados Google Merchant Center...');
+    
+    // 🛡️ Função auxiliar para validar e extrair dados Google Merchant
+    const extractMerchantField = (patterns: RegExp[], fieldName: string): string => {
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          const value = match[1].trim();
+          
+          // Validar se não é placeholder
+          if (isPlaceholderData(value)) {
+            console.log(`⚠️ ${fieldName} ignorado (placeholder detectado): "${value}"`);
+            continue;
+          }
+          
+          // Validar se não é muito curto ou genérico
+          if (value.length < 2 || value.toLowerCase() === 'hide') {
+            console.log(`⚠️ ${fieldName} ignorado (valor inválido): "${value}"`);
+            continue;
+          }
+          
+          console.log(`✅ ${fieldName} VÁLIDO encontrado: "${value}" (origem: padrão regex)`);
+          return value;
+        }
+      }
+      return '';
+    };
     
     // Extrair GTIN/EAN/UPC com múltiplos padrões
     const gtinPatterns = [
@@ -620,13 +739,9 @@ serve(async (req) => {
       /"gtin"[\s:]*"(\d{8,14})"/i
     ];
     
-    for (const pattern of gtinPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && /^\d{8,14}$/.test(match[1])) {
-        productData.gtin = match[1];
-        console.log(`✅ GTIN encontrado: ${productData.gtin} (padrão: ${pattern})`);
-        break;
-      }
+    const extractedGtin = extractMerchantField(gtinPatterns, 'GTIN');
+    if (extractedGtin && /^\d{8,14}$/.test(extractedGtin)) {
+      productData.gtin = extractedGtin;
     }
     if (!productData.gtin) console.log('⚠️ GTIN não encontrado');
 
@@ -644,13 +759,9 @@ serve(async (req) => {
       /data-sku=["']([^"']+)["']/i
     ];
     
-    for (const pattern of mpnPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].toLowerCase() !== 'hide') {
-        productData.mpn = match[1];
-        console.log(`✅ MPN/SKU encontrado: ${productData.mpn} (padrão: ${pattern})`);
-        break;
-      }
+    const extractedMpn = extractMerchantField(mpnPatterns, 'MPN/SKU');
+    if (extractedMpn) {
+      productData.mpn = extractedMpn;
     }
     if (!productData.mpn) console.log('⚠️ MPN/SKU não encontrado');
 
@@ -667,13 +778,9 @@ serve(async (req) => {
       /data-brand=["']([^"']+)["']/i
     ];
     
-    for (const pattern of brandPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].trim().length > 0) {
-        productData.brand = match[1].trim();
-        console.log(`✅ Marca encontrada: ${productData.brand} (padrão: ${pattern})`);
-        break;
-      }
+    const extractedBrand = extractMerchantField(brandPatterns, 'Marca');
+    if (extractedBrand) {
+      productData.brand = extractedBrand;
     }
     if (!productData.brand) console.log('⚠️ Marca não encontrada');
 
@@ -688,13 +795,10 @@ serve(async (req) => {
       /Cores?\s*Disponíveis?[:\s]*([^<\n]{3,200})/i
     ];
     
-    for (const pattern of colorPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].trim().length > 0) {
-        productData.color = match[1].trim();
-        console.log(`✅ Cor encontrada: ${productData.color} (${productData.color.length} caracteres)`);
-        break;
-      }
+    const extractedColor = extractMerchantField(colorPatterns, 'Cor');
+    if (extractedColor) {
+      productData.color = extractedColor;
+      console.log(`✅ Cor FINAL definida: ${productData.color} (${productData.color.length} caracteres)`);
     }
     if (!productData.color) console.log('⚠️ Cor não encontrada');
 
@@ -707,13 +811,9 @@ serve(async (req) => {
       /data-size=["']([^"']+)["']/i
     ];
     
-    for (const pattern of sizePatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].trim().length > 0) {
-        productData.size = match[1].trim();
-        console.log(`✅ Tamanho encontrado: ${productData.size}`);
-        break;
-      }
+    const extractedSize = extractMerchantField(sizePatterns, 'Tamanho');
+    if (extractedSize) {
+      productData.size = extractedSize;
     }
     if (!productData.size) console.log('⚠️ Tamanho não encontrado');
 
@@ -725,13 +825,9 @@ serve(async (req) => {
       /"material"[\s:]*"([^"]+)"/i
     ];
     
-    for (const pattern of materialPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].trim().length > 0) {
-        productData.material = match[1].trim();
-        console.log(`✅ Material encontrado: ${productData.material}`);
-        break;
-      }
+    const extractedMaterial = extractMerchantField(materialPatterns, 'Material');
+    if (extractedMaterial) {
+      productData.material = extractedMaterial;
     }
     if (!productData.material) console.log('⚠️ Material não encontrado');
 
