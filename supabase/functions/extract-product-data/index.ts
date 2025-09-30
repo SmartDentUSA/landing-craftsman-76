@@ -668,11 +668,21 @@ serve(async (req) => {
       productData.promoPrice = undefined; // Limpar promoPrice pois não há diferença
     }
     
+    // Converter price para número se existir
+    if (productData.price) {
+      const priceNumeric = parseFloat(productData.price.replace(/[^\d.,]/g, '').replace(',', '.'));
+      if (!isNaN(priceNumeric) && priceNumeric > 0) {
+        productData.price = priceNumeric as any; // Converter de string para number
+        console.log('✅ Preço convertido para número:', productData.price);
+      }
+    }
+    
     // Converter promoPrice para número (promo_price) se existir
     if (productData.promoPrice) {
       const promoNumeric = parseFloat(productData.promoPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
       if (!isNaN(promoNumeric) && promoNumeric > 0) {
         productData.promo_price = promoNumeric;
+        console.log('✅ Preço promocional convertido para número:', productData.promo_price);
       }
     }
 
