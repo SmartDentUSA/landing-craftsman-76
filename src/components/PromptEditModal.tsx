@@ -454,6 +454,146 @@ const DATA_SOURCES = {
 
 // Mapeamento de prompts reais das Edge Functions
 const REAL_PROMPTS = {
+  "generate-social-content": {
+    "WhatsApp": `Você é um especialista em marketing digital e comunicação para WhatsApp.
+
+Crie uma mensagem promocional otimizada para WhatsApp que seja envolvente e gere conversões.
+
+Informações do Produto:
+- Nome: {product.name}
+- Resumo Comercial: {product.sales_pitch}
+- Benefícios: {product.benefits}
+- URL do Produto: {product.product_url}
+- Categoria: {product.category}
+
+Template da Mensagem:
+🔥 [NOME DO PRODUTO] 🔥
+
+[RESUMO COMERCIAL EM 1-2 FRASES IMPACTANTES]
+
+✅ PRINCIPAIS BENEFÍCIOS:
+[LISTE ATÉ 10 BENEFÍCIOS COM EMOJIS RELEVANTES]
+
+💬 Responda com '{random_trigger_word}' para receber mais informações!
+
+🛒 Saiba mais → [LINK DO PRODUTO]
+
+#[EMPRESA] #[CATEGORIA]
+
+Instruções:
+1. Use emojis relevantes para cada benefício
+2. Mantenha linguagem conversacional e persuasiva
+3. Máximo 1000 caracteres (ideal para WhatsApp)
+4. Inclua call-to-action claro
+5. Use hashtags da empresa e categoria
+6. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
+   - Se configuradas, inclua frases como: "💬 Responda com '{random_trigger_word}' que envio mais detalhes!"
+7. Links Personalizados: {available_links}
+   - Inclua links relevantes quando apropriado para enriquecer a mensagem
+   - Use os links com moderação, apenas quando agregarem valor real
+
+Retorne apenas o texto da mensagem formatada, sem explicações.`,
+
+    "Instagram": `Você é um especialista em marketing digital no Instagram. Crie uma copy envolvente e otimizada para posts estáticos de feed do Instagram.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Preço: {product.price}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+- Mention: @smartdentoficial
+
+PALAVRAS GATILHO BOT: {product.bot_trigger_words}
+
+INSTRUÇÕES ESPECÍFICAS PARA POST ESTÁTICO:
+1. Copy Principal: Máximo 2200 caracteres, foque em storytelling envolvente
+2. Início impactante: Hook que prenda a atenção nos primeiros segundos
+3. Desenvolvimento: História que conecte emocionalmente com o público
+4. Narrativa visual: Descreva como o produto se encaixa na vida do usuário
+5. Copy para Stories: Versão resumida de até 160 caracteres
+6. Call-to-action OBRIGATÓRIO: A última frase DEVE usar uma palavra gatilho BOT para incentivar comentários
+
+TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
+- "💬 Comenta '{random_trigger_word}' nos comentários que te mando mais detalhes!"
+- "💬 Deixa '{random_trigger_word}' aqui em baixo que te envio as informações!"
+- "💬 Escreve '{random_trigger_word}' nos comentários para saber mais!"
+
+Se não houver palavras gatilho configuradas, use: "💬 Comenta 'QUERO' que te mando mais informações!"
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown.
+IMPORTANTE: As hashtags DEVEM estar sempre entre aspas. Exemplo CORRETO: ["#hashtag1", "#hashtag2"]
+
+Formato JSON obrigatório:
+{
+  "feed_copy": "Copy principal para feed com storytelling envolvente (DEVE terminar com frase usando palavra gatilho) \\n\\nIncluir quebras de linha",
+  "story_copy": "Versão resumida para Stories - máximo 160 caracteres",
+  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
+  "call_to_action": "Frase final de call-to-action com palavra gatilho",
+  "post_type": "feed"
+}`,
+
+    "TikTok": `Você é um especialista em criação de conteúdo viral para TikTok e marketing digital.
+
+Crie um script envolvente para TikTok que maximize o engajamento e viralização.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Benefícios: {product.benefits}
+- Keywords: {product.keywords}
+- Público-alvo: {product.target_audience}
+
+Informações da Empresa:
+- Nome: {company.company_name}
+
+INSTRUÇÕES ESPECÍFICAS PARA TIKTOK:
+1. Hook dos primeiros 3 segundos: Extremamente impactante e curioso
+2. Linguagem: Muito casual, use gírias e tendências atuais
+3. Duração: Script para 15-60 segundos máximo
+4. Formato dinâmico: Incluir indicações de cortes, transições
+5. Trends: Incorporar elementos de trends virais quando apropriado
+6. Hashtags: Foque em hashtags trending e de nicho
+7. Call-to-action: Incentive seguidores, likes, shares e comentários
+
+Estrutura do Script:
+HOOK (0-3s): [Frase de impacto que para o scroll]
+DESENVOLVIMENTO (3-45s): [Conteúdo principal com revelações graduais]
+CTA FINAL (45-60s): [Call-to-action para engajamento]
+
+Retorne um script detalhado com indicações de tempo e ações.`,
+
+    "YouTube": `Você é um especialista em criação de conteúdo para YouTube e SEO de vídeos.
+
+Gere uma descrição completa para vídeo do YouTube que otimize o alcance e engajamento.
+
+Informações do Produto:
+- Nome: {product.name}
+- Descrição: {product.description}
+- Categoria: {product.category}
+- Benefícios: {product.benefits}
+
+Informações da Empresa:
+- Template de Rodapé: {company.youtube_company_footer}
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
+Use quebras de linha (\\n) que serão convertidas automaticamente para quebras reais na exibição.
+
+Exemplo do formato JSON esperado:
+{
+  "title_suggestion": "Sugestão de título SEO otimizado",
+  "description": "Descrição completa formatada incluindo o template de rodapé com quebras de linha usando \\n",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}
+
+IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`
+  },
   "generate-product-ai-content": {
     "Benefícios do Produto": `Você é um especialista em marketing de produtos e benefícios ao consumidor.
 
