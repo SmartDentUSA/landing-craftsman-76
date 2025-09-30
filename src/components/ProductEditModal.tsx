@@ -23,6 +23,7 @@ import { useCategoryContext } from '@/contexts/CategoryContext';
 import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
+import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 
 interface Video {
   url: string;
@@ -1010,6 +1011,55 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Seção de importação da Loja Integrada */}
+          {(!isEditing || formData.product_url) && (
+            <ProductLojaIntegradaImporter
+              productUrl={formData.product_url}
+              onImportSuccess={(importedData) => {
+                // Preencher automaticamente todos os campos disponíveis
+                setFormData(prev => ({
+                  ...prev,
+                  name: importedData.name || prev.name,
+                  description: importedData.description || prev.description,
+                  price: importedData.price ?? prev.price,
+                  promo_price: importedData.promo_price ?? prev.promo_price,
+                  image_url: importedData.image_url || prev.image_url,
+                  brand: importedData.brand || prev.brand,
+                  ean: importedData.ean || prev.ean,
+                  gtin: importedData.gtin || prev.gtin,
+                  mpn: importedData.mpn || prev.mpn,
+                  category: importedData.category || prev.category,
+                  subcategory: importedData.subcategory || prev.subcategory,
+                  keywords: importedData.keywords?.length ? importedData.keywords : prev.keywords,
+                  features: importedData.features?.length ? importedData.features : prev.features,
+                }));
+                
+                // Preencher galeria de imagens se disponível
+                if (importedData.images_gallery?.length) {
+                  setImagesGallery(importedData.images_gallery);
+                }
+                
+                // Preencher variações se disponível
+                if (importedData.variations?.length) {
+                  setVariations(importedData.variations);
+                }
+
+                // Atualizar preço promocional se disponível
+                if (importedData.promo_price) {
+                  setPromoPrice(importedData.promo_price);
+                }
+                
+                toast({
+                  title: "Campos preenchidos",
+                  description: "Os dados foram importados. Revise e edite conforme necessário antes de salvar.",
+                });
+              }}
+              onImportError={(error) => {
+                console.error('Erro na importação:', error);
+              }}
+            />
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Produto *</Label>
