@@ -160,6 +160,10 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [overwriteData, setOverwriteData] = useState(false);
+  
+  // Images gallery state
+  const [imagesGallery, setImagesGallery] = useState<Array<{ url: string; alt: string; order: number; is_main: boolean }>>([]);
   
   // Physical specifications state
   const [variations, setVariations] = useState<{ name: string; price?: number; stock?: number; color?: string; size?: string }[]>([]);
@@ -287,6 +291,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setWidth(product.width?.toString() || '');
       setDepth(product.depth?.toString() || '');
       setStoreCategory(product.store_category || '');
+      
+      // Images gallery
+      setImagesGallery((product as any).images_gallery || []);
     } else {
       setFormData({
         name: '',
@@ -344,6 +351,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setDepth('');
       setStoreCategory('');
       setPromoPrice(undefined);
+      
+      // Reset images gallery
+      setImagesGallery([]);
     }
   }, [product]);
 
@@ -623,19 +633,24 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         const updates: Partial<Product> = {};
         let fieldsImported: string[] = [];
         
-        if (extractedData.name && !formData.name?.trim()) {
+        // Aplicar lógica de sobrescrita ou apenas campos vazios
+        const shouldUpdate = (currentValue: any) => {
+          return overwriteData || !currentValue || (typeof currentValue === 'string' && !currentValue.trim());
+        };
+        
+        if (extractedData.name && shouldUpdate(formData.name)) {
           updates.name = extractedData.name;
           fieldsImported.push('Nome');
         }
         
-        if (extractedData.description && !formData.description?.trim()) {
+        if (extractedData.description && shouldUpdate(formData.description)) {
           updates.description = extractedData.description;
           fieldsImported.push('Descrição');
         }
         
         if (extractedData.price) {
           const priceValue = parseFloat(extractedData.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
-          if (!isNaN(priceValue) && priceValue > 0) {
+          if (!isNaN(priceValue) && priceValue > 0 && shouldUpdate(formData.price)) {
             updates.price = priceValue;
             fieldsImported.push('Preço de venda');
           }
@@ -643,13 +658,24 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         
         if (extractedData.promoPrice) {
           const promoPriceValue = parseFloat(extractedData.promoPrice.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
-          if (!isNaN(promoPriceValue) && promoPriceValue > 0) {
+          if (!isNaN(promoPriceValue) && promoPriceValue > 0 && (overwriteData || !promoPrice)) {
             setPromoPrice(promoPriceValue);
             fieldsImported.push('Preço promocional');
           }
         }
         
-        if (extractedData.image && !formData.image_url?.trim()) {
+        // ✨ Importar galeria de imagens
+        if (extractedData.images_gallery && Array.isArray(extractedData.images_gallery) && extractedData.images_gallery.length > 0) {
+          setImagesGallery(extractedData.images_gallery);
+          fieldsImported.push(`Galeria (${extractedData.images_gallery.length} imagens)`);
+          
+          // Definir a primeira imagem (principal) como image_url para compatibilidade
+          const mainImage = extractedData.images_gallery.find((img: any) => img.is_main) || extractedData.images_gallery[0];
+          if (mainImage && shouldUpdate(formData.image_url)) {
+            updates.image_url = mainImage.url;
+          }
+        } else if (extractedData.image && shouldUpdate(formData.image_url)) {
+          // Fallback: imagem única
           updates.image_url = extractedData.image;
           fieldsImported.push('Imagem');
         }
@@ -665,77 +691,77 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         }
 
         // ✨ MAPEAR CAMPOS GOOGLE MERCHANT
-        if (extractedData.gtin) {
+        if (extractedData.gtin && shouldUpdate(formData.gtin)) {
           updates.gtin = extractedData.gtin;
           fieldsImported.push('GTIN/EAN');
         }
         
-        if (extractedData.mpn) {
+        if (extractedData.mpn && shouldUpdate(formData.mpn)) {
           updates.mpn = extractedData.mpn;
           fieldsImported.push('MPN/SKU');
         }
         
-        if (extractedData.brand) {
+        if (extractedData.brand && shouldUpdate(formData.brand)) {
           updates.brand = extractedData.brand;
           fieldsImported.push('Marca');
         }
         
-        if (extractedData.color) {
+        if (extractedData.color && shouldUpdate(formData.color)) {
           updates.color = extractedData.color;
           fieldsImported.push('Cor');
         }
         
-        if (extractedData.size) {
+        if (extractedData.size && shouldUpdate(formData.size)) {
           updates.size = extractedData.size;
           fieldsImported.push('Tamanho');
         }
         
-        if (extractedData.material) {
+        if (extractedData.material && shouldUpdate(formData.material)) {
           updates.material = extractedData.material;
           fieldsImported.push('Material');
         }
         
         // Physical specifications
-        if (extractedData.variations && Array.isArray(extractedData.variations)) {
+        if (extractedData.variations && Array.isArray(extractedData.variations) && (overwriteData || variations.length === 0)) {
           setVariations(extractedData.variations);
           fieldsImported.push('Variações');
         }
-        if (extractedData.package_size) {
+        if (extractedData.package_size && shouldUpdate(packageSize)) {
           setPackageSize(extractedData.package_size);
           fieldsImported.push('Tamanho da Embalagem');
         }
-        if (extractedData.weight) {
+        if (extractedData.weight && shouldUpdate(weight)) {
           setWeight(extractedData.weight.toString());
           fieldsImported.push('Peso');
         }
-        if (extractedData.height) {
+        if (extractedData.height && shouldUpdate(height)) {
           setHeight(extractedData.height.toString());
           fieldsImported.push('Altura');
         }
-        if (extractedData.width) {
+        if (extractedData.width && shouldUpdate(width)) {
           setWidth(extractedData.width.toString());
           fieldsImported.push('Largura');
         }
-        if (extractedData.depth) {
+        if (extractedData.depth && shouldUpdate(depth)) {
           setDepth(extractedData.depth.toString());
           fieldsImported.push('Profundidade');
         }
-        if (extractedData.store_category) {
+        if (extractedData.store_category && shouldUpdate(storeCategory)) {
           setStoreCategory(extractedData.store_category);
           fieldsImported.push('Categoria da Loja');
         }
         
-        if (extractedData.google_product_category) {
+        if (extractedData.google_product_category && shouldUpdate(formData.google_product_category)) {
           updates.google_product_category = extractedData.google_product_category;
           fieldsImported.push('Categoria Google');
         }
         
-        if (extractedData.condition) {
+        if (extractedData.condition && shouldUpdate(formData.condition)) {
           updates.condition = extractedData.condition;
           fieldsImported.push('Condição');
         }
         
-        if (extractedData.availability) {
+        if (extractedData.availability && shouldUpdate(formData.availability)) {
           updates.availability = extractedData.availability;
           fieldsImported.push('Disponibilidade');
         }
@@ -817,6 +843,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         category: formData.category,
         subcategory: formData.subcategory,
         image_url: formData.image_url,
+        images_gallery: imagesGallery.length > 0 ? imagesGallery : [],
         product_url: formData.product_url,
         source_type: 'manual', // Garantir que source_type seja definido
         target_audience: targetAudience,
@@ -1184,9 +1211,61 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                  </div>
               )}
             </div>
+            
+            {/* ✨ Galeria de Imagens Importadas */}
+            {imagesGallery.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Galeria Importada ({imagesGallery.length} imagens)</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setImagesGallery([])}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar
+                  </Button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {imagesGallery.map((img, index) => (
+                    <div 
+                      key={index} 
+                      className="relative rounded-md overflow-hidden bg-muted aspect-square group"
+                    >
+                      <OptimizedImage 
+                        src={img.url} 
+                        alt={img.alt || `Imagem ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        width={120}
+                        height={120}
+                        priority={false}
+                      />
+                      {img.is_main && (
+                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                          Principal
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute bottom-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          const newGallery = imagesGallery.filter((_, i) => i !== index);
+                          setImagesGallery(newGallery);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="product_url">URL do Produto</Label>
             <div className="flex gap-2">
               <Input
@@ -1218,6 +1297,23 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 )}
               </Button>
             </div>
+            
+            {/* ✨ Opção de sobrescrever dados existentes */}
+            <div className="flex items-center space-x-2 pt-1">
+              <Switch
+                id="overwrite-data"
+                checked={overwriteData}
+                onCheckedChange={setOverwriteData}
+              />
+              <Label htmlFor="overwrite-data" className="text-sm font-normal cursor-pointer">
+                Sobrescrever dados existentes ao importar
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {overwriteData 
+                ? "⚠️ Todos os campos serão substituídos pelos dados importados da Loja Integrada" 
+                : "✓ Apenas campos vazios serão preenchidos com dados importados"}
+            </p>
           </div>
 
           {/* Video Collections */}

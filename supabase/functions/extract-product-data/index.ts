@@ -15,6 +15,7 @@ interface ProductData {
   installmentText?: string;
   description: string;
   image?: string;
+  images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   available?: boolean;
   // ✨ NOVOS CAMPOS GOOGLE MERCHANT + SEO
   gtin?: string;
@@ -168,6 +169,103 @@ serve(async (req) => {
       return variations.length > 0 ? variations : undefined;
     };
     
+    // ✨ NOVA FUNÇÃO: Extrair galeria completa de imagens
+    const extractImagesGallery = (jsonLdData?: any, mainImageUrl?: string) => {
+      const imagesSet = new Set<string>();
+      const gallery: Array<{ url: string; alt: string; order: number; is_main: boolean }> = [];
+      
+      console.log('🖼️ Iniciando extração de galeria de imagens...');
+      
+      // 1. Extrair do JSON-LD
+      if (jsonLdData?.image) {
+        const jsonImages = Array.isArray(jsonLdData.image) ? jsonLdData.image : [jsonLdData.image];
+        jsonImages.forEach((img: string) => {
+          try {
+            const normalizedUrl = new URL(img, url).href;
+            imagesSet.add(normalizedUrl);
+          } catch (_e) {
+            if (img) imagesSet.add(img);
+          }
+        });
+        console.log(`✅ Extraídas ${jsonImages.length} imagens do JSON-LD`);
+      }
+      
+      // 2. Buscar imagens específicas da Loja Integrada
+      // Padrões comuns: .product-gallery, .thumbs, .slides, data-image, etc.
+      const lojaIntegradaPatterns = [
+        /<img[^>]*class="[^"]*(?:product-image|gallery-image|thumb|slide)[^"]*"[^>]*src="([^"]+)"/gi,
+        /<a[^>]*data-image="([^"]+)"/gi,
+        /<div[^>]*class="[^"]*product-gallery[^"]*"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/gi,
+        /<picture[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/gi
+      ];
+      
+      lojaIntegradaPatterns.forEach(pattern => {
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+          const imgUrl = match[1];
+          if (imgUrl && !imgUrl.includes('placeholder') && !imgUrl.includes('loading')) {
+            try {
+              const normalizedUrl = new URL(imgUrl, url).href;
+              imagesSet.add(normalizedUrl);
+            } catch (_e) {
+              if (imgUrl.startsWith('http')) imagesSet.add(imgUrl);
+            }
+          }
+        }
+      });
+      
+      // 3. Buscar todas as imagens og:image e twitter:image
+      const ogImagesMatches = html.matchAll(/property=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']/gi);
+      for (const match of ogImagesMatches) {
+        try {
+          const normalizedUrl = new URL(match[1], url).href;
+          imagesSet.add(normalizedUrl);
+        } catch (_e) {
+          if (match[1]) imagesSet.add(match[1]);
+        }
+      }
+      
+      // 4. Filtrar apenas imagens válidas de produtos (evitar logos, ícones)
+      const validImages = Array.from(imagesSet).filter(imgUrl => {
+        const lower = imgUrl.toLowerCase();
+        // Excluir logos, ícones, banners pequenos
+        if (lower.includes('logo') || lower.includes('icon') || lower.includes('banner')) return false;
+        // Incluir apenas imagens grandes (CDN patterns comuns)
+        if (lower.includes('800x800') || lower.includes('1000x1000') || lower.includes('product')) return true;
+        return true; // Incluir por padrão
+      });
+      
+      console.log(`✅ Total de ${validImages.length} imagens válidas encontradas`);
+      
+      // 5. Construir galeria ordenada
+      validImages.forEach((imgUrl, index) => {
+        const isMain = mainImageUrl ? imgUrl === mainImageUrl : index === 0;
+        gallery.push({
+          url: imgUrl,
+          alt: jsonLdData?.name || 'Imagem do produto',
+          order: isMain ? 0 : index + 1,
+          is_main: isMain
+        });
+      });
+      
+      // 6. Garantir que existe uma imagem principal
+      if (gallery.length > 0 && !gallery.some(img => img.is_main)) {
+        gallery[0].is_main = true;
+        gallery[0].order = 0;
+      }
+      
+      // 7. Reordenar: imagem principal primeiro
+      gallery.sort((a, b) => {
+        if (a.is_main) return -1;
+        if (b.is_main) return 1;
+        return a.order - b.order;
+      });
+      
+      console.log(`✅ Galeria final com ${gallery.length} imagens (principal: ${gallery.find(i => i.is_main)?.url || 'nenhuma'})`);
+      
+      return gallery.length > 0 ? gallery : undefined;
+    };
+    
     if (jsonLdMatches) {
       for (const match of jsonLdMatches) {
         try {
@@ -189,9 +287,10 @@ serve(async (req) => {
               }
               console.log('JSON-LD image (normalized):', { rawImage, normalizedImage });
               
-              // Extract physical specs and variations
+              // Extract physical specs, variations and images gallery
               const physicalSpecs = extractPhysicalSpecs();
               const variations = extractVariations(item);
+              const imagesGallery = extractImagesGallery(item, normalizedImage);
               
               // Preparar dados com conversão de promo_price
               const promoPrice = item.offers?.lowPrice || item.offers?.price || '';
@@ -209,6 +308,7 @@ serve(async (req) => {
                     installmentText: item.offers?.priceSpecification?.priceCurrency ? `ou ${item.offers?.priceSpecification?.maxPrice || ''} em até 12x` : '',
                     description: item.description || '',
                     image: normalizedImage,
+                    images_gallery: imagesGallery,
                     available: item.offers?.availability !== 'OutOfStock',
                     // ✨ EXTRAIR DADOS GOOGLE MERCHANT DO JSON-LD
                     gtin: item.gtin13 || item.gtin14 || item.gtin || item.ean || item.upc || '',
@@ -444,6 +544,12 @@ serve(async (req) => {
     const variationsData = extractVariations();
     if (variationsData) {
       productData.variations = variationsData;
+    }
+    
+    // Extract images gallery using the helper function
+    const imagesGallery = extractImagesGallery(undefined, productData.image);
+    if (imagesGallery) {
+      productData.images_gallery = imagesGallery;
     }
 
     console.log('Dados extraídos:', productData);
