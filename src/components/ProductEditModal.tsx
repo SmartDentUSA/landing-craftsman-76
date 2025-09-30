@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
 import { CaptionExtractor } from "@/components/CaptionExtractor";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
@@ -1695,15 +1696,29 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="package_size">Tamanho da Embalagem</Label>
-                <Input
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="package_size" className="flex items-center gap-2">
+                    Tamanho da Embalagem
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
                   id="package_size"
                   value={packageSize}
                   onChange={(e) => setPackageSize(e.target.value)}
-                  placeholder="Ex: Caixa Média"
+                  placeholder="Ex: Caixa Média - Input manual"
                 />
               </div>
+            </TooltipProvider>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -1868,7 +1883,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                   Dados Google Merchant Center
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Campos extraídos automaticamente da Loja Integrada. Editáveis manualmente.
+                  <Badge variant="outline" className="mr-2">Importado da API</Badge> MPN, Marca, Condição, Disponibilidade
+                  <br />
+                  <Badge variant="secondary" className="mr-2 mt-1">Input Manual</Badge> GTIN, EAN, Cor, Tamanho, Material, Categoria Google
                 </p>
               </div>
               <Badge variant="secondary" className="text-xs">
@@ -1877,108 +1894,209 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* GTIN */}
-              <div className="space-y-2">
-                <Label htmlFor="gtin" className="flex items-center gap-2">
-                  GTIN
-                  <span className="text-xs text-muted-foreground">(Global Trade Item Number)</span>
-                </Label>
-                <Input
-                  id="gtin"
-                  type="text"
-                  value={formData.gtin || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, gtin: e.target.value }))}
-                  placeholder="7891234567890"
-                  className="font-mono"
-                />
-              </div>
+              {/* GTIN - Manual Input */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="gtin" className="flex items-center gap-2">
+                    GTIN
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
+                    id="gtin"
+                    type="text"
+                    value={formData.gtin || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, gtin: e.target.value }))}
+                    placeholder="7891234567890 - Input manual"
+                    className="font-mono"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* EAN */}
-              <div className="space-y-2">
-                <Label htmlFor="ean" className="flex items-center gap-2">
-                  EAN
-                  <span className="text-xs text-muted-foreground">(European Article Number)</span>
-                </Label>
-                <Input
-                  id="ean"
-                  type="text"
-                  value={(formData as any).ean || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, ean: e.target.value } as any))}
-                  placeholder="5901234123457"
-                  className="font-mono"
-                />
-              </div>
+              {/* EAN - Manual Input */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="ean" className="flex items-center gap-2">
+                    EAN
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
+                    id="ean"
+                    type="text"
+                    value={(formData as any).ean || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, ean: e.target.value } as any))}
+                    placeholder="5901234123457 - Input manual"
+                    className="font-mono"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* MPN */}
-              <div className="space-y-2">
-                <Label htmlFor="mpn" className="flex items-center gap-2">
-                  MPN
-                  <span className="text-xs text-muted-foreground">(Manufacturer Part Number)</span>
-                </Label>
-                <Input
-                  id="mpn"
-                  type="text"
-                  value={formData.mpn || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, mpn: e.target.value }))}
-                  placeholder="PROD-12345"
-                  className="font-mono"
-                />
-              </div>
+              {/* MPN - Auto from API */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="mpn" className="flex items-center gap-2">
+                    MPN
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Check className="h-3 w-3 text-green-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo importado automaticamente da Loja Integrada</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">Auto</Badge>
+                  </Label>
+                  <Input
+                    id="mpn"
+                    type="text"
+                    value={formData.mpn || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, mpn: e.target.value }))}
+                    placeholder="PROD-12345"
+                    className="font-mono"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* Marca */}
-              <div className="space-y-2">
-                <Label htmlFor="brand">Marca</Label>
-                <Input
-                  id="brand"
-                  value={formData.brand || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                  placeholder="Ex: Apple, Samsung, Nike"
-                />
-              </div>
+              {/* Marca - Auto from API */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="brand" className="flex items-center gap-2">
+                    Marca
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Check className="h-3 w-3 text-green-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo importado automaticamente da Loja Integrada</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">Auto</Badge>
+                  </Label>
+                  <Input
+                    id="brand"
+                    value={formData.brand || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                    placeholder="Ex: Apple, Samsung, Nike"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* Cor */}
-              <div className="space-y-2">
-                <Label htmlFor="color">Cor</Label>
-                <Input
-                  id="color"
-                  value={formData.color || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                  placeholder="Ex: Azul, Vermelho, Preto"
-                />
-              </div>
+              {/* Cor - Manual Input */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="color" className="flex items-center gap-2">
+                    Cor
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
+                    id="color"
+                    value={formData.color || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                    placeholder="Ex: Azul, Vermelho - Input manual"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* Tamanho */}
-              <div className="space-y-2">
-                <Label htmlFor="size">Tamanho</Label>
-                <Input
-                  id="size"
-                  value={formData.size || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, size: e.target.value }))}
-                  placeholder="Ex: M, G, 42, 10ml"
-                />
-              </div>
+              {/* Tamanho - Manual Input */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="size" className="flex items-center gap-2">
+                    Tamanho
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
+                    id="size"
+                    value={formData.size || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, size: e.target.value }))}
+                    placeholder="Ex: M, G, 42 - Input manual"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* Material */}
-              <div className="space-y-2">
-                <Label htmlFor="material">Material</Label>
-                <Input
-                  id="material"
-                  value={formData.material || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
-                  placeholder="Ex: Algodão, Plástico, Aço"
-                />
-              </div>
+              {/* Material - Manual Input */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="material" className="flex items-center gap-2">
+                    Material
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
+                    id="material"
+                    value={formData.material || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
+                    placeholder="Ex: Algodão, Plástico - Input manual"
+                  />
+                </div>
+              </TooltipProvider>
 
-              {/* Categoria Google */}
-              <div className="space-y-2">
-                <Label htmlFor="google_product_category">Categoria Google</Label>
-                <Input
-                  id="google_product_category"
-                  value={formData.google_product_category || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, google_product_category: e.target.value }))}
-                  placeholder="Ex: Eletrônicos > Celulares"
-                />
-              </div>
+              {/* Categoria Google - Manual Input */}
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <Label htmlFor="google_product_category" className="flex items-center gap-2">
+                    Categoria Google
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Campo não disponível na API da Loja Integrada</p>
+                        <p className="text-xs font-semibold">Requer input manual</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Manual</Badge>
+                  </Label>
+                  <Input
+                    id="google_product_category"
+                    value={formData.google_product_category || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, google_product_category: e.target.value }))}
+                    placeholder="Ex: Eletrônicos - Input manual"
+                  />
+                </div>
+              </TooltipProvider>
 
               {/* Condição */}
               <div className="space-y-2">

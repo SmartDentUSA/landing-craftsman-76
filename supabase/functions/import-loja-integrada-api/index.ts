@@ -280,34 +280,62 @@ async function fallbackToWebScraping(
 }
 
 function mapAPIProductToRepository(apiProduct: ProductData): any {
+  console.log(`🔍 Mapping product: "${apiProduct.nome}"`);
+  console.log(`📊 API Product data available:`, {
+    nome: !!apiProduct.nome,
+    preco_cheio: !!apiProduct.preco_cheio,
+    preco_promocional: !!apiProduct.preco_promocional,
+    categorias: apiProduct.categorias?.length || 0,
+    imagens: apiProduct.imagens?.length || 0,
+    variacoes: apiProduct.variacoes?.length || 0,
+    disponivel: apiProduct.disponivel,
+    quantidade_disponivel: apiProduct.quantidade_disponivel
+  });
+
+  // Enhanced stock control - cross-check disponivel and quantidade_disponivel
+  let availability = 'in_stock';
+  if (!apiProduct.disponivel || (apiProduct.quantidade_disponivel !== undefined && apiProduct.quantidade_disponivel <= 0)) {
+    availability = 'out_of_stock';
+    console.log(`📦 Product out of stock - disponivel: ${apiProduct.disponivel}, quantidade: ${apiProduct.quantidade_disponivel}`);
+  }
+
+  // Multiple categories mapping
+  const allCategories = apiProduct.categorias?.map(cat => ({
+    name: cat.nome,
+    level: cat.nivel
+  })) || [];
+  console.log(`📁 Categories mapped: ${allCategories.length} categories`);
+
   const mapped: any = {
-    name: apiProduct.nome || '',
-    price: apiProduct.preco_cheio || 0,
+    // Core fields from API
+    name: apiProduct.nome,
+    price: apiProduct.preco_cheio,
     promo_price: apiProduct.preco_promocional || null,
-    description: apiProduct.descricao_completa || '',
+    description: apiProduct.descricao_completa || null,
     
-    // Physical specifications
+    // Physical specifications from API
     weight: apiProduct.peso || null,
     width: apiProduct.largura || null,
     height: apiProduct.altura || null,
     depth: apiProduct.profundidade || null,
     
-    // Identifiers
+    // Identifiers from API
     sku: apiProduct.sku || null,
     mpn: apiProduct.mpn || null,
     ncm: apiProduct.ncm || null,
-    gtin: null, // Will need to be filled manually or from variations
     
-    // Brand and category
+    // Brand and category from API
     brand: apiProduct.marca?.nome || null,
     category: apiProduct.categorias?.[0]?.nome || null,
+    all_categories: allCategories,
     
-    // Availability
+    // Enhanced stock control
     condition: 'new',
-    availability: apiProduct.disponivel ? 'in_stock' : 'out_of_stock',
+    availability: availability,
     stock_available: apiProduct.estoque_gerenciado ? apiProduct.quantidade_disponivel : null,
     
     // Images - structured array with validation
+    image_url: apiProduct.imagens?.[0]?.url || null,
     images_gallery: Array.isArray(apiProduct.imagens) 
       ? apiProduct.imagens
           .filter(img => img && (img.url || img.grande || img.media || img.thumbnail))
@@ -324,14 +352,14 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
       ? apiProduct.variacoes
           .filter(v => v && v.nome)
           .map((v) => ({
-            name: v.nome || '',
-            price: typeof v.preco === 'number' ? v.preco : apiProduct.preco_cheio,
-            stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : 0,
-            sku: v.sku || '',
+            name: v.nome,
+            price: typeof v.preco === 'number' ? v.preco : null,
+            stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : null,
+            sku: v.sku || null,
           }))
       : [],
     
-    // Additional metadata
+    // Additional metadata from API
     video_url: apiProduct.url_video_youtube || null,
     tags: Array.isArray(apiProduct.tags) ? apiProduct.tags : [],
     created_at: apiProduct.data_criacao || new Date().toISOString(),
@@ -340,23 +368,42 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     // Flags
     is_under_consultation: apiProduct.sob_consulta || false,
     
+    // Fields NOT available in Loja Integrada API - require manual input
+    gtin: null,
+    ean: null,
+    color: null,
+    size: null,
+    material: null,
+    google_product_category: null,
+    package_size: null,
+    
     // Data source tracking
-    data_source: 'loja_integrada_api',
-    last_api_sync: new Date().toISOString(),
+    source_type: 'loja_integrada_api',
+    original_data: apiProduct,
   };
+
+  // Log fields that need manual input
+  const manualInputFields = ['gtin', 'ean', 'color', 'size', 'material', 'google_product_category', 'package_size'];
+  console.log(`✏️ Fields requiring manual input: ${manualInputFields.join(', ')}`);
 
   // Count extracted fields for quality metrics
   const totalFields = Object.keys(mapped).length;
   const filledFields = Object.values(mapped).filter(v => 
-    v !== null && v !== '' && (Array.isArray(v) ? v.length > 0 : true)
+    v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : v !== '')
   ).length;
+  const nullFields = Object.entries(mapped)
+    .filter(([_, v]) => v === null)
+    .map(([k, _]) => k);
 
-  console.log(`📊 Field extraction: ${filledFields}/${totalFields} fields (${((filledFields/totalFields)*100).toFixed(1)}%)`);
-  
-  // Log extracted data structure
-  console.log(`📦 Mapped product:`, {
+  console.log(`📊 Field extraction summary:`);
+  console.log(`   ✅ Filled: ${filledFields}/${totalFields} (${((filledFields/totalFields)*100).toFixed(1)}%)`);
+  console.log(`   ❌ Null fields: ${nullFields.join(', ')}`);
+  console.log(`📦 Mapped product details:`, {
     name: mapped.name,
     price: mapped.price,
+    promo_price: mapped.promo_price,
+    availability: mapped.availability,
+    categories: mapped.all_categories.length,
     images_count: mapped.images_gallery?.length || 0,
     variations_count: mapped.variations?.length || 0,
   });
@@ -426,9 +473,11 @@ serve(async (req) => {
 
     if (apiResult.success && apiResult.data) {
       console.log('✅ API data retrieved successfully');
+      console.log('📄 Full API response:', JSON.stringify(apiResult.data, null, 2));
       
       // Validar que temos dados válidos antes de mapear
       if (!apiResult.data || typeof apiResult.data !== 'object') {
+        console.error('❌ Invalid API data structure');
         throw new Error('Invalid data structure from API');
       }
       
@@ -436,6 +485,7 @@ serve(async (req) => {
       
       // Validar que o mapeamento produziu dados válidos
       if (!finalData || !finalData.name) {
+        console.error('❌ Mapping failed - no product name');
         throw new Error('Failed to map API data to repository format');
       }
     } else {
