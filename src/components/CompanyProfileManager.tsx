@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Save, Building2, Video, Instagram, Youtube, Search } from "lucide-react";
@@ -526,17 +527,16 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             <div className="space-y-4">
               <div>
                 <Label htmlFor="seo_context_keywords">Palavras-chave de Contexto SEO</Label>
-                <Input
-                  id="seo_context_keywords"
-                  value={profile.seo_context_keywords?.join(', ') || ''}
-                  onChange={(e) => setProfile({
+                <TagInput
+                  value={profile.seo_context_keywords || []}
+                  onChange={(keywords) => setProfile({
                     ...profile, 
-                    seo_context_keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k)
+                    seo_context_keywords: keywords
                   })}
-                  placeholder="palavra1, palavra2, palavra3"
+                  placeholder="Digite e pressione Enter ou vírgula para adicionar"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Separe as palavras-chave por vírgula
+                  Digite palavras-chave e pressione Enter ou vírgula para adicionar
                 </p>
               </div>
 
