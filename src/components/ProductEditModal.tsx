@@ -813,6 +813,20 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           {(!isEditing || formData.product_url) && (
             <ProductLojaIntegradaImporter
               productUrl={formData.product_url}
+              mode="callback"
+              overwriteData={overwriteData}
+              currentFormData={{
+                ...formData,
+                promo_price: promoPrice,
+                images_gallery: imagesGallery,
+                variations,
+                weight: weight ? parseFloat(weight) : undefined,
+                height: height ? parseFloat(height) : undefined,
+                width: width ? parseFloat(width) : undefined,
+                depth: depth ? parseFloat(depth) : undefined,
+                package_size: packageSize,
+                store_category: storeCategory
+              }}
               onImportSuccess={(importedData) => {
                 try {
                   // Validar estrutura dos dados importados
@@ -827,54 +841,19 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
                   console.log('📦 Dados importados:', importedData);
 
-                  // Preencher automaticamente todos os campos disponíveis com validação
-                  setFormData(prev => ({
-                    ...prev,
-                    name: String(importedData.name || prev.name || ''),
-                    description: importedData.description ? String(importedData.description) : prev.description,
-                    price: typeof importedData.price === 'number' ? importedData.price : prev.price,
-                    promo_price: typeof importedData.promo_price === 'number' ? importedData.promo_price : prev.promo_price,
-                    image_url: importedData.image_url ? String(importedData.image_url) : prev.image_url,
-                    brand: importedData.brand ? String(importedData.brand) : prev.brand,
-                    ean: importedData.ean ? String(importedData.ean) : prev.ean,
-                    gtin: importedData.gtin ? String(importedData.gtin) : prev.gtin,
-                    mpn: importedData.mpn ? String(importedData.mpn) : prev.mpn,
-                    category: importedData.category ? String(importedData.category) : prev.category,
-                    subcategory: importedData.subcategory ? String(importedData.subcategory) : prev.subcategory,
-                    keywords: Array.isArray(importedData.keywords) && importedData.keywords.length > 0 
-                      ? importedData.keywords 
-                      : prev.keywords,
-                    features: Array.isArray(importedData.features) && importedData.features.length > 0 
-                      ? importedData.features 
-                      : prev.features,
-                  }));
+                  // Aplicar TODOS os campos importados ao form
+                  setFormData(prev => ({ ...prev, ...importedData }));
                   
-                  // Preencher galeria de imagens se disponível e válida
-                  if (Array.isArray(importedData.images_gallery) && importedData.images_gallery.length > 0) {
-                    const validImages = importedData.images_gallery.filter(
-                      img => img && typeof img === 'object' && img.url
-                    );
-                    if (validImages.length > 0) {
-                      setImagesGallery(validImages);
-                      console.log(`✅ ${validImages.length} imagens importadas`);
-                    }
-                  }
-                  
-                  // Preencher variações se disponível e válida
-                  if (Array.isArray(importedData.variations) && importedData.variations.length > 0) {
-                    const validVariations = importedData.variations.filter(
-                      v => v && typeof v === 'object' && v.name
-                    );
-                    if (validVariations.length > 0) {
-                      setVariations(validVariations);
-                      console.log(`✅ ${validVariations.length} variações importadas`);
-                    }
-                  }
-
-                  // Atualizar preço promocional se disponível
-                  if (typeof importedData.promo_price === 'number' && importedData.promo_price > 0) {
-                    setPromoPrice(importedData.promo_price);
-                  }
+                  // Aplicar estados separados para campos especiais
+                  if (importedData.promo_price) setPromoPrice(importedData.promo_price);
+                  if (importedData.images_gallery) setImagesGallery(importedData.images_gallery);
+                  if (importedData.variations) setVariations(importedData.variations);
+                  if (importedData.weight) setWeight(importedData.weight.toString());
+                  if (importedData.height) setHeight(importedData.height.toString());
+                  if (importedData.width) setWidth(importedData.width.toString());
+                  if (importedData.depth) setDepth(importedData.depth.toString());
+                  if (importedData.package_size) setPackageSize(importedData.package_size);
+                  if (importedData.store_category) setStoreCategory(importedData.store_category);
                   
                   toast({
                     title: "Campos preenchidos",
@@ -898,6 +877,27 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                 });
               }}
             />
+          )}
+
+          {/* Overwrite Toggle */}
+          {(!isEditing || formData.product_url) && (
+            <div className="flex items-center space-x-2 pt-1">
+              <Switch
+                id="overwrite-data"
+                checked={overwriteData}
+                onCheckedChange={setOverwriteData}
+              />
+              <Label htmlFor="overwrite-data" className="text-sm font-normal cursor-pointer">
+                Sobrescrever dados existentes ao importar
+              </Label>
+            </div>
+          )}
+          {(!isEditing || formData.product_url) && overwriteData !== undefined && (
+            <p className="text-xs text-muted-foreground">
+              {overwriteData 
+                ? "⚠️ Todos os campos serão substituídos pelos dados importados" 
+                : "✓ Apenas campos vazios serão preenchidos"}
+            </p>
           )}
 
           <div className="grid grid-cols-2 gap-4">
@@ -1171,63 +1171,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             )}
           </div>
 
-          {/* Loja Integrada Importer */}
-          <ProductLojaIntegradaImporter
-            productUrl={formData.product_url}
-            onImportSuccess={(importedData) => {
-              // Apply imported data to form
-              setFormData(prev => ({ ...prev, ...importedData }));
-              
-              // Handle special state fields
-              if (importedData.promo_price) setPromoPrice(importedData.promo_price);
-              if (importedData.images_gallery) setImagesGallery(importedData.images_gallery);
-              if (importedData.variations) setVariations(importedData.variations);
-              if (importedData.weight) setWeight(importedData.weight.toString());
-              if (importedData.height) setHeight(importedData.height.toString());
-              if (importedData.width) setWidth(importedData.width.toString());
-              if (importedData.depth) setDepth(importedData.depth.toString());
-              if (importedData.package_size) setPackageSize(importedData.package_size);
-              if (importedData.store_category) setStoreCategory(importedData.store_category);
-            }}
-            onImportError={(error) => {
-              toast({
-                title: "Erro na importação",
-                description: error,
-                variant: "destructive"
-              });
-            }}
-            mode="callback"
-            overwriteData={overwriteData}
-            currentFormData={{
-              ...formData,
-              promo_price: promoPrice,
-              images_gallery: imagesGallery,
-              variations,
-              weight,
-              height,
-              width,
-              depth,
-              package_size: packageSize,
-              store_category: storeCategory
-            }}
-          />
-
-          {/* Overwrite Toggle */}
-          <div className="flex items-center space-x-2 pt-1">
-            <Switch
-              id="overwrite-data"
-              checked={overwriteData}
-              onCheckedChange={setOverwriteData}
-            />
-            <Label htmlFor="overwrite-data" className="text-sm font-normal cursor-pointer">
-              Sobrescrever dados existentes ao importar
-            </Label>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {overwriteData 
-              ? "⚠️ Todos os campos serão substituídos pelos dados importados" 
-              : "✓ Apenas campos vazios serão preenchidos"}
-          </p>
+          {/* REMOVIDO: Duplicação do importer */}
 
           {/* Video Collections */}
           <div className="space-y-6 border-t pt-6">

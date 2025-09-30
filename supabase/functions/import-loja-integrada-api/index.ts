@@ -253,7 +253,7 @@ async function fallbackToWebScraping(
   supabaseUrl: string,
   supabaseKey: string,
   productUrl: string
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<{ success: boolean; data?: any; error?: string; li_product_id?: string }> {
   console.log('🔄 Falling back to web scraping for URL:', productUrl);
 
   try {
@@ -269,9 +269,15 @@ async function fallbackToWebScraping(
     }
 
     console.log('✅ Web scraping fallback successful');
-    // Unwrap nested data structure if present
+    // Unwrap nested data structure if present and extract li_product_id
     const unwrappedData = data?.data ?? data;
-    return { success: true, data: unwrappedData };
+    const li_product_id = data?.li_product_id;
+    
+    if (li_product_id) {
+      console.log(`🆔 Extracted Loja Integrada product ID: ${li_product_id}`);
+    }
+    
+    return { success: true, data: unwrappedData, li_product_id };
   } catch (error) {
     console.error('❌ Web scraping fallback error:', error);
     return {
@@ -466,12 +472,19 @@ serve(async (req) => {
       'info'
     );
 
-    // Try API first
-    const apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
+    // Try API first (if productId provided directly)
+    let apiResult = { success: false, data: null };
+    if (productId) {
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, `${endpoint}/${productId}`);
+    } else if (!productUrl) {
+      // Se não tem nem productId nem productUrl, tenta o endpoint genérico
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
+    }
 
     let finalData: any = null;
     let dataSource = 'api';
     let fallbackUsed = false;
+    let extractedProductId: string | undefined;
 
     if (apiResult.success && apiResult.data) {
       console.log('✅ API data retrieved successfully');
@@ -500,8 +513,29 @@ serve(async (req) => {
         
         if (scrapingResult.success && scrapingResult.data) {
           console.log('✅ Web scraping fallback successful');
-          finalData = scrapingResult.data;
-          dataSource = 'web_scraping';
+          extractedProductId = scrapingResult.li_product_id;
+          
+          // Se extraímos um ID e ainda não tentamos a API com ele, tentar agora
+          if (extractedProductId && !productId) {
+            console.log(`🔄 Trying API with extracted ID: ${extractedProductId}`);
+            const apiRetry = await fetchFromLojaIntegradaAPI(
+              lojaIntegradaApiKey,
+              `${endpoint}/${extractedProductId}`
+            );
+            
+            if (apiRetry.success && apiRetry.data) {
+              console.log('✅ API successful with extracted ID');
+              finalData = mapAPIProductToRepository(apiRetry.data);
+              dataSource = 'api_via_scraping';
+            } else {
+              // Se API com ID falhar, usar dados do scraping
+              finalData = scrapingResult.data;
+              dataSource = 'web_scraping';
+            }
+          } else {
+            finalData = scrapingResult.data;
+            dataSource = 'web_scraping';
+          }
         } else {
           throw new Error('Both API and web scraping failed');
         }

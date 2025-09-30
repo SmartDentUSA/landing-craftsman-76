@@ -256,7 +256,7 @@ function extractPhysicalSpecs(doc: Document | null, jsonLdData?: any) {
   return specs;
 }
 
-function extractVariations(jsonLdData?: any, doc?: Document): Array<{
+function extractVariations(jsonLdData?: any, doc?: Document, html?: string): Array<{
   name: string;
   price?: number;
   promo_price?: number;
@@ -296,38 +296,72 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
     return variations.length > 0 ? variations : undefined;
   }
 
-  // 2. Buscar JSON embutido em scripts (PRIORIDADE)
+  // 2. Buscar JSON embutido em scripts - MELHORADO para Loja Integrada
   const scripts = doc.querySelectorAll('script:not([src])');
   scripts.forEach(script => {
     const content = script.textContent || '';
     
-    // Procurar por objetos/arrays com variações
+    // Padrões específicos da Loja Integrada
+    const lojaIntegradaPatterns = [
+      /var\s+skuJson\s*=\s*(\[[\s\S]*?\]);/gi,
+      /var\s+product_variations\s*=\s*(\[[\s\S]*?\]);/gi,
+      /"skus"\s*:\s*(\[[\s\S]*?\])/gi,
+    ];
+    
+    lojaIntegradaPatterns.forEach(pattern => {
+      const matches = content.matchAll(pattern);
+      for (const match of matches) {
+        try {
+          const parsed = JSON.parse(match[1]);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item: any) => {
+              const varName = item.nome || item.name || item.titulo || item.title || item.label;
+              if (varName && varName.trim().length > 0) {
+                variations.push({
+                  name: varName,
+                  price: item.preco || item.price ? parsePriceBRL(item.preco || item.price) : undefined,
+                  promo_price: item.preco_promocional || item.promo_price ? parsePriceBRL(item.preco_promocional || item.promo_price) : undefined,
+                  sku: item.sku || item.codigo || item.id?.toString(),
+                  stock: item.estoque || item.stock,
+                  color: item.cor || item.color,
+                  size: item.tamanho || item.size
+                });
+              }
+            });
+          }
+        } catch (e) {
+          // Ignora erros de parse
+        }
+      }
+    });
+    
+    // Padrões genéricos
     const patterns = [
-      /"variacoes"\s*:\s*\[([^\]]+)\]/gi,
-      /"variations"\s*:\s*\[([^\]]+)\]/gi,
-      /"opcoes"\s*:\s*\[([^\]]+)\]/gi,
-      /"options"\s*:\s*\[([^\]]+)\]/gi,
-      /"attributes"\s*:\s*\[([^\]]+)\]/gi
+      /"variacoes"\s*:\s*(\[[\s\S]*?\])/gi,
+      /"variations"\s*:\s*(\[[\s\S]*?\])/gi,
+      /"opcoes"\s*:\s*(\[[\s\S]*?\])/gi,
+      /"options"\s*:\s*(\[[\s\S]*?\])/gi,
     ];
 
     patterns.forEach(pattern => {
       const matches = content.matchAll(pattern);
       for (const match of matches) {
         try {
-          const jsonStr = `[${match[1]}]`;
-          const parsed = JSON.parse(jsonStr);
-          parsed.forEach((item: any) => {
-            if (item.nome || item.name || item.titulo || item.title) {
-              variations.push({
-                name: item.nome || item.name || item.titulo || item.title,
-                price: item.preco || item.price ? parsePriceBRL(item.preco || item.price) : undefined,
-                promo_price: item.preco_promocional || item.promo_price ? parsePriceBRL(item.preco_promocional || item.promo_price) : undefined,
-                sku: item.sku || item.codigo,
-                color: item.cor || item.color,
-                size: item.tamanho || item.size
-              });
-            }
-          });
+          const parsed = JSON.parse(match[1]);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item: any) => {
+              if (item.nome || item.name || item.titulo || item.title) {
+                variations.push({
+                  name: item.nome || item.name || item.titulo || item.title,
+                  price: item.preco || item.price ? parsePriceBRL(item.preco || item.price) : undefined,
+                  promo_price: item.preco_promocional || item.promo_price ? parsePriceBRL(item.preco_promocional || item.promo_price) : undefined,
+                  sku: item.sku || item.codigo,
+                  color: item.cor || item.color,
+                  size: item.tamanho || item.size
+                });
+              }
+            });
+          }
         } catch (e) {
           // Ignora erros de parse
         }
@@ -335,8 +369,39 @@ function extractVariations(jsonLdData?: any, doc?: Document): Array<{
     });
   });
 
-  // 3. Selects e Radios
-  const selectElements = doc.querySelectorAll('select[name*="variacao"], select[name*="opcao"], select.product-variant');
+  // 3. Loja Integrada: data-attributes específicos
+  const lojaIntegradaSelectors = [
+    '[data-variacao-id]',
+    '[data-variacao]',
+    '[data-variacao-nome]',
+    '[data-sku-id]',
+    'input[name="sku"]',
+    'select[name="sku"]'
+  ];
+  
+  lojaIntegradaSelectors.forEach(selector => {
+    const elements = doc.querySelectorAll(selector);
+    elements.forEach(el => {
+      const varName = el.getAttribute('data-variacao-nome') || 
+                     el.getAttribute('data-variacao') || 
+                     el.getAttribute('data-label') ||
+                     el.getAttribute('value') ||
+                     el.textContent?.trim();
+      const varPrice = el.getAttribute('data-preco') || el.getAttribute('data-price');
+      const varSku = el.getAttribute('data-variacao-id') || el.getAttribute('data-sku-id') || el.getAttribute('data-sku');
+      
+      if (varName && varName.trim().length > 0 && !varName.includes('{{')) {
+        variations.push({
+          name: varName,
+          price: varPrice ? parsePriceBRL(varPrice) : undefined,
+          sku: varSku || undefined
+        });
+      }
+    });
+  });
+
+  // 4. Selects e Radios
+  const selectElements = doc.querySelectorAll('select[name*="variacao"], select[name*="opcao"], select[name*="sku"], select.product-variant');
   selectElements.forEach(select => {
     const options = select.querySelectorAll('option');
     options.forEach(option => {
@@ -598,7 +663,8 @@ function extractImagesGallery(
           url = extractLargestFromSrcset(url) || url;
         }
 
-        if (url && url.startsWith('http')) {
+        // Filtrar apenas imagens do produto (se temos li_product_id)
+        if (url && url.startsWith('http') && belongsToProduct(url)) {
           const normalized = normalizeUrl(url);
           const alt = img.getAttribute('alt') || img.getAttribute('title') || 'Product image';
           
@@ -757,11 +823,11 @@ serve(async (req) => {
             const physicalSpecs = extractPhysicalSpecs(doc, product);
             productData = { ...productData, ...physicalSpecs };
             
-            // Extrair variações
-            productData.variations = extractVariations(product, doc);
+            // Extrair variações (passando html também)
+            productData.variations = extractVariations(product, doc, html);
             
-            // Extrair galeria de imagens
-            productData.images_gallery = extractImagesGallery(product, productData.image, doc);
+            // Extrair galeria de imagens (passando URL também)
+            productData.images_gallery = extractImagesGallery(product, productData.image, doc, url);
             
             console.info('✅ Dados extraídos do JSON-LD');
             break;
@@ -874,20 +940,25 @@ serve(async (req) => {
       }
     }
 
-    // Fallback variações
+    // Fallback variações (passando html)
     if (!productData.variations) {
-      productData.variations = extractVariations(undefined, doc);
+      productData.variations = extractVariations(undefined, doc, html);
     }
 
-    // Fallback galeria
+    // Fallback galeria (passando url)
     if (!productData.images_gallery || productData.images_gallery.length === 0) {
-      productData.images_gallery = extractImagesGallery(undefined, productData.image, doc);
+      productData.images_gallery = extractImagesGallery(undefined, productData.image, doc, url);
     }
+
+    // Extrair li_product_id da URL
+    let li_product_id: string | null = null;
+    const urlMatch = url.match(/\/produto\/(\d+)\//i) || url.match(/product[_-]?id[=:](\d+)/i);
+    if (urlMatch) li_product_id = urlMatch[1];
 
     console.info('Dados extraídos:', productData);
 
     return new Response(
-      JSON.stringify({ success: true, data: productData }),
+      JSON.stringify({ success: true, data: productData, li_product_id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
