@@ -16,8 +16,9 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
   const navigate = useNavigate();
   const hasNavigated = useRef(false);
 
-  // Simple role cache to avoid excessive RPC calls
+  // Simple role cache to avoid excessive RPC calls (1 minute cache)
   const [roleCache, setRoleCache] = useState<{role: 'admin' | 'user', timestamp: number} | null>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -45,9 +46,9 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
         console.log('Session found for user:', session.user.email);
         setUser(session.user);
 
-        // Check cached role first (5 minute cache)
+        // Check cached role first (1 minute cache)
         const now = Date.now();
-        if (roleCache && (now - roleCache.timestamp) < 300000) {
+        if (roleCache && (now - roleCache.timestamp) < 60000) {
           setUserRole(roleCache.role);
           setLoading(false);
           return;
@@ -132,10 +133,45 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
     };
   }, [navigate]);
 
+  // Add timeout for loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.warn('Auth check timeout - proceeding with fallback');
+        setLoadingTimeout(true);
+        setLoading(false);
+      }
+    }, 12000); // 12 second timeout
+
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="text-lg text-muted-foreground">Verificando autenticação...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle timeout scenario
+  if (loadingTimeout && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="max-w-md mx-auto text-center p-8">
+          <div className="bg-card rounded-lg shadow-medium p-6 border">
+            <div className="text-xl font-semibold mb-2 text-foreground">Problema de Conexão</div>
+            <p className="text-muted-foreground mb-4">
+              Não foi possível verificar sua autenticação. Verifique sua conexão e tente novamente.
+            </p>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Tentar Novamente
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
