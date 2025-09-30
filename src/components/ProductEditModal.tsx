@@ -23,6 +23,7 @@ import { useCategoryContext } from '@/contexts/CategoryContext';
 import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
+import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 
 interface Video {
   url: string;
@@ -609,7 +610,74 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     }
   };
 
-  const extractProductDataFromUrl = async () => {
+  const handleLojaIntegradaImport = (importedData: any): void => {
+    console.log('Dados importados da Loja Integrada:', importedData);
+    
+    // Mapear campos importados para o formulário
+    const updates: Partial<Product> = {};
+    
+    if (importedData.name) {
+      updates.name = importedData.name;
+    }
+    if (importedData.description) {
+      updates.description = importedData.description;
+    }
+    if (importedData.price) {
+      updates.price = importedData.price;
+    }
+    if (importedData.promo_price) {
+      setPromoPrice(importedData.promo_price);
+    }
+    if (importedData.category) {
+      updates.category = importedData.category;
+    }
+    if (importedData.subcategory) {
+      updates.subcategory = importedData.subcategory;
+    }
+    if (importedData.brand) {
+      updates.brand = importedData.brand;
+    }
+    if (importedData.image_url) {
+      updates.image_url = importedData.image_url;
+    }
+    if (importedData.images_gallery && Array.isArray(importedData.images_gallery)) {
+      setImagesGallery(importedData.images_gallery);
+    }
+    if (importedData.variations && Array.isArray(importedData.variations)) {
+      setVariations(importedData.variations);
+    }
+    if (importedData.gtin) {
+      updates.gtin = importedData.gtin;
+    }
+    if (importedData.ean) {
+      updates.ean = importedData.ean;
+    }
+    if (importedData.mpn) {
+      updates.mpn = importedData.mpn;
+    }
+    if (importedData.weight) {
+      setWeight(importedData.weight.toString());
+    }
+    if (importedData.height) {
+      setHeight(importedData.height.toString());
+    }
+    if (importedData.width) {
+      setWidth(importedData.width.toString());
+    }
+    if (importedData.depth) {
+      setDepth(importedData.depth.toString());
+    }
+    
+    // Aplicar atualizações ao formData
+    setFormData(prev => ({ ...prev, ...updates }));
+    
+    toast({
+      title: "Dados importados",
+      description: "Campos preenchidos com dados da Loja Integrada. Revise antes de salvar.",
+    });
+  };
+
+  const extractProductDataFromUrl = async () {
     if (!formData.product_url?.trim()) {
       toast({
         title: "Erro",
@@ -1010,6 +1078,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Loja Integrada Importer */}
+          <ProductLojaIntegradaImporter 
+            onDataImported={handleLojaIntegradaImport}
+            productUrl={formData.product_url}
+          />
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Produto *</Label>
