@@ -1370,9 +1370,10 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
             defaultFields['company_profile'] = ['company_name', 'working_methodology', 'differentiators'];
             defaultFields['categories_config'] = ['keywords', 'target_audience'];
           } else if (edgeFunction.id === 'generate-social-content') {
-            defaultFields['products_repository'] = ['name', 'description', 'benefits', 'keywords', 'target_audience', 'bot_trigger_words', 'sales_pitch', 'product_url', 'price', 'currency', 'category'];
+            defaultFields['products_repository'] = ['name', 'description', 'benefits', 'keywords', 'target_audience', 'bot_trigger_words', 'sales_pitch', 'product_url', 'price', 'currency', 'category', 'subcategory', 'features'];
             defaultFields['company_profile'] = ['company_name', 'target_audience', 'youtube_company_footer'];
             defaultFields['external_links'] = ['name', 'url', 'category', 'description'];
+            defaultFields['landing_pages'] = ['id', 'name'];
           } else if (edgeFunction.id === 'ai-seo-generator') {
             defaultFields['products_repository'] = ['name', 'description', 'keywords'];
           } else if (edgeFunction.id === 'generate-instagram-copy') {
