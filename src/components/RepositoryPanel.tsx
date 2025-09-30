@@ -15,7 +15,7 @@ import { useProductSync } from "@/hooks/useProductSync";
 import useLandingPages from "@/hooks/useLandingPages";
 import { ProductEditModal } from "@/components/ProductEditModal";
 import { CompanyProfileManager } from "@/components/CompanyProfileManager";
-import { CompanyProfileManager as CompanyProfileManagerNew } from "@/components/CompanyProfileManagerNew";
+
 import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
@@ -615,7 +615,7 @@ export function RepositoryPanel({
                     Perfil da Empresa
                   </DialogTitle>
                 </DialogHeader>
-                <CompanyProfileManagerNew 
+                <CompanyProfileManager 
                   onProfileChange={onCompanyProfileChange}
                 />
               </DialogContent>
