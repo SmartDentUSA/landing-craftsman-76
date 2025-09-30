@@ -209,6 +209,13 @@ interface ConsolidatedBlogOptions {
   landingPageData?: any;
   includeOffers?: boolean;
   ogImage?: string;
+  seoHiddenData?: {
+    contextKeywords: string[];
+    marketPositioning: string;
+    competitiveAdvantages: string;
+    technicalExpertise: string;
+    serviceAreas: string;
+  };
 }
 
 export const useSEOHTMLGenerator = () => {
@@ -622,7 +629,7 @@ export const useSEOHTMLGenerator = () => {
   }, [generateCompletePageSchema]);
 
   const generateConsolidatedBlogHTML = useCallback((options: ConsolidatedBlogOptions): string => {
-    const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage } = options;
+    const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage, seoHiddenData } = options;
 
     // Define canonical URL at the beginning
     const canonicalUrl = `https://${domain}.com.br`;

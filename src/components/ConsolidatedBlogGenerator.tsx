@@ -10,6 +10,7 @@ import { useSEOHTMLGenerator } from '@/hooks/useSEOHTMLGenerator';
 import { useSelectedProducts } from '@/hooks/useSelectedProducts';
 import { useLandingPagesSupabase } from '@/hooks/useLandingPagesSupabase';
 import { generateAdvancedIntelligentLinks, processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConsolidatedBlogGeneratorProps {
   approvedLandingPages: any[];
@@ -58,6 +59,30 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         };
       });
 
+      // Fetch company profile with SEO Hidden fields
+      const { data: companyProfile } = await supabase
+        .from('company_profile')
+        .select(`
+          company_name,
+          company_description,
+          seo_context_keywords,
+          seo_market_positioning,
+          seo_competitive_advantages,
+          seo_technical_expertise,
+          seo_service_areas
+        `)
+        .single();
+      
+      // Extract SEO Hidden data for enhanced meta descriptions and schemas
+      const seoHiddenData = companyProfile ? {
+        contextKeywords: Array.isArray(companyProfile.seo_context_keywords) ? 
+          companyProfile.seo_context_keywords.filter((k): k is string => typeof k === 'string') : [],
+        marketPositioning: (companyProfile.seo_market_positioning as string) || '',
+        competitiveAdvantages: (companyProfile.seo_competitive_advantages as string) || '',
+        technicalExpertise: (companyProfile.seo_technical_expertise as string) || '',
+        serviceAreas: (companyProfile.seo_service_areas as string) || ''
+      } : null;
+
       // Extract standard image (image1) from first landing page that has one
       const ogImage = landingPageSEOData.find(lp => lp.image1_url)?.image1_url;
 
@@ -65,11 +90,12 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
       const allSelectedProductIds = [...new Set(landingPageSEOData.flatMap(lp => lp.selected_product_ids))];
       const selectedProductsData = await getProductsForTemplate(allSelectedProductIds);
 
-      // Aggregate all keywords
+      // Aggregate all keywords including SEO Hidden fields
       const aggregatedKeywords = [
         ...new Set([
           ...landingPageSEOData.flatMap(lp => lp.ai_keywords),
-          ...selectedProductsData.flatMap(p => [...(p.keywords || []), ...(p.market_keywords || []), ...(p.search_intent_keywords || [])])
+          ...selectedProductsData.flatMap(p => [...(p.keywords || []), ...(p.market_keywords || []), ...(p.search_intent_keywords || [])]),
+          ...(seoHiddenData?.contextKeywords || [])
         ])
       ];
 
@@ -97,16 +123,22 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         })
       );
 
+      // Generate enhanced meta description with SEO Hidden data
+      const enhancedDescription = seoHiddenData ? 
+        `${seoHiddenData.marketPositioning || `Conteúdo técnico e comercial consolidado para ${domain}`} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos. ${seoHiddenData.competitiveAdvantages}`.substring(0, 160) :
+        `Conteúdo técnico e comercial consolidado para ${domain} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos`;
+
       // Generate consolidated HTML with full SEO integration
       const consolidatedHTML = generateConsolidatedBlogHTML({
         title: `Blog Consolidado - ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}`,
-        description: `Conteúdo técnico e comercial consolidado para ${domain} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos`,
+        description: enhancedDescription,
         domain: domain,
         blogs: blogsWithAdvancedLinks,
         landingPagesSEO: landingPageSEOData,
         selectedProducts: selectedProductsData,
         aggregatedKeywords: aggregatedKeywords,
-        ogImage: ogImage
+        ogImage: ogImage,
+        seoHiddenData: seoHiddenData
       });
 
       // Copy to clipboard

@@ -132,15 +132,33 @@ async function buildStrategicContext(supabase: any, landingPageId: string, repos
     context.keyOpinionLeaders = kols || [];
   }
 
-  // Company Profile
+  // Company Profile with SEO Hidden fields
   if (selectedSources.includes('company_profile')) {
     const { data: companyProfile } = await supabase
       .from('company_profile')
-      .select('*')
+      .select(`
+        *,
+        seo_context_keywords,
+        seo_market_positioning,
+        seo_competitive_advantages,
+        seo_technical_expertise,
+        seo_service_areas
+      `)
       .limit(1)
       .single();
     
     context.companyProfile = companyProfile;
+    
+    // Extract SEO Hidden fields for enhanced context
+    if (companyProfile) {
+      context.seoContext = {
+        contextKeywords: companyProfile.seo_context_keywords || [],
+        marketPositioning: companyProfile.seo_market_positioning || '',
+        competitiveAdvantages: companyProfile.seo_competitive_advantages || '',
+        technicalExpertise: companyProfile.seo_technical_expertise || '',
+        serviceAreas: companyProfile.seo_service_areas || ''
+      };
+    }
   }
 
   return context;
@@ -208,6 +226,19 @@ async function loadCustomPrompts(supabase: any, edgeFunctionId: string) {
 }
 
 async function generateStrategicBlog(context: any, customPrompts: any): Promise<string> {
+  // Build enhanced context with SEO Hidden fields
+  let enhancedContext = { ...context };
+  
+  if (context.seoContext) {
+    enhancedContext.seoGuidelines = {
+      contextKeywords: context.seoContext.contextKeywords,
+      marketPositioning: context.seoContext.marketPositioning,
+      competitiveAdvantages: context.seoContext.competitiveAdvantages,
+      technicalExpertise: context.seoContext.technicalExpertise,
+      serviceAreas: context.seoContext.serviceAreas
+    };
+  }
+
   const defaultPrompt = `Você é um especialista em marketing de conteúdo estratégico e SEO.
 
 IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamais use espanhol ou outros idiomas.
@@ -215,7 +246,18 @@ IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamai
 Crie um artigo de blog abrangente e estratégico que combine todos os elementos fornecidos de forma natural e persuasiva.
 
 CONTEXTO DISPONÍVEL:
-${JSON.stringify(context, null, 2)}
+${JSON.stringify(enhancedContext, null, 2)}
+
+${context.seoContext ? `
+DIRETRIZES SEO ESPECÍFICAS:
+- PALAVRAS-CHAVE DE CONTEXTO: ${context.seoContext.contextKeywords?.join(', ') || 'N/A'}
+- POSICIONAMENTO DE MERCADO: ${context.seoContext.marketPositioning || 'N/A'}
+- VANTAGENS COMPETITIVAS: ${context.seoContext.competitiveAdvantages || 'N/A'}
+- EXPERTISE TÉCNICA: ${context.seoContext.technicalExpertise || 'N/A'}
+- ÁREAS DE ATUAÇÃO: ${context.seoContext.serviceAreas || 'N/A'}
+
+INTEGRE ESSAS INFORMAÇÕES NATURALMENTE NO CONTEÚDO PARA OTIMIZAÇÃO SEO.
+` : ''}
 
 ESTRUTURA OBRIGATÓRIA:
 1. **Título Principal** (H1) - Engajante e otimizado para SEO
