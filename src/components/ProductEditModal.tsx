@@ -1016,46 +1016,88 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
             <ProductLojaIntegradaImporter
               productUrl={formData.product_url}
               onImportSuccess={(importedData) => {
-                // Preencher automaticamente todos os campos disponíveis
-                setFormData(prev => ({
-                  ...prev,
-                  name: importedData.name || prev.name,
-                  description: importedData.description || prev.description,
-                  price: importedData.price ?? prev.price,
-                  promo_price: importedData.promo_price ?? prev.promo_price,
-                  image_url: importedData.image_url || prev.image_url,
-                  brand: importedData.brand || prev.brand,
-                  ean: importedData.ean || prev.ean,
-                  gtin: importedData.gtin || prev.gtin,
-                  mpn: importedData.mpn || prev.mpn,
-                  category: importedData.category || prev.category,
-                  subcategory: importedData.subcategory || prev.subcategory,
-                  keywords: importedData.keywords?.length ? importedData.keywords : prev.keywords,
-                  features: importedData.features?.length ? importedData.features : prev.features,
-                }));
-                
-                // Preencher galeria de imagens se disponível
-                if (importedData.images_gallery?.length) {
-                  setImagesGallery(importedData.images_gallery);
-                }
-                
-                // Preencher variações se disponível
-                if (importedData.variations?.length) {
-                  setVariations(importedData.variations);
-                }
+                try {
+                  // Validar estrutura dos dados importados
+                  if (!importedData || typeof importedData !== 'object') {
+                    throw new Error('Dados importados inválidos');
+                  }
 
-                // Atualizar preço promocional se disponível
-                if (importedData.promo_price) {
-                  setPromoPrice(importedData.promo_price);
+                  // Validar campo obrigatório
+                  if (!importedData.name || typeof importedData.name !== 'string') {
+                    throw new Error('Nome do produto é obrigatório');
+                  }
+
+                  console.log('📦 Dados importados:', importedData);
+
+                  // Preencher automaticamente todos os campos disponíveis com validação
+                  setFormData(prev => ({
+                    ...prev,
+                    name: String(importedData.name || prev.name || ''),
+                    description: importedData.description ? String(importedData.description) : prev.description,
+                    price: typeof importedData.price === 'number' ? importedData.price : prev.price,
+                    promo_price: typeof importedData.promo_price === 'number' ? importedData.promo_price : prev.promo_price,
+                    image_url: importedData.image_url ? String(importedData.image_url) : prev.image_url,
+                    brand: importedData.brand ? String(importedData.brand) : prev.brand,
+                    ean: importedData.ean ? String(importedData.ean) : prev.ean,
+                    gtin: importedData.gtin ? String(importedData.gtin) : prev.gtin,
+                    mpn: importedData.mpn ? String(importedData.mpn) : prev.mpn,
+                    category: importedData.category ? String(importedData.category) : prev.category,
+                    subcategory: importedData.subcategory ? String(importedData.subcategory) : prev.subcategory,
+                    keywords: Array.isArray(importedData.keywords) && importedData.keywords.length > 0 
+                      ? importedData.keywords 
+                      : prev.keywords,
+                    features: Array.isArray(importedData.features) && importedData.features.length > 0 
+                      ? importedData.features 
+                      : prev.features,
+                  }));
+                  
+                  // Preencher galeria de imagens se disponível e válida
+                  if (Array.isArray(importedData.images_gallery) && importedData.images_gallery.length > 0) {
+                    const validImages = importedData.images_gallery.filter(
+                      img => img && typeof img === 'object' && img.url
+                    );
+                    if (validImages.length > 0) {
+                      setImagesGallery(validImages);
+                      console.log(`✅ ${validImages.length} imagens importadas`);
+                    }
+                  }
+                  
+                  // Preencher variações se disponível e válida
+                  if (Array.isArray(importedData.variations) && importedData.variations.length > 0) {
+                    const validVariations = importedData.variations.filter(
+                      v => v && typeof v === 'object' && v.name
+                    );
+                    if (validVariations.length > 0) {
+                      setVariations(validVariations);
+                      console.log(`✅ ${validVariations.length} variações importadas`);
+                    }
+                  }
+
+                  // Atualizar preço promocional se disponível
+                  if (typeof importedData.promo_price === 'number' && importedData.promo_price > 0) {
+                    setPromoPrice(importedData.promo_price);
+                  }
+                  
+                  toast({
+                    title: "Campos preenchidos",
+                    description: "Os dados foram importados. Revise e edite conforme necessário antes de salvar.",
+                  });
+                } catch (error) {
+                  console.error('❌ Erro ao processar dados importados:', error);
+                  toast({
+                    title: "Erro ao processar dados",
+                    description: error instanceof Error ? error.message : "Erro desconhecido ao processar dados importados",
+                    variant: "destructive"
+                  });
                 }
-                
-                toast({
-                  title: "Campos preenchidos",
-                  description: "Os dados foram importados. Revise e edite conforme necessário antes de salvar.",
-                });
               }}
               onImportError={(error) => {
                 console.error('Erro na importação:', error);
+                toast({
+                  title: "Erro na importação",
+                  description: error,
+                  variant: "destructive"
+                });
               }}
             />
           )}

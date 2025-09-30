@@ -190,6 +190,8 @@ async function fetchFromLojaIntegradaAPI(
         headers: {
           'Authorization': `chave_api ${apiKey}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Supabase-Edge-Function',
         },
       }
     );
@@ -207,7 +209,32 @@ async function fetchFromLojaIntegradaAPI(
       };
     }
 
-    const data = await response.json();
+    // Validar content-type antes de fazer parse
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error(`❌ Invalid content-type: ${contentType}`);
+      updateCircuitBreaker(false);
+      return {
+        success: false,
+        error: `API returned non-JSON response (${contentType}). The API may be returning HTML instead of JSON.`,
+      };
+    }
+
+    const responseText = await response.text();
+    
+    // Validar se é JSON válido antes de fazer parse
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error(`❌ JSON Parse Error:`, parseError);
+      console.error(`Response text (first 500 chars):`, responseText.substring(0, 500));
+      updateCircuitBreaker(false);
+      return {
+        success: false,
+        error: `Invalid JSON response from API. Received: ${responseText.substring(0, 100)}...`,
+      };
+    }
     updateCircuitBreaker(true);
 
     return { success: true, data };
@@ -280,27 +307,33 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     availability: apiProduct.disponivel ? 'in_stock' : 'out_of_stock',
     stock_available: apiProduct.estoque_gerenciado ? apiProduct.quantidade_disponivel : null,
     
-    // Images - structured array
-    images_gallery: apiProduct.imagens?.map((img, index) => ({
-      url: img.url || img.grande || img.media || img.thumbnail || '',
-      thumbnail: img.thumbnail || img.media || img.url || '',
-      medium: img.media || img.url || '',
-      large: img.grande || img.url || '',
-      order: img.ordem || index,
-      is_main: index === 0,
-    })) || [],
+    // Images - structured array with validation
+    images_gallery: Array.isArray(apiProduct.imagens) 
+      ? apiProduct.imagens
+          .filter(img => img && (img.url || img.grande || img.media || img.thumbnail))
+          .map((img, index) => ({
+            url: img.url || img.grande || img.media || img.thumbnail || '',
+            alt: apiProduct.nome || 'Product image',
+            order: typeof img.ordem === 'number' ? img.ordem : index,
+            is_main: index === 0,
+          }))
+      : [],
     
-    // Variations - structured array
-    variations: apiProduct.variacoes?.map((v) => ({
-      sku: v.sku || '',
-      name: v.nome || '',
-      price: v.preco || apiProduct.preco_cheio,
-      stock: v.quantidade_disponivel || 0,
-    })) || [],
+    // Variations - structured array with validation
+    variations: Array.isArray(apiProduct.variacoes) 
+      ? apiProduct.variacoes
+          .filter(v => v && v.nome)
+          .map((v) => ({
+            name: v.nome || '',
+            price: typeof v.preco === 'number' ? v.preco : apiProduct.preco_cheio,
+            stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : 0,
+            sku: v.sku || '',
+          }))
+      : [],
     
     // Additional metadata
     video_url: apiProduct.url_video_youtube || null,
-    tags: apiProduct.tags || [],
+    tags: Array.isArray(apiProduct.tags) ? apiProduct.tags : [],
     created_at: apiProduct.data_criacao || new Date().toISOString(),
     updated_at: apiProduct.data_ultima_modificacao || new Date().toISOString(),
     
@@ -319,6 +352,14 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
   ).length;
 
   console.log(`📊 Field extraction: ${filledFields}/${totalFields} fields (${((filledFields/totalFields)*100).toFixed(1)}%)`);
+  
+  // Log extracted data structure
+  console.log(`📦 Mapped product:`, {
+    name: mapped.name,
+    price: mapped.price,
+    images_count: mapped.images_gallery?.length || 0,
+    variations_count: mapped.variations?.length || 0,
+  });
 
   return mapped;
 }
@@ -385,7 +426,18 @@ serve(async (req) => {
 
     if (apiResult.success && apiResult.data) {
       console.log('✅ API data retrieved successfully');
+      
+      // Validar que temos dados válidos antes de mapear
+      if (!apiResult.data || typeof apiResult.data !== 'object') {
+        throw new Error('Invalid data structure from API');
+      }
+      
       finalData = mapAPIProductToRepository(apiResult.data);
+      
+      // Validar que o mapeamento produziu dados válidos
+      if (!finalData || !finalData.name) {
+        throw new Error('Failed to map API data to repository format');
+      }
     } else {
       // Fallback to web scraping if API fails and we have a product URL
       if (productUrl) {
@@ -430,6 +482,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         data: finalData,
+        product: finalData, // Manter compatibilidade com código antigo
         metadata: {
           dataSource,
           fallbackUsed,

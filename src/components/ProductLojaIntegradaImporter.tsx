@@ -68,11 +68,27 @@ export function ProductLojaIntegradaImporter({
 
       if (error) throw error;
 
+      // Validar estrutura da resposta
+      if (!data || typeof data !== 'object') {
+        throw new Error('Resposta inválida do servidor');
+      }
+
       if (data.success) {
+        // Validar dados do produto
+        const productData = data.data || data.product;
+        
+        if (!productData || typeof productData !== 'object') {
+          throw new Error('Dados do produto não encontrados na resposta');
+        }
+
+        if (!productData.name) {
+          throw new Error('Nome do produto é obrigatório');
+        }
+
         setImportResult({
           success: true,
           source: data.metadata?.dataSource || 'API',
-          ...data.product
+          ...productData
         });
 
         toast({
@@ -81,13 +97,18 @@ export function ProductLojaIntegradaImporter({
         });
 
         // Chamar callback com os dados importados
-        onImportSuccess(data.product);
+        onImportSuccess(productData);
       } else {
         throw new Error(data.error || 'Erro na importação');
       }
     } catch (error: any) {
       console.error('Erro na importação:', error);
-      const errorMessage = error.message || 'Erro ao importar produto da Loja Integrada';
+      
+      // Mensagem de erro específica para resposta HTML
+      let errorMessage = error.message || 'Erro ao importar produto da Loja Integrada';
+      if (errorMessage.includes('is not valid JSON') || errorMessage.includes('Unexpected token')) {
+        errorMessage = 'A API retornou uma resposta inválida. Verifique se a URL/ID está correto e tente novamente.';
+      }
       
       toast({
         title: "Erro na importação",
