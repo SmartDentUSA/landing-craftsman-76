@@ -646,7 +646,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           fieldsImported.push('Nome');
         }
         
-        if (extractedData.description && shouldUpdate(formData.description)) {
+        // Validar descrição antes de importar
+        const isDescValid = extractedData.description && 
+                           extractedData.description.trim().length > 20 && 
+                           extractedData.description.toLowerCase() !== extractedData.name?.toLowerCase();
+        
+        if (isDescValid && shouldUpdate(formData.description)) {
           updates.description = extractedData.description;
           fieldsImported.push('Descrição');
         }
@@ -696,7 +701,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // ✨ MAPEAR CAMPOS GOOGLE MERCHANT
         if (extractedData.gtin && shouldUpdate(formData.gtin)) {
           updates.gtin = extractedData.gtin;
-          fieldsImported.push('GTIN/EAN');
+          fieldsImported.push('GTIN');
+        }
+        
+        if (extractedData.ean && shouldUpdate(formData.ean)) {
+          updates.ean = extractedData.ean;
+          fieldsImported.push('EAN');
         }
         
         if (extractedData.mpn && shouldUpdate(formData.mpn)) {

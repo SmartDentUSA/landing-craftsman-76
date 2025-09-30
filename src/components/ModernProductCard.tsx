@@ -252,9 +252,16 @@ export function ModernProductCard({
 
         {/* Conteúdo principal */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm leading-tight truncate">
-            {product.name}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-medium text-sm leading-tight truncate flex-1">
+              {product.name}
+            </h3>
+            {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {product.variations.length} variações
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground truncate mt-0.5">
             {categoryPath}
           </p>
@@ -338,8 +345,21 @@ export function ModernProductCard({
 
         {/* Preço (se disponível) */}
         {(product.price !== undefined && product.price !== null) && (
-          <div className="flex-shrink-0 text-sm font-medium">
-            {formatPrice(product.price, product.currency)}
+          <div className="flex-shrink-0 text-sm">
+            {product.promo_price && product.promo_price > 0 && product.promo_price < product.price ? (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="font-bold text-primary">
+                  {formatPrice(product.promo_price, product.currency)}
+                </span>
+                <span className="text-xs text-muted-foreground line-through">
+                  {formatPrice(product.price, product.currency)}
+                </span>
+              </div>
+            ) : (
+              <span className="font-medium">
+                {formatPrice(product.price, product.currency)}
+              </span>
+            )}
           </div>
         )}
 

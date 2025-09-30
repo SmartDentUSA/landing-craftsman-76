@@ -16,7 +16,6 @@ interface ProductData {
   image?: string;
   images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   available?: boolean;
-  // Google Merchant + SEO fields
   gtin?: string;
   ean?: string;
   mpn?: string;
@@ -29,7 +28,6 @@ interface ProductData {
   material?: string;
   age_group?: string;
   gender?: string;
-  // Physical specifications
   variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
   package_size?: string;
   weight?: number;
@@ -39,50 +37,53 @@ interface ProductData {
   store_category?: string;
 }
 
-// 🔥 PARSING BRL ROBUSTO
-const parsePriceBRL = (priceStr: string): number => {
-  if (!priceStr) return 0;
+function parsePriceBRL(priceStr: string): number {
+  if (!priceStr || typeof priceStr !== 'string') return 0;
   
-  const original = priceStr;
-  let cleaned = priceStr.trim();
+  let cleaned = priceStr.trim().replace(/<[^>]*>/g, '');
+  cleaned = cleaned.replace(/R\$|BRL/gi, '').trim();
   
-  console.log(`💰 Parsing BRL price: "${original}"`);
-  
-  // Remover símbolos de moeda e espaços
-  cleaned = cleaned.replace(/R\$|€|\$|USD|BRL/gi, '').trim();
-  
-  // Contar pontos e vírgulas para detectar formato
-  const dotCount = (cleaned.match(/\./g) || []).length;
-  const commaCount = (cleaned.match(/,/g) || []).length;
-  
-  // Formato brasileiro: 1.859,00 ou 1859,00
-  if (commaCount === 1 && (dotCount > 0 || cleaned.length > 6)) {
-    // Remover pontos (milhares) e trocar vírgula por ponto (decimal)
+  if (cleaned.includes('.') && cleaned.includes(',')) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    console.log(`  ✅ Formato BRL detectado: ${cleaned}`);
-  }
-  // Apenas vírgula: 1859,00 -> 1859.00
-  else if (commaCount === 1 && dotCount === 0) {
+  } else if (cleaned.includes(',')) {
     cleaned = cleaned.replace(',', '.');
-    console.log(`  ✅ Formato simples com vírgula: ${cleaned}`);
   }
-  // Formato já correto: 1859.00
-  else if (dotCount === 1 && commaCount === 0) {
-    console.log(`  ✅ Formato já correto: ${cleaned}`);
-  }
-  // Fallback: apenas dígitos (ex: "185900" -> 1859.00)
-  else {
-    const digits = cleaned.replace(/\D/g, '');
-    if (digits.length > 0) {
-      cleaned = (parseInt(digits) / 100).toFixed(2);
-      console.log(`  ⚠️ Fallback aplicado (apenas dígitos): ${cleaned}`);
+  
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function isInvalidDescription(desc: string, productName: string): boolean {
+  if (!desc || desc.trim().length < 20) return true;
+  const normalized = desc.trim().toLowerCase();
+  const nameLower = productName.trim().toLowerCase();
+  return normalized === nameLower || normalized.includes('produto sem descrição');
+}
+
+function extractDescriptionFromDOM(doc: Document, productName: string): string {
+  const selectors = [
+    'meta[property="og:description"]',
+    'meta[name="description"]',
+    'div[itemprop="description"]',
+    '.product-description',
+    '#descricao',
+    '.descricao-produto',
+    '.description'
+  ];
+
+  for (const sel of selectors) {
+    const el = doc.querySelector(sel);
+    if (!el) continue;
+    
+    const content = el.getAttribute('content') || el.textContent;
+    if (content && content.trim().length > 20 && !isInvalidDescription(content, productName)) {
+      console.log(`✅ Descrição extraída de ${sel}`);
+      return content.trim();
     }
   }
   
-  const result = parseFloat(cleaned);
-  console.log(`  💵 Resultado final: ${result}`);
-  return isNaN(result) ? 0 : result;
-};
+  return productName;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -100,7 +101,7 @@ serve(async (req) => {
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
 
@@ -109,7 +110,6 @@ serve(async (req) => {
     }
 
     const html = await response.text();
-    
     const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis);
     
     const isPlaceholderData = (value: string): boolean => {
@@ -123,7 +123,6 @@ serve(async (req) => {
     };
     
     const extractPhysicalSpecs = () => {
-      console.log('🔍 Iniciando extração de especificações físicas...');
       const specs: any = {};
       
       const weightPatterns = [
@@ -139,7 +138,6 @@ serve(async (req) => {
             specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
               ? weightValue / 1000
               : weightValue;
-            console.log(`✅ Peso: ${specs.weight}kg`);
             break;
           }
         }
@@ -158,23 +156,8 @@ serve(async (req) => {
             const value = parseFloat(match[1].replace(',', '.'));
             if (!isNaN(value) && value > 0) {
               specs[key] = match[0].toLowerCase().includes('mm') ? value / 10 : value;
-              console.log(`✅ ${key}: ${specs[key]}cm`);
               break;
             }
-          }
-        }
-      }
-      
-      const breadcrumbMatch = html.match(/<nav[^>]*class="[^"]*breadcrumb[^"]*"[^>]*>(.*?)<\/nav>/is);
-      if (breadcrumbMatch) {
-        const breadcrumbLinks = breadcrumbMatch[1].match(/>([^<]+)</g);
-        if (breadcrumbLinks && breadcrumbLinks.length > 1) {
-          const categories = breadcrumbLinks
-            .map(link => link.replace(/>/g, '').replace(/</g, '').trim())
-            .filter(cat => cat && !cat.toLowerCase().includes('home') && cat.length < 200);
-          if (categories.length > 0) {
-            specs.store_category = categories[categories.length - 1];
-            console.log(`✅ Categoria: ${specs.store_category}`);
           }
         }
       }
@@ -182,193 +165,175 @@ serve(async (req) => {
       return specs;
     };
     
-    // 🔥 EXTRAÇÃO ROBUSTA DE VARIAÇÕES (Loja Integrada)
-    const extractVariations = (jsonLdData?: any) => {
+    const extractVariations = (jsonLdData?: any, doc?: Document) => {
       console.log('🎨 Iniciando extração de variações...');
       const variations: { name: string; price?: number; stock?: number; color?: string; size?: string }[] = [];
+      const variationNames = new Set<string>();
       
       // 1. JSON-LD
       if (jsonLdData?.hasVariant) {
         const variants = Array.isArray(jsonLdData.hasVariant) ? jsonLdData.hasVariant : [jsonLdData.hasVariant];
         variants.forEach((variant: any) => {
-          variations.push({
-            name: variant.name || '',
-            price: variant.offers?.price ? parseFloat(variant.offers.price) : undefined,
-            stock: variant.offers?.availability === 'InStock' ? 999 : 0,
-            color: variant.color || '',
-            size: variant.size || ''
-          });
-        });
-        if (variations.length > 0) console.log(`  ✅ ${variations.length} variações do JSON-LD`);
-      }
-      
-      // 2. Select elements (Loja Integrada padrão)
-      if (variations.length === 0) {
-        const selectPatterns = [
-          /<select[^>]*(?:name|id|class)="[^"]*(?:variacao|variation|variant)[^"]*"[^>]*>(.*?)<\/select>/gis,
-          /<select[^>]*data-variant[^>]*>(.*?)<\/select>/gis
-        ];
-        
-        selectPatterns.forEach(pattern => {
-          const selectMatches = html.match(pattern);
-          if (selectMatches) {
-            selectMatches.forEach(selectHtml => {
-              const options = selectHtml.match(/<option[^>]*value="[^"]*"[^>]*>([^<]+)<\/option>/gi);
-              if (options) {
-                options.forEach(option => {
-                  const textMatch = option.match(/>([^<]+)</);
-                  if (textMatch && textMatch[1].trim()) {
-                    variations.push({ name: textMatch[1].trim() });
-                  }
-                });
-              }
+          const name = variant.name;
+          if (name && !name.includes('{{') && !name.includes("' + ")) {
+            variationNames.add(name);
+            variations.push({
+              name,
+              price: variant.offers?.price ? parseFloat(variant.offers.price) : undefined,
+              stock: variant.offers?.availability === 'InStock' ? 999 : 0,
+              color: variant.color || '',
+              size: variant.size || ''
             });
           }
         });
-        if (variations.length > 0) console.log(`  ✅ ${variations.length} variações de <select>`);
       }
       
-      // 3. Radio buttons/Lists (alternativa Loja Integrada)
-      if (variations.length === 0) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        
-        const variationContainers = doc?.querySelectorAll('.variacoes, .variacoes-produto, [class*="variation"]');
-        variationContainers?.forEach((container: any) => {
-          const inputs = container.querySelectorAll('input[type="radio"], input[name*="variacao"]');
-          inputs?.forEach((input: any) => {
-            const label = input.nextElementSibling?.textContent || input.value;
-            if (label && label.trim()) {
-              variations.push({ name: label.trim() });
-            }
-          });
-        });
-        if (variations.length > 0) console.log(`  ✅ ${variations.length} variações de radio/list`);
-      }
+      if (!doc) return variations.length > 0 ? variations : undefined;
       
-      // 4. Data attributes
-      if (variations.length === 0) {
-        const dataPattern = /data-(?:variacao|variation|variant)="([^"]+)"/gi;
-        let match;
-        while ((match = dataPattern.exec(html)) !== null) {
-          if (match[1]) variations.push({ name: match[1].trim() });
+      // 2. Select elements
+      doc.querySelectorAll('select[name*="variacao"], select[name*="variation"], select.product-variants option').forEach((option) => {
+        const text = option.textContent?.trim();
+        if (text && text !== 'Selecione' && text !== 'Escolha' && !text.includes('{{') && !variationNames.has(text)) {
+          variationNames.add(text);
+          variations.push({ name: text });
         }
-        if (variations.length > 0) console.log(`  ✅ ${variations.length} variações de data-attributes`);
-      }
+      });
       
-      // Remove duplicates
-      const unique = variations.filter((v, i, arr) => 
-        arr.findIndex(v2 => v2.name === v.name) === i
+      // 3. Radio buttons
+      doc.querySelectorAll('input[type="radio"][name*="variacao"], input[type="radio"][name*="variation"]').forEach((input) => {
+        const label = doc.querySelector(`label[for="${input.id}"]`)?.textContent?.trim();
+        const value = input.getAttribute('value');
+        const name = label || value;
+        if (name && !name.includes('{{') && !variationNames.has(name)) {
+          variationNames.add(name);
+          variations.push({ name });
+        }
+      });
+      
+      // 4. Loja Integrada: atributos data-* e listas
+      doc.querySelectorAll('[data-variation], [data-variacao], .variacao-item, ul.variacoes li').forEach((el) => {
+        const value = el.getAttribute('data-variation') || 
+                      el.getAttribute('data-variacao') || 
+                      el.textContent?.trim();
+        if (value && !value.includes('{{') && !value.includes("' + ") && value.length < 100 && !variationNames.has(value)) {
+          variationNames.add(value);
+          variations.push({ name: value });
+        }
+      });
+      
+      // 5. Botões ou links de variação
+      doc.querySelectorAll('.variant-option, .variation-item, .product-variant').forEach((el) => {
+        const text = el.textContent?.trim();
+        if (text && !text.includes('{{') && !variationNames.has(text)) {
+          variationNames.add(text);
+          variations.push({ name: text });
+        }
+      });
+      
+      // Filtrar placeholders finais
+      const cleaned = variations.filter(v => 
+        v.name && 
+        v.name.length > 0 && 
+        v.name.length < 100 && 
+        !v.name.includes("' + ") && 
+        !v.name.includes('value.value') &&
+        !v.name.includes('{{') &&
+        !v.name.includes('}}') &&
+        !v.name.match(/^[\d\s\-\.]+$/)
       );
       
-      console.log(`  🎯 Total de variações únicas: ${unique.length}`);
-      return unique.length > 0 ? unique : undefined;
+      console.log(`  🎯 ${cleaned.length} variações válidas`);
+      return cleaned.length > 0 ? cleaned : undefined;
     };
     
-    // 🔥 FILTRO MELHORADO DE IMAGENS
-    const extractImagesGallery = (jsonLdData?: any, mainImageUrl?: string) => {
-      const imagesSet = new Set<string>();
-      const gallery: Array<{ url: string; alt: string; order: number; is_main: boolean }> = [];
-      
+    const extractImagesGallery = (jsonLdData?: any, mainImageUrl?: string, doc?: Document) => {
       console.log('🖼️ Extraindo galeria de imagens...');
-      
-      const productIdMatch = url.match(/\/produto\/(\d+)|\/(\d+)\/|produto[/-](\d+)|[\/-](\d{5,})/i);
-      const productId = productIdMatch ? (productIdMatch[1] || productIdMatch[2] || productIdMatch[3] || productIdMatch[4]) : null;
-      
+      const images = new Set<string>();
+      const gallery: Array<{ url: string; alt: string; order: number; is_main: boolean }> = [];
+
+      if (mainImageUrl) images.add(mainImageUrl);
+
+      // 1. JSON-LD
       if (jsonLdData?.image) {
         const jsonImages = Array.isArray(jsonLdData.image) ? jsonLdData.image : [jsonLdData.image];
         jsonImages.forEach((img: string) => {
           try {
             const normalizedUrl = new URL(img, url).href;
-            imagesSet.add(normalizedUrl);
+            images.add(normalizedUrl);
           } catch {
-            if (img) imagesSet.add(img);
+            if (img) images.add(img);
           }
         });
       }
-      
-      const imagePatterns = [
-        /<img[^>]*class="[^"]*(?:product-image|gallery-image|main-image)[^"]*"[^>]*src="([^"]+)"/gi,
-        /<img[^>]*data-image="([^"]+)"/gi,
-        /<img[^>]*data-src="([^"]+)"/gi
-      ];
-      
-      imagePatterns.forEach(pattern => {
-        let match;
-        const regex = new RegExp(pattern.source, pattern.flags);
-        while ((match = regex.exec(html)) !== null) {
-          const imgUrl = match[1];
-          if (imgUrl && !imgUrl.includes('placeholder') && !imgUrl.includes('loading')) {
-            try {
-              const normalizedUrl = imgUrl.startsWith('http') ? imgUrl : new URL(imgUrl, url).href;
-              imagesSet.add(normalizedUrl);
-            } catch {
-              if (imgUrl.startsWith('http')) imagesSet.add(imgUrl);
-            }
-          }
-        }
-      });
-      
-      const urlDomain = new URL(url).hostname;
-      
-      const validImages = Array.from(imagesSet).filter(imgUrl => {
-        const lower = imgUrl.toLowerCase();
-        
-        // Excluir --PRODUTO_IMAGEM-- explicitamente
-        if (lower.includes('--produto_imagem--') || lower.includes('--produto-imagem--')) {
-          console.log(`❌ Placeholder excluído: ${imgUrl.substring(0, 80)}`);
-          return false;
-        }
-        
-        try {
-          const imgDomain = new URL(imgUrl.startsWith('http') ? imgUrl : `https:${imgUrl}`).hostname;
-          if (!imgDomain.includes('cdn.awsli.com.br') && !imgDomain.includes(urlDomain)) {
-            return false;
-          }
-        } catch {}
-        
-        // Dimensão mínima: 128x128
-        const sizeMatch = imgUrl.match(/\/(\d+)x(\d+)\//);
-        if (sizeMatch) {
-          const width = parseInt(sizeMatch[1]);
-          const height = parseInt(sizeMatch[2]);
-          if (width < 128 || height < 128) {
-            console.log(`❌ Imagem muito pequena: ${width}x${height}`);
-            return false;
-          }
-        }
-        
-        const exclusions = [
-          'logo', 'icon', 'banner', 'selo', 'badge', 'payment', 'pagamento',
-          'whatsapp', 'instagram', 'facebook', 'social', 'ssl', 'footer', 'header'
-        ];
-        if (exclusions.some(pattern => lower.includes(pattern))) {
-          return false;
-        }
-        
-        return true;
-      });
-      
-      // Priorizar 300x300+
-      const sorted = validImages.sort((a, b) => {
-        const getSize = (url: string) => {
-          const match = url.match(/\/(\d+)x(\d+)\//);
-          return match ? parseInt(match[1]) * parseInt(match[2]) : 0;
-        };
-        return getSize(b) - getSize(a);
-      });
-      
-      const limited = sorted.slice(0, 10);
-      
-      limited.forEach((imgUrl, index) => {
-        gallery.push({
-          url: imgUrl,
-          alt: 'Imagem do produto',
-          order: index,
-          is_main: index === 0
+
+      if (!doc) {
+        images.forEach((imgUrl, index) => {
+          gallery.push({ url: imgUrl, alt: 'Imagem do produto', order: index, is_main: index === 0 });
         });
+        return gallery;
+      }
+
+      // 2. Meta tags og:image e link[rel="image_src"]
+      doc.querySelectorAll('meta[property="og:image"], link[rel="image_src"]').forEach((meta) => {
+        const content = meta.getAttribute('content') || meta.getAttribute('href');
+        if (content) images.add(content);
       });
-      
+
+      // 3. Imagens no DOM
+      doc.querySelectorAll('img[itemprop="image"], .product-image img, .product-gallery img, img[data-zoom-image], .imagem-produto img').forEach((img) => {
+        const src = img.getAttribute('src') || 
+                    img.getAttribute('data-src') || 
+                    img.getAttribute('data-zoom-image') ||
+                    img.getAttribute('data-image');
+        if (src) images.add(src);
+      });
+
+      // 4. Links CDN
+      doc.querySelectorAll('a[href*="cdn.awsli.com.br"], a[href*="/produtos/"]').forEach((link) => {
+        const href = link.getAttribute('href');
+        if (href && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(href)) {
+          images.add(href);
+        }
+      });
+
+      // 5. JSON embutido
+      const scripts = doc.querySelectorAll('script[type="application/ld+json"], script');
+      scripts.forEach((script) => {
+        const content = script.textContent || '';
+        const imageMatches = content.match(/(https?:\/\/[^\s"']+\.(jpg|jpeg|png|webp|gif))/gi);
+        if (imageMatches) {
+          imageMatches.forEach(imgUrl => images.add(imgUrl));
+        }
+      });
+
+      // Filtrar e normalizar
+      const validImages = Array.from(images).filter(imgUrl => {
+        if (!imgUrl || imgUrl.length < 10) return false;
+        
+        if (imgUrl.includes('placeholder') || 
+            imgUrl.includes('--PRODUTO_IMAGEM--') ||
+            imgUrl.includes('no-image') ||
+            imgUrl === '/64x64/') {
+          return false;
+        }
+
+        const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(imgUrl);
+        const hasSizePattern = /\/\d+x\d+\//i.test(imgUrl);
+        
+        return hasImageExtension || hasSizePattern || imgUrl.startsWith('http');
+      }).map(imgUrl => {
+        if (imgUrl.startsWith('//')) return `https:${imgUrl}`;
+        if (imgUrl.startsWith('/') && !imgUrl.startsWith('//')) {
+          const baseUrl = new URL(url);
+          return `${baseUrl.protocol}//${baseUrl.host}${imgUrl}`;
+        }
+        return imgUrl;
+      });
+
+      validImages.forEach((imgUrl, index) => {
+        gallery.push({ url: imgUrl, alt: 'Imagem do produto', order: index, is_main: index === 0 });
+      });
+
       console.log(`✅ Galeria final: ${gallery.length} imagens`);
       return gallery;
     };
@@ -382,6 +347,9 @@ serve(async (req) => {
       availability: 'in stock'
     };
 
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
     if (jsonLdMatches && jsonLdMatches.length > 0) {
       for (const match of jsonLdMatches) {
         try {
@@ -392,7 +360,6 @@ serve(async (req) => {
             
             productData.name = product.name || '';
             
-            // 🔥 USAR parsePriceBRL para TODOS os preços
             if (product.offers) {
               const offers = Array.isArray(product.offers) ? product.offers[0] : product.offers;
               const priceStr = offers.price?.toString() || '';
@@ -404,16 +371,19 @@ serve(async (req) => {
               if (promoPrice > 0 && promoPrice < regularPrice) {
                 productData.price = regularPrice;
                 productData.promo_price = promoPrice;
-                console.log(`💰 Preço normal: ${regularPrice} | Promo: ${promoPrice}`);
               } else {
                 productData.price = regularPrice;
-                console.log(`💰 Preço: ${regularPrice}`);
               }
               
               productData.availability = offers.availability?.includes('InStock') ? 'in stock' : 'out of stock';
             }
             
-            productData.description = product.description || '';
+            let description = product.description || '';
+            if (isInvalidDescription(description, productData.name)) {
+              description = extractDescriptionFromDOM(doc!, productData.name);
+            }
+            productData.description = description;
+            
             productData.image = product.image?.[0] || product.image || '';
             productData.brand = product.brand?.name || product.brand || '';
             productData.gtin = product.gtin13 || product.gtin || '';
@@ -423,10 +393,10 @@ serve(async (req) => {
             const physicalSpecs = extractPhysicalSpecs();
             productData = { ...productData, ...physicalSpecs };
             
-            productData.variations = extractVariations(product);
-            productData.images_gallery = extractImagesGallery(product, productData.image);
+            productData.variations = extractVariations(product, doc);
+            productData.images_gallery = extractImagesGallery(product, productData.image, doc);
             
-            console.log('✅ Dados extraídos do JSON-LD com sucesso');
+            console.log('✅ Dados extraídos do JSON-LD');
             break;
           }
         } catch (e) {
@@ -435,7 +405,7 @@ serve(async (req) => {
       }
     }
 
-    // Fallback extraction
+    // Fallbacks
     if (!productData.name) {
       const nameMatch = html.match(/<h1[^>]*class="[^"]*(?:product|nome|title)[^"]*"[^>]*>([^<]+)<\/h1>/i) ||
                        html.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
@@ -446,87 +416,54 @@ serve(async (req) => {
     if (!productData.price || productData.price === 0) {
       const pricePatterns = [
         /[R\$]\s*([0-9.,]+)/i,
-        /price["\s:]+([0-9.,]+)/i,
-        /"price":\s*"?([0-9.,]+)"?/i
+        /<span[^>]*itemprop="price"[^>]*>([^<]+)<\/span>/i,
+        /<meta[^>]*property="og:price:amount"[^>]*content="([^"]+)"/i,
+        /price["\s:]+([0-9.,]+)/i
       ];
       
       for (const pattern of pricePatterns) {
         const match = html.match(pattern);
         if (match && match[1]) {
           productData.price = parsePriceBRL(match[1]);
-          console.log(`💰 Preço fallback: ${productData.price}`);
-          break;
+          if (productData.price > 0) break;
         }
       }
     }
 
-    if (!productData.description) {
-      const descContainers = ['#descricao', '.descricao-produto', '.product-description', '[itemprop="description"]'];
-      for (const selector of descContainers) {
-        const match = html.match(new RegExp(`<[^>]*(?:id|class)=["'][^"']*${selector.replace(/[#.[\]]/g, '')}[^"']*["'][^>]*>([\\s\\S]{20,3000}?)<\/`, 'i'));
-        if (match) {
-          productData.description = match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 500);
-          console.log(`✅ Descrição extraída`);
-          break;
-        }
-      }
-    }
-
-    // 🔥 EXTRAÇÃO SEPARADA: GTIN, EAN, MPN
-    if (!productData.gtin) {
-      const gtinMatch = html.match(/(?:gtin|barcode|ean-?13)[":\s]+([0-9]{8,14})/i);
-      if (gtinMatch) productData.gtin = gtinMatch[1];
-    }
-    
-    if (!productData.ean) {
-      const eanMatch = html.match(/(?:ean|ean-?13)[":\s]+([0-9]{13})/i);
-      if (eanMatch) productData.ean = eanMatch[1];
-    }
-    
-    if (!productData.mpn) {
-      const mpnMatch = html.match(/(?:mpn|sku|model|modelo)[":\s]+([A-Z0-9-]+)/i);
-      if (mpnMatch && mpnMatch[1] !== 'hide') productData.mpn = mpnMatch[1];
-    }
-    
-    if (!productData.brand) {
-      const brandMatch = html.match(/(?:brand|marca)[":\s]+([^"<\n]{2,50})/i);
-      if (brandMatch) productData.brand = brandMatch[1].trim();
+    if (!productData.description || isInvalidDescription(productData.description, productData.name)) {
+      productData.description = extractDescriptionFromDOM(doc!, productData.name);
     }
 
     if (!productData.variations) {
-      productData.variations = extractVariations();
+      productData.variations = extractVariations(undefined, doc);
     }
 
     if (!productData.images_gallery || productData.images_gallery.length === 0) {
-      const physicalSpecs = extractPhysicalSpecs();
-      productData = { ...productData, ...physicalSpecs };
-      productData.images_gallery = extractImagesGallery(undefined, productData.image);
+      productData.images_gallery = extractImagesGallery(undefined, productData.image, doc);
     }
 
-    console.log('Dados extraídos:', productData);
+    console.log('Dados extraídos:', {
+      name: productData.name,
+      price: productData.price,
+      description: productData.description,
+      available: productData.available,
+      condition: productData.condition,
+      availability: productData.availability,
+      brand: productData.brand,
+      variations: productData.variations?.map(v => v.name),
+      images_gallery: productData.images_gallery?.map(i => i.url)
+    });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        data: productData,
-        extracted_at: new Date().toISOString()
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+      JSON.stringify({ success: true, data: productData }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Erro na extração:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

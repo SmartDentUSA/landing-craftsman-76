@@ -818,6 +818,7 @@ export function RepositoryPanel({
 
       {/* Product Edit Modal */}
       <ProductEditModal
+        key={editingProduct?.id ?? 'new'}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         product={editingProduct}
