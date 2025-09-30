@@ -1,4 +1,5 @@
 import Mustache from 'mustache';
+import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from './company-profile-helper';
 
 // Mapeamento de ícones SVG para redes sociais
 const SOCIAL_ICONS: Record<string, string> = {
@@ -1168,6 +1169,67 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             transition: color 0.2s; 
         }
         .footer-social a:hover { color: #fff; }
+        
+        /* Footer automático da empresa */
+        .company-auto-footer {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #2d3748;
+        }
+        .company-auto-footer h3 {
+            color: #e2e8f0;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+        .company-auto-footer p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+        }
+        .company-auto-footer a {
+            color: #90cdf4;
+            text-decoration: none;
+        }
+        .company-auto-footer a:hover {
+            color: #bfdbfe;
+            text-decoration: underline;
+        }
+        
+        /* Links institucionais */
+        .institutional-links {
+            margin-top: 1.5rem;
+        }
+        .institutional-links h4 {
+            color: #e2e8f0;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+        .institutional-links-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .institutional-link {
+            background: rgba(255, 255, 255, 0.1);
+            color: #d0d8e0;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .institutional-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .institutional-link.legal {
+            border-left: 3px solid #f59e0b;
+        }
+        .institutional-link.policy {
+            border-left: 3px solid #3b82f6;
+        }
+        .institutional-link.support {
+            border-left: 3px solid #10b981;
+        }
         @media (min-width: 768px) {
             .footer-grid { grid-template-columns: repeat(3, 1fr); }
         }
@@ -1603,6 +1665,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <p>{{address}}</p>
                 <br>
                 {{/footer.locations}}
+                
+                <!-- Informações Automáticas da Empresa -->
+                {{#company_footer}}
+                <div class="company-auto-footer">
+                    {{{company_footer}}}
+                </div>
+                {{/company_footer}}
             </div>
             <div class="footer-links">
                 <h3>{{footer_links_title}}</h3>
@@ -1611,6 +1680,16 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     <li><a href="{{href}}">{{label}}</a></li>
                     {{/footer.links}}
                 </ul>
+                
+                <!-- Links Institucionais Automáticos -->
+                {{#institutional_links_html}}
+                <div class="institutional-links">
+                    <h4>Links Institucionais</h4>
+                    <div class="institutional-links-grid">
+                        {{{institutional_links_html}}}
+                    </div>
+                </div>
+                {{/institutional_links_html}}
             </div>
             <div class="footer-social">
                 {{#footer.social}}
@@ -2155,6 +2234,7 @@ export const generatePreviewHTML = (data: any): string => {
 };
 
 export const generateHTML = (data: any): string => {
+  
   // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
   const calculateColumnWidths = (solutions: any[]) => {
     const columnWeights = [0, 0, 0, 0]; // Inicial: começar em 0 para permitir colapso/expansão reais
@@ -2994,6 +3074,58 @@ export const generateHTML = (data: any): string => {
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
       "@graph": schemaGraph
+    });
+  }
+
+  // 🔧 INTEGRAÇÃO: Dados da empresa para SEO (integração via hook no componente)
+  let companyProfile = null;
+  
+  // Tentar obter dados da empresa se disponíveis no data
+  if (data.company_profile) {
+    companyProfile = data.company_profile;
+  }
+
+  // 🔧 INTEGRAÇÃO: Aplicar dados da empresa nos meta tags e footer
+  if (companyProfile) {
+    const companyMeta = buildSEOMetaFromCompany(companyProfile, processedData.ai_keywords?.primary || []);
+    
+    // Integrar company_name em og:site_name
+    if (!processedData.og_site_name && companyProfile.company_name) {
+      processedData.og_site_name = companyProfile.company_name;
+    }
+    
+    // Usar company_description como fallback para meta description
+    if (!processedData.seo_description && companyProfile.company_description) {
+      processedData.seo_description = companyProfile.company_description;
+    }
+    
+    // Adicionar seo_context_keywords às keywords existentes
+    if (companyMeta.additionalKeywords.length > 0) {
+      const existingKeywords = processedData.ai_keywords?.primary || [];
+      processedData.ai_keywords = {
+        ...processedData.ai_keywords,
+        primary: [...existingKeywords, ...companyMeta.additionalKeywords]
+      };
+    }
+    
+    // Enriquecer meta description com seo_market_positioning
+    if (companyProfile.seo_market_positioning && processedData.seo_description) {
+      processedData.seo_description = `${processedData.seo_description} ${companyProfile.seo_market_positioning}`;
+    }
+    
+    // Adicionar contexto geográfico se disponível
+    if (companyMeta.geoContext && !processedData.seo_description?.includes(companyMeta.geoContext)) {
+      processedData.seo_description = `${processedData.seo_description} | ${companyMeta.geoContext}`;
+    }
+    
+    // Adicionar footer automático da empresa
+    processedData.company_footer = companyMeta.companyFooter;
+    processedData.institutional_links_html = companyMeta.institutionalLinksHtml;
+    
+    console.info('✅ Dados da empresa integrados ao HTML:', {
+      company_name: companyProfile.company_name,
+      seo_context_keywords: companyProfile.seo_context_keywords?.length || 0,
+      institutional_links: companyProfile.institutional_links?.length || 0
     });
   }
 
