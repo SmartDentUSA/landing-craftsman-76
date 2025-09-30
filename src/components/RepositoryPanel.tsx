@@ -37,6 +37,7 @@ interface Product {
   name: string;
   description?: string;
   price?: number;
+  promo_price?: number;
   currency?: string;
   category?: string;
   subcategory?: string;
@@ -59,6 +60,7 @@ interface Product {
   testimonial_videos?: Video[];
   video_captions?: any;
   original_data?: any;
+  images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   technical_specifications?: Array<{ label: string; value: string }>;
   // Landing Page Section controls
   show_in_resources?: boolean;
@@ -296,6 +298,7 @@ export function RepositoryPanel({
         name: data.name,
         description: data.description || '',
         price: data.price || 0,
+        promo_price: data.promo_price || undefined,
         currency: data.currency || 'BRL',
         category: data.category || '',
         subcategory: data.subcategory || '',
@@ -318,6 +321,7 @@ export function RepositoryPanel({
         testimonial_videos: Array.isArray(data.testimonial_videos) ? data.testimonial_videos as unknown as Video[] : [],
         video_captions: data.video_captions || {},
         original_data: data.original_data || null,
+        images_gallery: Array.isArray(data.images_gallery) ? data.images_gallery as unknown as Array<{ url: string; alt: string; order: number; is_main: boolean }> : [],
         technical_specifications: Array.isArray(data.technical_specifications) 
           ? (data.technical_specifications as Array<{ label: string; value: string }>)
           : [],

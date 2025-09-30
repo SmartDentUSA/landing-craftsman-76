@@ -35,6 +35,7 @@ interface Product {
   description?: string;
   sales_pitch?: string;
   price?: number;
+  promo_price?: number;
   currency?: string;
   category?: string;
   subcategory?: string;
@@ -57,6 +58,7 @@ interface Product {
   tiktok_videos?: Video[];
   video_captions?: any;
   original_data?: any;
+  images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   // Google Merchant Center fields
   gtin?: string;
   mpn?: string;

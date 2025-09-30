@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -382,19 +383,36 @@ serve(async (req) => {
       });
       
       // 4. 🎯 FILTRAGEM RIGOROSA: apenas imagens DO PRODUTO ESPECÍFICO
+      // Extrair domínio do site para filtrar apenas imagens do mesmo host
+      const urlDomain = new URL(url).hostname;
+      
       const validImages = Array.from(imagesSet).filter(imgUrl => {
         const lower = imgUrl.toLowerCase();
+        
+        // Verificar se a imagem é do mesmo domínio ou CDN permitido
+        try {
+          const imgUrl_ = new URL(imgUrl.startsWith('http') ? imgUrl : `https:${imgUrl}`);
+          const imgDomain = imgUrl_.hostname;
+          // Permitir apenas imagens do CDN ou do domínio principal
+          if (!imgDomain.includes('cdn.awsli.com.br') && !imgDomain.includes(urlDomain)) {
+            console.log(`❌ Imagem de domínio diferente excluída: ${imgDomain}`);
+            return false;
+          }
+        } catch {
+          // Se não conseguir parsear URL, manter a imagem
+        }
         
         // 🚫 EXCLUIR IMEDIATAMENTE: ícones, pagamentos, selos, badges
         const criticalExclusions = [
           'logo', 'icon', 'banner', 'selo', 'badge', 'sprite', 'favicon',
           'payment', 'pagamento', 'payu', 'mercadopago', 'ssl', 'seguro',
           'whatsapp', 'instagram', 'facebook', 'twitter', 'social',
-          'correios', 'sedex', 'frete', 'shipping',
-          'certificado', 'garantia', 'warranty'
+          'correios', 'sedex', 'frete', 'shipping', 'formas-de-pag',
+          'certificado', 'garantia', 'warranty', 'whitelabel', 'loja-integrada',
+          'stamp', 'footer', 'header', 'menu', 'slide-'
         ];
         if (criticalExclusions.some(pattern => lower.includes(pattern))) {
-          console.log(`❌ Excluída imagem de serviço/pagamento: ${imgUrl.substring(0, 60)}...`);
+          console.log(`❌ Excluída imagem de serviço/pagamento: ${imgUrl.substring(0, 80)}...`);
           return false;
         }
         
@@ -421,8 +439,17 @@ serve(async (req) => {
               console.log(`❌ Excluída imagem de OUTRO produto (ID diferente): ${imgUrl.substring(0, 60)}...`);
               return false;
             }
-          } else {
-            console.log(`✅ Imagem CONFIRMADA do produto ${productId}: ${imgUrl.substring(0, 60)}...`);
+          }
+        }
+        
+        // Filtrar imagens muito pequenas (ícones, thumbnails)
+        const sizeMatch = imgUrl.match(/(\d+)x(\d+)/);
+        if (sizeMatch) {
+          const width = parseInt(sizeMatch[1]);
+          const height = parseInt(sizeMatch[2]);
+          if (width < 64 || height < 64) {
+            console.log(`❌ Excluída imagem muito pequena: ${width}x${height}`);
+            return false;
           }
         }
         
@@ -438,8 +465,9 @@ serve(async (req) => {
       
       console.log(`✅ Imagens válidas após filtragem: ${validImages.length}`);
       
-      // 5. Construir galeria ordenada
-      validImages.forEach((imgUrl, index) => {
+      // 5. Construir galeria ordenada (limitar a 10 imagens)
+      const limitedImages = validImages.slice(0, 10);
+      limitedImages.forEach((imgUrl, index) => {
         const isMain = mainImageUrl ? imgUrl === mainImageUrl : index === 0;
         gallery.push({
           url: imgUrl,
@@ -686,11 +714,52 @@ serve(async (req) => {
       }
     }
 
-    // Extrair descrição
-    const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i) ||
-                     html.match(/property="og:description"\s+content="([^"]+)"/i);
-    if (descMatch) {
-      productData.description = descMatch[1].trim().replace(/\s+/g, ' ');
+    // Extrair descrição com prioridade para container do produto
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      if (doc) {
+        // Tentar extrair de containers típicos de descrição de produto
+        const descriptionSelectors = [
+          '#descricao', '.descricao', '.descricao-produto', 
+          '#description', '.description', '.product-description',
+          '[itemprop="description"]', '.product-details', '.product-info'
+        ];
+        
+        let foundDescription = false;
+        for (const selector of descriptionSelectors) {
+          const element = doc.querySelector(selector);
+          if (element) {
+            const textContent = element.textContent?.trim();
+            if (textContent && textContent.length > 50 && !isPlaceholderData(textContent)) {
+              productData.description = textContent.replace(/\s+/g, ' ').substring(0, 500);
+              console.log('✅ Descrição extraída do container:', selector);
+              foundDescription = true;
+              break;
+            }
+          }
+        }
+        
+        // Fallback para meta tags se não encontrar no DOM
+        if (!foundDescription) {
+          const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i) ||
+                           html.match(/property="og:description"\s+content="([^"]+)"/i);
+          if (descMatch) {
+            const metaDesc = descMatch[1].trim().replace(/\s+/g, ' ');
+            if (!isPlaceholderData(metaDesc)) {
+              productData.description = metaDesc;
+              console.log('⚠️ Descrição extraída do fallback (meta tag)');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Erro ao parsear DOM para descrição:', e);
+      // Fallback para regex
+      const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i) ||
+                       html.match(/property="og:description"\s+content="([^"]+)"/i);
+      if (descMatch) {
+        productData.description = descMatch[1].trim().replace(/\s+/g, ' ');
+      }
     }
 
     // Extrair imagem principal
