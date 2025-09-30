@@ -72,56 +72,110 @@ serve(async (req) => {
     
     // Extract physical specifications and variations from HTML (needed for both JSON-LD and fallback)
     const extractPhysicalSpecs = () => {
+      console.log('🔍 Iniciando extração de especificações físicas...');
       const specs: any = {};
       
-      // Weight
-      const weightMatch = html.match(/(?:peso|weight)[\s:]*([0-9.,]+)\s*(?:kg|g)/i);
-      if (weightMatch) {
-        const weightValue = parseFloat(weightMatch[1].replace(',', '.'));
-        specs.weight = weightMatch[0].toLowerCase().includes('g') && !weightMatch[0].toLowerCase().includes('kg')
-          ? weightValue / 1000
-          : weightValue;
-      }
+      // PADRÕES EXPANDIDOS para Loja Integrada
+      // Weight - múltiplos padrões
+      const weightPatterns = [
+        /(?:peso|weight)[\s:]*([0-9.,]+)\s*(?:kg|g|gramas?)/i,
+        /<td[^>]*>[^<]*(?:peso|weight)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)\s*(?:kg|g)/i,
+        /data-weight=["']([0-9.,]+)["']/i,
+        /"weight"[\s:]*"?([0-9.,]+)"?/i
+      ];
       
-      // Dimensions
-      const heightMatch = html.match(/(?:altura|height)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i);
-      if (heightMatch) {
-        const heightValue = parseFloat(heightMatch[1].replace(',', '.'));
-        specs.height = heightMatch[0].toLowerCase().includes('mm') ? heightValue / 10 : heightValue;
-      }
-      
-      const widthMatch = html.match(/(?:largura|width)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i);
-      if (widthMatch) {
-        const widthValue = parseFloat(widthMatch[1].replace(',', '.'));
-        specs.width = widthMatch[0].toLowerCase().includes('mm') ? widthValue / 10 : widthValue;
-      }
-      
-      const depthMatch = html.match(/(?:profundidade|depth|comprimento|length)[\s:]*([0-9.,]+)\s*(?:cm|mm)/i);
-      if (depthMatch) {
-        const depthValue = parseFloat(depthMatch[1].replace(',', '.'));
-        specs.depth = depthMatch[0].toLowerCase().includes('mm') ? depthValue / 10 : depthValue;
-      }
-      
-      // Package size
-      const packageMatch = html.match(/(?:embalagem|package|packaging)[\s:]*([^<\n]{5,50})/i);
-      if (packageMatch) {
-        specs.package_size = packageMatch[1].trim();
-      }
-      
-      // Store category from breadcrumbs
-      const breadcrumbMatch = html.match(/<nav[^>]*class="[^"]*breadcrumb[^"]*"[^>]*>(.*?)<\/nav>/is);
-      if (breadcrumbMatch) {
-        const breadcrumbLinks = breadcrumbMatch[1].match(/>([^<]+)</g);
-        if (breadcrumbLinks && breadcrumbLinks.length > 1) {
-          const categories = breadcrumbLinks
-            .map(link => link.replace(/>/g, '').replace(/</g, '').trim())
-            .filter(cat => cat && !cat.toLowerCase().includes('home') && cat.length < 50);
-          if (categories.length > 0) {
-            specs.store_category = categories[categories.length - 1];
+      for (const pattern of weightPatterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          const weightValue = parseFloat(match[1].replace(',', '.'));
+          if (!isNaN(weightValue) && weightValue > 0) {
+            specs.weight = match[0].toLowerCase().includes('g') && !match[0].toLowerCase().includes('kg')
+              ? weightValue / 1000
+              : weightValue;
+            console.log(`✅ Peso encontrado: ${specs.weight}kg (padrão: ${pattern})`);
+            break;
           }
         }
       }
       
+      // Dimensions - padrões expandidos
+      const dimensionPatterns = {
+        height: [
+          /(?:altura|height)[\s:]*([0-9.,]+)\s*(?:cm|mm|centímetros?)/i,
+          /<td[^>]*>[^<]*(?:altura|height)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)/i,
+          /data-height=["']([0-9.,]+)["']/i,
+          /"height"[\s:]*"?([0-9.,]+)"?/i
+        ],
+        width: [
+          /(?:largura|width)[\s:]*([0-9.,]+)\s*(?:cm|mm|centímetros?)/i,
+          /<td[^>]*>[^<]*(?:largura|width)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)/i,
+          /data-width=["']([0-9.,]+)["']/i,
+          /"width"[\s:]*"?([0-9.,]+)"?/i
+        ],
+        depth: [
+          /(?:profundidade|depth|comprimento|length)[\s:]*([0-9.,]+)\s*(?:cm|mm|centímetros?)/i,
+          /<td[^>]*>[^<]*(?:profundidade|comprimento|depth|length)[^<]*<\/td>[\s\S]*?<td[^>]*>([0-9.,]+)/i,
+          /data-(?:depth|length)=["']([0-9.,]+)["']/i,
+          /"(?:depth|length)"[\s:]*"?([0-9.,]+)"?/i
+        ]
+      };
+      
+      for (const [key, patterns] of Object.entries(dimensionPatterns)) {
+        for (const pattern of patterns) {
+          const match = html.match(pattern);
+          if (match && match[1]) {
+            const value = parseFloat(match[1].replace(',', '.'));
+            if (!isNaN(value) && value > 0) {
+              specs[key] = match[0].toLowerCase().includes('mm') ? value / 10 : value;
+              console.log(`✅ ${key} encontrado: ${specs[key]}cm (padrão: ${pattern})`);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Package size - SEM LIMITE de caracteres
+      const packagePatterns = [
+        /(?:embalagem|package|packaging)[\s:]*([^<\n]{5,500})/i,
+        /<td[^>]*>[^<]*(?:embalagem|package)[^<]*<\/td>[\s\S]*?<td[^>]*>([^<]{5,500})<\/td>/i,
+        /data-package=["']([^"']{5,500})["']/i
+      ];
+      
+      for (const pattern of packagePatterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          specs.package_size = match[1].trim();
+          console.log(`✅ Tamanho da embalagem: ${specs.package_size.substring(0, 50)}... (${specs.package_size.length} caracteres)`);
+          break;
+        }
+      }
+      
+      // Store category from breadcrumbs - MÚLTIPLOS padrões
+      const breadcrumbPatterns = [
+        /<nav[^>]*class="[^"]*breadcrumb[^"]*"[^>]*>(.*?)<\/nav>/is,
+        /<ol[^>]*class="[^"]*breadcrumb[^"]*"[^>]*>(.*?)<\/ol>/is,
+        /<ul[^>]*class="[^"]*breadcrumb[^"]*"[^>]*>(.*?)<\/ul>/is,
+        /<div[^>]*class="[^"]*breadcrumb[^"]*"[^>]*>(.*?)<\/div>/is
+      ];
+      
+      for (const pattern of breadcrumbPatterns) {
+        const breadcrumbMatch = html.match(pattern);
+        if (breadcrumbMatch) {
+          const breadcrumbLinks = breadcrumbMatch[1].match(/>([^<]+)</g);
+          if (breadcrumbLinks && breadcrumbLinks.length > 1) {
+            const categories = breadcrumbLinks
+              .map(link => link.replace(/>/g, '').replace(/</g, '').trim())
+              .filter(cat => cat && !cat.toLowerCase().includes('home') && cat.length < 200);
+            if (categories.length > 0) {
+              specs.store_category = categories[categories.length - 1];
+              console.log(`✅ Categoria da loja: ${specs.store_category}`);
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log(`📊 Especificações extraídas:`, specs);
       return specs;
     };
     
@@ -190,52 +244,106 @@ serve(async (req) => {
         console.log(`✅ Extraídas ${jsonImages.length} imagens do JSON-LD`);
       }
       
-      // 2. Buscar imagens específicas da Loja Integrada
-      // Padrões comuns: .product-gallery, .thumbs, .slides, data-image, etc.
-      const lojaIntegradaPatterns = [
-        /<img[^>]*class="[^"]*(?:product-image|gallery-image|thumb|slide)[^"]*"[^>]*src="([^"]+)"/gi,
+      // 2. PADRÕES EXPANDIDOS para Loja Integrada e outros e-commerces
+      const imageExtractionPatterns = [
+        // Loja Integrada - Galeria principal
+        /<div[^>]*class="[^"]*product-images[^"]*"[^>]*>[\s\S]{0,2000}?<img[^>]*src="([^"]+)"/gi,
+        /<div[^>]*class="[^"]*product-gallery[^"]*"[^>]*>[\s\S]{0,2000}?<img[^>]*src="([^"]+)"/gi,
+        /<div[^>]*class="[^"]*thumbs?[^"]*"[^>]*>[\s\S]{0,2000}?<img[^>]*src="([^"]+)"/gi,
+        
+        // Imagens com data attributes (comum em Loja Integrada)
+        /<img[^>]*data-image="([^"]+)"/gi,
+        /<img[^>]*data-src="([^"]+)"/gi,
         /<a[^>]*data-image="([^"]+)"/gi,
-        /<div[^>]*class="[^"]*product-gallery[^"]*"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/gi,
-        /<picture[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/gi
+        /<a[^>]*href="([^"]+\.(jpg|jpeg|png|webp)[^"]*)"/gi,
+        
+        // Classes específicas
+        /<img[^>]*class="[^"]*(?:product-image|gallery-image|main-image|thumb|slide|zoom)[^"]*"[^>]*src="([^"]+)"/gi,
+        
+        // Picture element
+        /<picture[^>]*>[\s\S]{0,500}?<img[^>]*src="([^"]+)"/gi,
+        /<picture[^>]*>[\s\S]{0,500}?<source[^>]*srcset="([^"\s]+)"/gi,
+        
+        // Srcset
+        /<img[^>]*srcset="([^"\s]+)"/gi,
+        
+        // Padrão genérico para produtos
+        /<img[^>]*src="([^"]*product[^"]*\.(jpg|jpeg|png|webp)[^"]*)"/gi,
+        /<img[^>]*src="([^"]*cdn[^"]*\.(jpg|jpeg|png|webp)[^"]*)"/gi
       ];
       
-      lojaIntegradaPatterns.forEach(pattern => {
+      console.log(`🔍 Executando ${imageExtractionPatterns.length} padrões de extração...`);
+      let totalMatches = 0;
+      
+      imageExtractionPatterns.forEach((pattern, index) => {
         let match;
-        while ((match = pattern.exec(html)) !== null) {
+        let patternMatches = 0;
+        const regex = new RegExp(pattern.source, pattern.flags);
+        
+        while ((match = regex.exec(html)) !== null) {
           const imgUrl = match[1];
-          if (imgUrl && !imgUrl.includes('placeholder') && !imgUrl.includes('loading')) {
+          if (imgUrl && !imgUrl.includes('placeholder') && !imgUrl.includes('loading') && !imgUrl.includes('spacer')) {
             try {
-              const normalizedUrl = new URL(imgUrl, url).href;
+              const normalizedUrl = imgUrl.startsWith('http') 
+                ? imgUrl 
+                : new URL(imgUrl, url).href;
               imagesSet.add(normalizedUrl);
+              patternMatches++;
             } catch (_e) {
-              if (imgUrl.startsWith('http')) imagesSet.add(imgUrl);
+              if (imgUrl.startsWith('http')) {
+                imagesSet.add(imgUrl);
+                patternMatches++;
+              }
             }
+          }
+        }
+        
+        if (patternMatches > 0) {
+          console.log(`  ✅ Padrão ${index + 1}: ${patternMatches} imagens encontradas`);
+          totalMatches += patternMatches;
+        }
+      });
+      
+      console.log(`📊 Total de matches: ${totalMatches}, imagens únicas: ${imagesSet.size}`);
+      
+      // 3. Buscar meta tags og:image e twitter:image
+      const metaImagePatterns = [
+        /property=["']og:image["'][^>]*content=["']([^"']+)["']/gi,
+        /name=["']twitter:image["'][^>]*content=["']([^"']+)["']/gi,
+        /content=["']([^"']+)["'][^>]*property=["']og:image["']/gi
+      ];
+      
+      metaImagePatterns.forEach(pattern => {
+        const matches = html.matchAll(pattern);
+        for (const match of matches) {
+          try {
+            const normalizedUrl = new URL(match[1], url).href;
+            imagesSet.add(normalizedUrl);
+          } catch (_e) {
+            if (match[1]) imagesSet.add(match[1]);
           }
         }
       });
       
-      // 3. Buscar todas as imagens og:image e twitter:image
-      const ogImagesMatches = html.matchAll(/property=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']/gi);
-      for (const match of ogImagesMatches) {
-        try {
-          const normalizedUrl = new URL(match[1], url).href;
-          imagesSet.add(normalizedUrl);
-        } catch (_e) {
-          if (match[1]) imagesSet.add(match[1]);
-        }
-      }
-      
-      // 4. Filtrar apenas imagens válidas de produtos (evitar logos, ícones)
+      // 4. Filtrar apenas imagens válidas de produtos
       const validImages = Array.from(imagesSet).filter(imgUrl => {
         const lower = imgUrl.toLowerCase();
-        // Excluir logos, ícones, banners pequenos
-        if (lower.includes('logo') || lower.includes('icon') || lower.includes('banner')) return false;
-        // Incluir apenas imagens grandes (CDN patterns comuns)
-        if (lower.includes('800x800') || lower.includes('1000x1000') || lower.includes('product')) return true;
-        return true; // Incluir por padrão
+        
+        // Excluir: logos, ícones, banners, selos, badges
+        const excludePatterns = ['logo', 'icon', 'banner', 'selo', 'badge', 'sprite', 'favicon'];
+        if (excludePatterns.some(pattern => lower.includes(pattern))) return false;
+        
+        // Incluir: imagens com padrões de produto
+        const includePatterns = ['product', 'cdn', '800x800', '1000x1000', '1200x1200', 'gallery', 'zoom'];
+        if (includePatterns.some(pattern => lower.includes(pattern))) return true;
+        
+        // Incluir se termina com extensão de imagem válida
+        if (/\.(jpg|jpeg|png|webp)(\?|$)/i.test(lower)) return true;
+        
+        return false;
       });
       
-      console.log(`✅ Total de ${validImages.length} imagens válidas encontradas`);
+      console.log(`✅ Imagens válidas após filtragem: ${validImages.length}`);
       
       // 5. Construir galeria ordenada
       validImages.forEach((imgUrl, index) => {
@@ -261,7 +369,10 @@ serve(async (req) => {
         return a.order - b.order;
       });
       
-      console.log(`✅ Galeria final com ${gallery.length} imagens (principal: ${gallery.find(i => i.is_main)?.url || 'nenhuma'})`);
+      console.log(`✅ Galeria final com ${gallery.length} imagens`);
+      gallery.forEach((img, i) => {
+        console.log(`  ${i + 1}. ${img.is_main ? '⭐ PRINCIPAL' : '  '} ${img.url.substring(0, 80)}...`);
+      });
       
       return gallery.length > 0 ? gallery : undefined;
     };
@@ -493,48 +604,181 @@ serve(async (req) => {
       console.log('Fallback image (normalized):', { rawImg, normalized: productData.image });
     }
 
-    // ✨ EXTRAIR CAMPOS GOOGLE MERCHANT VIA META TAGS E REGEX
+    // ✨ EXTRAIR CAMPOS GOOGLE MERCHANT VIA META TAGS E REGEX - EXPANDIDO
+    console.log('🏪 Iniciando extração de dados Google Merchant Center...');
     
-    // Extrair GTIN/EAN/UPC
-    const gtinMatch = html.match(/<meta[^>]*property=["']product:gtin["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                      html.match(/<meta[^>]*name=["']gtin["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                      html.match(/EAN[:\s]*(\d{13})/i) ||
-                      html.match(/GTIN[:\s]*(\d{8,14})/i);
-    if (gtinMatch) productData.gtin = gtinMatch[1];
+    // Extrair GTIN/EAN/UPC com múltiplos padrões
+    const gtinPatterns = [
+      /<meta[^>]*property=["']product:gtin["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*name=["']gtin["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*property=["']product:ean["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<td[^>]*>[^<]*(?:EAN|GTIN|UPC)[^<]*<\/td>[\s\S]{0,200}?<td[^>]*>(\d{8,14})<\/td>/i,
+      /EAN[:\s]*(\d{13})/i,
+      /GTIN[:\s]*(\d{8,14})/i,
+      /UPC[:\s]*(\d{12})/i,
+      /Código\s*de\s*Barras[:\s]*(\d{8,14})/i,
+      /"gtin"[\s:]*"(\d{8,14})"/i
+    ];
+    
+    for (const pattern of gtinPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && /^\d{8,14}$/.test(match[1])) {
+        productData.gtin = match[1];
+        console.log(`✅ GTIN encontrado: ${productData.gtin} (padrão: ${pattern})`);
+        break;
+      }
+    }
+    if (!productData.gtin) console.log('⚠️ GTIN não encontrado');
 
-    // Extrair MPN/SKU
-    const mpnMatch = html.match(/<meta[^>]*property=["']product:mpn["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                     html.match(/<meta[^>]*name=["']mpn["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                     html.match(/SKU[:\s]*([A-Z0-9\-_]+)/i) ||
-                     html.match(/Código[:\s]*([A-Z0-9\-_]+)/i);
-    if (mpnMatch) productData.mpn = mpnMatch[1];
+    // Extrair MPN/SKU com múltiplos padrões
+    const mpnPatterns = [
+      /<meta[^>]*property=["']product:mpn["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*name=["']mpn["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*property=["']product:sku["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<td[^>]*>[^<]*(?:SKU|MPN|Código|Referência)[^<]*<\/td>[\s\S]{0,200}?<td[^>]*>([A-Z0-9\-_]+)<\/td>/i,
+      /SKU[:\s]*([A-Z0-9\-_]+)/i,
+      /MPN[:\s]*([A-Z0-9\-_]+)/i,
+      /Código[:\s]*([A-Z0-9\-_]+)/i,
+      /Referência[:\s]*([A-Z0-9\-_]+)/i,
+      /"sku"[\s:]*"([^"]+)"/i,
+      /data-sku=["']([^"']+)["']/i
+    ];
+    
+    for (const pattern of mpnPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[1].toLowerCase() !== 'hide') {
+        productData.mpn = match[1];
+        console.log(`✅ MPN/SKU encontrado: ${productData.mpn} (padrão: ${pattern})`);
+        break;
+      }
+    }
+    if (!productData.mpn) console.log('⚠️ MPN/SKU não encontrado');
 
-    // Extrair Marca
-    const brandMatch = html.match(/<meta[^>]*property=["']product:brand["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                       html.match(/<meta[^>]*name=["']brand["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                       html.match(/Marca[:\s]*([A-Za-z0-9\s]+)/i);
-    if (brandMatch) productData.brand = brandMatch[1].trim();
+    // Extrair Marca com múltiplos padrões
+    const brandPatterns = [
+      /<meta[^>]*property=["']product:brand["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*name=["']brand["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*property=["']og:brand["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<td[^>]*>[^<]*Marca[^<]*<\/td>[\s\S]{0,200}?<td[^>]*>([^<]+)<\/td>/i,
+      /Marca[:\s]*<[^>]*>([^<]+)</i,
+      /Marca[:\s]*([A-Za-z0-9\s\-]+)(?:<|$|\n)/i,
+      /"brand"[\s:]*{[^}]*"name"[\s:]*"([^"]+)"/i,
+      /"brand"[\s:]*"([^"]+)"/i,
+      /data-brand=["']([^"']+)["']/i
+    ];
+    
+    for (const pattern of brandPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[1].trim().length > 0) {
+        productData.brand = match[1].trim();
+        console.log(`✅ Marca encontrada: ${productData.brand} (padrão: ${pattern})`);
+        break;
+      }
+    }
+    if (!productData.brand) console.log('⚠️ Marca não encontrada');
 
-    // Extrair Cor
-    const colorMatch = html.match(/<meta[^>]*property=["']product:color["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                       html.match(/Cor[:\s]*([A-Za-z\s]+)/i);
-    if (colorMatch) productData.color = colorMatch[1].trim();
+    // Extrair Cor com múltiplos padrões - SEM LIMITE de caracteres
+    const colorPatterns = [
+      /<meta[^>]*property=["']product:color["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<td[^>]*>[^<]*Cor[^<]*<\/td>[\s\S]{0,200}?<td[^>]*>([^<]+)<\/td>/i,
+      /Cor[:\s]*<[^>]*>([^<]+)</i,
+      /Cor[:\s]*([A-Za-zÀ-ÿ0-9\s\-\/,]+)(?:<|$|\n)/i,
+      /"color"[\s:]*"([^"]+)"/i,
+      /data-color=["']([^"']+)["']/i,
+      /Cores?\s*Disponíveis?[:\s]*([^<\n]{3,200})/i
+    ];
+    
+    for (const pattern of colorPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[1].trim().length > 0) {
+        productData.color = match[1].trim();
+        console.log(`✅ Cor encontrada: ${productData.color} (${productData.color.length} caracteres)`);
+        break;
+      }
+    }
+    if (!productData.color) console.log('⚠️ Cor não encontrada');
 
-    // Extrair Tamanho
-    const sizeMatch = html.match(/<meta[^>]*property=["']product:size["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                      html.match(/Tamanho[:\s]*([A-Za-z0-9\s]+)/i);
-    if (sizeMatch) productData.size = sizeMatch[1].trim();
+    // Extrair Tamanho com múltiplos padrões
+    const sizePatterns = [
+      /<meta[^>]*property=["']product:size["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<td[^>]*>[^<]*Tamanho[^<]*<\/td>[\s\S]{0,200}?<td[^>]*>([^<]+)<\/td>/i,
+      /Tamanho[:\s]*([A-Za-z0-9\s\-]+)(?:<|$|\n)/i,
+      /"size"[\s:]*"([^"]+)"/i,
+      /data-size=["']([^"']+)["']/i
+    ];
+    
+    for (const pattern of sizePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[1].trim().length > 0) {
+        productData.size = match[1].trim();
+        console.log(`✅ Tamanho encontrado: ${productData.size}`);
+        break;
+      }
+    }
+    if (!productData.size) console.log('⚠️ Tamanho não encontrado');
+
+    // Extrair Material
+    const materialPatterns = [
+      /<meta[^>]*property=["']product:material["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<td[^>]*>[^<]*Material[^<]*<\/td>[\s\S]{0,200}?<td[^>]*>([^<]+)<\/td>/i,
+      /Material[:\s]*([A-Za-zÀ-ÿ0-9\s\-,\/]+)(?:<|$|\n)/i,
+      /"material"[\s:]*"([^"]+)"/i
+    ];
+    
+    for (const pattern of materialPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[1].trim().length > 0) {
+        productData.material = match[1].trim();
+        console.log(`✅ Material encontrado: ${productData.material}`);
+        break;
+      }
+    }
+    if (!productData.material) console.log('⚠️ Material não encontrado');
+
+    // Extrair Google Product Category
+    const categoryPatterns = [
+      /<meta[^>]*property=["']product:category["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]*name=["']google_product_category["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+      /"google_product_category"[\s:]*"([^"]+)"/i
+    ];
+    
+    for (const pattern of categoryPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        productData.google_product_category = match[1].trim();
+        console.log(`✅ Google Product Category: ${productData.google_product_category}`);
+        break;
+      }
+    }
+    if (!productData.google_product_category) console.log('ℹ️ Google Product Category não encontrada (será mapeada pela categoria da loja)');
 
     // Verificar disponibilidade (melhorado)
-    const unavailableKeywords = ['indisponível', 'esgotado', 'fora de estoque', 'sem estoque', 'out of stock'];
-    const isUnavailable = unavailableKeywords.some(keyword => 
-      html.toLowerCase().includes(keyword)
-    );
+    const unavailableKeywords = ['indisponível', 'esgotado', 'fora de estoque', 'sem estoque', 'out of stock', 'unavailable'];
+    const availableKeywords = ['em estoque', 'disponível', 'in stock', 'available'];
+    
+    const htmlLower = html.toLowerCase();
+    const hasUnavailable = unavailableKeywords.some(keyword => htmlLower.includes(keyword));
+    const hasAvailable = availableKeywords.some(keyword => htmlLower.includes(keyword));
+    
+    const isUnavailable = hasUnavailable && !hasAvailable;
     productData.available = !isUnavailable;
     productData.availability = isUnavailable ? 'out of stock' : 'in stock';
+    console.log(`✅ Disponibilidade: ${productData.availability}`);
     
     // Definir condição padrão
     productData.condition = 'new';
+    console.log('✅ Condição definida como: new');
+    
+    console.log('📊 Resumo Google Merchant:', {
+      gtin: productData.gtin || 'NÃO ENCONTRADO',
+      mpn: productData.mpn || 'NÃO ENCONTRADO',
+      brand: productData.brand || 'NÃO ENCONTRADO',
+      color: productData.color ? `${productData.color.substring(0, 30)}...` : 'NÃO ENCONTRADO',
+      size: productData.size || 'NÃO ENCONTRADO',
+      material: productData.material || 'NÃO ENCONTRADO',
+      availability: productData.availability,
+      condition: productData.condition
+    });
 
     // Extract physical specifications using the helper function
     const physicalSpecs = extractPhysicalSpecs();
