@@ -19,6 +19,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{seo_description}}">
     <meta name="robots" content="{{meta_robots}}">
+    <link rel="robots" href="/robots.txt">
     <title>{{seo_title}}</title>
     
     <!-- Canonical URL -->

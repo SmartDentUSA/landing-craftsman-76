@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.generate-tiktok-content]
 verify_jwt = false
+
+[functions.generate-robots-txt]
+verify_jwt = false

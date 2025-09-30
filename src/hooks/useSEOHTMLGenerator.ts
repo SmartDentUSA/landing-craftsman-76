@@ -418,6 +418,7 @@ export const useSEOHTMLGenerator = () => {
   ${uniqueKeywords.length > 0 ? `<meta name="keywords" content="${uniqueKeywords.join(', ')}">` : ''}
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="${canonical}">
+  <link rel="robots" href="/robots.txt">
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="${type === 'product' ? 'product' : 'article'}">
@@ -907,6 +908,7 @@ export const useSEOHTMLGenerator = () => {
   <meta name="keywords" content="${uniqueKeywords.join(', ')}">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="${canonicalUrl}">
+  <link rel="robots" href="/robots.txt">
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
