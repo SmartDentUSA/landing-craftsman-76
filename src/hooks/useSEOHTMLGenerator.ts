@@ -1313,29 +1313,33 @@ export const useSEOHTMLGenerator = () => {
   
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      const readMoreButtons = document.querySelectorAll('.read-more-btn');
+      // Usar delegação de eventos para melhor robustez
+      document.addEventListener('click', function(event) {
+        const button = event.target.closest('.read-more-btn');
+        if (!button) return;
+        
+        event.preventDefault();
+        
+        // Encontrar o container do conteúdo (aceitar ambos os tipos como no Eodonto)
+        const cardContent = button.closest('.post-card-content, .featured-post-content');
+        if (!cardContent) return;
 
-      readMoreButtons.forEach(button => {
-        button.addEventListener('click', function() {
-          // Encontrar o elemento .full-content no mesmo container
-          const cardContent = this.closest('.post-card-content');
-          const fullContent = cardContent.querySelector('.full-content');
-          const previewContent = cardContent.querySelector('.preview-content');
-          
-          if (fullContent && previewContent) {
-            const isExpanded = fullContent.classList.contains('expanded');
+        // Encontrar o elemento de conteúdo completo
+        const fullContent = cardContent.querySelector('.full-content');
+        if (!fullContent) return;
 
-            if (isExpanded) {
-              fullContent.classList.remove('expanded');
-              previewContent.style.display = 'block';
-              this.textContent = 'Leia mais →';
-            } else {
-              fullContent.classList.add('expanded');
-              previewContent.style.display = 'none';
-              this.textContent = 'Fechar ↑';
-            }
-          }
-        });
+        // Alternar a classe 'expanded'
+        const isExpanded = fullContent.classList.contains('expanded');
+        fullContent.classList.toggle('expanded');
+        
+        // Atualizar o texto do botão (igual ao Eodonto)
+        button.textContent = isExpanded ? 'Leia mais →' : 'Fechar ↑';
+        
+        // Gerenciar preview content se existir
+        const previewContent = cardContent.querySelector('.preview-content');
+        if (previewContent) {
+          previewContent.style.display = isExpanded ? 'block' : 'none';
+        }
       });
     });
   </script>
