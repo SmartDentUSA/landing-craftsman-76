@@ -1,63 +1,104 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from "react";
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
+import { Badge } from "@/components/ui/badge";
+import { ImageUploader } from "@/components/ImageUploader";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { ImageUploader } from './ImageUploader';
-import { useCategoryContext } from '@/contexts/CategoryContext';
-import { Combobox } from '@/components/ui/combobox';
-import { ScrollArea } from './ui/scroll-area';
-import { TagInput } from './ui/tag-input';
+import { VideoSection } from "@/components/VideoSection";
+import { CaptionExtractor } from "@/components/CaptionExtractor";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VideoSection } from './VideoSection';
-import { CaptionExtractor } from './CaptionExtractor';
-import { Badge } from './ui/badge';
+import { useCategoryContext } from '@/contexts/CategoryContext';
+import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
-import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 
-// Interfaces and types
+interface Video {
+  url: string;
+  description: string;
+}
+
 interface Product {
   id: string;
-  created_at?: string;
   name: string;
-  description: string;
-  price: number;
-  category: string;
-  subcategory: string;
-  image_url: string;
-  images_gallery: string[];
-  video_url: string;
-  video_title: string;
-  video_description: string;
-  product_url: string;
-  tags: string[];
-  active: boolean;
-  promo_price: number | null;
-  details: any;
-  variations: any[];
-  faq: any[];
-  brand: string;
-  gtin: string;
-  ean: string;
-  mpn: string;
-  weight: number;
-  height: number;
-  width: number;
-  depth: number;
+  description?: string;
+  sales_pitch?: string;
+  price?: number;
+  promo_price?: number;
+  currency?: string;
+  category?: string;
+  subcategory?: string;
+  image_url?: string;
+  product_url?: string;
+  target_audience?: string[];
+  use_in_ai_generation: boolean;
+  approved: boolean;
+  keywords?: string[];
+  market_keywords?: string[];
+  search_intent_keywords?: string[];
+  benefits?: string[];
+  features?: string[];
+  tags?: string[];
+  bot_trigger_words?: string[];
+  instagram_videos?: Video[];
+  youtube_videos?: Video[];
+  testimonial_videos?: Video[];
+  technical_videos?: Video[];
+  tiktok_videos?: Video[];
+  video_captions?: any;
+  original_data?: any;
+  images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
+  // Google Merchant Center fields
+  gtin?: string;
+  ean?: string;
+  mpn?: string;
+  brand?: string;
+  color?: string;
+  size?: string;
+  material?: string;
+  google_product_category?: string;
+  condition?: string;
+  availability?: string;
+  // Physical specifications
+  variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
+  package_size?: string;
+  weight?: number;
+  height?: number;
+  width?: number;
+  depth?: number;
+  store_category?: string;
+  // Landing Page Section controls
+  show_in_resources?: boolean;
+  selected?: boolean;
+  // Resource CTAs
+  resource_cta1?: { label: string; url: string; visible: boolean };
+  resource_cta2?: { label: string; url: string; visible: boolean };
+  resource_cta3?: { label: string; url: string; visible: boolean };
+  // Resource descriptions
+  resource_descriptions?: { cta1: string; cta2: string; cta3: string };
+  // Offer discount CTA
+  offer_discount_cta?: { label: string; url: string; visible: boolean };
+  // FAQ
+  faq?: Array<{ question: string; answer: string }>;
 }
 
 interface ProductEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  product: Product;
+  product?: Product | null;
   onSave: (product: Product) => void;
-  onDelete: (productId: string) => void;
+  onDelete?: (productId: string) => void;
 }
 
 export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }: ProductEditModalProps) {
@@ -70,263 +111,505 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   console.log('unifiedCategories:', unifiedCategories);
   
   const { getConfigByCategory } = useCategoryConfig();
-
-  const [formData, setFormData] = useState<Product>({
-    id: product.id,
-    created_at: product.created_at,
-    name: product.name,
-    description: product.description,
-    price: product.price,
-    category: product.category,
-    subcategory: product.subcategory,
-    image_url: product.image_url,
-    images_gallery: product.images_gallery || [],
-    video_url: product.video_url || '',
-    video_title: product.video_title || '',
-    video_description: product.video_description || '',
-    product_url: product.product_url || '',
-    tags: product.tags || [],
-    active: product.active,
-    promo_price: product.promo_price,
-    details: product.details || {},
-    variations: product.variations || [],
-    faq: product.faq || [],
-    brand: product.brand || '',
-    gtin: product.gtin || '',
-    ean: product.ean || '',
-    mpn: product.mpn || '',
-    weight: product.weight || 0,
-    height: product.height || 0,
-    width: product.width || 0,
-    depth: product.depth || 0,
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+  const [formData, setFormData] = useState<Partial<Product>>({
+    name: '',
+    description: '',
+    sales_pitch: '',
+    price: 0,
+    currency: 'BRL',
+    category: '',
+    subcategory: '',
+    image_url: '',
+    product_url: '',
+    target_audience: [],
+    use_in_ai_generation: true,
+    approved: true,
+        keywords: [],
+        market_keywords: [],
+        search_intent_keywords: [],
+        benefits: [],
+        features: [],
+        bot_trigger_words: [],
+    instagram_videos: [],
+    youtube_videos: [],
+    testimonial_videos: [],
+    technical_videos: [],
+    // Landing Page Section controls
+    show_in_resources: false,
+    selected: false,
+    // Resource CTAs
+    resource_cta1: { label: '', url: '', visible: false },
+    resource_cta2: { label: '', url: '', visible: false },
+    resource_cta3: { label: '', url: '', visible: false },
+    // Resource descriptions
+    resource_descriptions: { cta1: '', cta2: '', cta3: '' },
+    // Offer discount CTA
+    offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false },
+    // FAQ
+    faq: []
   });
-  const [isNewImage, setIsNewImage] = useState(false);
-  const [imagesGallery, setImagesGallery] = useState<string[]>(product.images_gallery || []);
-  const [variations, setVariations] = useState<any[]>(product.variations || []);
-  const [faq, setFaq] = useState<any[]>(product.faq || []);
-  const [subcategories, setSubcategories] = useState<string[]>([]);
-	const [weight, setWeight] = useState(product.weight?.toString() || '');
-	const [height, setHeight] = useState(product.height?.toString() || '');
-	const [width, setWidth] = useState(product.width?.toString() || '');
-	const [depth, setDepth] = useState(product.depth?.toString() || '');
-  const [promoPrice, setPromoPrice] = useState<number | undefined>(product.promo_price || undefined);
-  const [isImporting, setImporting] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [extractedCaption, setExtractedCaption] = useState<string>('');
-  const [isSmartMergeOpen, setIsSmartMergeOpen] = useState(false);
-  const [isFAQEditorOpen, setIsFAQEditorOpen] = useState(false);
-  const [isLojaIntegradaImporterOpen, setIsLojaIntegradaImporterOpen] = useState(false);
+  const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
+  const [benefits, setBenefits] = useState<string[]>([]);
+  const [features, setFeatures] = useState<string[]>([]);
+  const [targetAudience, setTargetAudience] = useState<string[]>([]);
+  const [marketKeywords, setMarketKeywords] = useState<string[]>([]);
+  const [searchIntentKeywords, setSearchIntentKeywords] = useState<string[]>([]);
+  const [botTriggerWords, setBotTriggerWords] = useState<string[]>([]);
+  const [newBenefit, setNewBenefit] = useState('');
+  const [newFeature, setNewFeature] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [generatingKeywords, setGeneratingKeywords] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [overwriteData, setOverwriteData] = useState(false);
+  
+  // Images gallery state
+  const [imagesGallery, setImagesGallery] = useState<Array<{ url: string; alt: string; order: number; is_main: boolean }>>([]);
+  
+  // Physical specifications state
+  const [variations, setVariations] = useState<{ name: string; price?: number; stock?: number; color?: string; size?: string }[]>([]);
+  const [packageSize, setPackageSize] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [width, setWidth] = useState('');
+  const [depth, setDepth] = useState('');
+  const [storeCategory, setStoreCategory] = useState('');
+  
+  const botTagRef = useRef<TagInputHandle>(null);
+  
+  // Video states
+  const [instagramVideos, setInstagramVideos] = useState<Video[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<Video[]>([]);
+  const [testimonialVideos, setTestimonialVideos] = useState<Video[]>([]);
+  const [technicalVideos, setTechnicalVideos] = useState<Video[]>([]);
+  const [tiktokVideos, setTiktokVideos] = useState<Video[]>([]);
+  
+  // Caption states
+  const [videoCaptions, setVideoCaptions] = useState<any>({});
+  
+  const { toast } = useToast();
+
+  // Função para carregar configurações padrão de categoria
+  const loadCategoryDefaults = useCallback((category: string, subcategory: string) => {
+    // Tenta buscar configuração específica (categoria + subcategoria)
+    let config = getConfigByCategory(category, subcategory);
+    
+    // Se não encontrar configuração específica, tenta buscar apenas por categoria
+    if (!config && category) {
+      const generalConfigs = getConfigByCategory(category, '');
+      config = generalConfigs;
+    }
+    
+    if (config) {
+      console.log('Aplicando configuração:', config);
+      // Auto-preencher apenas campos vazios para não sobrescrever dados já inseridos
+      const updates: Partial<Product> = {};
+      let fieldsUpdated = [];
+      
+      if (config.target_audience.length > 0 && (!targetAudience || targetAudience.length === 0)) {
+        setTargetAudience(config.target_audience);
+        fieldsUpdated.push('Público-Alvo');
+      }
+      
+      if (config.keywords.length > 0 && (!formData.keywords || formData.keywords.length === 0)) {
+        updates.keywords = config.keywords;
+        fieldsUpdated.push('Keywords');
+      }
+      
+      if (config.market_keywords.length > 0 && (!marketKeywords || marketKeywords.length === 0)) {
+        setMarketKeywords(config.market_keywords);
+        fieldsUpdated.push('Keywords de Mercado');
+      }
+      
+      if (config.search_intent_keywords.length > 0 && (!searchIntentKeywords || searchIntentKeywords.length === 0)) {
+        setSearchIntentKeywords(config.search_intent_keywords);
+        fieldsUpdated.push('Keywords de Intenção de Busca');
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+      
+      if (fieldsUpdated.length > 0) {
+        toast({
+          title: "Campos preenchidos automaticamente",
+          description: `${fieldsUpdated.join(', ')} foram aplicados da configuração da categoria`
+        });
+      }
+    } else {
+      console.log('Nenhuma configuração encontrada para:', { category, subcategory });
+    }
+  }, [getConfigByCategory, targetAudience, formData.keywords, marketKeywords, searchIntentKeywords, toast]);
+
+  const isEditing = !!product;
 
   useEffect(() => {
-    if (formData.category) {
-      const subcategories = getUnifiedSubcategoriesForCategory(formData.category);
-      setSubcategories(subcategories);
-    }
-  }, [formData.category, getUnifiedSubcategoriesForCategory]);
-
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      images_gallery: imagesGallery,
-      variations: variations,
-      faq: faq,
-			weight: parseFloat(weight),
-			height: parseFloat(height),
-			width: parseFloat(width),
-			depth: parseFloat(depth),
-      promo_price: promoPrice || null,
-    }));
-  }, [imagesGallery, variations, faq, weight, height, width, depth, promoPrice]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleCategoryChange = (value: string) => {
-    setFormData(prev => ({ ...prev, category: value, subcategory: '' }));
-  };
-
-  const handleSubcategoryChange = (value: string) => {
-    setFormData(prev => ({ ...prev, subcategory: value }));
-  };
-
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const parsedValue = parseFloat(value);
-
-    if (!isNaN(parsedValue)) {
-      setFormData(prev => ({ ...prev, price: parsedValue }));
+    if (product) {
+      setFormData({
+        ...product,
+        keywords: product.keywords || [],
+        market_keywords: product.market_keywords || [],
+        search_intent_keywords: product.search_intent_keywords || [],
+        benefits: product.benefits || [],
+        features: product.features || [],
+        instagram_videos: product.instagram_videos || [],
+        youtube_videos: product.youtube_videos || [],
+        testimonial_videos: product.testimonial_videos || [],
+        technical_videos: product.technical_videos || [],
+        // Landing Page Section controls
+        show_in_resources: product.show_in_resources || false,
+        selected: product.selected || false,
+        // Resource CTAs
+        resource_cta1: product.resource_cta1 || { label: '', url: '', visible: false },
+        resource_cta2: product.resource_cta2 || { label: '', url: '', visible: false },
+        resource_cta3: product.resource_cta3 || { label: '', url: '', visible: false },
+        // Resource descriptions
+        resource_descriptions: product.resource_descriptions || { cta1: '', cta2: '', cta3: '' },
+        // Offer discount CTA
+        offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
+        // FAQ
+        faq: product.faq || []
+      });
+      setBenefits(product.benefits || []);
+      setFeatures(product.features || []);
+      setTargetAudience(product.target_audience || []);
+      setMarketKeywords(product.market_keywords || []);
+      setSearchIntentKeywords(product.search_intent_keywords || []);
+      setBotTriggerWords(product.bot_trigger_words || []);
+      setInstagramVideos(product.instagram_videos || []);
+      setYoutubeVideos(product.youtube_videos || []);
+      setTestimonialVideos(product.testimonial_videos || []);
+      setTechnicalVideos(product.technical_videos || []);
+      setTiktokVideos(product.tiktok_videos || []);
+      setVideoCaptions(product.video_captions || {});
+      setPromoPrice((product as any).promo_price);
+      
+      // Physical specifications
+      setVariations(product.variations || []);
+      setPackageSize(product.package_size || '');
+      setWeight(product.weight?.toString() || '');
+      setHeight(product.height?.toString() || '');
+      setWidth(product.width?.toString() || '');
+      setDepth(product.depth?.toString() || '');
+      setStoreCategory(product.store_category || '');
+      
+      // Images gallery
+      setImagesGallery((product as any).images_gallery || []);
     } else {
-      setFormData(prev => ({ ...prev, price: 0 }));
-    }
-  };
-
-  const handlePromoPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const parsedValue = parseFloat(value);
-
-    if (!isNaN(parsedValue)) {
-      setPromoPrice(parsedValue);
-    } else {
+      setFormData({
+        name: '',
+        description: '',
+        sales_pitch: '',
+        price: 0,
+        currency: 'BRL',
+        category: '',
+        subcategory: '',
+        image_url: '',
+        product_url: '',
+        target_audience: [],
+        use_in_ai_generation: true,
+        approved: true,
+        keywords: [],
+        market_keywords: [],
+        search_intent_keywords: [],
+        benefits: [],
+        features: [],
+        bot_trigger_words: [],
+        instagram_videos: [],
+        youtube_videos: [],
+        testimonial_videos: [],
+        technical_videos: [],
+        // Landing Page Section controls
+        show_in_resources: false,
+        selected: false,
+        // Resource CTAs
+        resource_cta1: { label: '', url: '', visible: false },
+        resource_cta2: { label: '', url: '', visible: false },
+        resource_cta3: { label: '', url: '', visible: false },
+        // Resource descriptions
+        resource_descriptions: { cta1: '', cta2: '', cta3: '' },
+        // Offer discount CTA
+        offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false }
+      });
+      setBenefits([]);
+      setFeatures([]);
+      setTargetAudience([]);
+      setMarketKeywords([]);
+      setSearchIntentKeywords([]);
+      setBotTriggerWords([]);
+      setInstagramVideos([]);
+      setYoutubeVideos([]);
+      setTestimonialVideos([]);
+      setTechnicalVideos([]);
+      setVideoCaptions({});
+      
+      // Reset physical specifications
+      setVariations([]);
+      setPackageSize('');
+      setWeight('');
+      setHeight('');
+      setWidth('');
+      setDepth('');
+      setStoreCategory('');
       setPromoPrice(undefined);
+      
+      // Reset images gallery
+      setImagesGallery([]);
+    }
+  }, [product]);
+
+  const handleImageUploaded = (imageUrl: string) => {
+    setFormData(prev => ({ ...prev, image_url: imageUrl }));
+  };
+
+  const addBenefit = () => {
+    if (newBenefit.trim()) {
+      const updatedBenefits = [...benefits, newBenefit.trim()];
+      setBenefits(updatedBenefits);
+      setFormData(prev => ({ ...prev, benefits: updatedBenefits }));
+      setNewBenefit('');
     }
   };
 
-  const handleActiveChange = (checked: boolean) => {
-    setFormData(prev => ({ ...prev, active: checked }));
+  const removeBenefit = (index: number) => {
+    const updatedBenefits = benefits.filter((_, i) => i !== index);
+    setBenefits(updatedBenefits);
+    setFormData(prev => ({ ...prev, benefits: updatedBenefits }));
   };
 
-  const handleTagAdded = (tag: string) => {
-    setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      const updatedFeatures = [...features, newFeature.trim()];
+      setFeatures(updatedFeatures);
+      setFormData(prev => ({ ...prev, features: updatedFeatures }));
+      setNewFeature('');
+    }
   };
 
-  const handleTagRemoved = (tag: string) => {
-    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+  const removeFeature = (index: number) => {
+    const updatedFeatures = features.filter((_, i) => i !== index);
+    setFeatures(updatedFeatures);
+    setFormData(prev => ({ ...prev, features: updatedFeatures }));
   };
 
-  const handleImageUpload = (url: string) => {
-    setFormData(prev => ({ ...prev, image_url: url }));
-    setIsNewImage(true);
+  // Video management functions
+  const addVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical' | 'tiktok', url: string, description: string) => {
+    if (!url.trim()) return;
+
+    const newVideo: Video = { url: url.trim(), description: description.trim() };
+    
+    switch (type) {
+      case 'instagram':
+        if (instagramVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos Instagram permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedInstagram = [...instagramVideos, newVideo];
+        setInstagramVideos(updatedInstagram);
+        setFormData(prev => ({ ...prev, instagram_videos: updatedInstagram }));
+        break;
+        
+      case 'youtube':
+        if (youtubeVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos YouTube permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedYoutube = [...youtubeVideos, newVideo];
+        setYoutubeVideos(updatedYoutube);
+        setFormData(prev => ({ ...prev, youtube_videos: updatedYoutube }));
+        break;
+        
+      case 'testimonial':
+        if (testimonialVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos de depoimento permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedTestimonial = [...testimonialVideos, newVideo];
+        setTestimonialVideos(updatedTestimonial);
+        setFormData(prev => ({ ...prev, testimonial_videos: updatedTestimonial }));
+        break;
+        
+      case 'technical':
+        if (technicalVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos técnicos permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedTechnical = [...technicalVideos, newVideo];
+        setTechnicalVideos(updatedTechnical);
+        setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
+        break;
+        
+      case 'tiktok':
+        if (tiktokVideos.length >= 5) {
+          toast({
+            title: "Limite atingido",
+            description: "Máximo de 5 vídeos TikTok permitidos",
+            variant: "destructive"
+          });
+          return;
+        }
+        const updatedTiktok = [...tiktokVideos, newVideo];
+        setTiktokVideos(updatedTiktok);
+        setFormData(prev => ({ ...prev, tiktok_videos: updatedTiktok }));
+        break;
+    }
   };
 
-  const handleSave = async () => {
-    try {
-      // Validate required fields
-      if (!formData.name || !formData.description || !formData.price || !formData.category || !formData.subcategory) {
-        toast({
-          title: "Erro",
-          description: "Preencha todos os campos obrigatórios.",
-          variant: "destructive"
-        });
-        return;
-      }
+  const removeVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical' | 'tiktok', index: number) => {
+    switch (type) {
+      case 'instagram':
+        const updatedInstagram = instagramVideos.filter((_, i) => i !== index);
+        setInstagramVideos(updatedInstagram);
+        setFormData(prev => ({ ...prev, instagram_videos: updatedInstagram }));
+        break;
+        
+      case 'youtube':
+        const updatedYoutube = youtubeVideos.filter((_, i) => i !== index);
+        setYoutubeVideos(updatedYoutube);
+        setFormData(prev => ({ ...prev, youtube_videos: updatedYoutube }));
+        break;
+        
+      case 'testimonial':
+        const updatedTestimonial = testimonialVideos.filter((_, i) => i !== index);
+        setTestimonialVideos(updatedTestimonial);
+        setFormData(prev => ({ ...prev, testimonial_videos: updatedTestimonial }));
+        break;
+        
+      case 'technical':
+        const updatedTechnical = technicalVideos.filter((_, i) => i !== index);
+        setTechnicalVideos(updatedTechnical);
+        setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
+        break;
+        
+      case 'tiktok':
+        const updatedTiktok = tiktokVideos.filter((_, i) => i !== index);
+        setTiktokVideos(updatedTiktok);
+        setFormData(prev => ({ ...prev, tiktok_videos: updatedTiktok }));
+        break;
+    }
+  };
 
-      // Convert weight, height, width, and depth to numbers
-      const weightValue = parseFloat(weight);
-      const heightValue = parseFloat(height);
-      const widthValue = parseFloat(width);
-      const depthValue = parseFloat(depth);
+  // Caption management function
+  const handleCaptionsExtracted = (videoType: string, captions: any[]) => {
+    const updatedCaptions = {
+      ...videoCaptions,
+      [videoType]: captions
+    };
+    setVideoCaptions(updatedCaptions);
+  };
 
-      if (isNaN(weightValue) || isNaN(heightValue) || isNaN(widthValue) || isNaN(depthValue)) {
-        toast({
-          title: "Erro",
-          description: "Peso, altura, largura e profundidade devem ser números válidos.",
-          variant: "destructive"
-        });
-        return;
-      }
+  const generateKeywordsWithAI = async () => {
+    // Check if we have enough content to generate keywords
+    const hasContent = formData.description?.trim() || 
+                      benefits.length > 0 || 
+                      features.length > 0 || 
+                      formData.name?.trim();
 
-      const updatedProduct: Product = {
-        ...formData,
-        weight: weightValue,
-        height: heightValue,
-        width: widthValue,
-        depth: depthValue,
-      };
-
-      await onSave(updatedProduct);
-      onClose();
-      toast({
-        title: "Sucesso",
-        description: "Produto salvo com sucesso.",
-      });
-    } catch (error: any) {
-      console.error("Error saving product:", error);
+    if (!hasContent) {
       toast({
         title: "Erro",
-        description: "Erro ao salvar o produto.",
+        description: "Adicione pelo menos nome, descrição, benefícios ou recursos para gerar keywords",
         variant: "destructive"
       });
+      return;
     }
-  };
 
-  const handleDelete = async () => {
+    setGeneratingKeywords(true);
     try {
-      await onDelete(product.id);
-      onClose();
-      toast({
-        title: "Sucesso",
-        description: "Produto excluído com sucesso.",
+      // Prepare content for AI
+      const contentParts = [];
+      
+      if (formData.name?.trim()) {
+        contentParts.push(`Produto: ${formData.name}`);
+      }
+      
+      if (formData.description?.trim()) {
+        contentParts.push(`Descrição: ${formData.description}`);
+      }
+      
+      if (benefits.length > 0) {
+        contentParts.push(`Benefícios: ${benefits.join(', ')}`);
+      }
+      
+      if (features.length > 0) {
+        contentParts.push(`Recursos: ${features.join(', ')}`);
+      }
+
+      const content = contentParts.join('\n\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'keywords',
+          content: content
+        }
       });
-    } catch (error: any) {
-      console.error("Error deleting product:", error);
+
+      if (error) throw error;
+
+      if (data?.success && data?.content) {
+        // Parse the keywords response
+        let newKeywords: string[] = [];
+        
+        if (typeof data.content === 'object') {
+          // Combine all keyword types
+          const keywordData = data.content;
+          newKeywords = [
+            ...(keywordData.primary || []),
+            ...(keywordData.secondary || []),
+            ...(keywordData.lsi || []),
+            ...(keywordData.long_tail || [])
+          ];
+        } else if (Array.isArray(data.content)) {
+          newKeywords = data.content;
+        }
+
+        // Filter out duplicates and merge with existing keywords
+        const existingKeywords = formData.keywords || [];
+        const uniqueNewKeywords = newKeywords.filter(
+          keyword => !existingKeywords.includes(keyword)
+        );
+
+        const updatedKeywords = [...existingKeywords, ...uniqueNewKeywords];
+        setFormData(prev => ({ ...prev, keywords: updatedKeywords }));
+
+        toast({
+          title: "Sucesso",
+          description: `${uniqueNewKeywords.length} novas keywords geradas com IA!`
+        });
+      } else {
+        throw new Error('Resposta inválida da IA');
+      }
+    } catch (error) {
+      console.error('Error generating keywords:', error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir o produto.",
+        description: "Erro ao gerar keywords com IA. Tente novamente.",
         variant: "destructive"
       });
+    } finally {
+      setGeneratingKeywords(false);
     }
   };
 
-  const handleLojaIntegradaImport = (importedData: any): void => {
-    console.log('Dados importados da Loja Integrada:', importedData);
-    
-    // Mapear campos importados para o formulário
-    const updates: Partial<Product> = {};
-    
-    if (importedData.name) {
-      updates.name = importedData.name;
-    }
-    if (importedData.description) {
-      updates.description = importedData.description;
-    }
-    if (importedData.price) {
-      updates.price = importedData.price;
-    }
-    if (importedData.promo_price) {
-      setPromoPrice(importedData.promo_price);
-    }
-    if (importedData.category) {
-      updates.category = importedData.category;
-    }
-    if (importedData.subcategory) {
-      updates.subcategory = importedData.subcategory;
-    }
-    if (importedData.brand) {
-      updates.brand = importedData.brand;
-    }
-    if (importedData.image_url) {
-      updates.image_url = importedData.image_url;
-    }
-    if (importedData.images_gallery && Array.isArray(importedData.images_gallery)) {
-      setImagesGallery(importedData.images_gallery);
-    }
-    if (importedData.variations && Array.isArray(importedData.variations)) {
-      setVariations(importedData.variations);
-    }
-    if (importedData.gtin) {
-      updates.gtin = importedData.gtin;
-    }
-    if (importedData.ean) {
-      updates.ean = importedData.ean;
-    }
-    if (importedData.mpn) {
-      updates.mpn = importedData.mpn;
-    }
-    if (importedData.weight) {
-      setWeight(importedData.weight.toString());
-    }
-    if (importedData.height) {
-      setHeight(importedData.height.toString());
-    }
-    if (importedData.width) {
-      setWidth(importedData.width.toString());
-    }
-    if (importedData.depth) {
-      setDepth(importedData.depth.toString());
-    }
-    
-    // Aplicar atualizações ao formData
-    setFormData(prev => ({ ...prev, ...updates }));
-    
-    toast({
-      title: "Dados importados",
-      description: "Campos preenchidos com dados da Loja Integrada. Revise antes de salvar.",
-    });
-  };
-
-  const extractProductDataFromUrl = async (): Promise<void> => {
+  const extractProductDataFromUrl = async () => {
     if (!formData.product_url?.trim()) {
       toast({
         title: "Erro",
@@ -337,260 +620,1068 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     }
 
     setImporting(true);
-
     try {
-      const response = await fetch(`/api/extract?url=${encodeURIComponent(formData.product_url)}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const { data, error } = await supabase.functions.invoke('extract-product-data', {
+        body: {
+          url: formData.product_url
+        }
+      });
 
-      if (data) {
-        setFormData(prev => ({
-          ...prev,
-          name: data.name || prev.name,
-          description: data.description || prev.description,
-          image_url: data.image_url || prev.image_url,
-        }));
+      if (error) throw error;
 
-        setExtractedCaption(data.description || '');
+      if (data?.success && data?.data) {
+        const extractedData = data.data;
+        
+        // Mapear dados extraídos para o formulário
+        const updates: Partial<Product> = {};
+        let fieldsImported: string[] = [];
+        
+        // Aplicar lógica de sobrescrita ou apenas campos vazios
+        const shouldUpdate = (currentValue: any) => {
+          return overwriteData || !currentValue || (typeof currentValue === 'string' && !currentValue.trim());
+        };
+        
+        if (extractedData.name && shouldUpdate(formData.name)) {
+          updates.name = extractedData.name;
+          fieldsImported.push('Nome');
+        }
+        
+        // Validar descrição antes de importar
+        const isDescValid = extractedData.description && 
+                           extractedData.description.trim().length > 20 && 
+                           extractedData.description.toLowerCase() !== extractedData.name?.toLowerCase();
+        
+        if (isDescValid && shouldUpdate(formData.description)) {
+          updates.description = extractedData.description;
+          fieldsImported.push('Descrição');
+        }
+        
+        if (extractedData.price) {
+          const priceValue = parseFloat(extractedData.price.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (!isNaN(priceValue) && priceValue > 0 && shouldUpdate(formData.price)) {
+            updates.price = priceValue;
+            fieldsImported.push('Preço de venda');
+          }
+        }
+        
+        if (extractedData.promoPrice) {
+          const promoPriceValue = parseFloat(extractedData.promoPrice.toString().replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (!isNaN(promoPriceValue) && promoPriceValue > 0 && (overwriteData || !promoPrice)) {
+            setPromoPrice(promoPriceValue);
+            fieldsImported.push('Preço promocional');
+          }
+        }
+        
+        // ✨ Importar galeria de imagens
+        if (extractedData.images_gallery && Array.isArray(extractedData.images_gallery) && extractedData.images_gallery.length > 0) {
+          setImagesGallery(extractedData.images_gallery);
+          fieldsImported.push(`Galeria (${extractedData.images_gallery.length} imagens)`);
+          
+          // Definir a primeira imagem (principal) como image_url para compatibilidade
+          const mainImage = extractedData.images_gallery.find((img: any) => img.is_main) || extractedData.images_gallery[0];
+          if (mainImage && shouldUpdate(formData.image_url)) {
+            updates.image_url = mainImage.url;
+          }
+        } else if (extractedData.image && shouldUpdate(formData.image_url)) {
+          // Fallback: imagem única
+          updates.image_url = extractedData.image;
+          fieldsImported.push('Imagem');
+        }
+        
+        // Combinar installmentText com sales_pitch existente
+        if (extractedData.installmentText) {
+          const currentSalesPitch = formData.sales_pitch || '';
+          const newSalesPitch = currentSalesPitch ? 
+            `${currentSalesPitch}\n\n${extractedData.installmentText}` : 
+            extractedData.installmentText;
+          updates.sales_pitch = newSalesPitch;
+          fieldsImported.push('Parcelamento');
+        }
+
+        // ✨ MAPEAR CAMPOS GOOGLE MERCHANT
+        if (extractedData.gtin && shouldUpdate(formData.gtin)) {
+          updates.gtin = extractedData.gtin;
+          fieldsImported.push('GTIN');
+        }
+        
+        if (extractedData.ean && shouldUpdate(formData.ean)) {
+          updates.ean = extractedData.ean;
+          fieldsImported.push('EAN');
+        }
+        
+        if (extractedData.mpn && shouldUpdate(formData.mpn)) {
+          updates.mpn = extractedData.mpn;
+          fieldsImported.push('MPN/SKU');
+        }
+        
+        if (extractedData.brand && shouldUpdate(formData.brand)) {
+          updates.brand = extractedData.brand;
+          fieldsImported.push('Marca');
+        }
+        
+        if (extractedData.color && shouldUpdate(formData.color)) {
+          updates.color = extractedData.color;
+          fieldsImported.push('Cor');
+        }
+        
+        if (extractedData.size && shouldUpdate(formData.size)) {
+          updates.size = extractedData.size;
+          fieldsImported.push('Tamanho');
+        }
+        
+        if (extractedData.material && shouldUpdate(formData.material)) {
+          updates.material = extractedData.material;
+          fieldsImported.push('Material');
+        }
+        
+        // Physical specifications
+        if (extractedData.variations && Array.isArray(extractedData.variations) && (overwriteData || variations.length === 0)) {
+          setVariations(extractedData.variations);
+          fieldsImported.push('Variações');
+        }
+        if (extractedData.package_size && shouldUpdate(packageSize)) {
+          setPackageSize(extractedData.package_size);
+          fieldsImported.push('Tamanho da Embalagem');
+        }
+        if (extractedData.weight && shouldUpdate(weight)) {
+          setWeight(extractedData.weight.toString());
+          fieldsImported.push('Peso');
+        }
+        if (extractedData.height && shouldUpdate(height)) {
+          setHeight(extractedData.height.toString());
+          fieldsImported.push('Altura');
+        }
+        if (extractedData.width && shouldUpdate(width)) {
+          setWidth(extractedData.width.toString());
+          fieldsImported.push('Largura');
+        }
+        if (extractedData.depth && shouldUpdate(depth)) {
+          setDepth(extractedData.depth.toString());
+          fieldsImported.push('Profundidade');
+        }
+        if (extractedData.store_category && shouldUpdate(storeCategory)) {
+          setStoreCategory(extractedData.store_category);
+          fieldsImported.push('Categoria da Loja');
+        }
+        
+        if (extractedData.google_product_category && shouldUpdate(formData.google_product_category)) {
+          updates.google_product_category = extractedData.google_product_category;
+          fieldsImported.push('Categoria Google');
+        }
+        
+        if (extractedData.condition && shouldUpdate(formData.condition)) {
+          updates.condition = extractedData.condition;
+          fieldsImported.push('Condição');
+        }
+        
+        if (extractedData.availability && shouldUpdate(formData.availability)) {
+          updates.availability = extractedData.availability;
+          fieldsImported.push('Disponibilidade');
+        }
+
+        // Aplicar atualizações
+        setFormData(prev => ({ ...prev, ...updates }));
 
         toast({
-          title: "Dados extraídos",
-          description: "Dados do produto extraídos com sucesso.",
+          title: "Sucesso",
+          description: `${fieldsImported.length} campos importados: ${fieldsImported.join(', ')}`
         });
       } else {
-        setImportError("Não foi possível extrair os dados do produto.");
+        throw new Error(data?.error || 'Erro ao extrair dados do produto');
+      }
+    } catch (error) {
+      console.error('Error extracting product data:', error);
+      
+      // Check for specific error messages
+      const errorMessage = (error as any)?.message || error?.toString() || '';
+      
+      if (errorMessage.includes('404')) {
+        toast({
+          title: "Erro 404 - Página não encontrada",
+          description: "A URL informada não existe. Verifique se a URL está correta e completa, incluindo o protocolo (https://).",
+          variant: "destructive"
+        });
+      } else {
         toast({
           title: "Erro",
-          description: "Não foi possível extrair os dados do produto.",
+          description: "Erro ao importar dados. Verifique a URL e tente novamente.",
           variant: "destructive"
         });
       }
-    } catch (error: any) {
-      console.error("Erro ao extrair dados do produto:", error);
-      setImportError(error.message || "Erro ao extrair dados do produto.");
-      toast({
-        title: "Erro",
-        description: "Erro ao extrair dados do produto.",
-        variant: "destructive"
-      });
     } finally {
       setImporting(false);
     }
   };
 
-  const categoryConfig = getConfigByCategory(formData.category);
+  const handleSave = async () => {
+    console.log('[DEBUG] Iniciando salvamento do produto...');
+    console.log('[DEBUG] Dados do formulário:', formData);
+    console.log('[DEBUG] botTriggerWords state:', botTriggerWords);
+    
+    // Capturar texto pendente do TagInput e consolidar palavras gatilho
+    const pendingBotWord = botTagRef.current?.getPendingValue()?.trim();
+    console.log('[DEBUG] Palavra pendente no input:', pendingBotWord);
+    
+    const consolidatedBotWords = [...botTriggerWords];
+    if (pendingBotWord && !consolidatedBotWords.includes(pendingBotWord)) {
+      consolidatedBotWords.push(pendingBotWord);
+    }
+    
+    // Limitar e validar palavras gatilho (segurança)
+    const finalBotWords = consolidatedBotWords
+      .filter(word => word && word.trim().length > 0)
+      .map(word => word.trim().substring(0, 50)) // Max 50 chars por palavra
+      .slice(0, 50); // Max 50 palavras
+    
+    console.log('[DEBUG] Palavras gatilho finais:', finalBotWords);
+    
+    if (!formData.name?.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome do produto é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const dataToSave = {
+        name: formData.name!,
+        description: formData.description,
+        sales_pitch: formData.sales_pitch,
+        price: formData.price,
+        promo_price: promoPrice,
+        currency: formData.currency || 'BRL',
+        category: formData.category,
+        subcategory: formData.subcategory,
+        image_url: formData.image_url,
+        images_gallery: imagesGallery.length > 0 ? imagesGallery : [],
+        product_url: formData.product_url,
+        source_type: 'manual', // Garantir que source_type seja definido
+        target_audience: targetAudience,
+        instagram_videos: instagramVideos as any,
+        youtube_videos: youtubeVideos as any,
+        testimonial_videos: testimonialVideos as any,
+        technical_videos: technicalVideos as any,
+        tiktok_videos: tiktokVideos as any,
+        use_in_ai_generation: formData.use_in_ai_generation,
+        approved: formData.approved,
+        keywords: formData.keywords || [],
+        market_keywords: marketKeywords,
+        search_intent_keywords: searchIntentKeywords,
+        benefits: benefits,
+        features: features,
+        bot_trigger_words: finalBotWords,
+        // Google Merchant Center fields
+        gtin: formData.gtin,
+        ean: formData.ean,
+        mpn: formData.mpn,
+        brand: formData.brand,
+        color: formData.color,
+        size: formData.size,
+        material: formData.material,
+        google_product_category: formData.google_product_category,
+        condition: formData.condition || 'new',
+        availability: formData.availability || 'in stock',
+        // Physical specifications
+        variations: variations.length > 0 ? variations : [],
+        package_size: packageSize || null,
+        weight: weight ? parseFloat(weight) : null,
+        height: height ? parseFloat(height) : null,
+        width: width ? parseFloat(width) : null,
+        depth: depth ? parseFloat(depth) : null,
+        store_category: storeCategory || null,
+        // Landing Page Section controls
+        show_in_resources: formData.show_in_resources,
+        selected: formData.selected,
+        // Resource CTAs
+        resource_cta1: formData.resource_cta1,
+        resource_cta2: formData.resource_cta2,
+        resource_cta3: formData.resource_cta3,
+        // Offer Discount CTA
+        offer_discount_cta: formData.offer_discount_cta,
+        // FAQ
+        faq: formData.faq,
+        // Resource Descriptions
+        resource_descriptions: formData.resource_descriptions,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('[DEBUG] Dados que serão salvos:', dataToSave);
+      console.log('[DEBUG] bot_trigger_words especificamente:', dataToSave.bot_trigger_words);
+
+      let result;
+      if (isEditing) {
+        result = await supabase
+          .from('products_repository')
+          .update(dataToSave)
+          .eq('id', product.id)
+          .select()
+          .single();
+      } else {
+        result = await supabase
+          .from('products_repository')
+          .insert(dataToSave)
+          .select()
+          .single();
+      }
+
+      console.log('[DEBUG] Resultado da operação no Supabase:', result);
+      
+      if (result.error) {
+        console.error('[DEBUG] Erro no Supabase:', result.error);
+        throw result.error;
+      }
+
+      console.log('[DEBUG] Produto salvo com sucesso:', result.data);
+      
+      toast({
+        title: "Sucesso",
+        description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso! Configurações salvas.`,
+      });
+
+      onSave(result.data);
+      onClose();
+    } catch (error) {
+      console.error('[DEBUG] Error saving product:', error);
+      
+      // Verificar se é um erro de permissão RLS
+      if (error.message?.includes('new row violates row-level security') || 
+          error.message?.includes('permission denied') ||
+          error.message?.includes('insufficient privilege') ||
+          error.code === 'PGRST301' || 
+          error.code === '42501') {
+        toast({
+          title: "Erro de Permissão",
+          description: `Você precisa estar logado como administrador para ${isEditing ? 'atualizar' : 'criar'} produtos. Faça login em /auth com privilégios de admin.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: `Erro ao ${isEditing ? 'atualizar' : 'criar'} produto: ${error.message}`,
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!product || !onDelete) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('products_repository')
+        .delete()
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      onDelete(product.id);
+      onClose();
+      
+      toast({
+        title: "Sucesso",
+        description: "Produto excluído com sucesso!"
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir produto",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[925px]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{product.id === 'new' ? "Criar Produto" : "Editar Produto"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Editar Produto' : 'Adicionar Produto'}
+          </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList>
-            <TabsTrigger value="general">Geral</TabsTrigger>
-            <TabsTrigger value="media">Mídia</TabsTrigger>
-            <TabsTrigger value="details">Detalhes</TabsTrigger>
-            <TabsTrigger value="variations">Variações</TabsTrigger>
-            <TabsTrigger value="faq">FAQ</TabsTrigger>
-            <TabsTrigger value="import">Importar</TabsTrigger>
-          </TabsList>
-          <TabsContent value="general">
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Nome</Label>
-                  <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <Label htmlFor="brand">Marca</Label>
-                  <Input id="brand" name="brand" value={formData.brand} onChange={handleInputChange} />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="price">Preço</Label>
-                  <Input type="number" id="price" name="price" value={formData.price} onChange={handlePriceChange} />
-                </div>
-                <div>
-                  <Label htmlFor="promo_price">Preço Promocional</Label>
-                  <Input type="number" id="promo_price" name="promo_price" value={promoPrice || ''} onChange={handlePromoPriceChange} />
-                </div>
-                <div>
-                  <Label htmlFor="active">Ativo</Label>
-                  <Switch id="active" checked={formData.active} onCheckedChange={handleActiveChange} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="category">Categoria</Label>
-                  <Combobox
-                    options={unifiedCategories.map(cat => ({ label: cat, value: cat }))}
-                    onChange={handleCategoryChange}
-                    value={formData.category}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="subcategory">Subcategoria</Label>
-                  <Combobox
-                    options={subcategories.map(sub => ({ label: sub, value: sub }))}
-                    onChange={handleSubcategoryChange}
-                    value={formData.subcategory}
-                    disabled={!formData.category}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="tags">Tags</Label>
-                <TagInput tags={formData.tags} onTagAdded={handleTagAdded} onTagRemoved={handleTagRemoved} />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="media">
-            <div className="grid gap-4 py-4">
-              <div>
-                <Label>Imagem Principal</Label>
-                <ImageUploader imageUrl={formData.image_url} onUpload={handleImageUpload} isNewImage={isNewImage} />
-              </div>
-
-              <div>
-                <Label>Galeria de Imagens</Label>
-                <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                  <div className="flex gap-2">
-                    {imagesGallery.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img src={image} alt={`Image ${index + 1}`} className="h-24 w-24 object-cover rounded-md" />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="absolute top-0 right-0 rounded-full"
-                          onClick={() => {
-                            const newImages = [...imagesGallery];
-                            newImages.splice(index, 1);
-                            setImagesGallery(newImages);
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
-                            <path d="M18 6 6 18" />
-                            <path d="M6 6 18 18" />
-                          </svg>
-                        </Button>
-                      </div>
-                    ))}
-                    <ImageUploader onUpload={(url) => setImagesGallery([...imagesGallery, url])} isNewImage={isNewImage} />
-                  </div>
-                </ScrollArea>
-              </div>
-
-              <VideoSection
-                videoUrl={formData.video_url}
-                videoTitle={formData.video_title}
-                videoDescription={formData.video_description}
-                onVideoUrlChange={(url) => setFormData(prev => ({ ...prev, video_url: url }))}
-                onVideoTitleChange={(title) => setFormData(prev => ({ ...prev, video_title: title }))}
-                onVideoDescriptionChange={(description) => setFormData(prev => ({ ...prev, video_description: description }))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome do Produto *</Label>
+              <Input
+                id="name"
+                value={formData.name || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome do produto"
               />
             </div>
-          </TabsContent>
 
-          <TabsContent value="details">
-            <div className="grid gap-4 py-4">
-              {categoryConfig?.detailsConfig?.map((detail, index) => (
-                <div key={index}>
-                  <Label htmlFor={`details-${detail.key}`}>{detail.label}</Label>
-                  {detail.type === 'text' && (
-                    <Input
-                      type="text"
-                      id={`details-${detail.key}`}
-                      name={`details-${detail.key}`}
-                      value={formData.details[detail.key] || ''}
-                      onChange={(e) => {
-                        const { value } = e.target;
-                        setFormData(prev => ({
-                          ...prev,
-                          details: { ...prev.details, [detail.key]: value },
-                        }));
-                      }}
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={categoryOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.category || "Selecione ou digite nova categoria..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 z-50 bg-popover border">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Digite para buscar ou criar categoria..." 
+                      value={formData.category || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                     />
-                  )}
-                  {detail.type === 'number' && (
-                    <Input
-                      type="number"
-                      id={`details-${detail.key}`}
-                      name={`details-${detail.key}`}
-                      value={formData.details[detail.key] || ''}
-                      onChange={(e) => {
-                        const { value } = e.target;
-                        setFormData(prev => ({
-                          ...prev,
-                          details: { ...prev.details, [detail.key]: value },
-                        }));
-                      }}
+                    <CommandEmpty>
+                      <div className="p-2 text-sm">
+                        Pressione Enter para criar "{formData.category}"
+                      </div>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {unifiedCategories.map((category) => (
+                        <CommandItem
+                          key={category}
+                          value={category}
+                          onSelect={(currentValue) => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              category: currentValue,
+                              subcategory: '' // Reset subcategoria quando mudar categoria
+                            }));
+                            setCategoryOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.category === category ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {category}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={formData.description || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Descrição do produto"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sales_pitch">Discurso Comercial / Pitch de Vendas</Label>
+            <Textarea
+              id="sales_pitch"
+              value={formData.sales_pitch || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, sales_pitch: e.target.value }))}
+              placeholder="Descreva os pontos de venda únicos, benefícios principais, abordagem comercial, diferenciais competitivos..."
+              rows={4}
+            />
+            <p className="text-sm text-muted-foreground">
+              Este texto será usado pela IA para gerar conteúdo mais comercial e persuasivo em blogs, SEO e anúncios.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Preço de venda *</Label>
+              <Input
+                id="price"
+                type="text"
+                value={formData.price || ''}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d.,]/g, '');
+                  setFormData(prev => ({ ...prev, price: value ? parseFloat(value.replace(',', '.')) : 0 }));
+                }}
+                placeholder="1859.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promo_price">Preço promocional</Label>
+              <Input
+                id="promo_price"
+                type="text"
+                step="0.01"
+                value={promoPrice || ''}
+                onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currency">Moeda</Label>
+              <Select value={formData.currency} onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">BRL</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subcategory">Subcategoria</Label>
+              <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={subcategoryOpen}
+                    className="w-full justify-between"
+                    disabled={!formData.category}
+                  >
+                    {formData.subcategory || "Selecione ou digite nova subcategoria..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 z-50 bg-popover border">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Digite para buscar ou criar subcategoria..." 
+                      value={formData.subcategory || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
                     />
-                  )}
+                    <CommandEmpty>
+                      <div className="p-2 text-sm">
+                        Pressione Enter para criar "{formData.subcategory}"
+                      </div>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {formData.category && getUnifiedSubcategoriesForCategory(formData.category).map((subcategory) => (
+                        <CommandItem
+                          key={subcategory}
+                          value={subcategory}
+                          onSelect={(currentValue) => {
+                            setFormData(prev => ({ ...prev, subcategory: currentValue }));
+                            setSubcategoryOpen(false);
+                            
+                            // Auto-preencher com configurações da categoria se disponível
+                            if (formData.category && currentValue) {
+                              loadCategoryDefaults(formData.category, currentValue);
+                            }
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.subcategory === subcategory ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {subcategory}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {!formData.category && (
+                <p className="text-sm text-muted-foreground">Selecione uma categoria primeiro</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Imagem do Produto</Label>
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                value={formData.image_url || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                placeholder="URL da imagem do produto"
+                className="flex-1"
+              />
+              {formData.image_url && (
+                 <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                   <OptimizedImage 
+                     src={formData.image_url} 
+                     alt="Preview"
+                     className="w-full h-full object-cover"
+                     width={48}
+                     height={48}
+                     priority={false}
+                   />
+                 </div>
+              )}
+            </div>
+            
+            {/* ✨ Galeria de Imagens Importadas */}
+            {imagesGallery.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Galeria Importada ({imagesGallery.length} imagens)</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setImagesGallery([])}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar
+                  </Button>
                 </div>
-              ))}
-							<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-								<div>
-									<Label htmlFor="weight">Peso (kg)</Label>
-									<Input type="number" id="weight" name="weight" value={weight} onChange={(e) => setWeight(e.target.value)} />
-								</div>
-								<div>
-									<Label htmlFor="height">Altura (cm)</Label>
-									<Input type="number" id="height" name="height" value={height} onChange={(e) => setHeight(e.target.value)} />
-								</div>
-								<div>
-									<Label htmlFor="width">Largura (cm)</Label>
-									<Input type="number" id="width" name="width" value={width} onChange={(e) => setWidth(e.target.value)} />
-								</div>
-								<div>
-									<Label htmlFor="depth">Profundidade (cm)</Label>
-									<Input type="number" id="depth" name="depth" value={depth} onChange={(e) => setDepth(e.target.value)} />
-								</div>
-							</div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="gtin">GTIN</Label>
-                  <Input type="text" id="gtin" name="gtin" value={formData.gtin} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <Label htmlFor="ean">EAN</Label>
-                  <Input type="text" id="ean" name="ean" value={formData.ean} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <Label htmlFor="mpn">MPN</Label>
-                  <Input type="text" id="mpn" name="mpn" value={formData.mpn} onChange={handleInputChange} />
+                <div className="grid grid-cols-4 gap-2">
+                  {imagesGallery.map((img, index) => (
+                    <div 
+                      key={index} 
+                      className="relative rounded-md overflow-hidden bg-muted aspect-square group"
+                    >
+                      <OptimizedImage 
+                        src={img.url} 
+                        alt={img.alt || `Imagem ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        width={120}
+                        height={120}
+                        priority={false}
+                      />
+                      {img.is_main && (
+                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                          Principal
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute bottom-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          const newGallery = imagesGallery.filter((_, i) => i !== index);
+                          setImagesGallery(newGallery);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          </TabsContent>
+            )}
+          </div>
 
-          <TabsContent value="variations">
-            <div className="grid gap-4 py-4">
-              <Button onClick={() => setVariations([...variations, { name: '', price: 0, image_url: '' }])}>
-                Adicionar Variação
+          <div className="space-y-3">
+            <Label htmlFor="product_url">URL do Produto</Label>
+            <div className="flex gap-2">
+              <Input
+                id="product_url"
+                type="url"
+                value={formData.product_url || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, product_url: e.target.value }))}
+                placeholder="https://..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={extractProductDataFromUrl}
+                disabled={importing || !formData.product_url?.trim()}
+                className="shrink-0"
+              >
+                {importing ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Importar dados da loja integrada
+                  </>
+                )}
               </Button>
-              <ScrollArea className="h-[300px] w-full rounded-md border p-4">
-                {variations.map((variation, index) => (
-                  <div key={index} className="border p-4 rounded-md mb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`variation-name-${index}`}>Nome da Variação</Label>
+            </div>
+            
+            {/* ✨ Opção de sobrescrever dados existentes */}
+            <div className="flex items-center space-x-2 pt-1">
+              <Switch
+                id="overwrite-data"
+                checked={overwriteData}
+                onCheckedChange={setOverwriteData}
+              />
+              <Label htmlFor="overwrite-data" className="text-sm font-normal cursor-pointer">
+                Sobrescrever dados existentes ao importar
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {overwriteData 
+                ? "⚠️ Todos os campos serão substituídos pelos dados importados da Loja Integrada" 
+                : "✓ Apenas campos vazios serão preenchidos com dados importados"}
+            </p>
+          </div>
+
+          {/* Video Collections */}
+          <div className="space-y-6 border-t pt-6">
+            <h3 className="text-lg font-semibold">Coleções de Vídeos</h3>
+            
+            {/* Instagram Videos */}
+            <VideoSection
+              title="Vídeos Instagram"
+              videos={instagramVideos}
+              onAdd={(url, description) => addVideo('instagram', url, description)}
+              onRemove={(index) => removeVideo('instagram', index)}
+              maxVideos={5}
+            />
+
+            {/* YouTube Videos */}
+            <div className="space-y-4">
+              <VideoSection
+                title="Vídeos YouTube"
+                videos={youtubeVideos}
+                onAdd={(url, description) => {
+                  console.log('Adding YouTube video:', { url, description });
+                  addVideo('youtube', url, description);
+                }}
+                onRemove={(index) => removeVideo('youtube', index)}
+                maxVideos={5}
+              />
+              
+              {isEditing && (
+                <CaptionExtractor
+                  productId={product!.id}
+                  videoType="youtube_videos"
+                  videos={youtubeVideos}
+                  existingCaptions={videoCaptions.youtube_videos || []}
+                  onCaptionsExtracted={(captions) => handleCaptionsExtracted('youtube_videos', captions)}
+                />
+              )}
+            </div>
+
+            {/* Testimonial Videos */}
+            <div className="space-y-4">
+              <VideoSection
+                title="Vídeos Depoimentos"
+                videos={testimonialVideos}
+                onAdd={(url, description) => addVideo('testimonial', url, description)}
+                onRemove={(index) => removeVideo('testimonial', index)}
+                maxVideos={5}
+              />
+              
+              {isEditing && (
+                <CaptionExtractor
+                  productId={product!.id}
+                  videoType="testimonial_videos"
+                  videos={testimonialVideos}
+                  existingCaptions={videoCaptions.testimonial_videos || []}
+                  onCaptionsExtracted={(captions) => handleCaptionsExtracted('testimonial_videos', captions)}
+                />
+              )}
+            </div>
+
+            {/* Technical Videos */}
+            <div className="space-y-4">
+              <VideoSection
+                title="Explicações Técnicas"
+                videos={technicalVideos}
+                onAdd={(url, description) => addVideo('technical', url, description)}
+                onRemove={(index) => removeVideo('technical', index)}
+                maxVideos={5}
+              />
+              
+              {isEditing && (
+                <CaptionExtractor
+                  productId={product!.id}
+                  videoType="technical_videos"
+                  videos={technicalVideos}
+                  existingCaptions={videoCaptions.technical_videos || []}
+                  onCaptionsExtracted={(captions) => handleCaptionsExtracted('technical_videos', captions)}
+                />
+              )}
+            </div>
+
+            {/* TikTok Videos */}
+            <VideoSection
+              title="Vídeos TikTok"
+              videos={tiktokVideos}
+              onAdd={(url, description) => addVideo('tiktok', url, description)}
+              onRemove={(index) => removeVideo('tiktok', index)}
+              maxVideos={5}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="target_audience">Público-Alvo</Label>
+            <TagInput
+              value={targetAudience}
+              onChange={setTargetAudience}
+              placeholder="Digite um público-alvo e pressione Enter"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Keywords</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateKeywordsWithAI}
+                disabled={generatingKeywords}
+                className="gap-2"
+              >
+                {generatingKeywords ? (
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Gerar com IA
+              </Button>
+            </div>
+            <TagInput
+              value={formData.keywords || []}
+              onChange={(keywords) => setFormData(prev => ({ ...prev, keywords }))}
+              placeholder="Adicione keywords"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Keywords de Mercado</Label>
+            <p className="text-xs text-muted-foreground">
+              Termos relacionados ao seu nicho e concorrência para melhorar relevância SEO
+            </p>
+            <TagInput
+              value={marketKeywords}
+              onChange={setMarketKeywords}
+              placeholder="Ex: odontologia estética, clareamento dental, implantes"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Keywords de Intenção de Busca</Label>
+            <p className="text-xs text-muted-foreground">
+              Termos que seus clientes pesquisam quando têm intenção de compra
+            </p>
+            <TagInput
+              value={searchIntentKeywords}
+              onChange={setSearchIntentKeywords}
+              placeholder="Ex: preço de implante, melhor dentista, tratamento ortodôntico"
+            />
+          </div>
+
+          {/* AI Smart Merge System */}
+          {isEditing && product && (
+            <ProductAISmartMerge
+              productId={product.id || ''}
+              currentData={{
+                keywords: formData.keywords || [],
+                benefits: formData.benefits || [],
+                features: formData.features || [],
+                ai_generated_keywords: (product as any).ai_generated_keywords || false,
+                ai_generated_benefits: (product as any).ai_generated_benefits || false
+              }}
+              onDataUpdated={(updatedData) => {
+                setFormData(prev => ({
+                  ...prev,
+                  keywords: updatedData.keywords || [],
+                  benefits: updatedData.benefits || [],
+                  features: updatedData.features || [],
+                }));
+                setBenefits(updatedData.benefits || []);
+                setFeatures(updatedData.features || []);
+              }}
+            />
+          )}
+
+          <div className="space-y-2">
+            <Label>Benefícios</Label>
+            <div className="flex gap-2 mb-2">
+              <Input
+                value={newBenefit}
+                onChange={(e) => setNewBenefit(e.target.value)}
+                placeholder="Adicionar benefício"
+                onKeyPress={(e) => e.key === 'Enter' && addBenefit()}
+              />
+              <Button onClick={addBenefit} size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {benefits.map((benefit, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  {benefit}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => removeBenefit(index)} />
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Recursos</Label>
+            <div className="flex gap-2 mb-2">
+              <Input
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                placeholder="Adicionar recurso"
+                onKeyPress={(e) => e.key === 'Enter' && addFeature()}
+              />
+              <Button onClick={addFeature} size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {features.map((feature, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  {feature}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => removeFeature(index)} />
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bot_trigger_words">Palavras Gatilho BOT</Label>
+            <TagInput
+              ref={botTagRef}
+              value={botTriggerWords}
+              onChange={setBotTriggerWords}
+              placeholder="Digite palavras gatilho (ex: QUERO, INTERESSE) e pressione Enter"
+            />
+            <p className="text-sm text-muted-foreground">
+              Palavras que serão inseridas automaticamente nas copies do Instagram e WhatsApp para incentivar interação. 
+              Ex: "Comente 'QUERO' e receba mais informações"
+            </p>
+          </div>
+
+          {/* FAQ Section */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              FAQ do Produto
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Perguntas frequentes específicas deste produto que aparecerão com schema estruturado nos buscadores.
+            </p>
+            
+            <FAQEditor
+              faqs={formData.faq || []}
+              onChange={(faqs) => setFormData(prev => ({ ...prev, faq: faqs }))}
+              placeholder={{
+                question: "Ex: Como funciona este produto?",
+                answer: "Digite a resposta com formatação rica..."
+              }}
+            />
+          </div>
+
+          {/* Physical Specifications */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold">Especificações Físicas</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight">Peso (kg)</Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  step="0.01"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder="Ex: 2.5"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="package_size">Tamanho da Embalagem</Label>
+                <Input
+                  id="package_size"
+                  value={packageSize}
+                  onChange={(e) => setPackageSize(e.target.value)}
+                  placeholder="Ex: Caixa Média"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="height">Altura (cm)</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  step="0.1"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                  placeholder="Ex: 30"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="width">Largura (cm)</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  step="0.1"
+                  value={width}
+                  onChange={(e) => setWidth(e.target.value)}
+                  placeholder="Ex: 20"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="depth">Profundidade (cm)</Label>
+                <Input
+                  id="depth"
+                  type="number"
+                  step="0.1"
+                  value={depth}
+                  onChange={(e) => setDepth(e.target.value)}
+                  placeholder="Ex: 15"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="store_category">Categoria da Loja</Label>
+              <Input
+                id="store_category"
+                value={storeCategory}
+                onChange={(e) => setStoreCategory(e.target.value)}
+                placeholder="Categoria original da Loja Integrada"
+              />
+            </div>
+
+            {/* Product Variations */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Variações do Produto</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVariations([...variations, { name: '', price: undefined, stock: undefined, color: '', size: '' }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Variação
+                </Button>
+              </div>
+              
+              {variations.length > 0 && (
+                <div className="space-y-2">
+                  {variations.map((variation, index) => (
+                    <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-5 gap-2">
                         <Input
-                          type="text"
-                          id={`variation-name-${index}`}
+                          placeholder="Nome"
                           value={variation.name}
                           onChange={(e) => {
                             const newVariations = [...variations];
@@ -598,146 +1689,499 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                             setVariations(newVariations);
                           }}
                         />
-                      </div>
-                      <div>
-                        <Label htmlFor={`variation-price-${index}`}>Preço da Variação</Label>
                         <Input
+                          placeholder="Preço"
                           type="number"
-                          id={`variation-price-${index}`}
-                          value={variation.price}
+                          step="0.01"
+                          value={variation.price || ''}
                           onChange={(e) => {
                             const newVariations = [...variations];
-                            newVariations[index].price = parseFloat(e.target.value);
+                            newVariations[index].price = e.target.value ? parseFloat(e.target.value) : undefined;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Estoque"
+                          type="number"
+                          value={variation.stock || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].stock = e.target.value ? parseInt(e.target.value) : undefined;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Cor"
+                          value={variation.color || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].color = e.target.value;
+                            setVariations(newVariations);
+                          }}
+                        />
+                        <Input
+                          placeholder="Tamanho"
+                          value={variation.size || ''}
+                          onChange={(e) => {
+                            const newVariations = [...variations];
+                            newVariations[index].size = e.target.value;
                             setVariations(newVariations);
                           }}
                         />
                       </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setVariations(variations.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div>
-                      <Label>Imagem da Variação</Label>
-                      <ImageUploader
-                        imageUrl={variation.image_url}
-                        onUpload={(url) => {
-                          const newVariations = [...variations];
-                          newVariations[index].image_url = url;
-                          setVariations(newVariations);
-                        }}
-                        isNewImage={isNewImage}
-                      />
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        const newVariations = [...variations];
-                        newVariations.splice(index, 1);
-                        setVariations(newVariations);
-                      }}
-                    >
-                      Remover Variação
-                    </Button>
-                  </div>
-                ))}
-              </ScrollArea>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="faq">
-            <div className="grid gap-4 py-4">
-              <Button onClick={() => setIsFAQEditorOpen(true)}>
-                Editar FAQ
-              </Button>
-              {faq.length > 0 && (
-                <Badge variant="secondary">
-                  {faq.length} FAQs
-                </Badge>
+                  ))}
+                </div>
               )}
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="import">
-            <div className="grid gap-4 py-4">
+          {/* Google Merchant Center Data */}
+          <div className="space-y-4 border-t pt-6 bg-gradient-to-br from-primary/5 to-primary/10 p-6 rounded-lg">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="product_url">URL do Produto</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="product_url"
-                    name="product_url"
-                    value={formData.product_url}
-                    onChange={handleInputChange}
-                    placeholder="Cole a URL do produto aqui"
-                  />
-                  <Button type="button" onClick={extractProductDataFromUrl} disabled={isImporting}>
-                    {isImporting ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                          <path fill="currentColor" d="M12 2A10 10 0 1 0 12 22A10 10 0 0 0 12 2Z">
-                            <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
-                          </path>
-                        </svg>
-                        Importando...
-                      </>
-                    ) : (
-                      "Extrair Dados"
-                    )}
-                  </Button>
-                </div>
-                {importError && <p className="text-red-500">{importError}</p>}
-                {extractedCaption && (
-                  <div>
-                    <Label>Descrição Extraída</Label>
-                    <Textarea value={extractedCaption} readOnly />
-                  </div>
-                )}
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1 5v5h5v2h-5v5h-2v-5H4v-2h5V7h2z"/>
+                  </svg>
+                  Dados Google Merchant Center
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Campos extraídos automaticamente da Loja Integrada. Editáveis manualmente.
+                </p>
               </div>
-              <div>
-                <Button onClick={() => setIsSmartMergeOpen(true)}>
-                  Abrir Smart Merge AI
-                </Button>
+              <Badge variant="secondary" className="text-xs">
+                SEO Otimizado
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* GTIN */}
+              <div className="space-y-2">
+                <Label htmlFor="gtin" className="flex items-center gap-2">
+                  GTIN
+                  <span className="text-xs text-muted-foreground">(Global Trade Item Number)</span>
+                </Label>
+                <Input
+                  id="gtin"
+                  type="text"
+                  value={formData.gtin || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, gtin: e.target.value }))}
+                  placeholder="7891234567890"
+                  className="font-mono"
+                />
               </div>
-              <div>
-                <Button onClick={() => setIsLojaIntegradaImporterOpen(true)}>
-                  Importar da Loja Integrada
-                </Button>
+
+              {/* EAN */}
+              <div className="space-y-2">
+                <Label htmlFor="ean" className="flex items-center gap-2">
+                  EAN
+                  <span className="text-xs text-muted-foreground">(European Article Number)</span>
+                </Label>
+                <Input
+                  id="ean"
+                  type="text"
+                  value={(formData as any).ean || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ean: e.target.value } as any))}
+                  placeholder="5901234123457"
+                  className="font-mono"
+                />
+              </div>
+
+              {/* MPN */}
+              <div className="space-y-2">
+                <Label htmlFor="mpn" className="flex items-center gap-2">
+                  MPN
+                  <span className="text-xs text-muted-foreground">(Manufacturer Part Number)</span>
+                </Label>
+                <Input
+                  id="mpn"
+                  type="text"
+                  value={formData.mpn || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, mpn: e.target.value }))}
+                  placeholder="PROD-12345"
+                  className="font-mono"
+                />
+              </div>
+
+              {/* Marca */}
+              <div className="space-y-2">
+                <Label htmlFor="brand">Marca</Label>
+                <Input
+                  id="brand"
+                  value={formData.brand || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                  placeholder="Ex: Apple, Samsung, Nike"
+                />
+              </div>
+
+              {/* Cor */}
+              <div className="space-y-2">
+                <Label htmlFor="color">Cor</Label>
+                <Input
+                  id="color"
+                  value={formData.color || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                  placeholder="Ex: Azul, Vermelho, Preto"
+                />
+              </div>
+
+              {/* Tamanho */}
+              <div className="space-y-2">
+                <Label htmlFor="size">Tamanho</Label>
+                <Input
+                  id="size"
+                  value={formData.size || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, size: e.target.value }))}
+                  placeholder="Ex: M, G, 42, 10ml"
+                />
+              </div>
+
+              {/* Material */}
+              <div className="space-y-2">
+                <Label htmlFor="material">Material</Label>
+                <Input
+                  id="material"
+                  value={formData.material || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
+                  placeholder="Ex: Algodão, Plástico, Aço"
+                />
+              </div>
+
+              {/* Categoria Google */}
+              <div className="space-y-2">
+                <Label htmlFor="google_product_category">Categoria Google</Label>
+                <Input
+                  id="google_product_category"
+                  value={formData.google_product_category || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, google_product_category: e.target.value }))}
+                  placeholder="Ex: Eletrônicos > Celulares"
+                />
+              </div>
+
+              {/* Condição */}
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condição</Label>
+                <Select
+                  value={formData.condition || 'new'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+                >
+                  <SelectTrigger id="condition">
+                    <SelectValue placeholder="Selecione a condição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">Novo</SelectItem>
+                    <SelectItem value="used">Usado</SelectItem>
+                    <SelectItem value="refurbished">Recondicionado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Disponibilidade */}
+              <div className="space-y-2">
+                <Label htmlFor="availability">Disponibilidade</Label>
+                <Select
+                  value={formData.availability || 'in stock'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value }))}
+                >
+                  <SelectTrigger id="availability">
+                    <SelectValue placeholder="Selecione a disponibilidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in stock">Em Estoque</SelectItem>
+                    <SelectItem value="out of stock">Fora de Estoque</SelectItem>
+                    <SelectItem value="preorder">Pré-venda</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
 
-        <div className="flex justify-end space-x-2">
-          {product.id !== 'new' && (
-            <Button variant="destructive" onClick={handleDelete}>
-              Excluir
-            </Button>
-          )}
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" onClick={handleSave}>
-            Salvar
-          </Button>
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 p-3 rounded-md border border-blue-200 dark:border-blue-900">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <strong>Dica:</strong> Estes dados são importados automaticamente da Loja Integrada quando você clica em "Importar Dados". 
+                Produtos com GTIN, MPN e Marca têm melhor ranqueamento no Google Shopping e Google Merchant Center.
+              </p>
+            </div>
+          </div>
+
+          {/* Landing Page Sections Configuration */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold">Configurações de Seções da Landing Page</h3>
+            
+            {/* Section Toggles */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show_in_resources"
+                  checked={formData.show_in_resources}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, show_in_resources: checked }))}
+                />
+                <Label htmlFor="show_in_resources">Mostrar na seção "Recursos e Downloads"</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="selected"
+                  checked={formData.selected}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, selected: checked }))}
+                />
+                <Label htmlFor="selected">Mostrar na seção "Ofertas"</Label>
+              </div>
+            </div>
+
+            {/* Resource CTAs Configuration */}
+            {formData.show_in_resources && (
+              <div className="space-y-4 bg-muted/20 p-4 rounded-lg">
+                <h4 className="font-medium">Botões CTA para Recursos</h4>
+                
+                {/* CTA 1 */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="cta1_visible"
+                      checked={formData.resource_cta1?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        resource_cta1: { ...prev.resource_cta1!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="cta1_visible" className="font-medium">CTA 1</Label>
+                  </div>
+                  {formData.resource_cta1?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão"
+                        value={formData.resource_cta1?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta1: { ...prev.resource_cta1!, label: e.target.value }
+                        }))}
+                      />
+                       <Input
+                        placeholder="URL do link"
+                        value={formData.resource_cta1?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta1: { ...prev.resource_cta1!, url: e.target.value }
+                        }))}
+                      />
+                      <div className="col-span-2">
+                        <Textarea
+                          placeholder="Descrição do recurso (para SEO e Google Ads)"
+                          value={formData.resource_descriptions?.cta1 || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            resource_descriptions: { ...prev.resource_descriptions!, cta1: e.target.value }
+                          }))}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA 2 */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="cta2_visible"
+                      checked={formData.resource_cta2?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        resource_cta2: { ...prev.resource_cta2!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="cta2_visible" className="font-medium">CTA 2</Label>
+                  </div>
+                  {formData.resource_cta2?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão"
+                        value={formData.resource_cta2?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta2: { ...prev.resource_cta2!, label: e.target.value }
+                        }))}
+                      />
+                       <Input
+                        placeholder="URL do link"
+                        value={formData.resource_cta2?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta2: { ...prev.resource_cta2!, url: e.target.value }
+                        }))}
+                      />
+                      <div className="col-span-2">
+                        <Textarea
+                          placeholder="Descrição do recurso (para SEO e Google Ads)"
+                          value={formData.resource_descriptions?.cta2 || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            resource_descriptions: { ...prev.resource_descriptions!, cta2: e.target.value }
+                          }))}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA 3 */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="cta3_visible"
+                      checked={formData.resource_cta3?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        resource_cta3: { ...prev.resource_cta3!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="cta3_visible" className="font-medium">CTA 3</Label>
+                  </div>
+                  {formData.resource_cta3?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão"
+                        value={formData.resource_cta3?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta3: { ...prev.resource_cta3!, label: e.target.value }
+                        }))}
+                      />
+                       <Input
+                        placeholder="URL do link"
+                        value={formData.resource_cta3?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          resource_cta3: { ...prev.resource_cta3!, url: e.target.value }
+                        }))}
+                      />
+                      <div className="col-span-2">
+                        <Textarea
+                          placeholder="Descrição do recurso (para SEO e Google Ads)"
+                          value={formData.resource_descriptions?.cta3 || ''}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            resource_descriptions: { ...prev.resource_descriptions!, cta3: e.target.value }
+                          }))}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Offer Discount CTA Configuration */}
+            {formData.selected && (
+              <div className="space-y-4 bg-muted/20 p-4 rounded-lg">
+                <h4 className="font-medium">CTA Desconto para Ofertas Especiais</h4>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="offer_discount_cta_visible"
+                      checked={formData.offer_discount_cta?.visible}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        offer_discount_cta: { ...prev.offer_discount_cta!, visible: checked }
+                      }))}
+                    />
+                    <Label htmlFor="offer_discount_cta_visible" className="font-medium">Ativar CTA Desconto</Label>
+                  </div>
+                  {formData.offer_discount_cta?.visible && (
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <Input
+                        placeholder="Texto do botão (ex: Comprar com Desconto)"
+                        value={formData.offer_discount_cta?.label || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          offer_discount_cta: { ...prev.offer_discount_cta!, label: e.target.value }
+                        }))}
+                      />
+                      <Input
+                        placeholder="URL de atendimento específico"
+                        value={formData.offer_discount_cta?.url || ''}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          offer_discount_cta: { ...prev.offer_discount_cta!, url: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="use_in_ai"
+                checked={formData.use_in_ai_generation}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, use_in_ai_generation: checked }))}
+              />
+              <Label htmlFor="use_in_ai">Usar na geração de IA</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="approved"
+                checked={formData.approved}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, approved: checked }))}
+              />
+              <Label htmlFor="approved">Aprovado</Label>
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-4">
+            <div>
+              {isEditing && onDelete && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="gap-2"
+                >
+                  {deleting ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Excluir
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="gap-2">
+                {saving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {isEditing ? 'Atualizar' : 'Criar'}
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
-
-      <ProductAISmartMerge
-        isOpen={isSmartMergeOpen}
-        onClose={() => setIsSmartMergeOpen(false)}
-        product={formData}
-        setFormData={setFormData}
-      />
-
-      <FAQEditor
-        isOpen={isFAQEditorOpen}
-        onClose={() => setIsFAQEditorOpen(false)}
-        faq={faq}
-        setFaq={setFaq}
-      />
-
-      <ProductLojaIntegradaImporter
-        isOpen={isLojaIntegradaImporterOpen}
-        onClose={() => setIsLojaIntegradaImporterOpen(false)}
-        onImport={handleLojaIntegradaImport}
-      />
     </Dialog>
   );
 }

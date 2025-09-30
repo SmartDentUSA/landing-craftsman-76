@@ -20,6 +20,7 @@ import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
 import { KOLManager } from "@/components/KOLManager";
 import ProductRepositoryCSVImporter from "@/components/ProductRepositoryCSVImporter";
+import { LojaIntegradaAPIImporter } from "@/components/LojaIntegradaAPIImporter";
 import { useCategoryContext } from '@/contexts/CategoryContext';
 import { ModernProductCard } from './ModernProductCard';
 import { ScoreFilters } from './ScoreFilters';
@@ -770,7 +771,8 @@ export function RepositoryPanel({
           <TabsContent value="products" className="mt-4">
             <div className="space-y-4">
               {/* Import Methods */}
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <LojaIntegradaAPIImporter onImportComplete={() => loadProducts()} />
                 <ProductRepositoryCSVImporter onImportComplete={() => loadProducts()} />
               </div>
               

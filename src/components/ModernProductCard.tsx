@@ -26,8 +26,7 @@ import {
   Settings,
   Instagram,
   Target,
-  Database,
-  Cloud
+  Database
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
@@ -384,15 +383,6 @@ export function ModernProductCard({
 
         {/* Ações */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(product)}
-            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-            title="Importar da Loja Integrada"
-          >
-            <Cloud className="h-4 w-4" />
-          </Button>
           <Button
             variant="ghost"
             size="sm"
