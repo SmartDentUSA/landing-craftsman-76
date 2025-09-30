@@ -459,57 +459,65 @@ const REAL_PROMPTS = {
 
 Crie uma mensagem promocional otimizada para WhatsApp que seja envolvente e gere conversões.
 
-Informações do Produto:
-- Nome: {product.name}
-- Resumo Comercial: {product.sales_pitch}
-- Benefícios: {product.benefits}
-- URL do Produto: {product.product_url}
-- Categoria: {product.category}
+DADOS DISPONÍVEIS PARA PERSONALIZAÇÃO:
+- Nome do Produto: {produto.nome}
+- Descrição: {produto.descricao}
+- Benefícios: {produto.beneficios}
+- Palavras Gatilho: {produto.palavras_gatilho}
+- Pitch de Vendas: {produto.pitch_vendas}
+- URL do Produto: {produto.url_produto}
+- Preço: {produto.preco} {produto.moeda}
+- Categoria: {produto.categoria}
+- Keywords: {produto.keywords}
+- Público-Alvo: {produto.publico_alvo}
+- Nome da Empresa: {empresa.nome_empresa}
+- Público-Alvo da Empresa: {empresa.publico_alvo}
+- Links Externos: {links_externos}
 
 Template da Mensagem:
-🔥 [NOME DO PRODUTO] 🔥
+🔥 {produto.nome} 🔥
 
-[RESUMO COMERCIAL EM 1-2 FRASES IMPACTANTES]
+{produto.pitch_vendas}
 
 ✅ PRINCIPAIS BENEFÍCIOS:
-[LISTE ATÉ 10 BENEFÍCIOS COM EMOJIS RELEVANTES]
+{produto.beneficios}
 
-💬 Responda com '{random_trigger_word}' para receber mais informações!
+💬 Responda com '{produto.palavras_gatilho}' para receber mais informações!
 
-🛒 Saiba mais → [LINK DO PRODUTO]
+🛒 Saiba mais → {produto.url_produto}
 
-#[EMPRESA] #[CATEGORIA]
+#{empresa.nome_empresa} #{produto.categoria}
 
 Instruções:
 1. Use emojis relevantes para cada benefício
 2. Mantenha linguagem conversacional e persuasiva
 3. Máximo 1000 caracteres (ideal para WhatsApp)
-4. Inclua call-to-action claro
+4. Inclua call-to-action claro usando palavras gatilho configuradas
 5. Use hashtags da empresa e categoria
-6. Palavras Gatilho: Use palavras gatilho configuradas: {trigger_word_examples}
-   - Se configuradas, inclua frases como: "💬 Responda com '{random_trigger_word}' que envio mais detalhes!"
-7. Links Personalizados: {available_links}
-   - Inclua links relevantes quando apropriado para enriquecer a mensagem
-   - Use os links com moderação, apenas quando agregarem valor real
+6. Integre links externos quando relevantes para agregar valor
+7. Personalize conforme o público-alvo definido
 
 Retorne apenas o texto da mensagem formatada, sem explicações.`,
 
     "Instagram": `Você é um especialista em marketing digital no Instagram. Crie uma copy envolvente e otimizada para posts estáticos de feed do Instagram.
 
-Informações do Produto:
-- Nome: {product.name}
-- Descrição: {product.description}
-- Categoria: {product.category}
-- Preço: {product.price}
-- Keywords: {product.keywords}
-- Público-alvo: {product.target_audience}
-- Benefícios: {product.benefits}
+DADOS DISPONÍVEIS PARA PERSONALIZAÇÃO:
+- Nome do Produto: {produto.nome}
+- Descrição: {produto.descricao}
+- Categoria: {produto.categoria}
+- Preço: {produto.preco} {produto.moeda}
+- Keywords: {produto.keywords}
+- Público-Alvo: {produto.publico_alvo}
+- Benefícios: {produto.beneficios}
+- Palavras Gatilho: {produto.palavras_gatilho}
+- Pitch de Vendas: {produto.pitch_vendas}
+- URL do Produto: {produto.url_produto}
 
 Informações da Empresa:
-- Nome: {company.company_name}
-- Mention: @smartdentoficial
+- Nome: {empresa.nome_empresa}
+- Público-Alvo: {empresa.publico_alvo}
 
-PALAVRAS GATILHO BOT: {product.bot_trigger_words}
+PALAVRAS GATILHO BOT: {produto.palavras_gatilho}
 
 INSTRUÇÕES ESPECÍFICAS PARA POST ESTÁTICO:
 1. Copy Principal: Máximo 2200 caracteres, foque em storytelling envolvente
@@ -542,16 +550,20 @@ Formato JSON obrigatório:
 
 Crie um script envolvente para TikTok que maximize o engajamento e viralização.
 
-Informações do Produto:
-- Nome: {product.name}
-- Descrição: {product.description}
-- Categoria: {product.category}
-- Benefícios: {product.benefits}
-- Keywords: {product.keywords}
-- Público-alvo: {product.target_audience}
+DADOS DISPONÍVEIS PARA PERSONALIZAÇÃO:
+- Nome do Produto: {produto.nome}
+- Descrição: {produto.descricao}
+- Categoria: {produto.categoria}
+- Benefícios: {produto.beneficios}
+- Keywords: {produto.keywords}
+- Público-Alvo: {produto.publico_alvo}
+- Palavras Gatilho: {produto.palavras_gatilho}
+- Preço: {produto.preco} {produto.moeda}
+- Pitch de Vendas: {produto.pitch_vendas}
 
 Informações da Empresa:
-- Nome: {company.company_name}
+- Nome: {empresa.nome_empresa}
+- Público-Alvo: {empresa.publico_alvo}
 
 INSTRUÇÕES ESPECÍFICAS PARA TIKTOK:
 1. Hook dos primeiros 3 segundos: Extremamente impactante e curioso
@@ -573,14 +585,20 @@ Retorne um script detalhado com indicações de tempo e ações.`,
 
 Gere uma descrição completa para vídeo do YouTube que otimize o alcance e engajamento.
 
-Informações do Produto:
-- Nome: {product.name}
-- Descrição: {product.description}
-- Categoria: {product.category}
-- Benefícios: {product.benefits}
+DADOS DISPONÍVEIS PARA PERSONALIZAÇÃO:
+- Nome do Produto: {produto.nome}
+- Descrição: {produto.descricao}
+- Categoria: {produto.categoria}
+- Benefícios: {produto.beneficios}
+- Keywords: {produto.keywords}
+- Público-Alvo: {produto.publico_alvo}
+- Preço: {produto.preco} {produto.moeda}
+- URL do Produto: {produto.url_produto}
 
 Informações da Empresa:
-- Template de Rodapé: {company.youtube_company_footer}
+- Nome: {empresa.nome_empresa}
+- Público-Alvo: {empresa.publico_alvo}
+- Template de Rodapé: {empresa.rodape_youtube}
 
 CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
 Use quebras de linha (\\n) que serão convertidas automaticamente para quebras reais na exibição.
@@ -1352,8 +1370,9 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
             defaultFields['company_profile'] = ['company_name', 'working_methodology', 'differentiators'];
             defaultFields['categories_config'] = ['keywords', 'target_audience'];
           } else if (edgeFunction.id === 'generate-social-content') {
-            defaultFields['products_repository'] = ['name', 'description', 'benefits'];
-            defaultFields['company_profile'] = ['company_name', 'target_audience'];
+            defaultFields['products_repository'] = ['name', 'description', 'benefits', 'keywords', 'target_audience', 'bot_trigger_words', 'sales_pitch', 'product_url', 'price', 'currency', 'category'];
+            defaultFields['company_profile'] = ['company_name', 'target_audience', 'youtube_company_footer'];
+            defaultFields['external_links'] = ['name', 'url', 'category', 'description'];
           } else if (edgeFunction.id === 'ai-seo-generator') {
             defaultFields['products_repository'] = ['name', 'description', 'keywords'];
           } else if (edgeFunction.id === 'generate-instagram-copy') {
