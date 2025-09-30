@@ -1309,12 +1309,31 @@ export const PromptEditModal: React.FC<PromptEditModalProps> = ({
           const savedPrompts: Record<string, string> = {};
           edgeFunction.prompts.forEach(promptName => {
             const promptConfig = getConfigurationByFunction(edgeFunction.id, promptName);
-            if (promptConfig?.custom_prompt) {
+            
+            // Verificar se existe um prompt salvo e se não é um placeholder genérico
+            const isPlaceholder = promptConfig?.custom_prompt && 
+              promptConfig.custom_prompt.includes(`Prompt personalizado para ${promptName}`);
+            
+            if (promptConfig?.custom_prompt && !isPlaceholder) {
+              // Usar o prompt salvo válido
               savedPrompts[promptName] = promptConfig.custom_prompt;
             } else {
-              // Usar prompt padrão
+              // Usar REAL_PROMPTS quando não há prompt salvo ou é placeholder
               const realPrompt = REAL_PROMPTS[edgeFunction.id as keyof typeof REAL_PROMPTS]?.[promptName];
               savedPrompts[promptName] = realPrompt || `Prompt personalizado para ${promptName}...`;
+              
+              // Se encontrou um REAL_PROMPT válido, salvar automaticamente no banco
+              if (realPrompt && promptConfig && isPlaceholder) {
+                console.log(`🔄 Atualizando placeholder para ${promptName} com REAL_PROMPT`);
+                saveConfiguration(
+                  edgeFunction.id,
+                  promptName,
+                  realPrompt,
+                  Object.keys(savedConfig.selected_fields || {}),
+                  savedConfig.selected_fields || {},
+                  savedConfig.use_intelligent_links
+                ).catch(console.error);
+              }
             }
           });
           setCustomPrompts(savedPrompts);
