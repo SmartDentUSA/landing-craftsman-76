@@ -83,6 +83,31 @@ interface Product {
   width?: number;
   depth?: number;
   store_category?: string;
+  // SEO Avançado
+  seo_title_override?: string;
+  seo_description_override?: string;
+  slug?: string;
+  // Estoque & Logística
+  stock_quantity?: number;
+  stock_managed?: boolean;
+  min_order_quantity?: number;
+  max_order_quantity?: number;
+  multiple_order_quantity?: number;
+  unit_measure?: string;
+  shipping_time?: string;
+  free_shipping?: boolean;
+  shipping_type?: string;
+  // Status & Flags de Controle
+  active?: boolean;
+  featured?: boolean;
+  launch?: boolean;
+  promotion?: boolean;
+  showcase?: boolean;
+  // Fiscais
+  ncm?: string;
+  fiscal_class?: string;
+  tax_situation?: string;
+  fiscal_origin?: string;
   // Landing Page Section controls
   show_in_resources?: boolean;
   selected?: boolean;
@@ -686,6 +711,31 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         google_product_category: formData.google_product_category,
         condition: formData.condition || 'new',
         availability: formData.availability || 'in stock',
+        // SEO avançado
+        seo_title_override: formData.seo_title_override,
+        seo_description_override: formData.seo_description_override,
+        slug: formData.slug,
+        // Estoque & logística
+        stock_quantity: formData.stock_quantity,
+        stock_managed: formData.stock_managed ?? false,
+        min_order_quantity: formData.min_order_quantity,
+        max_order_quantity: formData.max_order_quantity,
+        multiple_order_quantity: formData.multiple_order_quantity,
+        unit_measure: formData.unit_measure,
+        shipping_time: formData.shipping_time,
+        free_shipping: formData.free_shipping ?? false,
+        shipping_type: formData.shipping_type,
+        // Status flags
+        active: formData.active ?? true,
+        featured: formData.featured ?? false,
+        launch: formData.launch ?? false,
+        promotion: formData.promotion ?? false,
+        showcase: formData.showcase ?? false,
+        // Fiscais
+        ncm: formData.ncm,
+        fiscal_class: formData.fiscal_class,
+        tax_situation: formData.tax_situation,
+        fiscal_origin: formData.fiscal_origin,
         // Physical specifications
         variations: variations.length > 0 ? variations : [],
         package_size: packageSize || null,
@@ -998,6 +1048,62 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               Este texto será usado pela IA para gerar conteúdo mais comercial e persuasivo em blogs, SEO e anúncios.
             </p>
           </div>
+
+          {/* SEO & URL Amigável Section */}
+          <Card className="p-4 space-y-3 bg-muted/20">
+            <h3 className="text-sm font-medium">SEO & URL Amigável</h3>
+
+            <div className="space-y-2">
+              <Label htmlFor="seo_title_override">Título SEO</Label>
+              <Input
+                id="seo_title_override"
+                value={formData.seo_title_override || ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, seo_title_override: e.target.value }))}
+                placeholder="Título otimizado para SEO (até 60 caracteres)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="seo_description_override">Descrição SEO</Label>
+              <Textarea
+                id="seo_description_override"
+                value={formData.seo_description_override || ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, seo_description_override: e.target.value }))}
+                placeholder="Meta descrição (até 160 caracteres)"
+                maxLength={160}
+                rows={2}
+              />
+              <div className="flex items-center justify-between">
+                <span className={cn(
+                  "text-xs",
+                  (formData.seo_description_override?.length || 0) >= 120 && (formData.seo_description_override?.length || 0) <= 160
+                    ? "text-success"
+                    : "text-muted-foreground"
+                )}>
+                  {formData.seo_description_override?.length || 0}/160
+                </span>
+                {(formData.seo_description_override?.length || 0) >= 120 && (formData.seo_description_override?.length || 0) <= 160 && (
+                  <Badge variant="outline" className="text-success">Tamanho ideal</Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug (URL Amigável)</Label>
+              <Input
+                id="slug"
+                value={formData.slug || ""}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  slug: e.target.value.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '')
+                }))}
+                placeholder="resina-smart-print-bio-vitality"
+              />
+              <p className="text-xs text-muted-foreground">
+                URL amigável será gerado automaticamente (apenas letras minúsculas, números e hífens)
+              </p>
+            </div>
+          </Card>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -1492,6 +1598,86 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               </div>
             </TooltipProvider>
             </div>
+
+            {/* Estoque & Logística Section */}
+            <Card className="p-4 space-y-3 bg-muted/20 mt-4">
+              <h3 className="text-sm font-medium">Estoque & Logística</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="stock_quantity">Quantidade em Estoque</Label>
+                  <Input
+                    id="stock_quantity"
+                    type="number"
+                    value={formData.stock_quantity || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: Number(e.target.value) }))}
+                    placeholder="Ex: 100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="min_order_quantity">Mínimo por Pedido</Label>
+                  <Input
+                    id="min_order_quantity"
+                    type="number"
+                    value={formData.min_order_quantity || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, min_order_quantity: Number(e.target.value) }))}
+                    placeholder="Ex: 1"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="max_order_quantity">Máximo por Pedido</Label>
+                  <Input
+                    id="max_order_quantity"
+                    type="number"
+                    value={formData.max_order_quantity || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, max_order_quantity: Number(e.target.value) }))}
+                    placeholder="Ex: 500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="shipping_time">Prazo de Entrega</Label>
+                  <Input
+                    id="shipping_time"
+                    value={formData.shipping_time || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, shipping_time: e.target.value }))}
+                    placeholder="Ex: 5 dias úteis"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="free_shipping"
+                    checked={formData.free_shipping || false}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, free_shipping: checked }))}
+                  />
+                  <Label htmlFor="free_shipping">Frete Grátis</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="stock_managed"
+                    checked={formData.stock_managed || false}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, stock_managed: checked }))}
+                  />
+                  <Label htmlFor="stock_managed">Controlar Estoque</Label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="unit_measure">Unidade de Medida</Label>
+                <Input
+                  id="unit_measure"
+                  value={formData.unit_measure || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, unit_measure: e.target.value }))}
+                  placeholder="Ex: unidade, caixa, kg, metro, m²..."
+                />
+              </div>
+            </Card>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -2129,6 +2315,52 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               </div>
             )}
           </div>
+
+          {/* Status & Flags Section */}
+          <Card className="p-4 space-y-3 bg-muted/20">
+            <h3 className="text-sm font-medium">Status & Flags de Controle</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="active"
+                  checked={formData.active ?? true}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
+                />
+                <Label htmlFor="active" className="flex items-center gap-2">
+                  Ativo
+                  {formData.active && <Badge variant="outline" className="text-success">Ativo</Badge>}
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="featured"
+                  checked={formData.featured ?? false}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
+                />
+                <Label htmlFor="featured">Em Destaque</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="launch"
+                  checked={formData.launch ?? false}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, launch: checked }))}
+                />
+                <Label htmlFor="launch">Lançamento</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="promotion"
+                  checked={formData.promotion ?? false}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, promotion: checked }))}
+                />
+                <Label htmlFor="promotion">Promoção</Label>
+              </div>
+            </div>
+          </Card>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
