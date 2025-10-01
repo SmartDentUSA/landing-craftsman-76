@@ -479,10 +479,16 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       // Atualizar formulário
       setFormData(prev => ({
         ...prev,
-        seo_title_override: titleResponse.data?.generated || '',
-        seo_description_override: descResponse.data?.generated || '',
+        seo_title_override: titleResponse.data?.content || '',
+        seo_description_override: descResponse.data?.content || '',
         slug: slug
       }));
+
+      console.log('✅ SEO atualizado:', {
+        title: titleResponse.data?.content,
+        description: descResponse.data?.content,
+        slug
+      });
 
       toast({
         title: "SEO gerado com sucesso!",
