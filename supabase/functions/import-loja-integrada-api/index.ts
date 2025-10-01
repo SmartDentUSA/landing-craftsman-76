@@ -188,7 +188,7 @@ async function fetchFromLojaIntegradaAPI(
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `chave_api ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
