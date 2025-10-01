@@ -184,7 +184,9 @@ serve(async (req) => {
     
     switch (request.type) {
       case 'google_ads':
-        result = await generateGoogleAds(deepSeekApiKey, strategicContext);
+        // ✅ FIX: Usar contexto SIMPLIFICADO para Google Ads
+        const googleAdsContext = buildGoogleAdsContext(request, allProducts, companyProfile);
+        result = await generateGoogleAds(deepSeekApiKey, googleAdsContext);
         break;
       case 'blog_content':
         result = await generateBlogContent(deepSeekApiKey, strategicContext, allProducts);
@@ -637,6 +639,70 @@ function calculateProductDataQuality(product: any): number {
   return Math.round((score / maxScore) * 100);
 }
 
+// ✅ NOVA FUNÇÃO: Contexto simplificado ESPECÍFICO para Google Ads
+function buildGoogleAdsContext(
+  request: ContentRequest,
+  products: any[],
+  companyProfile?: any
+): string {
+  console.log('🎯 Construindo contexto SIMPLIFICADO para Google Ads');
+  
+  // Extrair apenas informações ESSENCIAIS
+  const pageTitle = request.seoTitle || request.primaryKeyword || 'Produto/Serviço';
+  const primaryKeyword = request.primaryKeyword || '';
+  const targetAudience = request.targetAudience || 'profissionais';
+  
+  // Extrair apenas CATEGORIA e SUBCATEGORIA dos produtos (não descrições longas)
+  const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const productSubcategories = [...new Set(products.map(p => p.subcategory).filter(Boolean))];
+  
+  // Extrair apenas 2-3 BENEFÍCIOS principais (não todos)
+  const topBenefits = products
+    .flatMap(p => p.benefits || [])
+    .filter(Boolean)
+    .slice(0, 3);
+  
+  // Extrair apenas 2-3 KEYWORDS principais (não todos)
+  const topKeywords = products
+    .flatMap(p => p.keywords || [])
+    .filter(Boolean)
+    .slice(0, 3);
+  
+  // Nome da empresa (se disponível)
+  const companyName = companyProfile?.company_name || '';
+  
+  console.log('📊 Contexto Google Ads:', {
+    categorias: productCategories.length,
+    subcategorias: productSubcategories.length,
+    beneficios: topBenefits.length,
+    keywords: topKeywords.length
+  });
+  
+  return `
+# CONTEXTO MÍNIMO PARA GOOGLE ADS
+
+## Informações Essenciais:
+- **Título da Página**: ${pageTitle}
+- **Palavra-chave Principal**: ${primaryKeyword}
+- **Público-alvo**: ${targetAudience}
+${companyName ? `- **Empresa**: ${companyName}` : ''}
+
+## Categorias dos Produtos:
+${productCategories.length > 0 ? productCategories.map(c => `- ${c}`).join('\n') : '- Não especificada'}
+
+## Subcategorias:
+${productSubcategories.length > 0 ? productSubcategories.map(s => `- ${s}`).join('\n') : '- Não especificada'}
+
+## 2-3 Benefícios Principais:
+${topBenefits.length > 0 ? topBenefits.map(b => `- ${b}`).join('\n') : '- Qualidade profissional\n- Atendimento especializado'}
+
+## 2-3 Keywords Relevantes:
+${topKeywords.length > 0 ? topKeywords.map(k => `- ${k}`).join('\n') : '- Não especificadas'}
+
+⚠️ **IMPORTANTE**: Use APENAS estas informações. NÃO adicione detalhes extras.
+`;
+}
+
 // FASE 1: Extract FAQ Section for context
 function extractFAQSection(contentData: any): string {
   if (!contentData?.faq || !Array.isArray(contentData.faq)) {
@@ -687,30 +753,46 @@ function extractSolutions(contentData: any): string {
 }
 
 async function generateGoogleAds(apiKey: string, context: string): Promise<AdCopies> {
+  console.log('🎯 Gerando Google Ads com contexto simplificado');
+  
   const prompt = `${context}
 
-## TAREFA: Criar anúncios Google Ads PRIORIZANDO CATEGORIAS/SUBCATEGORIAS
+## TAREFA: Criar Headlines e Descriptions CURTOS para Google Ads
 
-Crie 8 variações de anúncios Google Ads com:
-- **Títulos**: máximo 30 caracteres cada
-- **Descrições**: máximo 90 caracteres cada  
-- **Paths**: máximo 15 caracteres, apenas letras e números
+⚠️ **REGRAS CRÍTICAS DE TAMANHO (NÃO NEGOCIÁVEIS):**
+1. **Headlines**: máximo 30 caracteres CADA (inclui espaços e pontuação)
+2. **Descriptions**: máximo 90 caracteres CADA (inclui espaços e pontuação)
+3. **Paths**: máximo 15 caracteres CADA (apenas letras e números, sem espaços)
 
-INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
-1. **PRIORIZE categorias e subcategorias dos produtos como palavras-chave principais nos títulos**
-2. **Use categorias para criar paths relevantes (ex: categoria/subcategoria)**
-3. **Incorpore hierarquia de categorias nas descrições**
-4. **Crie ad groups temáticos baseados nas categorias identificadas**
-5. **Integre categorias naturalmente para SEO e segmentação**
+🎯 **FOCO PARA HEADLINES (30 chars max):**
+- Use CATEGORIA ou SUBCATEGORIA se disponível
+- Seja DIRETO e OBJETIVO
+- Exemplos CORRETOS: "Impressora 3D Profissional", "Resina Odontológica Premium", "Atendimento Especializado"
+- Exemplos ERRADOS (muito longos): "Impressora 3D de alta qualidade para profissionais"
 
-Retorne APENAS um JSON válido no formato:
+📝 **FOCO PARA DESCRIPTIONS (90 chars max):**
+- Combine 1 benefício + 1 CTA simples
+- Exemplos CORRETOS: "Impressão 3D de precisão para odontologia. Qualidade profissional garantida."
+- Exemplos ERRADOS: "Nossa impressora 3D oferece alta qualidade e precisão para profissionais de odontologia com resultados excepcionais"
+
+🔗 **PATHS (15 chars max):**
+- Use categoria ou palavra-chave
+- Apenas letras e números, SEM espaços
+- Exemplos: "impressora3d", "resina", "odonto"
+
+📊 **QUANTIDADE:**
+- Gerar 6-8 headlines variados
+- Gerar 3-4 descriptions variadas
+- Gerar 2 paths
+
+Retorne APENAS JSON válido:
 {
-  "headlines": ["título1", "título2", ...],
-  "descriptions": ["desc1", "desc2", ...],
-  "paths": ["path1", "path2"]
+  "headlines": ["headline1 (max 30 chars)", "headline2", ...],
+  "descriptions": ["desc1 (max 90 chars)", "desc2", ...],
+  "paths": ["path1 (max 15)", "path2"]
 }
 
-Foque em conversão, use categorias como palavras-chave principais e respeite os limites de caracteres.`;
+⚠️ VALIDAÇÃO FINAL: Conte os caracteres de cada item ANTES de retornar!`;
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -1136,48 +1218,96 @@ Retorne APENAS um JSON válido:
 }
 
 function validateAndCleanAdCopies(copies: any): AdCopies {
+  console.log('🔍 Validando e limpando ad copies...');
+  console.log('📥 Entrada recebida:', JSON.stringify(copies, null, 2));
+  
   const cleaned: AdCopies = {
     headlines: [],
     descriptions: [],
     paths: []
   };
 
-  // Clean and validate headlines
+  // Clean and validate headlines - TRUNCAMENTO AGRESSIVO
   if (Array.isArray(copies.headlines)) {
     cleaned.headlines = copies.headlines
       .filter((h: any) => typeof h === 'string' && h.trim().length > 0)
-      .map((h: string) => h.trim().substring(0, 30))
+      .map((h: string) => {
+        const trimmed = h.trim();
+        if (trimmed.length > 30) {
+          console.warn(`⚠️ Headline muito longo (${trimmed.length} chars): "${trimmed}" → truncando para 30`);
+          return trimmed.substring(0, 30);
+        }
+        return trimmed;
+      })
       .slice(0, 8);
+    
+    console.log(`✅ Headlines validados: ${cleaned.headlines.length} items`);
+    cleaned.headlines.forEach((h, i) => {
+      console.log(`   ${i + 1}. "${h}" (${h.length} chars)`);
+    });
   }
 
-  // Clean and validate descriptions
+  // Clean and validate descriptions - TRUNCAMENTO AGRESSIVO
   if (Array.isArray(copies.descriptions)) {
     cleaned.descriptions = copies.descriptions
       .filter((d: any) => typeof d === 'string' && d.trim().length > 0)
-      .map((d: string) => d.trim().substring(0, 90))
+      .map((d: string) => {
+        const trimmed = d.trim();
+        if (trimmed.length > 90) {
+          console.warn(`⚠️ Description muito longa (${trimmed.length} chars): "${trimmed.substring(0, 50)}..." → truncando para 90`);
+          return trimmed.substring(0, 90);
+        }
+        return trimmed;
+      })
       .slice(0, 8);
+    
+    console.log(`✅ Descriptions validadas: ${cleaned.descriptions.length} items`);
+    cleaned.descriptions.forEach((d, i) => {
+      console.log(`   ${i + 1}. "${d}" (${d.length} chars)`);
+    });
   }
 
-  // Clean and validate paths
+  // Clean and validate paths - TRUNCAMENTO AGRESSIVO
   if (Array.isArray(copies.paths)) {
     cleaned.paths = copies.paths
       .filter((p: any) => typeof p === 'string' && p.trim().length > 0)
-      .map((p: string) => p.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 15))
+      .map((p: string) => {
+        const cleaned = p.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        if (cleaned.length > 15) {
+          console.warn(`⚠️ Path muito longo (${cleaned.length} chars): "${cleaned}" → truncando para 15`);
+          return cleaned.substring(0, 15);
+        }
+        return cleaned;
+      })
       .slice(0, 2);
+    
+    console.log(`✅ Paths validados: ${cleaned.paths.length} items`);
+    cleaned.paths.forEach((p, i) => {
+      console.log(`   ${i + 1}. "${p}" (${p.length} chars)`);
+    });
   }
 
   // Ensure minimum requirements
   if (cleaned.headlines.length < 3) {
+    console.warn(`⚠️ Insuficientes headlines (${cleaned.headlines.length}), adicionando fallbacks`);
     cleaned.headlines.push(...getFallbackAdCopies().headlines.slice(0, 3 - cleaned.headlines.length));
   }
 
   if (cleaned.descriptions.length < 2) {
+    console.warn(`⚠️ Insuficientes descriptions (${cleaned.descriptions.length}), adicionando fallbacks`);
     cleaned.descriptions.push(...getFallbackAdCopies().descriptions.slice(0, 2 - cleaned.descriptions.length));
   }
 
   if (cleaned.paths.length < 2) {
+    console.warn(`⚠️ Insuficientes paths (${cleaned.paths.length}), adicionando fallbacks`);
     cleaned.paths.push(...getFallbackAdCopies().paths.slice(0, 2 - cleaned.paths.length));
   }
+
+  console.log('✅ Validação completa:', {
+    headlines: cleaned.headlines.length,
+    descriptions: cleaned.descriptions.length,
+    paths: cleaned.paths.length
+  });
 
   return cleaned;
 }
