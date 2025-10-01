@@ -220,25 +220,37 @@ export const useAdvancedSchemaGenerator = () => {
       };
     }
 
-    // ✨ Vídeos associados com captions
+    // ✨ Vídeos associados com captions e descriptions
     const videos = [
       ...(product.youtube_videos || []),
       ...(product.instagram_videos || []),
       ...(product.technical_videos || []),
-      ...(product.testimonial_videos || [])
+      ...(product.testimonial_videos || []),
+      ...((product as any).tiktok_videos || [])
     ].filter(Boolean);
 
     if (videos.length > 0) {
-      schema.video = videos.map((url, index) => {
+      schema.video = videos.map((video, index) => {
+        // Suportar vídeos como strings (URLs) ou objetos { url, description, title, thumbnail }
+        const videoUrl = typeof video === 'string' ? video : video.url;
+        const videoTitle = typeof video === 'object' ? video.title : null;
+        const videoDescription = typeof video === 'object' ? video.description : null;
+        const videoThumbnail = typeof video === 'object' ? video.thumbnail : null;
+        const videoUploadDate = typeof video === 'object' ? video.uploadDate : null;
+        
         const videoObj: any = {
           "@type": "VideoObject",
-          "contentUrl": url,
-          "name": `${product.name} - Vídeo Demonstrativo ${index + 1}`
+          "contentUrl": videoUrl,
+          "name": videoTitle || `${product.name} - Vídeo Demonstrativo ${index + 1}`,
+          // ✅ MELHORIA: incluir description com fallbacks inteligentes
+          "description": videoDescription || product.sales_pitch || product.description || "",
+          "thumbnailUrl": videoThumbnail || product.image_url,
+          "uploadDate": videoUploadDate || (product as any).created_at
         };
         
-        // ✨ PHASE 1: Adicionar captions se disponíveis
+        // ✨ Adicionar captions se disponíveis (acessibilidade)
         if (product.video_captions && typeof product.video_captions === 'object') {
-          const caption = product.video_captions[url];
+          const caption = product.video_captions[videoUrl];
           if (caption) {
             videoObj.caption = caption;
             videoObj.accessibilityFeature = "captions";

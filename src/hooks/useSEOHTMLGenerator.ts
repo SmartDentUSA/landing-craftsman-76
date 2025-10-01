@@ -429,6 +429,27 @@ export const useSEOHTMLGenerator = () => {
   ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
   <meta property="og:locale" content="pt_BR">
   
+  <!-- ✅ Video Meta Tags for Social Sharing -->
+  ${(() => {
+    if (!products || products.length === 0) return '';
+    
+    const allVideos = products.flatMap((product: any) => [
+      ...(product.youtube_videos || []),
+      ...(product.instagram_videos || []),
+      ...(product.technical_videos || []),
+      ...(product.testimonial_videos || []),
+      ...((product as any).tiktok_videos || [])
+    ].filter(Boolean));
+    
+    return allVideos.map((video: any, idx: number) => {
+      const videoDescription = typeof video === 'object' 
+        ? (video.description || products[0]?.sales_pitch || products[0]?.description || '')
+        : (products[0]?.sales_pitch || products[0]?.description || '');
+      
+      return `<meta property="og:video:description" content="${videoDescription}">`;
+    }).join('\n  ');
+  })()}
+  
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${seoTitle}">

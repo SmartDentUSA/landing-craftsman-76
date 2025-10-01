@@ -45,6 +45,21 @@ interface DualBlogVersions {
   eodonto: BlogContent;
 }
 
+// ✅ Função utilitária para extrair descrições completas de vídeos
+function extractVideoDescriptions(product: any): string[] {
+  const videos = [
+    ...(product.youtube_videos || []),
+    ...(product.instagram_videos || []),
+    ...(product.technical_videos || []),
+    ...(product.testimonial_videos || []),
+    ...(product.tiktok_videos || [])
+  ];
+  
+  return videos
+    .map((v: any) => typeof v === 'object' ? v.description : null)
+    .filter(Boolean) as string[];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -369,10 +384,16 @@ function buildStrategicContext(
                 productInfo += `\n  🎯 KEYWORDS DE INTENÇÃO: ${p.search_intent_keywords.join(', ')}`;
               }
 
+              // ✅ MELHORIA: extrair descrições completas de vídeos + captions truncadas
+              const videoDescriptions = extractVideoDescriptions(p);
+              if (videoDescriptions.length > 0) {
+                productInfo += `\n  📹 DESCRIÇÕES DE VÍDEOS: ${videoDescriptions.join(' | ')}`;
+              }
+              
               if (p.video_captions && typeof p.video_captions === 'object') {
                 const captionText = Object.values(p.video_captions).join(' ').substring(0, 200);
                 if (captionText) {
-                  productInfo += `\n  📹 CONTEÚDO DE VÍDEOS: ${captionText}...`;
+                  productInfo += `\n  📹 LEGENDAS DOS VÍDEOS: ${captionText}...`;
                 }
               }
 
