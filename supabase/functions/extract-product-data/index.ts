@@ -516,11 +516,72 @@ function extractVariations(jsonLdData?: any, doc?: Document, html?: string): Arr
 function extractImagesGallery(
   jsonLdData?: any,
   mainImageUrl?: string,
-  doc?: Document
+  doc?: Document,
+  productUrl?: string
 ): Array<{ url: string; alt: string; order: number; is_main: boolean }> {
   console.info('🖼️ Extraindo galeria de imagens...');
   const images = new Map<string, { url: string; alt: string; order: number; is_main: boolean }>();
   let order = 0;
+  
+  // Extract li_product_id from URL or HTML
+  let li_product_id: string | null = null;
+  
+  if (productUrl) {
+    // Try URL patterns
+    const urlPatterns = [
+      /\/produto\/(\d+)\//i,
+      /product[_-]?id[=:](\d+)/i,
+      /\/p\/(\d+)/i,
+      /\/(\d{6,})\//i  // 6+ digits in path
+    ];
+    
+    for (const pattern of urlPatterns) {
+      const match = productUrl.match(pattern);
+      if (match && match[1]) {
+        li_product_id = match[1];
+        break;
+      }
+    }
+  }
+  
+  // Try to extract from HTML data attributes or meta tags
+  if (!li_product_id && doc) {
+    const idElements = [
+      doc.querySelector('[data-product-id]'),
+      doc.querySelector('[data-produto-id]'),
+      doc.querySelector('meta[property="product:id"]'),
+      doc.querySelector('[id*="produto-"][id*="-"]')
+    ];
+    
+    for (const el of idElements) {
+      if (!el) continue;
+      const id = el.getAttribute('data-product-id') || 
+                 el.getAttribute('data-produto-id') ||
+                 el.getAttribute('content') ||
+                 el.id?.match(/\d{6,}/)?.[0];
+      if (id && /^\d{6,}$/.test(id)) {
+        li_product_id = id;
+        break;
+      }
+    }
+  }
+  
+  if (li_product_id) {
+    console.info(`🆔 Product ID identified: ${li_product_id}`);
+  }
+  
+  // Helper to check if image belongs to this product
+  const belongsToProduct = (imageUrl: string): boolean => {
+    if (!li_product_id) return true; // If no ID, accept all
+    
+    // Check if URL contains the product ID
+    const hasProductId = imageUrl.includes(`/produto/${li_product_id}/`) ||
+                         imageUrl.includes(`/produto-${li_product_id}`) ||
+                         imageUrl.includes(`_${li_product_id}_`) ||
+                         imageUrl.includes(`/${li_product_id}/`);
+    
+    return hasProductId;
+  };
 
   // Helper para normalizar URLs
   const normalizeUrl = (url: string): string => {
@@ -950,10 +1011,47 @@ serve(async (req) => {
       productData.images_gallery = extractImagesGallery(undefined, productData.image, doc, url);
     }
 
-    // Extrair li_product_id da URL
+    // Extrair li_product_id da URL e HTML
     let li_product_id: string | null = null;
-    const urlMatch = url.match(/\/produto\/(\d+)\//i) || url.match(/product[_-]?id[=:](\d+)/i);
-    if (urlMatch) li_product_id = urlMatch[1];
+    
+    // Patterns for URL
+    const urlPatterns = [
+      /\/produto\/(\d+)\//i,
+      /product[_-]?id[=:](\d+)/i,
+      /\/p\/(\d+)/i,
+      /\/(\d{6,})\//i
+    ];
+    
+    for (const pattern of urlPatterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        li_product_id = match[1];
+        break;
+      }
+    }
+    
+    // Try HTML if URL didn't work
+    if (!li_product_id && doc) {
+      const htmlPatterns = [
+        /data-product-id=["'](\d{6,})["']/i,
+        /data-produto-id=["'](\d{6,})["']/i,
+        /"product_id"\s*:\s*(\d{6,})/i,
+        /"produto_id"\s*:\s*"?(\d{6,})"?/i,
+        /var\s+productId\s*=\s*['"]*(\d{6,})['"]*;/i
+      ];
+      
+      for (const pattern of htmlPatterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          li_product_id = match[1];
+          break;
+        }
+      }
+    }
+    
+    if (li_product_id) {
+      console.info(`🆔 Loja Integrada Product ID extracted: ${li_product_id}`);
+    }
 
     console.info('Dados extraídos:', productData);
 

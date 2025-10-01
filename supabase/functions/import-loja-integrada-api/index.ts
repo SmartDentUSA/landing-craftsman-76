@@ -7,8 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Configuration
-const LOJA_INTEGRADA_API_BASE = 'https://api.lojaintegrada.com.br/v1';
+// Configuration - CORRECTED: Using AWS endpoint and Bearer auth
+const LOJA_INTEGRADA_API_BASE = 'https://api.awsli.com.br/v1';
 const RATE_LIMIT_DELAY = 800; // 800ms between requests
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
@@ -188,7 +188,7 @@ async function fetchFromLojaIntegradaAPI(
       {
         method: 'GET',
         headers: {
-          'Authorization': `chave_api ${apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
@@ -496,7 +496,27 @@ serve(async (req) => {
         throw new Error('Invalid data structure from API');
       }
       
-      finalData = mapAPIProductToRepository(apiResult.data);
+      // Handle API response structure
+      // - For specific product requests (/produtos/{id}): returns product directly
+      // - For list requests (/produtos): returns { meta: {...}, objects: [...] }
+      let productData = apiResult.data;
+      
+      if (apiResult.data.objects && Array.isArray(apiResult.data.objects)) {
+        console.log(`📦 Paginated response detected: ${apiResult.data.objects.length} products found`);
+        productData = apiResult.data.objects[0]; // Use first product from list
+        if (!productData) {
+          throw new Error('No products found in API paginated response');
+        }
+      } else if (apiResult.data.resource_uri || apiResult.data.id) {
+        // Direct product response - use as is
+        console.log('📦 Direct product response detected');
+        productData = apiResult.data;
+      } else {
+        console.error('❌ Unexpected API response structure:', Object.keys(apiResult.data));
+        throw new Error('Unexpected API response structure');
+      }
+      
+      finalData = mapAPIProductToRepository(productData);
       
       // Validar que o mapeamento produziu dados válidos
       if (!finalData || !finalData.name) {
@@ -525,8 +545,21 @@ serve(async (req) => {
             
             if (apiRetry.success && apiRetry.data) {
               console.log('✅ API successful with extracted ID');
-              finalData = mapAPIProductToRepository(apiRetry.data);
-              dataSource = 'api_via_scraping';
+              
+              // Handle response structure (direct or paginated)
+              let retryProductData = apiRetry.data;
+              if (apiRetry.data.objects && Array.isArray(apiRetry.data.objects)) {
+                retryProductData = apiRetry.data.objects[0];
+              }
+              
+              if (retryProductData) {
+                finalData = mapAPIProductToRepository(retryProductData);
+                dataSource = 'api_via_scraping';
+              } else {
+                // Fallback to scraping data
+                finalData = scrapingResult.data;
+                dataSource = 'web_scraping';
+              }
             } else {
               // Se API com ID falhar, usar dados do scraping
               finalData = scrapingResult.data;
