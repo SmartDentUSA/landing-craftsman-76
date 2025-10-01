@@ -466,8 +466,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
       if (descResponse.error) throw descResponse.error;
 
-      // Gerar slug automaticamente do nome do produto
-      const slug = formData.name
+      // Usar URL da Loja Integrada como slug, ou gerar fallback
+      const slug = formData.product_url || formData.name
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -492,7 +492,9 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
       toast({
         title: "SEO gerado com sucesso!",
-        description: "Título, descrição e slug foram preenchidos automaticamente"
+        description: formData.product_url 
+          ? "Título, descrição e URL da Loja Integrada foram preenchidos"
+          : "Título, descrição e slug foram preenchidos automaticamente"
       });
 
     } catch (error) {
@@ -1184,18 +1186,18 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug (URL Amigável)</Label>
+              <Label htmlFor="slug">URL do Produto (Loja Integrada)</Label>
               <Input
                 id="slug"
                 value={formData.slug || ""}
                 onChange={(e) => setFormData(prev => ({ 
                   ...prev, 
-                  slug: e.target.value.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '')
+                  slug: e.target.value
                 }))}
-                placeholder="resina-smart-print-bio-vitality"
+                placeholder="https://minhaloja.com.br/nome-do-produto"
               />
               <p className="text-xs text-muted-foreground">
-                URL amigável será gerado automaticamente (apenas letras minúsculas, números e hífens)
+                URL completa da Loja Integrada (usada para canonical e links)
               </p>
             </div>
           </Card>

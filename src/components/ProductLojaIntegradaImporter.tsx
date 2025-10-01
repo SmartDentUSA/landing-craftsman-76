@@ -534,6 +534,9 @@ export function ProductLojaIntegradaImporter({
         // Product URL
         if (productUrl && shouldUpdate(currentFormData.product_url)) {
           updates.product_url = productUrl;
+          // Também atualizar slug com a URL da LI
+          updates.slug = productUrl;
+          fieldsImported.push('URL/Slug');
         }
 
         setImportResult({
