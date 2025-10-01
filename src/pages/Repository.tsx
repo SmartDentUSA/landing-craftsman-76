@@ -10,6 +10,7 @@ import CategoryManager from '@/components/CategoryManager';
 import { EnhancedPromptsManager } from '@/components/EnhancedPromptsManager';
 import { LinksManager } from '@/components/LinksManager';
 import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
+import { ProductSEOBatchEnhancer } from '@/components/ProductSEOBatchEnhancer';
 
 const Repository = () => {
   const navigate = useNavigate();
@@ -101,11 +102,14 @@ const Repository = () => {
             </div>
             
             {activeView === 'repository' ? (
-              <RepositoryPanel 
-                landingPageId="repository"
-                onProductSelectionChange={() => {}}
-                onCompanyProfileChange={() => {}}
-              />
+              <div className="space-y-6">
+                <ProductSEOBatchEnhancer />
+                <RepositoryPanel 
+                  landingPageId="repository"
+                  onProductSelectionChange={() => {}}
+                  onCompanyProfileChange={() => {}}
+                />
+              </div>
             ) : activeView === 'categories' ? (
               <CategoryManager />
             ) : activeView === 'links' ? (

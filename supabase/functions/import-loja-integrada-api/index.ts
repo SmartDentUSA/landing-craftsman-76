@@ -694,6 +694,25 @@ serve(async (req) => {
 
     console.log(`✅ Import completed in ${totalTime}ms using ${dataSource}`);
 
+    // 🤖 AUTO-SEO: Processar produto após importação
+    if (finalData?.id) {
+      try {
+        console.log('🤖 Iniciando automação SEO pós-importação...');
+        
+        const seoResponse = await supabaseAdmin.functions.invoke('auto-seo-enhancer', {
+          body: { productIds: [finalData.id], mode: 'import' }
+        });
+        
+        if (seoResponse.data?.success) {
+          console.log('✅ SEO automaticamente otimizado:', seoResponse.data.message);
+        } else {
+          console.warn('⚠️ Automação SEO falhou (não crítico):', seoResponse.error);
+        }
+      } catch (seoError) {
+        console.warn('⚠️ Erro na automação SEO (não crítico):', seoError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
