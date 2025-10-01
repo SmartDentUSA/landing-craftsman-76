@@ -571,6 +571,7 @@ export type Database = {
       }
       products_repository: {
         Row: {
+          active: boolean | null
           age_group: string | null
           ai_generated_benefits: boolean | null
           ai_generated_category: boolean | null
@@ -592,7 +593,11 @@ export type Database = {
           display_order: number | null
           ean: string | null
           faq: Json | null
+          featured: boolean | null
           features: Json | null
+          fiscal_class: string | null
+          fiscal_origin: string | null
+          free_shipping: boolean | null
           gender: string | null
           google_product_category: string | null
           gtin: string | null
@@ -604,16 +609,22 @@ export type Database = {
           instagram_copies: Json | null
           instagram_videos: Json | null
           keywords: Json | null
+          launch: boolean | null
           market_keywords: Json | null
           material: string | null
+          max_order_quantity: number | null
+          min_order_quantity: number | null
           mpn: string | null
+          multiple_order_quantity: number | null
           name: string
+          ncm: string | null
           offer_discount_cta: Json | null
           original_data: Json | null
           package_size: string | null
           price: number | null
           product_url: string | null
           promo_price: number | null
+          promotion: boolean | null
           resource_cta1: Json | null
           resource_cta2: Json | null
           resource_cta3: Json | null
@@ -624,19 +635,27 @@ export type Database = {
           seo_description_override: string | null
           seo_enhanced: boolean | null
           seo_title_override: string | null
+          shipping_time: string | null
+          shipping_type: string | null
           show_in_resources: boolean | null
+          showcase: boolean | null
           size: string | null
+          slug: string | null
           source_landing_page_id: string | null
           source_type: string
+          stock_managed: boolean | null
+          stock_quantity: number | null
           store_category: string | null
           subcategory: string | null
           tags: Json | null
           target_audience: Json | null
+          tax_situation: string | null
           technical_specifications: Json | null
           technical_videos: Json | null
           testimonial_videos: Json | null
           tiktok_content: Json | null
           tiktok_videos: Json | null
+          unit_measure: string | null
           updated_at: string
           use_in_ai_generation: boolean | null
           variations: Json | null
@@ -648,6 +667,7 @@ export type Database = {
           youtube_videos: Json | null
         }
         Insert: {
+          active?: boolean | null
           age_group?: string | null
           ai_generated_benefits?: boolean | null
           ai_generated_category?: boolean | null
@@ -669,7 +689,11 @@ export type Database = {
           display_order?: number | null
           ean?: string | null
           faq?: Json | null
+          featured?: boolean | null
           features?: Json | null
+          fiscal_class?: string | null
+          fiscal_origin?: string | null
+          free_shipping?: boolean | null
           gender?: string | null
           google_product_category?: string | null
           gtin?: string | null
@@ -681,16 +705,22 @@ export type Database = {
           instagram_copies?: Json | null
           instagram_videos?: Json | null
           keywords?: Json | null
+          launch?: boolean | null
           market_keywords?: Json | null
           material?: string | null
+          max_order_quantity?: number | null
+          min_order_quantity?: number | null
           mpn?: string | null
+          multiple_order_quantity?: number | null
           name: string
+          ncm?: string | null
           offer_discount_cta?: Json | null
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
           product_url?: string | null
           promo_price?: number | null
+          promotion?: boolean | null
           resource_cta1?: Json | null
           resource_cta2?: Json | null
           resource_cta3?: Json | null
@@ -701,19 +731,27 @@ export type Database = {
           seo_description_override?: string | null
           seo_enhanced?: boolean | null
           seo_title_override?: string | null
+          shipping_time?: string | null
+          shipping_type?: string | null
           show_in_resources?: boolean | null
+          showcase?: boolean | null
           size?: string | null
+          slug?: string | null
           source_landing_page_id?: string | null
           source_type: string
+          stock_managed?: boolean | null
+          stock_quantity?: number | null
           store_category?: string | null
           subcategory?: string | null
           tags?: Json | null
           target_audience?: Json | null
+          tax_situation?: string | null
           technical_specifications?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
           tiktok_content?: Json | null
           tiktok_videos?: Json | null
+          unit_measure?: string | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
           variations?: Json | null
@@ -725,6 +763,7 @@ export type Database = {
           youtube_videos?: Json | null
         }
         Update: {
+          active?: boolean | null
           age_group?: string | null
           ai_generated_benefits?: boolean | null
           ai_generated_category?: boolean | null
@@ -746,7 +785,11 @@ export type Database = {
           display_order?: number | null
           ean?: string | null
           faq?: Json | null
+          featured?: boolean | null
           features?: Json | null
+          fiscal_class?: string | null
+          fiscal_origin?: string | null
+          free_shipping?: boolean | null
           gender?: string | null
           google_product_category?: string | null
           gtin?: string | null
@@ -758,16 +801,22 @@ export type Database = {
           instagram_copies?: Json | null
           instagram_videos?: Json | null
           keywords?: Json | null
+          launch?: boolean | null
           market_keywords?: Json | null
           material?: string | null
+          max_order_quantity?: number | null
+          min_order_quantity?: number | null
           mpn?: string | null
+          multiple_order_quantity?: number | null
           name?: string
+          ncm?: string | null
           offer_discount_cta?: Json | null
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
           product_url?: string | null
           promo_price?: number | null
+          promotion?: boolean | null
           resource_cta1?: Json | null
           resource_cta2?: Json | null
           resource_cta3?: Json | null
@@ -778,19 +827,27 @@ export type Database = {
           seo_description_override?: string | null
           seo_enhanced?: boolean | null
           seo_title_override?: string | null
+          shipping_time?: string | null
+          shipping_type?: string | null
           show_in_resources?: boolean | null
+          showcase?: boolean | null
           size?: string | null
+          slug?: string | null
           source_landing_page_id?: string | null
           source_type?: string
+          stock_managed?: boolean | null
+          stock_quantity?: number | null
           store_category?: string | null
           subcategory?: string | null
           tags?: Json | null
           target_audience?: Json | null
+          tax_situation?: string | null
           technical_specifications?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
           tiktok_content?: Json | null
           tiktok_videos?: Json | null
+          unit_measure?: string | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
           variations?: Json | null

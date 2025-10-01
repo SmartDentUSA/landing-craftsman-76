@@ -349,6 +349,29 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     availability: availability,
     stock_available: apiProduct.estoque_gerenciado ? apiProduct.quantidade_disponivel : null,
     
+    // ✅ NEW: Advanced Stock & Logistics from API
+    stock_quantity: apiProduct.quantidade_disponivel || null,
+    stock_managed: apiProduct.estoque_gerenciado || false,
+    min_order_quantity: apiProduct.quantidade_minima || null,
+    max_order_quantity: apiProduct.quantidade_maxima || null,
+    multiple_order_quantity: apiProduct.multiplo_quantidade || null,
+    unit_measure: apiProduct.unidade_medida || null,
+    shipping_time: apiProduct.prazo_entrega || null,
+    free_shipping: apiProduct.frete_gratis || false,
+    shipping_type: apiProduct.tipo_frete || null,
+    
+    // ✅ NEW: Status & Flags from API
+    active: apiProduct.disponivel !== false, // default true if not explicitly false
+    featured: apiProduct.vitrine || false,
+    launch: apiProduct.lancamento || false,
+    promotion: !!apiProduct.preco_promocional, // true if has promotional price
+    showcase: apiProduct.vitrine || false, // same as featured
+    
+    // ✅ NEW: Fiscal fields from API
+    fiscal_class: apiProduct.classe_fiscal || null,
+    tax_situation: apiProduct.situacao_tributaria || null,
+    fiscal_origin: apiProduct.origem || null,
+    
     // Images - structured array with validation
     image_url: apiProduct.imagens?.[0]?.url || null,
     images_gallery: Array.isArray(apiProduct.imagens) 
@@ -412,9 +435,10 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     resource_descriptions: { cta1: '', cta2: '', cta3: '' },
     
     // SEO fields
-    canonical_url: null,
-    seo_title_override: null,
-    seo_description_override: null,
+    canonical_url: apiProduct.url || null,
+    slug: apiProduct.url?.split('/').pop() || apiProduct.nome?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || null,
+    seo_title_override: apiProduct.titulo_seo || null,
+    seo_description_override: apiProduct.descricao_seo || null,
     seo_enhanced: false,
     
     // Control fields
