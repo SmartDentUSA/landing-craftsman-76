@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -513,123 +514,244 @@ function extractVariations(jsonLdData?: any, doc?: Document, html?: string): Arr
   return validVariations.length > 0 ? validVariations : undefined;
 }
 
+// ============= INTELLIGENT IMAGE EXTRACTION WITH FALLBACK =============
+const LI_GALLERY_SELECTORS = [
+  ".product-images-thumbs img",
+  ".product-images img",
+  ".gallery-thumbs img",
+  ".thumbs img",
+  ".js-product-gallery img",
+  ".product-gallery img",
+  "#gallery img",
+  ".produto-imagens img",
+  ".galeria-imagens img",
+  ".product__gallery img",
+];
+
+const CDN_HOST_HINTS = ["cdn.awsli.com.br", "cdn.awsli.com"];
+const SIZE_HINTS_DESC = ["1600x1600", "1200x1200", "1000x1000", "800x800", "600x600", "400x400", "200x200"];
+
+function toAbsoluteUrl(baseUrl: string, url?: string | null): string {
+  if (!url) return "";
+  try {
+    if (/^https?:\/\//i.test(url)) return url;
+    return new URL(url, baseUrl).toString();
+  } catch {
+    return url;
+  }
+}
+
+function extractFromSrcset(srcset?: string | null): string[] {
+  if (!srcset) return [];
+  return srcset
+    .split(",")
+    .map(s => s.trim().split(" ")[0])
+    .filter(Boolean);
+}
+
+function dedupe(urls: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const u of urls) {
+    const key = u.replace(/(\?|#).*$/, "");
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(u);
+    }
+  }
+  return out;
+}
+
+function guessSlug(url: string): string | undefined {
+  try {
+    const { pathname } = new URL(url);
+    const segments = pathname.split("/").filter(Boolean);
+    return segments[segments.length - 1];
+  } catch {
+    return undefined;
+  }
+}
+
+function scoreBySize(u: string): number {
+  const url = u.toLowerCase();
+  let score = 0;
+  SIZE_HINTS_DESC.forEach((hint, idx) => {
+    if (url.includes(`/${hint}/`) || url.includes(hint)) {
+      score += (SIZE_HINTS_DESC.length - idx) * 10;
+    }
+  });
+  if (/-grande\b/.test(url) || url.includes("_grande")) score += 15;
+  if (url.includes("media")) score += 7;
+  if (url.includes("pequena") || url.includes("thumb")) score -= 5;
+  if (CDN_HOST_HINTS.some(h => url.includes(h))) score += 5;
+  return score;
+}
+
+function extractCandidateIdsFromText(html: string): string[] {
+  const ids = new Set<string>();
+  const re = /\b(\d{6,})\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    ids.add(m[1]);
+  }
+  return Array.from(ids);
+}
+
+function belongsToProduct(url: string, opts: { productId?: string; slug?: string; candidateIds?: string[] }): boolean {
+  const u = url.toLowerCase();
+  const { productId, slug, candidateIds } = opts;
+
+  if (productId) {
+    if (
+      u.includes(`/produto/${productId}/`) ||
+      u.includes(`/produto-${productId}`) ||
+      u.includes(`_${productId}_`) ||
+      u.includes(`/${productId}/`) ||
+      u.includes(`${productId}-`) ||
+      u.includes(`-${productId}`)
+    ) return true;
+  }
+
+  if (candidateIds && candidateIds.length) {
+    for (const id of candidateIds) {
+      if (
+        u.includes(`/produto/${id}/`) ||
+        u.includes(`/produto-${id}`) ||
+        u.includes(`_${id}_`) ||
+        u.includes(`/${id}/`) ||
+        u.includes(`${id}-`) ||
+        u.includes(`-${id}`)
+      ) return true;
+    }
+  }
+
+  if (slug) {
+    if (u.includes(slug.toLowerCase())) return true;
+  }
+
+  if (u.includes("/produto/")) return true;
+
+  return false;
+}
+
+function extractImagesFromLiProduct(html: string, ctx: { productUrl: string; productId?: string; knownCdnIds?: string[]; minImagesThreshold?: number; verbose?: boolean }): string[] {
+  const {
+    productUrl,
+    productId,
+    knownCdnIds = [],
+    minImagesThreshold = 3,
+    verbose = true,
+  } = ctx;
+
+  const $ = cheerio.load(html);
+  const slug = guessSlug(productUrl);
+
+  const raw: string[] = [];
+  const push = (u?: string | null) => { if (u) raw.push(toAbsoluteUrl(productUrl, u)); };
+
+  LI_GALLERY_SELECTORS.forEach(sel => {
+    $(sel).each((_, el) => {
+      const $el = $(el);
+      push($el.attr("data-zoom"));
+      push($el.attr("data-src"));
+      push($el.attr("src"));
+      extractFromSrcset($el.attr("srcset")).forEach(s => push(s));
+    });
+  });
+
+  $("img").each((_, el) => {
+    const $el = $(el);
+    push($el.attr("data-zoom"));
+    push($el.attr("data-src"));
+    push($el.attr("src"));
+    extractFromSrcset($el.attr("srcset")).forEach(s => push(s));
+  });
+
+  const before = dedupe(raw);
+  const inferredIds = extractCandidateIdsFromText(html);
+  const candidateIds = dedupe([...(knownCdnIds || []), ...(inferredIds || [])]);
+
+  const filtered = before.filter(u =>
+    belongsToProduct(u, { productId, slug, candidateIds })
+  );
+
+  const chosen = filtered.length >= minImagesThreshold ? filtered : before;
+  const final = dedupe(chosen).sort((a, b) => scoreBySize(b) - scoreBySize(a));
+
+  if (verbose) {
+    console.debug("[LI Images] slug:", slug, "productId:", productId);
+    console.debug("[LI Images] raw:", raw.length, "unique:", before.length);
+    console.debug("[LI Images] candidateIds:", candidateIds.slice(0, 8));
+    console.debug("[LI Images] filtered:", filtered.length, "chosen:", chosen.length, "final:", final.length);
+    if (final.length < minImagesThreshold) {
+      const rejected = before.filter(u => !filtered.includes(u)).slice(0, 15);
+      console.debug("[LI Images] few images → relaxed filter. Sample rejected URLs:", rejected);
+    }
+    console.debug("[LI Images] sample:", final.slice(0, 6));
+  }
+
+  return final;
+}
+
 function extractImagesGallery(
   jsonLdData?: any,
   mainImageUrl?: string,
   doc?: Document,
-  productUrl?: string
+  productUrl?: string,
+  html?: string
 ): Array<{ url: string; alt: string; order: number; is_main: boolean }> {
   console.info('🖼️ Extraindo galeria de imagens...');
-  const images = new Map<string, { url: string; alt: string; order: number; is_main: boolean }>();
-  let order = 0;
   
-  // Extract li_product_id from URL or HTML
-  let li_product_id: string | null = null;
+  // Extract product ID from URL or HTML
+  let productId: string | undefined;
   
   if (productUrl) {
-    // Try URL patterns
     const urlPatterns = [
       /\/produto\/(\d+)\//i,
       /product[_-]?id[=:](\d+)/i,
       /\/p\/(\d+)/i,
-      /\/(\d{6,})\//i  // 6+ digits in path
+      /\/(\d{6,})\//i
     ];
     
     for (const pattern of urlPatterns) {
       const match = productUrl.match(pattern);
       if (match && match[1]) {
-        li_product_id = match[1];
+        productId = match[1];
         break;
       }
     }
   }
   
-  // Try to extract from HTML data attributes or meta tags
-  if (!li_product_id && doc) {
-    const idElements = [
-      doc.querySelector('[data-product-id]'),
-      doc.querySelector('[data-produto-id]'),
-      doc.querySelector('meta[property="product:id"]'),
-      doc.querySelector('[id*="produto-"][id*="-"]')
-    ];
+  // Use intelligent extraction if we have HTML
+  if (html && productUrl) {
+    console.info('🚀 Using intelligent image extraction with fallback...');
+    const imageUrls = extractImagesFromLiProduct(html, {
+      productUrl,
+      productId,
+      minImagesThreshold: 3,
+      verbose: true,
+    });
     
-    for (const el of idElements) {
-      if (!el) continue;
-      const id = el.getAttribute('data-product-id') || 
-                 el.getAttribute('data-produto-id') ||
-                 el.getAttribute('content') ||
-                 el.id?.match(/\d{6,}/)?.[0];
-      if (id && /^\d{6,}$/.test(id)) {
-        li_product_id = id;
-        break;
-      }
-    }
+    // Convert to expected format
+    return imageUrls.map((url, index) => ({
+      url,
+      alt: jsonLdData?.name || 'Product image',
+      order: index,
+      is_main: index === 0
+    }));
   }
   
-  if (li_product_id) {
-    console.info(`🆔 Product ID identified: ${li_product_id}`);
-  }
+  // Fallback to legacy extraction
+  console.info('⚠️ Using legacy image extraction (no HTML provided)');
+  const images = new Map<string, { url: string; alt: string; order: number; is_main: boolean }>();
+  let order = 0;
   
-  // Helper to check if image belongs to this product
-  const belongsToProduct = (imageUrl: string): boolean => {
-    if (!li_product_id) return true; // If no ID, accept all
-    
-    // Check if URL contains the product ID
-    const hasProductId = imageUrl.includes(`/produto/${li_product_id}/`) ||
-                         imageUrl.includes(`/produto-${li_product_id}`) ||
-                         imageUrl.includes(`_${li_product_id}_`) ||
-                         imageUrl.includes(`/${li_product_id}/`);
-    
-    return hasProductId;
-  };
-
-  // Helper para normalizar URLs
-  const normalizeUrl = (url: string): string => {
-    if (!url) return '';
-    const cleaned = url.split('?')[0];
-    return cleaned.replace(/\/(thumbnail|small|medium)\//, '/large/')
-                 .replace(/_thumbnail|_small|_medium/, '_large');
-  };
-
-  // Helper para extrair maior URL de srcset
-  const extractLargestFromSrcset = (srcset: string): string | null => {
-    if (!srcset) return null;
-    const urls = srcset.split(',').map(s => s.trim().split(' ')[0]);
-    return urls[urls.length - 1] || null;
-  };
-
-  // Helper para verificar se elemento está em container de produtos relacionados
-  const isInRelatedProducts = (element: Element): boolean => {
-    let parent = element.parentElement;
-    while (parent) {
-      const classList = parent.className?.toLowerCase() || '';
-      const id = parent.id?.toLowerCase() || '';
-      
-      if (
-        classList.includes('relacionados') ||
-        classList.includes('related-products') ||
-        classList.includes('produtos-relacionados') ||
-        classList.includes('compre-junto') ||
-        classList.includes('recomendados') ||
-        classList.includes('recommendations') ||
-        id.includes('relacionados') ||
-        id.includes('related')
-      ) {
-        return true;
-      }
-      parent = parent.parentElement;
-    }
-    return false;
-  };
-
-  // 1. Imagem principal do JSON-LD
   if (jsonLdData?.image) {
     const imageUrls = Array.isArray(jsonLdData.image) ? jsonLdData.image : [jsonLdData.image];
     imageUrls.forEach((url: string) => {
-      const normalized = normalizeUrl(url);
-      if (normalized && !images.has(normalized)) {
-        images.set(normalized, {
-          url: normalized,
+      if (url && !images.has(url)) {
+        images.set(url, {
+          url,
           alt: jsonLdData.name || 'Product image',
           order: order++,
           is_main: images.size === 0
@@ -637,136 +759,22 @@ function extractImagesGallery(
       }
     });
   }
-
-  // 2. Meta tags OG
-  if (doc) {
-    const ogImages = doc.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"]');
-    ogImages.forEach(meta => {
-      const url = meta.getAttribute('content');
-      if (url) {
-        const normalized = normalizeUrl(url);
-        if (!images.has(normalized)) {
-          images.set(normalized, {
-            url: normalized,
-            alt: 'Product image',
-            order: order++,
-            is_main: images.size === 0
-          });
-        }
-      }
+  
+  if (mainImageUrl && !images.has(mainImageUrl)) {
+    images.set(mainImageUrl, {
+      url: mainImageUrl,
+      alt: 'Product image',
+      order: order++,
+      is_main: images.size === 0
     });
   }
-
-  // 3. Imagem principal fornecida
-  if (mainImageUrl) {
-    const normalized = normalizeUrl(mainImageUrl);
-    if (!images.has(normalized)) {
-      images.set(normalized, {
-        url: normalized,
-        alt: 'Product image',
-        order: order++,
-        is_main: images.size === 0
-      });
-    }
-  }
-
-  // 4. Galeria do DOM (SOMENTE do container principal do produto)
-  if (doc) {
-    // Primeiro, tentar encontrar o container principal do produto
-    const productContainerSelectors = [
-      '#produto',
-      '.produto',
-      '.product',
-      '.product-page',
-      '.product-main',
-      '[data-product-id]',
-      'main'
-    ];
-    
-    let productContainer: Element | null = null;
-    for (const selector of productContainerSelectors) {
-      productContainer = doc.querySelector(selector);
-      if (productContainer) break;
-    }
-    
-    const gallerySelectors = [
-      '.product-images img',
-      '.produto-imagens img',
-      '[itemprop="image"]',
-      '.gallery-image',
-      '.product-gallery img',
-      '.imagens-produto img',
-      '[data-large_image]',
-      '[data-zoom-image]',
-      'picture source',
-      '.thumbs img',
-      '.product-image img'
-    ];
-
-    gallerySelectors.forEach(selector => {
-      const container = productContainer || doc;
-      const elements = container.querySelectorAll(selector);
-      elements.forEach((img) => {
-        // SKIP se estiver em produtos relacionados
-        if (isInRelatedProducts(img)) {
-          return;
-        }
-        
-        // Tentar pegar a maior versão disponível
-        let url = img.getAttribute('data-large_image') ||
-                 img.getAttribute('data-zoom-image') ||
-                 img.getAttribute('data-src') ||
-                 img.getAttribute('src') ||
-                 img.getAttribute('srcset');
-
-        // Se for srcset, extrair a maior
-        if (url?.includes(',')) {
-          url = extractLargestFromSrcset(url) || url;
-        }
-
-        // Filtrar apenas imagens do produto (se temos li_product_id)
-        if (url && url.startsWith('http') && belongsToProduct(url)) {
-          const normalized = normalizeUrl(url);
-          const alt = img.getAttribute('alt') || img.getAttribute('title') || 'Product image';
-          
-          if (!images.has(normalized)) {
-            images.set(normalized, {
-              url: normalized,
-              alt,
-              order: order++,
-              is_main: false
-            });
-          }
-        }
-      });
-    });
-  }
-
-  // 5. Link tags
-  if (doc) {
-    const linkImages = doc.querySelectorAll('link[rel="image_src"]');
-    linkImages.forEach(link => {
-      const url = link.getAttribute('href');
-      if (url) {
-        const normalized = normalizeUrl(url);
-        if (!images.has(normalized)) {
-          images.set(normalized, {
-            url: normalized,
-            alt: 'Product image',
-            order: order++,
-            is_main: images.size === 0
-          });
-        }
-      }
-    });
-  }
-
+  
   const gallery = Array.from(images.values()).sort((a, b) => {
     if (a.is_main) return -1;
     if (b.is_main) return 1;
     return a.order - b.order;
   });
-
+  
   console.info(`✅ Galeria final: ${gallery.length} imagens`);
   return gallery;
 }
@@ -887,8 +895,8 @@ serve(async (req) => {
             // Extrair variações (passando html também)
             productData.variations = extractVariations(product, doc, html);
             
-            // Extrair galeria de imagens (passando URL também)
-            productData.images_gallery = extractImagesGallery(product, productData.image, doc, url);
+            // Extrair galeria de imagens (passando URL e HTML)
+            productData.images_gallery = extractImagesGallery(product, productData.image, doc, url, html);
             
             console.info('✅ Dados extraídos do JSON-LD');
             break;
@@ -1006,9 +1014,9 @@ serve(async (req) => {
       productData.variations = extractVariations(undefined, doc, html);
     }
 
-    // Fallback galeria (passando url)
+    // Fallback galeria (passando url e html)
     if (!productData.images_gallery || productData.images_gallery.length === 0) {
-      productData.images_gallery = extractImagesGallery(undefined, productData.image, doc, url);
+      productData.images_gallery = extractImagesGallery(undefined, productData.image, doc, url, html);
     }
 
     // Extrair li_product_id da URL e HTML
