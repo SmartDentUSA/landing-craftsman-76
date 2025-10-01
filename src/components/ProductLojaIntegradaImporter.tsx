@@ -51,6 +51,9 @@ interface ImportPreview {
   fields_extracted: number;
   total_fields: number;
   data_quality: number;
+  ean?: string;
+  gtin?: string;
+  availability?: string;
 }
 
 interface ProductLojaIntegradaImporterProps {
@@ -100,65 +103,118 @@ export function ProductLojaIntegradaImporter({
     else if (payload?.product?.data?.name) data = payload.product.data;
     else if (payload?.product?.name) data = payload.product;
 
-    // ✅ FASE 1: Normalização completa snake_case → DB format
+    console.log('[normalizeEdgeResponse] Input data:', data);
+
+    // ✅ FASE 1: Normalização completa - todos os campos do DB
     const normalized = {
-      ...data,
-      // Core fields
-      name: data.name ?? data.nome ?? null,
-      description: data.description ?? data.descricao_completa ?? null,
-      
-      // Prices
-      price: data.price ?? data.preco_cheio ?? null,
-      promo_price: data.promo_price ?? data.preco_promocional ?? null,
-      currency: data.currency ?? 'BRL',
-      
-      // Categorization
-      brand: data.brand ?? data.marca?.nome ?? data.marca ?? null,
-      category: data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? null,
-      subcategory: data.subcategory ?? null,
-      
-      // Media
-      image_url: data.image_url ?? data.imagens?.[0]?.url ?? null,
-      images_gallery: data.images_gallery ?? data.imagens ?? [],
-      
-      // Variations
-      variations: data.variations ?? data.variacoes ?? [],
-      
-      // Physical specs
-      weight: data.weight ?? data.peso ?? null,
-      width: data.width ?? data.largura ?? null,
-      height: data.height ?? data.altura ?? null,
-      depth: data.depth ?? data.profundidade ?? null,
-      
-      // Commercial
-      availability: data.availability ?? (data.disponivel ? "in_stock" : "out_of_stock") ?? "in_stock",
-      condition: data.condition ?? "new",
-      
-      // Identifiers
-      ean: data.ean ?? data.codigo_barras ?? null,
-      gtin: data.gtin ?? data.ean ?? null,
-      mpn: data.mpn ?? null,
-      sku: data.sku ?? null,
-      
-      // Optional fields
+      id: data.id || data.product_id || undefined,
+      name: data.name ?? data.nome ?? "",
+      description: data.description ?? data.descricao_completa ?? data.body ?? "",
+      sales_pitch: data.sales_pitch ?? "",
+
+      // Preços
+      price: data.price ?? data.preco_cheio ?? data.original_price ?? 0,
+      promo_price: data.promo_price ?? data.preco_promocional ?? data.discount_price ?? undefined,
+      currency: data.currency ?? data.moeda ?? "BRL",
+
+      // Links
+      product_url: data.product_url ?? data.url ?? "",
+      image_url: data.image_url ?? data.imagem_url ?? data.image ?? data.imagens?.[0]?.url ?? "",
+      images_gallery: data.images_gallery?.map((img: any, idx: number) => ({
+        url: img.url || img,
+        alt: img.alt || `Imagem ${idx + 1}`,
+        order: img.order ?? idx,
+        is_main: img.is_main ?? (idx === 0)
+      })) ?? data.imagens ?? [],
+
+      // Categorias
+      category: data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? "",
+      subcategory: data.subcategory ?? data.subcategoria ?? "",
+      store_category: data.store_category ?? data.categoria_original ?? "",
+
+      // Marca / identificação
+      brand: data.brand ?? data.marca?.nome ?? data.marca ?? "",
+      gtin: data.gtin ?? "",
+      ean: data.ean ?? data.codigo_barras ?? "",
+      mpn: data.mpn ?? "",
+
+      // Especificações físicas
+      package_size: data.package_size ?? "",
+      weight: data.weight ?? data.peso ? parseFloat(data.weight ?? data.peso) : null,
+      height: data.height ?? data.altura ? parseFloat(data.height ?? data.altura) : null,
+      width: data.width ?? data.largura ? parseFloat(data.width ?? data.largura) : null,
+      depth: data.depth ?? data.profundidade ? parseFloat(data.depth ?? data.profundidade) : null,
+
+      // Variações
+      variations: data.variations?.map((v: any) => ({
+        name: v.name || v.nome || "",
+        price: v.price ?? v.preco ?? undefined,
+        stock: v.stock ?? v.estoque ?? undefined,
+        sku: v.sku || "",
+        color: v.color || v.cor || "",
+        size: v.size || v.tamanho || ""
+      })) ?? data.variacoes?.map((v: any) => ({
+        name: v.nome || "",
+        price: v.preco ?? undefined,
+        stock: v.estoque ?? undefined,
+        sku: v.sku || "",
+        color: v.cor || "",
+        size: v.tamanho || ""
+      })) ?? [],
+
+      // SEO e IA
+      keywords: data.keywords ?? [],
+      market_keywords: data.market_keywords ?? [],
+      search_intent_keywords: data.search_intent_keywords ?? [],
+      benefits: data.benefits ?? [],
+      features: data.features ?? [],
+      bot_trigger_words: data.bot_trigger_words ?? [],
+
+      // Público-alvo
+      target_audience: data.target_audience ?? [],
+
+      // Vídeos
+      instagram_videos: data.instagram_videos ?? [],
+      youtube_videos: data.youtube_videos ?? [],
+      testimonial_videos: data.testimonial_videos ?? [],
+      technical_videos: data.technical_videos ?? [],
+      tiktok_videos: data.tiktok_videos ?? [],
+      video_captions: data.video_captions ?? {},
+
+      // Google Merchant
+      google_product_category: data.google_product_category ?? "",
+      ncm: data.ncm ?? null,
+      condition: data.condition ?? data.condicao ?? "new",
+      availability: data.availability ?? data.disponibilidade ?? (data.disponivel ? "in stock" : "out of stock") ?? "in stock",
+
+      // Controle
+      use_in_ai_generation: data.use_in_ai_generation !== undefined ? data.use_in_ai_generation : true,
+      approved: data.approved !== undefined ? data.approved : true,
+
+      // FAQ e specs técnicas
+      faq: data.faq ?? [],
+      technical_specifications: data.technical_specifications ?? [],
+      tags: data.tags ?? [],
+
+      // Campos adicionais
       material: data.material ?? null,
       size: data.size ?? null,
       color: data.color ?? null,
-      product_url: data.product_url ?? data.url ?? null,
-      
-      // Ensure all JSONB fields are initialized
-      keywords: data.keywords ?? [],
-      benefits: data.benefits ?? [],
-      features: data.features ?? [],
-      target_audience: data.target_audience ?? [],
-      market_keywords: data.market_keywords ?? [],
-      search_intent_keywords: data.search_intent_keywords ?? [],
-      technical_specifications: data.technical_specifications ?? [],
-      faq: data.faq ?? [],
-      tags: data.tags ?? [],
-      bot_trigger_words: data.bot_trigger_words ?? [],
+      sku: data.sku ?? null,
+
+      // Dados originais para debug
+      original_data: payload
     };
 
+    // Log field extraction summary
+    const extractedFields = Object.entries(normalized).filter(([key, value]) => {
+      if (key === 'original_data') return false;
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'object' && value !== null) return Object.keys(value).length > 0;
+      return value !== null && value !== undefined && value !== '';
+    });
+
+    console.log('[normalizeEdgeResponse] Fields extracted:', extractedFields.length);
     console.info("🔍 Dados normalizados para DB:", {
       name: !!normalized.name,
       price: normalized.price,
@@ -169,6 +225,8 @@ export function ProductLojaIntegradaImporter({
       ean: !!normalized.ean,
       gtin: !!normalized.gtin,
       availability: normalized.availability,
+      ncm: normalized.ncm,
+      store_category: normalized.store_category
     });
 
     return normalized;
@@ -257,18 +315,21 @@ export function ProductLojaIntegradaImporter({
       const totalFields = Object.keys(result).length;
       const dataQuality = Math.round((fieldsExtracted / totalFields) * 100);
 
-      setPreview({
-        name: result.name || 'Sem nome',
-        price: result.price || 0,
-        promo_price: result.promo_price,
-        brand: result.brand,
-        category: result.category,
-        images_count: result.images_gallery?.length || 0,
-        variations_count: result.variations?.length || 0,
-        fields_extracted: fieldsExtracted,
-        total_fields: totalFields,
-        data_quality: dataQuality
-      });
+        setPreview({
+          name: result.name || 'Sem nome',
+          price: result.price || 0,
+          promo_price: result.promo_price,
+          brand: result.brand,
+          category: result.category,
+          images_count: result.images_gallery?.length || 0,
+          variations_count: result.variations?.length || 0,
+          fields_extracted: fieldsExtracted,
+          total_fields: totalFields,
+          data_quality: dataQuality,
+          ean: result.ean,
+          gtin: result.gtin,
+          availability: result.availability
+        });
 
       // Handle based on mode
       if (mode === 'direct-save') {
