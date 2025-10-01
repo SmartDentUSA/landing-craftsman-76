@@ -499,13 +499,21 @@ function extractVariations(jsonLdData?: any, doc?: Document, html?: string): Arr
     });
   });
 
-  // Sanitização e deduplicação
+  // Sanitização e deduplicação com blacklist expandida
+  const BLACKLIST = [
+    "r$", "comprar", "estoque", "até", "qtde",
+    "parcelamento", "selecione", "escolha", "adicionar", "frete"
+  ];
+  const MAX_LEN = 50;
   const seen = new Set<string>();
+
   const validVariations = variations.filter(v => {
-    const normalized = v.name.trim().toLowerCase();
-    if (normalized.length < 2 || seen.has(normalized)) return false;
-    if (normalized.includes('selecione') || normalized.includes('escolha')) return false;
-    if (/^\d+$/.test(normalized)) return false; // apenas números
+    const normalized = (v.name ?? "").trim().toLowerCase();
+    if (!normalized) return false;
+    if (normalized.length < 2 || normalized.length > MAX_LEN) return false;
+    if (BLACKLIST.some(term => normalized.includes(term))) return false;
+    if (/^\d+$/.test(normalized)) return false; // só números
+    if (seen.has(normalized)) return false;     // dedupe
     seen.add(normalized);
     return true;
   });
@@ -572,18 +580,33 @@ function guessSlug(url: string): string | undefined {
   }
 }
 
+function isLogo(url: string): boolean {
+  try {
+    const u = url.toLowerCase();
+    return /(^|\/)(logo|brand|marca)(\/|\.|-|_)/i.test(u) || u.includes("/logo/");
+  } catch {
+    return /logo|brand|marca/i.test(String(url));
+  }
+}
+
 function scoreBySize(u: string): number {
   const url = u.toLowerCase();
   let score = 0;
+
   SIZE_HINTS_DESC.forEach((hint, idx) => {
     if (url.includes(`/${hint}/`) || url.includes(hint)) {
       score += (SIZE_HINTS_DESC.length - idx) * 10;
     }
   });
+
   if (/-grande\b/.test(url) || url.includes("_grande")) score += 15;
   if (url.includes("media")) score += 7;
   if (url.includes("pequena") || url.includes("thumb")) score -= 5;
   if (CDN_HOST_HINTS.some(h => url.includes(h))) score += 5;
+
+  // ✅ PATCH: nunca permitir logo como principal
+  if (isLogo(url)) score -= 100;
+
   return score;
 }
 
@@ -960,44 +983,45 @@ serve(async (req) => {
       }
     }
 
-    // Fallback preço DOM
+    // ✅ Fallback preço DOM (melhorado com lógica max/min)
     if (!productData.price || productData.price === 0) {
-      const priceSelectors = [
+      const selectors = [
         '[itemprop="price"]',
-        '.price',
-        '.preco',
-        '.product-price',
-        '.preco-atual',
+        '.valor-por', '.valor-de',
+        '.preco', '.price', '.product-price', '.preco-atual',
         '[data-price]',
         'meta[property="product:price:amount"]'
       ];
 
-      for (const selector of priceSelectors) {
-        const element = doc!.querySelector(selector);
-        if (element) {
-          const priceText = element.getAttribute('content') || 
-                           element.getAttribute('data-price') ||
-                           element.textContent || '';
-          const parsedPrice = parsePriceBRL(priceText);
-          if (parsedPrice > 0) {
-            productData.price = parsedPrice;
-            break;
-          }
+      const rawPrices: number[] = [];
+      for (const sel of selectors) {
+        const nodes = Array.from(doc!.querySelectorAll(sel));
+        for (const el of nodes) {
+          const text = el.getAttribute?.("content")
+            ?? el.getAttribute?.("data-price")
+            ?? (el.textContent || "");
+          const val = parsePriceBRL(text || "");
+          if (val > 0) rawPrices.push(val);
         }
       }
-      
-      // Buscar preço promocional
-      const promoSelectors = ['.preco-promocional', '.price-promo', '.sale-price', '[data-promo-price]'];
-      for (const selector of promoSelectors) {
-        const element = doc!.querySelector(selector);
-        if (element) {
-          const priceText = element.getAttribute('data-promo-price') || element.textContent || '';
-          const parsedPrice = parsePriceBRL(priceText);
-          if (parsedPrice > 0 && parsedPrice < productData.price) {
-            productData.promo_price = parsedPrice;
-            break;
-          }
+
+      if (rawPrices.length >= 2) {
+        const max = Math.max(...rawPrices);
+        const min = Math.min(...rawPrices);
+        productData.price = max;
+        if (min < max) {
+          productData.promo_price = min;
         }
+        console.info(`💰 Preços detectados (DOM): { original: ${max}, promocional: ${min} }`);
+      } else if (rawPrices.length === 1) {
+        productData.price = rawPrices[0];
+        console.info(`💰 Preço único detectado (DOM): ${rawPrices[0]}`);
+      }
+
+      // sanity check
+      if (productData.promo_price && productData.price && productData.promo_price >= productData.price) {
+        console.warn("⚠️ Ajuste: promo_price >= price — removendo promo_price.");
+        delete productData.promo_price;
       }
     }
 
