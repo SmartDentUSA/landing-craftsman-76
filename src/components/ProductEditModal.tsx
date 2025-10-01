@@ -476,12 +476,18 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         .replace(/-+/g, '-')
         .trim();
 
-      // Atualizar formulário
-      setFormData(prev => ({
-        ...prev,
+      const newSeoData = {
         seo_title_override: titleResponse.data?.content || '',
         seo_description_override: descResponse.data?.content || '',
         slug: slug
+      };
+
+      console.log('✅ [SEO DEBUG] SEO gerado com IA:', newSeoData);
+
+      // Atualizar formulário
+      setFormData(prev => ({
+        ...prev,
+        ...newSeoData
       }));
 
       console.log('✅ SEO atualizado:', {
@@ -757,6 +763,13 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
     setSaving(true);
     try {
+      console.log('🔍 [SEO DEBUG] Valores ANTES de salvar:', {
+        seo_title_override: formData.seo_title_override,
+        seo_description_override: formData.seo_description_override,
+        slug: formData.slug,
+        product_url: formData.product_url
+      });
+
       const dataToSave = {
         name: formData.name!,
         description: formData.description,
@@ -795,10 +808,10 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         google_product_category: formData.google_product_category,
         condition: formData.condition || 'new',
         availability: formData.availability || 'in stock',
-        // SEO avançado
-        seo_title_override: formData.seo_title_override,
-        seo_description_override: formData.seo_description_override,
-        slug: formData.slug,
+        // SEO avançado - garantir que campos sejam salvos (mesmo vazios)
+        seo_title_override: formData.seo_title_override || '',
+        seo_description_override: formData.seo_description_override || '',
+        slug: formData.slug || '',
         // Estoque & logística
         stock_quantity: formData.stock_quantity,
         stock_managed: formData.stock_managed ?? false,
@@ -871,10 +884,17 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       }
 
       console.log('[DEBUG] Produto salvo com sucesso:', result.data);
+      console.log('✅ [SEO DEBUG] Produto salvo! Campos SEO:', {
+        seo_title_override: result.data.seo_title_override,
+        seo_description_override: result.data.seo_description_override,
+        slug: result.data.slug
+      });
+      
+      const seoFieldsFilled = !!(result.data.seo_title_override || result.data.seo_description_override || result.data.slug);
       
       toast({
         title: "Sucesso",
-        description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso! Configurações salvas.`,
+        description: `Produto ${isEditing ? 'atualizado' : 'criado'} com sucesso!${seoFieldsFilled ? ' (incluindo campos SEO)' : ''}`,
       });
 
       onSave(result.data);
@@ -1151,21 +1171,41 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="seo_title_override">Título SEO</Label>
+              <Label htmlFor="seo_title_override" className="flex items-center gap-2">
+                Título SEO
+                {formData.seo_title_override && (
+                  <span className="text-xs text-green-600 dark:text-green-400">● Preenchido</span>
+                )}
+              </Label>
               <Input
                 id="seo_title_override"
                 value={formData.seo_title_override || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, seo_title_override: e.target.value }))}
+                onChange={(e) => {
+                  console.log('📝 [SEO DEBUG] Título SEO alterado:', e.target.value);
+                  setFormData(prev => ({ ...prev, seo_title_override: e.target.value }));
+                }}
                 placeholder="Título otimizado para SEO (até 60 caracteres)"
+                maxLength={60}
               />
+              <p className="text-xs text-muted-foreground">
+                Máximo 60 caracteres • Atual: {(formData.seo_title_override || "").length}
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="seo_description_override">Descrição SEO</Label>
+              <Label htmlFor="seo_description_override" className="flex items-center gap-2">
+                Descrição SEO
+                {formData.seo_description_override && (
+                  <span className="text-xs text-green-600 dark:text-green-400">● Preenchido</span>
+                )}
+              </Label>
               <Textarea
                 id="seo_description_override"
                 value={formData.seo_description_override || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, seo_description_override: e.target.value }))}
+                onChange={(e) => {
+                  console.log('📝 [SEO DEBUG] Meta Description alterada:', e.target.value);
+                  setFormData(prev => ({ ...prev, seo_description_override: e.target.value }));
+                }}
                 placeholder="Meta descrição (até 160 caracteres)"
                 maxLength={160}
                 rows={2}
@@ -1186,14 +1226,22 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="slug">URL do Produto (Loja Integrada)</Label>
+              <Label htmlFor="slug" className="flex items-center gap-2">
+                URL do Produto (Loja Integrada)
+                {formData.slug && (
+                  <span className="text-xs text-green-600 dark:text-green-400">● Preenchido</span>
+                )}
+              </Label>
               <Input
                 id="slug"
                 value={formData.slug || ""}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  slug: e.target.value
-                }))}
+                onChange={(e) => {
+                  console.log('📝 [SEO DEBUG] Slug/URL alterado:', e.target.value);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    slug: e.target.value
+                  }));
+                }}
                 placeholder="https://minhaloja.com.br/nome-do-produto"
               />
               <p className="text-xs text-muted-foreground">
