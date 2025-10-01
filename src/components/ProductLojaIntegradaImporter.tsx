@@ -92,7 +92,32 @@ export function ProductLojaIntegradaImporter({
     return false;
   };
 
-  // Normalize API response to unwrap nested structures AND map all snake_case → DB format
+  // Helpers internos
+  const parsePrice = (value: any): number | undefined => {
+    if (!value) return undefined;
+    const parsed = parseFloat(
+      value.toString().replace(/[^\d.,]/g, "").replace(",", ".")
+    );
+    return isNaN(parsed) ? undefined : parsed;
+  };
+
+  const normalizeAvailability = (val: any): string => {
+    if (!val) return "in_stock";
+    const map: Record<string, string> = {
+      "em estoque": "in_stock",
+      "disponivel": "in_stock",
+      "in stock": "in_stock",
+      "indisponivel": "out_of_stock",
+      "sem estoque": "out_of_stock",
+      "out of stock": "out_of_stock",
+      "pre-venda": "preorder",
+      "preorder": "preorder",
+    };
+    const norm = val.toString().toLowerCase();
+    return map[norm] || val;
+  };
+
+  // Função consolidada
   const normalizeEdgeResponse = (payload: any): any => {
     if (!payload) return payload;
 
@@ -103,32 +128,44 @@ export function ProductLojaIntegradaImporter({
     else if (payload?.product?.data?.name) data = payload.product.data;
     else if (payload?.product?.name) data = payload.product;
 
-    console.log('[normalizeEdgeResponse] Input data:', data);
+    console.log("[normalizeEdgeResponse] Input data:", data);
 
-    // ✅ FASE 1: Normalização completa - todos os campos do DB
     const normalized = {
       id: data.id || data.product_id || undefined,
       name: data.name ?? data.nome ?? "",
-      description: data.description ?? data.descricao_completa ?? data.body ?? "",
+      description:
+        data.description ?? data.descricao_completa ?? data.body ?? "",
       sales_pitch: data.sales_pitch ?? "",
 
-      // Preços
-      price: data.price ?? data.preco_cheio ?? data.original_price ?? 0,
-      promo_price: data.promo_price ?? data.preco_promocional ?? data.discount_price ?? undefined,
+      // Preços com parsing seguro
+      price:
+        parsePrice(data.price ?? data.preco_cheio ?? data.original_price) ?? 0,
+      promo_price: parsePrice(
+        data.promo_price ?? data.preco_promocional ?? data.discount_price
+      ),
       currency: data.currency ?? data.moeda ?? "BRL",
 
       // Links
       product_url: data.product_url ?? data.url ?? "",
-      image_url: data.image_url ?? data.imagem_url ?? data.image ?? data.imagens?.[0]?.url ?? "",
-      images_gallery: data.images_gallery?.map((img: any, idx: number) => ({
-        url: img.url || img,
-        alt: img.alt || `Imagem ${idx + 1}`,
-        order: img.order ?? idx,
-        is_main: img.is_main ?? (idx === 0)
-      })) ?? data.imagens ?? [],
+      canonical_url: data.canonical_url ?? data.url_canonica ?? null,
+      image_url:
+        data.image_url ??
+        data.imagem_url ??
+        data.image ??
+        data.imagens?.[0]?.url ??
+        "",
+      images_gallery: (data.images_gallery ?? data.imagens ?? []).map(
+        (img: any, idx: number) => ({
+          url: img.url || img,
+          alt: img.alt || `Imagem ${idx + 1}`,
+          order: img.order ?? idx,
+          is_main: img.is_main ?? idx === 0,
+        })
+      ),
 
       // Categorias
-      category: data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? "",
+      category:
+        data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? "",
       subcategory: data.subcategory ?? data.subcategoria ?? "",
       store_category: data.store_category ?? data.categoria_original ?? "",
 
@@ -140,27 +177,28 @@ export function ProductLojaIntegradaImporter({
 
       // Especificações físicas
       package_size: data.package_size ?? "",
-      weight: data.weight ?? data.peso ? parseFloat(data.weight ?? data.peso) : null,
-      height: data.height ?? data.altura ? parseFloat(data.height ?? data.altura) : null,
-      width: data.width ?? data.largura ? parseFloat(data.width ?? data.largura) : null,
-      depth: data.depth ?? data.profundidade ? parseFloat(data.depth ?? data.profundidade) : null,
+      weight:
+        parseFloat(data.weight ?? data.peso) ||
+        null,
+      height:
+        parseFloat(data.height ?? data.altura) ||
+        null,
+      width:
+        parseFloat(data.width ?? data.largura) ||
+        null,
+      depth:
+        parseFloat(data.depth ?? data.profundidade) ||
+        null,
 
       // Variações
-      variations: data.variations?.map((v: any) => ({
+      variations: (data.variations ?? data.variacoes ?? []).map((v: any) => ({
         name: v.name || v.nome || "",
-        price: v.price ?? v.preco ?? undefined,
+        price: parsePrice(v.price ?? v.preco),
         stock: v.stock ?? v.estoque ?? undefined,
         sku: v.sku || "",
         color: v.color || v.cor || "",
-        size: v.size || v.tamanho || ""
-      })) ?? data.variacoes?.map((v: any) => ({
-        name: v.nome || "",
-        price: v.preco ?? undefined,
-        stock: v.estoque ?? undefined,
-        sku: v.sku || "",
-        color: v.cor || "",
-        size: v.tamanho || ""
-      })) ?? [],
+        size: v.size || v.tamanho || "",
+      })),
 
       // SEO e IA
       keywords: data.keywords ?? [],
@@ -185,10 +223,17 @@ export function ProductLojaIntegradaImporter({
       google_product_category: data.google_product_category ?? "",
       ncm: data.ncm ?? null,
       condition: data.condition ?? data.condicao ?? "new",
-      availability: data.availability ?? data.disponibilidade ?? (data.disponivel ? "in stock" : "out of stock") ?? "in stock",
+      availability: normalizeAvailability(
+        data.availability ??
+          data.disponibilidade ??
+          (data.disponivel ? "em estoque" : "sem estoque")
+      ),
 
       // Controle
-      use_in_ai_generation: data.use_in_ai_generation !== undefined ? data.use_in_ai_generation : true,
+      use_in_ai_generation:
+        data.use_in_ai_generation !== undefined
+          ? data.use_in_ai_generation
+          : true,
       approved: data.approved !== undefined ? data.approved : true,
 
       // FAQ e specs técnicas
@@ -203,18 +248,10 @@ export function ProductLojaIntegradaImporter({
       sku: data.sku ?? null,
 
       // Dados originais para debug
-      original_data: payload
+      original_data: payload,
     };
 
-    // Log field extraction summary
-    const extractedFields = Object.entries(normalized).filter(([key, value]) => {
-      if (key === 'original_data') return false;
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === 'object' && value !== null) return Object.keys(value).length > 0;
-      return value !== null && value !== undefined && value !== '';
-    });
-
-    console.log('[normalizeEdgeResponse] Fields extracted:', extractedFields.length);
+    // Log resumo
     console.info("🔍 Dados normalizados para DB:", {
       name: !!normalized.name,
       price: normalized.price,
@@ -226,7 +263,7 @@ export function ProductLojaIntegradaImporter({
       gtin: !!normalized.gtin,
       availability: normalized.availability,
       ncm: normalized.ncm,
-      store_category: normalized.store_category
+      store_category: normalized.store_category,
     });
 
     return normalized;
