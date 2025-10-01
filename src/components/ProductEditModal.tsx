@@ -194,6 +194,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
   const [overwriteData, setOverwriteData] = useState(false);
+  const [generatingSEO, setGeneratingSEO] = useState(false);
   
   // Images gallery state
   const [imagesGallery, setImagesGallery] = useState<Array<{ url: string; alt: string; order: number; is_main: boolean }>>([]);
@@ -423,6 +424,81 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     const updatedFeatures = features.filter((_, i) => i !== index);
     setFeatures(updatedFeatures);
     setFormData(prev => ({ ...prev, features: updatedFeatures }));
+  };
+
+  const generateSEOWithAI = async () => {
+    setGeneratingSEO(true);
+    
+    try {
+      // Preparar contexto do produto para a IA
+      const productContext = `
+Nome: ${formData.name}
+Descrição: ${formData.description || 'N/A'}
+Pitch de Vendas: ${formData.sales_pitch || 'N/A'}
+Categoria: ${formData.category || 'N/A'}
+Subcategoria: ${formData.subcategory || 'N/A'}
+Benefícios: ${benefits.join(', ') || 'N/A'}
+Características: ${features.join(', ') || 'N/A'}
+Público-alvo: ${targetAudience.join(', ') || 'N/A'}
+Keywords: ${formData.keywords?.join(', ') || 'N/A'}
+Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
+      `.trim();
+
+      // Gerar Título SEO
+      const titleResponse = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'seo_title',
+          content: productContext,
+          speed: 'fast'
+        }
+      });
+
+      if (titleResponse.error) throw titleResponse.error;
+
+      // Gerar Meta Description
+      const descResponse = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'meta_description',
+          content: productContext,
+          speed: 'fast'
+        }
+      });
+
+      if (descResponse.error) throw descResponse.error;
+
+      // Gerar slug automaticamente do nome do produto
+      const slug = formData.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+
+      // Atualizar formulário
+      setFormData(prev => ({
+        ...prev,
+        seo_title_override: titleResponse.data?.generated || '',
+        seo_description_override: descResponse.data?.generated || '',
+        slug: slug
+      }));
+
+      toast({
+        title: "SEO gerado com sucesso!",
+        description: "Título, descrição e slug foram preenchidos automaticamente"
+      });
+
+    } catch (error) {
+      console.error('Erro ao gerar SEO:', error);
+      toast({
+        title: "Erro ao gerar SEO",
+        description: "Não foi possível gerar o conteúdo SEO automaticamente",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingSEO(false);
+    }
   };
 
   // Video management functions
@@ -1051,7 +1127,20 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
           {/* SEO & URL Amigável Section */}
           <Card className="p-4 space-y-3 bg-muted/20">
-            <h3 className="text-sm font-medium">SEO & URL Amigável</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">SEO & URL Amigável</h3>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={generateSEOWithAI}
+                disabled={generatingSEO || !formData.name}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                {generatingSEO ? 'Gerando...' : 'Gerar por IA'}
+              </Button>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="seo_title_override">Título SEO</Label>
