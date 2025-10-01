@@ -23,9 +23,10 @@ interface TikTokContentGeneratorProps {
   productName: string;
   isOpen: boolean;
   onClose: () => void;
+  onProductUpdate?: () => void;
 }
 
-export function TikTokContentGenerator({ productId, productName, isOpen, onClose }: TikTokContentGeneratorProps) {
+export function TikTokContentGenerator({ productId, productName, isOpen, onClose, onProductUpdate }: TikTokContentGeneratorProps) {
   const [videoScript, setVideoScript] = useState('');
   const [hookText, setHookText] = useState('');
   const [ctaText, setCtaText] = useState('');
@@ -258,9 +259,22 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         .eq('id', productId)
         .single();
 
-      const existingContent = existingData?.tiktok_content as any || { copies: [] };
+      const existingContent = existingData?.tiktok_content as any || { copies: [], last_generated: null };
       
-      if (existingContent.copies && existingContent.copies.length > 0) {
+      // Se copies estiver vazio, cria nova estrutura
+      if (!existingContent.copies || existingContent.copies.length === 0) {
+        existingContent.copies = [{
+          id: crypto.randomUUID(),
+          video_script: type === 'script' ? content : videoScript,
+          hook: type === 'hook' ? content : hookText,
+          call_to_action: type === 'cta' ? content : ctaText,
+          hashtags: [],
+          trending_references: [],
+          generated_at: new Date().toISOString(),
+          editable: true
+        }];
+      } else {
+        // Atualiza copy existente
         const latestCopy = { ...existingContent.copies[0] };
         
         if (type === 'script') latestCopy.video_script = content;
@@ -268,8 +282,9 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         if (type === 'cta') latestCopy.call_to_action = content;
         
         existingContent.copies[0] = latestCopy;
-        existingContent.last_updated = new Date().toISOString();
       }
+      
+      existingContent.last_updated = new Date().toISOString();
 
       const { error } = await supabase
         .from('products_repository')
@@ -284,6 +299,11 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         title: "Salvo!",
         description: `Conteúdo ${type === 'script' ? 'do script' : type === 'hook' ? 'do hook' : 'do CTA'} salvo com sucesso!`,
       });
+      
+      // Trigger product update callback
+      if (onProductUpdate) {
+        onProductUpdate();
+      }
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast({

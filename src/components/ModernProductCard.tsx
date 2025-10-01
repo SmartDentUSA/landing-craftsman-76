@@ -530,6 +530,7 @@ export function ModernProductCard({
         productName={product.name}
         isOpen={showTikTokModal}
         onClose={() => setShowTikTokModal(false)}
+        onProductUpdate={onProductUpdate}
       />
 
       {/* Modal de Google Ads */}
