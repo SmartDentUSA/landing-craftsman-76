@@ -593,22 +593,22 @@ export function ProductLojaIntegradaImporter({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2 max-h-[32rem] overflow-y-auto">
         {/* Method Selection */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <Label className="text-sm font-medium">Método de Importação</Label>
           <RadioGroup value={importMethod} onValueChange={(v) => setImportMethod(v as 'api' | 'scraping')}>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent transition-colors">
+              <div className="flex items-center space-x-2 border rounded-lg p-2 hover:bg-accent transition-colors">
                 <RadioGroupItem value="api" id="api" />
                 <Label htmlFor="api" className="flex-1 cursor-pointer">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-primary" />
                       <div>
-                        <div className="font-medium">API Oficial</div>
+                        <div className="font-medium text-sm">API Oficial</div>
                         <div className="text-xs text-muted-foreground">
-                          90%+ campos • Dados completos • Rápido
+                          90%+ campos • Dados completos
                         </div>
                       </div>
                     </div>
@@ -617,15 +617,15 @@ export function ProductLojaIntegradaImporter({
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent transition-colors">
+              <div className="flex items-center space-x-2 border rounded-lg p-2 hover:bg-accent transition-colors">
                 <RadioGroupItem value="scraping" id="scraping" />
                 <Label htmlFor="scraping" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <div className="font-medium">Web Scraping</div>
+                      <div className="font-medium text-sm">Web Scraping</div>
                       <div className="text-xs text-muted-foreground">
-                        ~20% campos • Dados básicos • Fallback
+                        ~20% campos • Básico
                       </div>
                     </div>
                   </div>
@@ -693,55 +693,52 @@ export function ProductLojaIntegradaImporter({
 
         {/* Preview */}
         {preview && !importing && (
-          <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+          <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm">Preview da Importação</span>
-              <Badge variant={importMethod === 'api' ? 'default' : 'secondary'} className="gap-1">
+              <span className="font-semibold text-sm">Preview</span>
+              <Badge variant={importMethod === 'api' ? 'default' : 'secondary'} className="gap-1 text-xs">
                 {importMethod === 'api' ? <Zap className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
                 {importMethod === 'api' ? 'API' : 'Scraping'}
               </Badge>
             </div>
 
-            <div className="space-y-2">
-              <div>
-                <div className="font-medium">{preview.name}</div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {preview.category && <span>{preview.category}</span>}
-                  {preview.brand && <span>• {preview.brand}</span>}
-                </div>
+            <div className="space-y-1">
+              <div className="font-medium text-sm">{preview.name}</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {preview.category && <span>{preview.category}</span>}
+                {preview.brand && <span>• {preview.brand}</span>}
               </div>
-
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-primary">
+                <span className="text-base font-bold text-primary">
                   R$ {preview.price.toFixed(2)}
                 </span>
                 {preview.promo_price && preview.promo_price < preview.price && (
                   <Badge variant="destructive" className="text-xs">
-                    Promoção: R$ {preview.promo_price.toFixed(2)}
+                    R$ {preview.promo_price.toFixed(2)}
                   </Badge>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-background rounded p-2 text-center">
+            <div className="grid grid-cols-3 gap-1.5">
+              <div className="bg-background rounded p-1.5 text-center">
                 <div className="text-xs text-muted-foreground">Imagens</div>
-                <div className="font-bold text-primary">{preview.images_count}</div>
+                <div className="font-bold text-sm text-primary">{preview.images_count}</div>
               </div>
-              <div className="bg-background rounded p-2 text-center">
+              <div className="bg-background rounded p-1.5 text-center">
                 <div className="text-xs text-muted-foreground">Variações</div>
-                <div className="font-bold text-primary">{preview.variations_count}</div>
+                <div className="font-bold text-sm text-primary">{preview.variations_count}</div>
               </div>
-              <div className="bg-background rounded p-2 text-center">
+              <div className="bg-background rounded p-1.5 text-center">
                 <div className="text-xs text-muted-foreground">Qualidade</div>
-                <div className="font-bold text-primary">{preview.data_quality}%</div>
+                <div className="font-bold text-sm text-primary">{preview.data_quality}%</div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Progress value={preview.data_quality} className="flex-1 h-2" />
+              <Progress value={preview.data_quality} className="flex-1 h-1.5" />
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {preview.fields_extracted}/{preview.total_fields} campos
+                {preview.fields_extracted}/{preview.total_fields}
               </span>
             </div>
           </div>

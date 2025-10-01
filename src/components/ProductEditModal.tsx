@@ -804,14 +804,14 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Editar Produto' : 'Adicionar Produto'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
           {/* Seção de importação da Loja Integrada */}
           {(!isEditing || formData.product_url) && (
             <ProductLojaIntegradaImporter
