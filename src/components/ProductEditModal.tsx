@@ -1137,7 +1137,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                     Limpar
                   </Button>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
                   {imagesGallery.map((img, index) => (
                     <div 
                       key={index} 
@@ -1147,12 +1147,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                         src={img.url} 
                         alt={img.alt || `Imagem ${index + 1}`}
                         className="w-full h-full object-cover"
-                        width={120}
-                        height={120}
+                        width={80}
+                        height={80}
                         priority={false}
                       />
                       {img.is_main && (
-                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1 py-0.5 rounded">
                           Principal
                         </div>
                       )}
@@ -1160,7 +1160,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                         type="button"
                         variant="destructive"
                         size="sm"
-                        className="absolute bottom-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute bottom-1 right-1 h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => {
                           const newGallery = imagesGallery.filter((_, i) => i !== index);
                           setImagesGallery(newGallery);
