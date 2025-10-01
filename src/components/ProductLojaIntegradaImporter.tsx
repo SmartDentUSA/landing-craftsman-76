@@ -117,7 +117,7 @@ export function ProductLojaIntegradaImporter({
     return map[norm] || val;
   };
 
-  // Função consolidada
+  // Função consolidada com lógica de preços baseada em variações
   const normalizeEdgeResponse = (payload: any): any => {
     if (!payload) return payload;
 
@@ -128,44 +128,55 @@ export function ProductLojaIntegradaImporter({
     else if (payload?.product?.data?.name) data = payload.product.data;
     else if (payload?.product?.name) data = payload.product;
 
-    console.log("[normalizeEdgeResponse] Input data:", data);
+    console.log('[normalizeEdgeResponse] Input data:', data);
 
+    // -------- Consolidar preços com base nas variações --------
+    let finalPrice = parsePrice(data.price ?? data.preco_cheio ?? data.original_price) ?? 0;
+    let finalPromo = parsePrice(data.promo_price ?? data.preco_promocional ?? data.discount_price) ?? 0;
+
+    if ((!finalPrice || finalPrice === 0) && Array.isArray(data.variacoes) && data.variacoes.length > 0) {
+      const variationPrices = data.variacoes
+        .map((v: any) => parsePrice(v.preco || v.price) || 0)
+        .filter((p: number) => p > 0);
+
+      const variationPromos = data.variacoes
+        .map((v: any) => parsePrice(v.preco_promocional || v.promo_price) || 0)
+        .filter((p: number) => p > 0);
+
+      if (variationPrices.length > 0) {
+        finalPrice = Math.max(...variationPrices); // maior = preço cheio
+        if (variationPromos.length > 0) {
+          const minPromo = Math.min(...variationPromos);
+          finalPromo = minPromo < finalPrice ? minPromo : 0; // menor promo válido
+        }
+      }
+    }
+
+    // -------- Normalização completa --------
     const normalized = {
       id: data.id || data.product_id || undefined,
       name: data.name ?? data.nome ?? "",
-      description:
-        data.description ?? data.descricao_completa ?? data.body ?? "",
+      description: data.description ?? data.descricao_completa ?? data.body ?? "",
       sales_pitch: data.sales_pitch ?? "",
 
-      // Preços com parsing seguro
-      price:
-        parsePrice(data.price ?? data.preco_cheio ?? data.original_price) ?? 0,
-      promo_price: parsePrice(
-        data.promo_price ?? data.preco_promocional ?? data.discount_price
-      ),
+      // Preços consolidados
+      price: finalPrice,
+      promo_price: finalPromo > 0 ? finalPromo : null,
       currency: data.currency ?? data.moeda ?? "BRL",
 
       // Links
       product_url: data.product_url ?? data.url ?? "",
       canonical_url: data.canonical_url ?? data.url_canonica ?? null,
-      image_url:
-        data.image_url ??
-        data.imagem_url ??
-        data.image ??
-        data.imagens?.[0]?.url ??
-        "",
-      images_gallery: (data.images_gallery ?? data.imagens ?? []).map(
-        (img: any, idx: number) => ({
-          url: img.url || img,
-          alt: img.alt || `Imagem ${idx + 1}`,
-          order: img.order ?? idx,
-          is_main: img.is_main ?? idx === 0,
-        })
-      ),
+      image_url: data.image_url ?? data.imagem_url ?? data.image ?? data.imagens?.[0]?.url ?? "",
+      images_gallery: (data.images_gallery ?? data.imagens ?? []).map((img: any, idx: number) => ({
+        url: img.url || img,
+        alt: img.alt || `Imagem ${idx + 1}`,
+        order: img.order ?? idx,
+        is_main: img.is_main ?? (idx === 0)
+      })),
 
       // Categorias
-      category:
-        data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? "",
+      category: data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? "",
       subcategory: data.subcategory ?? data.subcategoria ?? "",
       store_category: data.store_category ?? data.categoria_original ?? "",
 
@@ -177,27 +188,20 @@ export function ProductLojaIntegradaImporter({
 
       // Especificações físicas
       package_size: data.package_size ?? "",
-      weight:
-        parseFloat(data.weight ?? data.peso) ||
-        null,
-      height:
-        parseFloat(data.height ?? data.altura) ||
-        null,
-      width:
-        parseFloat(data.width ?? data.largura) ||
-        null,
-      depth:
-        parseFloat(data.depth ?? data.profundidade) ||
-        null,
+      weight: data.weight ?? data.peso ? parseFloat(data.weight ?? data.peso) : null,
+      height: data.height ?? data.altura ? parseFloat(data.height ?? data.altura) : null,
+      width: data.width ?? data.largura ? parseFloat(data.width ?? data.largura) : null,
+      depth: data.depth ?? data.profundidade ? parseFloat(data.depth ?? data.profundidade) : null,
 
-      // Variações
+      // Variações completas com suporte a preços promocionais
       variations: (data.variations ?? data.variacoes ?? []).map((v: any) => ({
         name: v.name || v.nome || "",
         price: parsePrice(v.price ?? v.preco),
+        promo_price: parsePrice(v.promo_price ?? v.preco_promocional),
         stock: v.stock ?? v.estoque ?? undefined,
         sku: v.sku || "",
         color: v.color || v.cor || "",
-        size: v.size || v.tamanho || "",
+        size: v.size || v.tamanho || ""
       })),
 
       // SEO e IA
@@ -230,10 +234,7 @@ export function ProductLojaIntegradaImporter({
       ),
 
       // Controle
-      use_in_ai_generation:
-        data.use_in_ai_generation !== undefined
-          ? data.use_in_ai_generation
-          : true,
+      use_in_ai_generation: data.use_in_ai_generation !== undefined ? data.use_in_ai_generation : true,
       approved: data.approved !== undefined ? data.approved : true,
 
       // FAQ e specs técnicas
@@ -247,23 +248,21 @@ export function ProductLojaIntegradaImporter({
       color: data.color ?? null,
       sku: data.sku ?? null,
 
-      // Dados originais para debug
-      original_data: payload,
+      // Dados originais
+      original_data: payload
     };
 
-    // Log resumo
-    console.info("🔍 Dados normalizados para DB:", {
-      name: !!normalized.name,
+    // -------- Logging melhorado --------
+    console.info("🔍 Dados normalizados:", {
+      name: normalized.name,
       price: normalized.price,
       promo_price: normalized.promo_price,
-      brand: !!normalized.brand,
+      brand: normalized.brand,
       variations_count: normalized.variations?.length ?? 0,
       images_count: normalized.images_gallery?.length ?? 0,
-      ean: !!normalized.ean,
-      gtin: !!normalized.gtin,
-      availability: normalized.availability,
-      ncm: normalized.ncm,
-      store_category: normalized.store_category,
+      ean: normalized.ean,
+      gtin: normalized.gtin,
+      availability: normalized.availability
     });
 
     return normalized;
