@@ -829,23 +829,27 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
               }}
               onImportSuccess={(importedData) => {
                 try {
-                  // Validar estrutura dos dados importados
                   if (!importedData || typeof importedData !== 'object') {
                     throw new Error('Dados importados inválidos');
                   }
-
-                  // Validar campo obrigatório
                   if (!importedData.name || typeof importedData.name !== 'string') {
                     throw new Error('Nome do produto é obrigatório');
                   }
 
                   console.log('📦 Dados importados:', importedData);
 
-                  // Aplicar TODOS os campos importados ao form
-                  setFormData(prev => ({ ...prev, ...importedData }));
-                  
-                  // Aplicar estados separados para campos especiais
-                  if (importedData.promo_price) setPromoPrice(importedData.promo_price);
+                  // Mesclar diretamente no formData
+                  setFormData(prev => ({
+                    ...prev,
+                    ...importedData,
+                    // Garantir defaults se vierem null
+                    condition: importedData.condition || 'new',
+                    availability: importedData.availability || 'in stock',
+                    currency: importedData.currency || 'BRL',
+                  }));
+
+                  // Estados controlados
+                  if (importedData.promo_price !== undefined) setPromoPrice(importedData.promo_price);
                   if (importedData.images_gallery) setImagesGallery(importedData.images_gallery);
                   if (importedData.variations) setVariations(importedData.variations);
                   if (importedData.weight) setWeight(importedData.weight.toString());
@@ -854,7 +858,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
                   if (importedData.depth) setDepth(importedData.depth.toString());
                   if (importedData.package_size) setPackageSize(importedData.package_size);
                   if (importedData.store_category) setStoreCategory(importedData.store_category);
-                  
+
                   toast({
                     title: "Campos preenchidos",
                     description: "Os dados foram importados. Revise e edite conforme necessário antes de salvar.",
