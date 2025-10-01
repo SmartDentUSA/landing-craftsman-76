@@ -89,20 +89,89 @@ export function ProductLojaIntegradaImporter({
     return false;
   };
 
-  // Normalize API response to unwrap nested structures
+  // Normalize API response to unwrap nested structures AND map all snake_case → DB format
   const normalizeEdgeResponse = (payload: any): any => {
-    // Try different unwrap paths
-    if (payload?.data?.data?.name) return payload.data.data;
-    if (payload?.data?.name) return payload.data;
-    if (payload?.product?.data?.name) return payload.product.data;
-    if (payload?.product?.name) return payload.product;
-    
-    // Map raw Loja Integrada "nome" field to "name"
-    if (payload?.nome && !payload?.name) {
-      return { ...payload, name: payload.nome };
-    }
-    
-    return payload;
+    if (!payload) return payload;
+
+    // Unwrap nested structures
+    let data = payload;
+    if (payload?.data?.data?.name) data = payload.data.data;
+    else if (payload?.data?.name) data = payload.data;
+    else if (payload?.product?.data?.name) data = payload.product.data;
+    else if (payload?.product?.name) data = payload.product;
+
+    // ✅ FASE 1: Normalização completa snake_case → DB format
+    const normalized = {
+      ...data,
+      // Core fields
+      name: data.name ?? data.nome ?? null,
+      description: data.description ?? data.descricao_completa ?? null,
+      
+      // Prices
+      price: data.price ?? data.preco_cheio ?? null,
+      promo_price: data.promo_price ?? data.preco_promocional ?? null,
+      currency: data.currency ?? 'BRL',
+      
+      // Categorization
+      brand: data.brand ?? data.marca?.nome ?? data.marca ?? null,
+      category: data.category ?? data.categorias?.[0]?.nome ?? data.categoria ?? null,
+      subcategory: data.subcategory ?? null,
+      
+      // Media
+      image_url: data.image_url ?? data.imagens?.[0]?.url ?? null,
+      images_gallery: data.images_gallery ?? data.imagens ?? [],
+      
+      // Variations
+      variations: data.variations ?? data.variacoes ?? [],
+      
+      // Physical specs
+      weight: data.weight ?? data.peso ?? null,
+      width: data.width ?? data.largura ?? null,
+      height: data.height ?? data.altura ?? null,
+      depth: data.depth ?? data.profundidade ?? null,
+      
+      // Commercial
+      availability: data.availability ?? (data.disponivel ? "in_stock" : "out_of_stock") ?? "in_stock",
+      condition: data.condition ?? "new",
+      
+      // Identifiers
+      ean: data.ean ?? data.codigo_barras ?? null,
+      gtin: data.gtin ?? data.ean ?? null,
+      mpn: data.mpn ?? null,
+      sku: data.sku ?? null,
+      
+      // Optional fields
+      material: data.material ?? null,
+      size: data.size ?? null,
+      color: data.color ?? null,
+      product_url: data.product_url ?? data.url ?? null,
+      
+      // Ensure all JSONB fields are initialized
+      keywords: data.keywords ?? [],
+      benefits: data.benefits ?? [],
+      features: data.features ?? [],
+      target_audience: data.target_audience ?? [],
+      market_keywords: data.market_keywords ?? [],
+      search_intent_keywords: data.search_intent_keywords ?? [],
+      technical_specifications: data.technical_specifications ?? [],
+      faq: data.faq ?? [],
+      tags: data.tags ?? [],
+      bot_trigger_words: data.bot_trigger_words ?? [],
+    };
+
+    console.info("🔍 Dados normalizados para DB:", {
+      name: !!normalized.name,
+      price: normalized.price,
+      promo_price: normalized.promo_price,
+      brand: !!normalized.brand,
+      variations_count: normalized.variations?.length ?? 0,
+      images_count: normalized.images_gallery?.length ?? 0,
+      ean: !!normalized.ean,
+      gtin: !!normalized.gtin,
+      availability: normalized.availability,
+    });
+
+    return normalized;
   };
 
   const handleImport = async () => {

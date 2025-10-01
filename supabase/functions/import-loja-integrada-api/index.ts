@@ -314,12 +314,14 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
   })) || [];
   console.log(`📁 Categories mapped: ${allCategories.length} categories`);
 
+  // ✅ FASE 2: Garantir que TODOS os campos do DB estejam presentes (mesmo que null)
   const mapped: any = {
     // Core fields from API
     name: apiProduct.nome,
     price: apiProduct.preco_cheio,
     promo_price: apiProduct.preco_promocional || null,
     description: apiProduct.descricao_completa || null,
+    currency: 'BRL',
     
     // Physical specifications from API
     weight: apiProduct.peso || null,
@@ -331,11 +333,16 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     sku: apiProduct.sku || null,
     mpn: apiProduct.mpn || null,
     ncm: apiProduct.ncm || null,
+    ean: apiProduct.ncm || null, // NCM pode servir como EAN temporariamente
+    gtin: null,
     
     // Brand and category from API
     brand: apiProduct.marca?.nome || null,
     category: apiProduct.categorias?.[0]?.nome || null,
+    subcategory: null,
     all_categories: allCategories,
+    store_category: null,
+    google_product_category: null,
     
     // Enhanced stock control
     condition: 'new',
@@ -362,6 +369,7 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
           .map((v) => ({
             name: v.nome,
             price: typeof v.preco === 'number' ? v.preco : null,
+            promo_price: null, // API não fornece preco promocional por variação
             stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : null,
             sku: v.sku || null,
           }))
@@ -369,29 +377,106 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     
     // Additional metadata from API
     video_url: apiProduct.url_video_youtube || null,
+    product_url: null, // API não fornece URL do produto
     tags: Array.isArray(apiProduct.tags) ? apiProduct.tags : [],
+    
+    // ✅ GARANTIR: Todos os campos JSONB inicializados como arrays vazios
+    keywords: [],
+    benefits: [],
+    features: [],
+    target_audience: [],
+    market_keywords: [],
+    search_intent_keywords: [],
+    technical_specifications: [],
+    faq: [],
+    bot_trigger_words: [],
+    
+    // ✅ GARANTIR: Campos JSONB estruturados inicializados
+    individual_blog_content: { technical: null, commercial: null, generated_at: null },
+    whatsapp_messages: { messages: [], last_generated: null },
+    youtube_descriptions: { descriptions: [], last_generated: null },
+    instagram_copies: { copies: [], last_generated: null, template_config: {} },
+    tiktok_content: { copies: [], last_generated: null },
+    tiktok_videos: [],
+    youtube_videos: [],
+    instagram_videos: [],
+    technical_videos: [],
+    testimonial_videos: [],
+    video_captions: {},
+    
+    // Resource CTAs
+    resource_cta1: { url: '', label: '', visible: false },
+    resource_cta2: { url: '', label: '', visible: false },
+    resource_cta3: { url: '', label: '', visible: false },
+    offer_discount_cta: { url: '', label: 'Comprar com Desconto', visible: false },
+    resource_descriptions: { cta1: '', cta2: '', cta3: '' },
+    
+    // SEO fields
+    canonical_url: null,
+    seo_title_override: null,
+    seo_description_override: null,
+    seo_enhanced: false,
+    
+    // Control fields
+    approved: true,
+    use_in_ai_generation: true,
+    show_in_resources: false,
+    selected: false,
+    display_order: null,
+    
+    // Fields NOT available in Loja Integrada API - require manual input
+    color: null,
+    size: null,
+    material: null,
+    package_size: null,
+    age_group: null,
+    gender: null,
+    sales_pitch: null,
+    
+    // Timestamps
     created_at: apiProduct.data_criacao || new Date().toISOString(),
     updated_at: apiProduct.data_ultima_modificacao || new Date().toISOString(),
     
     // Flags
     is_under_consultation: apiProduct.sob_consulta || false,
-    
-    // Fields NOT available in Loja Integrada API - require manual input
-    gtin: null,
-    ean: null,
-    color: null,
-    size: null,
-    material: null,
-    google_product_category: null,
-    package_size: null,
+    ai_generated_category: false,
+    ai_generated_keywords: false,
+    ai_generated_benefits: false,
     
     // Data source tracking
     source_type: 'loja_integrada_api',
+    source_landing_page_id: null,
     original_data: apiProduct,
   };
 
+  // ✅ FASE 3: Logs de validação completa
+  console.info("🔍 Produto Final para DB:", {
+    // Campos críticos
+    name: mapped.name,
+    price: mapped.price,
+    promo_price: mapped.promo_price,
+    brand: mapped.brand,
+    currency: mapped.currency,
+    
+    // Arrays importantes  
+    variations_count: mapped.variations?.length ?? 0,
+    images_count: mapped.images_gallery?.length ?? 0,
+    categories_count: mapped.all_categories?.length ?? 0,
+    
+    // Campos que podem estar missing
+    has_ean: !!mapped.ean,
+    has_gtin: !!mapped.gtin,
+    has_product_url: !!mapped.product_url,
+    availability: mapped.availability,
+    
+    // Validação de tipos
+    price_type: typeof mapped.price,
+    variations_type: typeof mapped.variations,
+    images_type: typeof mapped.images_gallery,
+  });
+
   // Log fields that need manual input
-  const manualInputFields = ['gtin', 'ean', 'color', 'size', 'material', 'google_product_category', 'package_size'];
+  const manualInputFields = ['gtin', 'product_url', 'color', 'size', 'material', 'google_product_category', 'package_size', 'sales_pitch'];
   console.log(`✏️ Fields requiring manual input: ${manualInputFields.join(', ')}`);
 
   // Count extracted fields for quality metrics
@@ -399,22 +484,10 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
   const filledFields = Object.values(mapped).filter(v => 
     v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : v !== '')
   ).length;
-  const nullFields = Object.entries(mapped)
-    .filter(([_, v]) => v === null)
-    .map(([k, _]) => k);
 
   console.log(`📊 Field extraction summary:`);
   console.log(`   ✅ Filled: ${filledFields}/${totalFields} (${((filledFields/totalFields)*100).toFixed(1)}%)`);
-  console.log(`   ❌ Null fields: ${nullFields.join(', ')}`);
-  console.log(`📦 Mapped product details:`, {
-    name: mapped.name,
-    price: mapped.price,
-    promo_price: mapped.promo_price,
-    availability: mapped.availability,
-    categories: mapped.all_categories.length,
-    images_count: mapped.images_gallery?.length || 0,
-    variations_count: mapped.variations?.length || 0,
-  });
+  console.log(`   Total DB fields mapped: ${totalFields}`);
 
   return mapped;
 }
