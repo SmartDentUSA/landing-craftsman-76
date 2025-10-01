@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
+import { useCompanyTargetAudience } from '@/hooks/useCompanyTargetAudience';
 import { useCallback } from 'react';
 import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
@@ -115,6 +116,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   console.log('unifiedCategories:', unifiedCategories);
   
   const { getConfigByCategory } = useCategoryConfig();
+  const { targetAudience: companyTargetAudience } = useCompanyTargetAudience();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -338,7 +340,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       });
       setBenefits([]);
       setFeatures([]);
-      setTargetAudience([]);
+      // Auto-preencher com público-alvo da empresa para novos produtos
+      setTargetAudience(companyTargetAudience.length > 0 ? companyTargetAudience : []);
       setMarketKeywords([]);
       setSearchIntentKeywords([]);
       setBotTriggerWords([]);
@@ -1267,7 +1270,26 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="target_audience">Público-Alvo</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="target_audience">Público-Alvo</Label>
+              {!product && companyTargetAudience.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 cursor-help">
+                        <Info className="h-3 w-3" />
+                        Auto-preenchido
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs">
+                      <p className="text-sm">
+                        Preenchido automaticamente com o público-alvo configurado no Perfil da Empresa
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <TagInput
               value={targetAudience}
               onChange={setTargetAudience}

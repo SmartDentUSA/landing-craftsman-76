@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Combobox } from '@/components/ui/combobox';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
 import { useCategoryContext } from '@/contexts/CategoryContext';
+import { useCompanyTargetAudience } from '@/hooks/useCompanyTargetAudience';
 import { Plus, Edit, Trash2, Save, X, Info, FileEdit, Users, Target, Hash, TrendingUp, Search, Calendar, CheckCircle, AlertTriangle, XCircle, Folder, User, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -37,6 +38,7 @@ interface RenameData {
 const CategoryManager = () => {
   const { configs, loading, createConfig, updateConfig, deleteConfig } = useCategoryConfig();
   const { unifiedCategories, unifiedSubcategories, getUnifiedSubcategoriesForCategory, notifyCategoryChange } = useCategoryContext();
+  const { targetAudience: companyTargetAudience } = useCompanyTargetAudience();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -160,13 +162,23 @@ const CategoryManager = () => {
     setFormData({
       category: '',
       subcategory: '',
-      target_audience: [],
+      target_audience: companyTargetAudience.length > 0 ? companyTargetAudience : [],
       keywords: [],
       market_keywords: [],
       search_intent_keywords: []
     });
     setEditingConfig(null);
   };
+  
+  // Auto-preencher target_audience quando o valor da empresa muda
+  useEffect(() => {
+    if (!editingConfig && companyTargetAudience.length > 0 && formData.target_audience.length === 0) {
+      setFormData(prev => ({
+        ...prev,
+        target_audience: companyTargetAudience
+      }));
+    }
+  }, [companyTargetAudience, editingConfig, formData.target_audience.length]);
 
   const handleCategoryChange = (category: string) => {
     setFormData(prev => ({
@@ -428,7 +440,15 @@ const CategoryManager = () => {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Público-Alvo</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Público-Alvo</Label>
+                    {!editingConfig && companyTargetAudience.length > 0 && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Info className="h-3 w-3" />
+                        Preenchido do perfil da empresa
+                      </span>
+                    )}
+                  </div>
                   <TagInput
                     value={formData.target_audience}
                     onChange={(value) => {

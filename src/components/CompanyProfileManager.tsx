@@ -340,33 +340,41 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label htmlFor="target_audience">Público-Alvo</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAggregateTargetAudiences}
-                    disabled={aggregatingAudiences}
-                    className="text-xs"
-                  >
-                    {aggregatingAudiences ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        Capturando...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-3 w-3 mr-1" />
-                        Capturar das Categorias
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Será usado como padrão em produtos e categorias
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAggregateTargetAudiences}
+                      disabled={aggregatingAudiences}
+                      className="text-xs"
+                    >
+                      {aggregatingAudiences ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Capturando...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-3 w-3 mr-1" />
+                          Capturar das Categorias
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Input
                   id="target_audience"
                   value={profile.target_audience || ''}
                   onChange={(e) => setProfile({...profile, target_audience: e.target.value})}
-                  placeholder="Defina seu público-alvo"
+                  placeholder="Defina seu público-alvo (ex: Dentistas, Profissionais de saúde, Clínicas)"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Este valor será usado automaticamente ao criar novos produtos e categorias
+                </p>
               </div>
               <div>
                 <Label htmlFor="website_url">Website</Label>
