@@ -373,10 +373,11 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
 
       {campaignConfig.enabled && (
         <>
-          {/* Configuration Tabs - Simplificado */}
+          {/* Configuration Tabs */}
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="general">Configurações</TabsTrigger>
+              <TabsTrigger value="videos">Extensões de Vídeo</TabsTrigger>
               <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="utm">UTM</TabsTrigger>
             </TabsList>
@@ -417,19 +418,12 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
               </Card>
             </TabsContent>
 
-            <TabsContent value="keywords">
-              <KeywordManager
+            <TabsContent value="videos">
+              <VideoManager
                 config={campaignConfig}
                 onChange={handleConfigChange}
                 data={getProductData()}
-              />
-            </TabsContent>
-
-            <TabsContent value="sitelinks">
-              <SitelinksManager
-                config={campaignConfig}
-                onChange={handleConfigChange}
-                data={getProductData()}
+                landingPageId={product.id}
               />
             </TabsContent>
 
