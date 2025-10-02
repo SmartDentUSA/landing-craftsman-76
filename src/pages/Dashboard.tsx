@@ -911,9 +911,6 @@ const DashboardContent = () => {
                   ADMIN
                 </Badge>
               )}
-              <p className="text-muted-foreground mt-1">
-                Crie e gerencie suas landing pages com facilidade
-              </p>
             </div>
             <div className="flex items-center gap-3">
               <Button 
