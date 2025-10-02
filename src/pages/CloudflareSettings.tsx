@@ -9,6 +9,7 @@ import { ArrowLeft, Save, TestTube, Settings, AlertCircle, CheckCircle, External
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { TopNavigation } from "@/components/TopNavigation";
 
 interface CloudflareConfig {
   accountId: string;
@@ -232,32 +233,32 @@ const CloudflareSettings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-soft sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/editor')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar ao Editor
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Configurações do Cloudflare
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Configure as credenciais para upload de imagens
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {getStatusBadge()}
+      <TopNavigation />
+
+      {/* Main Content */}
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/editor')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar ao Editor
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Configurações do Cloudflare
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Configure as credenciais para upload de imagens
+              </p>
             </div>
           </div>
+          
+          <div className="flex items-center gap-2">
+            {getStatusBadge()}
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">

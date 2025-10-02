@@ -7,6 +7,7 @@ import { Copy, Download, ExternalLink, ArrowLeft, Code2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { generateHTML } from "@/lib/template-engine";
+import { TopNavigation } from "@/components/TopNavigation";
 
 const CodeView = () => {
   const navigate = useNavigate();
@@ -95,46 +96,46 @@ const CodeView = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-soft sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate(editorId ? `/editor/${editorId}` : '/dashboard')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <Code2 className="h-5 w-5" />
-                  Código Gerado
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="success">HTML Pronto</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {lineCount} linhas • Template: Smart Dent Base v1
-                  </span>
-                </div>
+      <TopNavigation />
+      
+      {/* Main Content Header */}
+      <div className="container mx-auto px-6 py-4 border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate(editorId ? `/editor/${editorId}` : '/dashboard')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                <Code2 className="h-5 w-5" />
+                Código Gerado
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="success">HTML Pronto</Badge>
+                <span className="text-sm text-muted-foreground">
+                  {lineCount} linhas • Template: Smart Dent Base v1
+                </span>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handlePreviewInNewTab}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Abrir Preview
-              </Button>
-              <Button variant="outline" onClick={handleDownloadHTML}>
-                <Download className="h-4 w-4 mr-2" />
-                Baixar HTML
-              </Button>
-              <Button onClick={handleCopyCode} className="gradient-primary shadow-primary">
-                <Copy className="h-4 w-4 mr-2" />
-                Copiar Código
-              </Button>
-            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handlePreviewInNewTab}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Abrir Preview
+            </Button>
+            <Button variant="outline" onClick={handleDownloadHTML}>
+              <Download className="h-4 w-4 mr-2" />
+              Baixar HTML
+            </Button>
+            <Button onClick={handleCopyCode} className="gradient-primary shadow-primary">
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar Código
+            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">

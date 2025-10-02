@@ -10,6 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TopNavigation } from '@/components/TopNavigation';
 
 const STORAGE_KEYS = {
   CLIENT_ID: 'youtube_oauth_client_id',
@@ -24,6 +26,7 @@ type ConnectionStatus = 'connected' | 'error' | 'not_configured' | 'checking';
 
 export default function YouTubeOAuthSettings() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -312,16 +315,19 @@ export default function YouTubeOAuthSettings() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">YouTube OAuth 2.0</h1>
-          <p className="text-muted-foreground mt-2">
-            Configure credenciais para extrair legendas de vídeos do seu canal
-          </p>
+    <div className="min-h-screen bg-background">
+      <TopNavigation />
+      
+      <div className="container mx-auto p-6 max-w-4xl space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">YouTube OAuth 2.0</h1>
+            <p className="text-muted-foreground mt-2">
+              Configure credenciais para extrair legendas de vídeos do seu canal
+            </p>
+          </div>
+          {getStatusBadge()}
         </div>
-        {getStatusBadge()}
-      </div>
 
       {clientId === DEFAULT_CLIENT_ID && (
         <Alert variant="destructive">
@@ -680,6 +686,7 @@ export default function YouTubeOAuthSettings() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
