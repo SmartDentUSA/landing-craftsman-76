@@ -2,14 +2,18 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, FileText, Code2, Zap, Target, Palette } from "lucide-react";
+import { TopNavigation } from "@/components/TopNavigation";
 
 const Index = () => {
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      {/* CTA Section */}
-      <section className="py-20 text-center">
+    <div className="flex flex-col min-h-screen bg-background">
+      <TopNavigation showBreadcrumb={false} />
+      
+      <div className="flex-1 flex items-center justify-center">
+        {/* CTA Section */}
+        <section className="py-20 text-center">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4">
             Pronto para começar?
@@ -39,6 +43,7 @@ const Index = () => {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 };
