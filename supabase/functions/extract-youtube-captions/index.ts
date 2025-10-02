@@ -219,6 +219,104 @@ function decodeHtmlEntities(input: string): string {
     .replace(/&#39;/g, "'");
 }
 
+/**
+ * Trunca legendas para logs limpos (max 200 chars)
+ */
+function logCaptionPreview(captions: string, maxLength: number = 200): string {
+  if (!captions || captions.length <= maxLength) {
+    return captions;
+  }
+  return captions.substring(0, maxLength) + "... [truncated]";
+}
+
+/**
+ * OAuth 2.0: Obtém access_token a partir do refresh_token
+ */
+async function getAccessTokenFromRefresh(
+  clientId: string,
+  clientSecret: string,
+  refreshToken: string
+): Promise<string> {
+  const tokenUrl = "https://oauth2.googleapis.com/token";
+  const params = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to refresh access token: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+/**
+ * OAuth 2.0: Download de legendas via captions.download endpoint
+ */
+async function downloadCaptionsOAuth(
+  videoId: string,
+  clientId: string,
+  clientSecret: string,
+  refreshToken: string
+): Promise<{ captions: string; language: string }> {
+  // 1. Obter access token
+  const accessToken = await getAccessTokenFromRefresh(clientId, clientSecret, refreshToken);
+
+  // 2. Listar caption tracks
+  const listUrl = `https://www.googleapis.com/youtube/v3/captions?videoId=${videoId}&part=snippet`;
+  const listResponse = await fetch(listUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!listResponse.ok) {
+    const error = await listResponse.text();
+    throw new Error(`Failed to list captions: ${error}`);
+  }
+
+  const listData = await listResponse.json();
+  const tracks = listData.items || [];
+
+  if (tracks.length === 0) {
+    throw new Error("No caption tracks available");
+  }
+
+  // 3. Priorizar legendas (pt-BR > pt > en > primeiro disponível)
+  const prioritizedTrack =
+    tracks.find((t: any) => t.snippet.language === "pt-BR") ||
+    tracks.find((t: any) => t.snippet.language === "pt") ||
+    tracks.find((t: any) => t.snippet.language === "en") ||
+    tracks[0];
+
+  const captionId = prioritizedTrack.id;
+  const language = prioritizedTrack.snippet.language;
+
+  console.info(`[Method 1] Selected track: ${language} (id: ${captionId})`);
+
+  // 4. Download da legenda
+  const downloadUrl = `https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`;
+  const downloadResponse = await fetch(downloadUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!downloadResponse.ok) {
+    const error = await downloadResponse.text();
+    throw new Error(`Failed to download captions: ${error}`);
+  }
+
+  const captionsText = await downloadResponse.text();
+  return { captions: captionsText, language };
+}
+
 async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | null> {
   // Skip Instagram URLs
   if (url.includes('instagram.com')) {
@@ -232,65 +330,45 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] Starting caption extraction for videoId: ${videoId}`);
 
-  // Method 1: YouTube Data API v3 (requires OAuth, often fails with API key)
-  const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY');
-  const enableYoutubeApi = Deno.env.get('ENABLE_YOUTUBE_DATA_API') !== 'false';
+  // Method 1: YouTube OAuth 2.0 captions.download (official method)
+  const youtubeClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
+  const youtubeClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
+  const youtubeRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
   
-  if (youtubeApiKey && enableYoutubeApi) {
+  if (youtubeClientId && youtubeClientSecret && youtubeRefreshToken) {
     try {
-      console.log(`[Method 1] Trying YouTube Data API v3 for videoId: ${videoId}`);
-      const captionsListResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=${youtubeApiKey}`
+      console.log(`[Method 1] Trying YouTube OAuth captions.download for videoId: ${videoId}`);
+      
+      const { captions: srtContent, language } = await downloadCaptionsOAuth(
+        videoId,
+        youtubeClientId,
+        youtubeClientSecret,
+        youtubeRefreshToken
       );
       
-      if (captionsListResponse.ok) {
-        const captionsData = await captionsListResponse.json();
-        console.log(`[Method 1] Available caption tracks: ${captionsData.items?.length || 0}`);
+      // Clean SRT format
+      const cleanText = srtContent
+        .split('\n')
+        .filter(line => !line.match(/^\d+$/) && !line.match(/\d{2}:\d{2}:\d{2}/))
+        .join(' ')
+        .replace(/\[.*?\]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (cleanText.length > 50) {
+        console.log(`[Method 1] ✅ Success! Extracted ${cleanText.length} characters via OAuth`);
+        console.log(`[Method 1] Preview: ${logCaptionPreview(cleanText)}`);
         
-        const ptTrack = captionsData.items?.find((t: any) => 
-          t.snippet.language === 'pt' || t.snippet.language === 'pt-BR'
-        );
-        const selectedTrack = ptTrack || captionsData.items?.[0];
-        
-        if (selectedTrack) {
-          console.log(`[Method 1] Found track: ${selectedTrack.snippet.language} (${selectedTrack.snippet.trackKind})${ptTrack ? '' : ' [FALLBACK]'}`);
-          
-          try {
-            const downloadResponse = await fetch(
-              `https://www.googleapis.com/youtube/v3/captions/${selectedTrack.id}?tfmt=srt&key=${youtubeApiKey}`
-            );
-            
-            if (downloadResponse.ok) {
-              const srtContent = await downloadResponse.text();
-              const cleanText = srtContent
-                .split('\n')
-                .filter(line => !line.match(/^\d+$/) && !line.match(/\d{2}:\d{2}:\d{2}/))
-                .join(' ')
-                .replace(/\[.*?\]/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-              
-              if (cleanText) {
-                return {
-                  url,
-                  captions: cleanText,
-                  language: ptTrack ? 'pt' : selectedTrack.snippet.language,
-                  extracted_at: new Date().toISOString(),
-                  method: 'youtube-data-api-v3'
-                };
-              }
-            } else {
-              console.log(`[Method 1] ⚠️ Download failed (${downloadResponse.status}): ${await downloadResponse.text()}`);
-            }
-          } catch (downloadError) {
-            console.log(`[Method 1] ⚠️ Download error:`, downloadError);
-          }
-        } else {
-          console.log(`[Method 1] ⚠️ No caption tracks available`);
-        }
+        return {
+          url,
+          captions: cleanText,
+          language,
+          extracted_at: new Date().toISOString(),
+          method: 'youtube-oauth-captions'
+        };
       }
-    } catch (apiError) {
-      console.log(`[Method 1] ⚠️ API error:`, apiError);
+    } catch (oauthError) {
+      console.log(`[Method 1] ⚠️ OAuth error:`, (oauthError as Error).message);
     }
   }
 
@@ -372,6 +450,8 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
 
     if (fullText.length > 50) {
       console.log(`[Method 2] ✅ Success! Extracted ${fullText.length} characters`);
+      console.log(`[Method 2] Preview: ${logCaptionPreview(fullText)}`);
+      
       return {
         url,
         captions: fullText,

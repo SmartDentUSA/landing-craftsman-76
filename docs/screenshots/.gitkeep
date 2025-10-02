@@ -1,0 +1,9 @@
+# Screenshots Directory
+
+Adicione aqui os seguintes screenshots:
+
+1. `01-gcp-create-project.png` - Criação de projeto no GCP
+2. `02-enable-youtube-api.png` - Ativação do YouTube Data API v3
+3. `03-oauth-consent.png` - Configuração do OAuth Consent Screen
+4. `04-oauth-credentials.png` - Credenciais OAuth 2.0
+5. `05-supabase-secrets.png` - Secrets configurados no Supabase
