@@ -490,18 +490,52 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         ...newSeoData
       }));
 
-      console.log('✅ SEO atualizado:', {
-        title: titleResponse.data?.content,
-        description: descResponse.data?.content,
-        slug
-      });
+      // Auto-save no banco de dados
+      if (product?.id) {
+        const { error: saveError } = await supabase
+          .from('products_repository')
+          .update({
+            seo_title_override: newSeoData.seo_title_override,
+            seo_description_override: newSeoData.seo_description_override,
+            slug: newSeoData.slug,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', product.id);
 
-      toast({
-        title: "SEO gerado com sucesso!",
-        description: formData.product_url 
-          ? "Título, descrição e URL da Loja Integrada foram preenchidos"
-          : "Título, descrição e slug foram preenchidos automaticamente"
-      });
+        if (saveError) {
+          console.error('❌ Erro ao salvar SEO automaticamente:', saveError);
+          toast({
+            title: "⚠️ SEO gerado mas não salvo",
+            description: "Conteúdo gerado com sucesso, mas não foi possível salvar automaticamente. Clique em Atualizar para salvar manualmente.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('✅ SEO atualizado e salvo:', {
+          title: titleResponse.data?.content,
+          description: descResponse.data?.content,
+          slug
+        });
+
+        toast({
+          title: "✅ SEO Gerado e Salvo!",
+          description: formData.product_url 
+            ? "Título, descrição e URL foram salvos automaticamente"
+            : "Título, descrição e slug foram salvos automaticamente"
+        });
+      } else {
+        console.log('✅ SEO atualizado (novo produto):', {
+          title: titleResponse.data?.content,
+          description: descResponse.data?.content,
+          slug
+        });
+
+        toast({
+          title: "SEO gerado com sucesso!",
+          description: "Será salvo quando você criar o produto"
+        });
+      }
 
     } catch (error) {
       console.error('Erro ao gerar SEO:', error);
@@ -711,10 +745,37 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         const updatedKeywords = [...existingKeywords, ...uniqueNewKeywords];
         setFormData(prev => ({ ...prev, keywords: updatedKeywords }));
 
-        toast({
-          title: "Sucesso",
-          description: `${uniqueNewKeywords.length} novas keywords geradas com IA!`
-        });
+        // Auto-save no banco de dados
+        if (product?.id) {
+          const { error: saveError } = await supabase
+            .from('products_repository')
+            .update({
+              keywords: updatedKeywords,
+              ai_generated_keywords: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', product.id);
+
+          if (saveError) {
+            console.error('❌ Erro ao salvar keywords automaticamente:', saveError);
+            toast({
+              title: "⚠️ Keywords geradas mas não salvas",
+              description: "Keywords geradas com sucesso, mas não foi possível salvar automaticamente. Clique em Atualizar para salvar manualmente.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          toast({
+            title: "✅ Keywords Geradas e Salvas!",
+            description: `${uniqueNewKeywords.length} novas keywords foram salvas automaticamente`
+          });
+        } else {
+          toast({
+            title: "Sucesso",
+            description: `${uniqueNewKeywords.length} novas keywords geradas! Serão salvas quando você criar o produto`
+          });
+        }
       } else {
         throw new Error('Resposta inválida da IA');
       }
