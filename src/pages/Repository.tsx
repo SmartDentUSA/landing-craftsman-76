@@ -11,10 +11,11 @@ import { EnhancedPromptsManager } from '@/components/EnhancedPromptsManager';
 import { LinksManager } from '@/components/LinksManager';
 import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
 import { ProductSEOBatchEnhancer } from '@/components/ProductSEOBatchEnhancer';
+import YouTubeOAuthSettings from '@/pages/YouTubeOAuthSettings';
 
 const Repository = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -40,7 +41,8 @@ const Repository = () => {
                     {activeView === 'repository' ? 'Repositório Central de Dados' : 
                      activeView === 'categories' ? 'Gerenciar Categorias' : 
                      activeView === 'links' ? 'Gerenciador de Links' : 
-                     activeView === 'merchant' ? 'Google Merchant Center' : 'Prompts IA'}
+                     activeView === 'merchant' ? 'Google Merchant Center' : 
+                     activeView === 'youtube' ? 'YouTube OAuth' : 'Prompts IA'}
                   </h1>
                   <p className="text-muted-foreground mt-2">
                     {activeView === 'repository' 
@@ -51,6 +53,8 @@ const Repository = () => {
                       ? 'Gerencie URLs centralizadas para uso em blogs e landing pages'
                       : activeView === 'merchant'
                       ? 'Gerencie seu feed de produtos para Google Shopping'
+                      : activeView === 'youtube'
+                      ? 'Configure autenticação OAuth para extração de legendas do YouTube'
                       : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                     }
                   </p>
@@ -96,6 +100,13 @@ const Repository = () => {
                   >
                     Google Merchant
                   </Button>
+                  <Button
+                    variant={activeView === 'youtube' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('youtube')}
+                  >
+                    YouTube OAuth
+                  </Button>
                 </div>
                 <AdminStatusBadge />
               </div>
@@ -116,6 +127,8 @@ const Repository = () => {
               <LinksManager />
             ) : activeView === 'merchant' ? (
               <GoogleMerchantManager />
+            ) : activeView === 'youtube' ? (
+              <YouTubeOAuthSettings />
             ) : (
               <EnhancedPromptsManager />
             )}

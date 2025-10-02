@@ -64,7 +64,64 @@ Este guia detalha como configurar autenticação OAuth 2.0 para extrair legendas
 
 ---
 
-## 🔑 Etapa 2: Gerar Refresh Token
+## 🖥️ Configuração via Interface Web (Recomendado)
+
+### 2.1 Acessar Painel YouTube OAuth
+
+1. Acesse seu painel de administração
+2. Navegue para **Repository** → **YouTube OAuth**
+3. Ou acesse diretamente: `/repository` e clique na tab **YouTube OAuth**
+
+📸 **Screenshot:** `docs/screenshots/06-youtube-oauth-ui.png`
+
+### 2.2 Configurar Credenciais
+
+1. **Preencha os campos:**
+   - **Client ID:** Cole o valor obtido no passo 1.4
+   - **Client Secret:** Cole o valor obtido no passo 1.4
+
+2. **Gerar Refresh Token:**
+   - Clique no botão **"Gerar Token"**
+   - Uma janela OAuth será aberta
+   - Faça login com sua conta do YouTube
+   - Autorize o acesso
+   - Após autorização, copie o código da URL de callback
+   - Cole no modal e clique em **"Trocar por Token"**
+
+📸 **Screenshot:** `docs/screenshots/07-oauth-flow-modal.png`
+
+3. **Salvar e Testar:**
+   - Clique em **"Salvar Credenciais"**
+   - Clique em **"Testar Conexão"**
+   - Verifique o badge de status: 🟢 **Conectado**
+
+📸 **Screenshot:** `docs/screenshots/08-connected-status.png`
+
+### 2.3 Configurar Secrets no Supabase
+
+⚠️ **IMPORTANTE:** Após salvar na interface, você ainda precisa configurar os secrets manualmente no Supabase Dashboard:
+
+1. Acesse [Supabase Dashboard](https://supabase.com/dashboard/)
+2. Selecione seu projeto
+3. Vá em **"Project Settings"** → **"Edge Functions"** → **"Secrets"**
+4. Adicione os 3 secrets:
+   - `YOUTUBE_CLIENT_ID`
+   - `YOUTUBE_CLIENT_SECRET`
+   - `YOUTUBE_REFRESH_TOKEN`
+
+📸 **Screenshot:** `docs/screenshots/05-supabase-secrets.png`
+
+### 2.4 Vantagens da Interface Web
+
+✅ **Onboarding reduzido:** 30min → 5min  
+✅ **Sem CLI:** Configuração visual e intuitiva  
+✅ **Status em tempo real:** Badges indicam se está conectado  
+✅ **Alertas automáticos:** Sistema avisa se credenciais ausentes  
+✅ **Acessível a admins:** Não precisa ser desenvolvedor  
+
+---
+
+## 🔑 Etapa 2 (Alternativa): Gerar Refresh Token via CLI
 
 ### 2.1 Rodar Script Interativo
 

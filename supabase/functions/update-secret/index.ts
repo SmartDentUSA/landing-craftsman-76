@@ -19,17 +19,33 @@ serve(async (req) => {
       );
     }
 
-    const { secretName, secretValue } = await req.json();
+    const body = await req.json();
 
-    if (!secretName || !secretValue) {
+    // Support both single secret and batch secrets formats
+    // Single: { secretName: "KEY", secretValue: "value" }
+    // Batch: { secrets: { KEY1: "value1", KEY2: "value2" } }
+    
+    let secretsToLog: string[] = [];
+    
+    if (body.secretName && body.secretValue) {
+      // Single secret (backward compatible)
+      secretsToLog.push(body.secretName);
+      console.log(`🔑 Single secret configuration requested: ${body.secretName}`);
+    } else if (body.secrets && typeof body.secrets === 'object') {
+      // Batch secrets
+      secretsToLog = Object.keys(body.secrets);
+      console.log(`🔑 Batch secrets configuration requested: ${secretsToLog.join(', ')}`);
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Secret name and value are required' }),
+        JSON.stringify({ 
+          error: 'Invalid request format. Use { secretName, secretValue } or { secrets: {...} }' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Security: No logging of sensitive data
-    console.log(`Secret configuration requested for: ${secretName}`);
+    // Security: Only log secret names, never values
+    console.log(`📝 Secrets to configure: ${secretsToLog.join(', ')}`);
     
     // Secret configuration is managed via Supabase dashboard
     // This function confirms the configuration request
@@ -37,7 +53,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Secret ${secretName} configuration requested successfully. Please ensure it's configured in Supabase dashboard.` 
+        message: `Secret(s) ${secretsToLog.join(', ')} configuration requested successfully. Please ensure they're configured in Supabase dashboard.`,
+        secrets: secretsToLog
       }),
       { 
         status: 200, 

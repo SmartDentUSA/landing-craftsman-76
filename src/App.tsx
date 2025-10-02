@@ -12,6 +12,7 @@ import CloudflareSettings from "./pages/CloudflareSettings";
 import PublicationSettings from "./pages/PublicationSettings";
 import BlogEditor from "./pages/BlogEditor";
 import Repository from "./pages/Repository";
+import YouTubeOAuthSettings from "./pages/YouTubeOAuthSettings";
 import Auth from "./pages/Auth";
 import PasswordReset from "./pages/PasswordReset";
 import NotFound from "./pages/NotFound";
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/repository" element={<ProtectedRoute><Repository /></ProtectedRoute>} />
           <Route path="/blog-generator/:id" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
           <Route path="/blog/:id" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
+          <Route path="/youtube-settings" element={<ProtectedRoute><YouTubeOAuthSettings /></ProtectedRoute>} />
           <Route path="/password-reset" element={<PasswordReset />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

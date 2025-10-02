@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.auto-seo-enhancer]
 verify_jwt = true
+
+[functions.exchange-youtube-code]
+verify_jwt = false
+
+[functions.test-youtube-connection]
+verify_jwt = false

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Download, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,10 +40,26 @@ export function CaptionExtractor({
   onCaptionsExtracted,
   defaultOpen = true
 }: CaptionExtractorProps) {
+  const navigate = useNavigate();
   const [extracting, setExtracting] = useState(false);
   const [viewingCaptions, setViewingCaptions] = useState<VideoCaption | null>(null);
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [secretsConfigured, setSecretsConfigured] = useState<boolean | null>(null);
   const { toast } = useToast();
+
+  // Check if YouTube OAuth secrets are configured
+  useEffect(() => {
+    const checkSecrets = async () => {
+      try {
+        const { data } = await supabase.functions.invoke('test-youtube-connection');
+        setSecretsConfigured(data?.ok || false);
+      } catch (error) {
+        setSecretsConfigured(false);
+      }
+    };
+    
+    checkSecrets();
+  }, []);
 
   const hasVideos = videos.length > 0;
   const hasCaptions = existingCaptions.length > 0;
@@ -154,6 +172,23 @@ export function CaptionExtractor({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="border-2">
         <CardHeader className="pb-3">
+          {secretsConfigured === false && (
+            <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <strong>YouTube OAuth não configurado.</strong>{' '}
+                Para extrair legendas de vídeos do seu canal, configure as credenciais OAuth.{' '}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-yellow-900 underline"
+                  onClick={() => navigate('/repository')}
+                >
+                  Configurar agora
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <CollapsibleTrigger asChild>
