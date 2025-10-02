@@ -43,6 +43,11 @@ interface Product {
   subcategory?: string;
   image_url?: string;
   product_url?: string;
+  // SEO fields
+  seo_title_override?: string;
+  seo_description_override?: string;
+  slug?: string;
+  canonical_url?: string;
   sales_pitch?: string;
   use_in_ai_generation: boolean;
   approved: boolean;
@@ -316,6 +321,10 @@ export function RepositoryPanel({
         subcategory: data.subcategory || '',
         image_url: data.image_url || '',
         product_url: data.product_url || '',
+        seo_title_override: data.seo_title_override || undefined,
+        seo_description_override: data.seo_description_override || undefined,
+        slug: data.slug || '',
+        canonical_url: data.canonical_url || '',
         sales_pitch: data.sales_pitch || '',
         use_in_ai_generation: data.use_in_ai_generation ?? true,
         approved: data.approved ?? true,
