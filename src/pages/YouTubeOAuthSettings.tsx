@@ -6,15 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDown } from 'lucide-react';
 
 const STORAGE_KEYS = {
   CLIENT_ID: 'youtube_oauth_client_id',
   CLIENT_SECRET: 'youtube_oauth_client_secret',
   REFRESH_TOKEN: 'youtube_oauth_refresh_token',
 };
+
+const DEFAULT_CLIENT_ID = '616806868683-cvgcj38j5jr3ojhvelafmiorlc4ipiro.apps.googleusercontent.com';
+const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/youtube.force-ssl';
 
 type ConnectionStatus = 'connected' | 'error' | 'not_configured' | 'checking';
 
@@ -30,22 +34,13 @@ export default function YouTubeOAuthSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [showOAuthModal, setShowOAuthModal] = useState(false);
+  const [showGcpGuide, setShowGcpGuide] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (NO defaults)
   useEffect(() => {
-    const savedClientId = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || 
-      '616806868683-cvgcj38j5jr3ojhvelafmiorlc4ipiro.apps.googleusercontent.com';
-    const savedClientSecret = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || 
-      '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';
+    const savedClientId = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || '';
+    const savedClientSecret = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || '';
     const savedRefreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || '';
-    
-    // Save defaults to localStorage if not present
-    if (!localStorage.getItem(STORAGE_KEYS.CLIENT_ID)) {
-      localStorage.setItem(STORAGE_KEYS.CLIENT_ID, savedClientId);
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET)) {
-      localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, savedClientSecret);
-    }
     
     setClientId(savedClientId);
     setClientSecret(savedClientSecret);
@@ -157,8 +152,18 @@ export default function YouTubeOAuthSettings() {
       return;
     }
 
+    // Validar se está usando Client ID padrão
+    if (clientId === DEFAULT_CLIENT_ID) {
+      toast({
+        title: "❌ Credenciais padrão não permitidas",
+        description: "Você precisa criar suas próprias credenciais no Google Cloud Console",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const redirectUri = `${window.location.origin}/oauth2/callback`;
-    const scope = 'https://www.googleapis.com/auth/youtube.force-ssl';
+    const scope = REQUIRED_SCOPE;
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
@@ -224,14 +229,54 @@ export default function YouTubeOAuthSettings() {
       }
     } catch (error: any) {
       console.error('OAuth exchange error:', error);
-      toast({
-        title: "❌ Erro no OAuth",
-        description: error.message || 'Falha ao trocar código',
-        variant: "destructive"
-      });
+      
+      // Detectar erro específico de acesso negado
+      if (error.message?.includes('access_denied') || error.message?.includes('app not verified')) {
+        toast({
+          title: "❌ Acesso negado",
+          description: "Adicione seu email como Test User no OAuth Consent Screen do GCP",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "❌ Erro no OAuth",
+          description: error.message || 'Falha ao trocar código',
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "✅ Copiado",
+        description: `${label} copiado para a área de transferência`,
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Erro ao copiar",
+        description: "Tente copiar manualmente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getRedirectUri = () => `${window.location.origin}/oauth2/callback`;
+  
+  const getGcpConsentScreenUrl = () => {
+    if (!clientId) return 'https://console.cloud.google.com/apis/credentials/consent';
+    
+    // Extrair project number do Client ID (formato: PROJECT_NUMBER-xxxxx.apps.googleusercontent.com)
+    const match = clientId.match(/^(\d+)-/);
+    if (match && match[1]) {
+      return `https://console.cloud.google.com/apis/credentials/consent?project=${match[1]}`;
+    }
+    
+    return 'https://console.cloud.google.com/apis/credentials/consent';
   };
 
   const getStatusBadge = () => {
@@ -278,6 +323,19 @@ export default function YouTubeOAuthSettings() {
         {getStatusBadge()}
       </div>
 
+      {clientId === DEFAULT_CLIENT_ID && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>⚠️ Credenciais padrão detectadas!</strong>
+            <br />
+            Você não pode usar estas credenciais porque não tem acesso ao projeto GCP delas.
+            <br />
+            Crie suas próprias credenciais seguindo o guia abaixo.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {channelInfo && status === 'connected' && (
         <Alert>
           <CheckCircle className="h-4 w-4" />
@@ -303,13 +361,49 @@ export default function YouTubeOAuthSettings() {
             </a>
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Helper: Redirect URI */}
+          <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Redirect URI (use no GCP)</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyToClipboard(getRedirectUri(), 'Redirect URI')}
+              >
+                <Copy className="w-4 h-4 mr-1" />
+                Copiar
+              </Button>
+            </div>
+            <code className="text-xs break-all block bg-background p-2 rounded border">
+              {getRedirectUri()}
+            </code>
+          </div>
+
+          {/* Helper: Required Scope */}
+          <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Escopo necessário (OAuth Consent Screen)</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyToClipboard(REQUIRED_SCOPE, 'Escopo')}
+              >
+                <Copy className="w-4 h-4 mr-1" />
+                Copiar
+              </Button>
+            </div>
+            <code className="text-xs break-all block bg-background p-2 rounded border">
+              {REQUIRED_SCOPE}
+            </code>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="clientId">Client ID</Label>
             <Input
               id="clientId"
               type="text"
-              placeholder="123456789.apps.googleusercontent.com"
+              placeholder="123456789-xxxxx.apps.googleusercontent.com"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
             />
@@ -340,7 +434,7 @@ export default function YouTubeOAuthSettings() {
               <Button
                 variant="outline"
                 onClick={openOAuthFlow}
-                disabled={!clientId}
+                disabled={!clientId || clientId === DEFAULT_CLIENT_ID}
               >
                 Gerar Token
               </Button>
@@ -349,21 +443,6 @@ export default function YouTubeOAuthSettings() {
               Clique em "Gerar Token" para obter via fluxo OAuth
             </p>
           </div>
-
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              <strong>Instruções completas:</strong>{' '}
-              <a 
-                href="https://github.com/seu-repo/docs/YOUTUBE_OAUTH_SETUP.md" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Guia de configuração passo a passo
-              </a>
-            </AlertDescription>
-          </Alert>
 
           <div className="flex gap-2 pt-4">
             <Button
@@ -397,6 +476,154 @@ export default function YouTubeOAuthSettings() {
             </Button>
           </div>
         </CardContent>
+      </Card>
+
+      {/* GCP Setup Guide */}
+      <Card>
+        <CardHeader>
+          <Collapsible open={showGcpGuide} onOpenChange={setShowGcpGuide}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5" />
+                <CardTitle>⚙️ Guia de Configuração no Google Cloud</CardTitle>
+              </div>
+              <ChevronDown className={`w-5 h-5 transition-transform ${showGcpGuide ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="mt-4">
+              <CardDescription className="mb-4">
+                Siga este checklist para criar suas credenciais OAuth no GCP
+              </CardDescription>
+
+              <div className="space-y-4">
+                {/* Step 1 */}
+                <div className="p-4 border rounded-lg space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">Criar projeto GCP + Ativar YouTube Data API v3</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Crie um novo projeto no Google Cloud Console e ative a API do YouTube
+                      </p>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto mt-2"
+                        asChild
+                      >
+                        <a
+                          href="https://console.cloud.google.com/apis/library/youtube.googleapis.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ativar YouTube Data API v3
+                          <ExternalLink className="w-3 h-3 ml-1" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="p-4 border rounded-lg space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                      2
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">Configurar OAuth Consent Screen (External)</h4>
+                      <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
+                        <li>Selecione "External" como tipo de usuário</li>
+                        <li>Preencha nome do app e email de suporte</li>
+                        <li><strong>IMPORTANTE:</strong> Adicione seu email (<code>smartdentcadcam@gmail.com</code>) como "Test User"</li>
+                        <li>Adicione o escopo: <code className="text-xs bg-muted px-1 rounded">{REQUIRED_SCOPE}</code></li>
+                      </ul>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto mt-2"
+                        asChild
+                      >
+                        <a
+                          href={getGcpConsentScreenUrl()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Configurar OAuth Consent Screen
+                          <ExternalLink className="w-3 h-3 ml-1" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="p-4 border rounded-lg space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                      3
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">Criar OAuth Client ID (Web application)</h4>
+                      <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
+                        <li>Tipo: Web application</li>
+                        <li>Nome: YouTube OAuth Client (ou qualquer nome)</li>
+                        <li>Adicionar URI de redirecionamento autorizado:</li>
+                      </ul>
+                      <code className="text-xs break-all block bg-muted p-2 rounded border mt-2">
+                        {getRedirectUri()}
+                      </code>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto mt-2"
+                        asChild
+                      >
+                        <a
+                          href="https://console.cloud.google.com/apis/credentials"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Criar OAuth Client ID
+                          <ExternalLink className="w-3 h-3 ml-1" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="p-4 border rounded-lg space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                      4
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">Copiar Client ID e Client Secret</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Após criar o OAuth Client ID, copie as credenciais e cole nos campos acima
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Alert className="mt-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Documentação completa:</strong> Para mais detalhes, consulte o{' '}
+                  <a 
+                    href="/docs/YOUTUBE_OAUTH_SETUP.md" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    guia passo a passo completo
+                  </a>
+                </AlertDescription>
+              </Alert>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardHeader>
       </Card>
 
       <Dialog open={showOAuthModal} onOpenChange={setShowOAuthModal}>
