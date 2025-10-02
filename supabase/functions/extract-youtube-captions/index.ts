@@ -165,8 +165,94 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
     throw new Error('Invalid YouTube URL');
   }
 
-  // Method 1: Try youtube-transcript library (via external service)
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Starting caption extraction for videoId: ${videoId}`);
+
+  // Method 1: Try YouTube Data API v3 (Official - Most Reliable)
+  const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY');
+  const enableYoutubeApi = Deno.env.get('ENABLE_YOUTUBE_DATA_API') !== 'false'; // Feature flag
+  
+  if (youtubeApiKey && enableYoutubeApi) {
+    try {
+      console.log(`[Method 1] Trying YouTube Data API v3 for videoId: ${videoId}`);
+      
+      // Step 1: List available captions
+      const captionsListResponse = await fetch(
+        `https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=${youtubeApiKey}`
+      );
+      
+      if (captionsListResponse.ok) {
+        const captionsData = await captionsListResponse.json();
+        const tracksCount = captionsData.items?.length || 0;
+        console.log(`[Method 1] Available caption tracks: ${tracksCount}`);
+        
+        // Prefer Portuguese captions (manual or ASR)
+        const ptTrack = captionsData.items?.find((track: any) => 
+          track.snippet.language === 'pt' || 
+          track.snippet.language === 'pt-BR' ||
+          (track.snippet.trackKind === 'ASR' && track.snippet.language.startsWith('pt'))
+        );
+        
+        if (ptTrack) {
+          console.log(`[Method 1] Found PT track: ${ptTrack.snippet.language} (${ptTrack.snippet.trackKind})`);
+          
+          // Note: Caption download with API Key has limitations
+          // OAuth 2.0 is required for captions.download
+          // We'll attempt but expect it might fail, then fallback to Method 2
+          try {
+            const captionId = ptTrack.id;
+            const downloadResponse = await fetch(
+              `https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt&key=${youtubeApiKey}`
+            );
+            
+            if (downloadResponse.ok) {
+              const srtContent = await downloadResponse.text();
+              const cleanText = srtContent
+                .split('\n')
+                .filter(line => 
+                  !line.match(/^\d+$/) && 
+                  !line.match(/\d{2}:\d{2}:\d{2}/) &&
+                  line.trim() !== ''
+                )
+                .join(' ')
+                .replace(/\[.*?\]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              if (cleanText) {
+                console.log(`[Method 1] ✅ Success! Extracted ${cleanText.length} characters`);
+                return {
+                  url,
+                  captions: cleanText,
+                  language: ptTrack.snippet.language,
+                  extracted_at: new Date().toISOString(),
+                  method: 'youtube-data-api-v3'
+                };
+              }
+            } else {
+              const errorData = await downloadResponse.json();
+              console.log(`[Method 1] ⚠️ Download failed (${downloadResponse.status}): ${errorData.error?.message || 'OAuth required'}`);
+            }
+          } catch (downloadError) {
+            console.log(`[Method 1] ⚠️ Download error: ${(downloadError as Error).message}`);
+          }
+        } else {
+          console.log(`[Method 1] ⚠️ No Portuguese caption track found`);
+        }
+      } else {
+        const errorData = await captionsListResponse.json();
+        console.log(`[Method 1] ❌ API returned ${captionsListResponse.status}: ${errorData.error?.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error(`[Method 1] ❌ YouTube Data API error:`, error);
+    }
+  } else {
+    console.log(`[Method 1] Skipped (API key ${youtubeApiKey ? 'exists but' : 'not set or'} feature flag disabled)`);
+  }
+
+  // Method 2: Try youtube-transcript-api (Free fallback)
   try {
+    console.log(`[Method 2] Trying youtube-transcript-api for videoId: ${videoId}`);
     const response = await fetch(`https://youtube-transcript-api.vercel.app/api/transcript?videoId=${videoId}&lang=pt`);
     
     if (response.ok) {
@@ -180,6 +266,7 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
           .trim();
 
         if (fullText) {
+          console.log(`[Method 2] ✅ Success! Extracted ${fullText.length} characters`);
           return {
             url,
             captions: fullText,
@@ -189,22 +276,16 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
           };
         }
       }
+    } else {
+      console.log(`[Method 2] ⚠️ API returned status ${response.status}`);
     }
   } catch (error) {
-    console.error('youtube-transcript-api failed:', error);
+    console.error(`[Method 2] ❌ youtube-transcript-api failed:`, error);
   }
 
-  // Method 2: Try alternative transcript API
+  // Method 3: Try direct caption extraction (last resort)
   try {
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=your-api-key`);
-    // Note: This would require YouTube Data API key
-    // For now, we'll skip this method
-  } catch (error) {
-    console.error('YouTube Data API failed:', error);
-  }
-
-  // Method 3: Try direct caption extraction (simplified)
-  try {
+    console.log(`[Method 3] Trying direct HTML extraction for videoId: ${videoId}`);
     const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
     const html = await response.text();
     
@@ -212,6 +293,7 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
     const captionsMatch = html.match(/"captionTracks":\[(.*?)\]/);
     
     if (captionsMatch) {
+      console.log(`[Method 3] ⚠️ Caption tracks found but extraction not fully implemented`);
       // This is a simplified approach - in production you'd parse the actual caption data
       return {
         url,
@@ -220,17 +302,20 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
         extracted_at: new Date().toISOString(),
         method: 'direct-extraction'
       };
+    } else {
+      console.log(`[Method 3] ❌ No caption tracks found in HTML`);
     }
   } catch (error) {
-    console.error('Direct extraction failed:', error);
+    console.error(`[Method 3] ❌ Direct extraction failed:`, error);
   }
 
+  console.log(`[${timestamp}] ❌ All methods failed for videoId: ${videoId}`);
   return null;
 }
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
     /youtube\.com\/watch\?.*v=([^&\n?#]+)/
   ];
 
