@@ -33,9 +33,19 @@ export default function YouTubeOAuthSettings() {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedClientId = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || '';
-    const savedClientSecret = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || '';
+    const savedClientId = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || 
+      '616806868683-cvgcj38j5jr3ojhvelafmiorlc4ipiro.apps.googleusercontent.com';
+    const savedClientSecret = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || 
+      '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';
     const savedRefreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || '';
+    
+    // Save defaults to localStorage if not present
+    if (!localStorage.getItem(STORAGE_KEYS.CLIENT_ID)) {
+      localStorage.setItem(STORAGE_KEYS.CLIENT_ID, savedClientId);
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET)) {
+      localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, savedClientSecret);
+    }
     
     setClientId(savedClientId);
     setClientSecret(savedClientSecret);
