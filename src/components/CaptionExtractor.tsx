@@ -57,43 +57,74 @@ export function CaptionExtractor({
     }
 
     setExtracting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('extract-youtube-captions', {
-        body: {
-          productId,
-          videoType
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        onCaptionsExtracted(data.captions || []);
-        toast({
-          title: "Sucesso",
-          description: `Legendas extraídas para ${data.extracted} vídeo(s)`,
+    
+    // ✅ Retry logic with exponential backoff for conflicts
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke('extract-youtube-captions', {
+          body: {
+            productId,
+            videoType
+          }
         });
 
-        if (data.errors && data.errors.length > 0) {
+        if (error) throw error;
+
+        if (data?.success) {
+          onCaptionsExtracted(data.captions || []);
           toast({
-            title: "Avisos",
-            description: `Alguns vídeos falharam: ${data.errors.length}`,
-            variant: "destructive"
+            title: "Sucesso",
+            description: `Legendas extraídas para ${data.extracted} vídeo(s)`,
           });
+
+          if (data.errors && data.errors.length > 0) {
+            toast({
+              title: "Avisos",
+              description: `Alguns vídeos falharam: ${data.errors.length}`,
+              variant: "destructive"
+            });
+          }
+          
+          setExtracting(false);
+          return;
+        } else {
+          throw new Error(data?.error || 'Erro desconhecido');
         }
-      } else {
-        throw new Error(data?.error || 'Erro desconhecido');
+      } catch (error: any) {
+        lastError = error;
+        
+        // Check if it's a conflict error (optimistic locking)
+        const isConflict = error?.message?.includes('modified by another request');
+        
+        if (isConflict && attempt < maxRetries - 1) {
+          const waitTime = 1000 * (attempt + 1); // 1s, 2s, 4s
+          console.log(`Conflict detected, retrying in ${waitTime}ms... (attempt ${attempt + 1}/${maxRetries})`);
+          
+          toast({
+            title: "Conflito detectado",
+            description: `Tentando novamente em ${waitTime / 1000}s...`,
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        // If not a conflict or last attempt, break
+        break;
       }
-    } catch (error) {
-      console.error('Error extracting captions:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao extrair legendas. Tente novamente.",
-        variant: "destructive"
-      });
-    } finally {
-      setExtracting(false);
     }
+    
+    // All retries failed
+    console.error('Error extracting captions:', lastError);
+    toast({
+      title: "Erro",
+      description: lastError?.message || "Erro ao extrair legendas. Tente novamente.",
+      variant: "destructive"
+    });
+    setExtracting(false);
   };
 
   const getStatusBadge = () => {
