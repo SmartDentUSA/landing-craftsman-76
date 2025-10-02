@@ -160,6 +160,12 @@ serve(async (req) => {
 });
 
 async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | null> {
+  // Skip Instagram URLs silently
+  if (url.includes('instagram.com')) {
+    console.log(`[Skip] Instagram URL detected, skipping: ${url}`);
+    return null;
+  }
+
   const videoId = extractYouTubeId(url);
   if (!videoId) {
     throw new Error('Invalid YouTube URL');
@@ -186,21 +192,29 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
         const tracksCount = captionsData.items?.length || 0;
         console.log(`[Method 1] Available caption tracks: ${tracksCount}`);
         
-        // Prefer Portuguese captions (manual or ASR)
+        // 1. Try to find Portuguese captions (preferred)
         const ptTrack = captionsData.items?.find((track: any) => 
           track.snippet.language === 'pt' || 
           track.snippet.language === 'pt-BR' ||
           (track.snippet.trackKind === 'ASR' && track.snippet.language.startsWith('pt'))
         );
         
-        if (ptTrack) {
-          console.log(`[Method 1] Found PT track: ${ptTrack.snippet.language} (${ptTrack.snippet.trackKind})`);
+        // 2. If no Portuguese, fallback to ANY available track
+        const fallbackTrack = !ptTrack && captionsData.items?.length > 0 
+          ? captionsData.items[0] 
+          : null;
+        
+        const selectedTrack = ptTrack || fallbackTrack;
+        
+        if (selectedTrack) {
+          const isPreferredLanguage = !!ptTrack;
+          console.log(`[Method 1] Found track: ${selectedTrack.snippet.language} (${selectedTrack.snippet.trackKind})${isPreferredLanguage ? ' [PREFERRED]' : ' [FALLBACK]'}`);
           
           // Note: Caption download with API Key has limitations
           // OAuth 2.0 is required for captions.download
           // We'll attempt but expect it might fail, then fallback to Method 2
           try {
-            const captionId = ptTrack.id;
+            const captionId = selectedTrack.id;
             const downloadResponse = await fetch(
               `https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt&key=${youtubeApiKey}`
             );
@@ -220,11 +234,12 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
                 .trim();
               
               if (cleanText) {
-                console.log(`[Method 1] ✅ Success! Extracted ${cleanText.length} characters`);
+                const langIndicator = isPreferredLanguage ? 'pt' : selectedTrack.snippet.language;
+                console.log(`[Method 1] ✅ Success! Extracted ${cleanText.length} characters (lang: ${langIndicator})`);
                 return {
                   url,
                   captions: cleanText,
-                  language: ptTrack.snippet.language,
+                  language: langIndicator,
                   extracted_at: new Date().toISOString(),
                   method: 'youtube-data-api-v3'
                 };
@@ -237,7 +252,7 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
             console.log(`[Method 1] ⚠️ Download error: ${(downloadError as Error).message}`);
           }
         } else {
-          console.log(`[Method 1] ⚠️ No Portuguese caption track found`);
+          console.log(`[Method 1] ⚠️ No caption tracks available`);
         }
       } else {
         const errorData = await captionsListResponse.json();
@@ -252,8 +267,16 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
 
   // Method 2: Try youtube-transcript-api (Free fallback)
   try {
-    console.log(`[Method 2] Trying youtube-transcript-api for videoId: ${videoId}`);
-    const response = await fetch(`https://youtube-transcript-api.vercel.app/api/transcript?videoId=${videoId}&lang=pt`);
+    console.log(`[Method 2] Trying youtube-transcript-api for videoId: ${videoId} (lang=pt)`);
+    let response = await fetch(`https://youtube-transcript-api.vercel.app/api/transcript?videoId=${videoId}&lang=pt`);
+    let isPtPreferred = true;
+    
+    // If Portuguese fails, try default language
+    if (!response.ok) {
+      console.log(`[Method 2] PT failed, trying default language...`);
+      response = await fetch(`https://youtube-transcript-api.vercel.app/api/transcript?videoId=${videoId}`);
+      isPtPreferred = false;
+    }
     
     if (response.ok) {
       const data = await response.json();
@@ -266,11 +289,13 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
           .trim();
 
         if (fullText) {
-          console.log(`[Method 2] ✅ Success! Extracted ${fullText.length} characters`);
+          const detectedLang = data.language || (isPtPreferred ? 'pt' : 'unknown');
+          const langIndicator = isPtPreferred ? ' [PREFERRED]' : ' [FALLBACK]';
+          console.log(`[Method 2] ✅ Success! Extracted ${fullText.length} characters (lang: ${detectedLang})${langIndicator}`);
           return {
             url,
             captions: fullText,
-            language: 'pt',
+            language: detectedLang,
             extracted_at: new Date().toISOString(),
             method: 'youtube-transcript-api'
           };
