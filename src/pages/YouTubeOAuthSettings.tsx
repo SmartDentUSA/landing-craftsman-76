@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 
 const STORAGE_KEYS = {
@@ -27,6 +27,7 @@ type ConnectionStatus = 'connected' | 'error' | 'not_configured' | 'checking';
 export default function YouTubeOAuthSettings() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -38,6 +39,7 @@ export default function YouTubeOAuthSettings() {
   const [isTesting, setIsTesting] = useState(false);
   const [showOAuthModal, setShowOAuthModal] = useState(false);
   const [showGcpGuide, setShowGcpGuide] = useState(false);
+  const [oauthCode, setOauthCode] = useState('');
 
   // Load from localStorage on mount (NO defaults)
   useEffect(() => {
@@ -54,6 +56,19 @@ export default function YouTubeOAuthSettings() {
       testConnection();
     }
   }, []);
+
+  // Detectar retorno do OAuth callback
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.openOAuthModal && state?.code) {
+      console.log("OAuth callback detected, opening modal with code");
+      setOauthCode(state.code);
+      setShowOAuthModal(true);
+      
+      // Limpar state para evitar reabrir modal
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const testConnection = async () => {
     setIsTesting(true);
