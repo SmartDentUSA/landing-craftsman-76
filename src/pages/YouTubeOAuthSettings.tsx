@@ -440,7 +440,6 @@ export default function YouTubeOAuthSettings() {
               <Button
                 variant="outline"
                 onClick={openOAuthFlow}
-                disabled={!clientId || clientId === DEFAULT_CLIENT_ID}
               >
                 Gerar Token
               </Button>
