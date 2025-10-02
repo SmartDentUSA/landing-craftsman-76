@@ -265,47 +265,96 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
     console.log(`[Method 1] Skipped (API key ${youtubeApiKey ? 'exists but' : 'not set or'} feature flag disabled)`);
   }
 
-  // Method 2: Try youtube-transcript-api (Free fallback)
+  // Method 2: Try alternative transcript extraction (Free fallback)
   try {
-    console.log(`[Method 2] Trying youtube-transcript-api for videoId: ${videoId} (lang=pt)`);
-    let response = await fetch(`https://youtube-transcript-api.vercel.app/api/transcript?videoId=${videoId}&lang=pt`);
-    let isPtPreferred = true;
+    console.log(`[Method 2] Trying direct transcript extraction for videoId: ${videoId}`);
     
-    // If Portuguese fails, try default language
-    if (!response.ok) {
-      console.log(`[Method 2] PT failed, trying default language...`);
-      response = await fetch(`https://youtube-transcript-api.vercel.app/api/transcript?videoId=${videoId}`);
-      isPtPreferred = false;
+    // Fetch the video page
+    const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
+    
+    if (!pageResponse.ok) {
+      throw new Error(`Failed to fetch video page: ${pageResponse.status}`);
     }
     
-    if (response.ok) {
-      const data = await response.json();
+    const html = await pageResponse.text();
+    
+    // Extract caption track URLs from the initial player response
+    const playerResponseMatch = html.match(/"captions":\s*({[^}]*"playerCaptionsTracklistRenderer"[^}]+}[^}]*})/);
+    
+    if (playerResponseMatch) {
+      console.log(`[Method 2] Found captions data in page`);
       
-      if (data.transcript && Array.isArray(data.transcript)) {
-        const fullText = data.transcript
-          .map((item: Caption) => item.text)
-          .join(' ')
-          .replace(/\[.*?\]/g, '') // Remove time markers like [Music]
-          .trim();
-
-        if (fullText) {
-          const detectedLang = data.language || (isPtPreferred ? 'pt' : 'unknown');
-          const langIndicator = isPtPreferred ? ' [PREFERRED]' : ' [FALLBACK]';
-          console.log(`[Method 2] ✅ Success! Extracted ${fullText.length} characters (lang: ${detectedLang})${langIndicator}`);
-          return {
-            url,
-            captions: fullText,
-            language: detectedLang,
-            extracted_at: new Date().toISOString(),
-            method: 'youtube-transcript-api'
-          };
+      // Look for caption track URLs
+      const captionTracksMatch = html.match(/"captionTracks":\s*\[(.*?)\]/);
+      
+      if (captionTracksMatch) {
+        try {
+          const captionTracksStr = captionTracksMatch[1];
+          
+          // Try to find Portuguese caption first
+          const ptUrlMatch = captionTracksStr.match(/"baseUrl":"([^"]+)"[^}]*"languageCode":"pt/);
+          const anyUrlMatch = captionTracksStr.match(/"baseUrl":"([^"]+)"/);
+          
+          const captionUrl = ptUrlMatch ? ptUrlMatch[1] : (anyUrlMatch ? anyUrlMatch[1] : null);
+          const isPtPreferred = !!ptUrlMatch;
+          
+          if (captionUrl) {
+            const cleanUrl = captionUrl.replace(/\\u0026/g, '&').replace(/\\/g, '');
+            console.log(`[Method 2] Fetching captions from URL (${isPtPreferred ? 'PT' : 'fallback'})`);
+            
+            const captionsResponse = await fetch(cleanUrl);
+            
+            if (captionsResponse.ok) {
+              const captionsXml = await captionsResponse.text();
+              
+              // Parse XML and extract text
+              const textMatches = captionsXml.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
+              const texts: string[] = [];
+              
+              for (const match of textMatches) {
+                // Decode HTML entities
+                let text = match[1]
+                  .replace(/&amp;/g, '&')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&#39;/g, "'")
+                  .replace(/\n/g, ' ')
+                  .trim();
+                
+                if (text && !text.match(/^\[.*\]$/)) { // Skip [Music] etc
+                  texts.push(text);
+                }
+              }
+              
+              const fullText = texts.join(' ').replace(/\s+/g, ' ').trim();
+              
+              if (fullText && fullText.length > 50) {
+                console.log(`[Method 2] ✅ Success! Extracted ${fullText.length} characters (${isPtPreferred ? 'PT' : 'auto'})`);
+                return {
+                  url,
+                  captions: fullText,
+                  language: isPtPreferred ? 'pt' : 'auto',
+                  extracted_at: new Date().toISOString(),
+                  method: 'direct-transcript-extraction'
+                };
+              }
+            }
+          }
+        } catch (parseError) {
+          console.error(`[Method 2] ❌ Failed to parse caption tracks:`, parseError);
         }
       }
-    } else {
-      console.log(`[Method 2] ⚠️ API returned status ${response.status}`);
     }
+    
+    console.log(`[Method 2] ⚠️ No usable caption tracks found`);
   } catch (error) {
-    console.error(`[Method 2] ❌ youtube-transcript-api failed:`, error);
+    console.error(`[Method 2] ❌ Direct extraction failed:`, error);
   }
 
   // Method 3: Try direct caption extraction (last resort)
