@@ -1525,6 +1525,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   videos={youtubeVideos}
                   existingCaptions={videoCaptions.youtube_videos || []}
                   onCaptionsExtracted={(captions) => handleCaptionsExtracted('youtube_videos', captions)}
+                  defaultOpen={youtubeVideos.length > 0}
                 />
               )}
             </div>
@@ -1546,6 +1547,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   videos={testimonialVideos}
                   existingCaptions={videoCaptions.testimonial_videos || []}
                   onCaptionsExtracted={(captions) => handleCaptionsExtracted('testimonial_videos', captions)}
+                  defaultOpen={testimonialVideos.length > 0}
                 />
               )}
             </div>
@@ -1567,6 +1569,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   videos={technicalVideos}
                   existingCaptions={videoCaptions.technical_videos || []}
                   onCaptionsExtracted={(captions) => handleCaptionsExtracted('technical_videos', captions)}
+                  defaultOpen={technicalVideos.length > 0}
                 />
               )}
             </div>

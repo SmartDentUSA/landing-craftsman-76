@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Download, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,6 +27,7 @@ interface CaptionExtractorProps {
   videos: Array<{ url: string; description: string }>;
   existingCaptions?: VideoCaption[];
   onCaptionsExtracted: (captions: VideoCaption[]) => void;
+  defaultOpen?: boolean;
 }
 
 export function CaptionExtractor({ 
@@ -33,10 +35,12 @@ export function CaptionExtractor({
   videoType, 
   videos, 
   existingCaptions = [], 
-  onCaptionsExtracted 
+  onCaptionsExtracted,
+  defaultOpen = true
 }: CaptionExtractorProps) {
   const [extracting, setExtracting] = useState(false);
   const [viewingCaptions, setViewingCaptions] = useState<VideoCaption | null>(null);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const { toast } = useToast();
 
   const hasVideos = videos.length > 0;
@@ -97,9 +101,14 @@ export function CaptionExtractor({
       return <Badge variant="secondary">Sem vídeos</Badge>;
     }
     if (hasCaptions) {
-      return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Extraído</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-500">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Extraído ({existingCaptions.length}/{videos.length})
+        </Badge>
+      );
     }
-    return <Badge variant="outline">Não extraído</Badge>;
+    return <Badge variant="outline">Não extraído (0/{videos.length})</Badge>;
   };
 
   const getSentimentColor = (sentiment: string) => {
@@ -111,127 +120,149 @@ export function CaptionExtractor({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h4 className="font-medium">Extração de Legendas</h4>
-          <p className="text-sm text-muted-foreground">
-            Extraia legendas automaticamente dos vídeos do YouTube
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {getStatusBadge()}
-          <Button
-            onClick={extractCaptions}
-            disabled={!hasVideos || extracting}
-            size="sm"
-            variant={hasCaptions ? "outline" : "default"}
-          >
-            {extracting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4 mr-2" />
-            )}
-            {hasCaptions ? 'Re-extrair' : 'Extrair'}
-          </Button>
-        </div>
-      </div>
-
-      {hasCaptions && (
-        <div className="space-y-3">
-          <h5 className="font-medium text-sm">Legendas Extraídas ({existingCaptions.length})</h5>
-          {existingCaptions.map((caption, index) => (
-            <Card key={index} className="p-4">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="border-2">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent">
+                  {isOpen ? (
+                    <ChevronDown className="h-5 w-5" />
+                  ) : (
+                    <ChevronUp className="h-5 w-5" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              
+              <div>
+                <h4 className="font-medium">Extração de Legendas</h4>
+                <p className="text-sm text-muted-foreground">
+                  {hasVideos 
+                    ? `${videos.length} vídeo(s) disponível(is)`
+                    : "Nenhum vídeo para extração"
+                  }
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {getStatusBadge()}
+              <Button
+                onClick={extractCaptions}
+                disabled={!hasVideos || extracting}
+                size="sm"
+                variant={hasCaptions ? "outline" : "default"}
+              >
+                {extracting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                {hasCaptions ? 'Re-extrair' : 'Extrair'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            {hasCaptions && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {caption.method}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {caption.language}
-                    </Badge>
-                    {caption.analysis && (
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${getSentimentColor(caption.analysis.sentiment)}`}
-                      >
-                        {caption.analysis.sentiment}
-                      </Badge>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setViewingCaptions(
-                      viewingCaptions?.url === caption.url ? null : caption
-                    )}
-                  >
-                    {viewingCaptions?.url === caption.url ? 'Ocultar' : 'Ver Legendas'}
-                  </Button>
-                </div>
-
-                <div className="text-sm">
-                  <p className="font-medium truncate">{caption.url}</p>
-                  <p className="text-muted-foreground text-xs">
-                    Extraído em {new Date(caption.extracted_at).toLocaleString()}
-                  </p>
-                </div>
-
-                {caption.analysis && (
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">Resumo:</label>
-                      <p className="text-sm">{caption.analysis.summary}</p>
-                    </div>
-                    
-                    {caption.analysis.keywords.length > 0 && (
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Keywords:</label>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {caption.analysis.keywords.slice(0, 5).map((keyword, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {keyword}
-                            </Badge>
-                          ))}
-                          {caption.analysis.keywords.length > 5 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{caption.analysis.keywords.length - 5}
+                <h5 className="font-medium text-sm">Legendas Extraídas ({existingCaptions.length})</h5>
+                {existingCaptions.map((caption, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {caption.method}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {caption.language}
+                          </Badge>
+                          {caption.analysis && (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${getSentimentColor(caption.analysis.sentiment)}`}
+                            >
+                              {caption.analysis.sentiment}
                             </Badge>
                           )}
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewingCaptions(
+                            viewingCaptions?.url === caption.url ? null : caption
+                          )}
+                        >
+                          {viewingCaptions?.url === caption.url ? 'Ocultar' : 'Ver Legendas'}
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                )}
 
-                {viewingCaptions?.url === caption.url && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Legendas Completas ({caption.captions.length} caracteres):
-                    </label>
-                    <Textarea
-                      value={caption.captions}
-                      readOnly
-                      className="text-sm max-h-32"
-                      placeholder="Nenhuma legenda disponível"
-                    />
-                  </div>
-                )}
+                      <div className="text-sm">
+                        <p className="font-medium truncate">{caption.url}</p>
+                        <p className="text-muted-foreground text-xs">
+                          Extraído em {new Date(caption.extracted_at).toLocaleString()}
+                        </p>
+                      </div>
+
+                      {caption.analysis && (
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Resumo:</label>
+                            <p className="text-sm">{caption.analysis.summary}</p>
+                          </div>
+                          
+                          {caption.analysis.keywords.length > 0 && (
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Keywords:</label>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {caption.analysis.keywords.slice(0, 5).map((keyword, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                                {caption.analysis.keywords.length > 5 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{caption.analysis.keywords.length - 5}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {viewingCaptions?.url === caption.url && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Legendas Completas ({caption.captions.length} caracteres):
+                          </label>
+                          <Textarea
+                            value={caption.captions}
+                            readOnly
+                            className="text-sm max-h-32"
+                            placeholder="Nenhuma legenda disponível"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
               </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {!hasVideos && (
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <AlertCircle className="w-4 h-4" />
-            <p className="text-sm">Adicione vídeos do YouTube para extrair legendas automaticamente</p>
-          </div>
-        </Card>
-      )}
-    </div>
+            )}
+            
+            {!hasVideos && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <AlertCircle className="w-4 h-4" />
+                <p className="text-sm">Adicione vídeos do YouTube para extrair legendas automaticamente</p>
+              </div>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
