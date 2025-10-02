@@ -22,8 +22,8 @@ export default function OAuthCallback() {
     if (code) {
       console.log("OAuth code received, redirecting to repository");
       
-      // Redirecionar para Repository com flag para abrir modal
-      navigate("/repository", { 
+      // Redirecionar para YouTube Settings com flag para abrir modal
+      navigate("/youtube-settings", { 
         replace: true,
         state: { openOAuthModal: true, code }
       });
