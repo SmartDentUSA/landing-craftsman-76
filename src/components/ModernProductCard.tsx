@@ -246,23 +246,23 @@ export function ModernProductCard({
           className="flex-shrink-0"
         />
 
-        {/* Imagem pequena */}
+        {/* Imagem - aumentada para 80px */}
         {product.image_url ? (
           <OptimizedImage
             src={product.image_url}
             alt={product.name}
-            className="w-12 h-12 object-cover rounded-md flex-shrink-0"
+            className="w-20 h-20 object-cover rounded-md flex-shrink-0"
           />
         ) : (
-          <div className="w-12 h-12 rounded-md bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center flex-shrink-0">
-            <Package className="h-6 w-6 text-muted-foreground/50" />
+          <div className="w-20 h-20 rounded-md bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center flex-shrink-0">
+            <Package className="h-8 w-8 text-muted-foreground/50" />
           </div>
         )}
 
         {/* Conteúdo principal */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-base leading-tight truncate flex-1">
+            <h3 className="font-semibold text-base leading-tight line-clamp-1 flex-1">
               {product.name}
             </h3>
             {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
@@ -288,19 +288,23 @@ export function ModernProductCard({
               </TooltipProvider>
             )}
           </div>
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
+          <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
             {categoryPath}
           </p>
           {product.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-1.5">
               {product.description}
             </p>
           )}
-          <div className="mt-2 space-y-2">
-            <CompletionBadges product={product} score={score} compact={true} />
+          {/* Badges organizados em 3 linhas categorizadas */}
+          <div className="mt-2.5 space-y-2.5">
+            {/* LINHA 1: Contadores de Conteúdo (Verde) */}
+            <div className="flex flex-wrap gap-1.5">
+              <CompletionBadges product={product} score={score} compact={true} />
+            </div>
             
-            {/* Status and Section Badges */}
-            <div className="flex flex-wrap gap-1">
+            {/* LINHA 2: Status e Seções (Azul/Cinza) */}
+            <div className="flex flex-wrap gap-1.5">
               {/* Approval Status */}
               <Badge 
                 variant={product.approved ? "default" : "destructive"}
@@ -333,12 +337,15 @@ export function ModernProductCard({
                   Ofertas
                 </Badge>
               )}
-              
-              {/* Coupon Badge */}
+            </div>
+
+            {/* LINHA 3: Conteúdo Gerado e Promoções (Roxo/Laranja) */}
+            <div className="flex flex-wrap gap-1.5">
+              {/* Coupon Badge - Laranja */}
               {productCoupon && productCoupon.allow_promotions && (
                 <Badge 
-                  variant="default" 
-                  className="text-xs px-1.5 py-0.5 h-5 bg-orange-600 hover:bg-orange-700 cursor-pointer"
+                  variant="secondary" 
+                  className="text-xs px-1.5 py-0.5 h-5 bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 cursor-pointer"
                   onClick={() => setShowWhatsAppPromoModal(true)}
                   title="Clique para gerar mensagem promocional"
                 >
@@ -346,9 +353,9 @@ export function ModernProductCard({
                 </Badge>
               )}
               
-              {/* Blog Status */}
+              {/* Blog Status - Roxo */}
               {(product.individual_blog_content?.commercial || product.individual_blog_content?.technical) && (
-                <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5">
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-purple-100 text-purple-700 border-purple-200">
                   <FileText className="h-3 w-3 mr-1" />
                   {product.individual_blog_content?.commercial && product.individual_blog_content?.technical 
                     ? '2 Blogs' 
@@ -356,7 +363,7 @@ export function ModernProductCard({
                 </Badge>
               )}
               
-              {/* Active CTAs Count */}
+              {/* Active CTAs Count - Roxo */}
               {product.show_in_resources && (
                 (() => {
                   const activeCTAs = [
@@ -366,18 +373,29 @@ export function ModernProductCard({
                   ].filter(Boolean).length;
                   
                   return activeCTAs > 0 ? (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5">
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-purple-100 text-purple-700 border-purple-200">
                       {activeCTAs} CTA{activeCTAs > 1 ? 's' : ''}
                     </Badge>
                   ) : null;
                 })()
               )}
+
+              {/* Technical Specs - Roxo */}
+              {product.technical_specifications && Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0 && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-purple-100 text-purple-700 border-purple-200">
+                  <Settings className="h-3 w-3 mr-1" />
+                  Especificações
+                </Badge>
+              )}
             </div>
           </div>
         </div>
 
+        {/* Separador visual */}
+        <div className="h-16 w-px bg-border/30 flex-shrink-0" />
+
         {/* Score compacto */}
-        <div className="flex-shrink-0 pl-5 border-l border-border/30">
+        <div className="flex-shrink-0">
           <div className={cn(
             "rounded-lg p-2 transition-all",
             score.percentage >= 90 && "bg-success/10",
@@ -388,9 +406,12 @@ export function ModernProductCard({
           </div>
         </div>
 
+        {/* Separador visual */}
+        <div className="h-16 w-px bg-border/30 flex-shrink-0" />
+
         {/* Preço (se disponível) */}
         {(product.price !== undefined && product.price !== null) && (
-          <div className="flex-shrink-0 pl-5 border-l border-border/30">
+          <div className="flex-shrink-0">
             {product.promo_price && product.promo_price > 0 && product.promo_price < product.price ? (
               <div className="flex flex-col items-end gap-1">
                 <div className="flex items-center gap-1.5">
@@ -413,8 +434,11 @@ export function ModernProductCard({
           </div>
         )}
 
+        {/* Separador visual */}
+        <div className="h-16 w-px bg-border/30 flex-shrink-0" />
+
         {/* Ações */}
-        <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity flex-shrink-0 pl-5 border-l border-border/30">
+        <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity flex-shrink-0">
           <TooltipProvider>
           {product.product_url && (
             <Tooltip>
