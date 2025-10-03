@@ -107,6 +107,13 @@ export default function YouTubeOAuthSettings() {
     setIsTesting(true);
     setStatus('checking');
     
+    console.log('🧪 Testando conexão com YouTube API...');
+    console.log('📡 Credenciais configuradas:', {
+      CLIENT_ID: clientId ? '✅ Sim' : '❌ Não',
+      CLIENT_SECRET: clientSecret ? '✅ Sim' : '❌ Não',
+      REFRESH_TOKEN: refreshToken ? '✅ Sim' : '❌ Não',
+    });
+    
     try {
       const { data, error } = await supabase.functions.invoke('test-youtube-connection');
       
@@ -315,16 +322,52 @@ export default function YouTubeOAuthSettings() {
         return;
       }
 
-      // ✅ Sucesso
+      // ✅ Sucesso - salvar no localStorage
+      console.log("✅ Token recebido com sucesso");
       setRefreshToken(data.refresh_token);
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
-      setShowOAuthModal(false);
-      setOauthCode("");
       
       toast({
-        title: "✅ Token gerado",
-        description: "Refresh Token salvo com sucesso!",
+        title: "⏳ Salvando credenciais...",
+        description: "Configurando secrets no Supabase",
       });
+
+      // 🆕 Salvar nos Supabase Secrets
+      try {
+        const { error: secretError } = await supabase.functions.invoke('update-secret', {
+          body: {
+            secrets: {
+              YOUTUBE_CLIENT_ID: clientId,
+              YOUTUBE_CLIENT_SECRET: clientSecret,
+              YOUTUBE_REFRESH_TOKEN: data.refresh_token,
+            }
+          }
+        });
+
+        if (secretError) {
+          console.error('❌ Erro ao salvar secrets:', secretError);
+          toast({
+            title: "⚠️ Secrets salvos parcialmente",
+            description: "Configure manualmente no Supabase Dashboard",
+            variant: "destructive",
+          });
+        } else {
+          console.log("✅ Secrets salvos no Supabase com sucesso");
+          toast({
+            title: "✅ Credenciais salvas!",
+            description: "Secrets configurados no Supabase",
+          });
+        }
+      } catch (secretError: any) {
+        console.error('❌ Exceção ao salvar secrets:', secretError);
+      }
+      
+      setShowOAuthModal(false);
+      setOauthCode("");
+
+      // 🆕 Testar conexão automaticamente
+      console.log("🧪 Iniciando teste de conexão automático...");
+      await testConnection();
     } catch (err) {
       console.error("OAuth exchange exception", err);
       toast({
@@ -585,7 +628,7 @@ export default function YouTubeOAuthSettings() {
                   Salvando...
                 </>
               ) : (
-                'Salvar Credenciais'
+                'Salvar e Testar'
               )}
             </Button>
             
@@ -600,7 +643,7 @@ export default function YouTubeOAuthSettings() {
                   Testando...
                 </>
               ) : (
-                'Testar Conexão'
+                'Testar Agora'
               )}
             </Button>
           </div>
