@@ -63,6 +63,9 @@ export const useAfterSalesMessages = () => {
       queryClient.invalidateQueries({
         queryKey: ["aftersales-messages", variables.productId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["products-with-aftersales-messages"],
+      });
       toast({
         title: "Mensagem criada",
         description: "Mensagem de pós-venda criada com sucesso!",
@@ -101,6 +104,9 @@ export const useAfterSalesMessages = () => {
       queryClient.invalidateQueries({
         queryKey: ["aftersales-messages", variables.productId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["products-with-aftersales-messages"],
+      });
       toast({
         title: "Mensagem atualizada",
         description: "Mensagem de pós-venda atualizada com sucesso!",
@@ -133,6 +139,9 @@ export const useAfterSalesMessages = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["aftersales-messages", variables.productId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["products-with-aftersales-messages"],
       });
       toast({
         title: "Mensagem excluída",

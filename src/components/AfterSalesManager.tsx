@@ -44,6 +44,37 @@ export const AfterSalesManager = () => {
     },
   });
 
+  const { data: productsWithMessages = [], isLoading: productsWithMessagesLoading } = useQuery({
+    queryKey: ["products-with-aftersales-messages"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("aftersales_messages")
+        .select(`
+          product_id,
+          products_repository!inner(id, name)
+        `)
+        .eq("products_repository.approved", true);
+      
+      if (error) throw error;
+      
+      // Agrupar por produto e contar mensagens
+      const grouped = data.reduce((acc: any, item: any) => {
+        const productId = item.product_id;
+        if (!acc[productId]) {
+          acc[productId] = {
+            id: item.products_repository.id,
+            name: item.products_repository.name,
+            messageCount: 0
+          };
+        }
+        acc[productId].messageCount++;
+        return acc;
+      }, {});
+      
+      return Object.values(grouped) as Array<{ id: string; name: string; messageCount: number }>;
+    },
+  });
+
   const handleCreateFirstMessage = () => {
     if (!selectedProductId) {
       toast({
@@ -162,6 +193,50 @@ export const AfterSalesManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {productsWithMessages.length > 0 && (
+            <div className="space-y-2">
+              <Label>Produtos com Mensagens Cadastradas ({productsWithMessages.length})</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {productsWithMessages.map((product) => (
+                  <Card 
+                    key={product.id} 
+                    className={`cursor-pointer transition-all hover:border-primary ${
+                      selectedProductId === product.id ? 'border-primary bg-primary/5' : ''
+                    }`}
+                    onClick={() => setSelectedProductId(product.id)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {product.messageCount} {product.messageCount === 1 ? 'mensagem' : 'mensagens'}
+                          </p>
+                        </div>
+                        <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {productsWithMessages.length > 0 && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  ou selecione outro produto
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="product-select">Selecionar Produto</Label>
             <Select value={selectedProductId} onValueChange={setSelectedProductId}>
