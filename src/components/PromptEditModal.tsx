@@ -628,7 +628,117 @@ Exemplo do formato JSON esperado:
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
 }
 
-IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`
+IMPORTANTE: Não use blocos de código markdown (\`\`\`json), retorne apenas o JSON puro.`,
+
+    "Sequência de 7 Mensagens WhatsApp": `Você é um especialista em marketing digital e automação de campanhas WhatsApp.
+
+Gere uma sequência de 7 mensagens promocionais para uma campanha agendada de WhatsApp, cada uma com foco e abordagem DIFERENTES para evitar repetição.
+
+DADOS DISPONÍVEIS PARA PERSONALIZAÇÃO:
+- Nome do Produto: {produto.nome}
+- Descrição: {produto.descricao}
+- Resumo Comercial: {produto.pitch_vendas}
+- Benefícios: {produto.beneficios}
+- URL do Produto: {produto.url_produto}
+- Categoria: {produto.categoria}
+- Preço: {produto.preco} {produto.moeda}
+- Keywords: {produto.keywords}
+- Público-Alvo: {produto.publico_alvo}
+- Nome da Empresa: {empresa.nome_empresa}
+- Público-Alvo da Empresa: {empresa.publico_alvo}
+- Links Externos: {links_externos}
+- Landing Pages: {landing_pages}
+
+ESTRUTURA DAS 7 MENSAGENS:
+
+**MENSAGEM 1 - BENEFÍCIO (Dia 1)**
+Foco: Apresentar os principais benefícios do produto
+Objetivo: Despertar interesse inicial
+Formato: Lista de benefícios com emojis + CTA suave
+
+**MENSAGEM 2 - PROVA SOCIAL (Dia 2)**
+Foco: Credibilidade e confiança (mencionar resultados reais quando disponíveis nos dados)
+Objetivo: Reduzir objeções
+Formato: Contexto de uso + estatísticas quando disponíveis + CTA
+
+**MENSAGEM 3 - URGÊNCIA (Dia 3)**
+Foco: Senso de oportunidade ou vantagem de agir agora
+Objetivo: Acelerar decisão
+Formato: Oferta ou benefício de agir agora + CTA forte
+
+**MENSAGEM 4 - TÉCNICA (Dia 4)**
+Foco: Especificações técnicas e diferenciais únicos
+Objetivo: Educar e impressionar
+Formato: Detalhes técnicos + comparação implícita + CTA
+
+**MENSAGEM 5 - CURIOSIDADE (Dia 5)**
+Foco: Criar curiosidade sobre algo não revelado antes
+Objetivo: Reengajar quem parou de interagir
+Formato: Pergunta intrigante + revelação parcial + CTA
+
+**MENSAGEM 6 - GARANTIA (Dia 6)**
+Foco: Eliminar riscos percebidos (quando houver garantias ou políticas disponíveis nos dados)
+Objetivo: Remover última objeção
+Formato: Garantias + política quando disponível + CTA de segurança
+
+**MENSAGEM 7 - ÚLTIMA CHAMADA (Dia 7)**
+Foco: Urgência final + recap dos benefícios principais
+Objetivo: Conversão final
+Formato: Resumo + última oportunidade + CTA urgente
+
+REGRAS OBRIGATÓRIAS:
+1. Cada mensagem DEVE ter NO MÁXIMO 1000 caracteres
+2. SEMPRE incluir o link do produto: {produto.url_produto}
+3. Incluir até 3 emojis relevantes por mensagem
+4. Variar o formato do CTA em cada mensagem (ex: "Confira aqui", "Veja todos os detalhes", "Acesse agora", "Saiba mais", "Garanta o seu")
+5. Fechar cada mensagem com hashtags: #{empresa.nome_empresa} #{produto.categoria}
+6. VARIAR a estrutura e tom entre as mensagens (não repetir frases ou abordagens)
+7. Usar APENAS informações fornecidas nos dados disponíveis - NÃO inventar dados
+8. Quando não houver dados específicos (ex: garantias), focar em outros aspectos
+9. Integrar links externos e landing pages quando relevantes para agregar valor
+
+IMPORTANTE: Use APENAS informações reais dos dados fornecidos. Se algum dado não estiver disponível, adapte a mensagem para focar em aspectos que existam.
+
+CRÍTICO: Retorne APENAS um JSON válido, sem blocos de código markdown, sem texto adicional.
+
+Formato JSON obrigatório:
+[
+  {
+    "number": 1,
+    "approach": "beneficio",
+    "content": "🔥 [NOME PRODUTO] 🔥\\n\\n[Mensagem dia 1 completa com benefícios]\\n\\n🛒 [CTA] → {produto.url_produto}\\n\\n#{empresa.nome_empresa} #{produto.categoria}"
+  },
+  {
+    "number": 2,
+    "approach": "prova_social",
+    "content": "[Mensagem dia 2 com prova social]"
+  },
+  {
+    "number": 3,
+    "approach": "urgencia",
+    "content": "[Mensagem dia 3 com urgência]"
+  },
+  {
+    "number": 4,
+    "approach": "tecnica",
+    "content": "[Mensagem dia 4 técnica]"
+  },
+  {
+    "number": 5,
+    "approach": "curiosidade",
+    "content": "[Mensagem dia 5 com curiosidade]"
+  },
+  {
+    "number": 6,
+    "approach": "garantia",
+    "content": "[Mensagem dia 6 com garantia/segurança]"
+  },
+  {
+    "number": 7,
+    "approach": "ultima_chamada",
+    "content": "[Mensagem dia 7 última chamada]"
+  }
+]`
   },
   "generate-product-ai-content": {
     "Benefícios do Produto": `Você é um especialista em marketing de produtos e benefícios ao consumidor.

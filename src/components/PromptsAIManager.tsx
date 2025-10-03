@@ -158,6 +158,24 @@ const EDGE_FUNCTIONS = [
       "products_repository",
       "company_profile"
     ]
+  },
+  {
+    id: "generate-social-content",
+    name: "Gerador de Conteúdo Social",
+    description: "Gera conteúdo para redes sociais (WhatsApp, Instagram, TikTok, YouTube)",
+    icon: MessageCircle,
+    status: "active" as const,
+    prompts: [
+      "WhatsApp",
+      "Instagram",
+      "TikTok",
+      "YouTube",
+      "Sequência de 7 Mensagens WhatsApp"
+    ],
+    dataSources: [
+      "products_repository",
+      "company_profile"
+    ]
   }
 ];
 
