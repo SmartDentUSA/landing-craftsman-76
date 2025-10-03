@@ -112,7 +112,8 @@ export const CSManager = () => {
   };
 
   const handleSaveMessage = (messageId: string) => {
-    const content = editedContents[messageId];
+    const message = messages?.find(m => m.id === messageId);
+    const content = editedContents[messageId] ?? message?.message_content ?? "";
     
     if (!content || content.trim().length < 10) {
       toast({
