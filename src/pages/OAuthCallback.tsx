@@ -20,7 +20,7 @@ export default function OAuthCallback() {
     }
 
     if (code) {
-      console.log("OAuth code received, redirecting to repository");
+      console.log("OAuth callback recebido, redirecionando para /youtube-settings com code:", code);
       
       // Redirecionar para YouTube Settings com flag para abrir modal
       navigate("/youtube-settings", { 

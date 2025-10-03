@@ -671,21 +671,19 @@ export default function YouTubeOAuthSettings() {
                 id="oauthCode"
                 type="text"
                 placeholder="4/0AfJoh..."
+                value={oauthCode}
+                onChange={(e) => setOauthCode(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const input = e.currentTarget as HTMLInputElement;
-                    handleOAuthCode(input.value);
+                  if (e.key === "Enter") {
+                    handleOAuthCode(oauthCode);
                   }
                 }}
               />
             </div>
 
             <Button
-              onClick={() => {
-                const input = document.getElementById('oauthCode') as HTMLInputElement;
-                handleOAuthCode(input.value);
-              }}
-              disabled={isSaving}
+              onClick={() => handleOAuthCode(oauthCode)}
+              disabled={isSaving || !oauthCode}
               className="w-full"
             >
               {isSaving ? (
