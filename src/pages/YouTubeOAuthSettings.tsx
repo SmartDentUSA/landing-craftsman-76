@@ -14,9 +14,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 
 const STORAGE_KEYS = {
-  CLIENT_ID: 'youtube_oauth_client_id',
-  CLIENT_SECRET: 'youtube_oauth_client_secret',
-  REFRESH_TOKEN: 'youtube_oauth_refresh_token',
+  CLIENT_ID: 'youtube_client_id',
+  CLIENT_SECRET: 'youtube_client_secret',
+  REFRESH_TOKEN: 'youtube_refresh_token',
 };
 
 const DEFAULT_CLIENT_ID = '616806868683-cvgcj38j5jr3ojhvelafmiorlc4ipiro.apps.googleusercontent.com';
@@ -40,27 +40,55 @@ export default function YouTubeOAuthSettings() {
   const [showOAuthModal, setShowOAuthModal] = useState(false);
   const [showGcpGuide, setShowGcpGuide] = useState(false);
   const [oauthCode, setOauthCode] = useState('');
+  const [isClientIdValid, setIsClientIdValid] = useState(false);
 
   const redirectUri = useMemo(
-    () => `${window.location.origin}/oauth2/callback`,
+    () => `https://landing-craftsman-76.lovable.app/oauth2/callback`,
     []
   );
 
-  // Load from localStorage on mount (NO defaults)
+  // 🧹 Limpar chaves inválidas e carregar valores
   useEffect(() => {
-    const savedClientId = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || '';
-    const savedClientSecret = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || '';
-    const savedRefreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || '';
-    
-    setClientId(savedClientId);
-    setClientSecret(savedClientSecret);
-    setRefreshToken(savedRefreshToken);
+    const oldKeys = [
+      'YOUTUBE_CLIENT_ID',
+      'YOUTUBE_CLIENT_SECRET',
+      'YOUTUBE_REFRESH_TOKEN',
+      'youtube_oauth_client_id',
+      'youtube_oauth_client_secret',
+      'youtube_oauth_refresh_token',
+    ];
+    let foundInvalid = false;
+
+    oldKeys.forEach((key) => {
+      const val = localStorage.getItem(key);
+      if (val && !val.includes('apps.googleusercontent.com') && !val.startsWith('GOCSPX-')) {
+        console.warn(`⚠️ Removendo chave inválida: ${key} = ${val.slice(-10)}`);
+        localStorage.removeItem(key);
+        foundInvalid = true;
+      }
+    });
+
+    if (foundInvalid) {
+      toast({
+        title: '🧹 Cache limpo',
+        description: 'Valores inválidos foram removidos.',
+      });
+    }
+
+    const cid = localStorage.getItem(STORAGE_KEYS.CLIENT_ID) || '';
+    const csec = localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET) || '';
+    const rtok = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || '';
+    setClientId(cid);
+    setClientSecret(csec);
+    setRefreshToken(rtok);
+
+    setIsClientIdValid(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid));
 
     // Auto-test connection if all credentials exist
-    if (savedClientId && savedClientSecret && savedRefreshToken) {
+    if (cid && csec && rtok) {
       testConnection();
     }
-  }, []);
+  }, [toast]);
 
   // Detectar retorno do OAuth callback
   useEffect(() => {
@@ -166,11 +194,11 @@ export default function YouTubeOAuthSettings() {
   };
 
   const openOAuthFlow = () => {
-    if (!clientId) {
+    if (!clientId || !isClientIdValid) {
       toast({
-        title: "⚠️ Client ID obrigatório",
-        description: "Preencha o Client ID primeiro",
-        variant: "destructive"
+        title: "⚠️ Client ID inválido",
+        description: "Corrija o Client ID antes de gerar o token.",
+        variant: "destructive",
       });
       return;
     }
@@ -185,7 +213,6 @@ export default function YouTubeOAuthSettings() {
       return;
     }
 
-    const redirectUri = `${window.location.origin}/oauth2/callback`;
     const scope = REQUIRED_SCOPE;
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -195,6 +222,11 @@ export default function YouTubeOAuthSettings() {
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
+
+    console.log('🚀 Abrindo OAuth:', {
+      clientIdLast6: clientId.slice(-6),
+      redirectUri,
+    });
 
     setShowOAuthModal(true);
     
@@ -215,11 +247,20 @@ export default function YouTubeOAuthSettings() {
     if (!code || !clientId || !clientSecret) {
       toast({
         title: "⚠️ Dados incompletos",
-        description: "Código OAuth ou credenciais faltando",
+        description: "Preencha Client ID, Client Secret e Código OAuth.",
         variant: "destructive"
       });
       return;
     }
+
+    console.log('🔍 Dados enviados para Edge Function:', {
+      codePreview: code.slice(0, 10) + '...',
+      clientIdLast6: clientId.slice(-6),
+      clientIdLength: clientId.length,
+      clientIdValid: /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId),
+      clientSecretLength: clientSecret.length,
+      redirectUri,
+    });
 
     setIsSaving(true);
 
@@ -231,11 +272,6 @@ export default function YouTubeOAuthSettings() {
           clientSecret,
           redirectUri,
         },
-      });
-
-      console.log("OAuth exchange response", data, {
-        redirectUri,
-        clientIdLast6: clientId?.slice(-6),
       });
 
       // ⚠️ Trata payload estruturado (success true/false)
@@ -287,7 +323,7 @@ export default function YouTubeOAuthSettings() {
       
       toast({
         title: "✅ Token gerado",
-        description: "Refresh Token salvo. Clique em 'Salvar Credenciais' para finalizar.",
+        description: "Refresh Token salvo com sucesso!",
       });
     } catch (err) {
       console.error("OAuth exchange exception", err);
@@ -467,14 +503,35 @@ export default function YouTubeOAuthSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientId">Client ID</Label>
+            <Label htmlFor="clientId">
+              Client ID
+              {clientId && (
+                isClientIdValid
+                  ? <span className="text-green-600 text-xs ml-2">✓ Válido</span>
+                  : <span className="text-red-600 text-xs ml-2">✗ Formato incorreto</span>
+              )}
+            </Label>
             <Input
               id="clientId"
               type="text"
-              placeholder="123456789-xxxxx.apps.googleusercontent.com"
+              placeholder="616806868683-xxxx.apps.googleusercontent.com"
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                setClientId(v);
+                const isValid = /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(v);
+                setIsClientIdValid(isValid);
+                if (isValid) localStorage.setItem(STORAGE_KEYS.CLIENT_ID, v);
+              }}
+              className={clientId && !isClientIdValid ? 'border-red-500' : ''}
+              autoComplete="off"
+              data-form-type="other"
             />
+            {clientId && !isClientIdValid && (
+              <p className="text-xs text-red-600 mt-1">
+                Deve terminar com .apps.googleusercontent.com
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -484,7 +541,12 @@ export default function YouTubeOAuthSettings() {
               type="password"
               placeholder="GOCSPX-xxxxxxxxxxxxx"
               value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                setClientSecret(v);
+                localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, v);
+              }}
+              autoComplete="new-password"
             />
           </div>
 
@@ -542,6 +604,21 @@ export default function YouTubeOAuthSettings() {
               )}
             </Button>
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              localStorage.clear();
+              setClientId('');
+              setClientSecret('');
+              setRefreshToken('');
+              window.location.reload();
+            }}
+            className="w-full"
+          >
+            🧹 Limpar Cache e Recarregar
+          </Button>
         </CardContent>
       </Card>
 
@@ -696,52 +773,52 @@ export default function YouTubeOAuthSettings() {
       <Dialog open={showOAuthModal} onOpenChange={setShowOAuthModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Fluxo OAuth do YouTube</DialogTitle>
+            <DialogTitle>Código de Autorização</DialogTitle>
             <DialogDescription>
-              Cole o código de autorização após autorizar no navegador
+              Cole o código OAuth recebido após autorização:
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                1. Autorize a aplicação na janela que abriu<br />
-                2. Após o redirecionamento, copie o parâmetro <code>code=</code> da URL<br />
-                3. Cole abaixo e clique em "Trocar por Token"
-              </AlertDescription>
-            </Alert>
+            <Input
+              type="text"
+              placeholder="4/0AfJoh..."
+              value={oauthCode}
+              onChange={(e) => setOauthCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleOAuthCode(oauthCode);
+                }
+              }}
+              autoFocus
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="oauthCode">Código de Autorização</Label>
-              <Input
-                id="oauthCode"
-                type="text"
-                placeholder="4/0AfJoh..."
-                value={oauthCode}
-                onChange={(e) => setOauthCode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleOAuthCode(oauthCode);
-                  }
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleOAuthCode(oauthCode)}
+                disabled={isSaving || !oauthCode}
+                className="flex-1"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Trocando...
+                  </>
+                ) : (
+                  'Trocar por Token'
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowOAuthModal(false);
+                  setOauthCode('');
                 }}
-              />
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
             </div>
-
-            <Button
-              onClick={() => handleOAuthCode(oauthCode)}
-              disabled={isSaving || !oauthCode}
-              className="w-full"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Trocando...
-                </>
-              ) : (
-                'Trocar por Token'
-              )}
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
