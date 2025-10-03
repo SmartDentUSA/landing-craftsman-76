@@ -47,6 +47,7 @@ export function CaptionExtractor({
   const [secretsConfigured, setSecretsConfigured] = useState<boolean | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
   const [editedText, setEditedText] = useState("");
+  const [isRegeneratingAnalysis, setIsRegeneratingAnalysis] = useState(false);
   const { toast } = useToast();
 
   // Check if YouTube OAuth secrets are configured
@@ -190,6 +191,8 @@ export function CaptionExtractor({
       return;
     }
 
+    setIsRegeneratingAnalysis(true);
+
     try {
       // Buscar dados atuais do produto
       const { data: product, error: fetchError } = await supabase
@@ -222,13 +225,67 @@ export function CaptionExtractor({
 
       if (error) throw error;
 
-      // Atualizar estado local
-      onCaptionsExtracted(updatedCaptions);
+      // ✅ FASE 2: Regenerar análise de IA
+      console.log('🔄 Regenerando análise de IA para legenda editada...');
       
-      toast({
-        title: "Sucesso",
-        description: "Legenda atualizada com sucesso"
-      });
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
+        'extract-youtube-captions',
+        {
+          body: {
+            productId,
+            videoType,
+            regenerateAnalysis: {
+              videoUrl: originalCaption.url,
+              captionText: editedText
+            }
+          }
+        }
+      );
+
+      if (analysisError) {
+        console.warn('⚠️ Falha ao regenerar análise:', analysisError);
+        onCaptionsExtracted(updatedCaptions);
+        toast({
+          title: "Legenda salva",
+          description: "Texto atualizado, mas análise de IA não pôde ser regenerada",
+          variant: "default"
+        });
+      } else if (analysisData?.analysis) {
+        // Atualizar caption com nova análise
+        const finalCaptions = updatedCaptions.map(cap =>
+          cap.url === originalCaption.url
+            ? { 
+                ...cap, 
+                captions: editedText,
+                analysis: analysisData.analysis
+              }
+            : cap
+        );
+        
+        // Salvar análise atualizada no banco
+        const finalVideoCaptionsUpdate = {
+          ...currentCaptions,
+          [videoType]: finalCaptions
+        };
+        
+        await supabase
+          .from('products_repository')
+          .update({ video_captions: finalVideoCaptionsUpdate as any })
+          .eq('id', productId);
+        
+        onCaptionsExtracted(finalCaptions);
+        
+        toast({
+          title: "Legenda atualizada",
+          description: "Texto e análise de IA regenerados com sucesso",
+        });
+      } else {
+        onCaptionsExtracted(updatedCaptions);
+        toast({
+          title: "Sucesso",
+          description: "Legenda atualizada com sucesso"
+        });
+      }
 
       setEditingCaption(null);
       setEditedText("");
@@ -239,6 +296,8 @@ export function CaptionExtractor({
         description: error?.message || "Erro ao salvar legenda",
         variant: "destructive"
       });
+    } finally {
+      setIsRegeneratingAnalysis(false);
     }
   };
 
@@ -337,14 +396,25 @@ export function CaptionExtractor({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleSaveCaption(caption)}
+                                disabled={isRegeneratingAnalysis}
                               >
-                                <Check className="w-4 h-4 mr-1" />
-                                Salvar
+                                {isRegeneratingAnalysis ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                    Regenerando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-4 h-4 mr-1" />
+                                    Salvar
+                                  </>
+                                )}
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleCancelEdit}
+                                disabled={isRegeneratingAnalysis}
                               >
                                 <X className="w-4 h-4 mr-1" />
                                 Cancelar
@@ -420,6 +490,14 @@ export function CaptionExtractor({
                             className="text-sm max-h-32"
                             placeholder="Nenhuma legenda disponível"
                           />
+                          {isRegeneratingAnalysis && editingCaption === caption.url && (
+                            <Alert className="mt-2">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                🔄 Regenerando análise de IA (resumo e keywords)...
+                              </AlertDescription>
+                            </Alert>
+                          )}
                         </div>
                       )}
                     </div>

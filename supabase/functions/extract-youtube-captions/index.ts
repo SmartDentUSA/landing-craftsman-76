@@ -11,6 +11,10 @@ interface CaptionRequest {
   productId: string;
   videoType: 'youtube_videos' | 'instagram_videos' | 'testimonial_videos' | 'technical_videos';
   videoIndex?: number;
+  regenerateAnalysis?: {
+    videoUrl: string;
+    captionText: string;
+  };
 }
 
 interface Caption {
@@ -46,6 +50,55 @@ serve(async (req) => {
     const request: CaptionRequest = await req.json();
 
     console.log(`Extracting captions for product ${request.productId}, video type: ${request.videoType}`);
+
+    // ✅ FASE 1: Modo de regeneração de análise
+    if (request.regenerateAnalysis) {
+      console.log('🔄 Modo de regeneração de análise ativado');
+      
+      if (!deepSeekApiKey) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'DEEPSEEK_API_KEY não configurada'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Criar objeto de legenda temporário para análise
+      const tempCaption: VideoCaption = {
+        url: request.regenerateAnalysis.videoUrl,
+        captions: request.regenerateAnalysis.captionText,
+        language: 'auto',
+        extracted_at: new Date().toISOString(),
+        method: 'manual_edit'
+      };
+      
+      try {
+        const analysis = await analyzeCaptionsWithAI(
+          deepSeekApiKey,
+          request.regenerateAnalysis.captionText,
+          request.videoType
+        );
+        
+        console.log('✅ Análise regenerada com sucesso:', analysis);
+        
+        return new Response(JSON.stringify({
+          success: true,
+          analysis
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('❌ Erro ao regenerar análise:', error);
+        return new Response(JSON.stringify({
+          success: false,
+          error: (error as Error).message
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     // Try to get YouTube OAuth credentials from database first (per-user config)
     const authHeader = req.headers.get('Authorization');
