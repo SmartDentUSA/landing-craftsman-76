@@ -82,46 +82,7 @@ serve(async (req) => {
       console.warn('Erro ao carregar landing pages:', landingPagesError.message);
     }
 
-    // Buscar configuração de prompt personalizado
-    let finalPrompt: string = customPrompt || '';
-    if (!finalPrompt) {
-      let functionId: string;
-      let promptName: string;
-      
-      if (type === 'whatsapp') {
-        functionId = 'generate-whatsapp-messages';
-        promptName = 'Mensagem Promocional WhatsApp';
-      } else if (type === 'youtube') {
-        functionId = 'generate-youtube-descriptions';
-        promptName = 'Descrição Completa YouTube';
-      } else if (type === 'instagram') {
-        functionId = 'generate-instagram-copy';
-        if (instagramType === 'reels') {
-          promptName = 'Copy Vídeo Reels';
-      } else if (instagramType === 'carousel') {
-        promptName = 'Copy Carrossel';
-      } else {
-        promptName = 'Copy Feed (post estático)';
-      }
-    } else if (type !== 'whatsapp_sequence') {
-      throw new Error(`Tipo inválido: ${type}`);
-    }
-      
-      const { data: promptConfig } = await supabase
-        .from('prompts_configuration')
-        .select('custom_prompt')
-        .eq('edge_function_id', functionId)
-        .eq('prompt_name', promptName)
-        .single();
-
-      if (promptConfig?.custom_prompt) {
-        finalPrompt = promptConfig.custom_prompt;
-      } else {
-        finalPrompt = getDefaultPrompt(type, instagramType);
-      }
-    }
-
-    // Tratamento especial para whatsapp_sequence
+    // Tratamento PRIORITÁRIO para whatsapp_sequence (early return)
     if (type === 'whatsapp_sequence') {
       console.log('🔄 Gerando sequência de 7 mensagens WhatsApp...');
       
@@ -169,6 +130,47 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Buscar configuração de prompt personalizado
+    let finalPrompt: string = customPrompt || '';
+    if (!finalPrompt) {
+      let functionId: string = '';
+      let promptName: string = '';
+      
+      if (type === 'whatsapp') {
+        functionId = 'generate-whatsapp-messages';
+        promptName = 'Mensagem Promocional WhatsApp';
+      } else if (type === 'youtube') {
+        functionId = 'generate-youtube-descriptions';
+        promptName = 'Descrição Completa YouTube';
+      } else if (type === 'instagram') {
+        functionId = 'generate-instagram-copy';
+        if (instagramType === 'reels') {
+          promptName = 'Copy Vídeo Reels';
+        } else if (instagramType === 'carousel') {
+          promptName = 'Copy Carrossel';
+        } else {
+          promptName = 'Copy Feed (post estático)';
+        }
+      } else {
+        throw new Error(`Tipo inválido: ${type}`);
+      }
+      
+      const { data: promptConfig } = await supabase
+        .from('prompts_configuration')
+        .select('custom_prompt')
+        .eq('edge_function_id', functionId)
+        .eq('prompt_name', promptName)
+        .maybeSingle();
+      
+      if (promptConfig?.custom_prompt) {
+        finalPrompt = promptConfig.custom_prompt;
+      } else {
+        finalPrompt = getDefaultPrompt(type as 'whatsapp' | 'youtube' | 'instagram', instagramType);
+      }
+    }
+
+    // whatsapp_sequence é tratado anteriormente via early return
 
     // Processar variáveis no prompt
     const processedPrompt = processPromptVariables(finalPrompt, product, company, externalLinks || [], landingPages || []);
