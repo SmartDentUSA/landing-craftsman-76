@@ -5,110 +5,80 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-/**
- * Trunca logs sensíveis para até 50 caracteres
- */
-function logPreview(value: string, label: string = ''): void {
-  const preview = value.length > 50 ? `${value.substring(0, 50)}...` : value;
-  console.log(`${label}: ${preview}`);
-}
+const json = (body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status: 200, // ⬅️ SEMPRE 200
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
-serve(async (req) => {
+serve(async (req: Request) => {
+  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const { code, clientId, clientSecret, redirectUri } = await req.json();
+    const effectiveRedirectUri =
+      redirectUri || Deno.env.get("YOUTUBE_REDIRECT_URI") || "";
 
-    if (!code || !clientId || !clientSecret) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters: code, clientId, clientSecret' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!code || !clientId || !clientSecret || !effectiveRedirectUri) {
+      return json({
+        success: false,
+        error: "missing_params",
+        error_description: "Parâmetros obrigatórios ausentes",
+        details: { clientIdLast6: clientId?.slice(-6), redirectUri: effectiveRedirectUri },
+      });
     }
 
-    // Use redirect_uri from request or default to localhost
-    const effectiveRedirectUri = redirectUri || 
-      Deno.env.get('YOUTUBE_REDIRECT_URI') || 
-      'http://localhost:3000/oauth2/callback';
-
-    logPreview(code, '🔐 Exchange Code');
-    console.log('📍 Redirect URI:', effectiveRedirectUri);
-
-    // Trocar code por tokens
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
         client_id: clientId,
         client_secret: clientSecret,
         redirect_uri: effectiveRedirectUri,
-        grant_type: 'authorization_code',
+        grant_type: "authorization_code",
       }),
     });
+    const tokenData = await tokenRes.json();
 
-    const tokenData = await tokenResponse.json();
+    // 🔎 Log estruturado (sem dados sensíveis)
+    console.log("exchange-youtube-code", {
+      ok: tokenRes.ok,
+      status: tokenRes.status,
+      google_error: tokenData?.error,
+      google_error_description: tokenData?.error_description,
+      clientIdLast6: clientId.slice(-6),
+      redirectUri: effectiveRedirectUri,
+      codePreview: String(code).slice(0, 6) + "...",
+    });
 
-    if (!tokenResponse.ok) {
-      console.error('❌ Token exchange failed:', tokenData);
-      return new Response(
-        JSON.stringify({ 
-          error: tokenData.error_description || 'Failed to exchange code for tokens',
-          details: tokenData 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!tokenRes.ok || !tokenData?.refresh_token) {
+      return json({
+        success: false,
+        error: tokenData?.error || "unknown_error",
+        error_description:
+          tokenData?.error_description || "Falha ao trocar código por token",
+        details: {
+          status: tokenRes.status,
+          clientIdLast6: clientId.slice(-6),
+          redirectUri: effectiveRedirectUri,
+        },
+      });
     }
 
-    const { access_token, refresh_token, expires_in } = tokenData;
-
-    if (!refresh_token) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'No refresh_token received. Make sure to include access_type=offline in authorization URL' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    logPreview(access_token, '✅ Access Token');
-    logPreview(refresh_token, '✅ Refresh Token');
-    console.log('⏰ Expires in:', expires_in, 'seconds');
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        access_token,
-        refresh_token,
-        expires_in
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-
-  } catch (error) {
-    console.error('❌ Error in exchange-youtube-code:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to exchange code',
-        details: (error as Error).message 
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    return json({
+      success: true,
+      refresh_token: tokenData.refresh_token,
+    });
+  } catch (err) {
+    console.error("exchange-youtube-code exception", err);
+    return json({
+      success: false,
+      error: "exception",
+      error_description: "Erro inesperado na Edge Function",
+    });
   }
 });

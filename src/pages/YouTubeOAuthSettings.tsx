@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +40,11 @@ export default function YouTubeOAuthSettings() {
   const [showOAuthModal, setShowOAuthModal] = useState(false);
   const [showGcpGuide, setShowGcpGuide] = useState(false);
   const [oauthCode, setOauthCode] = useState('');
+
+  const redirectUri = useMemo(
+    () => `${window.location.origin}/oauth2/callback`,
+    []
+  );
 
   // Load from localStorage on mount (NO defaults)
   useEffect(() => {
@@ -219,49 +224,78 @@ export default function YouTubeOAuthSettings() {
     setIsSaving(true);
 
     try {
-      const redirectUri = `${window.location.origin}/oauth2/callback`;
-      
-      const { data, error } = await supabase.functions.invoke('exchange-youtube-code', {
+      const { data } = await supabase.functions.invoke('exchange-youtube-code', {
         body: {
-          code,
+          code: code.trim(),
           clientId,
           clientSecret,
-          redirectUri
-        }
+          redirectUri,
+        },
       });
 
-      if (error) throw error;
+      console.log("OAuth exchange response", data, {
+        redirectUri,
+        clientIdLast6: clientId?.slice(-6),
+      });
 
-      if (data?.success && data?.refresh_token) {
-        setRefreshToken(data.refresh_token);
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+      // ⚠️ Trata payload estruturado (success true/false)
+      if (!data?.success) {
+        let errorMessage = data?.error_description || "Erro desconhecido";
         
+        switch (data?.error) {
+          case "redirect_uri_mismatch":
+            errorMessage = `❌ Redirect URI incorreto!\n\nAdicione EXATAMENTE esta URL no Google Cloud Console:\n${redirectUri}`;
+            break;
+          case "invalid_grant":
+            errorMessage =
+              "❌ Código expirado ou já usado!\n\nO código OAuth expira em ~10 minutos e só pode ser usado uma vez. Refaça o fluxo e clique em 'Trocar por Token' rapidamente.";
+            break;
+          case "deleted_client":
+            errorMessage =
+              "❌ Credenciais inválidas!\n\nO Client ID/Secret foi deletado ou desativado no Google Cloud. Crie novas credenciais e atualize aqui.";
+            break;
+          case "invalid_client":
+            errorMessage = "❌ Client ID ou Secret incorretos!\n\nVerifique se copiou corretamente do Google Cloud Console.";
+            break;
+          default:
+            if (!data?.refresh_token) {
+              errorMessage =
+                "❌ Nenhum Refresh Token recebido!\n\nGaranta que a URL de autorização contém access_type=offline e prompt=consent (já aplicado pelo app).";
+            }
+        }
+
         toast({
-          title: "✅ Refresh Token obtido",
-          description: "Agora clique em 'Salvar Credenciais'",
+          title: "Erro no OAuth",
+          description: errorMessage,
+          variant: "destructive",
         });
-        
-        setShowOAuthModal(false);
-      } else {
-        throw new Error(data?.error || 'Falha ao obter refresh_token');
+
+        console.error("OAuth exchange failed", {
+          error: data?.error,
+          error_description: data?.error_description,
+          details: data?.details,
+          redirectUri,
+        });
+        return;
       }
-    } catch (error: any) {
-      console.error('OAuth exchange error:', error);
+
+      // ✅ Sucesso
+      setRefreshToken(data.refresh_token);
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+      setShowOAuthModal(false);
+      setOauthCode("");
       
-      // Detectar erro específico de acesso negado
-      if (error.message?.includes('access_denied') || error.message?.includes('app not verified')) {
-        toast({
-          title: "❌ Acesso negado",
-          description: "Adicione seu email como Test User no OAuth Consent Screen do GCP",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "❌ Erro no OAuth",
-          description: error.message || 'Falha ao trocar código',
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "✅ Token gerado",
+        description: "Refresh Token salvo. Clique em 'Salvar Credenciais' para finalizar.",
+      });
+    } catch (err) {
+      console.error("OAuth exchange exception", err);
+      toast({
+        title: "❌ Erro no OAuth",
+        description: "Falha inesperada. Veja o console para detalhes.",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -365,6 +399,19 @@ export default function YouTubeOAuthSettings() {
           </AlertDescription>
         </Alert>
       )}
+
+      <Alert className="mb-4">
+        <Info className="h-4 w-4" />
+        <AlertTitle>🔍 Configuração Esperada no GCP</AlertTitle>
+        <AlertDescription>
+          <p className="text-sm mb-2">Certifique-se de que você adicionou no Google Cloud Console:</p>
+          <ul className="list-none space-y-1 text-xs font-mono bg-muted p-2 rounded">
+            <li>✅ Redirect URI: <code className="text-green-600">{redirectUri}</code></li>
+            <li>✅ Client ID termina com: <code className="text-blue-600">...{clientId?.slice(-6) || "------"}</code></li>
+            <li>✅ Scope: <code>youtube.force-ssl</code></li>
+          </ul>
+        </AlertDescription>
+      </Alert>
 
       <Card>
         <CardHeader>
