@@ -119,6 +119,8 @@ export default function YouTubeOAuthSettings() {
       
       if (error) throw error;
 
+      console.log('📊 Resposta do teste:', data);
+
       if (data?.ok) {
         setStatus('connected');
         setChannelInfo({ name: data.channelName, count: data.channelCount });
@@ -129,11 +131,22 @@ export default function YouTubeOAuthSettings() {
       } else {
         setStatus('error');
         setChannelInfo(null);
-        toast({
-          title: "❌ Erro na conexão",
-          description: data?.error || 'Credenciais inválidas',
-          variant: "destructive"
-        });
+        
+        // Mensagem específica quando falta YOUTUBE_REFRESH_TOKEN
+        if (data?.missing?.includes('YOUTUBE_REFRESH_TOKEN')) {
+          toast({
+            title: "⚠️ Secret não configurado",
+            description: "Configure YOUTUBE_REFRESH_TOKEN no Supabase Dashboard > Edge Functions > Secrets",
+            variant: "destructive",
+            duration: 10000,
+          });
+        } else {
+          toast({
+            title: "❌ Erro na conexão",
+            description: data?.error || 'Credenciais inválidas',
+            variant: "destructive"
+          });
+        }
       }
     } catch (error: any) {
       console.error('Test connection error:', error);
@@ -291,7 +304,15 @@ export default function YouTubeOAuthSettings() {
             break;
           case "invalid_grant":
             errorMessage =
-              "❌ Código expirado ou já usado!\n\nO código OAuth expira em ~10 minutos e só pode ser usado uma vez. Refaça o fluxo e clique em 'Trocar por Token' rapidamente.";
+              "❌ Código expirado ou já usado!\n\nO código OAuth expira em ~10 minutos e só pode ser usado uma vez.\n\nOUTRO MOTIVO COMUM: Email salvo no localStorage como Client ID. Abra 'Limpar Cache' para resolver.\n\nRedirecionando para o fluxo OAuth novamente...";
+            
+            // Limpar cache e sugerir refazer fluxo
+            setTimeout(() => {
+              localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
+              localStorage.removeItem(STORAGE_KEYS.CLIENT_SECRET);
+              localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+              window.location.reload();
+            }, 5000);
             break;
           case "deleted_client":
             errorMessage =
@@ -323,51 +344,28 @@ export default function YouTubeOAuthSettings() {
       }
 
       // ✅ Sucesso - salvar no localStorage
-      console.log("✅ Token recebido com sucesso");
+      console.log("✅ Token recebido com sucesso:", data.refresh_token.substring(0, 20) + "...");
       setRefreshToken(data.refresh_token);
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
       
-      toast({
-        title: "⏳ Salvando credenciais...",
-        description: "Configurando secrets no Supabase",
-      });
-
-      // 🆕 Salvar nos Supabase Secrets
-      try {
-        const { error: secretError } = await supabase.functions.invoke('update-secret', {
-          body: {
-            secrets: {
-              YOUTUBE_CLIENT_ID: clientId,
-              YOUTUBE_CLIENT_SECRET: clientSecret,
-              YOUTUBE_REFRESH_TOKEN: data.refresh_token,
-            }
-          }
-        });
-
-        if (secretError) {
-          console.error('❌ Erro ao salvar secrets:', secretError);
-          toast({
-            title: "⚠️ Secrets salvos parcialmente",
-            description: "Configure manualmente no Supabase Dashboard",
-            variant: "destructive",
-          });
-        } else {
-          console.log("✅ Secrets salvos no Supabase com sucesso");
-          toast({
-            title: "✅ Credenciais salvas!",
-            description: "Secrets configurados no Supabase",
-          });
-        }
-      } catch (secretError: any) {
-        console.error('❌ Exceção ao salvar secrets:', secretError);
-      }
-      
       setShowOAuthModal(false);
       setOauthCode("");
+      
+      toast({
+        title: "✅ Refresh Token obtido!",
+        description: "Agora configure o Secret YOUTUBE_REFRESH_TOKEN no Supabase",
+        duration: 10000,
+      });
 
-      // 🆕 Testar conexão automaticamente
-      console.log("🧪 Iniciando teste de conexão automático...");
-      await testConnection();
+      // Copiar automaticamente o token
+      setTimeout(() => {
+        copyToClipboard(data.refresh_token, "Refresh Token");
+        toast({
+          title: "📋 Token copiado!",
+          description: "Cole no painel de Secrets do Supabase (YOUTUBE_REFRESH_TOKEN)",
+          duration: 8000,
+        });
+      }, 1000);
     } catch (err) {
       console.error("OAuth exchange exception", err);
       toast({
@@ -475,6 +473,45 @@ export default function YouTubeOAuthSettings() {
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
             <strong>Canal conectado:</strong> {channelInfo.name} ({channelInfo.count} canal(is))
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Alerta: Refresh Token precisa ser configurado manualmente */}
+      {refreshToken && status !== 'connected' && (
+        <Alert className="border-yellow-500 bg-yellow-50">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <AlertTitle className="text-yellow-800">Secret YOUTUBE_REFRESH_TOKEN não configurado</AlertTitle>
+          <AlertDescription className="text-yellow-700">
+            <p className="mb-2">
+              O Refresh Token foi gerado e salvo localmente, mas você precisa configurá-lo manualmente nos Secrets do Supabase.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-yellow-600 text-yellow-700 hover:bg-yellow-100"
+                onClick={() => copyToClipboard(refreshToken, "Refresh Token")}
+              >
+                <Copy className="w-3 h-3 mr-1" />
+                Copiar Token
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-yellow-600 text-yellow-700 hover:bg-yellow-100"
+                asChild
+              >
+                <a 
+                  href="https://supabase.com/dashboard/project/pgfgripuanuwwolmtknn/settings/functions" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Abrir Secrets
+                </a>
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
