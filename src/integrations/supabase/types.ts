@@ -353,6 +353,44 @@ export type Database = {
         }
         Relationships: []
       }
+      cs_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          message_content: string
+          message_order: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message_content: string
+          message_order: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message_content?: string
+          message_order?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_links: {
         Row: {
           approved: boolean

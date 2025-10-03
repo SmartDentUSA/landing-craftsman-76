@@ -13,9 +13,10 @@ import { ProductSEOBatchEnhancer } from '@/components/ProductSEOBatchEnhancer';
 import YouTubeOAuthSettings from '@/pages/YouTubeOAuthSettings';
 import { CouponsManager } from '@/components/CouponsManager';
 import { AfterSalesManager } from '@/components/AfterSalesManager';
+import { CSManager } from '@/components/CSManager';
 
 const Repository = () => {
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'coupons' | 'aftersales'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'coupons' | 'aftersales' | 'cs'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -33,7 +34,8 @@ const Repository = () => {
                    activeView === 'merchant' ? 'Google Merchant Center' : 
                    activeView === 'youtube' ? 'YouTube OAuth' : 
                    activeView === 'coupons' ? 'Cupons Promocionais' :
-                   activeView === 'aftersales' ? 'Pós-Venda' : 'Prompts IA'}
+                   activeView === 'aftersales' ? 'Pós-Venda' :
+                   activeView === 'cs' ? 'Customer Success (CS)' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
@@ -50,6 +52,8 @@ const Repository = () => {
                     ? 'Configure cupons de desconto e mensagens promocionais para WhatsApp'
                     : activeView === 'aftersales'
                     ? 'Crie mensagens sequenciais para robô de atendimento WhatsApp'
+                    : activeView === 'cs'
+                    ? 'Crie mensagens sequenciais para robô de Customer Success'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
@@ -115,6 +119,13 @@ const Repository = () => {
           >
             Pós-Venda
           </Button>
+          <Button
+            variant={activeView === 'cs' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveView('cs')}
+          >
+            CS
+          </Button>
                 </div>
                 <AdminStatusBadge />
               </div>
@@ -141,6 +152,8 @@ const Repository = () => {
               <CouponsManager />
             ) : activeView === 'aftersales' ? (
               <AfterSalesManager />
+            ) : activeView === 'cs' ? (
+              <CSManager />
             ) : (
               <EnhancedPromptsManager />
             )}
