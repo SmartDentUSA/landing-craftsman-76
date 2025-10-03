@@ -95,6 +95,10 @@ interface ProductData {
     copies?: any[];
     last_generated?: string;
   };
+  whatsapp_sequences?: {
+    sequences?: any[];
+    last_generated?: string;
+  };
   
   // AI Automation
   bot_trigger_words?: string[];
@@ -213,6 +217,7 @@ function generateAIPlaybookJSON(product: ProductData): any {
     ai_content_history: {
       blog_content: product.individual_blog_content || {},
       whatsapp_messages: product.whatsapp_messages || {},
+      whatsapp_sequences: product.whatsapp_sequences || {},
       youtube_descriptions: product.youtube_descriptions || {},
       instagram_copies: product.instagram_copies || {},
       tiktok_content: product.tiktok_content || {}
@@ -354,6 +359,13 @@ ${product.individual_blog_content?.generated_at ? `📅 Gerado em: ${new Date(pr
 ${product.whatsapp_messages?.messages?.length ? `✅ ${product.whatsapp_messages.messages.length} mensagens geradas` : '❌ Mensagens pendentes'}
 ${product.whatsapp_messages?.last_generated ? `📅 Última geração: ${new Date(product.whatsapp_messages.last_generated).toLocaleString('pt-BR')}` : ''}
 
+### WhatsApp Sequences (Sequências):
+${product.whatsapp_sequences?.sequences?.length ? `✅ ${product.whatsapp_sequences.sequences.length} sequências geradas` : '❌ Sequências pendentes'}
+${product.whatsapp_sequences?.sequences?.map((seq: any, idx: number) => 
+  `  Sequência ${idx + 1}: ${seq.messages?.length || 0} mensagens`
+).join('\n') || ''}
+${product.whatsapp_sequences?.last_generated ? `📅 Última geração: ${new Date(product.whatsapp_sequences.last_generated).toLocaleString('pt-BR')}` : ''}
+
 ### YouTube Descriptions:
 ${product.youtube_descriptions?.descriptions?.length ? `✅ ${product.youtube_descriptions.descriptions.length} descrições geradas` : '❌ Descrições pendentes'}
 ${product.youtube_descriptions?.last_generated ? `📅 Última geração: ${new Date(product.youtube_descriptions.last_generated).toLocaleString('pt-BR')}` : ''}
@@ -467,6 +479,7 @@ function calculateCompleteness(product: ProductData): number {
     // AI Content
     product.individual_blog_content?.commercial,
     product.individual_blog_content?.technical,
+    product.whatsapp_sequences?.sequences?.length,
     
     // Video content
     product.youtube_videos?.length,
