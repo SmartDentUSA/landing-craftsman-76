@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText } from 'lucide-react';
+import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText, Code } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ContentViewToggle } from '@/components/ui/content-view-toggle';
 
 interface WhatsAppMessage {
   id: string;
@@ -37,6 +38,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'text' | 'html'>('edit');
   const { toast } = useToast();
   const { allLinks, isLoading: linksLoading } = useLinksRepository();
 
@@ -313,31 +315,58 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="font-semibold">Mensagem Atual</h3>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    <ContentViewToggle mode={viewMode} onModeChange={setViewMode} />
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => copyToClipboard(currentMessage)}
                     >
                       <Copy className="h-4 w-4 mr-1" />
-                      Copiar Texto
+                      Texto
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => copyHTMLVersion(currentMessage)}
                     >
-                      <FileText className="h-4 w-4 mr-1" />
-                      Copiar HTML
+                      <Code className="h-4 w-4 mr-1" />
+                      HTML
                     </Button>
                   </div>
                 </div>
-                
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="whitespace-pre-wrap font-mono text-sm">
-                    {currentMessage}
+
+                {/* Modo Editar */}
+                {viewMode === 'edit' && (
+                  <Textarea
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    className="min-h-[300px] font-mono text-sm"
+                    placeholder="Mensagem editável..."
+                  />
+                )}
+
+                {/* Modo Texto */}
+                {viewMode === 'text' && (
+                  <div className="min-h-[300px] rounded-md border border-input bg-muted px-3 py-2">
+                    <div className="whitespace-pre-wrap font-mono text-sm">
+                      {currentMessage}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Modo HTML */}
+                {viewMode === 'html' && (
+                  <div className="min-h-[300px] rounded-md border border-input bg-background p-4">
+                    <div className="max-w-[600px] mx-auto">
+                      <div className="bg-[#25d366] rounded-2xl p-5">
+                        <div className="bg-[#dcf8c6] text-black p-4 rounded-xl whitespace-pre-wrap font-sans text-base leading-relaxed shadow-md">
+                          {currentMessage}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="flex justify-between items-center mt-2">
                   <Badge variant={isOverLimit(currentMessage) ? "destructive" : "secondary"}>

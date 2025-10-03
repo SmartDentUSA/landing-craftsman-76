@@ -5,9 +5,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { PlayCircle, Copy, Edit, Save, X, Loader2, Plus, History, Settings } from 'lucide-react';
+import { PlayCircle, Copy, Edit, Save, X, Loader2, Plus, History, Settings, Code } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ContentViewToggle } from '@/components/ui/content-view-toggle';
 
 interface YouTubeDescription {
   id: string;
@@ -39,6 +40,7 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
   const [showTemplateConfig, setShowTemplateConfig] = useState(false);
   const [companyTemplate, setCompanyTemplate] = useState<string>('');
   const [editingTemplate, setEditingTemplate] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'edit' | 'text' | 'html'>('edit');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -265,6 +267,83 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
     return [];
   };
 
+  const generateHTMLVersion = (content: any) => {
+    const formatted = formatDescription(content);
+    const title = getTitleSuggestion(content);
+    const tags = getTags(content);
+    
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title || productName} - YouTube</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    .youtube-container {
+      background: white;
+      border-left: 4px solid #FF0000;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #FF0000;
+      margin-top: 0;
+    }
+    .description {
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: #030303;
+    }
+    .tags {
+      margin-top: 20px;
+    }
+    .tag {
+      display: inline-block;
+      background: #065fd4;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="youtube-container">
+    ${title ? `<h2>${title}</h2>` : ''}
+    <div class="description">${formatted}</div>
+    ${tags.length > 0 ? `<div class="tags">${tags.map((tag: string) => `<span class="tag">#${tag}</span>`).join('')}</div>` : ''}
+  </div>
+</body>
+</html>`;
+  };
+
+  const copyHTMLVersion = async () => {
+    try {
+      const htmlContent = generateHTMLVersion(currentDescription);
+      await navigator.clipboard.writeText(htmlContent);
+      toast({
+        title: "HTML Copiado!",
+        description: "Versão HTML da descrição copiada.",
+      });
+    } catch (error) {
+      console.error('Erro ao copiar HTML:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar a versão HTML.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -353,51 +432,132 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="font-semibold">Descrição Atual</h3>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    <ContentViewToggle mode={viewMode} onModeChange={setViewMode} />
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => copyToClipboard(formatDescription(currentDescription))}
                     >
                       <Copy className="h-4 w-4 mr-1" />
-                      Copiar
+                      Texto
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={copyHTMLVersion}
+                    >
+                      <Code className="h-4 w-4 mr-1" />
+                      HTML
                     </Button>
                   </div>
                 </div>
 
-                {/* Sugestão de título */}
-                {getTitleSuggestion(currentDescription) && (
-                  <div className="mb-4">
-                    <h4 className="font-medium text-sm mb-2">Sugestão de Título:</h4>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm font-medium">{getTitleSuggestion(currentDescription)}</p>
+                {/* Modo Editar - Visualização completa */}
+                {viewMode === 'edit' && (
+                  <>
+                    {/* Sugestão de título */}
+                    {getTitleSuggestion(currentDescription) && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-sm mb-2">Sugestão de Título:</h4>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm font-medium">{getTitleSuggestion(currentDescription)}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Descrição */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-sm mb-2">Descrição:</h4>
+                      <Textarea
+                        value={formatDescription(currentDescription)}
+                        onChange={(e) => {
+                          if (typeof currentDescription === 'object') {
+                            setCurrentDescription({ ...currentDescription, description: e.target.value });
+                          } else {
+                            setCurrentDescription(e.target.value);
+                          }
+                        }}
+                        className="min-h-[300px] font-mono text-sm"
+                      />
                     </div>
-                  </div>
-                )}
-                
-                {/* Descrição */}
-                <div className="mb-4">
-                  <h4 className="font-medium text-sm mb-2">Descrição:</h4>
-                  <div className="bg-gray-50 border rounded-lg p-4">
-                    <div className="whitespace-pre-wrap font-mono text-sm">
-                      {formatDescription(currentDescription)}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Tags */}
-                {getTags(currentDescription).length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="font-medium text-sm mb-2">Tags Sugeridas:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {getTags(currentDescription).map((tag: string, index: number) => (
-                        <Badge key={index} variant="outline">#{tag}</Badge>
-                      ))}
+                    {/* Tags */}
+                    {getTags(currentDescription).length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-sm mb-2">Tags Sugeridas:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {getTags(currentDescription).map((tag: string, index: number) => (
+                            <Badge key={index} variant="outline">#{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Modo Texto - Somente leitura */}
+                {viewMode === 'text' && (
+                  <>
+                    {getTitleSuggestion(currentDescription) && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-sm mb-2">Título:</h4>
+                        <div className="rounded-md border border-input bg-muted px-3 py-2">
+                          <p className="text-sm font-medium">{getTitleSuggestion(currentDescription)}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="mb-4">
+                      <h4 className="font-medium text-sm mb-2">Descrição:</h4>
+                      <div className="rounded-md border border-input bg-muted px-3 py-2">
+                        <div className="whitespace-pre-wrap font-mono text-sm">
+                          {formatDescription(currentDescription)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {getTags(currentDescription).length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-sm mb-2">Tags:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {getTags(currentDescription).map((tag: string, index: number) => (
+                            <Badge key={index} variant="outline">#{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Modo HTML - Preview estilizado */}
+                {viewMode === 'html' && (
+                  <div className="min-h-[400px] rounded-md border border-input bg-background p-4">
+                    <div className="max-w-[800px] mx-auto">
+                      <div className="bg-white border-l-4 border-[#FF0000] p-5 rounded-lg shadow-sm">
+                        {getTitleSuggestion(currentDescription) && (
+                          <h2 className="text-[#FF0000] text-xl font-bold mb-4">
+                            {getTitleSuggestion(currentDescription)}
+                          </h2>
+                        )}
+                        <div className="whitespace-pre-wrap leading-relaxed text-sm text-gray-900 mb-4">
+                          {formatDescription(currentDescription)}
+                        </div>
+                        {getTags(currentDescription).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {getTags(currentDescription).map((tag: string, index: number) => (
+                              <span key={index} className="inline-block bg-[#065fd4] text-white px-3 py-1 rounded-full text-xs">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mt-4">
                   <Badge variant={isOverLimit(formatDescription(currentDescription)) ? "destructive" : "secondary"}>
                     {getCharacterCount(formatDescription(currentDescription))}/5000 caracteres
                   </Badge>

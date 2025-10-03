@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
+import { ContentViewToggle } from '@/components/ui/content-view-toggle';
 import { 
   MessageCircle, 
   Plus, 
@@ -17,7 +18,8 @@ import {
   X, 
   Copy, 
   FileText,
-  Loader2 
+  Loader2,
+  Code
 } from 'lucide-react';
 
 interface WhatsAppSequenceMessage {
@@ -59,8 +61,14 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [messageViewModes, setMessageViewModes] = useState<Record<string, 'edit' | 'text' | 'html'>>({});
   const { toast } = useToast();
   const { allLinks, isLoading: linksLoading } = useLinksRepository();
+
+  const getMessageViewMode = (messageId: string) => messageViewModes[messageId] || 'edit';
+  const setMessageViewMode = (messageId: string, mode: 'edit' | 'text' | 'html') => {
+    setMessageViewModes(prev => ({ ...prev, [messageId]: mode }));
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -274,29 +282,37 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                           <Badge>{getApproachLabel(message.approach)}</Badge>
                         </div>
                         
-                        <div className="flex gap-2">
-                          {editingId === message.id ? (
-                            <>
-                              <Button size="sm" onClick={saveEdit} disabled={isOverLimit(editingContent)}>
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button size="sm" variant="outline" onClick={() => startEditing(message)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => copyToClipboard(message.content)}>
-                                <Copy className="h-4 w-4" /> Texto
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => copyHTMLVersion(message.content)}>
-                                <FileText className="h-4 w-4" /> HTML
-                              </Button>
-                            </>
+                        <div className="flex items-center gap-2">
+                          {editingId !== message.id && (
+                            <ContentViewToggle 
+                              mode={getMessageViewMode(message.id)} 
+                              onModeChange={(mode) => setMessageViewMode(message.id, mode)} 
+                            />
                           )}
+                          <div className="flex gap-2">
+                            {editingId === message.id ? (
+                              <>
+                                <Button size="sm" onClick={saveEdit} disabled={isOverLimit(editingContent)}>
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button size="sm" variant="outline" onClick={() => startEditing(message)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => copyToClipboard(message.content)}>
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => copyHTMLVersion(message.content)}>
+                                  <Code className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -313,11 +329,34 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                         </div>
                       ) : (
                         <>
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                            <div className="whitespace-pre-wrap font-mono text-sm">
-                              {message.content}
+                          {getMessageViewMode(message.id) === 'edit' && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="whitespace-pre-wrap font-mono text-sm">
+                                {message.content}
+                              </div>
                             </div>
-                          </div>
+                          )}
+
+                          {getMessageViewMode(message.id) === 'text' && (
+                            <div className="rounded-md border border-input bg-muted px-3 py-2">
+                              <div className="whitespace-pre-wrap font-mono text-sm">
+                                {message.content}
+                              </div>
+                            </div>
+                          )}
+
+                          {getMessageViewMode(message.id) === 'html' && (
+                            <div className="rounded-md border border-input bg-background p-4">
+                              <div className="max-w-[400px] mx-auto">
+                                <div className="bg-[#25d366] rounded-xl p-4">
+                                  <div className="bg-[#dcf8c6] text-black p-3 rounded-lg whitespace-pre-wrap font-sans text-sm leading-relaxed shadow-sm">
+                                    {message.content}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           <Badge variant={isOverLimit(message.content) ? "destructive" : "secondary"} className="mt-2">
                             {getCharacterCount(message.content)}/1000 caracteres
                           </Badge>

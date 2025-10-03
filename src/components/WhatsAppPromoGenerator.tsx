@@ -3,9 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Copy, CheckCircle, Zap, Edit } from 'lucide-react';
+import { Loader2, Copy, CheckCircle, Zap, Edit, Save, Code } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ContentViewToggle } from '@/components/ui/content-view-toggle';
+import { useLinksRepository } from '@/hooks/useLinksRepository';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface WhatsAppPromoGeneratorProps {
   isOpen: boolean;
@@ -31,7 +34,10 @@ export function WhatsAppPromoGenerator({
   const [isEdited, setIsEdited] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'text' | 'html'>('edit');
   const { toast } = useToast();
+  const { allLinks, isLoading: linksLoading } = useLinksRepository();
 
   const originalPrice = productPrice;
   const discountAmount = (originalPrice * discountPercentage) / 100;
@@ -161,6 +167,58 @@ export function WhatsAppPromoGenerator({
     }
   };
 
+  const saveToDatabase = async () => {
+    setIsSaving(true);
+    try {
+      const { data: product, error: fetchError } = await supabase
+        .from('products_repository')
+        .select('whatsapp_messages')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const whatsappData = product?.whatsapp_messages as any;
+      const currentMessages = whatsappData?.messages || [];
+      const updatedMessages = [
+        {
+          id: crypto.randomUUID(),
+          content: message,
+          generated_at: new Date().toISOString(),
+          type: 'promo',
+          editable: true
+        },
+        ...currentMessages
+      ];
+
+      const { error: updateError } = await supabase
+        .from('products_repository')
+        .update({ 
+          whatsapp_messages: { 
+            messages: updatedMessages,
+            last_generated: new Date().toISOString()
+          }
+        })
+        .eq('id', productId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: 'Salvo!',
+        description: 'Mensagem promocional salva no banco de dados',
+      });
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível salvar a mensagem',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(message);
@@ -175,6 +233,61 @@ export function WhatsAppPromoGenerator({
         variant: 'destructive',
         title: 'Erro ao copiar',
         description: 'Não foi possível copiar a mensagem',
+      });
+    }
+  };
+
+  const copyHTMLVersion = async () => {
+    const htmlContent = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promoção WhatsApp - ${productName}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    .whatsapp-container {
+      background: #25d366;
+      border-radius: 15px;
+      padding: 20px;
+      color: white;
+    }
+    .whatsapp-message {
+      background: #dcf8c6;
+      color: #000;
+      padding: 15px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="whatsapp-container">
+    <div class="whatsapp-message">${message}</div>
+  </div>
+</body>
+</html>`;
+
+    try {
+      await navigator.clipboard.writeText(htmlContent);
+      toast({
+        title: 'HTML Copiado!',
+        description: 'Versão HTML da mensagem copiada',
+      });
+    } catch (error) {
+      console.error('Erro ao copiar HTML:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível copiar o HTML',
+        variant: 'destructive',
       });
     }
   };
@@ -227,7 +340,7 @@ export function WhatsAppPromoGenerator({
           </div>
 
           {/* Mensagem Gerada */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium flex items-center gap-2">
                 Mensagem Gerada
@@ -238,44 +351,70 @@ export function WhatsAppPromoGenerator({
                   </Badge>
                 )}
               </label>
+              <ContentViewToggle mode={viewMode} onModeChange={setViewMode} />
             </div>
-            <Textarea
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                setIsEdited(e.target.value !== originalMessage);
-              }}
-              className="min-h-[400px] font-mono text-sm focus:ring-2 focus:ring-primary"
-              placeholder={isGenerating ? 'Gerando mensagem...' : 'A mensagem aparecerá aqui'}
-              disabled={isGenerating}
-            />
-            <p className="text-xs text-muted-foreground flex items-center gap-2">
-              <Edit className="h-3 w-3" />
-              {message.length} caracteres • Edite a mensagem livremente antes de copiar
-            </p>
+
+            {/* Modo Editar */}
+            {viewMode === 'edit' && (
+              <Textarea
+                value={message}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  setIsEdited(e.target.value !== originalMessage);
+                }}
+                className="min-h-[400px] font-mono text-sm focus:ring-2 focus:ring-primary"
+                placeholder={isGenerating ? 'Gerando mensagem...' : 'A mensagem aparecerá aqui'}
+                disabled={isGenerating}
+              />
+            )}
+
+            {/* Modo Texto */}
+            {viewMode === 'text' && (
+              <div className="min-h-[400px] w-full rounded-md border border-input bg-muted px-3 py-2">
+                <div className="whitespace-pre-wrap font-mono text-sm">
+                  {message || 'Nenhuma mensagem gerada ainda'}
+                </div>
+              </div>
+            )}
+
+            {/* Modo HTML */}
+            {viewMode === 'html' && (
+              <div className="min-h-[400px] w-full rounded-md border border-input bg-background p-4">
+                <div className="max-w-[600px] mx-auto">
+                  <div className="bg-[#25d366] rounded-2xl p-5">
+                    <div className="bg-[#dcf8c6] text-black p-4 rounded-xl whitespace-pre-wrap font-sans text-base leading-relaxed shadow-md">
+                      {message || 'Nenhuma mensagem gerada ainda'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Edit className="h-3 w-3" />
+                {message.length} caracteres
+              </p>
+              {viewMode === 'edit' && (
+                <Button
+                  onClick={saveToDatabase}
+                  disabled={isSaving || !message}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar no Banco
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Ações */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={generatePromoMessage}
-              disabled={isGenerating}
-              variant="outline"
-              className="flex-1"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Gerar Nova Mensagem
-                </>
-              )}
-            </Button>
-
+          <div className="flex gap-2">
             <Button
               onClick={copyToClipboard}
               disabled={!message || isGenerating}
@@ -289,10 +428,68 @@ export function WhatsAppPromoGenerator({
               ) : (
                 <>
                   <Copy className="h-4 w-4 mr-2" />
-                  Copiar Mensagem
+                  Copiar Texto
                 </>
               )}
             </Button>
+
+            <Button
+              onClick={copyHTMLVersion}
+              disabled={!message || isGenerating}
+              variant="outline"
+              className="flex-1"
+            >
+              <Code className="h-4 w-4 mr-2" />
+              Copiar HTML
+            </Button>
+            
+            <Button
+              onClick={generatePromoMessage}
+              disabled={isGenerating}
+              variant="outline"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Gerar Nova
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Seção de Links Disponíveis */}
+          <div className="border rounded-lg p-4 bg-muted/50">
+            <h3 className="text-sm font-semibold mb-2">Links Disponíveis</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Use estes links para personalizar suas mensagens promocionais.
+            </p>
+            
+            {linksLoading ? (
+              <div className="text-xs text-muted-foreground">Carregando links...</div>
+            ) : allLinks.length > 0 ? (
+              <ScrollArea className="h-24 w-full border rounded-md p-2 bg-background">
+                <div className="space-y-1.5">
+                  {allLinks.map((link) => (
+                    <div key={link.id} className="text-xs border-b pb-1.5 last:border-0">
+                      <div className="font-medium">{link.name}</div>
+                      <div className="text-muted-foreground break-all text-[10px]">{link.url}</div>
+                      <Badge variant="outline" className="text-[10px] mt-0.5">
+                        {link.category}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                Nenhum link disponível. Configure links no repositório.
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
