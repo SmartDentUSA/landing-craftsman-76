@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Copy, CheckCircle, Zap } from 'lucide-react';
+import { Loader2, Copy, CheckCircle, Zap, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -27,6 +27,8 @@ export function WhatsAppPromoGenerator({
   couponCode,
 }: WhatsAppPromoGeneratorProps) {
   const [message, setMessage] = useState('');
+  const [originalMessage, setOriginalMessage] = useState('');
+  const [isEdited, setIsEdited] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
@@ -140,6 +142,8 @@ export function WhatsAppPromoGenerator({
       promoText += `#SmartDent #${product.category?.replace(/\s+/g, '') || 'Produtos'}`;
 
       setMessage(promoText);
+      setOriginalMessage(promoText);
+      setIsEdited(false);
 
       toast({
         title: 'Mensagem gerada!',
@@ -224,16 +228,30 @@ export function WhatsAppPromoGenerator({
 
           {/* Mensagem Gerada */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Mensagem Gerada</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                Mensagem Gerada
+                {isEdited && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Edit className="h-3 w-3 mr-1" />
+                    Editada
+                  </Badge>
+                )}
+              </label>
+            </div>
             <Textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[400px] font-mono text-sm"
+              onChange={(e) => {
+                setMessage(e.target.value);
+                setIsEdited(e.target.value !== originalMessage);
+              }}
+              className="min-h-[400px] font-mono text-sm focus:ring-2 focus:ring-primary"
               placeholder={isGenerating ? 'Gerando mensagem...' : 'A mensagem aparecerá aqui'}
               disabled={isGenerating}
             />
-            <p className="text-xs text-muted-foreground">
-              {message.length} caracteres • Você pode editar a mensagem antes de copiar
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <Edit className="h-3 w-3" />
+              {message.length} caracteres • Edite a mensagem livremente antes de copiar
             </p>
           </div>
 
