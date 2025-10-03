@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,9 +20,41 @@ serve(async (req) => {
   }
 
   try {
-    const clientId = Deno.env.get('YOUTUBE_CLIENT_ID');
-    const clientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
-    const refreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
+    // Get Supabase client to read from database
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    );
+
+    // Try to get credentials from database first (per-user config)
+    const authHeader = req.headers.get('Authorization');
+    let clientId, clientSecret, refreshToken;
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabaseClient.auth.getUser(token);
+      
+      if (user) {
+        const { data: credsData } = await supabaseClient
+          .from('youtube_oauth_credentials')
+          .select('client_id, client_secret, refresh_token')
+          .eq('user_id', user.id)
+          .single();
+
+        if (credsData) {
+          clientId = credsData.client_id;
+          clientSecret = credsData.client_secret;
+          refreshToken = credsData.refresh_token;
+          console.log('✅ Using credentials from database for user:', user.id);
+        }
+      }
+    }
+
+    // Fallback to environment variables
+    if (!clientId) clientId = Deno.env.get('YOUTUBE_CLIENT_ID');
+    if (!clientSecret) clientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
+    if (!refreshToken) refreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
 
     console.log('🔍 Checking YouTube OAuth credentials...');
     

@@ -175,27 +175,40 @@ export default function YouTubeOAuthSettings() {
     setIsSaving(true);
 
     try {
-      // Save to localStorage
+      // Save to localStorage for quick access
       localStorage.setItem(STORAGE_KEYS.CLIENT_ID, clientId);
       localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, clientSecret);
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 
-      // Save to Supabase secrets (batch)
-      const { data, error } = await supabase.functions.invoke('update-secret', {
-        body: {
-          secrets: {
-            YOUTUBE_CLIENT_ID: clientId,
-            YOUTUBE_CLIENT_SECRET: clientSecret,
-            YOUTUBE_REFRESH_TOKEN: refreshToken,
-          }
-        }
-      });
+      // Save to database automatically
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        toast({
+          title: "❌ Erro de autenticação",
+          description: "Você precisa estar logado para salvar as credenciais",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      if (error) throw error;
+      const { error: dbError } = await supabase
+        .from('youtube_oauth_credentials')
+        .upsert({
+          user_id: userData.user.id,
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+        });
+
+      if (dbError) {
+        console.error('Database save error:', dbError);
+        throw new Error('Erro ao salvar no banco de dados');
+      }
 
       toast({
-        title: "✅ Credenciais salvas",
-        description: "YouTube OAuth configurado com sucesso! Configure os secrets no Supabase Dashboard.",
+        title: "✅ Credenciais salvas automaticamente",
+        description: "YouTube OAuth configurado no banco de dados. Pronto para usar!",
       });
 
       // Auto-test after saving
@@ -343,29 +356,53 @@ export default function YouTubeOAuthSettings() {
         return;
       }
 
-      // ✅ Sucesso - salvar no localStorage
+      // ✅ Sucesso - salvar refresh token
       console.log("✅ Token recebido com sucesso:", data.refresh_token.substring(0, 20) + "...");
-      setRefreshToken(data.refresh_token);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+      const newRefreshToken = data.refresh_token;
+      setRefreshToken(newRefreshToken);
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+
+      // Save to database automatically
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        toast({
+          title: "⚠️ Aviso",
+          description: "Token obtido mas você não está logado. Salve manualmente com o botão Salvar.",
+          variant: "destructive",
+        });
+        setShowOAuthModal(false);
+        return;
+      }
+
+      const { error: dbError } = await supabase
+        .from('youtube_oauth_credentials')
+        .upsert({
+          user_id: userData.user.id,
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: newRefreshToken,
+        });
+
+      if (dbError) {
+        console.error("Database save error:", dbError);
+        toast({
+          title: "⚠️ Token obtido",
+          description: "Token salvo localmente, mas erro ao salvar no banco. Use o botão Salvar.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "✅ Configuração completa!",
+          description: "Credenciais salvas automaticamente no banco de dados. Pronto para usar!",
+        });
+      }
       
       setShowOAuthModal(false);
       setOauthCode("");
       
-      toast({
-        title: "✅ Refresh Token obtido!",
-        description: "Agora configure o Secret YOUTUBE_REFRESH_TOKEN no Supabase",
-        duration: 10000,
-      });
-
-      // Copiar automaticamente o token
-      setTimeout(() => {
-        copyToClipboard(data.refresh_token, "Refresh Token");
-        toast({
-          title: "📋 Token copiado!",
-          description: "Cole no painel de Secrets do Supabase (YOUTUBE_REFRESH_TOKEN)",
-          duration: 8000,
-        });
-      }, 1000);
+      // Auto-test connection
+      setTimeout(() => testConnection(), 500);
     } catch (err) {
       console.error("OAuth exchange exception", err);
       toast({

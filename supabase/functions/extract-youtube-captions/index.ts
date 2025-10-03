@@ -47,6 +47,35 @@ serve(async (req) => {
 
     console.log(`Extracting captions for product ${request.productId}, video type: ${request.videoType}`);
 
+    // Try to get YouTube OAuth credentials from database first (per-user config)
+    const authHeader = req.headers.get('Authorization');
+    let youtubeClientId, youtubeClientSecret, youtubeRefreshToken;
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      
+      if (user) {
+        const { data: credsData } = await supabase
+          .from('youtube_oauth_credentials')
+          .select('client_id, client_secret, refresh_token')
+          .eq('user_id', user.id)
+          .single();
+
+        if (credsData) {
+          youtubeClientId = credsData.client_id;
+          youtubeClientSecret = credsData.client_secret;
+          youtubeRefreshToken = credsData.refresh_token;
+          console.log('✅ Using YouTube credentials from database for user:', user.id);
+        }
+      }
+    }
+
+    // Fallback to environment variables if not in database
+    if (!youtubeClientId) youtubeClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
+    if (!youtubeClientSecret) youtubeClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
+    if (!youtubeRefreshToken) youtubeRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
+
     // Fetch product with current updated_at for optimistic locking
     const { data: product, error: productError } = await supabase
       .from('products_repository')
@@ -90,7 +119,12 @@ serve(async (req) => {
       if (!video?.url) continue;
 
       try {
-        const captionResult = await extractCaptionsFromVideo(video.url);
+        const captionResult = await extractCaptionsFromVideo(
+          video.url,
+          youtubeClientId,
+          youtubeClientSecret,
+          youtubeRefreshToken
+        );
         
         if (captionResult) {
           let analysis;
@@ -317,7 +351,12 @@ async function downloadCaptionsOAuth(
   return { captions: captionsText, language };
 }
 
-async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | null> {
+async function extractCaptionsFromVideo(
+  url: string,
+  youtubeClientId?: string,
+  youtubeClientSecret?: string,
+  youtubeRefreshToken?: string
+): Promise<VideoCaption | null> {
   // Skip Instagram URLs
   if (url.includes('instagram.com')) {
     console.log(`[Skip] Instagram URL detected, skipping: ${url}`);
@@ -331,10 +370,6 @@ async function extractCaptionsFromVideo(url: string): Promise<VideoCaption | nul
   console.log(`[${timestamp}] Starting caption extraction for videoId: ${videoId}`);
 
   // Method 1: YouTube OAuth 2.0 captions.download (official method)
-  const youtubeClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
-  const youtubeClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
-  const youtubeRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
-  
   if (youtubeClientId && youtubeClientSecret && youtubeRefreshToken) {
     try {
       console.log(`[Method 1] Trying YouTube OAuth captions.download for videoId: ${videoId}`);

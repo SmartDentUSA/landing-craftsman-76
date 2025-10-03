@@ -1178,6 +1178,36 @@ export type Database = {
         }
         Relationships: []
       }
+      youtube_oauth_credentials: {
+        Row: {
+          client_id: string
+          client_secret: string
+          created_at: string
+          id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          client_secret: string
+          created_at?: string
+          id?: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          client_secret?: string
+          created_at?: string
+          id?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
