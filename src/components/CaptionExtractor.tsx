@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Download, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,6 +45,8 @@ export function CaptionExtractor({
   const [viewingCaptions, setViewingCaptions] = useState<VideoCaption | null>(null);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [secretsConfigured, setSecretsConfigured] = useState<boolean | null>(null);
+  const [editingCaption, setEditingCaption] = useState<string | null>(null);
+  const [editedText, setEditedText] = useState("");
   const { toast } = useToast();
 
   // Check if YouTube OAuth secrets are configured
@@ -168,6 +170,78 @@ export function CaptionExtractor({
     }
   };
 
+  const handleEditCaption = (caption: VideoCaption) => {
+    setEditingCaption(caption.url);
+    setEditedText(caption.captions);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCaption(null);
+    setEditedText("");
+  };
+
+  const handleSaveCaption = async (originalCaption: VideoCaption) => {
+    if (!editedText.trim()) {
+      toast({
+        title: "Erro",
+        description: "A legenda não pode estar vazia",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Buscar dados atuais do produto
+      const { data: product, error: fetchError } = await supabase
+        .from('products_repository')
+        .select('video_captions')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Atualizar a legenda no array existente
+      const updatedCaptions = existingCaptions.map(cap => 
+        cap.url === originalCaption.url 
+          ? { ...cap, captions: editedText, extracted_at: new Date().toISOString() }
+          : cap
+      );
+
+      // Mesclar com video_captions existente
+      const currentCaptions = (product?.video_captions || {}) as Record<string, any>;
+      const videoCaptionsUpdate = {
+        ...currentCaptions,
+        [videoType]: updatedCaptions
+      };
+
+      // Atualizar no banco de dados
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ video_captions: videoCaptionsUpdate as any })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      onCaptionsExtracted(updatedCaptions);
+      
+      toast({
+        title: "Sucesso",
+        description: "Legenda atualizada com sucesso"
+      });
+
+      setEditingCaption(null);
+      setEditedText("");
+    } catch (error: any) {
+      console.error('Error saving caption:', error);
+      toast({
+        title: "Erro",
+        description: error?.message || "Erro ao salvar legenda",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="border-2">
@@ -239,7 +313,7 @@ export function CaptionExtractor({
                 {existingCaptions.map((caption, index) => (
                   <Card key={index} className="p-4">
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {caption.method}
@@ -256,15 +330,48 @@ export function CaptionExtractor({
                             </Badge>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewingCaptions(
-                            viewingCaptions?.url === caption.url ? null : caption
+                        <div className="flex items-center gap-2">
+                          {editingCaption === caption.url ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSaveCaption(caption)}
+                              >
+                                <Check className="w-4 h-4 mr-1" />
+                                Salvar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCancelEdit}
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Cancelar
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewingCaptions(
+                                  viewingCaptions?.url === caption.url ? null : caption
+                                )}
+                              >
+                                {viewingCaptions?.url === caption.url ? 'Ocultar' : 'Ver Legendas'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditCaption(caption)}
+                              >
+                                <Pencil className="w-4 h-4 mr-1" />
+                                Editar
+                              </Button>
+                            </>
                           )}
-                        >
-                          {viewingCaptions?.url === caption.url ? 'Ocultar' : 'Ver Legendas'}
-                        </Button>
+                        </div>
                       </div>
 
                       <div className="text-sm">
@@ -301,14 +408,15 @@ export function CaptionExtractor({
                         </div>
                       )}
 
-                      {viewingCaptions?.url === caption.url && (
+                      {(viewingCaptions?.url === caption.url || editingCaption === caption.url) && (
                         <div className="space-y-2">
                           <label className="text-xs font-medium text-muted-foreground">
-                            Legendas Completas ({caption.captions.length} caracteres):
+                            Legendas Completas ({editingCaption === caption.url ? editedText.length : caption.captions.length} caracteres):
                           </label>
                           <Textarea
-                            value={caption.captions}
-                            readOnly
+                            value={editingCaption === caption.url ? editedText : caption.captions}
+                            onChange={(e) => editingCaption === caption.url && setEditedText(e.target.value)}
+                            readOnly={editingCaption !== caption.url}
                             className="text-sm max-h-32"
                             placeholder="Nenhuma legenda disponível"
                           />
