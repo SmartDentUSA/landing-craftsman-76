@@ -98,14 +98,14 @@ serve(async (req) => {
         functionId = 'generate-instagram-copy';
         if (instagramType === 'reels') {
           promptName = 'Copy Vídeo Reels';
-        } else if (instagramType === 'carousel') {
-          promptName = 'Copy Carrossel';
-        } else {
-          promptName = 'Copy Feed (post estático)';
-        }
+      } else if (instagramType === 'carousel') {
+        promptName = 'Copy Carrossel';
       } else {
-        throw new Error(`Tipo inválido: ${type}`);
+        promptName = 'Copy Feed (post estático)';
       }
+    } else if (type !== 'whatsapp_sequence') {
+      throw new Error(`Tipo inválido: ${type}`);
+    }
       
       const { data: promptConfig } = await supabase
         .from('prompts_configuration')
