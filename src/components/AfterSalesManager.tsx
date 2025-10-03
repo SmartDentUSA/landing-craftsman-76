@@ -24,8 +24,7 @@ import {
 export const AfterSalesManager = () => {
   const { toast } = useToast();
   const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState("");
+  const [editedContents, setEditedContents] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { fetchMessages, createMessage, updateMessage, deleteMessage, toggleActive } = useAfterSalesMessages();
@@ -81,18 +80,18 @@ export const AfterSalesManager = () => {
     });
   };
 
-  const handleEdit = (messageId: string, content: string) => {
-    setEditingMessageId(messageId);
-    setEditingContent(content);
+  const handleContentChange = (messageId: string, newContent: string) => {
+    setEditedContents(prev => ({
+      ...prev,
+      [messageId]: newContent
+    }));
   };
 
-  const handleCancelEdit = () => {
-    setEditingMessageId(null);
-    setEditingContent("");
-  };
-
-  const handleSave = (messageId: string) => {
-    if (editingContent.trim().length < 10) {
+  const handleSave = (messageId: string, originalContent: string) => {
+    const contentToSave = editedContents[messageId] || originalContent;
+    console.log('Saving message:', messageId, 'with content:', contentToSave);
+    
+    if (contentToSave.trim().length < 10) {
       toast({
         title: "Mensagem muito curta",
         description: "A mensagem deve ter pelo menos 10 caracteres.",
@@ -104,14 +103,21 @@ export const AfterSalesManager = () => {
     updateMessage.mutate(
       {
         messageId,
-        content: editingContent,
+        content: contentToSave,
         productId: selectedProductId,
       },
       {
         onSuccess: () => {
-          setEditingMessageId(null);
-          setEditingContent("");
+          console.log('Message saved successfully');
+          setEditedContents(prev => {
+            const newContents = { ...prev };
+            delete newContents[messageId];
+            return newContents;
+          });
         },
+        onError: (error) => {
+          console.error('Error saving message:', error);
+        }
       }
     );
   };
@@ -209,8 +215,9 @@ export const AfterSalesManager = () => {
 
               <div className="space-y-3">
                 {messages.map((message) => {
-                  const isEditing = editingMessageId === message.id;
-                  const currentContent = isEditing ? editingContent : message.message_content;
+                  const currentContent = editedContents[message.id] ?? message.message_content;
+                  const hasChanges = editedContents[message.id] !== undefined && 
+                                    editedContents[message.id] !== message.message_content;
 
                   return (
                     <Card key={message.id} className={!message.is_active ? "opacity-60" : ""}>
@@ -234,60 +241,43 @@ export const AfterSalesManager = () => {
                             </div>
                             <Textarea
                               value={currentContent}
-                              onChange={(e) => setEditingContent(e.target.value)}
-                              disabled={!isEditing}
-                              className={!isEditing ? "resize-none" : ""}
+                              onChange={(e) => handleContentChange(message.id, e.target.value)}
+                              placeholder="Digite sua mensagem aqui..."
                               rows={4}
+                              className="resize-none"
                             />
-                            {isEditing && (
+                            <div className="flex items-center justify-between">
                               <p className="text-xs text-muted-foreground">
                                 {currentContent.length} caracteres (mínimo 10)
                               </p>
-                            )}
+                              {hasChanges && (
+                                <p className="text-xs text-amber-600 font-medium">
+                                  ⚠️ Alterações não salvas
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         <div className="flex gap-2">
-                          {!isEditing ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEdit(message.id, message.message_content)}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Editar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setDeleteConfirmId(message.id)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleSave(message.id)}
-                                disabled={updateMessage.isPending}
-                              >
-                                {updateMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                <Save className="mr-2 h-4 w-4" />
-                                Salvar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleCancelEdit}
-                                disabled={updateMessage.isPending}
-                              >
-                                Cancelar
-                              </Button>
-                            </>
-                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => handleSave(message.id, message.message_content)}
+                            disabled={updateMessage.isPending || !hasChanges}
+                            variant={hasChanges ? "default" : "outline"}
+                          >
+                            {updateMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Save className="mr-2 h-4 w-4" />
+                            Salvar Alterações
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeleteConfirmId(message.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
