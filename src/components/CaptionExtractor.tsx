@@ -390,19 +390,19 @@ export function CaptionExtractor({
                           
                           {caption.analysis.keywords.length > 0 && (
                             <div>
-                              <label className="text-xs font-medium text-muted-foreground">Keywords:</label>
+                              <label className="text-xs font-medium text-muted-foreground">
+                                Keywords Extraídas:
+                              </label>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {caption.analysis.keywords.slice(0, 5).map((keyword, i) => (
+                                {caption.analysis.keywords.map((keyword, i) => (
                                   <Badge key={i} variant="secondary" className="text-xs">
                                     {keyword}
                                   </Badge>
                                 ))}
-                                {caption.analysis.keywords.length > 5 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{caption.analysis.keywords.length - 5}
-                                  </Badge>
-                                )}
                               </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                ℹ️ Keywords são extraídas automaticamente e atualizadas quando você editar a legenda
+                              </p>
                             </div>
                           )}
                         </div>

@@ -662,7 +662,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     }
   };
 
-  // Caption management function
+  // Caption management function - ✅ FASE 2: Sincronizar estado imediatamente
   const handleCaptionsExtracted = (videoType: string, captions: any[]) => {
     const updatedCaptions = {
       ...videoCaptions,
@@ -850,6 +850,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         testimonial_videos: testimonialVideos as any,
         technical_videos: technicalVideos as any,
         tiktok_videos: tiktokVideos as any,
+        video_captions: videoCaptions, // ✅ FASE 1: Salvar video_captions editadas
         use_in_ai_generation: formData.use_in_ai_generation,
         approved: formData.approved,
         keywords: formData.keywords || [],
