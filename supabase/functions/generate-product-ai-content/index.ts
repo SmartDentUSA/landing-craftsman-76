@@ -278,6 +278,12 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     .limit(1)
     .single();
   
+  // 🎬 NOVO: Extrair keywords de video_captions
+  const { extractKeywordsFromVideoCaptions, hasCaptions } = await import('../_shared/video-captions-processor.ts');
+  const videoCaptionKeywords = hasCaptions(product.video_captions) 
+    ? extractKeywordsFromVideoCaptions(product.video_captions)
+    : [];
+  
   let prompt = '';
   
   if (promptConfig?.custom_prompt) {
@@ -291,11 +297,15 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     const existingContext = existingKeywords.length > 0 ? 
       `\n\nPALAVRAS-CHAVE MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingKeywords.join(', ')}` : '';
     
+    // 🎬 NOVO: Adicionar keywords de vídeos ao contexto
+    const videoCaptionsContext = videoCaptionKeywords.length > 0 ?
+      `\n\nPALAVRAS-CHAVE IDENTIFICADAS EM VÍDEOS (usar como referência): ${videoCaptionKeywords.join(', ')}` : '';
+    
     const instruction = complementOnly && existingKeywords.length > 0 ? 
       'Gere APENAS 3 palavras-chave complementares que NÃO duplicem as existentes:' :
       'Gere APENAS um array JSON com 8-12 palavras-chave relevantes:';
     
-    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
+    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}${videoCaptionsContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -311,13 +321,14 @@ INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 1. **PRIORIZE categoria e subcategoria como palavras-chave primárias**
 2. **Gere variações da categoria (plural, singular, sinônimos)**
 3. **Combine categoria + subcategoria + nome do produto**
+4. **Use termos técnicos mencionados nos vídeos (se disponíveis)**
 
 Inclua NESTA ORDEM DE PRIORIDADE:
 1. Categoria e subcategoria (primárias)
 2. Variações e sinônimos das categorias
 3. Categoria + subcategoria + benefícios
-4. Palavras-chave long-tail com categorias
-5. Termos técnicos da categoria
+4. Palavras-chave long-tail com categorias (especialmente as mencionadas em vídeos)
+5. Termos técnicos da categoria (priorizar os dos vídeos)
 6. Categoria + público-alvo`;
   }
 

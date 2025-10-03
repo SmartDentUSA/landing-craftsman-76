@@ -243,6 +243,12 @@ INSTRUÇÕES CRÍTICAS:
 
   const currentPrompt = prompts[blogType];
   
+  // 🎬 NOVO: Extrair contexto de video_captions
+  const { extractVideoCaptionsForBlog, hasCaptions } = await import('../_shared/video-captions-processor.ts');
+  const videoCaptionsContext = hasCaptions(product.video_captions)
+    ? extractVideoCaptionsForBlog(product.video_captions, blogType)
+    : '';
+  
   // Preparar dados do produto
   const productData = {
     name: product.name,
@@ -302,6 +308,8 @@ ${companyData ? `DADOS DA EMPRESA:
 - Descrição: ${companyData.description}
 - Missão: ${companyData.mission}
 - Valores: ${companyData.values}` : ''}
+
+${videoCaptionsContext}
 
 ESTRUTURA OBRIGATÓRIA:
 ${currentPrompt.structure}
