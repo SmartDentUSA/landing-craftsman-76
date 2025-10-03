@@ -52,7 +52,7 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
   const [isGeneratingAds, setIsGeneratingAds] = useState(false);
   const [lastGeneratedAt, setLastGeneratedAt] = useState<Date | null>(null);
   const [campaignConfig, setCampaignConfig] = useState<GoogleAdsCampaignConfig>({
-    enabled: false,
+    enabled: true,
     type: 'search',
     objective: 'leads',
     daily_budget_brl: 30,
@@ -282,10 +282,10 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
   }, [campaignConfig.enabled, adPreview, generateAdCopies]);
 
   const handleExportCSV = async () => {
-    if (!campaignConfig.enabled || warnings.some(w => w.type === 'error')) {
+    if (warnings.some(w => w.type === 'error')) {
       toast({
         title: "Não é possível exportar",
-        description: "Ative a campanha e corrija os erros primeiro.",
+        description: "Corrija os erros antes de exportar.",
         variant: "destructive"
       });
       return;
@@ -342,8 +342,6 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
   };
 
   const hasErrors = warnings.some(w => w.type === 'error');
-  const statusColor = !campaignConfig.enabled ? 'secondary' : hasErrors ? 'destructive' : 'default';
-  const StatusIcon = !campaignConfig.enabled ? null : hasErrors ? AlertTriangle : CheckCircle;
 
   return (
     <div className="space-y-6">
@@ -358,22 +356,23 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge variant={statusColor} className="gap-1">
-                {StatusIcon && <StatusIcon className="h-3 w-3" />}
-                {!campaignConfig.enabled ? 'Inativo' : hasErrors ? 'Erro' : 'Ativo'}
+              <Badge variant={hasErrors ? 'destructive' : 'default'} className="gap-1">
+                {hasErrors ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                {hasErrors ? 'Erro' : 'Ativo'}
               </Badge>
               <Switch
-                checked={campaignConfig.enabled}
+                checked={true}
+                disabled={true}
                 onCheckedChange={(enabled) => handleConfigChange({ enabled })}
+                className="pointer-events-none"
               />
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {campaignConfig.enabled && (
-        <>
-          {/* Configuration Tabs */}
+      <>
+        {/* Configuration Tabs */}
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="general">Configurações</TabsTrigger>
@@ -486,21 +485,20 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
           {warnings.length > 0 && (
             <WarningsPanel warnings={warnings} />
           )}
-
-          {/* Export Button */}
-          <div className="flex justify-center">
-            <Button
-              onClick={handleExportCSV}
-              disabled={!campaignConfig.enabled || hasErrors || isLoading}
-              className="gap-2"
-              size="lg"
-            >
-              <Download className="h-4 w-4" />
-              Exportar CSV para Google Ads Editor
-            </Button>
-          </div>
         </>
-      )}
+
+      {/* Export Button */}
+      <div className="flex justify-center">
+        <Button
+          onClick={handleExportCSV}
+          disabled={hasErrors || isLoading}
+          className="gap-2"
+          size="lg"
+        >
+          <Download className="h-4 w-4" />
+          Exportar CSV para Google Ads Editor
+        </Button>
+      </div>
     </div>
   );
 };
