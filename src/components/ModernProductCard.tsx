@@ -232,13 +232,13 @@ export function ModernProductCard({
     <>
       <Card 
         className={cn(
-          "group relative transition-all duration-200 hover:shadow-md p-4",
+          "group relative transition-all duration-200 hover:shadow-md hover:scale-[1.01] p-5",
           isSelected && "ring-2 ring-primary shadow-lg",
           score.percentage < 50 && "border-destructive/20",
           score.percentage >= 90 && "border-success/20"
         )}
       >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-5">
         {/* Checkbox */}
         <Checkbox
           checked={isSelected}
@@ -262,7 +262,7 @@ export function ModernProductCard({
         {/* Conteúdo principal */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-medium text-sm leading-tight truncate flex-1">
+            <h3 className="font-semibold text-base leading-tight truncate flex-1">
               {product.name}
             </h3>
             {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
@@ -292,11 +292,11 @@ export function ModernProductCard({
             {categoryPath}
           </p>
           {product.description && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
               {product.description}
             </p>
           )}
-          <div className="mt-1 space-y-1">
+          <div className="mt-2 space-y-2">
             <CompletionBadges product={product} score={score} compact={true} />
             
             {/* Status and Section Badges */}
@@ -377,24 +377,36 @@ export function ModernProductCard({
         </div>
 
         {/* Score compacto */}
-        <div className="flex-shrink-0">
-          <ProductScoreIndicator score={score} size="sm" />
+        <div className="flex-shrink-0 pl-5 border-l border-border/30">
+          <div className={cn(
+            "rounded-lg p-2 transition-all",
+            score.percentage >= 90 && "bg-success/10",
+            score.percentage >= 50 && score.percentage < 90 && "bg-warning/10",
+            score.percentage < 50 && "bg-destructive/10"
+          )}>
+            <ProductScoreIndicator score={score} size="md" />
+          </div>
         </div>
 
         {/* Preço (se disponível) */}
         {(product.price !== undefined && product.price !== null) && (
-          <div className="flex-shrink-0 text-sm">
+          <div className="flex-shrink-0 pl-5 border-l border-border/30">
             {product.promo_price && product.promo_price > 0 && product.promo_price < product.price ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <span className="font-bold text-primary">
-                  {formatPrice(product.promo_price, product.currency)}
-                </span>
-                <span className="text-xs text-muted-foreground line-through">
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-lg text-primary">
+                    {formatPrice(product.promo_price, product.currency)}
+                  </span>
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0">
+                    Oferta
+                  </Badge>
+                </div>
+                <span className="text-xs text-muted-foreground/70 line-through font-medium">
                   {formatPrice(product.price, product.currency)}
                 </span>
               </div>
             ) : (
-              <span className="font-medium">
+              <span className="font-semibold text-lg">
                 {formatPrice(product.price, product.currency)}
               </span>
             )}
@@ -402,129 +414,185 @@ export function ModernProductCard({
         )}
 
         {/* Ações */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity flex-shrink-0 pl-5 border-l border-border/30">
+          <TooltipProvider>
           {product.product_url && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(product)}
-              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-              title="Importar/Atualizar da Loja Integrada"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(product)}
+                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Importar/Atualizar</TooltipContent>
+            </Tooltip>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleExportAIPlaybook}
-            disabled={isExporting}
-            className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
-            title="Exportar para IA/Playbook"
-          >
-            <Database className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowGoogleAdsModal(true)}
-            className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
-            title="Google Ads"
-          >
-            <Target className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowBlogModal(true)}
-            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-            title="Gerar Blog IA"
-          >
-            <FileText className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowWhatsAppModal(true)}
-            className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-            title="Gerar Mensagem WhatsApp"
-          >
-            <MessageCircle className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExportAIPlaybook}
+                disabled={isExporting}
+                className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700"
+              >
+                <Database className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Exportar AI Playbook</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowGoogleAdsModal(true)}
+                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+              >
+                <Target className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Google Ads</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowBlogModal(true)}
+                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Gerar Blog IA</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWhatsAppModal(true)}
+                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Gerar Mensagem WhatsApp</TooltipContent>
+          </Tooltip>
           {productCoupon && productCoupon.allow_promotions && product.price && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowWhatsAppPromoModal(true)}
-              className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 relative"
-              title="Gerar Mensagem Promocional com Cupom"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">%</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowWhatsAppPromoModal(true)}
+                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 relative"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">%</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Mensagem Promocional com Cupom</TooltipContent>
+            </Tooltip>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowWhatsAppSequenceModal(true)}
-            className="h-8 w-8 p-0 text-green-700 hover:text-green-800 relative"
-            title="Gerar Sequência 7 Mensagens"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="absolute -top-1 -right-1 bg-green-700 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">7</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowYouTubeModal(true)}
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-            title="Gerar YouTube"
-          >
-            <PlayCircle className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowInstagramModal(true)}
-            className="h-8 w-8 p-0 text-pink-600 hover:text-pink-700"
-            title="Gerar Copy Instagram"
-          >
-            <Instagram className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowTikTokModal(true)}
-            className="h-8 w-8 p-0 text-gray-900 hover:text-black"
-            title="Gerar Conteúdo TikTok"
-          >
-            <TikTokIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(product)}
-            className="h-8 w-8 p-0"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowTechnicalSpecs(true)}
-            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-            title="Especificações Técnicas"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(product.id)}
-            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWhatsAppSequenceModal(true)}
+                className="h-8 w-8 p-0 text-green-700 hover:text-green-800 relative"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="absolute -top-1 -right-1 bg-green-700 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">7</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Sequência 7 Mensagens</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowYouTubeModal(true)}
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+              >
+                <PlayCircle className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Gerar YouTube</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInstagramModal(true)}
+                className="h-8 w-8 p-0 text-pink-600 hover:text-pink-700"
+              >
+                <Instagram className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Gerar Copy Instagram</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTikTokModal(true)}
+                className="h-8 w-8 p-0 text-gray-900 hover:text-black"
+              >
+                <TikTokIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Gerar Conteúdo TikTok</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(product)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Editar Produto</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTechnicalSpecs(true)}
+                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Especificações Técnicas</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(product.id)}
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Excluir Produto</TooltipContent>
+          </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
