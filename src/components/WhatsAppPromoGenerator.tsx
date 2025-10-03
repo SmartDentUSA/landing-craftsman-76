@@ -42,6 +42,38 @@ export function WhatsAppPromoGenerator({
     }).format(value);
   };
 
+  const fetchBestTestimonial = async (productCategory: string, productName: string) => {
+    try {
+      const { data: testimonials, error } = await supabase
+        .from('video_testimonials')
+        .select('*')
+        .eq('approved', true)
+        .order('sentiment_score', { ascending: false, nullsFirst: false });
+
+      if (error) throw error;
+      if (!testimonials || testimonials.length === 0) return null;
+
+      // Prioridade 1: Depoimento que menciona o nome do produto
+      const nameMatch = testimonials.find(t => 
+        t.testimonial_text?.toLowerCase().includes(productName.toLowerCase())
+      );
+      if (nameMatch) return nameMatch;
+
+      // Prioridade 2: Depoimento da mesma categoria (via landing_page_id)
+      const categoryMatch = testimonials.find(t => {
+        // Aqui assumimos que landing_page_id pode conter a categoria
+        return t.landing_page_id?.toLowerCase().includes(productCategory?.toLowerCase());
+      });
+      if (categoryMatch) return categoryMatch;
+
+      // Prioridade 3: Melhor sentiment_score geral
+      return testimonials[0];
+    } catch (error) {
+      console.error('Error fetching testimonial:', error);
+      return null;
+    }
+  };
+
   const generatePromoMessage = async () => {
     setIsGenerating(true);
     try {
@@ -57,6 +89,9 @@ export function WhatsAppPromoGenerator({
       const benefits = Array.isArray(product.benefits) ? product.benefits.slice(0, 10) : [];
       const productUrl = product.product_url || '';
 
+      // Buscar melhor depoimento real
+      const testimonial = await fetchBestTestimonial(product.category, product.name);
+
       // Template manual otimizado
       let promoText = `🔥 OFERTA RELÂMPAGO! 🔥\n\n`;
       promoText += `${productName}\n\n`;
@@ -64,6 +99,30 @@ export function WhatsAppPromoGenerator({
       promoText += `Por apenas: *${formatCurrency(finalPrice)}*\n`;
       promoText += `💰 Economia de ${discountPercentage}% OFF\n\n`;
       promoText += `Use o cupom: *${couponCode}*\n\n`;
+
+      // Seção de Prova Social (se houver depoimento real)
+      if (testimonial) {
+        const testimonialText = testimonial.testimonial_text?.slice(0, 150) || '';
+        const location = testimonial.location || '';
+        const state = testimonial.state || '';
+        const profession = testimonial.profession || testimonial.specialty || '';
+        
+        promoText += `⭐ PROVA SOCIAL:\n`;
+        promoText += `"${testimonialText}${testimonialText.length === 150 ? '...' : ''}"\n\n`;
+        
+        let attribution = `- ${testimonial.client_name}`;
+        if (profession) attribution += `, ${profession}`;
+        if (location && state) attribution += ` - ${location}, ${state}`;
+        else if (location) attribution += ` - ${location}`;
+        else if (state) attribution += ` - ${state}`;
+        
+        promoText += `${attribution}\n`;
+        
+        if (testimonial.youtube_url) {
+          promoText += `🎥 Assista ao depoimento completo: ${testimonial.youtube_url}\n`;
+        }
+        promoText += `\n`;
+      }
 
       if (benefits.length > 0) {
         promoText += `✅ PRINCIPAIS BENEFÍCIOS:\n`;
