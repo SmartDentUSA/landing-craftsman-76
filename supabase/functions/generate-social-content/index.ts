@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface SocialContentRequest {
-  type: 'whatsapp' | 'youtube' | 'instagram';
+  type: 'whatsapp' | 'youtube' | 'instagram' | 'whatsapp_sequence';
   productId: string;
   customPrompt?: string;
   instagramType?: 'feed' | 'reels' | 'carousel';
@@ -119,6 +119,55 @@ serve(async (req) => {
       } else {
         finalPrompt = getDefaultPrompt(type, instagramType);
       }
+    }
+
+    // Tratamento especial para whatsapp_sequence
+    if (type === 'whatsapp_sequence') {
+      console.log('🔄 Gerando sequência de 7 mensagens WhatsApp...');
+      
+      const sequencePrompt = getSequencePrompt(product, company, externalLinks || [], landingPages || []);
+      const sequenceContent = await generateSequenceWithDeepSeek(deepseekApiKey, sequencePrompt);
+      
+      const newGeneration = {
+        id: crypto.randomUUID(),
+        generated_at: new Date().toISOString(),
+        messages: sequenceContent.map((msg: any, index: number) => ({
+          id: crypto.randomUUID(),
+          number: index + 1,
+          content: msg.content,
+          editable: true,
+          approach: msg.approach
+        }))
+      };
+      
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('whatsapp_sequences')
+        .eq('id', productId)
+        .single();
+      
+      const existingSequences = existingData?.whatsapp_sequences?.sequences || [];
+      
+      const updatedSequences = {
+        sequences: [newGeneration, ...existingSequences].slice(0, 10),
+        last_generated: new Date().toISOString()
+      };
+      
+      const { error: updateError } = await supabase
+        .from('products_repository')
+        .update({ whatsapp_sequences: updatedSequences })
+        .eq('id', productId);
+        
+      if (updateError) throw updateError;
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          sequence: newGeneration,
+          type: 'whatsapp_sequence'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Processar variáveis no prompt
@@ -642,4 +691,197 @@ async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whats
   }
 
   return content;
+}
+
+function getSequencePrompt(product: any, company: any, externalLinks: any[] = [], landingPages: any[] = []): string {
+  const triggerWords = Array.isArray(product.bot_trigger_words) && product.bot_trigger_words.length > 0 
+    ? product.bot_trigger_words 
+    : ['QUERO', 'INFO', 'DETALHES'];
+  
+  const linksText = formatLinksForPrompt(externalLinks, landingPages);
+  
+  return `Você é um especialista em marketing digital e automação de campanhas WhatsApp.
+
+Gere uma sequência de 7 mensagens promocionais para uma campanha agendada de WhatsApp, cada uma com foco e abordagem DIFERENTES para evitar repetição.
+
+INFORMAÇÕES DO PRODUTO:
+- Nome: ${product.name}
+- Resumo Comercial: ${product.sales_pitch || 'Não informado'}
+- Benefícios: ${Array.isArray(product.benefits) ? product.benefits.join(', ') : 'Não informados'}
+- URL do Produto: ${product.product_url || '#'}
+- Categoria: ${product.category || 'Não informada'}
+- Preço: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Consultar'}
+- Palavras Gatilho BOT: ${triggerWords.join(', ')}
+
+INFORMAÇÕES DA EMPRESA:
+- Nome: ${company?.company_name || 'Empresa'}
+
+${linksText}
+
+ESTRUTURA DAS 7 MENSAGENS:
+
+**MENSAGEM 1 - BENEFÍCIO**
+Foco: Apresentar os principais benefícios do produto
+Objetivo: Despertar interesse inicial
+Formato: Lista de benefícios com emojis + CTA suave
+
+**MENSAGEM 2 - PROVA SOCIAL**
+Foco: Credibilidade e confiança (mencionar clientes satisfeitos, resultados)
+Objetivo: Reduzir objeções
+Formato: Testemunho fictício realista + estatísticas + CTA
+
+**MENSAGEM 3 - URGÊNCIA**
+Foco: Senso de escassez ou oportunidade limitada
+Objetivo: Acelerar decisão
+Formato: Oferta limitada + countdown fictício + CTA forte
+
+**MENSAGEM 4 - TÉCNICA**
+Foco: Especificações técnicas e diferenciais únicos
+Objetivo: Educar e impressionar
+Formato: Detalhes técnicos + comparação com alternativas + CTA
+
+**MENSAGEM 5 - CURIOSIDADE**
+Foco: Criar curiosidade sobre algo não revelado antes
+Objetivo: Reengajar quem parou de interagir
+Formato: Pergunta intrigante + revelação parcial + CTA
+
+**MENSAGEM 6 - GARANTIA**
+Foco: Eliminar riscos percebidos (garantia, devolução, suporte)
+Objetivo: Remover última objeção
+Formato: Garantias + política de devolução + CTA de segurança
+
+**MENSAGEM 7 - ÚLTIMA CHAMADA**
+Foco: Urgência final + recap dos benefícios
+Objetivo: Conversão final
+Formato: Resumo + última oportunidade + CTA urgente
+
+REGRAS OBRIGATÓRIAS:
+1. Cada mensagem DEVE ter NO MÁXIMO 1000 caracteres
+2. Cada mensagem DEVE usar 1 palavra gatilho DIFERENTE dos BOT trigger words: ${triggerWords.join(', ')}
+3. Incluir até 3 emojis relevantes por mensagem
+4. Incluir link do produto quando apropriado
+5. Fechar com hashtags: #${company?.company_name?.replace(/\s+/g, '')} #${product.category?.replace(/\s+/g, '')}
+6. VARIAR a estrutura e tom entre as mensagens (não repetir fórmulas)
+7. Usar links disponíveis de forma estratégica e natural
+
+IMPORTANTE: Retorne APENAS um JSON válido sem blocos de código markdown.
+
+FORMATO DE SAÍDA (JSON):
+[
+  {
+    "number": 1,
+    "approach": "beneficio",
+    "content": "🔥 [NOME PRODUTO] 🔥\\n\\n[Mensagem dia 1 completa com emojis, benefícios, CTA com palavra gatilho e hashtags]"
+  },
+  {
+    "number": 2,
+    "approach": "prova_social",
+    "content": "⭐ [Mensagem dia 2 completa...]"
+  },
+  {
+    "number": 3,
+    "approach": "urgencia",
+    "content": "⏰ [Mensagem dia 3 completa...]"
+  },
+  {
+    "number": 4,
+    "approach": "tecnica",
+    "content": "🔧 [Mensagem dia 4 completa...]"
+  },
+  {
+    "number": 5,
+    "approach": "curiosidade",
+    "content": "🤔 [Mensagem dia 5 completa...]"
+  },
+  {
+    "number": 6,
+    "approach": "garantia",
+    "content": "🛡️ [Mensagem dia 6 completa...]"
+  },
+  {
+    "number": 7,
+    "approach": "ultima_chamada",
+    "content": "🔥 [Mensagem dia 7 completa...]"
+  }
+]`;
+}
+
+function formatLinksForPrompt(externalLinks: any[], landingPages: any[]): string {
+  const availableLinks: string[] = [];
+  
+  if (externalLinks?.length > 0) {
+    externalLinks.forEach(link => {
+      availableLinks.push(`• ${link.name}: ${link.url} (categoria: ${link.category})`);
+    });
+  }
+  
+  if (landingPages?.length > 0) {
+    landingPages.forEach(page => {
+      const pageData = page.data as any;
+      const url = pageData?.seo?.canonical_url || `/${page.id}`;
+      availableLinks.push(`• ${page.name}: ${url} (página interna)`);
+    });
+  }
+  
+  return availableLinks.length > 0 
+    ? `\n\nLINKS DISPONÍVEIS PARA INCLUIR NAS MENSAGENS:\n${availableLinks.join('\n')}\n`
+    : '';
+}
+
+async function generateSequenceWithDeepSeek(apiKey: string, prompt: string): Promise<Array<{number: number, approach: string, content: string}>> {
+  try {
+    console.log('Gerando sequência com DeepSeek...');
+    
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: 'Você é um especialista em marketing digital para WhatsApp.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 3000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    let content = data.choices[0].message.content.trim();
+    
+    // Limpar markdown
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    // Parse JSON
+    const sequence = JSON.parse(content);
+    
+    if (!Array.isArray(sequence) || sequence.length !== 7) {
+      throw new Error('Sequência inválida: deve conter 7 mensagens');
+    }
+    
+    console.log('Sequência gerada com sucesso:', sequence.length, 'mensagens');
+    return sequence;
+    
+  } catch (error) {
+    console.error('Erro ao gerar sequência:', error);
+    return generateFallbackSequence();
+  }
+}
+
+function generateFallbackSequence(): Array<{number: number, approach: string, content: string}> {
+  const triggerWords = ['QUERO', 'INFO', 'DETALHES', 'SIM', 'MAIS', 'QUERO SABER', 'INTERESSE'];
+  const approaches = ['beneficio', 'prova_social', 'urgencia', 'tecnica', 'curiosidade', 'garantia', 'ultima_chamada'];
+  
+  return Array.from({ length: 7 }, (_, i) => ({
+    number: i + 1,
+    approach: approaches[i],
+    content: `🔥 Mensagem ${i + 1} 🔥\n\n📅 Esta é a mensagem número ${i + 1} da sequência de 7 mensagens.\n\n[Conteúdo gerado automaticamente em modo fallback]\n\n💬 Responda com '${triggerWords[i]}' para mais informações!\n\n#Marketing #Produto`
+  }));
 }

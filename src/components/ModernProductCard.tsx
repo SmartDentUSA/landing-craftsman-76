@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProductBlogGeneratorModal } from "./ProductBlogGeneratorModal";
 import { TechnicalSpecsPreview } from './TechnicalSpecsPreview';
 import { WhatsAppMessageGenerator } from "./WhatsAppMessageGenerator";
+import { WhatsAppSequenceGenerator } from "./WhatsAppSequenceGenerator";
 import { YouTubeDescriptionGenerator } from "./YouTubeDescriptionGenerator";
 import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
 import { TikTokContentGenerator } from "./TikTokContentGenerator";
@@ -112,6 +113,7 @@ export function ModernProductCard({
 }: ModernProductCardProps) {
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showWhatsAppSequenceModal, setShowWhatsAppSequenceModal] = useState(false);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [showInstagramModal, setShowInstagramModal] = useState(false);
   const [showTikTokModal, setShowTikTokModal] = useState(false);
@@ -428,9 +430,19 @@ export function ModernProductCard({
             size="sm"
             onClick={() => setShowWhatsAppModal(true)}
             className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-            title="Gerar WhatsApp"
+            title="Gerar Mensagem WhatsApp"
           >
             <MessageCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowWhatsAppSequenceModal(true)}
+            className="h-8 w-8 p-0 text-green-700 hover:text-green-800 relative"
+            title="Gerar Sequência 7 Mensagens"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="absolute -top-1 -right-1 bg-green-700 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">7</span>
           </Button>
           <Button
             variant="ghost"
@@ -506,6 +518,14 @@ export function ModernProductCard({
         onClose={() => setShowWhatsAppModal(false)}
         productId={product.id}
         productName={product.name}
+      />
+
+      {/* Modal de Sequência WhatsApp */}
+      <WhatsAppSequenceGenerator
+        productId={product.id}
+        productName={product.name}
+        isOpen={showWhatsAppSequenceModal}
+        onClose={() => setShowWhatsAppSequenceModal(false)}
       />
 
       {/* Modal de Geração YouTube */}

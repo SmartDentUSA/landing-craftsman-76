@@ -662,6 +662,7 @@ export type Database = {
           video_captions: Json | null
           weight: number | null
           whatsapp_messages: Json | null
+          whatsapp_sequences: Json | null
           width: number | null
           youtube_descriptions: Json | null
           youtube_videos: Json | null
@@ -758,6 +759,7 @@ export type Database = {
           video_captions?: Json | null
           weight?: number | null
           whatsapp_messages?: Json | null
+          whatsapp_sequences?: Json | null
           width?: number | null
           youtube_descriptions?: Json | null
           youtube_videos?: Json | null
@@ -854,6 +856,7 @@ export type Database = {
           video_captions?: Json | null
           weight?: number | null
           whatsapp_messages?: Json | null
+          whatsapp_sequences?: Json | null
           width?: number | null
           youtube_descriptions?: Json | null
           youtube_videos?: Json | null
