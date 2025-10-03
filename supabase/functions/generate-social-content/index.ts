@@ -694,10 +694,6 @@ async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whats
 }
 
 function getSequencePrompt(product: any, company: any, externalLinks: any[] = [], landingPages: any[] = []): string {
-  const triggerWords = Array.isArray(product.bot_trigger_words) && product.bot_trigger_words.length > 0 
-    ? product.bot_trigger_words 
-    : ['QUERO', 'INFO', 'DETALHES'];
-  
   const linksText = formatLinksForPrompt(externalLinks, landingPages);
   
   return `Você é um especialista em marketing digital e automação de campanhas WhatsApp.
@@ -711,7 +707,6 @@ INFORMAÇÕES DO PRODUTO:
 - URL do Produto: ${product.product_url || '#'}
 - Categoria: ${product.category || 'Não informada'}
 - Preço: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Consultar'}
-- Palavras Gatilho BOT: ${triggerWords.join(', ')}
 
 INFORMAÇÕES DA EMPRESA:
 - Nome: ${company?.company_name || 'Empresa'}
@@ -757,12 +752,12 @@ Formato: Resumo + última oportunidade + CTA urgente
 
 REGRAS OBRIGATÓRIAS:
 1. Cada mensagem DEVE ter NO MÁXIMO 1000 caracteres
-2. Cada mensagem DEVE usar 1 palavra gatilho DIFERENTE dos BOT trigger words: ${triggerWords.join(', ')}
+2. SEMPRE incluir o link do produto de forma natural e estratégica: ${product.product_url || '#'}
 3. Incluir até 3 emojis relevantes por mensagem
-4. Incluir link do produto quando apropriado
+4. Variar o formato do CTA (ex: "Confira aqui", "Veja todos os detalhes", "Acesse agora", "Saiba mais")
 5. Fechar com hashtags: #${company?.company_name?.replace(/\s+/g, '')} #${product.category?.replace(/\s+/g, '')}
 6. VARIAR a estrutura e tom entre as mensagens (não repetir fórmulas)
-7. Usar links disponíveis de forma estratégica e natural
+7. Usar links externos disponíveis de forma estratégica quando relevante
 
 IMPORTANTE: Retorne APENAS um JSON válido sem blocos de código markdown.
 
@@ -771,7 +766,7 @@ FORMATO DE SAÍDA (JSON):
   {
     "number": 1,
     "approach": "beneficio",
-    "content": "🔥 [NOME PRODUTO] 🔥\\n\\n[Mensagem dia 1 completa com emojis, benefícios, CTA com palavra gatilho e hashtags]"
+    "content": "🔥 [NOME PRODUTO] 🔥\\n\\n[Mensagem dia 1 completa com emojis, benefícios, link do produto e hashtags]"
   },
   {
     "number": 2,
