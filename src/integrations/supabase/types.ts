@@ -569,6 +569,44 @@ export type Database = {
         }
         Relationships: []
       }
+      product_coupons: {
+        Row: {
+          allow_promotions: boolean
+          coupon_code: string
+          created_at: string
+          discount_percentage: number
+          id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_promotions?: boolean
+          coupon_code: string
+          created_at?: string
+          discount_percentage: number
+          id?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_promotions?: boolean
+          coupon_code?: string
+          created_at?: string
+          discount_percentage?: number
+          id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products_repository: {
         Row: {
           active: boolean | null

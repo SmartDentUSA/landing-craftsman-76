@@ -11,9 +11,10 @@ import { LinksManager } from '@/components/LinksManager';
 import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
 import { ProductSEOBatchEnhancer } from '@/components/ProductSEOBatchEnhancer';
 import YouTubeOAuthSettings from '@/pages/YouTubeOAuthSettings';
+import { CouponsManager } from '@/components/CouponsManager';
 
 const Repository = () => {
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'coupons'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -29,7 +30,8 @@ const Repository = () => {
                    activeView === 'categories' ? 'Gerenciar Categorias' : 
                    activeView === 'links' ? 'Gerenciador de Links' : 
                    activeView === 'merchant' ? 'Google Merchant Center' : 
-                   activeView === 'youtube' ? 'YouTube OAuth' : 'Prompts IA'}
+                   activeView === 'youtube' ? 'YouTube OAuth' : 
+                   activeView === 'coupons' ? 'Cupons Promocionais' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
@@ -42,6 +44,8 @@ const Repository = () => {
                     ? 'Gerencie seu feed de produtos para Google Shopping'
                     : activeView === 'youtube'
                     ? 'Configure autenticação OAuth para extração de legendas do YouTube'
+                    : activeView === 'coupons'
+                    ? 'Configure cupons de desconto e mensagens promocionais para WhatsApp'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
@@ -93,6 +97,13 @@ const Repository = () => {
                   >
                     YouTube OAuth
                   </Button>
+                  <Button
+                    variant={activeView === 'coupons' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('coupons')}
+                  >
+                    Cupons
+                  </Button>
                 </div>
                 <AdminStatusBadge />
               </div>
@@ -115,6 +126,8 @@ const Repository = () => {
               <GoogleMerchantManager />
             ) : activeView === 'youtube' ? (
               <YouTubeOAuthSettings />
+            ) : activeView === 'coupons' ? (
+              <CouponsManager />
             ) : (
               <EnhancedPromptsManager />
             )}

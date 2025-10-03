@@ -39,6 +39,8 @@ import { InstagramCopyGenerator } from "./InstagramCopyGenerator";
 import { TikTokContentGenerator } from "./TikTokContentGenerator";
 import { ProductGoogleAdsModal } from "./google-ads/ProductGoogleAdsModal";
 import { TikTokIcon } from "./icons/TikTokIcon";
+import { WhatsAppPromoGenerator } from "./WhatsAppPromoGenerator";
+import { useCoupons } from "@/hooks/useCoupons";
 
 
 interface Product {
@@ -119,9 +121,12 @@ export function ModernProductCard({
   const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [showGoogleAdsModal, setShowGoogleAdsModal] = useState(false);
   const [showTechnicalSpecs, setShowTechnicalSpecs] = useState(false);
+  const [showWhatsAppPromoModal, setShowWhatsAppPromoModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
+  const { getCouponByProductId } = useCoupons();
   const score = calculateProductScore(product);
+  const productCoupon = getCouponByProductId(product.id);
 
   const handleSaveTechnicalSpecs = async (specs: any[]) => {
     try {
@@ -329,6 +334,18 @@ export function ModernProductCard({
                 </Badge>
               )}
               
+              {/* Coupon Badge */}
+              {productCoupon && productCoupon.allow_promotions && (
+                <Badge 
+                  variant="default" 
+                  className="text-xs px-1.5 py-0.5 h-5 bg-orange-600 hover:bg-orange-700 cursor-pointer"
+                  onClick={() => setShowWhatsAppPromoModal(true)}
+                  title="Clique para gerar mensagem promocional"
+                >
+                  🎟️ {productCoupon.coupon_code} (-{productCoupon.discount_percentage}%)
+                </Badge>
+              )}
+              
               {/* Blog Status */}
               {(product.individual_blog_content?.commercial || product.individual_blog_content?.technical) && (
                 <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5">
@@ -434,6 +451,18 @@ export function ModernProductCard({
           >
             <MessageCircle className="h-4 w-4" />
           </Button>
+          {productCoupon && productCoupon.allow_promotions && product.price && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowWhatsAppPromoModal(true)}
+              className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 relative"
+              title="Gerar Mensagem Promocional com Cupom"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">%</span>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -569,6 +598,19 @@ export function ModernProductCard({
         initialSpecs={product.technical_specifications || []}
         onSave={handleSaveTechnicalSpecs}
       />
+
+      {/* Modal de Mensagem Promocional WhatsApp */}
+      {productCoupon && productCoupon.allow_promotions && product.price && (
+        <WhatsAppPromoGenerator
+          isOpen={showWhatsAppPromoModal}
+          onClose={() => setShowWhatsAppPromoModal(false)}
+          productId={product.id}
+          productName={product.name}
+          productPrice={product.price}
+          discountPercentage={productCoupon.discount_percentage}
+          couponCode={productCoupon.coupon_code}
+        />
+      )}
     </>
   );
 }
