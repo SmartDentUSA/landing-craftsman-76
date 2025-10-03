@@ -100,6 +100,16 @@ interface ProductData {
     last_generated?: string;
   };
   
+  // Promotional Data
+  coupons?: {
+    id: string;
+    coupon_code: string;
+    discount_percentage: number;
+    allow_promotions: boolean;
+    created_at: string;
+    updated_at: string;
+  }[];
+  
   // AI Automation
   bot_trigger_words?: string[];
   
@@ -161,7 +171,12 @@ function generateAIPlaybookJSON(product: ProductData): any {
       package_size: product.package_size,
       store_category: product.store_category,
       source_type: product.source_type,
-      source_landing_page: product.source_landing_page_id
+      source_landing_page: product.source_landing_page_id,
+      coupons: product.coupons?.map(coupon => ({
+        code: coupon.coupon_code,
+        discount: coupon.discount_percentage,
+        allow_promotions: coupon.allow_promotions
+      })) || []
     },
     product_variations: product.variations || [],
     marketing_data: {
@@ -279,6 +294,11 @@ function generatePlaybookTXT(product: ProductData): string {
 - Origem: ${product.source_type || 'N/A'}${product.source_landing_page_id ? ` (Landing Page: ${product.source_landing_page_id})` : ''}
 ${product.package_size ? `- Tamanho da Embalagem: ${product.package_size}` : ''}
 ${product.store_category ? `- Categoria na Loja: ${product.store_category}` : ''}
+
+## 🎟️ CUPONS DISPONÍVEIS
+${product.coupons?.length ? product.coupons.map((coupon: any) => 
+  `- 📌 ${coupon.coupon_code} → ${coupon.discount_percentage}% de desconto ${coupon.allow_promotions ? '(Válido em promoções)' : '(Não válido em promoções)'}`
+).join('\n') : '- ❌ Nenhum cupom cadastrado'}
 
 ## 📦 VARIAÇÕES DO PRODUTO
 ${product.variations?.length ? product.variations.map((v: any) => 
@@ -481,6 +501,10 @@ function calculateCompleteness(product: ProductData): number {
     product.individual_blog_content?.technical,
     product.whatsapp_sequences?.sequences?.length,
     
+    // Pricing & Promotions
+    product.price,
+    product.coupons?.length,
+    
     // Video content
     product.youtube_videos?.length,
     product.instagram_videos?.length,
@@ -549,25 +573,37 @@ serve(async (req) => {
       );
     }
 
+    // Fetch product coupons
+    const { data: coupons } = await supabase
+      .from('product_coupons')
+      .select('*')
+      .eq('product_id', productId);
+
+    // Attach coupons to product object
+    const productWithCoupons = {
+      ...product,
+      coupons: coupons || []
+    };
+
     // Generate content based on format
     let result: any = {};
 
     if (format === 'json' || format === 'both') {
-      result.json = generateAIPlaybookJSON(product);
+      result.json = generateAIPlaybookJSON(productWithCoupons);
     }
 
     if (format === 'txt' || format === 'both') {
-      result.txt = generatePlaybookTXT(product);
+      result.txt = generatePlaybookTXT(productWithCoupons);
     }
 
     // Add metadata
     result.metadata = {
-      product_name: product.name,
+      product_name: productWithCoupons.name,
       export_date: new Date().toISOString(),
-      filename_base: `produto-${product.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-ia-playbook-${new Date().toISOString().split('T')[0]}`
+      filename_base: `produto-${productWithCoupons.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-ia-playbook-${new Date().toISOString().split('T')[0]}`
     };
 
-    console.log(`✅ Product AI playbook generated successfully for: ${product.name}`);
+    console.log(`✅ Product AI playbook generated successfully for: ${productWithCoupons.name}`);
 
     return new Response(
       JSON.stringify(result),
