@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Percent, Tag, CheckCircle, XCircle } from 'lucide-react';
+import { Trash2, Plus, Percent, Tag, CheckCircle, XCircle, Edit, Save, X } from 'lucide-react';
 import { useCoupons } from '@/hooks/useCoupons';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +19,7 @@ export function CouponsManager() {
   const [couponCode, setCouponCode] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState(10);
   const [allowPromotions, setAllowPromotions] = useState(true);
+  const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
 
   React.useEffect(() => {
     fetchProducts();
@@ -42,7 +43,7 @@ export function CouponsManager() {
     }
   };
 
-  const handleCreateCoupon = async () => {
+  const handleSaveCoupon = async () => {
     if (!selectedProductId || !couponCode || discountPercentage <= 0) {
       toast({
         variant: 'destructive',
@@ -52,9 +53,43 @@ export function CouponsManager() {
       return;
     }
 
-    await createCoupon(selectedProductId, couponCode, discountPercentage, allowPromotions);
+    if (editingCoupon) {
+      // MODO EDIÇÃO
+      await updateCoupon(
+        editingCoupon.id,
+        couponCode,
+        discountPercentage,
+        allowPromotions
+      );
+      setEditingCoupon(null);
+    } else {
+      // MODO CRIAÇÃO
+      await createCoupon(selectedProductId, couponCode, discountPercentage, allowPromotions);
+    }
     
     // Reset form
+    setSelectedProductId('');
+    setCouponCode('');
+    setDiscountPercentage(10);
+    setAllowPromotions(true);
+  };
+
+  const handleEditCoupon = (coupon: any) => {
+    setEditingCoupon(coupon);
+    setSelectedProductId(coupon.product_id);
+    setCouponCode(coupon.coupon_code);
+    setDiscountPercentage(coupon.discount_percentage);
+    setAllowPromotions(coupon.allow_promotions);
+    
+    // Scroll suave até o formulário
+    document.getElementById('coupon-form')?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCoupon(null);
     setSelectedProductId('');
     setCouponCode('');
     setDiscountPercentage(10);
@@ -77,7 +112,7 @@ export function CouponsManager() {
 
   const getAvailableProducts = () => {
     const usedProductIds = coupons.map((c) => c.product_id);
-    return products.filter((p) => !usedProductIds.includes(p.id));
+    return products.filter((p) => !usedProductIds.includes(p.id) || p.id === editingCoupon?.product_id);
   };
 
   return (
@@ -93,18 +128,27 @@ export function CouponsManager() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Formulário de Criação */}
-          <div className="grid gap-4 p-4 border rounded-lg bg-muted/30">
-            <h3 className="font-semibold text-sm">Criar Novo Cupom</h3>
+          {/* Formulário de Criação/Edição */}
+          <div 
+            id="coupon-form"
+            className={`grid gap-4 p-4 border rounded-lg transition-colors ${
+              editingCoupon 
+                ? 'bg-blue-50 border-blue-300' 
+                : 'bg-muted/30'
+            }`}
+          >
+            <h3 className="font-semibold text-sm">
+              {editingCoupon ? '✏️ Editar Cupom' : 'Criar Novo Cupom'}
+            </h3>
             
             <div className="grid gap-2">
               <Label htmlFor="product-select">Produto</Label>
               <select
                 id="product-select"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                disabled={loadingProducts}
+                disabled={loadingProducts || editingCoupon !== null}
               >
                 <option value="">Selecione um produto...</option>
                 {getAvailableProducts().map((product) => (
@@ -151,10 +195,30 @@ export function CouponsManager() {
               </Label>
             </div>
 
-            <Button onClick={handleCreateCoupon} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Cupom
+            <Button onClick={handleSaveCoupon} className="w-full">
+              {editingCoupon ? (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Cupom
+                </>
+              )}
             </Button>
+
+            {editingCoupon && (
+              <Button 
+                variant="outline" 
+                onClick={handleCancelEdit}
+                className="w-full"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancelar Edição
+              </Button>
+            )}
           </div>
 
           {/* Lista de Cupons */}
@@ -199,6 +263,14 @@ export function CouponsManager() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditCoupon(coupon)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
                       <Button
                         size="sm"
                         variant={coupon.allow_promotions ? 'outline' : 'default'}
