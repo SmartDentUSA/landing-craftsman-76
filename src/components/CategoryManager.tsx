@@ -650,11 +650,22 @@ const CategoryManager = () => {
                             </Badge>
                           </div>
                         </div>
-                        <ChevronDown 
-                          className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
-                            isOpen ? 'rotate-180' : ''
-                          }`} 
-                        />
+                        
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openRenameDialog('category', category)}
+                          >
+                            <FileEdit className="h-4 w-4" />
+                          </Button>
+                          <ChevronDown 
+                            className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
+                              isOpen ? 'rotate-180' : ''
+                            }`} 
+                          />
+                        </div>
                       </div>
                     </CollapsibleTrigger>
                     
