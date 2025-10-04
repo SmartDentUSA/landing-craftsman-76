@@ -460,67 +460,6 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
   };
 }
 
-async function generateWithLovableAI(prompt: string): Promise<string> {
-  const defaultPrompt = `Você é um especialista em marketing de conteúdo estratégico e SEO.
-
-IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamais use espanhol ou outros idiomas.
-
-Crie um artigo de blog abrangente e estratégico que combine todos os elementos fornecidos de forma natural e persuasiva.
-
-CONTEXTO DISPONÍVEL:
-${JSON.stringify(enhancedContext, null, 2)}
-
-${context.seoContext ? `
-DIRETRIZES SEO ESPECÍFICAS:
-- PALAVRAS-CHAVE DE CONTEXTO: ${context.seoContext.contextKeywords?.join(', ') || 'N/A'}
-- POSICIONAMENTO DE MERCADO: ${context.seoContext.marketPositioning || 'N/A'}
-- VANTAGENS COMPETITIVAS: ${context.seoContext.competitiveAdvantages || 'N/A'}
-- EXPERTISE TÉCNICA: ${context.seoContext.technicalExpertise || 'N/A'}
-- ÁREAS DE ATUAÇÃO: ${context.seoContext.serviceAreas || 'N/A'}
-
-INTEGRE ESSAS INFORMAÇÕES NATURALMENTE NO CONTEÚDO PARA OTIMIZAÇÃO SEO.
-` : ''}
-
-ESTRUTURA OBRIGATÓRIA:
-1. **Título Principal** (H1) - Engajante e otimizado para SEO
-2. **Introdução Estratégica** - Conecte o tema com as necessidades do público
-3. **Desenvolvimento por Seções** (H2, H3) - Use dados reais do contexto
-4. **Integração de Produtos** - Apresente naturalmente os produtos selecionados
-5. **Depoimentos e Prova Social** - Use avaliações e KOLs quando disponível
-6. **Soluções Específicas** - Detalhe as soluções da landing page
-7. **Call-to-Action Estratégico** - Direcionamento claro
-
-DIRETRIZES:
-- Use APENAS as informações fornecidas no contexto
-- Integre naturalmente produtos, depoimentos e soluções
-- Mantenha tom profissional e autoritativo
-- Otimize para SEO com palavras-chave naturais
-- Entre 1200-1800 palavras
-- Use markdown limpo e estruturado
-- Conecte todos os elementos de forma coesa
-
-Gere o artigo estratégico completo agora:`;
-
-  const promptToUse = customPrompts['Artigo Estratégico Contextual'] || defaultPrompt;
-
-  console.log('🤖 Iniciating dual-AI generation system');
-
-  // Chamadas simultâneas para ambas as APIs
-  const [lovableResult, deepSeekResult] = await Promise.allSettled([
-    generateWithLovableAI(promptToUse),
-    generateWithDeepSeek(promptToUse)
-  ]);
-
-  console.log('🔍 Comparing AI responses...');
-
-  // Analisar e comparar as respostas
-  const comparison = await compareAndSelectBestResponse(lovableResult, deepSeekResult);
-  
-  console.log(`✅ Selected ${comparison.selectedAPI} response (score: ${comparison.score})`);
-  console.log(`📊 Metrics: Lovable=${comparison.metrics.lovable}, DeepSeek=${comparison.metrics.deepSeek}`);
-
-  return comparison.selectedContent;
-}
 
 async function generateWithLovableAI(prompt: string): Promise<string> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
