@@ -208,11 +208,38 @@ serve(async (req) => {
       currentData.descriptions = currentData.descriptions.slice(0, 10);
     } else if (type === 'instagram') {
       fieldName = 'instagram_copies';
-      // Usar nova estrutura direta ao invés de array de copies
-      currentData = {
+      
+      // Carregar histórico existente
+      const existingCopies = product[fieldName] || { copies: [] };
+      const existingHistory = existingCopies.copies || [];
+      
+      // Criar nova versão
+      const newVersion = {
+        id: crypto.randomUUID(),
         ...generatedContent,
-        last_generated: new Date().toISOString()
+        generated_at: new Date().toISOString(),
+        ai_source: "deepseek-chat"
       };
+      
+      // Adicionar ao histórico (últimas 10 versões)
+      const updatedHistory = [newVersion, ...existingHistory].slice(0, 10);
+      
+      // Atualizar com histórico + campos de compatibilidade
+      currentData = {
+        copies: updatedHistory,
+        // Campos de compatibilidade (última versão)
+        feed_copy: newVersion.feed_copy,
+        story_copy: newVersion.story_copy,
+        reels_copy: newVersion.reels_copy,
+        feed_link: newVersion.feed_link || '',
+        story_link: newVersion.story_link || '',
+        reels_link: newVersion.reels_link || '',
+        hashtags: newVersion.hashtags,
+        call_to_action: newVersion.call_to_action,
+        last_generated: newVersion.generated_at
+      };
+      
+      console.log(`✅ Instagram copies saved with version history: ${updatedHistory.length} versions`);
     }
 
     currentData.last_generated = new Date().toISOString();

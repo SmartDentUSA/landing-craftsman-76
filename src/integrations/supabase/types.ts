@@ -119,6 +119,7 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          version_history: Json | null
           youtube_video_url: string | null
         }
         Insert: {
@@ -137,6 +138,7 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          version_history?: Json | null
           youtube_video_url?: string | null
         }
         Update: {
@@ -155,6 +157,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          version_history?: Json | null
           youtube_video_url?: string | null
         }
         Relationships: [

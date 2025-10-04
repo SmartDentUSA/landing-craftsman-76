@@ -71,15 +71,44 @@ serve(async (req) => {
       console.log('🚫 Intelligent links disabled by user');
     }
     
-    // Atualizar produto com o novo blog e links
+    // Carregar histórico existente
+    const existingBlogContent = product.individual_blog_content || {};
+    const commercialHistory = existingBlogContent.commercial_versions || [];
+    const technicalHistory = existingBlogContent.technical_versions || [];
+
+    // Criar nova versão
+    const newVersion = {
+      id: crypto.randomUUID(),
+      content: finalBlogContent,
+      generated_at: new Date().toISOString(),
+      ai_source: "deepseek-chat",
+      intelligent_links: intelligentLinks,
+      use_intelligent_links: useIntelligentLinks
+    };
+
+    // Atualizar histórico específico do tipo
+    const updatedCommercialHistory = blogType === 'commercial' 
+      ? [newVersion, ...commercialHistory].slice(0, 10)
+      : commercialHistory;
+
+    const updatedTechnicalHistory = blogType === 'technical'
+      ? [newVersion, ...technicalHistory].slice(0, 10)
+      : technicalHistory;
+
+    // Estrutura completa com histórico + compatibilidade
     const updatedBlogContent = {
-      ...product.individual_blog_content,
-      [blogType]: finalBlogContent,
-      [`${blogType}_links`]: intelligentLinks,
-      [`${blogType}_links_generated_at`]: new Date().toISOString(),
+      commercial_versions: updatedCommercialHistory,
+      technical_versions: updatedTechnicalHistory,
+      // Campos de compatibilidade (últimas versões)
+      commercial: updatedCommercialHistory[0]?.content || existingBlogContent.commercial,
+      technical: updatedTechnicalHistory[0]?.content || existingBlogContent.technical,
+      commercial_links: updatedCommercialHistory[0]?.intelligent_links || {},
+      technical_links: updatedTechnicalHistory[0]?.intelligent_links || {},
       generated_at: new Date().toISOString(),
       use_intelligent_links: useIntelligentLinks
     };
+
+    console.log(`✅ ${blogType} blog saved with version history: ${blogType === 'commercial' ? updatedCommercialHistory.length : updatedTechnicalHistory.length} versions`);
 
     const { error: updateError } = await supabase
       .from('products_repository')
