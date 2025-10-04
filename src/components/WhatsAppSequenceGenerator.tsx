@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
@@ -19,7 +20,8 @@ import {
   Copy, 
   FileText,
   Loader2,
-  Code
+  Code,
+  ExternalLink
 } from 'lucide-react';
 
 interface WhatsAppSequenceMessage {
@@ -28,6 +30,7 @@ interface WhatsAppSequenceMessage {
   content: string;
   editable: boolean;
   approach: 'beneficio' | 'prova_social' | 'urgencia' | 'tecnica' | 'curiosidade' | 'garantia' | 'ultima_chamada';
+  external_link?: string;
 }
 
 interface WhatsAppSequenceGeneration {
@@ -58,6 +61,7 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const [currentSequence, setCurrentSequence] = useState<WhatsAppSequenceMessage[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
+  const [editingLink, setEditingLink] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -177,6 +181,7 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const startEditing = (message: WhatsAppSequenceMessage) => {
     setEditingId(message.id);
     setEditingContent(message.content);
+    setEditingLink(message.external_link || '');
   };
 
   const saveEdit = async () => {
@@ -186,7 +191,7 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
       const updatedSequences = sequences.map(seq => ({
         ...seq,
         messages: seq.messages.map(msg =>
-          msg.id === editingId ? { ...msg, content: editingContent } : msg
+          msg.id === editingId ? { ...msg, content: editingContent, external_link: editingLink } : msg
         )
       }));
 
@@ -224,6 +229,7 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const cancelEdit = () => {
     setEditingId(null);
     setEditingContent('');
+    setEditingLink('');
   };
 
   const getCharacterCount = (text: string) => text.length;
@@ -304,6 +310,15 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                                 <Button size="sm" variant="outline" onClick={() => startEditing(message)}>
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                                {message.external_link && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => window.open(message.external_link, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button size="sm" variant="outline" onClick={() => copyToClipboard(message.content)}>
                                   <Copy className="h-4 w-4" />
                                 </Button>
@@ -326,6 +341,15 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                           <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
                             {getCharacterCount(editingContent)}/1000 caracteres
                           </Badge>
+                          <div className="pt-2">
+                            <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
+                            <Input
+                              value={editingLink}
+                              onChange={(e) => setEditingLink(e.target.value)}
+                              placeholder="https://exemplo.com"
+                              className="text-sm"
+                            />
+                          </div>
                         </div>
                       ) : (
                         <>

@@ -5,7 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { PlayCircle, Copy, Edit, Save, X, Loader2, Plus, History, Settings, Code } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { PlayCircle, Copy, Edit, Save, X, Loader2, Plus, History, Settings, Code, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
@@ -15,6 +16,7 @@ interface YouTubeDescription {
   content: any;
   generated_at: string;
   editable: boolean;
+  external_link?: string;
 }
 
 interface YouTubeDescriptionGeneratorProps {
@@ -34,6 +36,7 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
   const [currentDescription, setCurrentDescription] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
+  const [editingLink, setEditingLink] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -178,6 +181,7 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
       ? description.content 
       : description.content?.description || '';
     setEditingContent(content);
+    setEditingLink(description.external_link || '');
   };
 
   const saveEdit = async () => {
@@ -191,7 +195,8 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
               ...desc, 
               content: typeof desc.content === 'string' 
                 ? editingContent 
-                : { ...desc.content, description: editingContent }
+                : { ...desc.content, description: editingContent },
+              external_link: editingLink
             } 
           : desc
       );
@@ -236,6 +241,7 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
   const cancelEdit = () => {
     setEditingId(null);
     setEditingContent('');
+    setEditingLink('');
   };
 
   const getCharacterCount = (text: string) => text.length;
@@ -621,6 +627,15 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                                {description.external_link && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(description.external_link, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -644,6 +659,15 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                             <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
                               {getCharacterCount(editingContent)}/5000 caracteres
                             </Badge>
+                            <div className="pt-2">
+                              <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
+                              <Input
+                                value={editingLink}
+                                onChange={(e) => setEditingLink(e.target.value)}
+                                placeholder="https://exemplo.com"
+                                className="text-sm"
+                              />
+                            </div>
                           </div>
                         ) : (
                           <div className="space-y-3">

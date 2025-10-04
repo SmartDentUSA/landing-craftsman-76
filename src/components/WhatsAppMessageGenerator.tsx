@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText, Code } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText, Code, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
@@ -16,6 +17,7 @@ interface WhatsAppMessage {
   content: string;
   generated_at: string;
   editable: boolean;
+  external_link?: string;
 }
 
 interface WhatsAppMessageGeneratorProps {
@@ -35,6 +37,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const [currentMessage, setCurrentMessage] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
+  const [editingLink, setEditingLink] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -217,6 +220,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const startEditing = (message: WhatsAppMessage) => {
     setEditingId(message.id);
     setEditingContent(message.content);
+    setEditingLink(message.external_link || '');
   };
 
   const saveEdit = async () => {
@@ -225,7 +229,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
     try {
       // Atualizar na lista local
       const updatedMessages = messages.map(msg => 
-        msg.id === editingId ? { ...msg, content: editingContent } : msg
+        msg.id === editingId ? { ...msg, content: editingContent, external_link: editingLink } : msg
       );
       
       // Atualizar no banco
@@ -268,6 +272,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const cancelEdit = () => {
     setEditingId(null);
     setEditingContent('');
+    setEditingLink('');
   };
 
   const getCharacterCount = (text: string) => text.length;
@@ -432,6 +437,15 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                                {message.external_link && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(message.external_link, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -455,6 +469,15 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                             <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
                               {getCharacterCount(editingContent)}/1000 caracteres
                             </Badge>
+                            <div className="pt-2">
+                              <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
+                              <Input
+                                value={editingLink}
+                                onChange={(e) => setEditingLink(e.target.value)}
+                                placeholder="https://exemplo.com"
+                                className="text-sm"
+                              />
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-gray-50 border rounded p-3">

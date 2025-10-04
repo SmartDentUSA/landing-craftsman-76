@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Copy, Edit, Save, X, Zap, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Copy, Edit, Save, X, Zap, FileText, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +17,7 @@ interface InstagramCopy {
   post_type: string;
   generated_at: string;
   editable: boolean;
+  external_link?: string;
 }
 
 interface InstagramCopyGeneratorProps {
@@ -29,6 +31,9 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
   const [feedCopy, setFeedCopy] = useState('');
   const [storyCopy, setStoryCopy] = useState('');
   const [reelsCopy, setReelsCopy] = useState('');
+  const [feedLink, setFeedLink] = useState('');
+  const [storyLink, setStoryLink] = useState('');
+  const [reelsLink, setReelsLink] = useState('');
   const [editingFeed, setEditingFeed] = useState(false);
   const [editingStory, setEditingStory] = useState(false);
   const [editingReels, setEditingReels] = useState(false);
@@ -61,6 +66,9 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
           setFeedCopy(instagramData.feed_copy || '');
           setStoryCopy(instagramData.story_copy || '');
           setReelsCopy(instagramData.reels_copy || '');
+          setFeedLink(instagramData.feed_link || '');
+          setStoryLink(instagramData.story_link || '');
+          setReelsLink(instagramData.reels_link || '');
         }
         // Estrutura antiga com array de copies (fallback)
         else if (instagramData.copies && instagramData.copies.length > 0) {
@@ -317,7 +325,7 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
     }
   };
 
-  const saveCopy = async (type: 'feed' | 'story' | 'reels', content: string) => {
+  const saveCopy = async (type: 'feed' | 'story' | 'reels', content: string, link?: string) => {
     try {
       // Carregar dados existentes
       const { data: existingData } = await supabase
@@ -335,9 +343,16 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
         'reels': 'reels_copy'
       };
 
+      const linkFieldMap = {
+        'feed': 'feed_link',
+        'story': 'story_link', 
+        'reels': 'reels_link'
+      };
+
       const updatedCopies = {
         ...existingCopies,
         [fieldMap[type]]: content,
+        [linkFieldMap[type]]: link || '',
         last_updated: new Date().toISOString()
       };
 
@@ -414,6 +429,17 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                     placeholder="A copy para feed será gerada aqui..."
                     readOnly={!editingFeed}
                   />
+                  {editingFeed && (
+                    <div className="pt-2">
+                      <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
+                      <Input
+                        value={feedLink}
+                        onChange={(e) => setFeedLink(e.target.value)}
+                        placeholder="https://exemplo.com"
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       {feedCopy.length} caracteres
@@ -428,6 +454,15 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
+                          {feedLink && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(feedLink, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -452,7 +487,7 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                           <Button
                             size="sm"
                             onClick={() => {
-                              saveCopy('feed', feedCopy);
+                              saveCopy('feed', feedCopy, feedLink);
                               setEditingFeed(false);
                             }}
                           >
@@ -486,6 +521,17 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                     placeholder="A copy para stories será gerada aqui..."
                     readOnly={!editingStory}
                   />
+                  {editingStory && (
+                    <div className="pt-2">
+                      <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
+                      <Input
+                        value={storyLink}
+                        onChange={(e) => setStoryLink(e.target.value)}
+                        placeholder="https://exemplo.com"
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       {storyCopy.length} caracteres
@@ -500,6 +546,15 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
+                          {storyLink && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(storyLink, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -524,7 +579,7 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                           <Button
                             size="sm"
                             onClick={() => {
-                              saveCopy('story', storyCopy);
+                              saveCopy('story', storyCopy, storyLink);
                               setEditingStory(false);
                             }}
                           >
@@ -558,6 +613,17 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                     placeholder="A copy para reels será gerada aqui..."
                     readOnly={!editingReels}
                   />
+                  {editingReels && (
+                    <div className="pt-2">
+                      <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
+                      <Input
+                        value={reelsLink}
+                        onChange={(e) => setReelsLink(e.target.value)}
+                        placeholder="https://exemplo.com"
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       {reelsCopy.length} caracteres
@@ -572,6 +638,15 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
+                          {reelsLink && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(reelsLink, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -596,7 +671,7 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                           <Button
                             size="sm"
                             onClick={() => {
-                              saveCopy('reels', reelsCopy);
+                              saveCopy('reels', reelsCopy, reelsLink);
                               setEditingReels(false);
                             }}
                           >
