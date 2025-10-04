@@ -375,8 +375,9 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
     versions: [dentalaVersion, ...dentalaHistory].slice(0, 10)
   };
 
-  await supabase.from('blog_posts').upsert({
-    id: existingDentala?.id,
+  console.log('🟡 Tentando salvar blog DENTALA...');
+  
+  const dentalaPayload: any = {
     landing_page_id: landingPageId,
     title: dentalaVersion.title,
     content: dentalaVersion.content,
@@ -385,10 +386,25 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
     published_domains: ['dentala.com.br'],
     version_history: updatedDentalaHistory,
     status: 'draft',
-    updated_at: new Date().toISOString()
-  });
+    updated_at: new Date().toISOString(),
+  };
+  
+  if (existingDentala?.id) dentalaPayload.id = existingDentala.id;
 
-  console.log(`💾 DENTALA saved with version history (${updatedDentalaHistory.versions.length} versions)`);
+  const { data: dentalaSaved, error: dentalaError } = await supabase
+    .from('blog_posts')
+    .upsert(dentalaPayload)
+    .select()
+    .single();
+
+  if (dentalaError) {
+    console.error('❌ DENTALA upsert error:', dentalaError);
+    throw new Error(`Failed to save Dentala blog: ${dentalaError.message}`);
+  }
+
+  console.log(`✅ DENTALA saved successfully!`);
+  console.log(`   📦 Database ID: ${dentalaSaved.id}`);
+  console.log(`   📚 Version history: ${updatedDentalaHistory.versions.length} versions`);
 
   // === SALVAR NO BANCO (Eodonto) ===
   const eodontoVersion = {
@@ -414,8 +430,9 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
     versions: [eodontoVersion, ...eodontoHistory].slice(0, 10)
   };
 
-  await supabase.from('blog_posts').upsert({
-    id: existingEodonto?.id,
+  console.log('🟡 Tentando salvar blog EODONTO...');
+  
+  const eodontoPayload: any = {
     landing_page_id: landingPageId,
     title: eodontoVersion.title,
     content: eodontoVersion.content,
@@ -424,10 +441,25 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
     published_domains: ['eodonto.com.br'],
     version_history: updatedEodontoHistory,
     status: 'draft',
-    updated_at: new Date().toISOString()
-  });
+    updated_at: new Date().toISOString(),
+  };
+  
+  if (existingEodonto?.id) eodontoPayload.id = existingEodonto.id;
 
-  console.log(`💾 EODONTO saved with version history (${updatedEodontoHistory.versions.length} versions)`);
+  const { data: eodontoSaved, error: eodontoError } = await supabase
+    .from('blog_posts')
+    .upsert(eodontoPayload)
+    .select()
+    .single();
+
+  if (eodontoError) {
+    console.error('❌ EODONTO upsert error:', eodontoError);
+    throw new Error(`Failed to save Eodonto blog: ${eodontoError.message}`);
+  }
+
+  console.log(`✅ EODONTO saved successfully!`);
+  console.log(`   📦 Database ID: ${eodontoSaved.id}`);
+  console.log(`   📚 Version history: ${updatedEodontoHistory.versions.length} versions`);
 
   // === RETORNAR ESTRUTURA COMPLETA ===
   return {

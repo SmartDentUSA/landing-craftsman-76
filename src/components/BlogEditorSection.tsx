@@ -63,42 +63,79 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
 
   const loadDualBlogs = async () => {
     try {
-      const { data: blogs } = await supabase
+      console.log('🔍 Carregando blogs duais...');
+      
+      const { data: blogs, error: loadError } = await supabase
         .from('blog_posts')
         .select('*')
-        .eq('landing_page_id', landingPageId)
-        .in('published_domains', [['dentala.com.br'], ['eodonto.com.br']]);
-      
-      const dentalaBlog = blogs?.find(b => 
-        b.published_domains?.includes('dentala.com.br')
+        .eq('landing_page_id', landingPageId);
+
+      if (loadError) {
+        console.error('❌ Erro ao carregar blogs:', loadError);
+        throw loadError;
+      }
+
+      console.log(`📊 Total de blogs encontrados: ${blogs?.length || 0}`);
+      console.table(
+        (blogs || []).map((b: any) => ({
+          id: b.id?.substring(0, 8),
+          domains: b.published_domains,
+          title: b.title?.substring(0, 30),
+        }))
       );
-      const eodontoBlog = blogs?.find(b => 
-        b.published_domains?.includes('eodonto.com.br')
+
+      // Helper seguro para verificar domínios
+      const domainMatches = (domains: unknown, target: string) =>
+        Array.isArray(domains) && (domains as string[]).includes(target);
+
+      const dentalaBlog = blogs?.find((b: any) =>
+        domainMatches(b.published_domains, 'dentala.com.br')
       );
-      
+      const eodontoBlog = blogs?.find((b: any) =>
+        domainMatches(b.published_domains, 'eodonto.com.br')
+      );
+
+      console.log(`✅ Dentala encontrado: ${!!dentalaBlog}`);
+      console.log(`✅ Eodonto encontrado: ${!!eodontoBlog}`);
+
       if (dentalaBlog) {
         setDentalaBlogPost({
           title: dentalaBlog.title || '',
           content: dentalaBlog.content || '',
           meta_description: dentalaBlog.meta_description || '',
           keywords: dentalaBlog.keywords || [],
-          status: dentalaBlog.status || 'draft'
+          status: dentalaBlog.status || 'draft',
         });
         setDentalaHistory((dentalaBlog.version_history as any)?.versions || []);
+        console.log(
+          `   📚 Dentala: ${
+            ((dentalaBlog.version_history as any)?.versions || []).length
+          } versões`
+        );
       }
-      
+
       if (eodontoBlog) {
         setEodontoBlogPost({
           title: eodontoBlog.title || '',
           content: eodontoBlog.content || '',
           meta_description: eodontoBlog.meta_description || '',
           keywords: eodontoBlog.keywords || [],
-          status: eodontoBlog.status || 'draft'
+          status: eodontoBlog.status || 'draft',
         });
         setEodontoHistory((eodontoBlog.version_history as any)?.versions || []);
+        console.log(
+          `   📚 Eodonto: ${
+            ((eodontoBlog.version_history as any)?.versions || []).length
+          } versões`
+        );
       }
-    } catch (error) {
-      console.error('Erro ao carregar blogs duais:', error);
+    } catch (error: any) {
+      console.error('❌ Erro fatal ao carregar blogs duais:', error);
+      toast({
+        title: 'Erro ao carregar blogs',
+        description: error?.message || 'Erro desconhecido',
+        variant: 'destructive',
+      });
     }
   };
 
