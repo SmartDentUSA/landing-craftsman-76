@@ -21,6 +21,7 @@ interface BlogEditorSectionProps {
   landingPageId: string;
   landingPageData: any;
   selectedProductIds?: string[];
+  onSave?: () => void; // callback quando salvar blog estratégico
 }
 
 interface BlogPost {
@@ -36,7 +37,7 @@ interface DualBlogPost {
   eodonto: BlogPost;
 }
 
-export function BlogEditorSection({ landingPageId, landingPageData, selectedProductIds }: BlogEditorSectionProps) {
+export function BlogEditorSection({ landingPageId, landingPageData, selectedProductIds, onSave }: BlogEditorSectionProps) {
   const [dentalaBlogPost, setDentalaBlogPost] = useState<BlogPost | null>(null);
   const [eodontoBlogPost, setEodontoBlogPost] = useState<BlogPost | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<'dentala' | 'eodonto'>('dentala');
@@ -266,6 +267,9 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         title: "✅ Blog salvo com sucesso!",
         description: `Blog ${selectedDomain === 'dentala' ? 'Dentala' : 'Eodonto'} atualizado.`,
       });
+      
+      // ✅ Notificar parent que houve save
+      onSave?.();
     } catch (error: any) {
       console.error('Erro ao salvar blog:', error);
       toast({

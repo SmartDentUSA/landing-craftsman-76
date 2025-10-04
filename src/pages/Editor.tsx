@@ -21,6 +21,7 @@ import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Downloa
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
+import { StrategicBlogPreview } from "@/components/StrategicBlogPreview";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -1011,6 +1012,9 @@ const EditorContent = () => {
   
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  
+  // State para refresh do preview consolidado de blogs estratégicos
+  const [strategicBlogRefreshKey, setStrategicBlogRefreshKey] = useState(0);
   
   // State for debounced name input
   const [localName, setLocalName] = useState('');
@@ -6906,11 +6910,28 @@ dataLayer = [{
             </TabsContent>
 
             <TabsContent value="blog-preview" className="flex-1 p-4">
-              <BlogEditorSection
-                landingPageId={id || ""}
-                landingPageData={data}
-                selectedProductIds={selectedProductIds}
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+                {/* Coluna esquerda: Editor Estratégico */}
+                <div className="min-h-[60vh] max-h-[calc(100vh-220px)] overflow-y-auto">
+                  <BlogEditorSection
+                    landingPageId={id || ""}
+                    landingPageData={data}
+                    selectedProductIds={selectedProductIds}
+                    onSave={() => setStrategicBlogRefreshKey(prev => prev + 1)}
+                  />
+                </div>
+
+                {/* Coluna direita: Preview Consolidado (Dentala + Eodonto) */}
+                <div className="min-h-[60vh] max-h-[calc(100vh-220px)] overflow-y-auto">
+                  <StrategicBlogPreview
+                    dentalaData={null}
+                    eodontoData={null}
+                    approvedLandingPages={landingPages?.filter(lp => lp.status === 'approved') || []}
+                    selectedProductIds={selectedProductIds}
+                    refreshKey={strategicBlogRefreshKey}
+                  />
+                </div>
+              </div>
             </TabsContent>
 
             {/* Repository Tab - Fixed positioning */}
