@@ -36,17 +36,20 @@ serve(async (req) => {
     // Carregar prompts customizados
     const customPrompts = await loadCustomPrompts(supabase, 'strategic-blog-generator');
     
-    // Gerar blog estratégico com sistema de redundância dual-AI
-    const blogContent = await generateStrategicBlog(strategicContext, customPrompts);
+    // Gerar blog estratégico com sistema dual-domain dual-AI
+    const dualBlogResult = await generateStrategicBlog(supabase, landingPageId, strategicContext, customPrompts);
     
-    console.log(`✅ Strategic blog generated: ${blogContent.length} characters`);
+    console.log(`✅ Dual blogs generated and saved:`);
+    console.log(`   - Dentala: ${dualBlogResult.dentala.contentLength} chars (${dualBlogResult.dentala.selectedAPI})`);
+    console.log(`   - Eodonto: ${dualBlogResult.eodonto.contentLength} chars (${dualBlogResult.eodonto.selectedAPI})`);
 
     return new Response(JSON.stringify({
       success: true,
       landingPageId,
-      contentLength: blogContent.length,
-      generatedAt: new Date().toISOString(),
-      blogContent
+      dentala: dualBlogResult.dentala,
+      eodonto: dualBlogResult.eodonto,
+      metrics: dualBlogResult.metrics,
+      generatedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -225,20 +228,239 @@ async function loadCustomPrompts(supabase: any, edgeFunctionId: string) {
   return customPrompts;
 }
 
-async function generateStrategicBlog(context: any, customPrompts: any): Promise<string> {
-  // Build enhanced context with SEO Hidden fields
-  let enhancedContext = { ...context };
+function extractBlogMetadata(markdown: string) {
+  const lines = markdown.split('\n').filter(line => line.trim());
+  const title = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico";
   
-  if (context.seoContext) {
-    enhancedContext.seoGuidelines = {
-      contextKeywords: context.seoContext.contextKeywords,
-      marketPositioning: context.seoContext.marketPositioning,
-      competitiveAdvantages: context.seoContext.competitiveAdvantages,
-      technicalExpertise: context.seoContext.technicalExpertise,
-      serviceAreas: context.seoContext.serviceAreas
-    };
+  // Extrair primeira seção como meta description
+  const firstParagraph = lines.find(line => 
+    !line.startsWith('#') && 
+    !line.startsWith('**') && 
+    line.length > 50
+  );
+  const metaDescription = firstParagraph 
+    ? firstParagraph.substring(0, 155).trim() + '...'
+    : '';
+  
+  // Extrair keywords (palavras em negrito ou títulos H2/H3)
+  const keywords: string[] = [];
+  const keywordMatches = markdown.match(/\*\*([^*]+)\*\*/g);
+  if (keywordMatches) {
+    keywords.push(
+      ...keywordMatches
+        .slice(0, 10)
+        .map(k => k.replace(/\*\*/g, '').trim())
+        .filter(k => k.length > 3)
+    );
   }
+  
+  return { title, metaDescription, keywords };
+}
 
+function buildDentalaPrompt(context: any, customPrompts: any): string {
+  const basePrompt = customPrompts['Artigo Estratégico Contextual'] || '';
+  
+  return `${basePrompt}
+
+# CONTEXTO ESPECÍFICO: Dentala.com.br
+PÚBLICO-ALVO: Dentistas, clínicas odontológicas, profissionais da área
+FOCO EDITORIAL: Educação profissional, aplicações clínicas, evidências científicas
+
+## DIRETRIZES DENTALA:
+- **Tom:** Técnico-profissional, baseado em evidências e estudos de caso
+- **Linguagem:** Precisa, utilizando terminologia odontológica adequada
+- **Estrutura:** Introdução técnica → Aplicações clínicas → Evidências científicas → Resultados esperados
+- **CTAs:** "Saiba mais", "Consulte nossos especialistas", "Agende uma demonstração"
+- **Keywords:** Termos técnicos + aplicações clínicas + nomenclatura científica
+- **SEO:** Otimizar para buscas de profissionais (ex: "melhor scanner intraoral para clínica")
+
+${context.seoContext ? `
+CONTEXTO SEO PROFISSIONAL:
+- Palavras-chave técnicas: ${context.seoContext.contextKeywords?.join(', ') || 'N/A'}
+- Posicionamento: ${context.seoContext.marketPositioning || 'N/A'}
+- Expertise: ${context.seoContext.technicalExpertise || 'N/A'}
+` : ''}
+
+GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que demonstre autoridade técnica e seja útil para profissionais da odontologia.
+`;
+}
+
+function buildEodontoPrompt(context: any, customPrompts: any): string {
+  const basePrompt = customPrompts['Artigo Estratégico Contextual'] || '';
+  
+  return `${basePrompt}
+
+# CONTEXTO ESPECÍFICO: Eodonto.com.br  
+PÚBLICO-ALVO: Consumidores finais, pacientes, compradores de produtos odontológicos
+FOCO EDITORIAL: Benefícios práticos, facilidade de uso, custo-benefício, guias de compra
+
+## DIRETRIZES EODONTO:
+- **Tom:** Acessível, didático, orientado a benefícios e resultados
+- **Linguagem:** Simples e clara, evitando jargão técnico excessivo
+- **Estrutura:** Problema do consumidor → Solução prática → Benefícios → Como comprar
+- **CTAs:** "Compre agora", "Confira ofertas", "Veja preços", "Adicione ao carrinho"
+- **Keywords:** Termos de busca comerciais + intenção de compra (ex: "comprar", "preço", "onde encontrar")
+- **SEO:** Otimizar para buscas transacionais (ex: "comprar scanner intraoral barato")
+
+${context.seoContext ? `
+CONTEXTO SEO COMERCIAL:
+- Palavras-chave de compra: ${context.seoContext.contextKeywords?.filter((k: string) => k.includes('comprar') || k.includes('preço')).join(', ') || 'N/A'}
+- Diferenciação comercial: ${context.seoContext.competitiveAdvantages || 'N/A'}
+` : ''}
+
+GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que seja persuasivo e ajude o consumidor a tomar uma decisão de compra informada.
+`;
+}
+
+async function generateStrategicBlog(supabase: any, landingPageId: string, context: any, customPrompts: any): Promise<any> {
+  console.log('🤖 Iniciating dual-domain dual-AI generation system (4 API calls)');
+
+  // Build prompts específicos
+  const dentalaPrompt = buildDentalaPrompt(context, customPrompts);
+  const eodontoPrompt = buildEodontoPrompt(context, customPrompts);
+
+  // === DENTALA: Dual-AI Comparison ===
+  console.log('🔵 Generating DENTALA version...');
+  const [dentalaLovableResult, dentalaDeepSeekResult] = await Promise.allSettled([
+    generateWithLovableAI(dentalaPrompt),
+    generateWithDeepSeek(dentalaPrompt)
+  ]);
+
+  const dentalaComparison = await compareAndSelectBestResponse(
+    dentalaLovableResult, 
+    dentalaDeepSeekResult
+  );
+  
+  const dentalaMetadata = extractBlogMetadata(dentalaComparison.selectedContent);
+  
+  console.log(`✅ DENTALA: ${dentalaComparison.selectedAPI} selected (score: ${dentalaComparison.score})`);
+
+  // === EODONTO: Dual-AI Comparison ===
+  console.log('🟢 Generating EODONTO version...');
+  const [eodontoLovableResult, eodontoDeepSeekResult] = await Promise.allSettled([
+    generateWithLovableAI(eodontoPrompt),
+    generateWithDeepSeek(eodontoPrompt)
+  ]);
+
+  const eodontoComparison = await compareAndSelectBestResponse(
+    eodontoLovableResult, 
+    eodontoDeepSeekResult
+  );
+  
+  const eodontoMetadata = extractBlogMetadata(eodontoComparison.selectedContent);
+  
+  console.log(`✅ EODONTO: ${eodontoComparison.selectedAPI} selected (score: ${eodontoComparison.score})`);
+
+  // === SALVAR NO BANCO (Dentala) ===
+  const dentalaVersion = {
+    id: crypto.randomUUID(),
+    title: dentalaMetadata.title,
+    content: dentalaComparison.selectedContent,
+    meta_description: dentalaMetadata.metaDescription,
+    keywords: dentalaMetadata.keywords,
+    generated_at: new Date().toISOString(),
+    ai_source: dentalaComparison.selectedAPI,
+    domain: "dentala.com.br"
+  };
+
+  const { data: existingDentala } = await supabase
+    .from('blog_posts')
+    .select('id, version_history')
+    .eq('landing_page_id', landingPageId)
+    .contains('published_domains', ['dentala.com.br'])
+    .maybeSingle();
+
+  const dentalaHistory = existingDentala?.version_history?.versions || [];
+  const updatedDentalaHistory = {
+    versions: [dentalaVersion, ...dentalaHistory].slice(0, 10)
+  };
+
+  await supabase.from('blog_posts').upsert({
+    id: existingDentala?.id,
+    landing_page_id: landingPageId,
+    title: dentalaVersion.title,
+    content: dentalaVersion.content,
+    meta_description: dentalaVersion.meta_description,
+    keywords: dentalaVersion.keywords,
+    published_domains: ['dentala.com.br'],
+    version_history: updatedDentalaHistory,
+    status: 'draft',
+    updated_at: new Date().toISOString()
+  });
+
+  console.log(`💾 DENTALA saved with version history (${updatedDentalaHistory.versions.length} versions)`);
+
+  // === SALVAR NO BANCO (Eodonto) ===
+  const eodontoVersion = {
+    id: crypto.randomUUID(),
+    title: eodontoMetadata.title,
+    content: eodontoComparison.selectedContent,
+    meta_description: eodontoMetadata.metaDescription,
+    keywords: eodontoMetadata.keywords,
+    generated_at: new Date().toISOString(),
+    ai_source: eodontoComparison.selectedAPI,
+    domain: "eodonto.com.br"
+  };
+
+  const { data: existingEodonto } = await supabase
+    .from('blog_posts')
+    .select('id, version_history')
+    .eq('landing_page_id', landingPageId)
+    .contains('published_domains', ['eodonto.com.br'])
+    .maybeSingle();
+
+  const eodontoHistory = existingEodonto?.version_history?.versions || [];
+  const updatedEodontoHistory = {
+    versions: [eodontoVersion, ...eodontoHistory].slice(0, 10)
+  };
+
+  await supabase.from('blog_posts').upsert({
+    id: existingEodonto?.id,
+    landing_page_id: landingPageId,
+    title: eodontoVersion.title,
+    content: eodontoVersion.content,
+    meta_description: eodontoVersion.meta_description,
+    keywords: eodontoVersion.keywords,
+    published_domains: ['eodonto.com.br'],
+    version_history: updatedEodontoHistory,
+    status: 'draft',
+    updated_at: new Date().toISOString()
+  });
+
+  console.log(`💾 EODONTO saved with version history (${updatedEodontoHistory.versions.length} versions)`);
+
+  // === RETORNAR ESTRUTURA COMPLETA ===
+  return {
+    dentala: {
+      id: dentalaVersion.id,
+      title: dentalaVersion.title,
+      content: dentalaVersion.content,
+      meta_description: dentalaVersion.meta_description,
+      keywords: dentalaVersion.keywords,
+      contentLength: dentalaVersion.content.length,
+      selectedAPI: dentalaComparison.selectedAPI,
+      score: dentalaComparison.score,
+      domain: "dentala.com.br"
+    },
+    eodonto: {
+      id: eodontoVersion.id,
+      title: eodontoVersion.title,
+      content: eodontoVersion.content,
+      meta_description: eodontoVersion.meta_description,
+      keywords: eodontoVersion.keywords,
+      contentLength: eodontoVersion.content.length,
+      selectedAPI: eodontoComparison.selectedAPI,
+      score: eodontoComparison.score,
+      domain: "eodonto.com.br"
+    },
+    metrics: {
+      dentala: dentalaComparison.metrics,
+      eodonto: eodontoComparison.metrics
+    }
+  };
+}
+
+async function generateWithLovableAI(prompt: string): Promise<string> {
   const defaultPrompt = `Você é um especialista em marketing de conteúdo estratégico e SEO.
 
 IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamais use espanhol ou outros idiomas.

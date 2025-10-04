@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings, Zap } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings, Zap, Globe, ShoppingCart, History, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePromptsConfiguration } from "@/hooks/usePromptsConfiguration";
@@ -30,14 +31,17 @@ interface BlogPost {
   status: string;
 }
 
+interface DualBlogPost {
+  dentala: BlogPost;
+  eodonto: BlogPost;
+}
+
 export function BlogEditorSection({ landingPageId, landingPageData, selectedProductIds }: BlogEditorSectionProps) {
-  const [blogPost, setBlogPost] = useState<BlogPost>({
-    title: "",
-    content: "",
-    meta_description: "",
-    keywords: [],
-    status: "draft"
-  });
+  const [dentalaBlogPost, setDentalaBlogPost] = useState<BlogPost | null>(null);
+  const [eodontoBlogPost, setEodontoBlogPost] = useState<BlogPost | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<'dentala' | 'eodonto'>('dentala');
+  const [dentalaHistory, setDentalaHistory] = useState<any[]>([]);
+  const [eodontoHistory, setEodontoHistory] = useState<any[]>([]);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -54,41 +58,47 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
 
   // Load existing blog post on mount
   useEffect(() => {
-    loadExistingBlogPost();
+    loadDualBlogs();
   }, [landingPageId]);
 
-  const loadExistingBlogPost = async () => {
+  const loadDualBlogs = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: blogs } = await supabase
         .from('blog_posts')
         .select('*')
         .eq('landing_page_id', landingPageId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
+        .in('published_domains', [['dentala.com.br'], ['eodonto.com.br']]);
       
-      if (data && data.length > 0) {
-        const post = data[0];
-        setBlogPost({
-          title: post.title || "",
-          content: post.content || "",
-          meta_description: post.meta_description || "",
-          keywords: Array.isArray(post.keywords) ? post.keywords : [],
-          status: post.status || "draft"
+      const dentalaBlog = blogs?.find(b => 
+        b.published_domains?.includes('dentala.com.br')
+      );
+      const eodontoBlog = blogs?.find(b => 
+        b.published_domains?.includes('eodonto.com.br')
+      );
+      
+      if (dentalaBlog) {
+        setDentalaBlogPost({
+          title: dentalaBlog.title || '',
+          content: dentalaBlog.content || '',
+          meta_description: dentalaBlog.meta_description || '',
+          keywords: dentalaBlog.keywords || [],
+          status: dentalaBlog.status || 'draft'
         });
-      } else {
-        // Initialize with landing page data
-        setBlogPost({
-          title: landingPageData?.banner?.title || landingPageData?.seo_title || "",
-          content: "",
-          meta_description: landingPageData?.seo_description || "",
-          keywords: [],
-          status: "draft"
+        setDentalaHistory((dentalaBlog.version_history as any)?.versions || []);
+      }
+      
+      if (eodontoBlog) {
+        setEodontoBlogPost({
+          title: eodontoBlog.title || '',
+          content: eodontoBlog.content || '',
+          meta_description: eodontoBlog.meta_description || '',
+          keywords: eodontoBlog.keywords || [],
+          status: eodontoBlog.status || 'draft'
         });
+        setEodontoHistory((eodontoBlog.version_history as any)?.versions || []);
       }
     } catch (error) {
-      console.error('Erro ao carregar blog post:', error);
+      console.error('Erro ao carregar blogs duais:', error);
     }
   };
 
@@ -96,7 +106,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     if (!selectedProductIds || selectedProductIds.length === 0) {
       toast({
         title: "Produtos necessários",
-        description: "Selecione produtos no repositório para gerar o blog contextual",
+        description: "Selecione produtos no repositório para gerar os blogs contextuais",
         variant: "destructive"
       });
       return;
@@ -106,62 +116,54 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     setError(null);
 
     try {
-      console.log("🔄 Gerando blog estratégico contextual para:", landingPageId);
+      console.log("🔄 Gerando blogs estratégicos duais (Dentala + Eodonto)...");
 
       const promptConfig = getConfigurationByFunction('strategic-blog-generator', 'Artigo Estratégico Contextual');
       
       const repositoryConfig = {
-        selectedDataSources: promptConfig?.selected_data_sources || ['products_repository', 'approved_reviews', 'key_opinion_leaders', 'company_profile'],
-        selectedFields: promptConfig?.selected_fields || {
-          landing_pages: ['banner', 'seo_title', 'seo_description'],
-          products_repository: ['name', 'description', 'benefits', 'keywords'],
-          approved_reviews: ['review_text', 'contextual_seo_info'],
-          key_opinion_leaders: ['full_name', 'specialty', 'mini_cv'],
-          company_profile: ['company_name', 'main_products_services', 'target_audience']
-        },
+        selectedDataSources: promptConfig?.selected_data_sources || [
+          'landing_page_banner',
+          'landing_page_solutions_1',
+          'landing_page_solutions_2',
+          'products_repository',
+          'approved_reviews',
+          'key_opinion_leaders',
+          'company_profile'
+        ],
+        selectedFields: promptConfig?.selected_fields || {},
         selectedProductIds: selectedProductIds
       };
 
       const { data, error } = await supabase.functions.invoke('strategic-blog-generator', {
-        body: {
-          landingPageId,
-          repositoryConfig
-        }
+        body: { landingPageId, repositoryConfig }
       });
 
       if (error) throw error;
 
-      if (data && typeof data === 'string') {
-        const blogContent = data;
-        const lines = blogContent.split('\n').filter(line => line.trim());
-        const title = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico Contextual";
+      if (data?.dentala && data?.eodonto) {
+        // Carregar dados salvos do banco
+        await loadDualBlogs();
         
-        setBlogPost(prev => ({
-          ...prev,
-          title: title,
-          content: blogContent,
-          meta_description: `${title.substring(0, 150)}...`,
-          keywords: selectedProductIds?.slice(0, 5) || []
-        }));
-
         setBlogGenerated(true);
 
-        console.log("✅ Blog estratégico gerado com sucesso");
+        console.log("✅ Blogs estratégicos duais gerados com sucesso");
+        console.log(`   - Dentala: ${data.dentala.contentLength} chars (${data.dentala.selectedAPI})`);
+        console.log(`   - Eodonto: ${data.eodonto.contentLength} chars (${data.eodonto.selectedAPI})`);
         
         toast({
-          title: "Blog gerado com sucesso!",
-          description: "Conteúdo estratégico contextual criado.",
+          title: "✅ Blogs Gerados com Sucesso!",
+          description: `Dentala: ${data.dentala.contentLength} chars • Eodonto: ${data.eodonto.contentLength} chars`,
         });
       } else {
         throw new Error("Resposta inválida do gerador estratégico");
       }
     } catch (err: any) {
-      console.error("❌ Erro ao gerar blog estratégico:", err);
-      setError(err.message || "Erro ao gerar blog estratégico");
+      console.error("❌ Erro ao gerar blogs estratégicos:", err);
+      setError(err.message || "Erro ao gerar blogs estratégicos");
       
       toast({
         title: "Erro na geração",
-        description: err.message || "Erro ao gerar conteúdo do blog",
+        description: err.message || "Erro ao gerar conteúdo dos blogs",
         variant: "destructive"
       });
     } finally {
@@ -169,47 +171,68 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     }
   };
 
-  const saveBlogPost = async () => {
+  const saveDualBlog = async () => {
     setSaving(true);
     
     try {
-      // Apply auto-links if enabled
-      let finalContent = blogPost.content;
-      let linksAdded = 0;
+      const currentBlog = selectedDomain === 'dentala' ? dentalaBlogPost : eodontoBlogPost;
+      const domain = selectedDomain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br';
       
-      if (autoLinksEnabled && blogPost.content) {
-        finalContent = processAutoLinks(blogPost.content, true);
-        linksAdded = autoLinksCount;
+      if (!currentBlog) {
+        throw new Error('Nenhum blog selecionado para salvar');
       }
-
-      const { data, error } = await supabase
+      
+      // Carregar histórico existente
+      const { data: existing } = await supabase
         .from('blog_posts')
-        .upsert({
-          landing_page_id: landingPageId,
-          title: blogPost.title,
-          content: finalContent,
-          meta_description: blogPost.meta_description,
-          keywords: blogPost.keywords,
-          status: 'draft',
-          updated_at: new Date().toISOString()
-        })
-        .select();
-
-      if (error) throw error;
-
-      // Update local state with processed content
-      if (autoLinksEnabled && linksAdded > 0) {
-        setBlogPost(prev => ({ ...prev, content: finalContent }));
+        .select('id, version_history')
+        .eq('landing_page_id', landingPageId)
+        .contains('published_domains', [domain])
+        .maybeSingle();
+      
+      const newVersion = {
+        id: crypto.randomUUID(),
+        title: currentBlog.title,
+        content: currentBlog.content,
+        meta_description: currentBlog.meta_description,
+        keywords: currentBlog.keywords,
+        generated_at: new Date().toISOString(),
+        ai_source: 'manual_edit',
+        domain
+      };
+      
+      const updatedHistory = {
+        versions: [newVersion, ...((existing?.version_history as any)?.versions || [])].slice(0, 10)
+      };
+      
+      await supabase.from('blog_posts').upsert({
+        id: existing?.id,
+        landing_page_id: landingPageId,
+        title: currentBlog.title,
+        content: currentBlog.content,
+        meta_description: currentBlog.meta_description,
+        keywords: currentBlog.keywords,
+        published_domains: [domain],
+        version_history: updatedHistory,
+        status: 'draft',
+        updated_at: new Date().toISOString()
+      });
+      
+      // Atualizar histórico local
+      if (selectedDomain === 'dentala') {
+        setDentalaHistory(updatedHistory.versions);
+      } else {
+        setEodontoHistory(updatedHistory.versions);
       }
-
+      
       toast({
-        title: "Blog salvo!",
-        description: `Suas alterações foram salvas com sucesso.${linksAdded > 0 ? ` ${linksAdded} links automáticos adicionados.` : ''}`,
+        title: "✅ Blog salvo com sucesso!",
+        description: `Blog ${selectedDomain === 'dentala' ? 'Dentala' : 'Eodonto'} atualizado.`,
       });
     } catch (error: any) {
       console.error('Erro ao salvar blog:', error);
       toast({
-        title: "Erro ao salvar",
+        title: "❌ Erro ao salvar",
         description: error.message || "Erro ao salvar o blog post",
         variant: "destructive"
       });
@@ -218,13 +241,33 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     }
   };
 
-  const updateBlogPost = (field: keyof BlogPost, value: any) => {
-    setBlogPost(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const restoreVersion = (domain: 'dentala' | 'eodonto', version: any) => {
+    if (domain === 'dentala') {
+      setDentalaBlogPost({
+        title: version.title,
+        content: version.content,
+        meta_description: version.meta_description,
+        keywords: version.keywords,
+        status: 'draft'
+      });
+    } else {
+      setEodontoBlogPost({
+        title: version.title,
+        content: version.content,
+        meta_description: version.meta_description,
+        keywords: version.keywords,
+        status: 'draft'
+      });
+    }
+    
+    toast({
+      title: "Versão Restaurada",
+      description: `Versão restaurada no editor ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}.`,
+    });
+  };
 
-    // Real-time auto-links preview for content changes
+  const updateDentalaBlog = (field: keyof BlogPost, value: any) => {
+    setDentalaBlogPost(prev => prev ? ({ ...prev, [field]: value }) : null);
     if (field === 'content' && autoLinksEnabled && value) {
       debouncedPreviewLinks(value, (processed, count) => {
         setPreviewContent(processed);
@@ -233,14 +276,24 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     }
   };
 
-  const generatePreviewHTML = (content: string) => {
+  const updateEodontoBlog = (field: keyof BlogPost, value: any) => {
+    setEodontoBlogPost(prev => prev ? ({ ...prev, [field]: value }) : null);
+    if (field === 'content' && autoLinksEnabled && value) {
+      debouncedPreviewLinks(value, (processed, count) => {
+        setPreviewContent(processed);
+        setPreviewLinksCount(count);
+      });
+    }
+  };
+
+  const generatePreviewHTML = (content: string, title: string) => {
     return `
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${blogPost.title}</title>
+        <title>${title}</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
           h1, h2, h3 { color: #333; }
@@ -258,31 +311,35 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   };
 
   const getBlogStatus = () => {
-    if (blogPost.content) return "Blog gerado";
+    const hasDentala = dentalaBlogPost?.content;
+    const hasEodonto = eodontoBlogPost?.content;
+    
     if (generating) return "Gerando...";
-    return "Sem blog";
+    if (hasDentala && hasEodonto) return "Ambos gerados";
+    if (hasDentala || hasEodonto) return "Parcialmente gerado";
+    return "Sem blogs";
   };
 
   return (
     <Accordion type="multiple" defaultValue={["product-curation"]} className="w-full space-y-4">
-      {/* Editor de Blog Estratégico */}
+      {/* Editor de Blog Estratégico - Dual Domain */}
       <AccordionItem value="strategic-blog" className="border rounded-lg">
         <AccordionTrigger className="px-6 py-4 hover:no-underline">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
               <BookOpen className="h-5 w-5 text-primary" />
               <div className="text-left">
-                <h3 className="font-semibold">Editor de Blog Estratégico</h3>
+                <h3 className="font-semibold">Editor de Blog Estratégico (Dentala + Eodonto)</h3>
                 <p className="text-sm text-muted-foreground">
-                  {getBlogStatus()} • Blog opcional da landing page
+                  {getBlogStatus()} • Blogs opcionais da landing page
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 mr-4">
               {generating && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
-              <Badge variant={blogPost.content ? "default" : "secondary"}>
-                {blogPost.content ? "Gerado" : "Vazio"}
+              <Badge variant={(dentalaBlogPost || eodontoBlogPost) ? "default" : "secondary"}>
+                {dentalaBlogPost && eodontoBlogPost ? "Ambos gerados" : (dentalaBlogPost || eodontoBlogPost) ? "Parcial" : "Vazio"}
               </Badge>
             </div>
           </div>
@@ -299,51 +356,17 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                   disabled={generating || !selectedProductIds?.length}
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
-                  {generating ? "Gerando..." : "Gerar com IA"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPreview(!showPreview)}
-                  disabled={!blogPost.content}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  {showPreview ? "Ocultar" : "Preview"}
+                  {generating ? "Gerando Dentala + Eodonto..." : "Gerar Blogs (Dentala + Eodonto)"}
                 </Button>
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={saveBlogPost}
-                  disabled={saving || !blogPost.title}
+                  onClick={saveDualBlog}
+                  disabled={saving || (!dentalaBlogPost && !eodontoBlogPost)}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {saving ? "Salvando..." : "Salvar"}
+                  {saving ? "Salvando..." : `Salvar ${selectedDomain === 'dentala' ? 'Dentala' : 'Eodonto'}`}
                 </Button>
-              </div>
-
-              {/* Auto-Links Status */}
-              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">Auto-Links Inteligentes</span>
-                  <Badge variant={autoLinksEnabled ? "default" : "secondary"}>
-                    {autoLinksEnabled ? "Ativado" : "Desativado"}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3">
-                  {blogPost.content && autoLinksEnabled && (
-                    <span className="text-xs text-blue-700">
-                      {previewLinksCount > 0 ? `${previewLinksCount} links detectados` : 'Nenhum link detectado'}
-                    </span>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAutoLinksEnabled(!autoLinksEnabled)}
-                  >
-                    {autoLinksEnabled ? "Desativar" : "Ativar"}
-                  </Button>
-                </div>
               </div>
 
               {error && (
@@ -355,91 +378,217 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
               {!selectedProductIds?.length && (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-4">
                   <p className="text-sm text-orange-700">
-                    ⚠️ <strong>Produtos necessários:</strong> Selecione produtos no repositório para gerar o blog contextual
+                    ⚠️ <strong>Produtos necessários:</strong> Selecione produtos no repositório para gerar os blogs contextuais
                   </p>
                 </div>
               )}
             </CardHeader>
 
             <CardContent className="px-0 space-y-6">
-              {/* Título */}
-              <div className="space-y-2">
-                <Label htmlFor="blog-title">Título do Blog</Label>
-                <Input
-                  id="blog-title"
-                  value={blogPost.title}
-                  onChange={(e) => updateBlogPost('title', e.target.value)}
-                  placeholder="Digite o título do blog post..."
-                />
-              </div>
-
-              {/* Meta Description */}
-              <div className="space-y-2">
-                <Label htmlFor="blog-meta">Meta Descrição</Label>
-                <Textarea
-                  id="blog-meta"
-                  value={blogPost.meta_description}
-                  onChange={(e) => updateBlogPost('meta_description', e.target.value)}
-                  placeholder="Descrição para SEO (máx. 160 caracteres)..."
-                  rows={2}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {blogPost.meta_description.length}/160 caracteres
-                </p>
-              </div>
-
-              {/* Keywords */}
-              <div className="space-y-2">
-                <Label>Palavras-chave</Label>
-                <TagInput
-                  value={blogPost.keywords}
-                  onChange={(keywords) => updateBlogPost('keywords', keywords)}
-                  placeholder="Adicionar palavra-chave..."
-                />
-              </div>
-
-              {/* Content Editor */}
-              <div className="space-y-2">
-                <Label htmlFor="blog-content">Conteúdo</Label>
-                <RichTextEditor
-                  content={blogPost.content}
-                  onChange={(content) => updateBlogPost('content', content)}
-                  placeholder="Escreva o conteúdo do seu blog post..."
-                  className="min-h-[400px]"
-                />
-              </div>
-
-              {/* Preview */}
-              {showPreview && blogPost.content && (
-                <div className="border rounded-lg p-4 bg-background">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
-                    Preview do Blog
-                    {autoLinksEnabled && previewLinksCount > 0 && (
-                      <Badge variant="outline" className="ml-2">
-                        {previewLinksCount} auto-links
+              <Tabs value={selectedDomain} onValueChange={(v) => setSelectedDomain(v as 'dentala' | 'eodonto')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="dentala" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Dentala
+                    {dentalaBlogPost && (
+                      <Badge variant="secondary" className="ml-1">
+                        v{dentalaHistory.length || 1}
                       </Badge>
                     )}
-                  </h3>
-                  <iframe
-                    srcDoc={generatePreviewHTML(autoLinksEnabled && previewContent ? previewContent : blogPost.content)}
-                    className="w-full h-96 border rounded"
-                    title="Preview do Blog"
-                  />
-                </div>
-              )}
+                  </TabsTrigger>
+                  <TabsTrigger value="eodonto" className="flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Eodonto
+                    {eodontoBlogPost && (
+                      <Badge variant="secondary" className="ml-1">
+                        v{eodontoHistory.length || 1}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Status Badge */}
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
-                  Status: {blogPost.status === 'draft' ? 'Rascunho' : 'Publicado'}
-                </Badge>
-                {selectedProductIds?.length && (
-                  <Badge variant="outline">
-                    {selectedProductIds.length} produto(s) selecionado(s)
-                  </Badge>
-                )}
-              </div>
+                {/* TAB DENTALA */}
+                <TabsContent value="dentala" className="space-y-6 mt-4">
+                  {dentalaBlogPost ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="dentala-title">Título do Blog (Dentala)</Label>
+                        <Input
+                          id="dentala-title"
+                          value={dentalaBlogPost.title}
+                          onChange={(e) => updateDentalaBlog('title', e.target.value)}
+                          placeholder="Título otimizado para profissionais..."
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="dentala-meta">Meta Descrição (Dentala)</Label>
+                        <Textarea
+                          id="dentala-meta"
+                          value={dentalaBlogPost.meta_description}
+                          onChange={(e) => updateDentalaBlog('meta_description', e.target.value)}
+                          placeholder="Descrição SEO para dentistas..."
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {dentalaBlogPost.meta_description.length}/160 caracteres
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Palavras-chave (Dentala)</Label>
+                        <TagInput
+                          value={dentalaBlogPost.keywords}
+                          onChange={(keywords) => updateDentalaBlog('keywords', keywords)}
+                          placeholder="Adicionar palavra-chave técnica..."
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Conteúdo (Dentala)</Label>
+                        <RichTextEditor
+                          content={dentalaBlogPost.content}
+                          onChange={(content) => updateDentalaBlog('content', content)}
+                          placeholder="Conteúdo para profissionais..."
+                          className="min-h-[400px]"
+                        />
+                      </div>
+
+                      {dentalaHistory.length > 0 && (
+                        <div className="border rounded-lg p-4 bg-muted/30">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            Histórico de Versões (Dentala)
+                            <Badge variant="secondary">{dentalaHistory.length}/10</Badge>
+                          </h4>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                            {dentalaHistory.map((version, index) => (
+                              <div key={version.id} className="flex items-center justify-between p-2 bg-background rounded border">
+                                <div>
+                                  <span className="text-sm font-medium">
+                                    Versão {index + 1}
+                                    {index === 0 && <Badge className="ml-2" variant="default">Atual</Badge>}
+                                  </span>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(version.generated_at).toLocaleString('pt-BR')} • {version.ai_source}
+                                  </p>
+                                </div>
+                                {index > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => restoreVersion('dentala', version)}
+                                  >
+                                    <RotateCcw className="h-3 w-3 mr-1" />
+                                    Restaurar
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Globe className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p>Nenhum blog Dentala gerado ainda</p>
+                      <p className="text-sm">Clique em "Gerar Blogs" para criar</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* TAB EODONTO */}
+                <TabsContent value="eodonto" className="space-y-6 mt-4">
+                  {eodontoBlogPost ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="eodonto-title">Título do Blog (Eodonto)</Label>
+                        <Input
+                          id="eodonto-title"
+                          value={eodontoBlogPost.title}
+                          onChange={(e) => updateEodontoBlog('title', e.target.value)}
+                          placeholder="Título otimizado para consumidores..."
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="eodonto-meta">Meta Descrição (Eodonto)</Label>
+                        <Textarea
+                          id="eodonto-meta"
+                          value={eodontoBlogPost.meta_description}
+                          onChange={(e) => updateEodontoBlog('meta_description', e.target.value)}
+                          placeholder="Descrição SEO para e-commerce..."
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {eodontoBlogPost.meta_description.length}/160 caracteres
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Palavras-chave (Eodonto)</Label>
+                        <TagInput
+                          value={eodontoBlogPost.keywords}
+                          onChange={(keywords) => updateEodontoBlog('keywords', keywords)}
+                          placeholder="Adicionar palavra-chave comercial..."
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Conteúdo (Eodonto)</Label>
+                        <RichTextEditor
+                          content={eodontoBlogPost.content}
+                          onChange={(content) => updateEodontoBlog('content', content)}
+                          placeholder="Conteúdo para consumidores..."
+                          className="min-h-[400px]"
+                        />
+                      </div>
+
+                      {eodontoHistory.length > 0 && (
+                        <div className="border rounded-lg p-4 bg-muted/30">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            Histórico de Versões (Eodonto)
+                            <Badge variant="secondary">{eodontoHistory.length}/10</Badge>
+                          </h4>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                            {eodontoHistory.map((version, index) => (
+                              <div key={version.id} className="flex items-center justify-between p-2 bg-background rounded border">
+                                <div>
+                                  <span className="text-sm font-medium">
+                                    Versão {index + 1}
+                                    {index === 0 && <Badge className="ml-2" variant="default">Atual</Badge>}
+                                  </span>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(version.generated_at).toLocaleString('pt-BR')} • {version.ai_source}
+                                  </p>
+                                </div>
+                                {index > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => restoreVersion('eodonto', version)}
+                                  >
+                                    <RotateCcw className="h-3 w-3 mr-1" />
+                                    Restaurar
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p>Nenhum blog Eodonto gerado ainda</p>
+                      <p className="text-sm">Clique em "Gerar Blogs" para criar</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </AccordionContent>

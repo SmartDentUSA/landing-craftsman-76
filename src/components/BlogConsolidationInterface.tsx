@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Package } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Settings, Package, Globe, ShoppingCart } from "lucide-react";
 import { ProductBlogCuratorPanel } from "./ProductBlogCuratorPanel";
 
 interface BlogConsolidationInterfaceProps {
@@ -27,6 +29,7 @@ export function BlogConsolidationInterface({
   blogGenerated 
 }: BlogConsolidationInterfaceProps) {
   const [blogPreferences, setBlogPreferences] = useState<BlogConsolidationPreferences>({});
+  const [selectedDomain, setSelectedDomain] = useState<'dentala.com.br' | 'eodonto.com.br'>('dentala.com.br');
 
   const handlePreferencesChange = (preferences: BlogConsolidationPreferences) => {
     setBlogPreferences(preferences);
@@ -35,7 +38,7 @@ export function BlogConsolidationInterface({
 
   return (
     <div className="space-y-6">
-      {/* Header Simplificado */}
+      {/* Header com seletor de domínio */}
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2">
@@ -46,7 +49,27 @@ export function BlogConsolidationInterface({
             Gere e gerencie blogs individuais para cada produto selecionado
           </CardDescription>
           
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 pt-4">
+            <Label>Domínio do Blog Estratégico:</Label>
+            <Select value={selectedDomain} onValueChange={(v) => setSelectedDomain(v as any)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dentala.com.br">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Dentala
+                  </div>
+                </SelectItem>
+                <SelectItem value="eodonto.com.br">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Eodonto
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
             <Badge variant="outline" className="flex items-center gap-2">
               <Package className="h-3 w-3" />
               {selectedProductIds.length} produto{selectedProductIds.length !== 1 ? 's' : ''} selecionado{selectedProductIds.length !== 1 ? 's' : ''}
