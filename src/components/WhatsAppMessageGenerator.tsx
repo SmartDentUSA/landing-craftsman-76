@@ -5,7 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, FileText, Code, ExternalLink } from 'lucide-react';
+import { MessageCircle, Copy, Edit, Save, X, Loader2, Plus, History, Code, ExternalLink } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
@@ -322,22 +323,32 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                   <h3 className="font-semibold">Mensagem Atual</h3>
                   <div className="flex items-center gap-2">
                     <ContentViewToggle mode={viewMode} onModeChange={setViewMode} />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyToClipboard(currentMessage)}
-                    >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Texto
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyHTMLVersion(currentMessage)}
-                    >
-                      <Code className="h-4 w-4 mr-1" />
-                      HTML
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(currentMessage)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar Texto</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyHTMLVersion(currentMessage)}
+                          >
+                            <Code className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar HTML</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -429,31 +440,58 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                                 </Button>
                               </>
                             ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => startEditing(message)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => startEditing(message)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar</TooltipContent>
+                                </Tooltip>
                                 {message.external_link && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => window.open(message.external_link, '_blank')}
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => window.open(message.external_link, '_blank')}
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Link Canva</TooltipContent>
+                                  </Tooltip>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => copyToClipboard(message.content)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyToClipboard(message.content)}
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar Texto</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyHTMLVersion(message.content)}
+                                    >
+                                      <Code className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar HTML</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>

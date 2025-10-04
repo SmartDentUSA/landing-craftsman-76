@@ -18,11 +18,11 @@ import {
   Save, 
   X, 
   Copy, 
-  FileText,
   Loader2,
   Code,
   ExternalLink
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface WhatsAppSequenceMessage {
   id: string;
@@ -306,26 +306,46 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                                 </Button>
                               </>
                             ) : (
-                              <>
-                                <Button size="sm" variant="outline" onClick={() => startEditing(message)}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="outline" onClick={() => startEditing(message)}>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar</TooltipContent>
+                                </Tooltip>
                                 {message.external_link && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => window.open(message.external_link, '_blank')}
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        onClick={() => window.open(message.external_link, '_blank')}
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Link Canva</TooltipContent>
+                                  </Tooltip>
                                 )}
-                                <Button size="sm" variant="outline" onClick={() => copyToClipboard(message.content)}>
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => copyHTMLVersion(message.content)}>
-                                  <Code className="h-4 w-4" />
-                                </Button>
-                              </>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(message.content)}>
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar Texto</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="outline" onClick={() => copyHTMLVersion(message.content)}>
+                                      <Code className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar HTML</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>

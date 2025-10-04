@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { PlayCircle, Copy, Edit, Save, X, Loader2, Plus, History, Settings, Code, ExternalLink } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
@@ -440,22 +441,32 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                   <h3 className="font-semibold">Descrição Atual</h3>
                   <div className="flex items-center gap-2">
                     <ContentViewToggle mode={viewMode} onModeChange={setViewMode} />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyToClipboard(formatDescription(currentDescription))}
-                    >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Texto
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={copyHTMLVersion}
-                    >
-                      <Code className="h-4 w-4 mr-1" />
-                      HTML
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(formatDescription(currentDescription))}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar Texto</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={copyHTMLVersion}
+                          >
+                            <Code className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar HTML</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -619,31 +630,65 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                                 </Button>
                               </>
                             ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => startEditing(description)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => startEditing(description)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar</TooltipContent>
+                                </Tooltip>
                                 {description.external_link && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => window.open(description.external_link, '_blank')}
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => window.open(description.external_link, '_blank')}
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Link Canva</TooltipContent>
+                                  </Tooltip>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => copyToClipboard(formatDescription(description.content))}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyToClipboard(formatDescription(description.content))}
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar Texto</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const htmlContent = generateHTMLVersion(description.content);
+                                        navigator.clipboard.writeText(htmlContent);
+                                        toast({
+                                          title: "HTML Copiado!",
+                                          description: "Versão HTML da descrição copiada.",
+                                        });
+                                      }}
+                                    >
+                                      <Code className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar HTML</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>

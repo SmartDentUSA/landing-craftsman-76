@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Copy, Edit, Save, X, Zap, FileText, ExternalLink } from "lucide-react";
+import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -445,43 +446,66 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                       {feedCopy.length} caracteres
                     </span>
                     <div className="flex gap-2">
-                      {feedCopy && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(feedCopy)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          {feedLink && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(feedLink, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyHTMLVersion(feedCopy, 'feed')}
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
                       {!editingFeed ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingFeed(true)}
-                          disabled={!feedCopy}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        <TooltipProvider>
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingFeed(true)}
+                                  disabled={!feedCopy}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
+                            {feedLink && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(feedLink, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Link Canva</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {feedCopy && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyToClipboard(feedCopy)}
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar Texto</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyHTMLVersion(feedCopy, 'feed')}
+                                    >
+                                      <Code className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar HTML</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
+                          </>
+                        </TooltipProvider>
                       ) : (
                         <div className="flex gap-2">
                           <Button
@@ -537,43 +561,66 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                       {storyCopy.length} caracteres
                     </span>
                     <div className="flex gap-2">
-                      {storyCopy && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(storyCopy)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          {storyLink && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(storyLink, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyHTMLVersion(storyCopy, 'story')}
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
                       {!editingStory ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingStory(true)}
-                          disabled={!storyCopy}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        <TooltipProvider>
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingStory(true)}
+                                  disabled={!storyCopy}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
+                            {storyLink && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(storyLink, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Link Canva</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {storyCopy && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyToClipboard(storyCopy)}
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar Texto</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyHTMLVersion(storyCopy, 'story')}
+                                    >
+                                      <Code className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar HTML</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
+                          </>
+                        </TooltipProvider>
                       ) : (
                         <div className="flex gap-2">
                           <Button
@@ -629,43 +676,66 @@ export function InstagramCopyGenerator({ productId, productName, isOpen, onClose
                       {reelsCopy.length} caracteres
                     </span>
                     <div className="flex gap-2">
-                      {reelsCopy && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(reelsCopy)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          {reelsLink && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(reelsLink, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyHTMLVersion(reelsCopy, 'reels')}
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
                       {!editingReels ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingReels(true)}
-                          disabled={!reelsCopy}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        <TooltipProvider>
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingReels(true)}
+                                  disabled={!reelsCopy}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
+                            {reelsLink && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(reelsLink, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Link Canva</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {reelsCopy && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyToClipboard(reelsCopy)}
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar Texto</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => copyHTMLVersion(reelsCopy, 'reels')}
+                                    >
+                                      <Code className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copiar HTML</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
+                          </>
+                        </TooltipProvider>
                       ) : (
                         <div className="flex gap-2">
                           <Button
