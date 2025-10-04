@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Copy, Edit, Save, X, Zap, FileText } from "lucide-react";
+import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TikTokCopy {
   id: string;
@@ -30,6 +32,9 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
   const [videoScript, setVideoScript] = useState('');
   const [hookText, setHookText] = useState('');
   const [ctaText, setCtaText] = useState('');
+  const [scriptLink, setScriptLink] = useState('');
+  const [hookLink, setHookLink] = useState('');
+  const [ctaLink, setCtaLink] = useState('');
   const [editingScript, setEditingScript] = useState(false);
   const [editingHook, setEditingHook] = useState(false);
   const [editingCta, setEditingCta] = useState(false);
@@ -61,6 +66,9 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         setVideoScript(latestCopy.video_script || '');
         setHookText(latestCopy.hook || '');
         setCtaText(latestCopy.call_to_action || '');
+        setScriptLink(latestCopy.script_link || '');
+        setHookLink(latestCopy.hook_link || '');
+        setCtaLink(latestCopy.cta_link || '');
       }
     } catch (error) {
       console.error('Erro ao carregar conteúdo TikTok:', error);
@@ -251,7 +259,7 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
     }
   };
 
-  const saveContent = async (type: 'script' | 'hook' | 'cta', content: string) => {
+  const saveContent = async (type: 'script' | 'hook' | 'cta', content: string, link?: string) => {
     try {
       const { data: existingData } = await supabase
         .from('products_repository')
@@ -268,6 +276,9 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
           video_script: type === 'script' ? content : videoScript,
           hook: type === 'hook' ? content : hookText,
           call_to_action: type === 'cta' ? content : ctaText,
+          script_link: type === 'script' ? (link || '') : scriptLink,
+          hook_link: type === 'hook' ? (link || '') : hookLink,
+          cta_link: type === 'cta' ? (link || '') : ctaLink,
           hashtags: [],
           trending_references: [],
           generated_at: new Date().toISOString(),
@@ -277,9 +288,18 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         // Atualiza copy existente
         const latestCopy = { ...existingContent.copies[0] };
         
-        if (type === 'script') latestCopy.video_script = content;
-        if (type === 'hook') latestCopy.hook = content;
-        if (type === 'cta') latestCopy.call_to_action = content;
+        if (type === 'script') {
+          latestCopy.video_script = content;
+          latestCopy.script_link = link || '';
+        }
+        if (type === 'hook') {
+          latestCopy.hook = content;
+          latestCopy.hook_link = link || '';
+        }
+        if (type === 'cta') {
+          latestCopy.call_to_action = content;
+          latestCopy.cta_link = link || '';
+        }
         
         existingContent.copies[0] = latestCopy;
       }
@@ -364,49 +384,115 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                     placeholder="O hook será gerado aqui..."
                     readOnly={!editingHook}
                   />
+                  <Input
+                    type="url"
+                    placeholder="URL do link externo (Canva, etc.)"
+                    value={hookLink}
+                    onChange={(e) => setHookLink(e.target.value)}
+                    className="mt-2"
+                    disabled={!editingHook}
+                  />
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       {hookText.length} caracteres
                     </span>
                     <div className="flex gap-2">
                       {hookText && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(hookText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyToClipboard(hookText)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar Texto</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {hookLink && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(hookLink, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Link Canva</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {hookText && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyHTMLVersion({ hook: hookText, script: '', cta: '' })}
+                              >
+                                <Code className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar HTML</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                       {!editingHook ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingHook(true)}
-                          disabled={!hookText}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingHook(true)}
+                                disabled={!hookText}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              saveContent('hook', hookText);
-                              setEditingHook(false);
-                            }}
-                          >
-                            <Save className="h-4 w-4" />
-                            Salvar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingHook(false)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    saveContent('hook', hookText, hookLink);
+                                    setEditingHook(false);
+                                  }}
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Salvar</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingHook(false)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancelar</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       )}
                     </div>
@@ -427,49 +513,115 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                     placeholder="O script do vídeo será gerado aqui..."
                     readOnly={!editingScript}
                   />
+                  <Input
+                    type="url"
+                    placeholder="URL do link externo (Canva, etc.)"
+                    value={scriptLink}
+                    onChange={(e) => setScriptLink(e.target.value)}
+                    className="mt-2"
+                    disabled={!editingScript}
+                  />
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       {videoScript.length} caracteres
                     </span>
                     <div className="flex gap-2">
                       {videoScript && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(videoScript)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyToClipboard(videoScript)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar Texto</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {scriptLink && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(scriptLink, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Link Canva</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {videoScript && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyHTMLVersion({ hook: '', script: videoScript, cta: '' })}
+                              >
+                                <Code className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar HTML</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                       {!editingScript ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingScript(true)}
-                          disabled={!videoScript}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingScript(true)}
+                                disabled={!videoScript}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              saveContent('script', videoScript);
-                              setEditingScript(false);
-                            }}
-                          >
-                            <Save className="h-4 w-4" />
-                            Salvar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingScript(false)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    saveContent('script', videoScript, scriptLink);
+                                    setEditingScript(false);
+                                  }}
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Salvar</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingScript(false)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancelar</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       )}
                     </div>
@@ -490,49 +642,115 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                     placeholder="O call-to-action será gerado aqui..."
                     readOnly={!editingCta}
                   />
+                  <Input
+                    type="url"
+                    placeholder="URL do link externo (Canva, etc.)"
+                    value={ctaLink}
+                    onChange={(e) => setCtaLink(e.target.value)}
+                    className="mt-2"
+                    disabled={!editingCta}
+                  />
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       {ctaText.length} caracteres
                     </span>
                     <div className="flex gap-2">
                       {ctaText && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(ctaText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyToClipboard(ctaText)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar Texto</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {ctaLink && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(ctaLink, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Link Canva</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {ctaText && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyHTMLVersion({ hook: '', script: '', cta: ctaText })}
+                              >
+                                <Code className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar HTML</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                       {!editingCta ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingCta(true)}
-                          disabled={!ctaText}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingCta(true)}
+                                disabled={!ctaText}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              saveContent('cta', ctaText);
-                              setEditingCta(false);
-                            }}
-                          >
-                            <Save className="h-4 w-4" />
-                            Salvar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingCta(false)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    saveContent('cta', ctaText, ctaLink);
+                                    setEditingCta(false);
+                                  }}
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Salvar</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingCta(false)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancelar</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       )}
                     </div>
@@ -543,18 +761,23 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
               {/* Botão para copiar versão HTML completa */}
               {(videoScript || hookText || ctaText) && (
                 <div className="flex justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => copyHTMLVersion({
-                      script: videoScript,
-                      hook: hookText,
-                      cta: ctaText
-                    })}
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Copiar Versão HTML Completa
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          onClick={() => copyHTMLVersion({
+                            script: videoScript,
+                            hook: hookText,
+                            cta: ctaText
+                          })}
+                        >
+                          <Code className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copiar HTML Completo</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               )}
             </>
