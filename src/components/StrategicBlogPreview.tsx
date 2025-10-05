@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Copy, ExternalLink } from "lucide-react";
 import { useProductBlogsIntegration } from "@/hooks/useProductBlogsIntegration";
-import { supabase } from "@/integrations/supabase/client";
+import { useSEOHTMLGenerator } from "@/hooks/useSEOHTMLGenerator";
+import { getLatestSEOContext } from "@/services/seoContextStore";
 
 interface BlogData {
   title?: string;
@@ -19,6 +20,7 @@ interface StrategicBlogPreviewProps {
   approvedLandingPages: any[];
   selectedProductIds?: string[];
   refreshKey?: number;
+  landingPageId: string;
 }
 
 export function StrategicBlogPreview({
@@ -27,12 +29,14 @@ export function StrategicBlogPreview({
   approvedLandingPages,
   selectedProductIds = [],
   refreshKey = 0,
+  landingPageId,
 }: StrategicBlogPreviewProps) {
   const [previewDentalaHTML, setPreviewDentalaHTML] = useState("");
   const [previewEodontoHTML, setPreviewEodontoHTML] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
+  const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
 
   // Debounce para regeneração automática
   const [debounceTick, setDebounceTick] = useState(0);
@@ -45,7 +49,7 @@ export function StrategicBlogPreview({
     return () => clearTimeout(timer);
   }, [refreshKey, dentalaData, eodontoData]);
 
-  const generateConsolidatedHTML = useCallback(async (domain: 'dentala' | 'eodonto') => {
+  const generateHTML = useCallback(async (domain: 'dentala' | 'eodonto') => {
     try {
       const strategicBlog = domain === 'dentala' ? dentalaData : eodontoData;
       
@@ -62,143 +66,37 @@ export function StrategicBlogPreview({
 
       // Buscar blogs de produtos para o domínio
       const productBlogs = productBlogsForHTMLByDomain(domain);
+      
+      // Buscar SEO Context do Supabase
+      const seoContext = await getLatestSEOContext(landingPageId);
 
       console.log(`🔍 Gerando preview consolidado ${domain}:`, {
         strategicTitle: strategicBlog.title,
-        productBlogsCount: productBlogs.length
+        productBlogsCount: productBlogs.length,
+        hasSEOContext: !!seoContext
       });
 
-      // Consolidar: strategic blog PRIMEIRO, depois product blogs
-      const allBlogs = [
-        {
-          title: strategicBlog.title || `Blog Estratégico ${domain}`,
-          content: strategicBlog.content,
-          keywords: Array.isArray(strategicBlog.keywords) 
-            ? strategicBlog.keywords 
-            : typeof strategicBlog.keywords === 'string' 
-              ? [strategicBlog.keywords] 
-              : [],
-          type: 'strategic'
-        },
-        ...productBlogs.map(pb => ({
-          title: pb.title,
-          content: pb.content,
-          keywords: [],
-          type: pb.type,
-          productName: pb.productName
-        }))
-      ];
-
-      // Gerar HTML consolidado simples
-      const blogsHTML = allBlogs.map((blog, index) => `
-        <article style="margin-bottom: 60px; padding-bottom: 40px; ${index < allBlogs.length - 1 ? 'border-bottom: 2px solid #eee;' : ''}">
-          <header style="margin-bottom: 24px;">
-            <h2 style="font-size: 28px; color: #1a1a1a; margin-bottom: 12px; line-height: 1.3;">
-              ${blog.title}
-            </h2>
-            ${blog.type === 'strategic' ? '<span style="display: inline-block; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">Blog Estratégico</span>' : ''}
-            ${blog.type === 'commercial' ? '<span style="display: inline-block; background: #10b981; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">Comercial</span>' : ''}
-            ${blog.type === 'technical' ? '<span style="display: inline-block; background: #6366f1; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase;">Técnico</span>' : ''}
-          </header>
-          <div style="line-height: 1.8; color: #333;">
-            ${blog.content}
-          </div>
-        </article>
-      `).join('\n');
-
-      const html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${strategicBlog.title || `Preview Consolidado ${domain}`}</title>
-  <meta name="description" content="${strategicBlog.meta_description || ''}">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f9fafb;
-      padding: 0;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      background: white;
-      padding: 40px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .header {
-      text-align: center;
-      padding-bottom: 40px;
-      border-bottom: 3px solid #3b82f6;
-      margin-bottom: 60px;
-    }
-    .header h1 {
-      font-size: 42px;
-      color: #1a1a1a;
-      margin-bottom: 16px;
-      line-height: 1.2;
-    }
-    .header .meta {
-      color: #666;
-      font-size: 14px;
-      margin-top: 12px;
-    }
-    .header .badge {
-      display: inline-block;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      padding: 8px 20px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-top: 16px;
-    }
-    h2 { font-size: 28px; color: #1a1a1a; margin: 32px 0 16px; }
-    h3 { font-size: 22px; color: #333; margin: 24px 0 12px; }
-    p { margin-bottom: 16px; }
-    ul, ol { margin: 16px 0 16px 24px; }
-    li { margin-bottom: 8px; }
-    strong { color: #1a1a1a; }
-    a { color: #3b82f6; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .footer {
-      margin-top: 80px;
-      padding-top: 40px;
-      border-top: 2px solid #eee;
-      text-align: center;
-      color: #666;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>${strategicBlog.title || `Preview Consolidado ${domain}`}</h1>
-      <div class="meta">
-        ${strategicBlog.meta_description || ''}
-      </div>
-      <div class="badge">${domain.toUpperCase()}.COM.BR</div>
-      <div class="meta" style="margin-top: 20px;">
-        📝 ${allBlogs.length} artigo${allBlogs.length > 1 ? 's' : ''} consolidado${allBlogs.length > 1 ? 's' : ''}
-        ${productBlogs.length > 0 ? ` • ${productBlogs.length} produto${productBlogs.length > 1 ? 's' : ''}` : ''}
-      </div>
-    </div>
-
-    ${blogsHTML}
-
-    <div class="footer">
-      <p>Gerado em ${new Date().toLocaleString('pt-BR')}</p>
-      <p style="margin-top: 8px;">Preview Consolidado • ${domain.toUpperCase()}</p>
-    </div>
-  </div>
-</body>
-</html>`;
+      // Usar generateConsolidatedBlogHTML do hook robusto
+      const html = await generateConsolidatedBlogHTML({
+        title: strategicBlog.title || `Blog Consolidado ${domain}`,
+        description: strategicBlog.meta_description || '',
+        domain: domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br',
+        blogs: [
+          ...(seoContext ? [{
+            title: 'Blog Estratégico',
+            content: seoContext.baseTextMarkdown || '',
+            keywords: seoContext.aiKeywords?.map(k => k.term) || [],
+          }] : []),
+          ...productBlogs.map(pb => ({
+            title: pb.title,
+            content: pb.content,
+            productName: pb.productName,
+            keywords: [],
+          }))
+        ],
+        landingPageIdForSEOContext: landingPageId,
+        preview: true,
+      });
 
       return html;
     } catch (error) {
@@ -212,15 +110,15 @@ export function StrategicBlogPreview({
         </body>
         </html>`;
     }
-  }, [dentalaData, eodontoData, productBlogsForHTMLByDomain]);
+  }, [dentalaData, eodontoData, productBlogsForHTMLByDomain, landingPageId, generateConsolidatedBlogHTML]);
 
   const doGenerateAll = useCallback(async () => {
     try {
       setIsGenerating(true);
       
       const [dentalaHTML, eodontoHTML] = await Promise.all([
-        generateConsolidatedHTML('dentala'),
-        generateConsolidatedHTML('eodonto')
+        generateHTML('dentala'),
+        generateHTML('eodonto')
       ]);
 
       setPreviewDentalaHTML(dentalaHTML);
@@ -240,7 +138,7 @@ export function StrategicBlogPreview({
     } finally {
       setIsGenerating(false);
     }
-  }, [generateConsolidatedHTML]);
+  }, [generateHTML]);
 
   // Gera ao montar e quando debounceTick muda
   useEffect(() => {

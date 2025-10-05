@@ -7096,6 +7096,7 @@ dataLayer = [{
                     approvedLandingPages={landingPages?.filter(lp => lp.status === 'approved') || []}
                     selectedProductIds={selectedProductIds}
                     refreshKey={strategicBlogRefreshKey}
+                    landingPageId={id || ''}
                   />
                 </div>
               </div>
