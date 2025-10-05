@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings, Zap, Globe, ShoppingCart, History, RotateCcw } from "lucide-react";
+import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings, Zap, Globe, ShoppingCart, History, RotateCcw, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePromptsConfiguration } from "@/hooks/usePromptsConfiguration";
@@ -51,6 +52,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [autoLinksEnabled, setAutoLinksEnabled] = useState(true);
   const [previewContent, setPreviewContent] = useState("");
   const [previewLinksCount, setPreviewLinksCount] = useState(0);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [versionToDelete, setVersionToDelete] = useState<{ domain: 'dentala' | 'eodonto', index: number } | null>(null);
   
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
@@ -311,6 +314,85 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     });
   };
 
+  const deleteVersion = async (domain: 'dentala' | 'eodonto', versionIndex: number) => {
+    try {
+      const targetDomain = domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br';
+      const history = domain === 'dentala' ? dentalaHistory : eodontoHistory;
+      
+      // Validações
+      if (versionIndex === 0) {
+        toast({
+          title: "Ação não permitida",
+          description: "Não é possível excluir a versão atual.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (history.length < 2) {
+        toast({
+          title: "Ação não permitida",
+          description: "É necessário manter pelo menos uma versão.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Buscar o blog atual
+      const { data: existing } = await supabase
+        .from('blog_posts')
+        .select('id, version_history')
+        .eq('landing_page_id', landingPageId)
+        .contains('published_domains', [targetDomain])
+        .maybeSingle();
+        
+      if (!existing) {
+        throw new Error('Blog não encontrado');
+      }
+      
+      // Remover a versão do array
+      const currentHistory = (existing.version_history as any)?.versions || [];
+      const updatedVersions = currentHistory.filter((_: any, i: number) => i !== versionIndex);
+      
+      // Atualizar no Supabase
+      const { error: updateError } = await supabase
+        .from('blog_posts')
+        .update({
+          version_history: { versions: updatedVersions }
+        })
+        .eq('id', existing.id);
+        
+      if (updateError) throw updateError;
+      
+      // Atualizar estado local
+      if (domain === 'dentala') {
+        setDentalaHistory(updatedVersions);
+      } else {
+        setEodontoHistory(updatedVersions);
+      }
+      
+      toast({
+        title: "Versão excluída",
+        description: `Versão ${versionIndex + 1} foi removida do histórico.`,
+      });
+      
+      setDeleteDialogOpen(false);
+      setVersionToDelete(null);
+    } catch (error: any) {
+      console.error('Erro ao deletar versão:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Não foi possível excluir a versão.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openDeleteDialog = (domain: 'dentala' | 'eodonto', index: number) => {
+    setVersionToDelete({ domain, index });
+    setDeleteDialogOpen(true);
+  };
+
   const updateDentalaBlog = (field: keyof BlogPost, value: any) => {
     setDentalaBlogPost(prev => prev ? ({ ...prev, [field]: value }) : null);
     if (field === 'content' && autoLinksEnabled && value) {
@@ -519,14 +601,24 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                                   </p>
                                 </div>
                                 {index > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => restoreVersion('dentala', version)}
-                                  >
-                                    <RotateCcw className="h-3 w-3 mr-1" />
-                                    Restaurar
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => restoreVersion('dentala', version)}
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-1" />
+                                      Restaurar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => openDeleteDialog('dentala', index)}
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-1" />
+                                      Excluir
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -610,14 +702,24 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                                   </p>
                                 </div>
                                 {index > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => restoreVersion('eodonto', version)}
-                                  >
-                                    <RotateCcw className="h-3 w-3 mr-1" />
-                                    Restaurar
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => restoreVersion('eodonto', version)}
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-1" />
+                                      Restaurar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => openDeleteDialog('eodonto', index)}
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-1" />
+                                      Excluir
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -663,6 +765,33 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
           />
         </AccordionContent>
       </AccordionItem>
+
+      {/* Diálogo de Confirmação de Exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a <strong>Versão {(versionToDelete?.index || 0) + 1}</strong> do histórico?
+              <br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (versionToDelete) {
+                  deleteVersion(versionToDelete.domain, versionToDelete.index);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Accordion>
   );
 }
