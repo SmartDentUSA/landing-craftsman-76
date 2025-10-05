@@ -1136,20 +1136,90 @@ const EditorContent = () => {
           return;
         }
 
-        console.log(`📊 [Editor] Total de blogs encontrados: ${blogs?.length || 0}`);
+        console.log('📊 [Editor] Blogs carregados do banco:', {
+          total: blogs?.length || 0,
+          blogs: blogs?.map((b: any) => ({
+            id: b.id?.substring(0, 8),
+            title: b.title?.substring(0, 40),
+            domains: b.published_domains,
+            contentLength: b.content?.length || 0,
+            status: b.status
+          }))
+        });
 
-        const domainMatches = (domains: unknown, target: string) =>
-          Array.isArray(domains) && (domains as string[]).includes(target);
+        /**
+         * Verifica se um domínio está presente no array published_domains
+         * Suporta comparação flexível (com/sem www, http/https)
+         */
+        const domainMatches = (publishedDomains: unknown, targetDomain: string): boolean => {
+          if (!publishedDomains || !Array.isArray(publishedDomains)) {
+            console.warn('⚠️ [domainMatches] published_domains inválido:', publishedDomains);
+            return false;
+          }
+          
+          const normalize = (domain: string) => domain
+            .toLowerCase()
+            .replace(/^https?:\/\//, '') // remove protocolo
+            .replace(/^www\./, '') // remove www
+            .replace(/\/$/, '') // remove trailing slash
+            .trim();
+          
+          const normalizedTarget = normalize(targetDomain);
+          
+          const matches = (publishedDomains as string[]).some(d => {
+            const normalized = normalize(d);
+            const isMatch = normalized === normalizedTarget;
+            if (isMatch) {
+              console.log(`✅ [domainMatches] Match encontrado: "${d}" ≈ "${targetDomain}"`);
+            }
+            return isMatch;
+          });
+          
+          return matches;
+        };
 
-        const dentalaBlog = blogs?.find((b: any) =>
+        // Camada 1: Matching por published_domains (método principal)
+        let dentalaBlog = blogs?.find((b: any) =>
           domainMatches(b.published_domains, 'dentala.com.br')
         );
-        const eodontoBlog = blogs?.find((b: any) =>
+        let eodontoBlog = blogs?.find((b: any) =>
           domainMatches(b.published_domains, 'eodonto.com.br')
         );
 
-        console.log(`✅ [Editor] Dentala encontrado: ${!!dentalaBlog}`);
-        console.log(`✅ [Editor] Eodonto encontrado: ${!!eodontoBlog}`);
+        // Camada 2: Fallback por título (se published_domains falhar)
+        if (!dentalaBlog && blogs?.length > 0) {
+          dentalaBlog = blogs.find((b: any) => 
+            b.title?.toLowerCase().includes('dentala')
+          );
+          if (dentalaBlog) {
+            console.warn('⚠️ [Editor] Dentala encontrado via fallback de título:', dentalaBlog.title);
+          }
+        }
+
+        if (!eodontoBlog && blogs?.length > 0) {
+          eodontoBlog = blogs.find((b: any) => 
+            b.title?.toLowerCase().includes('eodonto')
+          );
+          if (eodontoBlog) {
+            console.warn('⚠️ [Editor] Eodonto encontrado via fallback de título:', eodontoBlog.title);
+          }
+        }
+
+        // Camada 3: Fallback por índice (última chance se houver exatamente 2 blogs)
+        if ((!dentalaBlog || !eodontoBlog) && blogs?.length === 2) {
+          console.warn('⚠️ [Editor] Usando fallback de índice (assumindo blog[0]=Dentala, blog[1]=Eodonto)');
+          dentalaBlog = dentalaBlog || blogs[0];
+          eodontoBlog = eodontoBlog || blogs[1];
+        }
+
+        console.log('🎯 [Editor] Resultado final da busca:', {
+          dentalaEncontrado: !!dentalaBlog,
+          dentalaTitle: dentalaBlog?.title?.substring(0, 50),
+          dentalaDomains: dentalaBlog?.published_domains,
+          eodontoEncontrado: !!eodontoBlog,
+          eodontoTitle: eodontoBlog?.title?.substring(0, 50),
+          eodontoDomains: eodontoBlog?.published_domains
+        });
 
         if (dentalaBlog) {
           setDentalaBlogPost({
