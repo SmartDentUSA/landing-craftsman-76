@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
@@ -44,6 +44,7 @@ import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
+import { SEOIntelligentCard } from "@/components/SEOIntelligentCard";
 
 // ✅ PATCH 0.2: Estados para Blogs Estratégicos (Dentala + Eodonto)
 interface BlogPost {
@@ -3978,6 +3979,14 @@ const EditorContent = () => {
                     </div>
                       </>
                     )}
+                  </AccordionContent>
+                 </AccordionItem>
+
+                {/* SEO Inteligente com IA */}
+                <AccordionItem value="seo-intelligent">
+                  <AccordionTrigger>🔮 SEO Inteligente com IA</AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <SEOIntelligentCard landingPageId={id || ''} />
                   </AccordionContent>
                 </AccordionItem>
 

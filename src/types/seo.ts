@@ -35,3 +35,13 @@ export interface SEOContext {
   updatedAt: string;
   locale?: 'pt_BR';
 }
+
+// Interface para SEO Inteligente persistido em landing_pages.data
+export interface SEOIntelligentContext {
+  enabled: boolean;
+  generated_at: string;
+  base_text_markdown: string;
+  ai_keywords: KeywordSuggestion[];
+  resolved_keywords: KeywordResolution[];
+  locale: 'pt_BR';
+}

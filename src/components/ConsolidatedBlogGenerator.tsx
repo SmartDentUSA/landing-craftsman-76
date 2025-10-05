@@ -33,50 +33,6 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
     try {
       setGenerating(true);
       
-      // 🧪 TESTE TEMPORÁRIO - Mock SEO Context para validação
-      try {
-        if (landingPageId) {
-          const { saveSEOContext } = await import('@/services/seoContextStore');
-          await saveSEOContext({
-            landingPageId,
-            baseTextMarkdown: `## Insights Estratégicos sobre Impressão 3D
-
-A **impressão 3D odontológica** revolucionou os fluxos de trabalho digitais em consultórios e laboratórios.
-
-**Principais benefícios:**
-- Precisão dimensional superior a 25 mícrons
-- Redução de 70% no tempo de produção de guias cirúrgicas
-- Biocompatibilidade certificada para uso intraoral
-
-Nossos scanners intraorais integram perfeitamente com impressoras UV.`,
-            aiKeywords: [
-              { term: 'impressão 3D odontológica' } as any,
-              { term: 'scanners intraorais' } as any,
-            ],
-            resolvedKeywords: [
-              {
-                source: 'Repository',
-                term: 'impressão 3D odontológica',
-                matched: true,
-                url: '/impressao-3d',
-                chosenAlias: 'impressão 3D odontológica',
-                status: 'approved',
-              },
-              {
-                source: 'Repository',
-                term: 'scanners intraorais',
-                matched: true,
-                url: '/scanners',
-                chosenAlias: 'scanners intraorais',
-                status: 'approved',
-              },
-            ],
-          });
-          console.log('🧪 Dados de teste salvos no SEO Context para:', landingPageId);
-        }
-      } catch (e) {
-        console.warn('Mock SEO Context falhou (ok em prod):', e);
-      }
       
       // Get blogs for the specific domain, optionally filtered by landing page
       const blogsForDomain = productBlogsForHTMLByDomain(domain, landingPageId);
