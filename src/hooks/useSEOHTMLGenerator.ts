@@ -669,7 +669,11 @@ export const useSEOHTMLGenerator = () => {
 </html>`;
   }, [generateCompletePageSchema]);
 
-  const generateConsolidatedBlogHTML = useCallback(async (options: ConsolidatedBlogOptions): Promise<string> => {
+  const generateConsolidatedBlogHTML = useCallback(async (options: ConsolidatedBlogOptions & {
+    excludeMetaInfo?: boolean;
+    excludeFooter?: boolean;
+    excludeSubtitle?: boolean;
+  }): Promise<string> => {
     const { 
       title, 
       description, 
@@ -683,7 +687,10 @@ export const useSEOHTMLGenerator = () => {
       ogImage, 
       seoHiddenData,
       landingPageIdForSEOContext,
-      preview = false
+      preview = false,
+      excludeMetaInfo = true,
+      excludeFooter = true,
+      excludeSubtitle = true,
     } = options;
 
     // ============= PATCH 1: Funções de Sanitização =============
@@ -1507,10 +1514,10 @@ export const useSEOHTMLGenerator = () => {
   <div class="container">
     <div class="header">
       <h1>${title}</h1>
-      <div class="subtitle">${description}</div>
-      <div class="meta-info">
+      ${excludeSubtitle ? '' : `<div class="subtitle">${description}</div>`}
+      ${excludeMetaInfo ? '' : `<div class="meta-info">
         ${blogs.length} artigo${blogs.length > 1 ? 's' : ''} • Publicado em ${new Date().toLocaleDateString('pt-BR')} • ${domain}
-      </div>
+      </div>`}
     </div>
     
     
@@ -1530,11 +1537,11 @@ export const useSEOHTMLGenerator = () => {
     </section>
     ` : ''}
     
-    <footer>
+    ${excludeFooter ? '' : `<footer>
       <p>&copy; ${new Date().getFullYear()} ${domain}. Todos os direitos reservados.</p>
       <p><small>Conteúdo gerado com tecnologia avançada de SEO</small></p>
       <p><small>URL: ${canonicalUrl}</small></p>
-    </footer>
+    </footer>`}
   </div>
   
   <script>

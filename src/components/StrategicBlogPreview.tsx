@@ -96,6 +96,9 @@ export function StrategicBlogPreview({
         ],
         landingPageIdForSEOContext: landingPageId,
         preview: true,
+        excludeMetaInfo: true,
+        excludeFooter: true,
+        excludeSubtitle: true
       });
 
       return html;

@@ -65,6 +65,78 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     loadDualBlogs();
   }, [landingPageId]);
 
+  const createVersionEntries = async (data: any) => {
+    try {
+      const now = new Date().toISOString();
+      
+      // Dentala version
+      const { data: existingDentala } = await supabase
+        .from('blog_posts')
+        .select('id, version_history')
+        .eq('landing_page_id', landingPageId)
+        .contains('published_domains', ['dentala.com.br'])
+        .maybeSingle();
+      
+      if (existingDentala) {
+        const newDentalaVersion = {
+          id: crypto.randomUUID(),
+          title: data.dentala.title || 'Blog Estratégico',
+          content: data.dentala.content || '',
+          meta_description: data.dentala.meta_description || '',
+          keywords: data.dentala.keywords || [],
+          generated_at: now,
+          ai_source: data.dentala.selectedAPI || 'strategic-generator',
+          domain: 'dentala.com.br'
+        };
+        
+        const updatedDentalaHistory = {
+          versions: [newDentalaVersion, ...((existingDentala.version_history as any)?.versions || [])].slice(0, 10)
+        };
+        
+        await supabase.from('blog_posts').update({
+          version_history: updatedDentalaHistory
+        }).eq('id', existingDentala.id);
+        
+        setDentalaHistory(updatedDentalaHistory.versions);
+      }
+      
+      // Eodonto version
+      const { data: existingEodonto } = await supabase
+        .from('blog_posts')
+        .select('id, version_history')
+        .eq('landing_page_id', landingPageId)
+        .contains('published_domains', ['eodonto.com.br'])
+        .maybeSingle();
+      
+      if (existingEodonto) {
+        const newEodontoVersion = {
+          id: crypto.randomUUID(),
+          title: data.eodonto.title || 'Blog Estratégico',
+          content: data.eodonto.content || '',
+          meta_description: data.eodonto.meta_description || '',
+          keywords: data.eodonto.keywords || [],
+          generated_at: now,
+          ai_source: data.eodonto.selectedAPI || 'strategic-generator',
+          domain: 'eodonto.com.br'
+        };
+        
+        const updatedEodontoHistory = {
+          versions: [newEodontoVersion, ...((existingEodonto.version_history as any)?.versions || [])].slice(0, 10)
+        };
+        
+        await supabase.from('blog_posts').update({
+          version_history: updatedEodontoHistory
+        }).eq('id', existingEodonto.id);
+        
+        setEodontoHistory(updatedEodontoHistory.versions);
+      }
+      
+      console.log('✅ Versões criadas automaticamente no histórico');
+    } catch (error) {
+      console.error('❌ Erro ao criar versões:', error);
+    }
+  };
+
   const loadDualBlogs = async () => {
     try {
       console.log('🔍 Carregando blogs duais...');
@@ -184,6 +256,9 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       if (data?.dentala && data?.eodonto) {
         // Carregar dados salvos do banco
         await loadDualBlogs();
+        
+        // Create version history entries for auto-generated content
+        await createVersionEntries(data);
         
         setBlogGenerated(true);
 

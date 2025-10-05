@@ -50,11 +50,18 @@ export async function saveSEOContext(payload: SaveSEOContextPayload): Promise<SE
     locale: payload.locale ?? 'pt_BR',
   };
   
-  // Merge with existing data
+  // Merge with existing data AND mirror to seo block
   const existingData = (typeof currentLP?.data === 'object' && currentLP?.data !== null) ? currentLP.data : {};
   const updatedData = {
     ...existingData,
     seo_intelligent: seoIntelligent,
+    seo: {
+      ...(existingData as any).seo,
+      seo_hidden_content: payload.baseTextMarkdown,
+      ai_keywords: payload.aiKeywords,
+      seo_generated_by_ai: true,
+      ai_seo_enabled: true,
+    }
   } as any;
   
   console.log('💾 [SEO Context] Preparando para salvar:', {

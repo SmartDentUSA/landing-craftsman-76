@@ -154,7 +154,12 @@ interface ProductData {
   source_type?: string;
 }
 
-function generateAIPlaybookJSON(product: ProductData): any {
+function generateAIPlaybookJSON(product: ProductData & { 
+  cs_messages?: any[]; 
+  aftersales_messages?: any[];
+  google_ads_campaigns?: any[];
+  landing_page_context?: any;
+}): any {
   return {
     product_id: product.id,
     basic_info: {
@@ -252,6 +257,28 @@ function generateAIPlaybookJSON(product: ProductData): any {
       },
       cta_descriptions: product.resource_descriptions || {}
     },
+    customer_success: {
+      cs_messages: (product.cs_messages || []).map((msg: any) => ({
+        order: msg.message_order,
+        content: msg.message_content,
+        active: msg.is_active
+      })),
+      aftersales_messages: (product.aftersales_messages || []).map((msg: any) => ({
+        order: msg.message_order,
+        content: msg.message_content,
+        active: msg.is_active
+      }))
+    },
+    ads: {
+      google_ads_campaigns: (product.google_ads_campaigns || []).map((campaign: any) => ({
+        id: campaign.id,
+        type: campaign.campaign_type,
+        config: campaign.config,
+        campaign_history: campaign.campaign_history,
+        last_exported: campaign.last_exported
+      }))
+    },
+    landing_page_context: product.landing_page_context || null,
     customer_service_prompts: [
       `Produto: ${product.name}`,
       `Categoria: ${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`,
@@ -278,7 +305,12 @@ function generateAIPlaybookJSON(product: ProductData): any {
   };
 }
 
-function generatePlaybookTXT(product: ProductData): string {
+function generatePlaybookTXT(product: ProductData & { 
+  cs_messages?: any[]; 
+  aftersales_messages?: any[];
+  google_ads_campaigns?: any[];
+  landing_page_context?: any;
+}): string {
   const json = generateAIPlaybookJSON(product);
   
   return `# PLAYBOOK DO PRODUTO: ${product.name}
@@ -434,6 +466,59 @@ ${product.resource_cta3?.visible ? `3️⃣ ${product.resource_cta3.label || 'CT
 
 ${product.offer_discount_cta?.visible ? `🔥 ${product.offer_discount_cta.label || 'Comprar com Desconto'} → ${product.offer_discount_cta.url || 'URL não definida'}` : '🔥 CTA Desconto: ❌ Não configurado'}
 
+## 💬 MENSAGENS DE CS (CUSTOMER SUCCESS)
+${(product.cs_messages && product.cs_messages.length > 0) ? 
+  product.cs_messages.map((msg: any, idx: number) => 
+    `${idx + 1}. [Ordem ${msg.message_order}] ${msg.message_content}${msg.is_active ? '' : ' (INATIVA)'}`
+  ).join('\n') : '📭 Nenhuma mensagem de CS configurada'}
+
+## 📦 MENSAGENS DE PÓS-VENDA
+${(product.aftersales_messages && product.aftersales_messages.length > 0) ? 
+  product.aftersales_messages.map((msg: any, idx: number) => 
+    `${idx + 1}. [Ordem ${msg.message_order}] ${msg.message_content}${msg.is_active ? '' : ' (INATIVA)'}`
+  ).join('\n') : '📭 Nenhuma mensagem de pós-venda configurada'}
+
+## 📊 CAMPANHAS GOOGLE ADS
+${(product.google_ads_campaigns && product.google_ads_campaigns.length > 0) ?
+  product.google_ads_campaigns.map((campaign: any, idx: number) => `
+${idx + 1}. Campanha ${campaign.campaign_type || 'N/A'}
+   - ID: ${campaign.id}
+   - Última exportação: ${campaign.last_exported || 'Nunca'}
+   - Total de histórico: ${campaign.campaign_history?.campaigns?.length || 0} versões
+   - Configuração: ${JSON.stringify(campaign.config || {}, null, 2).substring(0, 200)}...
+  `).join('\n') : '📭 Nenhuma campanha Google Ads configurada'}
+
+## 🌐 CONTEXTO DA LANDING PAGE
+${product.landing_page_context ? `
+Landing Page: ${product.landing_page_context.landing_page_name || product.landing_page_context.landing_page_id}
+
+### SEO Inteligente:
+${product.landing_page_context.seo_intelligent ? `
+- Habilitado: ${product.landing_page_context.seo_intelligent.enabled ? '✅ Sim' : '❌ Não'}
+- Gerado em: ${product.landing_page_context.seo_intelligent.generated_at || 'N/A'}
+- AI Keywords: ${product.landing_page_context.seo_intelligent.ai_keywords?.length || 0} termos
+- Resolved Keywords: ${product.landing_page_context.seo_intelligent.resolved_keywords?.length || 0} termos
+- Base Text: ${product.landing_page_context.seo_intelligent.base_text_markdown?.substring(0, 150) || 'N/A'}...
+` : '❌ SEO Inteligente não configurado'}
+
+### Bloco SEO:
+${product.landing_page_context.seo ? `
+- Título SEO: ${product.landing_page_context.seo.seo_title || 'N/A'}
+- Descrição SEO: ${product.landing_page_context.seo.seo_description || 'N/A'}
+- AI SEO Enabled: ${product.landing_page_context.seo.ai_seo_enabled ? '✅ Sim' : '❌ Não'}
+- Gerado por IA: ${product.landing_page_context.seo.seo_generated_by_ai ? '✅ Sim' : '❌ Não'}
+` : '❌ Bloco SEO não configurado'}
+
+### Reviews Aprovados:
+Total: ${product.landing_page_context.approved_reviews?.length || 0} reviews
+${product.landing_page_context.approved_reviews?.slice(0, 3).map((review: any, idx: number) => 
+  `${idx + 1}. ${review.contextual_seo_info || 'Sem contexto SEO'}`
+).join('\n') || ''}
+
+### Depoimentos em Vídeo:
+Total: ${product.landing_page_context.video_testimonials?.length || 0} depoimentos aprovados
+` : '❌ Produto não vinculado a uma Landing Page'}
+
 ## 🤖 SCRIPTS PARA ATENDIMENTO IA
 ${json.customer_service_prompts.join('\n')}
 
@@ -579,31 +664,93 @@ serve(async (req) => {
       .select('*')
       .eq('product_id', productId);
 
-    // Attach coupons to product object
-    const productWithCoupons = {
+    // Fetch CS messages
+    const { data: csMessages } = await supabase
+      .from('cs_messages')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('message_order');
+
+    // Fetch aftersales messages
+    const { data: aftersalesMessages } = await supabase
+      .from('aftersales_messages')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('message_order');
+
+    // Fetch Google Ads campaigns
+    const { data: googleAdsCampaigns } = await supabase
+      .from('google_ads_campaigns')
+      .select('*')
+      .eq('product_id', productId);
+
+    // Fetch landing page context if product has source_landing_page_id
+    let landingPageContext: any = null;
+    if (product.source_landing_page_id) {
+      const { data: landingPage } = await supabase
+        .from('landing_pages')
+        .select('id, name, data')
+        .eq('id', product.source_landing_page_id)
+        .single();
+
+      if (landingPage) {
+        const { data: approvedReviews } = await supabase
+          .from('approved_reviews')
+          .select('*')
+          .eq('landing_page_id', product.source_landing_page_id);
+
+        const { data: videoTestimonials } = await supabase
+          .from('video_testimonials')
+          .select('*')
+          .eq('landing_page_id', product.source_landing_page_id)
+          .eq('approved', true);
+
+        landingPageContext = {
+          landing_page_id: landingPage.id,
+          landing_page_name: landingPage.name,
+          seo_intelligent: (landingPage.data as any)?.seo_intelligent || null,
+          seo: (landingPage.data as any)?.seo || null,
+          approved_reviews: approvedReviews || [],
+          video_testimonials: videoTestimonials || []
+        };
+      }
+    }
+
+    // Attach all related data to product object
+    const productWithAllData = {
       ...product,
-      coupons: coupons || []
+      coupons: coupons || [],
+      cs_messages: csMessages || [],
+      aftersales_messages: aftersalesMessages || [],
+      google_ads_campaigns: googleAdsCampaigns || [],
+      landing_page_context: landingPageContext
     };
 
     // Generate content based on format
     let result: any = {};
 
     if (format === 'json' || format === 'both') {
-      result.json = generateAIPlaybookJSON(productWithCoupons);
+      result.json = generateAIPlaybookJSON(productWithAllData);
     }
 
     if (format === 'txt' || format === 'both') {
-      result.txt = generatePlaybookTXT(productWithCoupons);
+      result.txt = generatePlaybookTXT(productWithAllData);
     }
 
     // Add metadata
     result.metadata = {
-      product_name: productWithCoupons.name,
+      product_name: productWithAllData.name,
       export_date: new Date().toISOString(),
-      filename_base: `produto-${productWithCoupons.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-ia-playbook-${new Date().toISOString().split('T')[0]}`
+      filename_base: `produto-${productWithAllData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-ia-playbook-${new Date().toISOString().split('T')[0]}`,
+      has_cs_messages: (csMessages?.length || 0) > 0,
+      has_aftersales_messages: (aftersalesMessages?.length || 0) > 0,
+      has_google_ads: (googleAdsCampaigns?.length || 0) > 0,
+      has_landing_page_context: !!landingPageContext
     };
 
-    console.log(`✅ Product AI playbook generated successfully for: ${productWithCoupons.name}`);
+    console.log(`✅ Product AI playbook generated successfully for: ${productWithAllData.name}`);
 
     return new Response(
       JSON.stringify(result),

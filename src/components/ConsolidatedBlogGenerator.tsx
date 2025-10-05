@@ -147,7 +147,10 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         aggregatedKeywords: aggregatedKeywords,
         ogImage: ogImage,
         seoHiddenData: seoHiddenData,
-        landingPageIdForSEOContext: landingPageId
+        landingPageIdForSEOContext: landingPageId,
+        excludeMetaInfo: true,
+        excludeFooter: true,
+        excludeSubtitle: true
       });
 
       // Copy to clipboard
