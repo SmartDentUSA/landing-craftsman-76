@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
+import { isSEOContextEnabled, logSEODebug } from '@/config/feature-flags';
+import { buildStrategicBlogInput } from '@/services/strategicBlogInput';
+import { stripInternalLabels } from '@/lib/sanitize-internal-labels';
+import { getDomainConfig } from '@/config/domain-config';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -229,6 +233,8 @@ interface ConsolidatedBlogOptions {
     technicalExpertise: string;
     serviceAreas: string;
   };
+  landingPageIdForSEOContext?: string; // PATCH 3: ID para carregar SEO Context
+  preview?: boolean; // PATCH 5: Flag de preview (noindex, sem canonical)
 }
 
 export const useSEOHTMLGenerator = () => {
@@ -663,8 +669,22 @@ export const useSEOHTMLGenerator = () => {
 </html>`;
   }, [generateCompletePageSchema]);
 
-  const generateConsolidatedBlogHTML = useCallback((options: ConsolidatedBlogOptions): string => {
-    const { title, description, domain, blogs, landingPagesSEO, selectedProducts, aggregatedKeywords, landingPageData, includeOffers = false, ogImage, seoHiddenData } = options;
+  const generateConsolidatedBlogHTML = useCallback(async (options: ConsolidatedBlogOptions): Promise<string> => {
+    const { 
+      title, 
+      description, 
+      domain, 
+      blogs, 
+      landingPagesSEO, 
+      selectedProducts, 
+      aggregatedKeywords, 
+      landingPageData, 
+      includeOffers = false, 
+      ogImage, 
+      seoHiddenData,
+      landingPageIdForSEOContext,
+      preview = false
+    } = options;
 
     // Define canonical URL at the beginning
     const canonicalUrl = `https://${domain}.com.br`;
@@ -947,8 +967,50 @@ export const useSEOHTMLGenerator = () => {
         </section>
       `;
     }
+    
+    // PATCH 3: Strategic Blog Input (SEO Context com auto-linking)
+    let strategicBlock = '';
+    if (isSEOContextEnabled() && landingPageIdForSEOContext) {
+      logSEODebug('Tentando carregar SEO Context', { landingPageId: landingPageIdForSEOContext });
+      try {
+        const cfg = getDomainConfig(domain);
+        const strategic = await buildStrategicBlogInput(landingPageIdForSEOContext, cfg.BASE_URL);
+        if (strategic?.baseTextHTML) {
+          logSEODebug('SEO Context carregado com sucesso', { keywordsCount: strategic.keywords.length });
+          const previewStrategic = strategic.baseTextHTML.slice(0, 300);
+          const hasMore = strategic.baseTextHTML.length > 300;
+          
+          strategicBlock = `
+          <section class="blog-item strategic" id="blog-strategic">
+            <h2>
+              <a href="${cfg.BASE_URL}${cfg.BLOG_PATH}" class="blog-link">
+                Insights Estratégicos
+              </a>
+            </h2>
+            <div class="blog-content post-card-content">
+              <div class="preview-content">
+                ${previewStrategic}${hasMore ? '…' : ''}
+              </div>
+              ${hasMore ? `
+                <button class="read-more-btn" aria-expanded="false" aria-controls="full-strategic">
+                  Leia mais →
+                </button>
+                <div id="full-strategic" class="full-content" hidden>
+                  ${strategic.baseTextHTML}
+                </div>
+              ` : ''}
+            </div>
+          </section>`;
+        } else {
+          logSEODebug('SEO Context vazio ou não encontrado');
+        }
+      } catch (err) {
+        console.error('❌ Erro ao compor SEO Context:', err);
+        logSEODebug('Erro ao compor SEO Context', err);
+      }
+    }
 
-    return `<!DOCTYPE html>
+    const finalHTML = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -958,8 +1020,8 @@ export const useSEOHTMLGenerator = () => {
   <!-- SEO Meta Tags -->
   <title>${truncateSEOTitle(title)}</title>
   <meta name="description" content="${description}">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${canonicalUrl}/blog">
+  <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
+  ${preview ? '' : `<link rel="canonical" href="${canonicalUrl}/blog">`}
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
@@ -1466,6 +1528,9 @@ export const useSEOHTMLGenerator = () => {
   </script>
 </body>
 </html>`;
+
+    // PATCH 5: Blindagem final anti-rótulos internos
+    return stripInternalLabels(finalHTML);
   }, []);
 
   const generateEmailWebViewHTML = useCallback((options: {

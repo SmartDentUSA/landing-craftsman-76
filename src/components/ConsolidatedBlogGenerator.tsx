@@ -129,7 +129,7 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         `Conteúdo técnico e comercial consolidado para ${domain} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos`;
 
       // Generate consolidated HTML with full SEO integration
-      const consolidatedHTML = generateConsolidatedBlogHTML({
+      const consolidatedHTML = await generateConsolidatedBlogHTML({
         title: `Blog Consolidado - ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}`,
         description: enhancedDescription,
         domain: domain,

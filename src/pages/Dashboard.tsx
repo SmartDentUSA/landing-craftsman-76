@@ -416,7 +416,7 @@ const DashboardContent = () => {
   }, []);
 
   // Function to generate clean HTML for copying (without preview structure)
-  const generateCleanHTML = useCallback((blogs: BlogPost[], domain: string) => {
+  const generateCleanHTML = useCallback(async (blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
     console.log(`🎨 Generating clean ${domainName} HTML for copying using corrected function`);
     
@@ -455,7 +455,7 @@ const DashboardContent = () => {
     );
 
     // Use the corrected generateConsolidatedBlogHTML function
-    return generateConsolidatedBlogHTML({
+    return await generateConsolidatedBlogHTML({
       title: `Blog ${domainName} - Odontologia Digital`,
       description: `Blog de odontologia digital do ${domainName} com conteúdo especializado e atualizado sobre tecnologia odontológica.`,
       domain: domain,
@@ -802,15 +802,18 @@ const DashboardContent = () => {
   );
 
   // Generate clean HTML for copying (without preview structure)
-  const eodontoCleanHTML = useMemo(() => 
-    generateCleanHTML(blogPosts, 'eodonto'), 
-    [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
-  );
+  const [eodontoCleanHTML, setEodontoCleanHTML] = useState('');
+  const [dentalaCleanHTML, setDentalaCleanHTML] = useState('');
 
-  const dentalaCleanHTML = useMemo(() => 
-    generateCleanHTML(blogPosts, 'dentala'), 
-    [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain]
-  );
+  useEffect(() => {
+    const loadHTML = async () => {
+      const eodonto = await generateCleanHTML(blogPosts, 'eodonto');
+      const dentala = await generateCleanHTML(blogPosts, 'dentala');
+      setEodontoCleanHTML(eodonto);
+      setDentalaCleanHTML(dentala);
+    };
+    loadHTML();
+  }, [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain]);
 
   // Cached clean text extraction for preview
   const eodontoCleanText = useMemo(() => 
