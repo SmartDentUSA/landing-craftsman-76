@@ -1178,6 +1178,27 @@ export const useSEOHTMLGenerator = () => {
       color: var(--primary-color);
     }
     
+    .blog-item.strategic {
+      background: linear-gradient(135deg, hsl(262, 83%, 98%), hsl(262, 83%, 96%));
+      border-left: 4px solid hsl(262, 83%, 58%);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+      margin-bottom: 3rem;
+    }
+    
+    .blog-item.strategic h2 {
+      color: hsl(262, 83%, 48%);
+      font-size: 1.8rem;
+    }
+    
+    .blog-item.strategic .blog-link {
+      color: hsl(262, 83%, 48%);
+      text-decoration: none;
+    }
+    
+    .blog-item.strategic .blog-link:hover {
+      text-decoration: underline;
+    }
+    
     .product-reference {
       background: linear-gradient(135deg, hsl(221, 83%, 98%), hsl(221, 83%, 95%));
       padding: 0.875rem 1.25rem;
@@ -1473,7 +1494,7 @@ export const useSEOHTMLGenerator = () => {
     
     
     <main class="blog-section">
-      ${seoSummary}
+      ${strategicBlock}
       ${blogContents}
     </main>
     
