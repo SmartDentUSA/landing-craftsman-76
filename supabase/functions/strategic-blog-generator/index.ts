@@ -228,9 +228,35 @@ async function loadCustomPrompts(supabase: any, edgeFunctionId: string) {
   return customPrompts;
 }
 
+// ✅ PATCH 0.1: Sanitização de Título (10-60 chars)
+function sanitizeTitle(rawTitle: string, fallback: string = "Blog Estratégico"): string {
+  const clean = (rawTitle || '').trim();
+  
+  // Caso 1: Título muito curto (< 10 chars) → usar fallback
+  if (clean.length < 10) {
+    console.warn(`⚠️ Título muito curto (${clean.length} chars): "${clean}" → usando fallback`);
+    return fallback.substring(0, 60);
+  }
+  
+  // Caso 2: Título muito longo (> 60 chars) → truncar inteligentemente
+  if (clean.length > 60) {
+    console.warn(`⚠️ Título muito longo (${clean.length} chars) → truncando para 60`);
+    // Truncar no último espaço antes de 60 chars (evita cortar palavras)
+    const truncated = clean.substring(0, 60);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 40 ? truncated.substring(0, lastSpace).trim() : truncated.trim();
+  }
+  
+  // Caso 3: Título OK (10-60 chars)
+  return clean;
+}
+
 function extractBlogMetadata(markdown: string) {
   const lines = markdown.split('\n').filter(line => line.trim());
-  const title = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico";
+  const rawTitle = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico";
+  
+  // ✅ Sanitizar título ANTES de retornar
+  const title = sanitizeTitle(rawTitle);
   
   // Extrair primeira seção como meta description
   const firstParagraph = lines.find(line => 

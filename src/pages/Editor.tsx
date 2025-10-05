@@ -45,6 +45,15 @@ import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML 
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
 
+// ✅ PATCH 0.2: Estados para Blogs Estratégicos (Dentala + Eodonto)
+interface BlogPost {
+  title: string;
+  content: string;
+  meta_description: string;
+  keywords: string[];
+  status: string;
+}
+
 // SelFlux mode completely removed - using only standard template engine
 
 // Interface de dados de imagem para o novo sistema
@@ -1013,7 +1022,9 @@ const EditorContent = () => {
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   
-  // State para refresh do preview consolidado de blogs estratégicos
+  // ✅ PATCH 0.2: Estados para Blogs Estratégicos
+  const [dentalaBlogPost, setDentalaBlogPost] = useState<BlogPost | null>(null);
+  const [eodontoBlogPost, setEodontoBlogPost] = useState<BlogPost | null>(null);
   const [strategicBlogRefreshKey, setStrategicBlogRefreshKey] = useState(0);
   
   // State for debounced name input
@@ -1106,6 +1117,83 @@ const EditorContent = () => {
       }
     }
   }, [id, landingPages, getLandingPage]);
+
+  // ✅ PATCH 0.2: Carregar Blogs Estratégicos do Banco
+  useEffect(() => {
+    const loadStrategicBlogs = async () => {
+      if (!id) return;
+
+      try {
+        console.log('🔍 [Editor] Carregando blogs estratégicos para landing page:', id);
+
+        const { data: blogs, error } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('landing_page_id', id);
+
+        if (error) {
+          console.error('❌ [Editor] Erro ao carregar blogs:', error);
+          return;
+        }
+
+        console.log(`📊 [Editor] Total de blogs encontrados: ${blogs?.length || 0}`);
+
+        const domainMatches = (domains: unknown, target: string) =>
+          Array.isArray(domains) && (domains as string[]).includes(target);
+
+        const dentalaBlog = blogs?.find((b: any) =>
+          domainMatches(b.published_domains, 'dentala.com.br')
+        );
+        const eodontoBlog = blogs?.find((b: any) =>
+          domainMatches(b.published_domains, 'eodonto.com.br')
+        );
+
+        console.log(`✅ [Editor] Dentala encontrado: ${!!dentalaBlog}`);
+        console.log(`✅ [Editor] Eodonto encontrado: ${!!eodontoBlog}`);
+
+        if (dentalaBlog) {
+          setDentalaBlogPost({
+            title: dentalaBlog.title || '',
+            content: dentalaBlog.content || '',
+            meta_description: dentalaBlog.meta_description || '',
+            keywords: dentalaBlog.keywords || [],
+            status: dentalaBlog.status || 'draft',
+          });
+        } else {
+          setDentalaBlogPost(null);
+        }
+
+        if (eodontoBlog) {
+          setEodontoBlogPost({
+            title: eodontoBlog.title || '',
+            content: eodontoBlog.content || '',
+            meta_description: eodontoBlog.meta_description || '',
+            keywords: eodontoBlog.keywords || [],
+            status: eodontoBlog.status || 'draft',
+          });
+        } else {
+          setEodontoBlogPost(null);
+        }
+      } catch (error: any) {
+        console.error('❌ [Editor] Erro fatal ao carregar blogs:', error);
+      }
+    };
+
+    loadStrategicBlogs();
+  }, [id, strategicBlogRefreshKey]); // ⚠️ Recarrega quando refreshKey muda
+
+  // ✅ PATCH 0.2: Handler para Reload de Blogs (chamado por BlogEditorSection)
+  const handleStrategicBlogSave = useCallback(async () => {
+    console.log('🔄 [Editor] Recarregando blogs estratégicos após save...');
+    
+    // Incrementar refreshKey para forçar reload do useEffect acima
+    setStrategicBlogRefreshKey(prev => prev + 1);
+    
+    // Aguardar um tick para garantir que o banco commitou
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    console.log('✅ [Editor] Blogs recarregados!');
+  }, []);
 
   // Handler para mudanças na seleção de produtos
   const handleProductSelectionChange = useCallback((productIds: string[]) => {
@@ -6917,15 +7005,15 @@ dataLayer = [{
                     landingPageId={id || ""}
                     landingPageData={data}
                     selectedProductIds={selectedProductIds}
-                    onSave={() => setStrategicBlogRefreshKey(prev => prev + 1)}
+                    onSave={handleStrategicBlogSave}
                   />
                 </div>
 
                 {/* Coluna direita: Preview Consolidado (Dentala + Eodonto) */}
                 <div className="min-h-[60vh] max-h-[calc(100vh-220px)] overflow-y-auto">
                   <StrategicBlogPreview
-                    dentalaData={null}
-                    eodontoData={null}
+                    dentalaData={dentalaBlogPost}
+                    eodontoData={eodontoBlogPost}
                     approvedLandingPages={landingPages?.filter(lp => lp.status === 'approved') || []}
                     selectedProductIds={selectedProductIds}
                     refreshKey={strategicBlogRefreshKey}

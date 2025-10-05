@@ -268,6 +268,10 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         description: `Blog ${selectedDomain === 'dentala' ? 'Dentala' : 'Eodonto'} atualizado.`,
       });
       
+      // ✅ PATCH 0.3: Safety Delay antes de chamar onSave
+      const SAVE_COMMIT_DELAY_MS = 120;
+      await new Promise(resolve => setTimeout(resolve, SAVE_COMMIT_DELAY_MS));
+      
       // ✅ Notificar parent que houve save
       onSave?.();
     } catch (error: any) {
