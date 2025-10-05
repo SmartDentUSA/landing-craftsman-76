@@ -63,12 +63,13 @@ export async function saveSEOContext(payload: SaveSEOContextPayload): Promise<SE
     aiKeywordsCount: seoIntelligent.ai_keywords.length
   });
   
-  // Update landing page
+  // Update landing page with timestamps
   const { data: updatedLP, error: updateError } = await supabase
     .from('landing_pages')
     .update({ 
       data: updatedData,
-      updated_at: now 
+      updated_at: now,
+      last_modified: now
     })
     .eq('id', payload.landingPageId)
     .select('data');
@@ -109,7 +110,7 @@ export async function getLatestSEOContext(landingPageId: string): Promise<SEOCon
     .from('landing_pages')
     .select('data')
     .eq('id', landingPageId)
-    .single();
+    .maybeSingle();
   
   const lpData = typeof data?.data === 'object' && data?.data !== null ? data.data as any : null;
   

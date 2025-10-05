@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { deepMerge } from '@/lib/deepMerge';
 
 export interface LandingPage {
   id: string;
@@ -156,6 +157,20 @@ export const useLandingPagesSupabase = () => {
   // Atualizar landing page
   const updateLandingPage = useCallback(async (id: string, updates: Partial<LandingPage>) => {
     try {
+      console.log('🔄 [Update LP] Iniciando update para LP:', id);
+      
+      // Buscar dados atuais da landing page
+      const { data: currentLP, error: fetchError } = await supabase
+        .from('landing_pages')
+        .select('data')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error('❌ [Update LP] Erro ao buscar LP atual:', fetchError);
+        throw fetchError;
+      }
+
       // Preparar updates com conversões necessárias
       const supabaseUpdates: any = {
         ...updates,
@@ -167,6 +182,26 @@ export const useLandingPagesSupabase = () => {
         supabaseUpdates.blog_generated_at = updates.blog_generated_at.toISOString();
       }
 
+      // Se updates.data existe, fazer deep merge com dados existentes
+      if (updates.data && currentLP?.data) {
+        const existingData = typeof currentLP.data === 'object' && currentLP.data !== null 
+          ? currentLP.data as any
+          : {};
+        
+        console.log('🔀 [Update LP] Fazendo deep merge:', {
+          existingKeys: Object.keys(existingData),
+          updateKeys: Object.keys(updates.data),
+          hasSEOIntelligent: !!(existingData as any).seo_intelligent
+        });
+        
+        supabaseUpdates.data = deepMerge(existingData, updates.data);
+        
+        console.log('✅ [Update LP] Merge concluído:', {
+          resultKeys: Object.keys(supabaseUpdates.data),
+          seoIntelligentPreserved: !!(supabaseUpdates.data as any).seo_intelligent
+        });
+      }
+
       const { error } = await supabase
         .from('landing_pages')
         .update(supabaseUpdates)
@@ -174,6 +209,7 @@ export const useLandingPagesSupabase = () => {
 
       if (error) throw error;
 
+      console.log('✅ [Update LP] Update concluído com sucesso');
       await loadLandingPages();
     } catch (error) {
       console.error('Erro ao atualizar landing page:', error);
