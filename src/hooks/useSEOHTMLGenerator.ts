@@ -1155,6 +1155,7 @@ export const useSEOHTMLGenerator = () => {
     }
     
     .header .meta-info {
+      display: none; /* Oculto visualmente - mantido no código */
       color: var(--text-muted);
       font-size: 0.95rem;
       font-weight: 500;
@@ -1439,6 +1440,7 @@ export const useSEOHTMLGenerator = () => {
     }
 
     footer {
+      display: none; /* Oculto visualmente - mantido no código */
       margin-top: 4rem;
       padding: 2rem;
       background: var(--card-background);
