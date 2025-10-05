@@ -686,8 +686,23 @@ export const useSEOHTMLGenerator = () => {
       preview = false
     } = options;
 
-    // Define canonical URL at the beginning
-    const canonicalUrl = `https://${domain}.com.br`;
+    // ============= PATCH 1: Funções de Sanitização =============
+    // Helper functions for sanitization
+    const stripTags = (s = '') => s.replace(/<[^>]*>/g, '');
+    const collapse = (s = '') => s.replace(/\s+/g, ' ').trim();
+    const attrEscape = (s = '') => collapse(stripTags(s)).replace(/"/g, '&quot;'); // para atributos HTML
+    const jsonText = (s = '') => collapse(stripTags(s)); // para JSON.stringify
+
+    // ============= PATCH 5: Normalizar BaseURL =============
+    const baseURL = domain.includes('.com.br') 
+      ? `https://${domain}` 
+      : `https://${domain}.com.br`;
+    const blogURL = `${baseURL}/blog`;
+    const canonicalUrl = baseURL; // manter compatibilidade
+
+    // ============= PATCH 2: Sanitizar description para uso seguro =============
+    const safeDesc = attrEscape(description || '');
+    const safeJsonDesc = jsonText(description || '');
 
     // Use aggregated keywords from landing pages + products + blogs if provided
     const allKeywords = aggregatedKeywords && aggregatedKeywords.length > 0 
@@ -908,6 +923,9 @@ export const useSEOHTMLGenerator = () => {
       const htmlTitle = convertInlineMarkdownToHTML(sanitizedTitle);
       const processedTitle = processContentWithAdvancedIntelligentLinks(htmlTitle, intelligentLinks);
       
+      // ============= PATCH 7: Sanitizar título antes de linkar =============
+      const cleanTitle = collapse(stripTags(processedTitle));
+      
       // Encontrar URL do produto relacionado
       let productUrl = '';
       let productName = '';
@@ -925,7 +943,7 @@ export const useSEOHTMLGenerator = () => {
         <section class="blog-item">
           <h2>
             <a href="${blogCanonicalUrl}" class="blog-link">
-              ${processedTitle}
+              ${cleanTitle}
             </a>
           </h2>
           ${productName ? `
@@ -1019,22 +1037,24 @@ export const useSEOHTMLGenerator = () => {
   
   <!-- SEO Meta Tags -->
   <title>${truncateSEOTitle(title)}</title>
-  <meta name="description" content="${description}">
+  <meta name="description" content="${safeDesc}">
   <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
-  ${preview ? '' : `<link rel="canonical" href="${canonicalUrl}/blog">`}
+  <link rel="canonical" href="${blogURL}">
+  <link rel="alternate" href="${blogURL}" hreflang="pt-br">
+  <link rel="alternate" href="${blogURL}" hreflang="x-default">
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="${truncateSEOTitle(title)}">
-  <meta property="og:description" content="${description}">
-  <meta property="og:url" content="${canonicalUrl}/blog">
-  ${ogImage ? `<meta property="og:image" content="${ogImage}">` : `<meta property="og:image" content="https://${domain}.com.br/static/og/blog.jpg">`}
+  <meta property="og:description" content="${safeDesc}">
+  <meta property="og:url" content="${blogURL}">
+  ${ogImage ? `<meta property="og:image" content="${ogImage}">` : `<meta property="og:image" content="${baseURL}/static/og/blog.jpg">`}
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${truncateSEOTitle(title)}">
-  <meta name="twitter:description" content="${description}">
-  ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : `<meta name="twitter:image" content="https://${domain}.com.br/static/og/blog.jpg">`}
+  <meta name="twitter:description" content="${safeDesc}">
+  ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : `<meta name="twitter:image" content="${baseURL}/static/og/blog.jpg">`}
   
   <!-- Additional SEO Meta Tags -->
   <meta name="author" content="${domain}">
@@ -1047,8 +1067,8 @@ export const useSEOHTMLGenerator = () => {
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "Blog ${domain === 'dentala' ? 'Dentala' : 'Eodonto'} - Odontologia Digital",
-    "description": "${description}",
-    "url": "${canonicalUrl}/blog",
+    "description": ${JSON.stringify(safeJsonDesc)},
+    "url": "${blogURL}",
     "inLanguage": "pt-BR"
   }
   </script>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ interface ConsolidatedBlogGeneratorProps {
 
 export function ConsolidatedBlogGenerator({ approvedLandingPages }: ConsolidatedBlogGeneratorProps) {
   const [generating, setGenerating] = useState(false);
+  const generatingRef = useRef(false); // PATCH 8: Prevenir chamada duplicada
   const { toast } = useToast();
   const { getProductsForTemplate } = useSelectedProducts();
   const { getLandingPage } = useLandingPagesSupabase();
@@ -31,6 +32,12 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
 
   const generateConsolidatedHTML = async (domain: 'dentala' | 'eodonto', landingPageId?: string) => {
     try {
+      // PATCH 8: Prevenir chamada duplicada
+      if (generatingRef.current) {
+        console.log('⏸️ Geração já em andamento, ignorando chamada duplicada');
+        return;
+      }
+      generatingRef.current = true;
       setGenerating(true);
       
       
@@ -160,6 +167,7 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
       });
     } finally {
       setGenerating(false);
+      generatingRef.current = false; // PATCH 8: Reset da flag
     }
   };
 
