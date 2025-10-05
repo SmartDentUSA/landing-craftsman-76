@@ -3,6 +3,19 @@ import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
 
+// Helper para truncar títulos SEO (≤60 caracteres)
+const truncateSEOTitle = (title: string, maxLength = 60): string => {
+  if (title.length <= maxLength) return title;
+  
+  // Truncar no último espaço antes do limite
+  const truncated = title.substring(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  return lastSpace > 0 
+    ? truncated.substring(0, lastSpace) + '...'
+    : truncated + '...';
+};
+
 // Função para converter markdown inline para HTML (para títulos e textos inline)
 const convertInlineMarkdownToHTML = (content: string): string => {
   if (!content) return '';
@@ -875,15 +888,34 @@ export const useSEOHTMLGenerator = () => {
       const htmlTitle = convertInlineMarkdownToHTML(sanitizedTitle);
       const processedTitle = processContentWithAdvancedIntelligentLinks(htmlTitle, intelligentLinks);
       
-      const htmlProductName = blog.productName ? convertInlineMarkdownToHTML(blog.productName) : '';
-      const processedProductName = htmlProductName ? processContentWithAdvancedIntelligentLinks(htmlProductName, intelligentLinks) : '';
+      // Encontrar URL do produto relacionado
+      let productUrl = '';
+      let productName = '';
+      if (blog.productName && selectedProducts) {
+        const relatedProduct = selectedProducts.find((p: any) => 
+          p.name.toLowerCase().includes(blog.productName.toLowerCase())
+        );
+        if (relatedProduct) {
+          productUrl = `${canonicalUrl}/produto/${relatedProduct.id}`;
+          productName = relatedProduct.name;
+        }
+      }
 
       return `
         <section class="blog-item">
-          <a href="${blogCanonicalUrl}" class="blog-link">
-            <h2>${processedTitle}</h2>
-          </a>
-          ${processedProductName ? `<p class="product-reference"><strong>Produto:</strong> ${processedProductName}</p>` : ''}
+          <h2>
+            <a href="${blogCanonicalUrl}" class="blog-link">
+              ${processedTitle}
+            </a>
+          </h2>
+          ${productName ? `
+            <p class="product-reference">
+              <strong>Produto:</strong>
+              <a href="${productUrl}" title="Saiba mais sobre ${productName}">
+                ${productName}
+              </a>
+            </p>
+          ` : ''}
           <div class="blog-content post-card-content">
             <div class="preview-content">
               ${previewContent}
@@ -924,32 +956,40 @@ export const useSEOHTMLGenerator = () => {
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
   <!-- SEO Meta Tags -->
-  <title>${title}</title>
+  <title>${truncateSEOTitle(title)}</title>
   <meta name="description" content="${description}">
-  <meta name="keywords" content="${uniqueKeywords.join(', ')}">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${canonicalUrl}">
-  <link rel="robots" href="/robots.txt">
+  <link rel="canonical" href="${canonicalUrl}/blog">
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="${title}">
+  <meta property="og:title" content="${truncateSEOTitle(title)}">
   <meta property="og:description" content="${description}">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="${domain}">
-  <meta property="og:locale" content="pt_BR">
-  ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
+  <meta property="og:url" content="${canonicalUrl}/blog">
+  ${ogImage ? `<meta property="og:image" content="${ogImage}">` : `<meta property="og:image" content="https://${domain}.com.br/static/og/blog.jpg">`}
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:title" content="${truncateSEOTitle(title)}">
   <meta name="twitter:description" content="${description}">
-  ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : ''}
+  ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : `<meta name="twitter:image" content="https://${domain}.com.br/static/og/blog.jpg">`}
   
   <!-- Additional SEO Meta Tags -->
   <meta name="author" content="${domain}">
   <meta name="generator" content="Blog Consolidado SEO">
   <meta name="theme-color" content="#007bff">
+  
+  <!-- WebPage JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Blog ${domain === 'dentala' ? 'Dentala' : 'Eodonto'} - Odontologia Digital",
+    "description": "${description}",
+    "url": "${canonicalUrl}/blog",
+    "inLanguage": "pt-BR"
+  }
+  </script>
   
   ${schemaJson}
   
