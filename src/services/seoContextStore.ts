@@ -20,17 +20,25 @@ interface SaveSEOContextPayload {
 export async function saveSEOContext(payload: SaveSEOContextPayload): Promise<SEOContext> {
   const now = new Date().toISOString();
   
+  console.log('🔍 [SEO Context] Iniciando salvamento para LP:', payload.landingPageId);
+  
   // Fetch current landing page data
   const { data: currentLP, error: fetchError } = await supabase
     .from('landing_pages')
-    .select('data')
+    .select('data, user_id')
     .eq('id', payload.landingPageId)
     .single();
   
   if (fetchError) {
-    console.error('❌ Erro ao buscar landing page:', fetchError);
+    console.error('❌ [SEO Context] Erro ao buscar landing page:', fetchError);
     throw new Error(`Falha ao buscar landing page: ${fetchError.message}`);
   }
+  
+  console.log('📊 [SEO Context] Dados atuais da LP:', {
+    hasData: !!currentLP?.data,
+    userId: currentLP?.user_id,
+    dataKeys: currentLP?.data ? Object.keys(currentLP.data) : []
+  });
   
   // Prepare SEO Intelligent data
   const seoIntelligent: SEOIntelligentContext = {
@@ -49,21 +57,37 @@ export async function saveSEOContext(payload: SaveSEOContextPayload): Promise<SE
     seo_intelligent: seoIntelligent,
   } as any;
   
+  console.log('💾 [SEO Context] Preparando para salvar:', {
+    existingDataKeys: Object.keys(existingData),
+    seoIntelligentEnabled: seoIntelligent.enabled,
+    aiKeywordsCount: seoIntelligent.ai_keywords.length
+  });
+  
   // Update landing page
-  const { error: updateError } = await supabase
+  const { data: updatedLP, error: updateError } = await supabase
     .from('landing_pages')
     .update({ 
       data: updatedData,
       updated_at: now 
     })
-    .eq('id', payload.landingPageId);
+    .eq('id', payload.landingPageId)
+    .select('data');
   
   if (updateError) {
-    console.error('❌ Erro ao salvar SEO Context:', updateError);
+    console.error('❌ [SEO Context] Erro ao salvar:', updateError);
+    console.error('❌ [SEO Context] Detalhes do erro:', {
+      message: updateError.message,
+      details: updateError.details,
+      hint: updateError.hint,
+      code: updateError.code
+    });
     throw new Error(`Falha ao salvar SEO Context: ${updateError.message}`);
   }
   
-  console.log('✅ SEO Context salvo com sucesso:', payload.landingPageId);
+  console.log('✅ [SEO Context] Salvo com sucesso!', {
+    landingPageId: payload.landingPageId,
+    dataUpdated: !!updatedLP?.[0]?.data
+  });
   
   return {
     id: `ctx_${Date.now()}`,

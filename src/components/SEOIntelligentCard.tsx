@@ -103,11 +103,11 @@ Nossos scanners intraorais integram perfeitamente com impressoras UV.`;
         description: "Conteúdo SEO salvo com sucesso no Supabase",
       });
 
-    } catch (error) {
-      console.error('Erro ao gerar SEO Inteligente:', error);
+    } catch (error: any) {
+      console.error('❌ [SEO Intelligent Card] Erro ao gerar:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao gerar SEO Inteligente",
+        title: "Erro ao salvar SEO Inteligente",
+        description: error?.message || "Falha desconhecida ao salvar no Supabase",
         variant: "destructive"
       });
     } finally {
@@ -127,11 +127,11 @@ Nossos scanners intraorais integram perfeitamente com impressoras UV.`;
         description: "Conteúdo SEO foi limpo com sucesso",
       });
 
-    } catch (error) {
-      console.error('Erro ao limpar SEO Context:', error);
+    } catch (error: any) {
+      console.error('❌ [SEO Intelligent Card] Erro ao limpar:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao limpar SEO Context",
+        title: "Erro ao limpar SEO Context",
+        description: error?.message || "Falha desconhecida ao limpar do Supabase",
         variant: "destructive"
       });
     } finally {
