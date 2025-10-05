@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useCSMessages } from "@/hooks/useCSMessages";
+import { TutorialsList } from "@/components/TutorialsList";
 import { Loader2, Trash2, Save, MessageSquare, Plus } from "lucide-react";
 
 export const CSManager = () => {
@@ -313,6 +314,15 @@ export const CSManager = () => {
                                 onChange={(e) => handleContentChange(message.id, e.target.value)}
                                 placeholder="Digite o conteúdo da mensagem..."
                                 className="min-h-[100px]"
+                              />
+                              
+                              {/* 🎓 Tutoriais do Produto */}
+                              <TutorialsList 
+                                productId={selectedProductId} 
+                                onInsert={(text) => {
+                                  const newText = currentContent + text;
+                                  handleContentChange(message.id, newText);
+                                }}
                               />
                               
                               <div className="flex items-center justify-between">

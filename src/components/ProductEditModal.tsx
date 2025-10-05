@@ -34,6 +34,13 @@ interface Video {
   description: string;
 }
 
+interface Tutorial {
+  id: string;
+  course_name: string;
+  course_url: string;
+  created_at: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -61,6 +68,9 @@ interface Product {
   testimonial_videos?: Video[];
   technical_videos?: Video[];
   tiktok_videos?: Video[];
+  tutorial_resources?: {
+    tutorials: Tutorial[];
+  };
   video_captions?: any;
   original_data?: any;
   images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
@@ -217,6 +227,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [technicalVideos, setTechnicalVideos] = useState<Video[]>([]);
   const [tiktokVideos, setTiktokVideos] = useState<Video[]>([]);
   
+  // Tutorial states
+  const [tutorials, setTutorials] = useState<Tutorial[]>([]);
+  
   // Caption states
   const [videoCaptions, setVideoCaptions] = useState<any>({});
   
@@ -314,6 +327,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTestimonialVideos(product.testimonial_videos || []);
       setTechnicalVideos(product.technical_videos || []);
       setTiktokVideos(product.tiktok_videos || []);
+      setTutorials(product.tutorial_resources?.tutorials || []);
       setVideoCaptions(product.video_captions || {});
       setPromoPrice((product as any).promo_price);
       
@@ -662,6 +676,57 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     }
   };
 
+  const addTutorial = (courseName: string, courseUrl: string) => {
+    if (!courseName.trim() || !courseUrl.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Nome do curso e URL são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar URL básica
+    try {
+      new URL(courseUrl);
+    } catch {
+      toast({
+        title: "URL inválida",
+        description: "Por favor, insira uma URL válida",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newTutorial: Tutorial = {
+      id: crypto.randomUUID(),
+      course_name: courseName,
+      course_url: courseUrl,
+      created_at: new Date().toISOString(),
+    };
+
+    const updated = [...tutorials, newTutorial];
+    setTutorials(updated);
+    setFormData(prev => ({ 
+      ...prev, 
+      tutorial_resources: { tutorials: updated } 
+    }));
+
+    toast({
+      title: "Tutorial adicionado",
+      description: `"${courseName}" foi adicionado com sucesso`,
+    });
+  };
+
+  const removeTutorial = (tutorialId: string) => {
+    const updated = tutorials.filter(t => t.id !== tutorialId);
+    setTutorials(updated);
+    setFormData(prev => ({ 
+      ...prev, 
+      tutorial_resources: { tutorials: updated } 
+    }));
+  };
+
   // Caption management function - ✅ FASE 2: Sincronizar estado imediatamente
   const handleCaptionsExtracted = (videoType: string, captions: any[]) => {
     const updatedCaptions = {
@@ -850,6 +915,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         testimonial_videos: testimonialVideos as any,
         technical_videos: technicalVideos as any,
         tiktok_videos: tiktokVideos as any,
+        tutorial_resources: { tutorials } as any,
         video_captions: videoCaptions, // ✅ FASE 1: Salvar video_captions editadas
         use_in_ai_generation: formData.use_in_ai_generation,
         approved: formData.approved,
@@ -1583,6 +1649,93 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               onRemove={(index) => removeVideo('tiktok', index)}
               maxVideos={5}
             />
+
+            {/* Tutorial Resources */}
+            <Card className="p-4 border-2 border-purple-200 bg-purple-50/30">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-purple-900">
+                    🎓 Tutoriais do Produto
+                  </h3>
+                </div>
+
+                {/* Lista de tutoriais existentes */}
+                {tutorials.length > 0 && (
+                  <div className="space-y-2">
+                    {tutorials.map((tutorial) => (
+                      <Card key={tutorial.id} className="p-3 bg-white">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {tutorial.course_name}
+                            </p>
+                            <a 
+                              href={tutorial.course_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline truncate block"
+                            >
+                              {tutorial.course_url}
+                            </a>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Adicionado em {new Date(tutorial.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeTutorial(tutorial.id)}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Form para adicionar novo tutorial */}
+                <Card className="p-4 bg-white/50 border-dashed">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Nome do Curso/Tutorial</Label>
+                      <Input
+                        placeholder="Ex: Como configurar o equipamento"
+                        id="new-tutorial-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL do Curso</Label>
+                      <Input
+                        placeholder="https://meuplataforma.com/curso"
+                        type="url"
+                        id="new-tutorial-url"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const nameInput = document.getElementById('new-tutorial-name') as HTMLInputElement;
+                        const urlInput = document.getElementById('new-tutorial-url') as HTMLInputElement;
+                        if (nameInput && urlInput) {
+                          addTutorial(nameInput.value, urlInput.value);
+                          nameInput.value = '';
+                          urlInput.value = '';
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Tutorial
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </Card>
           </div>
 
           <div className="space-y-2">

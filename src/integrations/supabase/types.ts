@@ -772,6 +772,7 @@ export type Database = {
           testimonial_videos: Json | null
           tiktok_content: Json | null
           tiktok_videos: Json | null
+          tutorial_resources: Json | null
           unit_measure: string | null
           updated_at: string
           use_in_ai_generation: boolean | null
@@ -869,6 +870,7 @@ export type Database = {
           testimonial_videos?: Json | null
           tiktok_content?: Json | null
           tiktok_videos?: Json | null
+          tutorial_resources?: Json | null
           unit_measure?: string | null
           updated_at?: string
           use_in_ai_generation?: boolean | null
@@ -966,6 +968,7 @@ export type Database = {
           testimonial_videos?: Json | null
           tiktok_content?: Json | null
           tiktok_videos?: Json | null
+          tutorial_resources?: Json | null
           unit_measure?: string | null
           updated_at?: string
           use_in_ai_generation?: boolean | null

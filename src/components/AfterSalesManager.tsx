@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Edit, Save, Trash2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TutorialsList } from "@/components/TutorialsList";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -333,6 +334,15 @@ export const AfterSalesManager = () => {
                             </div>
                           </div>
                         </div>
+
+                        {/* 🎓 Tutoriais do Produto */}
+                        <TutorialsList 
+                          productId={selectedProductId} 
+                          onInsert={(text) => {
+                            const newText = currentContent + text;
+                            handleContentChange(message.id, newText);
+                          }}
+                        />
 
                         <div className="flex gap-2">
                           <Button

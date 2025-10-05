@@ -23,6 +23,14 @@ interface Product {
   testimonial_videos?: any[];
   technical_videos?: any[];
   tiktok_videos?: any[];
+  tutorial_resources?: {
+    tutorials: Array<{
+      id: string;
+      course_name: string;
+      course_url: string;
+      created_at: string;
+    }>;
+  };
   offer_discount_cta?: { label: string; url: string; visible: boolean };
   // Physical specifications
   variations?: { name: string; price?: number; stock?: number; color?: string; size?: string }[];
