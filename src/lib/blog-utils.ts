@@ -49,3 +49,18 @@ export function normalizeKeywords(keywords: any): string[] {
   if (typeof keywords === 'string') return keywords.split(',').map(k => k.trim()).filter(Boolean);
   return [];
 }
+
+/**
+ * Converts markdown to HTML including image support
+ */
+export function convertMarkdownToHTML(markdown: string): string {
+  return markdown
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)/g, '<img src="$2" alt="$1" title="$3" loading="lazy" style="max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0;" />')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\n/g, '<br>');
+}

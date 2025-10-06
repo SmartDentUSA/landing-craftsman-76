@@ -74,6 +74,14 @@ export function StrategicBlogPreview({
       
       // Buscar SEO Context do Supabase
       const seoContext = await getLatestSEOContext(landingPageId);
+      
+      // Buscar dados dos produtos selecionados para incluir image_url
+      const supabase = (await import('@/integrations/supabase/client')).supabase;
+      const { data: selectedProductsData } = await supabase
+        .from('products_repository')
+        .select('id, name, image_url, product_url')
+        .in('id', selectedProductIds)
+        .eq('approved', true);
 
       console.log(`🔍 Gerando preview consolidado ${domain}:`, {
         strategicTitle: strategicBlog.title,
@@ -95,12 +103,17 @@ export function StrategicBlogPreview({
             content: seoContext.baseTextMarkdown || '',
             keywords: seoContext.aiKeywords?.map(k => k.term) || [],
           }] : []),
-          ...filteredBlogs.map(pb => ({
-            title: pb.title,
-            content: pb.content,
-            productName: pb.productName,
-            keywords: [],
-          }))
+          ...filteredBlogs.map(pb => {
+            const product = selectedProductsData?.find(p => p.id === pb.productId);
+            return {
+              title: pb.title,
+              content: pb.content,
+              productName: pb.productName,
+              productImageUrl: product?.image_url,
+              productUrl: product?.product_url,
+              keywords: [],
+            };
+          })
         ],
         landingPageIdForSEOContext: landingPageId,
         preview: true,

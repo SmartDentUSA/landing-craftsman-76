@@ -237,6 +237,8 @@ interface ConsolidatedBlogOptions {
     title: string;
     content: string;
     productName?: string;
+    productImageUrl?: string;
+    productUrl?: string;
     keywords?: string[];
   }>;
   landingPagesSEO?: Array<{
@@ -254,6 +256,7 @@ interface ConsolidatedBlogOptions {
     description: string;
     price?: string | number;
     productUrl?: string;
+    image_url?: string;
     keywords?: string[];
     market_keywords?: string[];
     search_intent_keywords?: string[];
@@ -986,6 +989,11 @@ export const useSEOHTMLGenerator = () => {
         }
       }
 
+      // Buscar imagem do produto relacionado
+      const productImageUrl = blog.productImageUrl || (blog.productName && selectedProducts 
+        ? selectedProducts.find((p: any) => p.name.toLowerCase().includes(blog.productName.toLowerCase()))?.image_url
+        : '');
+
       return `
         <section class="blog-item">
           <h2>
@@ -993,6 +1001,16 @@ export const useSEOHTMLGenerator = () => {
               ${cleanTitle}
             </a>
           </h2>
+          ${productName && productImageUrl ? `
+            <div class="product-image">
+              <img 
+                src="${productImageUrl}" 
+                alt="${productName}" 
+                loading="lazy"
+                style="max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0;"
+              />
+            </div>
+          ` : ''}
           ${productName ? `
             <p class="product-reference">
               <strong>Produto:</strong>

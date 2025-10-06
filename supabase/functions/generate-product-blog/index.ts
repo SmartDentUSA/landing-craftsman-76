@@ -285,6 +285,7 @@ INSTRUÇÕES CRÍTICAS:
     category: product.category || '',
     subcategory: product.subcategory || '',
     price: product.price ? `${product.currency || 'BRL'} ${product.price}` : '',
+    imageUrl: product.image_url || '',
     keywords: Array.isArray(product.keywords) ? product.keywords.join(', ') : '',
     benefits: Array.isArray(product.benefits) ? product.benefits.join(', ') : '',
     features: Array.isArray(product.features) ? product.features.join(', ') : '',
@@ -327,6 +328,7 @@ DADOS DO PRODUTO:
 - Categoria: ${productData.category}
 - Subcategoria: ${productData.subcategory}
 - Preço: ${productData.price}
+- Imagem do Produto: ${productData.imageUrl}
 - Keywords: ${productData.keywords}
 - Benefícios: ${productData.benefits}
 - Características: ${productData.features}
@@ -356,6 +358,11 @@ INSTRUÇÕES ESPECÍFICAS:
 10. NÃO invente informações que não estão nos dados fornecidos
 11. Use formato markdown limpo e envolvente
 12. EVITE linguagem corporativa ou muito formal no início - seja mais humano e direto
+
+INSTRUÇÕES PARA IMAGEM:
+${productData.imageUrl ? `- INCLUA a imagem do produto logo após o título principal (H1)
+- Use o formato Markdown: ![${productData.name}](${productData.imageUrl} "${productData.name}")
+- A imagem deve aparecer antes do primeiro parágrafo de texto` : '- Produto sem imagem disponível, prossiga sem incluir tag de imagem'}
 
 IMPORTANTE - NÃO INCLUIR NO CONTEÚDO:
 - CTAs genéricos como "Solicite uma Demonstração Personalizada", "Fale com Nossos Especialistas", "Baixe o Catálogo Completo"
