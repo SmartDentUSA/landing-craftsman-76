@@ -566,6 +566,12 @@ async function extractAndSaveReviews(url: string, supabase: any) {
       }
     }
 
+    // Sync to company_profile if requested
+    if (sync_to_company_profile && company_id) {
+      console.log('Syncing reviews to company_profile...');
+      await syncReviewsToCompanyProfile(supabase, company_id, reviews, place_id);
+    }
+
     // Update extraction job
     await supabase
       .from('extraction_jobs')

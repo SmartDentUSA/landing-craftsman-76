@@ -34,18 +34,27 @@ export async function fetchAllReviewsForSchema(
     if (landingPageId) {
       const { data: googleReviews, error: googleError } = await supabase
         .from("approved_reviews")
-        .select("*")
+        .select(`
+          *,
+          raw_reviews:raw_review_id (
+            author_name,
+            rating,
+            review_text,
+            review_date
+          )
+        `)
         .eq("landing_page_id", landingPageId);
 
       if (googleError) {
         console.error("Erro ao buscar Google reviews:", googleError);
       } else if (googleReviews) {
-        googleReviews.forEach((review) => {
+        googleReviews.forEach((review: any) => {
+          const rawReview = review.raw_reviews;
           const sanitized = sanitizeReviewData({
-            author_name: review.raw_review_id || 'Cliente Google',
-            rating: 5, // Assume 5 estrelas se aprovado
-            review_text: review.notes || '',
-            review_date: review.approved_at
+            author_name: rawReview?.author_name || 'Cliente Google',
+            rating: rawReview?.rating || 5,
+            review_text: rawReview?.review_text || review.notes || '',
+            review_date: rawReview?.review_date || review.approved_at
           });
           
           allReviews.push({
