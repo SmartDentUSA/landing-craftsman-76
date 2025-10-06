@@ -11,12 +11,13 @@ import { LinksManager } from '@/components/LinksManager';
 import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
 import { ProductSEOBatchEnhancer } from '@/components/ProductSEOBatchEnhancer';
 import YouTubeOAuthSettings from '@/pages/YouTubeOAuthSettings';
+import GoogleBusinessOAuthSettings from '@/pages/GoogleBusinessOAuthSettings';
 import { CouponsManager } from '@/components/CouponsManager';
 import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
 
 const Repository = () => {
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'coupons' | 'aftersales' | 'cs'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs'>('repository');
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -33,6 +34,7 @@ const Repository = () => {
                    activeView === 'links' ? 'Gerenciador de Links' : 
                    activeView === 'merchant' ? 'Google Merchant Center' : 
                    activeView === 'youtube' ? 'YouTube OAuth' : 
+                   activeView === 'google-business' ? 'Google Business OAuth' : 
                    activeView === 'coupons' ? 'Cupons Promocionais' :
                    activeView === 'aftersales' ? 'Pós-Venda' :
                    activeView === 'cs' ? 'Customer Success (CS)' : 'Prompts IA'}
@@ -48,6 +50,8 @@ const Repository = () => {
                     ? 'Gerencie seu feed de produtos para Google Shopping'
                     : activeView === 'youtube'
                     ? 'Configure autenticação OAuth para extração de legendas do YouTube'
+                    : activeView === 'google-business'
+                    ? 'Configure autenticação OAuth para extração de reviews do Google Business Profile'
                     : activeView === 'coupons'
                     ? 'Configure cupons de desconto e mensagens promocionais para WhatsApp'
                     : activeView === 'aftersales'
@@ -105,6 +109,13 @@ const Repository = () => {
                   >
                     YouTube OAuth
                   </Button>
+                  <Button
+                    variant={activeView === 'google-business' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveView('google-business')}
+                  >
+                    Google Business
+                  </Button>
           <Button
             variant={activeView === 'coupons' ? 'default' : 'ghost'}
             size="sm"
@@ -148,6 +159,8 @@ const Repository = () => {
               <GoogleMerchantManager />
             ) : activeView === 'youtube' ? (
               <YouTubeOAuthSettings />
+            ) : activeView === 'google-business' ? (
+              <GoogleBusinessOAuthSettings />
             ) : activeView === 'coupons' ? (
               <CouponsManager />
             ) : activeView === 'aftersales' ? (

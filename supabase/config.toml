@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.test-youtube-connection]
 verify_jwt = false
+
+[functions.exchange-google-business-code]
+verify_jwt = false
+
+[functions.test-google-business-connection]
+verify_jwt = false
