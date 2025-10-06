@@ -43,6 +43,7 @@ export default function GoogleBusinessOAuthSettings() {
   const [oauthCode, setOauthCode] = useState('');
   const [isClientIdValid, setIsClientIdValid] = useState(false);
   const [showDiagnosticCard, setShowDiagnosticCard] = useState(false);
+  const [showFormatWarning, setShowFormatWarning] = useState(false);
 
   const REDIRECT_URI = 'https://landing-craftsman-76.lovable.app/oauth2/callback';
 
@@ -142,6 +143,20 @@ export default function GoogleBusinessOAuthSettings() {
     }
   }, [location]);
 
+  // Validar formato do refresh token em tempo real
+  useEffect(() => {
+    if (refreshToken) {
+      const isInvalid = refreshToken.startsWith("GOCSPX-");
+      setShowFormatWarning(isInvalid);
+      
+      if (isInvalid) {
+        console.error("❌ Client Secret detectado no campo Refresh Token!");
+      }
+    } else {
+      setShowFormatWarning(false);
+    }
+  }, [refreshToken]);
+
   const testConnection = async () => {
     setIsTesting(true);
     setStatus('checking');
@@ -171,11 +186,21 @@ export default function GoogleBusinessOAuthSettings() {
         setStatus('error');
         setAccountInfo(null);
         
-        toast({
-          title: "❌ Erro na conexão",
-          description: data?.error || 'Credenciais inválidas',
-          variant: "destructive"
-        });
+        // Se detectar client_secret no refresh_token, auto-abrir diagnóstico
+        if (data?.error === "client_secret_in_refresh") {
+          setShowDiagnosticCard(true);
+          toast({
+            title: "⚠️ Credencial incorreta detectada",
+            description: "Client Secret foi detectado no campo Refresh Token. Use o botão 'Limpar e Reconfigurar' abaixo.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "❌ Erro na conexão",
+            description: data?.error || 'Credenciais inválidas',
+            variant: "destructive"
+          });
+        }
       }
     } catch (error: any) {
       console.error('Test connection error:', error);
@@ -472,6 +497,7 @@ export default function GoogleBusinessOAuthSettings() {
     setAccountInfo(null);
     setShowDiagnosticCard(false);
     setIsClientIdValid(false);
+    setShowFormatWarning(false);
     
     toast({ 
       title: "🧹 Cache limpo completamente", 
@@ -609,14 +635,28 @@ export default function GoogleBusinessOAuthSettings() {
               <li>As APIs <strong>My Business Business Information</strong> e <strong>Business Profile Performance</strong> estão ativadas?</li>
               <li>Você está logado com o mesmo email cadastrado como <strong>Test User</strong> no GCP?</li>
             </ol>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-3"
-              onClick={() => setShowDiagnosticCard(false)}
-            >
-              Fechar
-            </Button>
+            <div className="flex gap-2 flex-wrap mt-3">
+              <Button
+                onClick={async () => {
+                  await handleClearCredentials();
+                  toast({
+                    title: "✅ Limpeza concluída",
+                    description: "Agora refaça o fluxo: 1) Preencha Client ID e Secret, 2) Gere Token, 3) Cole o código.",
+                  });
+                }}
+                variant="default"
+                size="sm"
+              >
+                🔧 Limpar e Reconfigurar
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowDiagnosticCard(false)}
+              >
+                Fechar
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -723,7 +763,12 @@ export default function GoogleBusinessOAuthSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="refreshToken">Refresh Token</Label>
+            <Label htmlFor="refreshToken" className="flex items-center gap-2">
+              Refresh Token
+              <span className="text-xs text-muted-foreground font-normal">
+                (começa com 1// ou 4/)
+              </span>
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="refreshToken"
@@ -740,15 +785,25 @@ export default function GoogleBusinessOAuthSettings() {
                 Gerar Token
               </Button>
             </div>
+            {showFormatWarning && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  ⚠️ <strong>Client Secret detectado!</strong> O Refresh Token deve começar com <code>1//</code> ou <code>4/</code>, não com <code>GOCSPX-</code>.
+                  <br />
+                  Use o botão "Limpar credenciais" e refaça o fluxo OAuth.
+                </AlertDescription>
+              </Alert>
+            )}
             <p className="text-xs text-muted-foreground">
               Clique em "Gerar Token" para obter via fluxo OAuth
             </p>
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-4 flex-wrap">
             <Button
               onClick={handleSave}
-              disabled={isSaving || !clientId || !clientSecret || !refreshToken}
+              disabled={isSaving || !clientId || !clientSecret || !refreshToken || showFormatWarning}
               className="flex-1"
             >
               {isSaving ? (
@@ -764,7 +819,19 @@ export default function GoogleBusinessOAuthSettings() {
             <Button
               variant="outline"
               onClick={testConnection}
-              disabled={isTesting || !clientId || !clientSecret || !refreshToken}
+              disabled={
+                isTesting ||
+                !clientId ||
+                !clientSecret ||
+                !refreshToken ||
+                showFormatWarning ||
+                (!refreshToken.startsWith("1//") && !refreshToken.startsWith("4/"))
+              }
+              title={
+                showFormatWarning || (!refreshToken.startsWith("1//") && !refreshToken.startsWith("4/") && refreshToken)
+                  ? "Refresh Token inválido. Deve começar com 1// ou 4/"
+                  : undefined
+              }
             >
               {isTesting ? (
                 <>
