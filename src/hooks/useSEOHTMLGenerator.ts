@@ -39,6 +39,44 @@ const convertInlineMarkdownToHTML = (content: string): string => {
   return processedContent.trim();
 };
 
+/**
+ * Remove links markdown aninhados ANTES da conversão para HTML
+ */
+const cleanNestedMarkdown = (md: string): string => {
+  return md
+    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '[$1]($2)') // [[text]](url) → [text](url)
+    .replace(/\[([^\]]+)\]\(([^)]+)\s+"[^"]*"\)\]\(([^)]+)\)/g, '[$1]($2)'); // [text](url "title")](url2) → [text](url)
+};
+
+/**
+ * Remove links HTML aninhados APÓS a conversão
+ */
+const removeNestedLinks = (html: string): string => {
+  // Remove <a> tags aninhados dentro de outros <a> tags
+  let cleaned = html;
+  let previousCleaned = '';
+  
+  // Loop até não haver mais links aninhados
+  while (cleaned !== previousCleaned) {
+    previousCleaned = cleaned;
+    // Remove <a> interno, mantendo apenas o texto
+    cleaned = cleaned.replace(/<a([^>]*)>([^<]*)<a[^>]*>([^<]*)<\/a>([^<]*)<\/a>/gi, '<a$1>$2$3$4</a>');
+  }
+  
+  return cleaned;
+};
+
+/**
+ * Sanitiza atributos HTML para evitar aspas duplicadas
+ */
+const sanitizeHTMLAttributes = (text: string): string => {
+  return text
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+};
+
 // Função para sanitizar conteúdo do blog antes da conversão HTML
 const sanitizeBlogContent = (content: string): string => {
   if (!content) return '';
@@ -102,8 +140,8 @@ const extractTitleFromMarkdown = (content: string): string => {
 const convertMarkdownToHTML = (content: string): string => {
   if (!content) return '';
 
-  // Sanitizar conteúdo antes da conversão
-  const sanitizedContent = sanitizeBlogContent(content);
+  // Sanitizar conteúdo antes da conversão e limpar markdown aninhado
+  const sanitizedContent = cleanNestedMarkdown(sanitizeBlogContent(content));
   
   // Processar conteúdo linha por linha para manter estrutura
   const lines = sanitizedContent.split('\n');
@@ -728,10 +766,10 @@ export const useSEOHTMLGenerator = () => {
     const blogSchemas = blogs.map((blog, index) => {
       // Converter markdown para HTML inline e depois limpar para JSON-LD
       const htmlTitle = convertInlineMarkdownToHTML(blog.title);
-      const cleanTitle = stripHtmlTags(htmlTitle);
-      // Para descrição, primeiro converter markdown e depois limpar tags HTML
+      const cleanTitle = sanitizeHTMLAttributes(stripHtmlTags(htmlTitle));
+      // Para descrição, primeiro converter markdown e depois limpar tags HTML e links aninhados
       const htmlContent = convertMarkdownToHTML(blog.content);
-      const cleanDescription = stripHtmlTags(htmlContent.substring(0, 160));
+      const cleanDescription = stripHtmlTags(removeNestedLinks(htmlContent)).substring(0, 160);
       
       // Encontrar produto relacionado se existir
       let relatedProduct = null;
@@ -854,12 +892,14 @@ export const useSEOHTMLGenerator = () => {
 
     // Processar conteúdo dos blogs com links clicáveis
     const blogContents = blogs.map((blog, index) => {
-      const blogCanonicalUrl = `${canonicalUrl}/blog/${domain}-${index + 1}`;
+      const blogCanonicalUrl = `${blogURL}/${domain}-${index + 1}`;
       
       // Converter markdown para HTML primeiro
       const htmlContent = convertMarkdownToHTML(blog.content);
-      // Depois aplicar links inteligentes
-      const processedContent = processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks);
+      // Depois aplicar links inteligentes e remover links aninhados
+      const processedContent = removeNestedLinks(
+        processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks)
+      );
       
       // Smart HTML-aware truncation for preview
       const previewLength = 300;
@@ -1043,7 +1083,7 @@ export const useSEOHTMLGenerator = () => {
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
   <!-- SEO Meta Tags -->
-  <title>${truncateSEOTitle(title)}</title>
+  <title>${sanitizeHTMLAttributes(truncateSEOTitle(title))}</title>
   <meta name="description" content="${safeDesc}">
   <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
   <link rel="canonical" href="${blogURL}">
@@ -1052,14 +1092,14 @@ export const useSEOHTMLGenerator = () => {
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="${truncateSEOTitle(title)}">
+  <meta property="og:title" content="${sanitizeHTMLAttributes(truncateSEOTitle(title))}">
   <meta property="og:description" content="${safeDesc}">
   <meta property="og:url" content="${blogURL}">
   ${ogImage ? `<meta property="og:image" content="${ogImage}">` : `<meta property="og:image" content="${baseURL}/static/og/blog.jpg">`}
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${truncateSEOTitle(title)}">
+  <meta name="twitter:title" content="${sanitizeHTMLAttributes(truncateSEOTitle(title))}">
   <meta name="twitter:description" content="${safeDesc}">
   ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : `<meta name="twitter:image" content="${baseURL}/static/og/blog.jpg">`}
   
