@@ -1006,7 +1006,7 @@ export const useSEOHTMLGenerator = () => {
               ${previewContent}
             </div>
             ${previewContent !== processedContent ? `
-              <button class="read-more-btn">Leia mais →</button>
+              <button class="read-more-btn" onclick="toggleReadMore(this)">Leia mais →</button>
               <div class="full-content">
                 ${processedContent}
               </div>
@@ -1057,10 +1057,8 @@ export const useSEOHTMLGenerator = () => {
                 ${previewStrategic}${hasMore ? '…' : ''}
               </div>
               ${hasMore ? `
-                <button class="read-more-btn" aria-expanded="false" aria-controls="full-strategic">
-                  Leia mais →
-                </button>
-                <div id="full-strategic" class="full-content" hidden>
+                <button class="read-more-btn" onclick="toggleReadMore(this)">Leia mais →</button>
+                <div class="full-content">
                   ${strategic.baseTextHTML}
                 </div>
               ` : ''}
@@ -1592,36 +1590,22 @@ export const useSEOHTMLGenerator = () => {
   </div>
   
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Usar delegação de eventos para melhor robustez
-      document.addEventListener('click', function(event) {
-        const button = event.target.closest('.read-more-btn');
-        if (!button) return;
-        
-        event.preventDefault();
-        
-        // Encontrar o container do conteúdo (aceitar ambos os tipos como no Eodonto)
-        const cardContent = button.closest('.post-card-content, .featured-post-content');
-        if (!cardContent) return;
-
-        // Encontrar o elemento de conteúdo completo
-        const fullContent = cardContent.querySelector('.full-content');
-        if (!fullContent) return;
-
-        // Alternar a classe 'expanded'
-        const isExpanded = fullContent.classList.contains('expanded');
-        fullContent.classList.toggle('expanded');
-        
-        // Atualizar o texto do botão (igual ao Eodonto)
-        button.textContent = isExpanded ? 'Leia mais →' : 'Fechar ↑';
-        
-        // Gerenciar preview content se existir
-        const previewContent = cardContent.querySelector('.preview-content');
-        if (previewContent) {
-          previewContent.style.display = isExpanded ? 'block' : 'none';
-        }
-      });
-    });
+    function toggleReadMore(btn) {
+      var cardContent = btn.closest('.post-card-content') || btn.closest('.featured-post-content');
+      if (!cardContent) return;
+      
+      var fullContent = cardContent.querySelector('.full-content');
+      var previewContent = cardContent.querySelector('.preview-content');
+      if (!fullContent) return;
+      
+      var isExpanded = fullContent.classList.contains('expanded');
+      fullContent.classList.toggle('expanded');
+      btn.textContent = isExpanded ? 'Leia mais →' : 'Fechar ↑';
+      
+      if (previewContent) {
+        previewContent.style.display = isExpanded ? 'block' : 'none';
+      }
+    }
   </script>
 </body>
 </html>`;
