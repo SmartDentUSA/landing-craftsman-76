@@ -210,6 +210,7 @@ export default function GoogleBusinessOAuthSettings() {
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.set('state', 'google-business');
 
     console.log('🚀 Abrindo OAuth:', {
       clientIdLast6: clientId.slice(-6),

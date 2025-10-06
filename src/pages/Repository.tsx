@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,17 @@ import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
 
 const Repository = () => {
+  const location = useLocation();
   const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs'>('repository');
+
+  // Detectar redirecionamento OAuth e abrir aba correta
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.activeView) {
+      console.log("🔄 Mudando para aba:", state.activeView);
+      setActiveView(state.activeView);
+    }
+  }, [location]);
 
   return (
     <ProtectedRoute requiredRole="admin">

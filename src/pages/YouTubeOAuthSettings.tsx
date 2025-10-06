@@ -257,6 +257,7 @@ export default function YouTubeOAuthSettings() {
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.set('state', 'youtube');
 
     console.log('🚀 Abrindo OAuth:', {
       clientIdLast6: clientId.slice(-6),
