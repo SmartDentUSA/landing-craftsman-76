@@ -120,6 +120,18 @@ serve(async (req) => {
       );
     }
 
+    if (refreshToken.startsWith('4/')) {
+      console.error('❌ Código de autorização detectado no campo Refresh Token!');
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          error: 'authorization_code_in_refresh',
+          suggestion: 'Você colou um código OAuth (4/...) no lugar do Refresh Token. Use o botão "Trocar por Token" no modal para obter o Refresh Token válido (1//).',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     logPreview(clientId, '✅ Client ID');
     logPreview(clientSecret, '✅ Client Secret');
     logPreview(refreshToken, '✅ Refresh Token');
@@ -171,7 +183,7 @@ serve(async (req) => {
 
     console.log('🧪 Testing Google Business API connection...');
     const apiResponse = await fetch(
-      'https://mybusiness.googleapis.com/v4/accounts',
+      'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,

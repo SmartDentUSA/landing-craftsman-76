@@ -143,19 +143,32 @@ export default function GoogleBusinessOAuthSettings() {
     }
   }, [location]);
 
-  // Validar formato do refresh token em tempo real
+  // Validar formato do refresh token em tempo real e auto-abrir modal se detectar "4/"
   useEffect(() => {
     if (refreshToken) {
       const isInvalid = refreshToken.startsWith("GOCSPX-");
+      const isAuthCode = refreshToken.startsWith("4/");
+      
       setShowFormatWarning(isInvalid);
       
       if (isInvalid) {
         console.error("❌ Client Secret detectado no campo Refresh Token!");
       }
+      
+      // Auto-abrir modal OAuth se detectar código de autorização "4/"
+      if (isAuthCode && clientId && isClientIdValid) {
+        console.log("🔄 Código de autorização detectado (4/). Abrindo modal para troca...");
+        setOauthCode(refreshToken);
+        setShowOAuthModal(true);
+        toast({
+          title: "🔄 Código OAuth detectado",
+          description: "Clique em 'Trocar por Token' para obter o Refresh Token válido.",
+        });
+      }
     } else {
       setShowFormatWarning(false);
     }
-  }, [refreshToken]);
+  }, [refreshToken, clientId, isClientIdValid, toast]);
 
   const testConnection = async () => {
     setIsTesting(true);
@@ -246,7 +259,7 @@ export default function GoogleBusinessOAuthSettings() {
       return;
     }
 
-    // Validar formato do Refresh Token
+    // Validar formato do Refresh Token - SOMENTE aceitar "1//"
     if (refreshToken.startsWith('GOCSPX-')) {
       toast({
         title: "⚠️ Refresh Token inválido",
@@ -256,10 +269,19 @@ export default function GoogleBusinessOAuthSettings() {
       return;
     }
 
-    if (!refreshToken.startsWith('1//') && !refreshToken.startsWith('4/')) {
+    if (refreshToken.startsWith('4/')) {
       toast({
-        title: "⚠️ Refresh Token suspeito",
-        description: "Refresh Token deve começar com 1// ou 4/. Verifique se está correto.",
+        title: "⚠️ Código de autorização detectado",
+        description: "Você colou um código OAuth (4/...). Use o botão 'Trocar por Token' no modal para obter o Refresh Token válido (1//).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!refreshToken.startsWith('1//')) {
+      toast({
+        title: "⚠️ Refresh Token inválido",
+        description: "Refresh Token deve começar com 1//. Use o botão 'Gerar Token' para obter via OAuth.",
         variant: "destructive"
       });
       return;
@@ -338,6 +360,7 @@ export default function GoogleBusinessOAuthSettings() {
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.set('include_granted_scopes', 'true');
     authUrl.searchParams.set('state', 'google-business');
 
     console.log('🚀 Abrindo OAuth:', {
@@ -715,13 +738,16 @@ export default function GoogleBusinessOAuthSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientId">
+            <Label htmlFor="clientId" className="flex items-center gap-2">
               Client ID
               {clientId && (
                 isClientIdValid
                   ? <span className="text-green-600 text-xs ml-2">✓ Válido</span>
                   : <span className="text-red-600 text-xs ml-2">✗ Formato incorreto</span>
               )}
+              <span className="text-xs text-muted-foreground font-normal">
+                (termina com .apps.googleusercontent.com)
+              </span>
             </Label>
             <Input
               id="clientId"
@@ -747,7 +773,12 @@ export default function GoogleBusinessOAuthSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientSecret">Client Secret</Label>
+            <Label htmlFor="clientSecret" className="flex items-center gap-2">
+              Client Secret
+              <span className="text-xs text-muted-foreground font-normal">
+                (começa com GOCSPX-)
+              </span>
+            </Label>
             <Input
               id="clientSecret"
               type="password"
@@ -766,14 +797,14 @@ export default function GoogleBusinessOAuthSettings() {
             <Label htmlFor="refreshToken" className="flex items-center gap-2">
               Refresh Token
               <span className="text-xs text-muted-foreground font-normal">
-                (começa com 1// ou 4/)
+                (gerado via OAuth, deve começar com 1//)
               </span>
             </Label>
             <div className="flex gap-2">
               <Input
                 id="refreshToken"
                 type="password"
-                placeholder="1//0xxxxxxxxxxxxx"
+                placeholder="Gerado pelo botão 'Gerar Token' (deve começar com 1//)"
                 value={refreshToken}
                 onChange={(e) => setRefreshToken(e.target.value)}
                 className="flex-1"
@@ -781,6 +812,8 @@ export default function GoogleBusinessOAuthSettings() {
               <Button
                 variant="outline"
                 onClick={openOAuthFlow}
+                disabled={!clientId || !isClientIdValid}
+                title={!clientId || !isClientIdValid ? "Configure o Client ID primeiro" : ""}
               >
                 Gerar Token
               </Button>
@@ -789,22 +822,35 @@ export default function GoogleBusinessOAuthSettings() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  ⚠️ <strong>Client Secret detectado!</strong> O Refresh Token deve começar com <code>1//</code> ou <code>4/</code>, não com <code>GOCSPX-</code>.
+                  ⚠️ <strong>Client Secret detectado!</strong> O Refresh Token deve começar com <code>1//</code>, não com <code>GOCSPX-</code>.
                   <br />
-                  Use o botão "Limpar credenciais" e refaça o fluxo OAuth.
+                  Use o botão "Limpar Token e Refazer OAuth" abaixo.
+                </AlertDescription>
+              </Alert>
+            )}
+            {refreshToken.startsWith('4/') && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  ℹ️ Código de autorização detectado (4/...). Clique em "Trocar por Token" no modal que se abriu para obter o Refresh Token válido (1//).
                 </AlertDescription>
               </Alert>
             )}
             <p className="text-xs text-muted-foreground">
-              Clique em "Gerar Token" para obter via fluxo OAuth
+              💡 O Refresh Token válido sempre começa com <code>1//</code>. Use o botão "Gerar Token" para iniciar o fluxo OAuth.
             </p>
           </div>
 
           <div className="flex gap-2 pt-4 flex-wrap">
             <Button
               onClick={handleSave}
-              disabled={isSaving || !clientId || !clientSecret || !refreshToken || showFormatWarning}
+              disabled={isSaving || !clientId || !clientSecret || !refreshToken || showFormatWarning || !refreshToken.startsWith('1//')}
               className="flex-1"
+              title={
+                !refreshToken.startsWith('1//') && refreshToken
+                  ? "Refresh Token inválido. Deve começar com 1//"
+                  : undefined
+              }
             >
               {isSaving ? (
                 <>
@@ -825,11 +871,11 @@ export default function GoogleBusinessOAuthSettings() {
                 !clientSecret ||
                 !refreshToken ||
                 showFormatWarning ||
-                (!refreshToken.startsWith("1//") && !refreshToken.startsWith("4/"))
+                !refreshToken.startsWith("1//")
               }
               title={
-                showFormatWarning || (!refreshToken.startsWith("1//") && !refreshToken.startsWith("4/") && refreshToken)
-                  ? "Refresh Token inválido. Deve começar com 1// ou 4/"
+                !refreshToken.startsWith("1//") && refreshToken
+                  ? "Refresh Token inválido. Deve começar com 1//"
                   : undefined
               }
             >
