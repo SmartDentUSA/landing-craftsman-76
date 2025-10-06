@@ -126,8 +126,7 @@ export function RepositoryPanel({
   const [isSyncing, setIsSyncing] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("products");
-  const [manualReviews, setManualReviews] = useState<ManualReview[]>([]);
+  const [activeTab, setActiveTab] = useState<'products' | 'testimonials' | 'kols'>("products");
   const [exportingData, setExportingData] = useState(false);
   const [showUnapproved, setShowUnapproved] = useState(false);
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
@@ -136,23 +135,6 @@ export function RepositoryPanel({
   const { getLandingPage } = useLandingPages();
   const { refreshAllCategories } = useCategoryContext();
 
-  // Function to load manual reviews
-  const loadManualReviews = async () => {
-    try {
-      console.log(`[DEBUG] Carregando reviews manuais para landingPageId: ${landingPageId}`);
-      const { loadManualReviews: loadReviews } = useLandingPages.getState();
-      const reviews = await loadReviews(landingPageId);
-      console.log(`[DEBUG] Reviews carregadas:`, reviews);
-      setManualReviews(reviews);
-    } catch (error) {
-      console.error('Erro ao carregar reviews manuais:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar reviews manuais",
-        variant: "destructive"
-      });
-    }
-  };
 
   // Function to load company profile data
   const loadCompanyProfile = async () => {
@@ -181,7 +163,6 @@ export function RepositoryPanel({
     try {
       await Promise.all([
         loadProducts(),
-        loadManualReviews(),
         loadCompanyProfile()
       ]);
       toast({
@@ -768,10 +749,9 @@ export function RepositoryPanel({
       </CardHeader>
 
       <CardContent className="pt-0">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'products' | 'testimonials' | 'kols')} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="products">Produtos</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
               <TabsTrigger value="kols">KOLs</TabsTrigger>
             </TabsList>
@@ -808,12 +788,6 @@ export function RepositoryPanel({
                   </div>
                 )}
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="reviews" className="mt-4">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Reviews management functionality</p>
             </div>
           </TabsContent>
 
