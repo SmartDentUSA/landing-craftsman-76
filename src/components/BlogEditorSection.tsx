@@ -57,6 +57,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [versionToDelete, setVersionToDelete] = useState<{ domain: 'dentala' | 'eodonto', index: number } | null>(null);
   const [imageSelectorOpen, setImageSelectorOpen] = useState(false);
   const [activeEditor, setActiveEditor] = useState<'dentala' | 'eodonto' | null>(null);
+  const [dentalaEditorInstance, setDentalaEditorInstance] = useState<any>(null);
+  const [eodontoEditorInstance, setEodontoEditorInstance] = useState<any>(null);
   
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
@@ -499,22 +501,33 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const handleImageSelect = (imageMarkdown: string, imageUrl: string) => {
     if (!activeEditor) return;
     
-    const currentBlog = activeEditor === 'dentala' ? dentalaBlogPost : eodontoBlogPost;
-    if (!currentBlog) return;
+    const editorInstance = activeEditor === 'dentala' ? dentalaEditorInstance : eodontoEditorInstance;
     
-    // Inserir markdown da imagem no final do conteúdo
-    const updatedContent = currentBlog.content + '\n\n' + imageMarkdown + '\n\n';
-    
-    if (activeEditor === 'dentala') {
-      updateDentalaBlog('content', updatedContent);
+    // Se o editor está focado, inserir na posição do cursor
+    if (editorInstance && editorInstance.isFocused) {
+      editorInstance.commands.insertContent(imageMarkdown);
+      toast({
+        title: "Imagem inserida",
+        description: "Imagem adicionada na posição do cursor",
+      });
     } else {
-      updateEodontoBlog('content', updatedContent);
+      // Fallback: inserir no final do conteúdo
+      const currentBlog = activeEditor === 'dentala' ? dentalaBlogPost : eodontoBlogPost;
+      if (!currentBlog) return;
+      
+      const updatedContent = currentBlog.content + '\n\n' + imageMarkdown + '\n\n';
+      
+      if (activeEditor === 'dentala') {
+        updateDentalaBlog('content', updatedContent);
+      } else {
+        updateEodontoBlog('content', updatedContent);
+      }
+      
+      toast({
+        title: "Imagem inserida",
+        description: "Imagem adicionada ao final do conteúdo",
+      });
     }
-    
-    toast({
-      title: "Imagem inserida",
-      description: "Imagem da solução adicionada ao conteúdo",
-    });
   };
 
   const generatePreviewHTML = (content: string, title: string) => {
@@ -682,6 +695,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                           onChange={(content) => updateDentalaBlog('content', content)}
                           placeholder="Conteúdo para profissionais..."
                           onInsertSolutionImage={() => handleInsertSolutionImage('dentala')}
+                          onEditorReady={setDentalaEditorInstance}
                           className="min-h-[400px]"
                         />
                       </div>
@@ -784,6 +798,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                           onChange={(content) => updateEodontoBlog('content', content)}
                           placeholder="Conteúdo para consumidores..."
                           onInsertSolutionImage={() => handleInsertSolutionImage('eodonto')}
+                          onEditorReady={setEodontoEditorInstance}
                           className="min-h-[400px]"
                         />
                       </div>

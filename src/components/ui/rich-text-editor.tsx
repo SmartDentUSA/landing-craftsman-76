@@ -12,6 +12,7 @@ interface RichTextEditorProps {
   placeholder?: string;
   onInsertProductLink?: () => void;
   onInsertSolutionImage?: () => void;
+  onEditorReady?: (editor: any) => void;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = "Digite sua resposta...",
   onInsertProductLink,
   onInsertSolutionImage,
+  onEditorReady,
   className
 }) => {
   const editor = useEditor({
@@ -36,6 +38,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+    },
+    onCreate: ({ editor }) => {
+      onEditorReady?.(editor);
     },
   });
 
