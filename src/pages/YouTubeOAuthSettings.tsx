@@ -44,10 +44,7 @@ export default function YouTubeOAuthSettings() {
   const [oauthCode, setOauthCode] = useState('');
   const [isClientIdValid, setIsClientIdValid] = useState(false);
 
-  const redirectUri = useMemo(
-    () => `https://landing-craftsman-76.lovable.app/oauth2/callback`,
-    []
-  );
+  const redirectUri = `${window.location.origin}/oauth2/callback`;
 
   // 🧹 Limpar chaves inválidas e carregar valores
   useEffect(() => {

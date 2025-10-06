@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -9,41 +11,45 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Use native fetch instead of Supabase client to avoid dependency issues
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration')
     }
 
     console.log('🛒 Generating Google Merchant feed...')
 
-    // Fetch company profile
-    const companyResponse = await fetch(`${supabaseUrl}/rest/v1/company_profile?select=*`, {
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-        'Content-Type': 'application/json'
-      }
-    })
+    // Create Supabase client with service role key
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const companyData = await companyResponse.json()
-    const companyProfile = companyData?.[0] || {}
+    // Fetch company profile
+    const { data: companyData, error: companyError } = await supabase
+      .from('company_profile')
+      .select('*')
+      .limit(1)
+      .single()
+
+    if (companyError) {
+      console.error('❌ Error fetching company profile:', companyError)
+    }
+
+    const companyProfile = companyData || {}
 
     // Fetch approved products
-    const productsResponse = await fetch(`${supabaseUrl}/rest/v1/products_repository?approved=eq.true&order=display_order.asc&select=*`, {
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-        'Content-Type': 'application/json'
-      }
-    })
+    const { data: products, error: productsError } = await supabase
+      .from('products_repository')
+      .select('*')
+      .eq('approved', true)
+      .order('display_order', { ascending: true })
 
-    const products = await productsResponse.json()
-
-    if (!Array.isArray(products)) {
+    if (productsError) {
+      console.error('❌ Error fetching products:', productsError)
       throw new Error('Failed to fetch products')
+    }
+
+    if (!products || !Array.isArray(products)) {
+      throw new Error('No products found')
     }
 
     console.log(`📦 Found ${products.length} approved products`)
