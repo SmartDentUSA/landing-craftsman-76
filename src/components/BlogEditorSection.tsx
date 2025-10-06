@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { normalizeBlogContent } from "@/lib/blog-utils";
 import { Loader2, FileText, Save, Eye, Sparkles, Link, BookOpen, Settings, Zap, Globe, ShoppingCart, History, RotateCcw, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -149,7 +150,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       const { data: blogs, error: loadError } = await supabase
         .from('blog_posts')
         .select('*')
-        .eq('landing_page_id', landingPageId);
+        .eq('landing_page_id', landingPageId)
+        .order('updated_at', { ascending: false });
 
       if (loadError) {
         console.error('❌ Erro ao carregar blogs:', loadError);
@@ -180,9 +182,10 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       console.log(`✅ Eodonto encontrado: ${!!eodontoBlog}`);
 
       if (dentalaBlog) {
+        const normalizedContent = normalizeBlogContent(dentalaBlog.content || '');
         setDentalaBlogPost({
           title: dentalaBlog.title || '',
-          content: dentalaBlog.content || '',
+          content: normalizedContent,
           meta_description: dentalaBlog.meta_description || '',
           keywords: dentalaBlog.keywords || [],
           status: dentalaBlog.status || 'draft',
@@ -191,14 +194,15 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         console.log(
           `   📚 Dentala: ${
             ((dentalaBlog.version_history as any)?.versions || []).length
-          } versões`
+          } versões | Normalizado: ${normalizedContent.substring(0, 50)}...`
         );
       }
 
       if (eodontoBlog) {
+        const normalizedContent = normalizeBlogContent(eodontoBlog.content || '');
         setEodontoBlogPost({
           title: eodontoBlog.title || '',
-          content: eodontoBlog.content || '',
+          content: normalizedContent,
           meta_description: eodontoBlog.meta_description || '',
           keywords: eodontoBlog.keywords || [],
           status: eodontoBlog.status || 'draft',
@@ -207,7 +211,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         console.log(
           `   📚 Eodonto: ${
             ((eodontoBlog.version_history as any)?.versions || []).length
-          } versões`
+          } versões | Normalizado: ${normalizedContent.substring(0, 50)}...`
         );
       }
     } catch (error: any) {
