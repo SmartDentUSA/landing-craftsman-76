@@ -109,6 +109,7 @@ export function StrategicBlogPreview({
               title: pb.title,
               content: pb.content,
               productName: pb.productName,
+              productId: pb.productId,
               productImageUrl: product?.image_url,
               productUrl: product?.product_url,
               keywords: [],

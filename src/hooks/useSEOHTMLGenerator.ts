@@ -237,6 +237,7 @@ interface ConsolidatedBlogOptions {
     title: string;
     content: string;
     productName?: string;
+    productId?: string;
     productImageUrl?: string;
     productUrl?: string;
     keywords?: string[];
@@ -989,10 +990,15 @@ export const useSEOHTMLGenerator = () => {
         }
       }
 
-      // Buscar imagem do produto relacionado
-      const productImageUrl = blog.productImageUrl || (blog.productName && selectedProducts 
-        ? selectedProducts.find((p: any) => p.name.toLowerCase().includes(blog.productName.toLowerCase()))?.image_url
-        : '');
+      // Buscar imagem do produto relacionado (fallback robusto)
+      const productImageUrl = blog.productImageUrl 
+        || (blog.productId && selectedProducts 
+          ? selectedProducts.find((p: any) => p.id === blog.productId)?.image_url 
+          : '')
+        || (blog.productName && selectedProducts 
+          ? selectedProducts.find((p: any) => p.name.toLowerCase().includes(blog.productName.toLowerCase()))?.image_url
+          : '')
+        || '';
 
       return `
         <section class="blog-item">
