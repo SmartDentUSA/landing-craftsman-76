@@ -64,16 +64,24 @@ export function StrategicBlogPreview({
           </html>`;
       }
 
-      // Buscar blogs de produtos para o domínio
-      const productBlogs = productBlogsForHTMLByDomain(domain);
+      // Buscar blogs de produtos APENAS desta landing page
+      const productBlogs = productBlogsForHTMLByDomain(domain, landingPageId);
+      
+      // Se há produtos selecionados, filtrar apenas esses
+      const filteredBlogs = selectedProductIds.length > 0
+        ? productBlogs.filter(blog => selectedProductIds.includes(blog.productId))
+        : productBlogs;
       
       // Buscar SEO Context do Supabase
       const seoContext = await getLatestSEOContext(landingPageId);
 
       console.log(`🔍 Gerando preview consolidado ${domain}:`, {
         strategicTitle: strategicBlog.title,
-        productBlogsCount: productBlogs.length,
-        hasSEOContext: !!seoContext
+        totalProductBlogs: productBlogs.length,
+        filteredProductBlogs: filteredBlogs.length,
+        selectedProductIds: selectedProductIds.length,
+        hasSEOContext: !!seoContext,
+        includedProducts: filteredBlogs.map(b => b.productName)
       });
 
       // Usar generateConsolidatedBlogHTML do hook robusto
@@ -87,7 +95,7 @@ export function StrategicBlogPreview({
             content: seoContext.baseTextMarkdown || '',
             keywords: seoContext.aiKeywords?.map(k => k.term) || [],
           }] : []),
-          ...productBlogs.map(pb => ({
+          ...filteredBlogs.map(pb => ({
             title: pb.title,
             content: pb.content,
             productName: pb.productName,
@@ -168,11 +176,12 @@ export function StrategicBlogPreview({
 
   return (
     <div className="w-full flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg">
-          📰 Preview Consolidado (Blog Estratégico + Produtos)
-        </h3>
-        <Button onClick={doGenerateAll} disabled={isGenerating} size="sm" variant="outline">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-lg">
+            📰 Preview Consolidado (Blog Estratégico + Produtos)
+          </h3>
+          <Button onClick={doGenerateAll} disabled={isGenerating} size="sm" variant="outline">
           {isGenerating ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -185,6 +194,13 @@ export function StrategicBlogPreview({
             </>
           )}
         </Button>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          📌 Mostrando apenas produtos desta landing page
+          {selectedProductIds.length > 0 && (
+            <span className="ml-2">🎯 Filtrado por seleção: {selectedProductIds.length} produto{selectedProductIds.length > 1 ? 's' : ''}</span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100vh-260px)]">
