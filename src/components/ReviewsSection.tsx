@@ -132,14 +132,14 @@ export function ReviewsSection() {
         </Button>
       </div>
 
-      <Accordion type="multiple" className="w-full space-y-4">
+      <Accordion type="multiple" defaultValue={["manual-reviews"]} className="w-full space-y-4">
         {/* Seção 1: Reviews Manuais */}
         <AccordionItem value="manual-reviews">
           <AccordionTrigger className="hover:no-underline">
             <div className="flex items-center gap-3">
               <Star className="h-5 w-5 text-yellow-500" />
               <span className="font-semibold">Reviews Manuais da Empresa</span>
-              <Badge variant="secondary">{reviews.manual_reviews.length}</Badge>
+              <Badge variant="secondary">{reviews.manual_reviews.length} reviews</Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -151,13 +151,39 @@ export function ReviewsSection() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Card de boas-vindas quando não há reviews */}
+                {reviews.manual_reviews.length === 0 && (
+                  <Card className="border-dashed bg-muted/50">
+                    <CardContent className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-4">
+                      <div className="rounded-full bg-primary/10 p-4">
+                        <Star className="h-8 w-8 text-primary" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-lg">Nenhum review adicionado ainda</h3>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          Reviews são essenciais para SEO! Eles aparecem no schema LocalBusiness e ajudam a aumentar a confiança dos clientes.
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          setEditingReview(null);
+                          setFormAuthor("");
+                          setFormRating(5);
+                          setFormText("");
+                          setIsModalOpen(true);
+                        }}
+                        className="group"
+                      >
+                        <Plus className="h-4 w-4 mr-2 transition-transform group-hover:scale-110" />
+                        Adicionar Primeiro Review
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Lista de reviews */}
                 <div className="space-y-3">
-                  {reviews.manual_reviews.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum review manual adicionado ainda
-                    </p>
-                  ) : (
+                  {reviews.manual_reviews.length > 0 && (
                     reviews.manual_reviews.map((review, index) => (
                       <Card key={index} className="p-4">
                         <div className="flex items-start justify-between gap-4">
@@ -195,19 +221,25 @@ export function ReviewsSection() {
                   )}
                 </div>
 
-                {/* Modal para adicionar/editar */}
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full" onClick={() => {
+                {/* Botão adicionar (visível apenas quando já houver reviews) */}
+                {reviews.manual_reviews.length > 0 && (
+                  <Button 
+                    className="w-full group" 
+                    onClick={() => {
                       setEditingReview(null);
                       setFormAuthor("");
                       setFormRating(5);
                       setFormText("");
-                    }}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Review Manual
-                    </Button>
-                  </DialogTrigger>
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
+                    Adicionar Review Manual
+                  </Button>
+                )}
+
+                {/* Modal para adicionar/editar */}
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>
@@ -284,6 +316,15 @@ export function ReviewsSection() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Card informativo */}
+                <Card className="bg-muted/30 border-primary/20">
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>💡 Como encontrar:</strong> Acesse o Google Maps, procure sua empresa, copie a URL da página (ex: https://maps.google.com/?cid=123456789) e cole abaixo.
+                    </p>
+                  </CardContent>
+                </Card>
+
                 <div>
                   <Label>Google Maps URL ou Place ID</Label>
                   <div className="flex gap-2">
@@ -305,18 +346,23 @@ export function ReviewsSection() {
                   </div>
                 </div>
 
-                {reviews.last_google_sync && (
-                  <div className="text-sm text-muted-foreground">
-                    <strong>Última sincronização:</strong>{" "}
-                    {new Date(reviews.last_google_sync).toLocaleString("pt-BR")}
-                  </div>
-                )}
+                {/* Status da sincronização */}
+                <div className="flex flex-col gap-2">
+                  {reviews.last_google_sync && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1 text-success" />
+                        Última sincronização: {new Date(reviews.last_google_sync).toLocaleString("pt-BR")}
+                      </Badge>
+                    </div>
+                  )}
 
-                {reviews.google_place_id && (
-                  <div className="text-sm text-muted-foreground">
-                    <strong>Place ID:</strong> {reviews.google_place_id}
-                  </div>
-                )}
+                  {reviews.google_place_id && (
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Place ID:</strong> <code className="bg-muted px-2 py-0.5 rounded">{reviews.google_place_id}</code>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </AccordionContent>
