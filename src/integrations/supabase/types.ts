@@ -214,6 +214,7 @@ export type Database = {
           company_description: string | null
           company_logo_url: string | null
           company_name: string
+          company_reviews: Json | null
           company_videos: Json | null
           contact_email: string | null
           contact_phone: string | null
@@ -250,6 +251,7 @@ export type Database = {
           company_description?: string | null
           company_logo_url?: string | null
           company_name: string
+          company_reviews?: Json | null
           company_videos?: Json | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           company_description?: string | null
           company_logo_url?: string | null
           company_name?: string
+          company_reviews?: Json | null
           company_videos?: Json | null
           contact_email?: string | null
           contact_phone?: string | null
