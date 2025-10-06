@@ -158,9 +158,9 @@ const Repository = () => {
             ) : activeView === 'merchant' ? (
               <GoogleMerchantManager />
             ) : activeView === 'youtube' ? (
-              <YouTubeOAuthSettings />
+              <YouTubeOAuthSettings key="youtube-oauth" />
             ) : activeView === 'google-business' ? (
-              <GoogleBusinessOAuthSettings />
+              <GoogleBusinessOAuthSettings key="google-business-oauth" />
             ) : activeView === 'coupons' ? (
               <CouponsManager />
             ) : activeView === 'aftersales' ? (

@@ -24,6 +24,8 @@ const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/business.manage';
 type ConnectionStatus = 'connected' | 'error' | 'not_configured' | 'checking';
 
 export default function GoogleBusinessOAuthSettings() {
+  console.log('🏢 GoogleBusinessOAuthSettings component mounted');
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -397,10 +399,8 @@ export default function GoogleBusinessOAuthSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <TopNavigation />
-      
-      <div className="container mx-auto p-6 max-w-4xl space-y-6">
+    <div className="space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Google Business OAuth 2.0</h1>
