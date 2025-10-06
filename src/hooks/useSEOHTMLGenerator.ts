@@ -1166,13 +1166,15 @@ export const useSEOHTMLGenerator = () => {
     }
     
     .header {
+      display: none;
+      position: absolute;
+      left: -9999px;
       text-align: center;
       margin-bottom: 4rem;
       padding: 3rem 2rem;
       background: var(--card-background);
       border-radius: var(--border-radius);
       box-shadow: var(--shadow-md);
-      position: relative;
       overflow: hidden;
     }
     
@@ -1518,9 +1520,6 @@ export const useSEOHTMLGenerator = () => {
       }
       
       .header {
-        display: none;
-        position: absolute;
-        left: -9999px;
         padding: 2rem 1rem;
         margin-bottom: 2rem;
       }
