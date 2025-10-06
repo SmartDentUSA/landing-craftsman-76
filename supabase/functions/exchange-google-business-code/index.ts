@@ -31,6 +31,43 @@ serve(async (req: Request) => {
       });
     }
 
+    // Validar formato do Client ID
+    if (!clientId.includes('.apps.googleusercontent.com')) {
+      return json({
+        success: false,
+        error: "invalid_client_id_format",
+        error_description: "Client ID deve ter formato: 123456789-abc.apps.googleusercontent.com",
+        details: { 
+          clientIdReceived: clientId.slice(0, 30) + '...',
+          expectedFormat: 'XXXXXXXXX-XXXX.apps.googleusercontent.com'
+        },
+      });
+    }
+
+    // Validar se não enviaram Client Secret como Client ID
+    if (clientId.startsWith('GOCSPX-')) {
+      return json({
+        success: false,
+        error: "client_secret_in_client_id",
+        error_description: "ERRO: Você enviou o Client Secret no campo Client ID. Corrija as credenciais.",
+        details: { 
+          hint: 'Client ID deve terminar com .apps.googleusercontent.com, não começar com GOCSPX-'
+        },
+      });
+    }
+
+    // Validar formato do Client Secret
+    if (!clientSecret.startsWith('GOCSPX-')) {
+      return json({
+        success: false,
+        error: "invalid_client_secret_format",
+        error_description: "Client Secret deve começar com GOCSPX-",
+        details: { 
+          clientSecretPreview: clientSecret.slice(0, 10) + '...'
+        },
+      });
+    }
+
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },

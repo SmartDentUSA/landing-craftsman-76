@@ -70,6 +70,56 @@ serve(async (req) => {
       );
     }
 
+    // Validar formato das credenciais ANTES de usar
+    if (!clientId.includes('.apps.googleusercontent.com')) {
+      console.error('❌ Client ID com formato inválido:', clientId.slice(0, 30));
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          error: 'Invalid Client ID format',
+          suggestion: 'Client ID deve terminar com .apps.googleusercontent.com',
+          details: { clientIdPreview: clientId.slice(0, 30) + '...' }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (clientId.startsWith('GOCSPX-')) {
+      console.error('❌ Client Secret detectado no campo Client ID!');
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          error: 'Client Secret in Client ID field',
+          suggestion: 'Você colocou o Client Secret no lugar do Client ID. Corrija as credenciais.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!clientSecret.startsWith('GOCSPX-')) {
+      console.error('❌ Client Secret com formato inválido');
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          error: 'Invalid Client Secret format',
+          suggestion: 'Client Secret deve começar com GOCSPX-',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (refreshToken.startsWith('GOCSPX-')) {
+      console.error('❌ Client Secret detectado no campo Refresh Token!');
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          error: 'Client Secret in Refresh Token field',
+          suggestion: 'Você colocou o Client Secret no lugar do Refresh Token. Gere um token válido via OAuth.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     logPreview(clientId, '✅ Client ID');
     logPreview(clientSecret, '✅ Client Secret');
     logPreview(refreshToken, '✅ Refresh Token');
