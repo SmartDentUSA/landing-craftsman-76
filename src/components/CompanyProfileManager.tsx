@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Save, Building2, Video, Instagram, Youtube, Search } from "lucide-react";
 import { VideoSection } from "./VideoSection";
+import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
 import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
 
@@ -296,10 +297,11 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
             <TabsTrigger value="social">Redes Sociais</TabsTrigger>
             <TabsTrigger value="videos">Vídeos da Empresa</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="seo">SEO Hidden</TabsTrigger>
           </TabsList>
           
@@ -592,6 +594,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 />
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="reviews" className="space-y-4">
+            <ReviewsSection />
           </TabsContent>
         </Tabs>
 

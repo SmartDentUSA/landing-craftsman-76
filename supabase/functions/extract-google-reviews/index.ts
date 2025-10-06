@@ -24,7 +24,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { url, extract_individual_reviews = false } = await req.json();
+    const { 
+      url, 
+      extract_individual_reviews = false,
+      sync_to_company_profile = false,
+      company_id = null
+    } = await req.json();
     
     console.log('Extracting Google Reviews from URL:', url);
 

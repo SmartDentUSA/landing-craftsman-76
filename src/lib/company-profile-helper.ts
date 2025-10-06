@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-interface CompanyProfileData {
+export interface CompanyProfileData {
   company_name: string;
   company_description: string;
   location: string;
@@ -10,6 +10,8 @@ interface CompanyProfileData {
   brand_values: string;
   mission_statement: string;
   vision_statement: string;
+  instagram_profile?: string;
+  youtube_channel?: string;
   seo_context_keywords: string[];
   seo_market_positioning: string;
   seo_service_areas: string;
