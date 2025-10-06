@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -43,6 +43,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       onEditorReady?.(editor);
     },
   });
+
+  // Sincronizar content prop com o editor interno
+  useEffect(() => {
+    if (editor && content && !editor.isFocused) {
+      const currentContent = editor.getHTML();
+      if (currentContent !== content) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [content, editor]);
 
   if (!editor) {
     return null;
