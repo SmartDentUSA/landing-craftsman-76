@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import { Button } from '@/components/ui/button';
 import { Bold, Italic, Link as LinkIcon, List, ListOrdered, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         openOnClick: false,
         HTMLAttributes: {
           class: 'text-primary underline hover:text-primary/80 transition-colors',
+        },
+      }),
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-md my-4',
         },
       }),
     ],
