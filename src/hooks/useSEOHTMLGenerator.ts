@@ -1254,8 +1254,13 @@ export const useSEOHTMLGenerator = () => {
     }
     
     .blog-item.strategic h2 {
+      display: none;
       color: hsl(262, 83%, 48%);
       font-size: 1.8rem;
+    }
+    
+    .blog-item.strategic .blog-content {
+      padding-top: 2rem;
     }
     
     .blog-item.strategic .blog-link {
@@ -1513,6 +1518,9 @@ export const useSEOHTMLGenerator = () => {
       }
       
       .header {
+        display: none;
+        position: absolute;
+        left: -9999px;
         padding: 2rem 1rem;
         margin-bottom: 2rem;
       }
