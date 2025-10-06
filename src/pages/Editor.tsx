@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
@@ -145,6 +145,15 @@ interface SchemaData {
     review_text: string;
     approved: boolean;
   }>;
+  // 🆕 Novos campos para Reviews Schema
+  reviews_enabled?: boolean;
+  local_business_enabled?: boolean;
+  all_reviews?: Array<{
+    type: 'google' | 'manual' | 'video';
+    author_name: string;
+    rating: number;
+    review_text?: string;
+  }>;
   offers: Array<{
     name: string;
     description: string;
@@ -164,7 +173,6 @@ interface SchemaData {
     discount_percentage?: number;
     rating?: string;
     rating_count?: number;
-    // Novos campos para seção de recursos
     show_in_resources?: boolean;
     resource_cta1?: { label: string; url: string; visible: boolean };
     resource_cta2?: { label: string; url: string; visible: boolean };
@@ -5488,6 +5496,91 @@ const EditorContent = () => {
                   }}
                 />
               </div>
+              
+              {/* 🆕 Reviews & LocalBusiness Schema */}
+              <Card className="border-l-4 border-l-yellow-500/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-yellow-500/10 rounded-lg">
+                        <Star className="w-5 h-5 text-yellow-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Reviews & LocalBusiness Schema</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Gera schema com reviews consolidados (Google + Manuais + Vídeos)
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={data.schema?.reviews_enabled || false}
+                      onCheckedChange={(checked) => setData(prev => ({
+                        ...prev,
+                        schema: { ...prev.schema, reviews_enabled: checked }
+                      }))}
+                    />
+                  </div>
+                </CardHeader>
+                
+                {data.schema?.reviews_enabled && (
+                  <CardContent className="space-y-4">
+                    {/* Estatísticas de Reviews */}
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <p className="text-xs text-gray-600">Google Aprovados</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {data.schema?.all_reviews?.filter((r: any) => r.type === 'google').length || 0}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <p className="text-xs text-gray-600">Reviews Manuais</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {data.schema?.all_reviews?.filter((r: any) => r.type === 'manual').length || 0}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-purple-50 rounded-lg">
+                        <p className="text-xs text-gray-600">Vídeo Depoimentos</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {data.schema?.all_reviews?.filter((r: any) => r.type === 'video').length || 0}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-yellow-50 rounded-lg">
+                        <p className="text-xs text-gray-600">Média de Rating</p>
+                        <p className="text-2xl font-bold text-yellow-600 flex items-center gap-1">
+                          {data.schema?.all_reviews && data.schema.all_reviews.length > 0
+                            ? (data.schema.all_reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / data.schema.all_reviews.length).toFixed(1)
+                            : '0.0'}
+                          <Star className="w-4 h-4 fill-current" />
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open('https://search.google.com/test/rich-results', '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Testar Rich Snippets
+                      </Button>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3 bg-blue-50 rounded-lg text-sm text-gray-700">
+                      <p className="font-semibold mb-1">ℹ️ Como funciona:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>Consolida reviews de Google, manuais e vídeo depoimentos</li>
+                        <li>Gera schema LocalBusiness com AggregateRating</li>
+                        <li>Limite de 15 reviews no schema (melhores ratings)</li>
+                        <li>Validação automática de tamanho (&lt;100KB)</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
               
               {/* Schema Software Application Card */}
               {false && (

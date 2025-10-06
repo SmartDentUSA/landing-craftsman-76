@@ -1,5 +1,8 @@
 import Mustache from 'mustache';
 import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from './company-profile-helper';
+import { fetchAllReviewsForSchema } from './reviews';
+import { generateSchemaFromCompanyProfile } from './schema-reviews';
+import { validateJsonLdSize, estimateJsonSizeKB } from './validate-jsonld';
 
 // Mapeamento de ícones SVG para redes sociais
 const SOCIAL_ICONS: Record<string, string> = {
@@ -3153,6 +3156,61 @@ export const generateHTML = (data: any): string => {
   };
   
   validateFinalSEO(processedData);
+
+  // 🆕 REVIEWS SCHEMA: Adicionar LocalBusiness + Reviews ao footer
+  if (data?.schema?.reviews_enabled) {
+    console.log('🔍 Reviews Schema habilitado, gerando schema...');
+    
+    (async () => {
+      try {
+        // Buscar company profile
+        const companyData = await getCompanyProfileForSEO();
+        if (!companyData) {
+          console.warn('⚠️ Company profile não encontrado, schema de reviews não gerado');
+          return;
+        }
+
+        // Buscar todos os reviews consolidados
+        const { all_reviews, stats } = await fetchAllReviewsForSchema(data.id);
+        
+        if (all_reviews.length === 0) {
+          console.warn('⚠️ Nenhum review encontrado, schema não gerado');
+          return;
+        }
+
+        console.log(`📊 Reviews encontrados: ${stats.total} (Google: ${stats.google_approved}, Manual: ${stats.manual}, Vídeo: ${stats.video_testimonial})`);
+
+        // Gerar schema
+        const reviewsSchema = generateSchemaFromCompanyProfile(
+          companyData,
+          all_reviews,
+          15 // Máximo 15 reviews
+        );
+
+        if (!reviewsSchema) {
+          console.error('❌ Erro ao gerar schema de reviews');
+          return;
+        }
+
+        // Validar tamanho
+        const sizeKB = estimateJsonSizeKB(JSON.parse(reviewsSchema));
+        console.log(`✅ Schema de reviews gerado: ${sizeKB.toFixed(2)}KB`);
+
+        // Adicionar ao schema_json_ld existente
+        if (processedData.schema_json_ld) {
+          // Se já existe schema, combinar
+          processedData.schema_json_ld += '\n' + reviewsSchema;
+        } else {
+          processedData.schema_json_ld = reviewsSchema;
+        }
+
+        console.log('✅ Reviews schema adicionado ao footer');
+        
+      } catch (error) {
+        console.error('❌ Erro ao gerar reviews schema:', error);
+      }
+    })();
+  }
 
   return Mustache.render(TEMPLATE_HTML, processedData);
 };
