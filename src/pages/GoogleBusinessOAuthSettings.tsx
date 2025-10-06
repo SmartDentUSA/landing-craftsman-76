@@ -42,11 +42,9 @@ export default function GoogleBusinessOAuthSettings() {
   const [showGcpGuide, setShowGcpGuide] = useState(false);
   const [oauthCode, setOauthCode] = useState('');
   const [isClientIdValid, setIsClientIdValid] = useState(false);
+  const [showDiagnosticCard, setShowDiagnosticCard] = useState(false);
 
-  const redirectUri = useMemo(
-    () => `https://landing-craftsman-76.lovable.app/oauth2/callback`,
-    []
-  );
+  const REDIRECT_URI = 'https://landing-craftsman-76.lovable.app/oauth2/callback';
 
   // Limpar chaves inválidas e carregar valores
   useEffect(() => {
@@ -205,7 +203,7 @@ export default function GoogleBusinessOAuthSettings() {
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('access_type', 'offline');
@@ -214,7 +212,7 @@ export default function GoogleBusinessOAuthSettings() {
 
     console.log('🚀 Abrindo OAuth:', {
       clientIdLast6: clientId.slice(-6),
-      redirectUri,
+      redirectUri: REDIRECT_URI,
     });
 
     setShowOAuthModal(true);
@@ -246,7 +244,7 @@ export default function GoogleBusinessOAuthSettings() {
       clientIdLength: clientId.length,
       clientIdValid: /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId),
       clientSecretLength: clientSecret.length,
-      redirectUri,
+      redirectUri: REDIRECT_URI,
     });
 
     setIsSaving(true);
@@ -257,24 +255,33 @@ export default function GoogleBusinessOAuthSettings() {
           code: code.trim(),
           clientId,
           clientSecret,
-          redirectUri,
+          redirectUri: REDIRECT_URI,
         },
       });
 
       if (!data?.success) {
-        let errorMessage = data?.error_description || "Erro desconhecido";
-        
-        toast({
-          title: "Erro no OAuth",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        // Tratamento específico para invalid_grant
+        if (data?.error === 'invalid_grant') {
+          setShowDiagnosticCard(true);
+          toast({
+            title: "❌ Erro: invalid_grant",
+            description: "Código inválido, expirado ou redirect URI incorreto. Verifique o card de diagnóstico abaixo.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro no OAuth",
+            description: data?.error_description || "Erro desconhecido",
+            variant: "destructive",
+          });
+        }
 
         console.error("OAuth exchange failed", {
           error: data?.error,
           error_description: data?.error_description,
+          probable_cause: data?.probable_cause,
           details: data?.details,
-          redirectUri,
+          redirectUri: REDIRECT_URI,
         });
         return;
       }
@@ -338,6 +345,30 @@ export default function GoogleBusinessOAuthSettings() {
     }
   };
 
+  const handleClearCredentials = async () => {
+    localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
+    localStorage.removeItem(STORAGE_KEYS.CLIENT_SECRET);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from('google_business_oauth_credentials')
+        .delete()
+        .eq('user_id', user.id);
+    }
+    
+    setRefreshToken('');
+    setStatus('not_configured');
+    setAccountInfo(null);
+    setShowDiagnosticCard(false);
+    
+    toast({ 
+      title: "🧹 Credenciais limpas", 
+      description: "Refaça o fluxo OAuth do início." 
+    });
+  };
+
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -353,8 +384,6 @@ export default function GoogleBusinessOAuthSettings() {
       });
     }
   };
-
-  const getRedirectUri = () => `${window.location.origin}/oauth2/callback`;
   
   const getGcpConsentScreenUrl = () => {
     if (!clientId) return 'https://console.cloud.google.com/apis/credentials/consent';
@@ -421,18 +450,66 @@ export default function GoogleBusinessOAuthSettings() {
         </Alert>
       )}
 
-      <Alert className="mb-4">
-        <Info className="h-4 w-4" />
-        <AlertTitle>🔍 Configuração Esperada no GCP</AlertTitle>
-        <AlertDescription>
-          <p className="text-sm mb-2">Certifique-se de que você adicionou no Google Cloud Console:</p>
-          <ul className="list-none space-y-1 text-xs font-mono bg-muted p-2 rounded">
-            <li>✅ Redirect URI: <code className="text-green-600">{redirectUri}</code></li>
-            <li>✅ Client ID termina com: <code className="text-blue-600">...{clientId?.slice(-6) || "------"}</code></li>
-            <li>✅ Scope: <code>business.manage</code></li>
-          </ul>
-        </AlertDescription>
-      </Alert>
+      {/* Checklist Pré-voo */}
+      <Card className="p-4 space-y-2 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+        <p className="font-semibold flex items-center gap-2">
+          <CheckCircle className="w-5 h-5" />
+          ✅ Checklist Pré-voo OAuth Google Business
+        </p>
+        <ul className="list-none pl-6 text-sm space-y-1">
+          <li>{clientId && isClientIdValid ? '✅' : '❌'} Client ID formatado: {clientId ? `...${clientId.slice(-15)}` : 'não configurado'}</li>
+          <li>✅ Redirect URI: <code className="text-xs">{REDIRECT_URI}</code></li>
+          <li>✅ Escopo: <code className="text-xs">{REQUIRED_SCOPE}</code></li>
+          <li>
+            <a 
+              href="https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+            >
+              📌 Ativar My Business Business Information API
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </li>
+          <li>
+            <a 
+              href="https://console.cloud.google.com/apis/library/businessprofileperformance.googleapis.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+            >
+              📌 Ativar Business Profile Performance API
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </li>
+        </ul>
+      </Card>
+
+      {/* Card de Diagnóstico invalid_grant */}
+      {showDiagnosticCard && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>🔧 Diagnóstico: Erro invalid_grant</AlertTitle>
+          <AlertDescription>
+            <p className="text-sm mb-2">Verifique estes itens na ordem:</p>
+            <ol className="list-decimal pl-5 text-sm space-y-1">
+              <li>O código OAuth foi usado <strong>apenas uma vez</strong>? (expira em ~10min)</li>
+              <li>O Redirect URI no GCP é <strong>exatamente</strong>: <code className="text-xs bg-muted px-1 rounded">{REDIRECT_URI}</code></li>
+              <li>O escopo <code className="text-xs bg-muted px-1 rounded">{REQUIRED_SCOPE}</code> está adicionado no OAuth Consent Screen?</li>
+              <li>As APIs <strong>My Business Business Information</strong> e <strong>Business Profile Performance</strong> estão ativadas?</li>
+              <li>Você está logado com o mesmo email cadastrado como <strong>Test User</strong> no GCP?</li>
+            </ol>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-3"
+              onClick={() => setShowDiagnosticCard(false)}
+            >
+              Fechar
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -458,14 +535,14 @@ export default function GoogleBusinessOAuthSettings() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(getRedirectUri(), 'Redirect URI')}
+                onClick={() => copyToClipboard(REDIRECT_URI, 'Redirect URI')}
               >
                 <Copy className="w-4 h-4 mr-1" />
                 Copiar
               </Button>
             </div>
             <code className="text-xs break-all block bg-background p-2 rounded border">
-              {getRedirectUri()}
+              {REDIRECT_URI}
             </code>
           </div>
 
@@ -590,20 +667,28 @@ export default function GoogleBusinessOAuthSettings() {
             </Button>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              localStorage.clear();
-              setClientId('');
-              setClientSecret('');
-              setRefreshToken('');
-              window.location.reload();
-            }}
-            className="w-full"
-          >
-            🧹 Limpar Cache e Recarregar
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearCredentials}
+              className="flex-1"
+            >
+              🗑️ Limpar Token e Refazer OAuth
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="flex-1"
+            >
+              🧹 Limpar Cache e Recarregar
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -690,14 +775,14 @@ export default function GoogleBusinessOAuthSettings() {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold">Criar OAuth Client ID (Web application)</h4>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
-                        <li>Tipo: Web application</li>
-                        <li>Nome: Google Business OAuth Client</li>
-                        <li>Adicionar URI de redirecionamento autorizado:</li>
-                      </ul>
-                      <code className="text-xs break-all block bg-muted p-2 rounded border mt-2">
-                        {getRedirectUri()}
-                      </code>
+                       <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
+                         <li>Tipo: Web application</li>
+                         <li>Nome: Google Business OAuth Client</li>
+                         <li>Adicionar URI de redirecionamento autorizado:</li>
+                       </ul>
+                       <code className="text-xs break-all block bg-muted p-2 rounded border mt-2">
+                         {REDIRECT_URI}
+                       </code>
                       <Button
                         variant="link"
                         className="p-0 h-auto mt-2"

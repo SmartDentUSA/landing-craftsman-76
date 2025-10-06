@@ -83,6 +83,55 @@ Este guia detalha como configurar autenticação OAuth 2.0 para extrair reviews 
 
 ---
 
+## ✅ Checklist Rápido (Pré-requisitos Obrigatórios)
+
+Antes de gerar o token, certifique-se:
+
+### 📍 Redirect URI
+- ✅ Redirect URI **exato**: `https://landing-craftsman-76.lovable.app/oauth2/callback`
+- ⚠️ **Sem barra final** (`/`)
+- ⚠️ **HTTPS obrigatório**
+
+### 🔑 Escopos OAuth
+Adicione no **OAuth Consent Screen → Scopes**:
+- `https://www.googleapis.com/auth/business.manage`
+- `https://www.googleapis.com/auth/userinfo.email`
+- `https://www.googleapis.com/auth/userinfo.profile`
+- `openid`
+
+### 📚 APIs Obrigatórias
+Ative no **APIs & Services → Library**:
+1. ✅ **My Business Business Information API** (crítico!)
+2. ✅ **Business Profile Performance API**
+3. ✅ **Google Places API** (opcional, fallback)
+
+### 👤 Usuário de Teste
+- ✅ Adicione seu email em **OAuth Consent Screen → Test users**
+- ⚠️ **Use o mesmo email** ao fazer login no fluxo OAuth
+
+---
+
+## 🔧 Troubleshooting: Erros Comuns
+
+### ❌ Erro: `invalid_grant` / `Bad Request`
+
+| Causa | Solução |
+|-------|---------|
+| Código OAuth reutilizado | Refaça o fluxo do início (código expira em ~10min) |
+| Redirect URI incorreto | Verifique que é exatamente `https://landing-craftsman-76.lovable.app/oauth2/callback` |
+| Escopo não habilitado | Adicione `business.manage` no OAuth Consent Screen |
+| API errada | Ative **My Business Business Information API** (não só Performance) |
+| Email não autorizado | Use o mesmo email cadastrado como Test User no GCP |
+
+### 🧪 Como Testar
+
+1. Limpe credenciais antigas com o botão "🗑️ Limpar Token e Refazer OAuth"
+2. Cole código **imediatamente** após autorização (expira em ~10min)
+3. Verifique logs no Supabase Edge Functions
+4. Confira se `redirectMatch: true` aparece nos logs
+
+---
+
 ## 🔄 Fluxo de Extração
 
 ```
@@ -99,6 +148,8 @@ Web Scraping → Reviews Básicos
 
 - [Google My Business API](https://developers.google.com/my-business)
 - [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
+- [My Business Business Information API](https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com)
+- [Business Profile Performance API](https://console.cloud.google.com/apis/library/businessprofileperformance.googleapis.com)
 
 ---
 

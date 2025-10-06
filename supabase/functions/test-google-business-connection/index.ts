@@ -73,6 +73,12 @@ serve(async (req) => {
     logPreview(clientId, '✅ Client ID');
     logPreview(clientSecret, '✅ Client Secret');
     logPreview(refreshToken, '✅ Refresh Token');
+    
+    // Detectar formato antigo de token
+    if (refreshToken?.startsWith("4/")) {
+      console.warn("⚠️ Token formato antigo detectado (OAuth Playground). Recomenda-se gerar novo via app.");
+    }
+    console.log(`🔍 Token type: ${refreshToken?.startsWith("1/") ? "Production" : "Playground/Test"}`);
 
     console.log('🔄 Exchanging refresh_token for access_token...');
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -90,11 +96,21 @@ serve(async (req) => {
 
     if (!tokenResponse.ok) {
       console.error('❌ Token refresh failed:', tokenData);
+      
+      const suggestion = refreshToken?.startsWith("4/")
+        ? "Token antigo detectado. Gere novo via fluxo OAuth do app (não use OAuth Playground)"
+        : "Verifique se redirect URI e escopos estão corretos no GCP";
+
       return new Response(
         JSON.stringify({ 
           ok: false,
           error: tokenData.error_description || 'Failed to refresh access token',
-          details: tokenData 
+          suggestion,
+          details: {
+            ...tokenData,
+            clientIdLast6: clientId.slice(-6),
+            refreshTokenPreview: refreshToken.slice(0, 10) + "...",
+          }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
