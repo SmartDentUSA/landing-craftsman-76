@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Link as LinkIcon, List, ListOrdered } from 'lucide-react';
+import { Bold, Italic, Link as LinkIcon, List, ListOrdered, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RichTextEditorProps {
@@ -11,6 +11,7 @@ interface RichTextEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   onInsertProductLink?: () => void;
+  onInsertSolutionImage?: () => void;
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onChange,
   placeholder = "Digite sua resposta...",
   onInsertProductLink,
+  onInsertSolutionImage,
   className
 }) => {
   const editor = useEditor({
@@ -106,6 +108,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             type="button"
           >
             🔗 Produto
+          </Button>
+        )}
+
+        {onInsertSolutionImage && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onInsertSolutionImage}
+            className="h-8 text-xs px-2"
+            type="button"
+          >
+            <ImageIcon className="h-3 w-3 mr-1" />
+            Solução
           </Button>
         )}
 

@@ -17,6 +17,7 @@ import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { TagInput } from "@/components/ui/tag-input";
 import { BlogConsolidationInterface } from "./BlogConsolidationInterface";
 import { useAutoLinker } from "@/hooks/useAutoLinker";
+import { SolutionImageSelector } from "./SolutionImageSelector";
 
 interface BlogEditorSectionProps {
   landingPageId: string;
@@ -54,6 +55,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [previewLinksCount, setPreviewLinksCount] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [versionToDelete, setVersionToDelete] = useState<{ domain: 'dentala' | 'eodonto', index: number } | null>(null);
+  const [imageSelectorOpen, setImageSelectorOpen] = useState(false);
+  const [activeEditor, setActiveEditor] = useState<'dentala' | 'eodonto' | null>(null);
   
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
@@ -488,6 +491,32 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     }
   };
 
+  const handleInsertSolutionImage = (domain: 'dentala' | 'eodonto') => {
+    setActiveEditor(domain);
+    setImageSelectorOpen(true);
+  };
+
+  const handleImageSelect = (imageMarkdown: string, imageUrl: string) => {
+    if (!activeEditor) return;
+    
+    const currentBlog = activeEditor === 'dentala' ? dentalaBlogPost : eodontoBlogPost;
+    if (!currentBlog) return;
+    
+    // Inserir markdown da imagem no final do conteúdo
+    const updatedContent = currentBlog.content + '\n\n' + imageMarkdown + '\n\n';
+    
+    if (activeEditor === 'dentala') {
+      updateDentalaBlog('content', updatedContent);
+    } else {
+      updateEodontoBlog('content', updatedContent);
+    }
+    
+    toast({
+      title: "Imagem inserida",
+      description: "Imagem da solução adicionada ao conteúdo",
+    });
+  };
+
   const generatePreviewHTML = (content: string, title: string) => {
     return `
       <!DOCTYPE html>
@@ -652,6 +681,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                           content={dentalaBlogPost.content}
                           onChange={(content) => updateDentalaBlog('content', content)}
                           placeholder="Conteúdo para profissionais..."
+                          onInsertSolutionImage={() => handleInsertSolutionImage('dentala')}
                           className="min-h-[400px]"
                         />
                       </div>
@@ -753,6 +783,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                           content={eodontoBlogPost.content}
                           onChange={(content) => updateEodontoBlog('content', content)}
                           placeholder="Conteúdo para consumidores..."
+                          onInsertSolutionImage={() => handleInsertSolutionImage('eodonto')}
                           className="min-h-[400px]"
                         />
                       </div>
@@ -867,6 +898,17 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Seletor de Imagens das Soluções */}
+      <SolutionImageSelector
+        open={imageSelectorOpen}
+        onClose={() => {
+          setImageSelectorOpen(false);
+          setActiveEditor(null);
+        }}
+        solutions={landingPageData?.solutions || []}
+        onImageSelect={handleImageSelect}
+      />
     </Accordion>
   );
 }
