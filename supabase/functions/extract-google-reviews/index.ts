@@ -37,9 +37,18 @@ serve(async (req) => {
       throw new Error('URL inválida. Use um link do Google Maps ou Google My Business.');
     }
 
+    // Get auth header for OAuth credential lookup
+    const authHeader = req.headers.get('Authorization');
+
     if (extract_individual_reviews) {
       // New functionality: extract individual reviews and save to database
-      const extractionResult = await extractAndSaveReviews(url, supabase);
+      const extractionResult = await extractAndSaveReviews(
+        url, 
+        supabase, 
+        authHeader,
+        sync_to_company_profile,
+        company_id
+      );
       return new Response(JSON.stringify({
         success: true,
         data: extractionResult,
@@ -327,6 +336,34 @@ async function extractReviewsData(url: string): Promise<GoogleReviewsData> {
   }
 }
 
+// Exchange refresh_token for access_token (Google OAuth 2.0)
+async function getGoogleBusinessAccessToken(
+  clientId: string,
+  clientSecret: string,
+  refreshToken: string
+): Promise<string> {
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json();
+    console.error('❌ Token exchange failed:', errorData);
+    throw new Error(`Failed to exchange refresh token: ${errorData.error_description || errorData.error}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  console.log('✅ Access token obtained successfully');
+  return tokenData.access_token;
+}
+
 // Function to extract reviews from Google Business Profile API (Priority 1)
 async function extractReviewsFromBusinessAPI(
   placeId: string,
@@ -440,7 +477,13 @@ async function syncReviewsToCompanyProfile(
 }
 
 // New function to extract individual reviews and save to database
-async function extractAndSaveReviews(url: string, supabase: any) {
+async function extractAndSaveReviews(
+  url: string, 
+  supabase: any,
+  authHeader: string | null,
+  sync_to_company_profile: boolean = false,
+  company_id: string | null = null
+) {
   const normalizedUrl = normalizeGoogleMapsUrl(url);
   console.log('Using URL for individual extraction:', normalizedUrl);
   
@@ -473,35 +516,46 @@ async function extractAndSaveReviews(url: string, supabase: any) {
     let reviews: any[] = [];
     let businessName = '';
     
-    // PRIORITY 1: Try Business Profile API (OAuth)
-    try {
-      console.log('🥇 Attempting Business Profile API extraction...');
-      const { data: credentials } = await supabase
-        .from('google_business_oauth_credentials')
-        .select('*')
-        .single();
+    // ✅ Try to get Google Business OAuth credentials from database first (per-user config)
+    let clientId, clientSecret, refreshToken;
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
       
-      if (credentials?.refresh_token && credentials?.client_id && credentials?.client_secret) {
-        // Exchange refresh token for access token
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: credentials.client_id,
-            client_secret: credentials.client_secret,
-            refresh_token: credentials.refresh_token,
-            grant_type: 'refresh_token'
-          })
-        });
-        
-        if (tokenResponse.ok) {
-          const { access_token } = await tokenResponse.json();
-          reviews = await extractReviewsFromBusinessAPI(place_id, access_token);
-          console.log('✅ Business API extraction successful');
+      if (user) {
+        const { data: credsData } = await supabase
+          .from('google_business_oauth_credentials')
+          .select('client_id, client_secret, refresh_token')
+          .eq('user_id', user.id)
+          .single();
+
+        if (credsData) {
+          clientId = credsData.client_id;
+          clientSecret = credsData.client_secret;
+          refreshToken = credsData.refresh_token;
+          console.log('✅ Using Google Business credentials from database for user:', user.id);
         }
       }
-    } catch (error) {
-      console.log('⚠️ Business API failed, trying fallback methods...', error);
+    }
+
+    // Fallback to environment variables if not in database
+    if (!clientId) clientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID');
+    if (!clientSecret) clientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET');
+    if (!refreshToken) refreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
+    
+    // PRIORITY 1: Try Business Profile API (OAuth)
+    if (clientId && clientSecret && refreshToken) {
+      try {
+        console.log('🥇 Attempting Business Profile API extraction...');
+        const accessToken = await getGoogleBusinessAccessToken(clientId, clientSecret, refreshToken);
+        reviews = await extractReviewsFromBusinessAPI(place_id, accessToken);
+        console.log('✅ Business API extraction successful');
+      } catch (error) {
+        console.log('⚠️ Business API failed, trying fallback methods...', error);
+      }
+    } else {
+      console.log('ℹ️ Google Business OAuth credentials not configured, using web scraping');
     }
     
     // PRIORITY 2 & 3: Fallback to web scraping if Business API failed
