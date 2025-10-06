@@ -44,6 +44,10 @@ export default function GoogleBusinessOAuthSettings() {
   const [isClientIdValid, setIsClientIdValid] = useState(false);
   const [showDiagnosticCard, setShowDiagnosticCard] = useState(false);
   const [showFormatWarning, setShowFormatWarning] = useState(false);
+  const [dbCredentials, setDbCredentials] = useState<{
+    token: string;
+    updatedAt: string;
+  } | null>(null);
 
   const REDIRECT_URI = 'https://landing-craftsman-76.lovable.app/oauth2/callback';
 
@@ -121,6 +125,27 @@ export default function GoogleBusinessOAuthSettings() {
 
     setIsClientIdValid(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid));
 
+    // Load database credentials for status display
+    const loadDbCredentials = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { data: dbCreds } = await supabase
+        .from('google_business_oauth_credentials')
+        .select('refresh_token, updated_at')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+
+      if (dbCreds) {
+        setDbCredentials({
+          token: dbCreds.refresh_token || '',
+          updatedAt: dbCreds.updated_at || '',
+        });
+      }
+    };
+
+    loadDbCredentials();
+
     // Auto-test connection if all credentials exist and are valid format
     if (cid && csec && rtok && 
         /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid) &&
@@ -170,7 +195,7 @@ export default function GoogleBusinessOAuthSettings() {
     }
   }, [refreshToken, clientId, isClientIdValid, toast]);
 
-  const testConnection = async () => {
+  const testConnection = async (useFormData = false) => {
     setIsTesting(true);
     setStatus('checking');
     
@@ -179,10 +204,19 @@ export default function GoogleBusinessOAuthSettings() {
       CLIENT_ID: clientId ? '✅ Sim' : '❌ Não',
       CLIENT_SECRET: clientSecret ? '✅ Sim' : '❌ Não',
       REFRESH_TOKEN: refreshToken ? '✅ Sim' : '❌ Não',
+      SOURCE: useFormData ? 'FORMULÁRIO' : 'BANCO DE DADOS',
     });
     
     try {
-      const { data, error } = await supabase.functions.invoke('test-google-business-connection');
+      const body = useFormData ? {
+        clientId,
+        clientSecret,
+        refreshToken,
+      } : undefined;
+
+      const { data, error } = await supabase.functions.invoke('test-google-business-connection', {
+        body,
+      });
       
       if (error) throw error;
 
@@ -191,9 +225,10 @@ export default function GoogleBusinessOAuthSettings() {
       if (data?.ok) {
         setStatus('connected');
         setAccountInfo({ name: data.accountName, count: data.accountCount });
+        const source = data.credentialSource === 'form' ? 'formulário' : data.credentialSource === 'database' ? 'banco de dados' : 'environment';
         toast({
           title: "✅ Conectado",
-          description: `Conta: ${data.accountName}`,
+          description: `Conta: ${data.accountName} (Fonte: ${source})`,
         });
       } else {
         setStatus('error');
@@ -321,13 +356,19 @@ export default function GoogleBusinessOAuthSettings() {
         throw new Error('Erro ao salvar no banco de dados');
       }
 
+      // Update database credentials status
+      setDbCredentials({
+        token: refreshToken,
+        updatedAt: new Date().toISOString(),
+      });
+
       toast({
         title: "✅ Credenciais salvas automaticamente",
         description: "Google Business OAuth configurado no banco de dados. Pronto para usar!",
       });
 
-      // Auto-test after saving
-      await testConnection();
+      // Auto-test after saving (using database values)
+      await testConnection(false);
 
     } catch (error: any) {
       console.error('Save error:', error);
@@ -498,7 +539,60 @@ export default function GoogleBusinessOAuthSettings() {
     }
   };
 
+  const handleDeleteFromDatabase = async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !userData.user) {
+      toast({
+        title: "❌ Erro de autenticação",
+        description: "Você precisa estar autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Tem certeza que deseja apagar as credenciais do banco de dados?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("google_business_oauth_credentials")
+        .delete()
+        .eq("user_id", userData.user.id);
+
+      if (error) {
+        toast({
+          title: "❌ Erro ao apagar",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setDbCredentials(null);
+      toast({
+        title: "✅ Credenciais apagadas",
+        description: "Credenciais removidas do banco de dados",
+      });
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro",
+        description: error.message || "Erro ao apagar credenciais",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleClearCredentials = async () => {
+    const confirmed = window.confirm(
+      "Tem certeza que deseja limpar o formulário E apagar do banco de dados?"
+    );
+
+    if (!confirmed) return;
+
     console.log('🧹 Limpando TODOS os dados do Google Business OAuth...');
     
     localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
@@ -520,6 +614,7 @@ export default function GoogleBusinessOAuthSettings() {
     setAccountInfo(null);
     setShowDiagnosticCard(false);
     setIsClientIdValid(false);
+    setDbCredentials(null);
     setShowFormatWarning(false);
     
     toast({ 
@@ -841,6 +936,30 @@ export default function GoogleBusinessOAuthSettings() {
             </p>
           </div>
 
+          {/* Database Status */}
+          {dbCredentials && (
+            <Alert className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Status no Banco de Dados</AlertTitle>
+              <AlertDescription className="space-y-1">
+                <div className="text-sm">
+                  <strong>Token:</strong>{" "}
+                  {dbCredentials.token.startsWith("1//") ? (
+                    <Badge variant="default" className="ml-1">✓ Refresh Token (1//...)</Badge>
+                  ) : dbCredentials.token.startsWith("4/") ? (
+                    <Badge variant="destructive" className="ml-1">✗ Código de Autorização (4/...)</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="ml-1">Outro formato</Badge>
+                  )}
+                </div>
+                <div className="text-sm">
+                  <strong>Atualizado:</strong>{" "}
+                  {new Date(dbCredentials.updatedAt).toLocaleString("pt-BR")}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex gap-2 pt-4 flex-wrap">
             <Button
               onClick={handleSave}
@@ -858,13 +977,13 @@ export default function GoogleBusinessOAuthSettings() {
                   Salvando...
                 </>
               ) : (
-                'Salvar e Testar'
+                'Salvar e Testar (com banco)'
               )}
             </Button>
             
             <Button
               variant="outline"
-              onClick={testConnection}
+              onClick={() => testConnection(true)}
               disabled={
                 isTesting ||
                 !clientId ||
@@ -885,7 +1004,7 @@ export default function GoogleBusinessOAuthSettings() {
                   Testando...
                 </>
               ) : (
-                'Testar Agora'
+                'Testar Agora (com formulário)'
               )}
             </Button>
           </div>
@@ -894,10 +1013,20 @@ export default function GoogleBusinessOAuthSettings() {
             <Button
               variant="outline"
               size="sm"
+              onClick={handleDeleteFromDatabase}
+              disabled={!dbCredentials}
+              className="flex-1"
+            >
+              Apagar do Banco
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleClearCredentials}
               className="flex-1"
             >
-              🗑️ Limpar Token e Refazer OAuth
+              🗑️ Limpar Tudo
             </Button>
             
             <Button

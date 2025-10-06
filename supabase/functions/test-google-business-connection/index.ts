@@ -23,34 +23,61 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const authHeader = req.headers.get('Authorization');
+    console.log('🔍 Checking Google Business OAuth credentials...');
+
+    // Parse request body for optional credentials
+    const body = await req.json().catch(() => ({}));
+    const {
+      clientId: bodyClientId,
+      clientSecret: bodyClientSecret,
+      refreshToken: bodyRefreshToken,
+    } = body;
+
     let clientId, clientSecret, refreshToken;
+    let credentialSource = 'environment';
 
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabaseClient.auth.getUser(token);
-      
-      if (user) {
-        const { data: credsData } = await supabaseClient
-          .from('google_business_oauth_credentials')
-          .select('client_id, client_secret, refresh_token')
-          .eq('user_id', user.id)
-          .single();
+    // Priority: body > database > environment
+    if (bodyClientId && bodyClientSecret && bodyRefreshToken) {
+      console.log('🔵 Using credentials from request body (form data)');
+      clientId = bodyClientId;
+      clientSecret = bodyClientSecret;
+      refreshToken = bodyRefreshToken;
+      credentialSource = 'form';
+    } else {
+      // Try database if user is authenticated
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabaseClient.auth.getUser(token);
+        
+        if (user) {
+          const { data: credsData } = await supabaseClient
+            .from('google_business_oauth_credentials')
+            .select('client_id, client_secret, refresh_token')
+            .eq('user_id', user.id)
+            .single();
 
-        if (credsData) {
-          clientId = credsData.client_id;
-          clientSecret = credsData.client_secret;
-          refreshToken = credsData.refresh_token;
-          console.log('✅ Using credentials from database for user:', user.id);
+          if (credsData) {
+            clientId = credsData.client_id;
+            clientSecret = credsData.client_secret;
+            refreshToken = credsData.refresh_token;
+            credentialSource = 'database';
+            console.log('✅ Using credentials from database for user:', user.id);
+          }
+        }
+      }
+
+      // Fallback to environment variables
+      if (!clientId || !clientSecret || !refreshToken) {
+        console.log('⚠️ Using credentials from environment variables');
+        clientId = clientId || Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID');
+        clientSecret = clientSecret || Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET');
+        refreshToken = refreshToken || Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
+        if (!credentialSource || credentialSource === 'environment') {
+          credentialSource = 'environment';
         }
       }
     }
-
-    if (!clientId) clientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID');
-    if (!clientSecret) clientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET');
-    if (!refreshToken) refreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
-
-    console.log('🔍 Checking Google Business OAuth credentials...');
     
     if (!clientId || !clientSecret || !refreshToken) {
       const missing = [];
@@ -216,7 +243,8 @@ serve(async (req) => {
         ok: true,
         accountCount,
         accountName,
-        message: 'Google Business OAuth credentials are valid'
+        credentialSource,
+        message: `Google Business OAuth credentials are valid (Source: ${credentialSource})`
       }),
       { 
         status: 200, 
@@ -231,6 +259,7 @@ serve(async (req) => {
       JSON.stringify({ 
         ok: false,
         error: 'Failed to test Google Business connection',
+        credentialSource: credentialSource || 'unknown',
         details: (error as Error).message 
       }),
       { 
