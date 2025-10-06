@@ -327,6 +327,118 @@ async function extractReviewsData(url: string): Promise<GoogleReviewsData> {
   }
 }
 
+// Function to extract reviews from Google Business Profile API (Priority 1)
+async function extractReviewsFromBusinessAPI(
+  placeId: string,
+  accessToken: string
+): Promise<any[]> {
+  console.log('🔵 Extracting reviews from Business Profile API...');
+  
+  try {
+    // 1. Fetch accounts
+    const accountsRes = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const accountsData = await accountsRes.json();
+    
+    if (!accountsRes.ok || !accountsData.accounts?.length) {
+      throw new Error('No Business Profile accounts found');
+    }
+    
+    const accountId = accountsData.accounts[0].name;
+    console.log('✅ Account found:', accountId);
+    
+    // 2. Fetch locations
+    const locationsRes = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const locationsData = await locationsRes.json();
+    
+    if (!locationsRes.ok || !locationsData.locations?.length) {
+      throw new Error('No locations found for this account');
+    }
+    
+    const locationId = locationsData.locations[0].name;
+    console.log('✅ Location found:', locationId);
+    
+    // 3. Fetch reviews
+    const reviewsRes = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const reviewsData = await reviewsRes.json();
+    
+    if (!reviewsRes.ok) {
+      throw new Error('Failed to fetch reviews from Business API');
+    }
+    
+    console.log(`✅ Fetched ${reviewsData.reviews?.length || 0} reviews from Business API`);
+    
+    return (reviewsData.reviews || []).map((r: any) => ({
+      place_id: placeId,
+      author_name: r.reviewer?.displayName || 'Anonymous',
+      author_url: '',
+      rating: r.starRating === 'FIVE' ? 5 : r.starRating === 'FOUR' ? 4 : r.starRating === 'THREE' ? 3 : r.starRating === 'TWO' ? 2 : 1,
+      review_text: r.comment || '',
+      review_date: r.createTime || new Date().toISOString(),
+      relative_time: 'via Business API',
+      profile_photo_url: r.reviewer?.profilePhotoUrl || '',
+      response_from_owner: r.reviewReply?.comment || '',
+      response_date: r.reviewReply?.updateTime || '',
+      is_local_guide: false,
+      review_likes: 0
+    }));
+  } catch (error) {
+    console.error('❌ Business API extraction failed:', error);
+    throw error;
+  }
+}
+
+// Function to sync reviews to company_profile table
+async function syncReviewsToCompanyProfile(
+  supabase: any,
+  userId: string,
+  reviews: any[],
+  placeId: string
+) {
+  console.log('💾 Syncing reviews to company_profile...');
+  
+  const { data: profile } = await supabase
+    .from('company_profile')
+    .select('company_reviews')
+    .eq('user_id', userId)
+    .single();
+  
+  const existingReviews = profile?.company_reviews || {
+    manual_reviews: [],
+    google_reviews_imported: false,
+    google_place_id: null,
+    last_google_sync: null
+  };
+  
+  const updatedReviews = {
+    ...existingReviews,
+    manual_reviews: [
+      ...existingReviews.manual_reviews,
+      ...reviews.map(r => ({
+        author_name: r.author_name,
+        rating: r.rating,
+        review_text: r.review_text,
+        review_date: r.review_date
+      }))
+    ],
+    google_reviews_imported: true,
+    google_place_id: placeId,
+    last_google_sync: new Date().toISOString()
+  };
+  
+  await supabase
+    .from('company_profile')
+    .update({ company_reviews: updatedReviews })
+    .eq('user_id', userId);
+    
+  console.log('✅ Reviews synced to company_profile');
+}
+
 // New function to extract individual reviews and save to database
 async function extractAndSaveReviews(url: string, supabase: any) {
   const normalizedUrl = normalizeGoogleMapsUrl(url);
@@ -358,8 +470,45 @@ async function extractAndSaveReviews(url: string, supabase: any) {
   console.log('Created extraction job:', job.id);
 
   try {
-    // Fetch the page to get business name and initial reviews
-    const response = await fetch(normalizedUrl, {
+    let reviews: any[] = [];
+    let businessName = '';
+    
+    // PRIORITY 1: Try Business Profile API (OAuth)
+    try {
+      console.log('🥇 Attempting Business Profile API extraction...');
+      const { data: credentials } = await supabase
+        .from('google_business_oauth_credentials')
+        .select('*')
+        .single();
+      
+      if (credentials?.refresh_token && credentials?.client_id && credentials?.client_secret) {
+        // Exchange refresh token for access token
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: credentials.client_id,
+            client_secret: credentials.client_secret,
+            refresh_token: credentials.refresh_token,
+            grant_type: 'refresh_token'
+          })
+        });
+        
+        if (tokenResponse.ok) {
+          const { access_token } = await tokenResponse.json();
+          reviews = await extractReviewsFromBusinessAPI(place_id, access_token);
+          console.log('✅ Business API extraction successful');
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Business API failed, trying fallback methods...', error);
+    }
+    
+    // PRIORITY 2 & 3: Fallback to web scraping if Business API failed
+    if (reviews.length === 0) {
+      console.log('🥈 Attempting web scraping extraction...');
+      // Fetch the page to get business name and initial reviews
+      const response = await fetch(normalizedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -375,29 +524,29 @@ async function extractAndSaveReviews(url: string, supabase: any) {
       throw new Error(`Falha ao acessar a página: ${response.status}`);
     }
 
-    const html = await response.text();
-    console.log('Fetched page, HTML length:', html.length);
+      const html = await response.text();
+      console.log('Fetched page, HTML length:', html.length);
 
-    // Extract business name using existing logic
-    let businessName = '';
-    const businessNamePatterns = [
-      /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i,
-      /<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i,
-      /<title[^>]*>([^<]+)</i
-    ];
+      // Extract business name using existing logic
+      const businessNamePatterns = [
+        /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i,
+        /<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i,
+        /<title[^>]*>([^<]+)</i
+      ];
 
-    for (const pattern of businessNamePatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        businessName = match[1].trim();
-        console.log('Business name extracted:', businessName);
-        break;
+      for (const pattern of businessNamePatterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          businessName = match[1].trim();
+          console.log('Business name extracted:', businessName);
+          break;
+        }
       }
-    }
 
-    // Extract individual reviews from the current page
-    const reviews = extractIndividualReviews(html, place_id);
-    console.log(`Extracted ${reviews.length} individual reviews`);
+      // Extract individual reviews from the current page
+      reviews = extractIndividualReviews(html, place_id);
+      console.log(`Extracted ${reviews.length} individual reviews`);
+    }
 
     // Save reviews to database
     let savedCount = 0;
@@ -529,59 +678,6 @@ function extractIndividualReviews(html: string, place_id: string) {
     console.log('Error extracting real reviews:', error);
   }
   
-  // Fallback: Generate sample reviews if no real ones found
-  if (reviews.length === 0) {
-    console.log('No real reviews extracted, generating sample reviews');
-    
-    const sampleAuthors = [
-      'Ana Silva', 'João Santos', 'Maria Oliveira', 'Carlos Ferreira', 'Patricia Lima',
-      'Roberto Costa', 'Fernanda Souza', 'Marcos Pereira', 'Juliana Rodrigues', 'Rafael Almeida',
-      'Camila Barbosa', 'Diego Martins', 'Larissa Cunha', 'Bruno Dias', 'Tatiane Moura'
-    ];
-
-    const sampleTexts = [
-      'Excelente atendimento! Profissionais muito competentes e equipamentos de última geração.',
-      'Recomendo! Serviço de qualidade e preço justo. Muito satisfeito com o resultado.',
-      'Ótima experiência. Equipe atenciosa e trabalho impecável. Voltarei sempre!',
-      'Profissionais dedicados e resultados surpreendentes. Superou minhas expectativas.',
-      'Ambiente limpo, organizado e profissionais qualificados. Nota 10!',
-      'Serviço rápido e eficiente. Preço compatível com a qualidade oferecida.',
-      'Muito bom! Atendimento personalizado e atenção aos detalhes.',
-      'Equipe experiente e cuidadosa. Trabalho de excelente qualidade.',
-      'Recomendo a todos! Profissionalismo e competência em primeiro lugar.',
-      'Ótimo custo-benefício. Profissionais preparados e atenciosos.',
-      'Trabalho impecável! Superou todas as minhas expectativas.',
-      'Atendimento diferenciado e resultados excepcionais. Muito satisfeito!',
-      'Profissionais qualificados e equipamentos modernos. Recomendo!',
-      'Excelente experiência! Equipe dedicada e preocupada com o cliente.',
-      'Serviço de alta qualidade. Voltarei sempre que precisar!'
-    ];
-
-    // Create realistic sample reviews
-    for (let i = 0; i < Math.min(sampleAuthors.length, 15); i++) {
-      const daysAgo = Math.floor(Math.random() * 180) + 1;
-      const rating = Math.random() < 0.8 ? 5 : 4;
-      
-      reviews.push({
-        place_id,
-        author_name: sampleAuthors[i],
-        author_url: '',
-        rating,
-        review_text: sampleTexts[i],
-        review_date: new Date(Date.now() - (daysAgo * 24 * 60 * 60 * 1000)).toISOString(),
-        relative_time: daysAgo === 1 ? 'há 1 dia' : 
-                      daysAgo < 7 ? `há ${daysAgo} dias` :
-                      daysAgo < 30 ? `há ${Math.floor(daysAgo / 7)} semana${Math.floor(daysAgo / 7) > 1 ? 's' : ''}` :
-                      `há ${Math.floor(daysAgo / 30)} mês${Math.floor(daysAgo / 30) > 1 ? 'es' : ''}`,
-        profile_photo_url: '',
-        response_from_owner: '',
-        response_date: '',
-        is_local_guide: Math.random() < 0.3,
-        review_likes: Math.floor(Math.random() * 8)
-      });
-    }
-  }
-
   console.log(`Extracted ${reviews.length} reviews for place_id: ${place_id}`);
   return reviews;
 }

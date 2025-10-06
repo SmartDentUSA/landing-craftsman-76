@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Star, Plus, Trash2, Edit, ExternalLink, Loader2, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Star, Plus, Trash2, Edit, ExternalLink, Loader2, RefreshCw, CheckCircle2, Upload } from "lucide-react";
+import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import { useCompanyReviews } from "@/hooks/useCompanyReviews";
 import type { CompanyReviewsJSONB } from "@/types/reviews";
 
@@ -363,6 +364,49 @@ export function ReviewsSection() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Seção 3: Importação via CSV */}
+        <AccordionItem value="csv-import">
+          <AccordionTrigger className="hover:no-underline">
+            <div className="flex items-center gap-3">
+              <Upload className="h-5 w-5 text-purple-500" />
+              <span className="font-semibold">Importar Reviews via CSV</span>
+              <Badge variant="secondary">{reviews.manual_reviews.length} reviews</Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Upload de Reviews em Massa</CardTitle>
+                <CardDescription>
+                  Importe múltiplos reviews de uma vez usando um arquivo CSV
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CSVReviewUploader 
+                  reviews={reviews.manual_reviews.map((r, idx) => ({
+                    id: `manual_${idx}`,
+                    author_name: r.author_name,
+                    rating: r.rating,
+                    review_text: r.review_text || '',
+                    approved: true
+                  }))}
+                  onReviewsUpdate={(updatedReviews) => {
+                    setReviews({
+                      ...reviews,
+                      manual_reviews: updatedReviews.map(r => ({
+                        author_name: r.author_name,
+                        rating: r.rating,
+                        review_text: r.review_text,
+                        review_date: new Date().toISOString()
+                      }))
+                    });
+                  }}
+                />
               </CardContent>
             </Card>
           </AccordionContent>
