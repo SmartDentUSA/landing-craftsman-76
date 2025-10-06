@@ -280,7 +280,12 @@ function extractBlogMetadata(markdown: string) {
     );
   }
   
-  return { title, metaDescription, keywords };
+  return { 
+    title, 
+    metaDescription, 
+    keywords,
+    cleanContent: markdown // ✅ Retornar conteúdo limpo separadamente
+  };
 }
 
 function buildDentalaPrompt(context: any, customPrompts: any): string {
@@ -381,7 +386,7 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
   const dentalaVersion = {
     id: crypto.randomUUID(),
     title: dentalaMetadata.title,
-    content: dentalaComparison.selectedContent,
+    content: dentalaMetadata.cleanContent, // ✅ Usar conteúdo limpo
     meta_description: dentalaMetadata.metaDescription,
     keywords: dentalaMetadata.keywords,
     generated_at: new Date().toISOString(),
@@ -405,10 +410,10 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
   
   const dentalaPayload: any = {
     landing_page_id: landingPageId,
-    title: dentalaVersion.title,
-    content: dentalaVersion.content,
-    meta_description: dentalaVersion.meta_description,
-    keywords: dentalaVersion.keywords,
+    title: dentalaMetadata.title, // ✅ Campo separado
+    content: dentalaMetadata.cleanContent, // ✅ Apenas HTML limpo
+    meta_description: dentalaMetadata.metaDescription, // ✅ Campo separado
+    keywords: dentalaMetadata.keywords, // ✅ Campo separado
     published_domains: ['dentala.com.br'],
     version_history: updatedDentalaHistory,
     status: 'draft',
@@ -436,7 +441,7 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
   const eodontoVersion = {
     id: crypto.randomUUID(),
     title: eodontoMetadata.title,
-    content: eodontoComparison.selectedContent,
+    content: eodontoMetadata.cleanContent, // ✅ Usar conteúdo limpo
     meta_description: eodontoMetadata.metaDescription,
     keywords: eodontoMetadata.keywords,
     generated_at: new Date().toISOString(),
@@ -460,10 +465,10 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
   
   const eodontoPayload: any = {
     landing_page_id: landingPageId,
-    title: eodontoVersion.title,
-    content: eodontoVersion.content,
-    meta_description: eodontoVersion.meta_description,
-    keywords: eodontoVersion.keywords,
+    title: eodontoMetadata.title, // ✅ Campo separado
+    content: eodontoMetadata.cleanContent, // ✅ Apenas HTML limpo
+    meta_description: eodontoMetadata.metaDescription, // ✅ Campo separado
+    keywords: eodontoMetadata.keywords, // ✅ Campo separado
     published_domains: ['eodonto.com.br'],
     version_history: updatedEodontoHistory,
     status: 'draft',
