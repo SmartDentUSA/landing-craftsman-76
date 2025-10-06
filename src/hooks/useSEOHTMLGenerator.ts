@@ -879,12 +879,12 @@ export const useSEOHTMLGenerator = () => {
     if (selectedProducts) {
       selectedProducts.forEach(product => {
         if (product.name) {
-          intelligentLinks[product.name.toLowerCase()] = `${canonicalUrl}/produto/${product.id}`;
+          intelligentLinks[product.name.toLowerCase()] = product.productUrl || `${canonicalUrl}/produto/${product.id}`;
         }
         // Add keywords as links too
         [...(product.keywords || []), ...(product.market_keywords || [])].forEach(keyword => {
           if (keyword.length > 3) {
-            intelligentLinks[keyword.toLowerCase()] = `${canonicalUrl}/produto/${product.id}`;
+            intelligentLinks[keyword.toLowerCase()] = product.productUrl || `${canonicalUrl}/produto/${product.id}`;
           }
         });
       });
@@ -981,7 +981,7 @@ export const useSEOHTMLGenerator = () => {
           p.name.toLowerCase().includes(blog.productName.toLowerCase())
         );
         if (relatedProduct) {
-          productUrl = `${canonicalUrl}/produto/${relatedProduct.id}`;
+          productUrl = relatedProduct.productUrl || `${canonicalUrl}/produto/${relatedProduct.id}`;
           productName = relatedProduct.name;
         }
       }
