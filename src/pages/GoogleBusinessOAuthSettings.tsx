@@ -160,11 +160,22 @@ export default function GoogleBusinessOAuthSettings() {
   useEffect(() => {
     const state = location.state as any;
     if (state?.openOAuthModal && state?.code) {
-      console.log("OAuth callback detected, opening modal with code");
-      setOauthCode(state.code);
-      setShowOAuthModal(true);
+      console.log("OAuth callback detected, automatically exchanging code");
       
-      // Limpar state para evitar reabrir modal
+      // Trocar código automaticamente
+      toast({
+        title: "🔄 Trocando código automaticamente...",
+        description: "Aguarde enquanto convertemos o código OAuth em Refresh Token.",
+      });
+      
+      handleOAuthCode(state.code).catch((error) => {
+        console.error("Auto exchange failed:", error);
+        // Se falhar, abrir modal para retry manual
+        setOauthCode(state.code);
+        setShowOAuthModal(true);
+      });
+      
+      // Limpar state para evitar reprocessar
       window.history.replaceState({}, document.title);
     }
   }, [location]);
