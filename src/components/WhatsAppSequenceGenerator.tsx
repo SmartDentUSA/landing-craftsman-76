@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
-import { 
+import { ProductVideosList } from '@/components/ProductVideosList';
+import {
   MessageCircle, 
   Plus, 
   History, 
@@ -357,6 +358,10 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                             value={editingContent}
                             onChange={(e) => setEditingContent(e.target.value)}
                             className="min-h-[150px] font-mono text-sm"
+                          />
+                          <ProductVideosList 
+                            productId={productId}
+                            onInsert={(text) => setEditingContent(prev => prev + text)}
                           />
                           <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
                             {getCharacterCount(editingContent)}/1000 caracteres

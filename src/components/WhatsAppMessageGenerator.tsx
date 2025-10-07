@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
+import { ProductVideosList } from '@/components/ProductVideosList';
 
 interface WhatsAppMessage {
   id: string;
@@ -354,12 +355,18 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
 
                 {/* Modo Editar */}
                 {viewMode === 'edit' && (
-                  <Textarea
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    className="min-h-[300px] font-mono text-sm"
-                    placeholder="Mensagem editável..."
-                  />
+                  <>
+                    <Textarea
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      className="min-h-[300px] font-mono text-sm"
+                      placeholder="Mensagem editável..."
+                    />
+                    <ProductVideosList 
+                      productId={productId}
+                      onInsert={(text) => setCurrentMessage(prev => prev + text)}
+                    />
+                  </>
                 )}
 
                 {/* Modo Texto */}

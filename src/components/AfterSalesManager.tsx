@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Edit, Save, Trash2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { TutorialsList } from "@/components/TutorialsList";
+import { ProductVideosList } from "@/components/ProductVideosList";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -335,8 +335,8 @@ export const AfterSalesManager = () => {
                           </div>
                         </div>
 
-                        {/* 🎓 Tutoriais do Produto */}
-                        <TutorialsList 
+                        {/* 🎬 Biblioteca de Vídeos do Produto */}
+                        <ProductVideosList 
                           productId={selectedProductId} 
                           onInsert={(text) => {
                             const newText = currentContent + text;
