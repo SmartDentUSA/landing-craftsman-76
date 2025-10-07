@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDown, Check } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Switch } from '@/components/ui/switch';
 import { launchGoogleOAuth } from '@/lib/oauth-launcher';
@@ -32,6 +32,7 @@ export default function YouTubeOAuthSettings() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -96,15 +97,19 @@ export default function YouTubeOAuthSettings() {
 
   // Detectar retorno do OAuth callback
   useEffect(() => {
-    const state = location.state as any;
-    if (state?.openOAuthModal && state?.code) {
-      console.log("✅ OAuth callback detectado - abrindo modal com código pré-preenchido");
-      
-      // Sempre abrir o modal com o código
-      setOauthCode(state.code);
+    // 1️⃣ Ler de location.state (compatibilidade com Google Business)
+    const stateCode = location.state?.code;
+    
+    // 2️⃣ Ler de query params (mais confiável para YouTube)
+    const queryCode = searchParams.get("code");
+    
+    const code = queryCode || stateCode; // Prioriza query params
+    
+    if (code) {
+      console.log("✅ Código OAuth detectado:", code.substring(0, 10) + "...");
+      setOauthCode(code);
       setShowOAuthModal(true);
       
-      // Trocar automaticamente se NÃO estiver em modo manual
       if (!manualMode) {
         setIsExchanging(true);
         
@@ -113,7 +118,7 @@ export default function YouTubeOAuthSettings() {
           description: "Aguarde enquanto convertemos 4/... em 1//...",
         });
         
-        handleOAuthCode(state.code)
+        handleOAuthCode(code)
           .then(() => {
             setExchangeSuccess(true);
           })
@@ -133,10 +138,12 @@ export default function YouTubeOAuthSettings() {
         });
       }
       
-      // Limpar state para evitar reprocessar
-      window.history.replaceState({}, document.title);
+      // Limpa a URL para evitar reprocessamento (apenas se vier de query params)
+      if (queryCode) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
-  }, [location, manualMode]);
+  }, [location.state, manualMode]);
 
   const testConnection = async () => {
     setIsTesting(true);

@@ -33,23 +33,19 @@ export default function OAuthCallback() {
           }
         });
       } else if (state === "youtube") {
-        console.log("OAuth callback recebido para YouTube, redirecionando com code:", code);
-        navigate("/repository", { 
+        console.log("OAuth callback recebido para YouTube, redirecionando com code no query param:", code);
+        navigate(`/repository?code=${code}`, { 
           replace: true,
           state: { 
-            openOAuthModal: true, 
-            code,
             activeView: 'youtube'
           }
         });
       } else {
         // Fallback para YouTube (compatibilidade com fluxo antigo)
         console.log("OAuth callback sem state, usando fallback para YouTube");
-        navigate("/repository", { 
+        navigate(`/repository?code=${code}`, { 
           replace: true,
           state: { 
-            openOAuthModal: true, 
-            code,
             activeView: 'youtube'
           }
         });
