@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { IntelligentLinksManager } from "@/components/IntelligentLinksManager";
 import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
+import { ProductVideosList } from '@/components/ProductVideosList';
+import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
+import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 
 interface Product {
   id: string;
@@ -499,6 +502,51 @@ export const ProductBlogGeneratorModal = ({
                     productName={currentProduct.name}
                   />
                 </div>
+
+                {/* 🎬 Biblioteca de Vídeos e Recursos do Produto */}
+                <Card className="w-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span>🎬</span>
+                      <span>Biblioteca de Vídeos e Recursos</span>
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Clique em "Inserir" para copiar links e enriquecer seu conteúdo manualmente
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <ProductVideosList 
+                      productId={currentProduct.id}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ 
+                          title: "Copiado!", 
+                          description: "Link do vídeo copiado para área de transferência" 
+                        });
+                      }}
+                    />
+                    <ProductResourceCTAsList
+                      productId={currentProduct.id}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ 
+                          title: "Link CTA copiado!",
+                          description: "Cole no seu conteúdo"
+                        });
+                      }}
+                    />
+                    <RelatedLandingPagesList
+                      productId={currentProduct.id}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ 
+                          title: "Link da Landing Page copiado!",
+                          description: "Cole no seu conteúdo" 
+                        });
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
@@ -645,6 +693,51 @@ export const ProductBlogGeneratorModal = ({
                     productName={currentProduct.name}
                   />
                 </div>
+
+                {/* 🎬 Biblioteca de Vídeos e Recursos do Produto */}
+                <Card className="w-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span>🎬</span>
+                      <span>Biblioteca de Vídeos e Recursos</span>
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Clique em "Inserir" para copiar links e enriquecer seu conteúdo manualmente
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <ProductVideosList 
+                      productId={currentProduct.id}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ 
+                          title: "Copiado!", 
+                          description: "Link do vídeo copiado para área de transferência" 
+                        });
+                      }}
+                    />
+                    <ProductResourceCTAsList
+                      productId={currentProduct.id}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ 
+                          title: "Link CTA copiado!",
+                          description: "Cole no seu conteúdo"
+                        });
+                      }}
+                    />
+                    <RelatedLandingPagesList
+                      productId={currentProduct.id}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ 
+                          title: "Link da Landing Page copiado!",
+                          description: "Cole no seu conteúdo" 
+                        });
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
