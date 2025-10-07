@@ -2,6 +2,12 @@ import { useEffect } from "react";
 
 export default function OAuthLaunch() {
   useEffect(() => {
+    // 🔧 Adiciona meta Referrer-Policy para compatibilidade cross-origin
+    const meta = document.createElement("meta");
+    meta.httpEquiv = "Referrer-Policy";
+    meta.content = "no-referrer-when-downgrade";
+    document.head.appendChild(meta);
+
     try {
       const params = new URLSearchParams(window.location.search);
       const target = params.get("target");
@@ -15,10 +21,17 @@ export default function OAuthLaunch() {
       }
 
       console.log("🔁 Redirecionando para Google OAuth:", target);
-      setTimeout(() => window.location.replace(target), 100);
+      setTimeout(() => window.open(target, "_self"), 100);
     } catch (err) {
       console.error("❌ Erro ao redirecionar:", err);
     }
+
+    // Cleanup ao desmontar componente
+    return () => {
+      if (document.head.contains(meta)) {
+        document.head.removeChild(meta);
+      }
+    };
   }, []);
 
   return (
@@ -37,7 +50,7 @@ export default function OAuthLaunch() {
       <button
         onClick={() => {
           const target = new URLSearchParams(window.location.search).get("target");
-          if (target) window.location.href = target;
+          if (target) window.open(target, "_self");
         }}
         style={{
           padding: "10px 20px",
