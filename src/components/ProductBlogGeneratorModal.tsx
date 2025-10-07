@@ -337,6 +337,34 @@ export const ProductBlogGeneratorModal = ({
     }
   };
 
+  // Função para inserir conteúdo diretamente no editor
+  const handleInsertIntoEditor = (text: string, type: 'commercial' | 'technical') => {
+    // Ativar modo de edição se não estiver ativo
+    if (type === 'commercial' && !isEditingCommercial) {
+      setEditingContent(currentProduct.individual_blog_content?.commercial || '');
+      setIsEditingCommercial(true);
+    } else if (type === 'technical' && !isEditingTechnical) {
+      setEditingContent(currentProduct.individual_blog_content?.technical || '');
+      setIsEditingTechnical(true);
+    }
+    
+    // Inserir texto no final do conteúdo
+    setEditingContent(prev => {
+      const currentContent = prev || (type === 'commercial' 
+        ? currentProduct.individual_blog_content?.commercial 
+        : currentProduct.individual_blog_content?.technical) || '';
+      
+      // Adicionar separador se já houver conteúdo
+      const separator = currentContent.trim() ? '\n\n' : '';
+      return currentContent + separator + text;
+    });
+    
+    toast({
+      title: "✅ Conteúdo inserido!",
+      description: "Conteúdo adicionado ao editor. Revise a posição conforme necessário.",
+    });
+  };
+
   const blogTypeConfig = {
     commercial: {
       title: "Blog Comercial",
@@ -544,35 +572,17 @@ export const ProductBlogGeneratorModal = ({
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <ProductVideosList 
+                    <ProductVideosList
                       productId={currentProduct.id}
-                      onInsert={(text) => {
-                        navigator.clipboard.writeText(text);
-                        toast({ 
-                          title: "Copiado!", 
-                          description: "Link do vídeo copiado para área de transferência" 
-                        });
-                      }}
+                      onInsert={(text) => handleInsertIntoEditor(text, 'commercial')}
                     />
                     <ProductResourceCTAsList
                       productId={currentProduct.id}
-                      onInsert={(text) => {
-                        navigator.clipboard.writeText(text);
-                        toast({ 
-                          title: "Link CTA copiado!",
-                          description: "Cole no seu conteúdo"
-                        });
-                      }}
+                      onInsert={(text) => handleInsertIntoEditor(text, 'commercial')}
                     />
                     <RelatedLandingPagesList
                       productId={currentProduct.id}
-                      onInsert={(text) => {
-                        navigator.clipboard.writeText(text);
-                        toast({ 
-                          title: "Link da Landing Page copiado!",
-                          description: "Cole no seu conteúdo" 
-                        });
-                      }}
+                      onInsert={(text) => handleInsertIntoEditor(text, 'commercial')}
                     />
                   </CardContent>
                 </Card>
@@ -735,35 +745,17 @@ export const ProductBlogGeneratorModal = ({
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <ProductVideosList 
+                    <ProductVideosList
                       productId={currentProduct.id}
-                      onInsert={(text) => {
-                        navigator.clipboard.writeText(text);
-                        toast({ 
-                          title: "Copiado!", 
-                          description: "Link do vídeo copiado para área de transferência" 
-                        });
-                      }}
+                      onInsert={(text) => handleInsertIntoEditor(text, 'technical')}
                     />
                     <ProductResourceCTAsList
                       productId={currentProduct.id}
-                      onInsert={(text) => {
-                        navigator.clipboard.writeText(text);
-                        toast({ 
-                          title: "Link CTA copiado!",
-                          description: "Cole no seu conteúdo"
-                        });
-                      }}
+                      onInsert={(text) => handleInsertIntoEditor(text, 'technical')}
                     />
                     <RelatedLandingPagesList
                       productId={currentProduct.id}
-                      onInsert={(text) => {
-                        navigator.clipboard.writeText(text);
-                        toast({ 
-                          title: "Link da Landing Page copiado!",
-                          description: "Cole no seu conteúdo" 
-                        });
-                      }}
+                      onInsert={(text) => handleInsertIntoEditor(text, 'technical')}
                     />
                   </CardContent>
                 </Card>
