@@ -14,6 +14,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Switch } from '@/components/ui/switch';
 import { launchGoogleOAuth } from '@/lib/oauth-launcher';
+import { getRedirectUri } from '@/lib/oauth';
 
 const STORAGE_KEYS = {
   CLIENT_ID: 'google_business_client_id',
@@ -54,7 +55,7 @@ export default function GoogleBusinessOAuthSettings() {
     updatedAt: string;
   } | null>(null);
 
-  const REDIRECT_URI = 'https://landing-craftsman-76.lovable.app/oauth2/callback';
+  const REDIRECT_URI = getRedirectUri();
 
   // Limpar chaves inválidas e carregar valores
   useEffect(() => {
@@ -448,6 +449,16 @@ export default function GoogleBusinessOAuthSettings() {
       toast({
         title: "⚠️ Client ID inválido",
         description: "Corrija o Client ID antes de gerar o token.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // ✅ NOVO: Validar Client Secret ANTES de abrir OAuth
+    if (!clientSecret || clientSecret.trim().length < 10) {
+      toast({
+        title: "⚠️ Client Secret obrigatório",
+        description: "Preencha o Client Secret antes de iniciar o fluxo OAuth.",
         variant: "destructive",
       });
       return;

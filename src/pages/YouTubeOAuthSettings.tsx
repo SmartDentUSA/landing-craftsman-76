@@ -14,6 +14,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Switch } from '@/components/ui/switch';
 import { launchGoogleOAuth } from '@/lib/oauth-launcher';
+import { getRedirectUri } from '@/lib/oauth';
 
 const STORAGE_KEYS = {
   CLIENT_ID: 'youtube_client_id',
@@ -50,7 +51,7 @@ export default function YouTubeOAuthSettings() {
   const [exchangeSuccess, setExchangeSuccess] = useState(false);
   const [manualMode, setManualMode] = useState(false);
 
-  const REDIRECT_URI = 'https://landing-craftsman-76.lovable.app/oauth2/callback';
+  const REDIRECT_URI = getRedirectUri();
 
   // 🧹 Limpar chaves inválidas e carregar valores
   useEffect(() => {
@@ -332,6 +333,16 @@ export default function YouTubeOAuthSettings() {
       return;
     }
 
+    // ✅ NOVO: Validar Client Secret ANTES de abrir OAuth
+    if (!clientSecret || clientSecret.trim().length < 10) {
+      toast({
+        title: "⚠️ Client Secret obrigatório",
+        description: "Preencha o Client Secret antes de iniciar o fluxo OAuth.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Carregar e-mail do usuário para login_hint
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -549,8 +560,6 @@ export default function YouTubeOAuthSettings() {
     }
   };
 
-  const getRedirectUri = () => REDIRECT_URI;
-  
   const getGcpConsentScreenUrl = () => {
     if (!clientId) return 'https://console.cloud.google.com/apis/credentials/consent';
     

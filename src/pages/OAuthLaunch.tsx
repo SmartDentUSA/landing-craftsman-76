@@ -12,6 +12,15 @@ export default function OAuthLaunch() {
       const params = new URLSearchParams(window.location.search);
       const target = params.get("target");
 
+      // 🔍 LOGS DE DIAGNÓSTICO
+      console.log("🔍 Debug OAuth Launch", {
+        inIframe: window.self !== window.top,
+        currentOrigin: window.location.origin,
+        targetPreview: target?.slice(0, 120),
+        userAgent: navigator.userAgent,
+        canOpenWindow: !!window.open
+      });
+
       if (
         !target ||
         !/^https:\/\/accounts\.google\.com\/o\/oauth2\/(v2\/)?auth/.test(target)
@@ -21,7 +30,14 @@ export default function OAuthLaunch() {
       }
 
       console.log("🔁 Redirecionando para Google OAuth:", target);
-      setTimeout(() => window.open(target, "_self"), 100);
+      
+      // ✅ USAR location.assign ao invés de window.open
+      try {
+        window.location.assign(target);
+      } catch (err) {
+        console.error("❌ window.location.assign falhou, fallback para replace", err);
+        window.location.replace(target);
+      }
     } catch (err) {
       console.error("❌ Erro ao redirecionar:", err);
     }

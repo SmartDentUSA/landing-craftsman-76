@@ -7,9 +7,28 @@ const corsHeaders = {
 
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), {
-    status: 200, // ⬅️ SEMPRE 200
+    status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+
+// ✅ WHITELIST de origens permitidas
+const ALLOWED = new Set([
+  "https://landing-craftsman-76.lovable.app",
+  "https://b282ae68-9aa1-4f3f-8597-81ef6773926f.lovableproject.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]);
+
+function sanitizeRedirectUri(uri?: string): string | undefined {
+  if (!uri) return undefined;
+  try {
+    const u = new URL(uri);
+    const normalized = `${u.origin}/oauth2/callback`;
+    return ALLOWED.has(u.origin) ? normalized : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 serve(async (req: Request) => {
   // CORS preflight
@@ -19,8 +38,14 @@ serve(async (req: Request) => {
 
   try {
     const { code, clientId, clientSecret, redirectUri } = await req.json();
-    const effectiveRedirectUri =
-      redirectUri || Deno.env.get("YOUTUBE_REDIRECT_URI") || "https://landing-craftsman-76.lovable.app/oauth2/callback";
+    
+    // ✅ SANITIZAR redirectUri antes de usar
+    const incoming = sanitizeRedirectUri(redirectUri);
+    const envFallback = Deno.env.get("YOUTUBE_REDIRECT_URI") || 
+                        "https://landing-craftsman-76.lovable.app/oauth2/callback";
+    const effectiveRedirectUri = incoming ?? envFallback;
+    
+    console.log("🔁 redirect_uri usado:", effectiveRedirectUri);
 
     if (!code || !clientId || !clientSecret || !effectiveRedirectUri) {
       return json({

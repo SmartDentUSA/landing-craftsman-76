@@ -135,6 +135,31 @@ export const ProductBlogGeneratorModal = ({
   };
 
   // Função para aplicar links ao conteúdo (mesma lógica da edge function)
+  // Gerar HTML de preview
+  const generateBlogHTML = async (content: string, type: 'commercial' | 'technical') => {
+    try {
+      const html = await generateConsolidatedBlogHTML({
+        title: `${product.name} - Blog ${type === 'commercial' ? 'Comercial' : 'Técnico'}`,
+        description: product.description || '',
+        domain: 'dentala.com.br',
+        blogs: [{
+          title: product.name,
+          content: content,
+          productName: product.name,
+          productId: product.id,
+          productImageUrl: product.image_url,
+          productUrl: product.product_url,
+          keywords: product.keywords || [],
+        }],
+        preview: true,
+      });
+      return html;
+    } catch (error) {
+      console.error('Erro ao gerar HTML:', error);
+      return '';
+    }
+  };
+
   const applyLinksToContent = (content: string, links: Record<string, string>): string => {
     let processedContent = content;
     const linksApplied: string[] = [];

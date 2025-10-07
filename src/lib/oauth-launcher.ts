@@ -50,7 +50,12 @@ export function launchGoogleOAuth({
       }
     } else {
       console.log(`✅ [${source}] Ambiente top-level — redirecionamento direto`);
-      window.location.assign(authUrl);
+      try {
+        window.location.assign(authUrl);
+      } catch (err) {
+        console.error(`❌ [${source}] location.assign falhou:`, err);
+        window.location.replace(authUrl);
+      }
     }
   } catch (error) {
     console.error(`❌ [${source}] Erro crítico ao iniciar OAuth:`, error);
