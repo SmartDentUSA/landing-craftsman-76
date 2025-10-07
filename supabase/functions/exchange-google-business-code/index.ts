@@ -56,14 +56,14 @@ serve(async (req: Request) => {
       });
     }
 
-    // Validar formato do Client Secret
-    if (!clientSecret.startsWith('GOCSPX-')) {
+    // Validação básica do Client Secret (aceitar qualquer formato)
+    if (!clientSecret || clientSecret.trim().length < 10) {
       return json({
         success: false,
-        error: "invalid_client_secret_format",
-        error_description: "Client Secret deve começar com GOCSPX-",
+        error: "invalid_client_secret",
+        error_description: "Client Secret muito curto ou inválido",
         details: { 
-          clientSecretPreview: clientSecret.slice(0, 10) + '...'
+          clientSecretLength: clientSecret?.length || 0
         },
       });
     }

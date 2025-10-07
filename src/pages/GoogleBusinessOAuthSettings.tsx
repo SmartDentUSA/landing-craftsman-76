@@ -19,7 +19,7 @@ const STORAGE_KEYS = {
   REFRESH_TOKEN: 'google_business_refresh_token',
 };
 
-const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/business.manage';
+const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/business.manage openid email profile';
 
 type ConnectionStatus = 'connected' | 'error' | 'not_configured' | 'checking';
 
@@ -149,8 +149,9 @@ export default function GoogleBusinessOAuthSettings() {
     // Auto-test connection if all credentials exist and are valid format
     if (cid && csec && rtok && 
         /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(cid) &&
-        csec.startsWith('GOCSPX-') &&
-        !rtok.startsWith('GOCSPX-')) {
+        csec.trim().length >= 10 &&
+        !rtok.startsWith('GOCSPX-') &&
+        !rtok.includes('.apps.googleusercontent.com')) {
       testConnection();
     }
   }, [toast]);
@@ -171,13 +172,28 @@ export default function GoogleBusinessOAuthSettings() {
   // Validar formato do refresh token em tempo real e auto-abrir modal se detectar "4/"
   useEffect(() => {
     if (refreshToken) {
-      const isInvalid = refreshToken.startsWith("GOCSPX-");
+      const isInvalidSecret = refreshToken.startsWith("GOCSPX-");
+      const isInvalidClientId = refreshToken.includes(".apps.googleusercontent.com");
       const isAuthCode = refreshToken.startsWith("4/");
       
-      setShowFormatWarning(isInvalid);
+      setShowFormatWarning(isInvalidSecret || isInvalidClientId);
       
-      if (isInvalid) {
+      if (isInvalidSecret) {
         console.error("❌ Client Secret detectado no campo Refresh Token!");
+        toast({
+          title: "❌ Erro de campo",
+          description: "Você colou o Client Secret no campo Refresh Token. Use o campo correto acima.",
+          variant: "destructive"
+        });
+      }
+      
+      if (isInvalidClientId) {
+        console.error("❌ Client ID detectado no campo Refresh Token!");
+        toast({
+          title: "❌ Erro de campo",
+          description: "Você colou o Client ID no campo Refresh Token. Use o campo correto acima.",
+          variant: "destructive"
+        });
       }
       
       // Auto-abrir modal OAuth se detectar código de autorização "4/"

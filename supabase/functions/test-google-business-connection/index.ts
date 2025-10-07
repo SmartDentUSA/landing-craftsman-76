@@ -123,13 +123,14 @@ serve(async (req) => {
       );
     }
 
-    if (!clientSecret.startsWith('GOCSPX-')) {
-      console.error('❌ Client Secret com formato inválido');
+    // Validação relaxada do Client Secret (aceitar qualquer formato)
+    if (!clientSecret || clientSecret.trim().length < 10) {
+      console.error('❌ Client Secret muito curto ou inválido');
       return new Response(
         JSON.stringify({ 
           ok: false,
-          error: 'Invalid Client Secret format',
-          suggestion: 'Client Secret deve começar com GOCSPX-',
+          error: 'Invalid Client Secret',
+          suggestion: 'Client Secret muito curto. Verifique se colou corretamente.',
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -142,6 +143,18 @@ serve(async (req) => {
           ok: false,
           error: 'Client Secret in Refresh Token field',
           suggestion: 'Você colocou o Client Secret no lugar do Refresh Token. Gere um token válido via OAuth.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (refreshToken.includes('.apps.googleusercontent.com')) {
+      console.error('❌ Client ID detectado no campo Refresh Token!');
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          error: 'client_id_in_refresh_token',
+          suggestion: 'Você colou o Client ID no lugar do Refresh Token. Use o campo Client ID separado.',
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -209,8 +222,10 @@ serve(async (req) => {
     logPreview(accessToken, '✅ New Access Token');
 
     console.log('🧪 Testing Google Business API connection...');
-    const apiResponse = await fetch(
-      'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+    
+    // Try Business Information API first (newer), fallback to Account Management
+    let apiResponse = await fetch(
+      'https://mybusinessbusinessinformation.googleapis.com/v1/accounts',
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -218,15 +233,31 @@ serve(async (req) => {
       }
     );
 
+    let apiUsed = 'Business Information API';
+
+    // Fallback to Account Management API if first fails
+    if (!apiResponse.ok) {
+      console.log('⚠️ Business Information API failed, trying Account Management API...');
+      apiResponse = await fetch(
+        'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+      apiUsed = 'Account Management API';
+    }
+
     const apiData = await apiResponse.json();
 
     if (!apiResponse.ok) {
-      console.error('❌ Google Business API test failed:', apiData);
+      console.error(`❌ ${apiUsed} test failed:`, apiData);
       return new Response(
         JSON.stringify({ 
           ok: false,
-          error: apiData.error?.message || 'Google Business API test failed',
-          details: apiData 
+          error: apiData.error?.message || `Falha ao testar conexão com ${apiUsed}`,
+          details: { ...apiData, apiUsed }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -235,7 +266,7 @@ serve(async (req) => {
     const accountCount = apiData.accounts?.length || 0;
     const accountName = apiData.accounts?.[0]?.accountName || 'Unknown';
     
-    console.log('✅ Google Business API connection successful!');
+    console.log(`✅ ${apiUsed} connection successful!`);
     console.log(`🏢 Account: ${accountName} (${accountCount} account(s) found)`);
 
     return new Response(
@@ -244,7 +275,8 @@ serve(async (req) => {
         accountCount,
         accountName,
         credentialSource,
-        message: `Google Business OAuth credentials are valid (Source: ${credentialSource})`
+        apiUsed,
+        message: `Google Business OAuth credentials are valid (Source: ${credentialSource}, API: ${apiUsed})`
       }),
       { 
         status: 200, 
