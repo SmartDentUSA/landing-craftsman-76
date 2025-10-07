@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLinksRepository } from '@/hooks/useLinksRepository';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
 import { ProductVideosList } from '@/components/ProductVideosList';
+import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
+import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 import {
   MessageCircle, 
   Plus, 
@@ -434,6 +436,20 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                           <ProductVideosList 
                             productId={productId}
                             onInsert={(text) => setEditingContent(prev => prev + text)}
+                          />
+                          <ProductResourceCTAsList
+                            productId={productId}
+                            onInsert={(text) => {
+                              navigator.clipboard.writeText(text);
+                              toast({ title: "Link CTA copiado!" });
+                            }}
+                          />
+                          <RelatedLandingPagesList
+                            productId={productId}
+                            onInsert={(text) => {
+                              navigator.clipboard.writeText(text);
+                              toast({ title: "Link da Landing Page copiado!" });
+                            }}
                           />
                           <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
                             {getCharacterCount(editingContent)}/5000 caracteres

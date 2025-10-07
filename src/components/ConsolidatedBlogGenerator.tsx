@@ -13,6 +13,8 @@ import { useLandingPagesSupabase } from '@/hooks/useLandingPagesSupabase';
 import { generateAdvancedIntelligentLinks, processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductVideosList } from '@/components/ProductVideosList';
+import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
+import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 
 interface ConsolidatedBlogGeneratorProps {
   approvedLandingPages: any[];
@@ -420,7 +422,7 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
                             📦 {product?.name || `Produto ${productId.substring(0, 8)}...`}
                           </AccordionTrigger>
                           <AccordionContent className="max-h-[300px] overflow-y-auto">
-                            <ProductVideosList 
+                             <ProductVideosList 
                               productId={productId}
                               onInsert={(text) => {
                                 navigator.clipboard.writeText(text);
@@ -428,6 +430,20 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
                                   title: "Copiado!", 
                                   description: "Link do vídeo copiado para área de transferência" 
                                 });
+                              }}
+                            />
+                            <ProductResourceCTAsList
+                              productId={productId}
+                              onInsert={(text) => {
+                                navigator.clipboard.writeText(text);
+                                toast({ title: "Link CTA copiado!" });
+                              }}
+                            />
+                            <RelatedLandingPagesList
+                              productId={productId}
+                              onInsert={(text) => {
+                                navigator.clipboard.writeText(text);
+                                toast({ title: "Link da Landing Page copiado!" });
                               }}
                             />
                           </AccordionContent>

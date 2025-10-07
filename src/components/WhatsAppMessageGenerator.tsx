@@ -13,6 +13,8 @@ import { useLinksRepository } from '@/hooks/useLinksRepository';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
 import { ProductVideosList } from '@/components/ProductVideosList';
+import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
+import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 
 interface WhatsAppMessage {
   id: string;
@@ -451,6 +453,20 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                     <ProductVideosList 
                       productId={productId}
                       onInsert={(text) => setCurrentMessage(prev => prev + text)}
+                    />
+                    <ProductResourceCTAsList
+                      productId={productId}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ title: "Link CTA copiado!" });
+                      }}
+                    />
+                    <RelatedLandingPagesList
+                      productId={productId}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ title: "Link da Landing Page copiado!" });
+                      }}
                     />
                   </>
                 )}

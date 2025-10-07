@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
+import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 
 interface TikTokCopy {
   id: string;
@@ -795,6 +797,22 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                   </TooltipProvider>
                 </div>
               )}
+
+              {/* Biblioteca de CTAs e Landing Pages */}
+              <ProductResourceCTAsList
+                productId={productId}
+                onInsert={(text) => {
+                  navigator.clipboard.writeText(text);
+                  toast({ title: "Link CTA copiado!" });
+                }}
+              />
+              <RelatedLandingPagesList
+                productId={productId}
+                onInsert={(text) => {
+                  navigator.clipboard.writeText(text);
+                  toast({ title: "Link da Landing Page copiado!" });
+                }}
+              />
             </>
           )}
         </div>

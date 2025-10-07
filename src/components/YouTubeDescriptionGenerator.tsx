@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
 import { ProductVideosList } from '@/components/ProductVideosList';
+import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
+import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
 
 interface YouTubeDescription {
   id: string;
@@ -596,6 +598,22 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                         </div>
                       </div>
                     )}
+
+                    {/* Biblioteca de Recursos */}
+                    <ProductResourceCTAsList
+                      productId={productId}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ title: "Link CTA copiado!" });
+                      }}
+                    />
+                    <RelatedLandingPagesList
+                      productId={productId}
+                      onInsert={(text) => {
+                        navigator.clipboard.writeText(text);
+                        toast({ title: "Link da Landing Page copiado!" });
+                      }}
+                    />
                   </>
                 )}
 
