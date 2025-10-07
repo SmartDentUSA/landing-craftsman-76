@@ -139,28 +139,29 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                   <Badge variant="secondary" className="ml-2">{youtubeVideos.length}</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <AccordionContent className="px-4 pb-4 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1.5">
                   {youtubeVideos.map((video, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                    <div key={index} className="grid grid-cols-[1fr_auto] gap-2 items-start p-2 bg-background rounded border border-red-200 hover:border-red-300 transition-colors">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium line-clamp-2">
                           {video.description || `Vídeo YouTube ${index + 1}`}
                         </p>
                         <a 
                           href={video.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate"
                         >
-                          {video.url.substring(0, 40)}...
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {video.url.substring(0, 35)}...
                         </a>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleInsertVideo(video.url, video.description || `Vídeo YouTube ${index + 1}`)}
+                        className="flex-shrink-0"
                       >
                         Inserir
                       </Button>
@@ -181,28 +182,29 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                   <Badge variant="secondary" className="ml-2">{instagramVideos.length}</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <AccordionContent className="px-4 pb-4 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1.5">
                   {instagramVideos.map((video, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                    <div key={index} className="grid grid-cols-[1fr_auto] gap-2 items-start p-2 bg-background rounded border border-pink-200 hover:border-pink-300 transition-colors">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium line-clamp-2">
                           {video.description || `Vídeo Instagram ${index + 1}`}
                         </p>
                         <a 
                           href={video.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate"
                         >
-                          {video.url.substring(0, 40)}...
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {video.url.substring(0, 35)}...
                         </a>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleInsertVideo(video.url, video.description || `Vídeo Instagram ${index + 1}`)}
+                        className="flex-shrink-0"
                       >
                         Inserir
                       </Button>
@@ -223,28 +225,29 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                   <Badge variant="secondary" className="ml-2">{testimonialVideos.length}</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <AccordionContent className="px-4 pb-4 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1.5">
                   {testimonialVideos.map((video, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                    <div key={index} className="grid grid-cols-[1fr_auto] gap-2 items-start p-2 bg-background rounded border border-blue-200 hover:border-blue-300 transition-colors">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium line-clamp-2">
                           {video.description || `Depoimento ${index + 1}`}
                         </p>
                         <a 
                           href={video.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate"
                         >
-                          {video.url.substring(0, 40)}...
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {video.url.substring(0, 35)}...
                         </a>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleInsertVideo(video.url, video.description || `Depoimento ${index + 1}`)}
+                        className="flex-shrink-0"
                       >
                         Inserir
                       </Button>
@@ -265,28 +268,29 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                   <Badge variant="secondary" className="ml-2">{technicalVideos.length}</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <AccordionContent className="px-4 pb-4 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1.5">
                   {technicalVideos.map((video, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                    <div key={index} className="grid grid-cols-[1fr_auto] gap-2 items-start p-2 bg-background rounded border border-green-200 hover:border-green-300 transition-colors">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium line-clamp-2">
                           {video.description || `Vídeo Técnico ${index + 1}`}
                         </p>
                         <a 
                           href={video.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate"
                         >
-                          {video.url.substring(0, 40)}...
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {video.url.substring(0, 35)}...
                         </a>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleInsertVideo(video.url, video.description || `Vídeo Técnico ${index + 1}`)}
+                        className="flex-shrink-0"
                       >
                         Inserir
                       </Button>
@@ -307,28 +311,29 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                   <Badge variant="secondary" className="ml-2">{tiktokVideos.length}</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <AccordionContent className="px-4 pb-4 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1.5">
                   {tiktokVideos.map((video, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                    <div key={index} className="grid grid-cols-[1fr_auto] gap-2 items-start p-2 bg-background rounded border border-slate-200 hover:border-slate-300 transition-colors">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium line-clamp-2">
                           {video.description || `Vídeo TikTok ${index + 1}`}
                         </p>
                         <a 
                           href={video.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate"
                         >
-                          {video.url.substring(0, 40)}...
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {video.url.substring(0, 35)}...
                         </a>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleInsertVideo(video.url, video.description || `Vídeo TikTok ${index + 1}`)}
+                        className="flex-shrink-0"
                       >
                         Inserir
                       </Button>
@@ -349,28 +354,29 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                   <Badge variant="secondary" className="ml-2">{tutorials.length}</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2">
+              <AccordionContent className="px-4 pb-4 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1.5">
                   {tutorials.map((tutorial) => (
-                    <div key={tutorial.id} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                    <div key={tutorial.id} className="grid grid-cols-[1fr_auto] gap-2 items-start p-2 bg-background rounded border border-orange-200 hover:border-orange-300 transition-colors">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium line-clamp-2">
                           {tutorial.course_name}
                         </p>
                         <a 
                           href={tutorial.course_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 truncate"
                         >
-                          {tutorial.course_url.substring(0, 40)}...
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          {tutorial.course_url.substring(0, 35)}...
                         </a>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleInsertVideo(tutorial.course_url, tutorial.course_name)}
+                        className="flex-shrink-0"
                       >
                         Inserir
                       </Button>
