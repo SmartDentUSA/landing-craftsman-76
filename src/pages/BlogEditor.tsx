@@ -13,16 +13,18 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
 import { generateBlogHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
-  import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
-  import { useProductSchemaGenerator } from "@/hooks/useProductSchemaGenerator";
-  import { KeywordsDashboard } from "@/components/KeywordsDashboard";
-  import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag, BarChart3 } from "lucide-react";
+import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
+import { useProductSchemaGenerator } from "@/hooks/useProductSchemaGenerator";
+import { KeywordsDashboard } from "@/components/KeywordsDashboard";
+import { ProductVideosList } from "@/components/ProductVideosList";
+import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag, BarChart3 } from "lucide-react";
 
 interface BlogPost {
   id?: string;
@@ -1270,6 +1272,47 @@ export default function BlogGenerator() {
                   className="min-h-[400px]"
                 />
               </div>
+
+              {/* Biblioteca de Vídeos dos Produtos Selecionados */}
+              {selectedProducts.length > 0 && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span>🎬</span>
+                      <span>Biblioteca de Vídeos dos Produtos Selecionados</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Vídeos dos {selectedProducts.length} produto(s) selecionado(s) para esta Landing Page
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Accordion type="single" collapsible className="w-full">
+                      {selectedProducts.map((product) => (
+                        <AccordionItem key={product.id} value={product.id}>
+                          <AccordionTrigger>
+                            📦 {product.name}
+                          </AccordionTrigger>
+                          <AccordionContent className="max-h-[300px] overflow-y-auto">
+                            <ProductVideosList 
+                              productId={product.id}
+                              onInsert={(text) => {
+                                setBlogPost(prev => ({
+                                  ...prev,
+                                  content: prev.content + '\n' + text
+                                }));
+                                toast({
+                                  title: "Vídeo inserido!",
+                                  description: "Link adicionado ao conteúdo do blog"
+                                });
+                              }}
+                            />
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
 

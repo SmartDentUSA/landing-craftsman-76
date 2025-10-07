@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Copy, FileText, Globe, Building2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
@@ -23,6 +24,24 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
   const { toast } = useToast();
   const { getProductsForTemplate } = useSelectedProducts();
   const { getLandingPage } = useLandingPagesSupabase();
+  
+  // Gather all selected products for video library
+  const allSelectedProductIds = useMemo(() => {
+    return [...new Set(approvedLandingPages.flatMap(lp => lp.selected_product_ids || []))];
+  }, [approvedLandingPages]);
+  
+  // Fetch products data for video library display
+  const [selectedProductsData, setSelectedProductsData] = useState<any[]>([]);
+  
+  React.useEffect(() => {
+    const loadProducts = async () => {
+      if (allSelectedProductIds.length > 0) {
+        const products = await getProductsForTemplate(allSelectedProductIds);
+        setSelectedProductsData(products);
+      }
+    };
+    loadProducts();
+  }, [allSelectedProductIds, getProductsForTemplate]);
   
   const {
     productBlogsForHTMLByDomain,
@@ -377,6 +396,49 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
               </div>
             </div>
           </div>
+
+          {/* Biblioteca de Vídeos dos Produtos */}
+          {allSelectedProductIds.length > 0 && (
+            <div className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span>🎬</span>
+                    <span>Biblioteca de Vídeos dos Produtos</span>
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Clique em "Inserir" para copiar o link do vídeo para a área de transferência
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="single" collapsible className="w-full">
+                    {allSelectedProductIds.map((productId) => {
+                      const product = selectedProductsData.find(p => p.id === productId);
+                      return (
+                        <AccordionItem key={productId} value={productId}>
+                          <AccordionTrigger>
+                            📦 {product?.name || `Produto ${productId.substring(0, 8)}...`}
+                          </AccordionTrigger>
+                          <AccordionContent className="max-h-[300px] overflow-y-auto">
+                            <ProductVideosList 
+                              productId={productId}
+                              onInsert={(text) => {
+                                navigator.clipboard.writeText(text);
+                                toast({ 
+                                  title: "Copiado!", 
+                                  description: "Link do vídeo copiado para área de transferência" 
+                                });
+                              }}
+                            />
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
