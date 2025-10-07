@@ -253,14 +253,62 @@ export default function GoogleBusinessOAuthSettings() {
     setStatus('checking');
     
     console.log('🧪 Testando conexão com Google Business API...');
-    console.log('📡 Credenciais configuradas:', {
-      CLIENT_ID: clientId ? '✅ Sim' : '❌ Não',
-      CLIENT_SECRET: clientSecret ? '✅ Sim' : '❌ Não',
-      REFRESH_TOKEN: refreshToken ? '✅ Sim' : '❌ Não',
-      SOURCE: useFormData ? 'FORMULÁRIO' : 'BANCO DE DADOS',
-    });
     
     try {
+      // ✅ CRITICAL: Verificar banco de dados PRIMEIRO
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("Não autenticado");
+      }
+
+      const { data: dbCreds } = await supabase
+        .from('google_business_oauth_credentials')
+        .select('client_id, client_secret, refresh_token, updated_at')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+
+      const hasDbCredentials = dbCreds?.refresh_token && dbCreds?.client_id && dbCreds?.client_secret;
+      const hasLocalCredentials = clientId && clientSecret && refreshToken;
+
+      console.log('📡 Status das credenciais:', {
+        DATABASE: hasDbCredentials ? '✅ Salvo' : '❌ Vazio',
+        LOCALSTORAGE: hasLocalCredentials ? '⚠️ Cache apenas' : '❌ Vazio',
+        PRIORITY: hasDbCredentials ? 'BANCO (seguro)' : hasLocalCredentials ? 'CACHE (inseguro)' : 'NENHUM',
+      });
+
+      // Atualizar status visual de credenciais do banco
+      if (hasDbCredentials) {
+        setDbCredentials({
+          token: dbCreds.refresh_token,
+          updatedAt: dbCreds.updated_at,
+        });
+      } else {
+        setDbCredentials(null);
+      }
+
+      // Se não tem no banco, mas tem no localStorage, alertar
+      if (!hasDbCredentials && hasLocalCredentials) {
+        toast({
+          title: "⚠️ Credenciais não salvas",
+          description: "Você tem credenciais no cache do navegador, mas não no banco de dados. Clique em 'Salvar' para garantir persistência.",
+          variant: "destructive",
+        });
+        setStatus('error');
+        return;
+      }
+
+      // Se não tem credenciais, mostrar erro
+      if (!hasDbCredentials) {
+        toast({
+          title: "❌ Sem credenciais",
+          description: "Configure Client ID, Secret e Refresh Token primeiro.",
+          variant: "destructive",
+        });
+        setStatus('not_configured');
+        return;
+      }
+
+      // Testar conexão usando credenciais do BANCO
       const body = useFormData ? {
         clientId,
         clientSecret,
@@ -278,17 +326,16 @@ export default function GoogleBusinessOAuthSettings() {
       if (data?.ok) {
         setStatus('connected');
         setAccountInfo({ name: data.accountName, count: data.accountCount });
-        const source = data.credentialSource === 'form' ? 'formulário' : data.credentialSource === 'database' ? 'banco de dados' : 'environment';
+        const source = data.credentialSource === 'database' ? '🟢 Banco de dados' : data.credentialSource === 'form' ? '🟡 Formulário (cache)' : 'environment';
         const accounts = data.accountCount || 0;
         toast({
           title: "✅ Conectado",
-          description: `Via ${source}. ${accounts > 0 ? `${accounts} conta(s) disponível(is).` : data.accountName}`,
+          description: `${source}. ${accounts > 0 ? `${accounts} conta(s) disponível(is).` : data.accountName}`,
         });
       } else {
         setStatus('error');
         setAccountInfo(null);
         
-        // Se detectar client_secret no refresh_token, auto-abrir diagnóstico
         if (data?.error === "client_secret_in_refresh") {
           setShowDiagnosticCard(true);
           toast({
@@ -299,7 +346,7 @@ export default function GoogleBusinessOAuthSettings() {
         } else {
           toast({
             title: "❌ Erro na conexão",
-            description: data?.error || 'Credenciais inválidas',
+            description: data?.error || 'Credenciais inválidas no banco',
             variant: "destructive"
           });
         }

@@ -151,13 +151,52 @@ export default function YouTubeOAuthSettings() {
     setStatus('checking');
     
     console.log('🧪 Testando conexão com YouTube API...');
-    console.log('📡 Credenciais configuradas:', {
-      CLIENT_ID: clientId ? '✅ Sim' : '❌ Não',
-      CLIENT_SECRET: clientSecret ? '✅ Sim' : '❌ Não',
-      REFRESH_TOKEN: refreshToken ? '✅ Sim' : '❌ Não',
-    });
     
     try {
+      // ✅ CRITICAL: Verificar banco de dados PRIMEIRO
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("Não autenticado");
+      }
+
+      const { data: dbCreds } = await supabase
+        .from('youtube_oauth_credentials')
+        .select('client_id, client_secret, refresh_token, updated_at')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+
+      const hasDbCredentials = dbCreds?.refresh_token && dbCreds?.client_id && dbCreds?.client_secret;
+      const hasLocalCredentials = clientId && clientSecret && refreshToken;
+
+      console.log('📡 Status das credenciais:', {
+        DATABASE: hasDbCredentials ? '✅ Salvo' : '❌ Vazio',
+        LOCALSTORAGE: hasLocalCredentials ? '⚠️ Cache apenas' : '❌ Vazio',
+        PRIORITY: hasDbCredentials ? 'BANCO (seguro)' : hasLocalCredentials ? 'CACHE (inseguro)' : 'NENHUM',
+      });
+
+      // Se não tem no banco, mas tem no localStorage, alertar
+      if (!hasDbCredentials && hasLocalCredentials) {
+        toast({
+          title: "⚠️ Credenciais não salvas",
+          description: "Você tem credenciais no cache do navegador, mas não no banco de dados. Clique em 'Salvar' para garantir persistência.",
+          variant: "destructive",
+        });
+        setStatus('error');
+        return;
+      }
+
+      // Se não tem credenciais, mostrar erro
+      if (!hasDbCredentials) {
+        toast({
+          title: "❌ Sem credenciais",
+          description: "Configure Client ID, Secret e Refresh Token primeiro.",
+          variant: "destructive",
+        });
+        setStatus('not_configured');
+        return;
+      }
+
+      // Testar conexão usando credenciais do BANCO
       const { data, error } = await supabase.functions.invoke('test-youtube-connection');
       
       if (error) throw error;
@@ -168,14 +207,13 @@ export default function YouTubeOAuthSettings() {
         setStatus('connected');
         setChannelInfo({ name: data.channelName, count: data.channelCount });
         toast({
-          title: "✅ Conectado",
-          description: `Canal: ${data.channelName}`,
+          title: "✅ Conectado via Banco",
+          description: `Canal: ${data.channelName} (credenciais persistidas)`,
         });
       } else {
         setStatus('error');
         setChannelInfo(null);
         
-        // Mensagem específica quando falta YOUTUBE_REFRESH_TOKEN
         if (data?.missing?.includes('YOUTUBE_REFRESH_TOKEN')) {
           toast({
             title: "⚠️ Secret não configurado",
@@ -186,7 +224,7 @@ export default function YouTubeOAuthSettings() {
         } else {
           toast({
             title: "❌ Erro na conexão",
-            description: data?.error || 'Credenciais inválidas',
+            description: data?.error || 'Credenciais inválidas no banco',
             variant: "destructive"
           });
         }
