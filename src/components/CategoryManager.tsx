@@ -701,6 +701,7 @@ const CategoryManager = () => {
                                   search_intent_keywords: config.search_intent_keywords || []
                                 })}
                                 onDelete={handleDelete}
+                                onRenameSubcategory={(subcategory, category) => openRenameDialog('subcategory', subcategory, category)}
                               />
                             );
                          })}

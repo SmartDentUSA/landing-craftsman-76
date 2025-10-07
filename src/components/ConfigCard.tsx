@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit, Trash2, Target, Hash, TrendingUp, Search, MoreVertical } from "lucide-react";
+import { Edit, Trash2, Target, Hash, TrendingUp, Search, MoreVertical, FileEdit } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface ConfigCardProps {
   onToggleSelection: (id: string) => void;
   onEdit: (config: CategoryFormData) => void;
   onDelete: (id: string) => void;
+  onRenameSubcategory?: (subcategory: string, category: string) => void;
 }
 
 function InlineCompletenessIndicator({ percentage }: { percentage: number }) {
@@ -64,6 +65,7 @@ export function ConfigCard({
   onToggleSelection,
   onEdit,
   onDelete,
+  onRenameSubcategory,
 }: ConfigCardProps) {
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -75,6 +77,13 @@ export function ConfigCard({
     e.stopPropagation();
     if (config.id) {
       onDelete(config.id);
+    }
+  };
+
+  const handleRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRenameSubcategory) {
+      onRenameSubcategory(config.subcategoria, config.categoria);
     }
   };
 
@@ -171,6 +180,12 @@ export function ConfigCard({
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
+              {onRenameSubcategory && (
+                <DropdownMenuItem onClick={handleRename}>
+                  <FileEdit className="h-4 w-4 mr-2" />
+                  Renomear
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={handleDelete}
                 className="text-destructive focus:text-destructive"
