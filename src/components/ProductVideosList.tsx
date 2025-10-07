@@ -94,6 +94,13 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
     setInsertCount(nextNumber);
   };
 
+  const handleInsertVideoSimple = (url: string) => {
+    const nextNumber = insertCount + 1;
+    const formattedText = `\n\n${nextNumber}) ${url}\n`;
+    onInsert(formattedText);
+    setInsertCount(nextNumber);
+  };
+
   const hasYouTube = youtubeVideos.length > 0;
   const hasInstagram = instagramVideos.length > 0;
   const hasTestimonials = testimonialVideos.length > 0;
@@ -157,14 +164,14 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                           {video.url.substring(0, 35)}...
                         </a>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleInsertVideo(video.url, video.description || `Vídeo YouTube ${index + 1}`)}
-                        className="flex-shrink-0"
-                      >
-                        Inserir
-                      </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleInsertVideoSimple(video.url)}
+                  className="flex-shrink-0"
+                >
+                  Inserir
+                </Button>
                     </div>
                   ))}
                 </div>
@@ -200,14 +207,14 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                           {video.url.substring(0, 35)}...
                         </a>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleInsertVideo(video.url, video.description || `Vídeo Instagram ${index + 1}`)}
-                        className="flex-shrink-0"
-                      >
-                        Inserir
-                      </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleInsertVideoSimple(video.url)}
+                  className="flex-shrink-0"
+                >
+                  Inserir
+                </Button>
                     </div>
                   ))}
                 </div>
@@ -243,14 +250,14 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                           {video.url.substring(0, 35)}...
                         </a>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleInsertVideo(video.url, video.description || `Depoimento ${index + 1}`)}
-                        className="flex-shrink-0"
-                      >
-                        Inserir
-                      </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleInsertVideoSimple(video.url)}
+                  className="flex-shrink-0"
+                >
+                  Inserir
+                </Button>
                     </div>
                   ))}
                 </div>
@@ -286,14 +293,14 @@ export const ProductVideosList: React.FC<ProductVideosListProps> = ({ productId,
                           {video.url.substring(0, 35)}...
                         </a>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleInsertVideo(video.url, video.description || `Vídeo Técnico ${index + 1}`)}
-                        className="flex-shrink-0"
-                      >
-                        Inserir
-                      </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleInsertVideoSimple(video.url)}
+                  className="flex-shrink-0"
+                >
+                  Inserir
+                </Button>
                     </div>
                   ))}
                 </div>
