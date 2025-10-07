@@ -13,6 +13,7 @@ import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDow
 import { useNavigate, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 import { Switch } from '@/components/ui/switch';
+import { launchGoogleOAuth } from '@/lib/oauth-launcher';
 
 const STORAGE_KEYS = {
   CLIENT_ID: 'youtube_client_id',
@@ -304,7 +305,7 @@ export default function YouTubeOAuthSettings() {
     }
   };
 
-  const openOAuthFlow = () => {
+  const openOAuthFlow = async () => {
     if (!clientId || !isClientIdValid) {
       toast({
         title: "⚠️ Client ID inválido",
@@ -324,24 +325,41 @@ export default function YouTubeOAuthSettings() {
       return;
     }
 
-    const scope = REQUIRED_SCOPE;
-    
+    // Carregar e-mail do usuário para login_hint
+    const { data: { user } } = await supabase.auth.getUser();
+
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', scope);
+    authUrl.searchParams.set('scope', REQUIRED_SCOPE);
     authUrl.searchParams.set('access_type', 'offline');
-    authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.set('prompt', 'consent select_account');
     authUrl.searchParams.set('state', 'youtube');
+    
+    // Sugerir e-mail do usuário logado
+    if (user?.email) {
+      authUrl.searchParams.set('login_hint', user.email);
+    }
 
-    console.log('🚀 Abrindo OAuth:', {
+    console.log('🚀 Abrindo OAuth YouTube:', {
       clientIdLast6: clientId.slice(-6),
       redirectUri: REDIRECT_URI,
+      loginHint: user?.email || 'nenhum',
     });
 
-    // Abrir na mesma aba para garantir que o callback retorne ao app
-    window.location.assign(authUrl.toString());
+    // Usar utilitário que detecta iframe
+    launchGoogleOAuth({
+      authUrl: authUrl.toString(),
+      source: 'youtube',
+      onBlocked: () => {
+        toast({
+          title: "⚠️ Popup bloqueado",
+          description: "Permita popups neste site para continuar com a autenticação.",
+          variant: "destructive"
+        });
+      }
+    });
   };
 
   const handleOAuthCode = async (code: string) => {
