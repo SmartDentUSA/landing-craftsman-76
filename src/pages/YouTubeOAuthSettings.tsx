@@ -95,12 +95,12 @@ export default function YouTubeOAuthSettings() {
     }
   }, [toast]);
 
-  // Detectar retorno do OAuth callback
+  // Detectar retorno do OAuth callback (igual ao Google Business)
   useEffect(() => {
-    const queryCode = searchParams.get("code");
+    const code = location.state?.code;
     
-    if (queryCode) {
-      console.log("✅ Código OAuth detectado:", queryCode.substring(0, 10) + "...");
+    if (code && !manualMode) {
+      console.log("✅ Código OAuth detectado:", code.substring(0, 10) + "...");
       
       // 🔒 VALIDAR SESSÃO LOVABLE ANTES DE PROCESSAR OAUTH
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -116,45 +116,34 @@ export default function YouTubeOAuthSettings() {
         }
         
         console.log("✅ Sessão Lovable válida:", session.user.email);
-        setOauthCode(queryCode);
+        setOauthCode(code);
         setShowOAuthModal(true);
+        setIsExchanging(true);
         
-        if (!manualMode) {
-          setIsExchanging(true);
-          
-          toast({
-            title: "🔄 Trocando código...",
-            description: "Aguarde enquanto convertemos 4/... em 1//...",
-          });
-          
-          handleOAuthCode(queryCode)
-            .then(() => {
-              setExchangeSuccess(true);
-            })
-            .catch((error) => {
-              console.error("❌ Erro ao trocar código:", error);
-              setIsExchanging(false);
-              toast({
-                title: "⚠️ Erro ao trocar código",
-                description: error.message || 'Erro desconhecido',
-                variant: "destructive",
-              });
-            })
-            .finally(() => {
-              setIsExchanging(false);
+        toast({
+          title: "🔄 Trocando código...",
+          description: "Convertendo código OAuth em refresh token",
+        });
+        
+        handleOAuthCode(code)
+          .then(() => {
+            setExchangeSuccess(true);
+          })
+          .catch((error) => {
+            console.error("❌ Erro ao trocar código:", error);
+            setIsExchanging(false);
+            toast({
+              title: "⚠️ Erro ao trocar código",
+              description: error.message || 'Erro desconhecido',
+              variant: "destructive",
             });
-        } else {
-          toast({
-            title: "📋 Código detectado",
-            description: "Cole manualmente no campo abaixo",
+          })
+          .finally(() => {
+            setIsExchanging(false);
           });
-        }
-        
-        // Limpa a URL para evitar reprocessamento
-        window.history.replaceState({}, document.title, window.location.pathname);
       });
     }
-  }, [searchParams, manualMode, navigate]);
+  }, [location.state, manualMode, navigate]);
 
   const testConnection = async () => {
     setIsTesting(true);
