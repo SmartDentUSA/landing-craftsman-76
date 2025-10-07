@@ -87,14 +87,11 @@ verify_jwt = false
 [functions.auto-seo-enhancer]
 verify_jwt = true
 
-[functions.exchange-youtube-code]
-verify_jwt = false
+[functions.exchange-oauth-code]
+verify_jwt = true
 
 [functions.test-youtube-connection]
-verify_jwt = false
-
-[functions.exchange-google-business-code]
-verify_jwt = false
+verify_jwt = true
 
 [functions.test-google-business-connection]
-verify_jwt = false
+verify_jwt = true

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, Youtube, Building2 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
@@ -13,6 +13,7 @@ import { GoogleMerchantManager } from '@/components/GoogleMerchantManager';
 import { ProductSEOBatchEnhancer } from '@/components/ProductSEOBatchEnhancer';
 import YouTubeOAuthSettings from '@/pages/YouTubeOAuthSettings';
 import GoogleBusinessOAuthSettings from '@/pages/GoogleBusinessOAuthSettings';
+import { OAuthSettingsCard } from '@/components/OAuthSettingsCard';
 import { CouponsManager } from '@/components/CouponsManager';
 import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
@@ -169,9 +170,31 @@ const Repository = () => {
             ) : activeView === 'merchant' ? (
               <GoogleMerchantManager />
             ) : activeView === 'youtube' ? (
-              <YouTubeOAuthSettings key="youtube-oauth" />
+              <div className="space-y-6">
+                <OAuthSettingsCard
+                  provider="youtube"
+                  title="YouTube Data API"
+                  icon={<Youtube className="w-5 h-5" />}
+                  testFunctionName="test-youtube-connection"
+                />
+                <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
+                  <p><strong>Componente OAuth Moderno:</strong> Segurança de produção com client_secret protegido no backend.</p>
+                  <p><strong>⚠️ Ação Necessária:</strong> Execute primeiro as migrations SQL em supabase/migrations/</p>
+                </div>
+              </div>
             ) : activeView === 'google-business' ? (
-              <GoogleBusinessOAuthSettings key="google-business-oauth" />
+              <div className="space-y-6">
+                <OAuthSettingsCard
+                  provider="googleBusiness"
+                  title="Google Business Profile"
+                  icon={<Building2 className="w-5 h-5" />}
+                  testFunctionName="test-google-business-connection"
+                />
+                <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
+                  <p><strong>Componente OAuth Moderno:</strong> Segurança de produção com client_secret protegido no backend.</p>
+                  <p><strong>⚠️ Ação Necessária:</strong> Execute primeiro as migrations SQL em supabase/migrations/</p>
+                </div>
+              </div>
             ) : activeView === 'coupons' ? (
               <CouponsManager />
             ) : activeView === 'aftersales' ? (
