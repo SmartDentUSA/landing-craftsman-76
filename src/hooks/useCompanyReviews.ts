@@ -157,6 +157,12 @@ export function useCompanyReviews() {
 
       if (error) throw error;
 
+      console.log('✅ Google Reviews sync response:', {
+        reviews_extracted: data?.reviews_extracted,
+        place_id: data?.place_id,
+        success: data?.success
+      });
+
       toast({
         title: "✅ Google Reviews importados",
         description: `${data?.reviews_extracted || 0} reviews extraídos e sincronizados`,

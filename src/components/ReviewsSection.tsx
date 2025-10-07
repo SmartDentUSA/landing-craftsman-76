@@ -43,6 +43,13 @@ export function ReviewsSection() {
   const loadReviews = async () => {
     const data = await loadCompanyReviews();
     if (data) {
+      console.log('🔄 Reviews recarregados:', {
+        manual_count: data.manual_reviews?.length || 0,
+        google_imported: data.google_reviews_imported,
+        google_place_id: data.google_place_id,
+        last_sync: data.last_google_sync
+      });
+      
       setReviews(data);
       if (data.google_place_id) {
         setGoogleMapsUrl(`https://maps.google.com/?cid=${data.google_place_id}`);
@@ -59,14 +66,7 @@ export function ReviewsSection() {
     
     const success = await syncGoogleReviews(googleMapsUrl);
     if (success) {
-      const updatedReviews = await loadCompanyReviews();
-      if (updatedReviews) {
-        // Salvar a URL/Place ID após sincronizar
-        await saveCompanyReviews({
-          ...updatedReviews,
-          google_place_id: googleMapsUrl
-        });
-      }
+      // ✅ Edge function já salvou tudo - apenas recarregar
       await loadReviews();
     }
   };
