@@ -1,0 +1,343 @@
+/**
+ * Company Reviews Manager
+ * Gerencia reviews globais da empresa (Google + Manuais)
+ */
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Star, Download, Plus, Edit, Trash2, Calendar, MapPin } from "lucide-react";
+import { useCompanyReviews } from "@/hooks/useCompanyReviews";
+import { useToast } from "@/hooks/use-toast";
+import type { CompanyReviewsJSONB } from "@/types/reviews";
+
+export function CompanyReviewsManager() {
+  const { loading, syncing, loadCompanyReviews, saveCompanyReviews, syncGoogleReviews } = useCompanyReviews();
+  const { toast } = useToast();
+  
+  const [reviewsData, setReviewsData] = useState<CompanyReviewsJSONB | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    author_name: "",
+    rating: 5,
+    review_text: "",
+    review_date: new Date().toISOString().split('T')[0]
+  });
+
+  // Load reviews on mount
+  useEffect(() => {
+    loadReviews();
+  }, []);
+
+  const loadReviews = async () => {
+    const data = await loadCompanyReviews();
+    if (data) {
+      setReviewsData(data);
+    }
+  };
+
+  const handleSyncGoogle = async () => {
+    const success = await syncGoogleReviews("https://maps.app.goo.gl/XCU7EwqCUmS9kCsx7");
+    if (success) {
+      await loadReviews();
+    }
+  };
+
+  const handleSaveReview = async () => {
+    if (!reviewsData) return;
+    
+    const newReview = {
+      author_name: formData.author_name.trim(),
+      rating: formData.rating,
+      review_text: formData.review_text.trim(),
+      review_date: formData.review_date
+    };
+
+    const updatedManualReviews = editingIndex !== null
+      ? reviewsData.manual_reviews.map((r, i) => i === editingIndex ? newReview : r)
+      : [...reviewsData.manual_reviews, newReview];
+
+    const success = await saveCompanyReviews({
+      ...reviewsData,
+      manual_reviews: updatedManualReviews
+    });
+
+    if (success) {
+      setReviewsData({
+        ...reviewsData,
+        manual_reviews: updatedManualReviews
+      });
+      setIsAddModalOpen(false);
+      setEditingIndex(null);
+      setFormData({
+        author_name: "",
+        rating: 5,
+        review_text: "",
+        review_date: new Date().toISOString().split('T')[0]
+      });
+    }
+  };
+
+  const handleEditReview = (index: number) => {
+    if (!reviewsData) return;
+    const review = reviewsData.manual_reviews[index];
+    setFormData({
+      author_name: review.author_name,
+      rating: review.rating,
+      review_text: review.review_text,
+      review_date: review.review_date || new Date().toISOString().split('T')[0]
+    });
+    setEditingIndex(index);
+    setIsAddModalOpen(true);
+  };
+
+  const handleDeleteReview = async (index: number) => {
+    if (!reviewsData) return;
+    if (!confirm("Deseja excluir este review?")) return;
+
+    const updatedManualReviews = reviewsData.manual_reviews.filter((_, i) => i !== index);
+    const success = await saveCompanyReviews({
+      ...reviewsData,
+      manual_reviews: updatedManualReviews
+    });
+
+    if (success) {
+      setReviewsData({
+        ...reviewsData,
+        manual_reviews: updatedManualReviews
+      });
+    }
+  };
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }).map((_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+      />
+    ));
+  };
+
+  const calculateStats = () => {
+    if (!reviewsData) return { total: 0, average: 0 };
+    const reviews = reviewsData.manual_reviews;
+    if (reviews.length === 0) return { total: 0, average: 0 };
+    
+    const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+    return {
+      total: reviews.length,
+      average: (sum / reviews.length).toFixed(1)
+    };
+  };
+
+  if (loading && !reviewsData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Reviews da Empresa</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Carregando reviews...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const stats = calculateStats();
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-400" />
+              Reviews da Empresa (Global)
+            </CardTitle>
+            <CardDescription>
+              Gerencie reviews da empresa que aparecem no SEO de todas as páginas
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSyncGoogle}
+              disabled={syncing}
+              variant="outline"
+              size="sm"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {syncing ? "Sincronizando..." : "Importar do Google"}
+            </Button>
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={() => {
+                  setEditingIndex(null);
+                  setFormData({
+                    author_name: "",
+                    rating: 5,
+                    review_text: "",
+                    review_date: new Date().toISOString().split('T')[0]
+                  });
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Manual
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingIndex !== null ? "Editar Review" : "Adicionar Review Manual"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Adicione reviews manualmente para complementar os do Google
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="author_name">Nome do Autor *</Label>
+                    <Input
+                      id="author_name"
+                      value={formData.author_name}
+                      onChange={(e) => setFormData({ ...formData, author_name: e.target.value })}
+                      placeholder="João Silva"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rating">Rating (1-5) *</Label>
+                    <Input
+                      id="rating"
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value) || 5 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="review_text">Texto do Review *</Label>
+                    <Textarea
+                      id="review_text"
+                      value={formData.review_text}
+                      onChange={(e) => setFormData({ ...formData, review_text: e.target.value })}
+                      placeholder="Excelente atendimento e qualidade..."
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="review_date">Data</Label>
+                    <Input
+                      id="review_date"
+                      type="date"
+                      value={formData.review_date}
+                      onChange={(e) => setFormData({ ...formData, review_date: e.target.value })}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleSaveReview} 
+                    disabled={!formData.author_name || !formData.review_text}
+                    className="w-full"
+                  >
+                    {editingIndex !== null ? "Salvar Alterações" : "Adicionar Review"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">Total de Reviews</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">Média de Rating</p>
+            <div className="flex items-center gap-2">
+              <p className="text-2xl font-bold">{stats.average}</p>
+              <div className="flex">{renderStars(Math.round(Number(stats.average)))}</div>
+            </div>
+          </div>
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">Status Google</p>
+            <Badge variant={reviewsData?.google_reviews_imported ? "default" : "secondary"}>
+              {reviewsData?.google_reviews_imported ? "Importado" : "Não importado"}
+            </Badge>
+            {reviewsData?.last_google_sync && (
+              <p className="text-xs text-muted-foreground mt-1">
+                <Calendar className="h-3 w-3 inline mr-1" />
+                {new Date(reviewsData.last_google_sync).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Reviews List */}
+        <div className="space-y-3">
+          <h3 className="font-semibold">Reviews Manuais ({reviewsData?.manual_reviews.length || 0})</h3>
+          {reviewsData?.manual_reviews.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Star className="h-12 w-12 mx-auto mb-2 opacity-20" />
+              <p>Nenhum review manual cadastrado</p>
+              <p className="text-sm">Clique em "Adicionar Manual" ou "Importar do Google"</p>
+            </div>
+          ) : (
+            reviewsData?.manual_reviews.map((review, index) => (
+              <div key={index} className="p-4 border rounded-lg space-y-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{review.author_name}</p>
+                      <div className="flex">{renderStars(review.rating)}</div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">{review.review_text}</p>
+                    {review.review_date && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        <Calendar className="h-3 w-3 inline mr-1" />
+                        {new Date(review.review_date).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditReview(index)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteReview(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {reviewsData?.google_place_id && (
+          <div className="pt-4 border-t">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              Google Place ID: {reviewsData.google_place_id}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

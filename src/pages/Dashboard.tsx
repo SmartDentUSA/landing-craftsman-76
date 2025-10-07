@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Copy, Edit, ExternalLink, MoreVertical, Trash2, Shield, PenTool, Database, Globe, Building2 } from "lucide-react";
+import { CompanyReviewsManager } from "@/components/CompanyReviewsManager";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -1165,6 +1166,11 @@ const DashboardContent = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Company Reviews Manager */}
+        <div className="mt-8 mb-8">
+          <CompanyReviewsManager />
+        </div>
 
         {/* HTML Blogs Copy & Paste Section */}
         {/* HTML Blogs Copy & Paste - 2 Consolidated Preview Cards */}
