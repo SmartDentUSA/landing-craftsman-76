@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Monitor, Smartphone, ExternalLink, Play } from 'lucide-react';
+import { Monitor, Smartphone, ExternalLink, Play, AlertTriangle } from 'lucide-react';
 import { AdCopy, Sitelink, VideoExtension } from '@/types/google-ads';
 
 interface AdPreviewCardsProps {
@@ -11,7 +11,46 @@ interface AdPreviewCardsProps {
   videos?: VideoExtension[];
 }
 
+// Helper para validar e truncar ad copies
+const validateAdCopies = (adCopies: AdCopy): { 
+  validated: AdCopy; 
+  truncated: boolean 
+} => {
+  let wasTruncated = false;
+  
+  const validated: AdCopy = {
+    headlines: (adCopies.headlines || []).map(h => {
+      if (h.length > 30) {
+        wasTruncated = true;
+        return h.substring(0, 27) + '...';
+      }
+      return h;
+    }),
+    descriptions: (adCopies.descriptions || []).map(d => {
+      if (d.length > 90) {
+        wasTruncated = true;
+        return d.substring(0, 87) + '...';
+      }
+      return d;
+    }),
+    paths: (adCopies.paths || []).map(p => {
+      if (p.length > 15) {
+        wasTruncated = true;
+        return p.substring(0, 15);
+      }
+      return p;
+    })
+  };
+  
+  return { validated, truncated: wasTruncated };
+};
+
 export const AdPreviewCards = React.memo(({ adCopies, finalUrl, sitelinks, videos = [] }: AdPreviewCardsProps) => {
+  // Validar e truncar ad copies
+  const { validated: validatedCopies, truncated } = useMemo(
+    () => validateAdCopies(adCopies),
+    [adCopies]
+  );
   const formatUrl = useMemo(() => (url: string) => {
     try {
       const urlObj = new URL(url);
@@ -58,15 +97,30 @@ export const AdPreviewCards = React.memo(({ adCopies, finalUrl, sitelinks, video
             <Badge variant="outline">Responsivo</Badge>
           </div>
 
+          {truncated && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 mb-4">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-amber-800 font-medium">Textos truncados</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Alguns textos excederam os limites do Google Ads e foram automaticamente truncados:
+                  <br />• Headlines: máx. 30 caracteres
+                  <br />• Descriptions: máx. 90 caracteres
+                  <br />• Paths: máx. 15 caracteres
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             {/* Primary combinations */}
-            {adCopies?.headlines?.length > 0 ? (
-              adCopies.headlines.slice(0, 3).map((headline, index) => (
+            {validatedCopies?.headlines?.length > 0 ? (
+              validatedCopies.headlines.slice(0, 3).map((headline, index) => (
                 <AdCard
                   key={index}
                   headline={headline}
-                  description={adCopies.descriptions?.[index % adCopies.descriptions.length] || ''}
-                  paths={adCopies.paths || []}
+                  description={validatedCopies.descriptions?.[index % validatedCopies.descriptions.length] || ''}
+                  paths={validatedCopies.paths || []}
                 />
               ))
             ) : (

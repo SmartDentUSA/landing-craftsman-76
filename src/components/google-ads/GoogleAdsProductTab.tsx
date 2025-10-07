@@ -164,8 +164,8 @@ export const GoogleAdsProductTab = ({ product, onUpdate }: GoogleAdsProductTabPr
         adCopies: {
           headlines: [`${product.name}`, `Comprar ${product.name}`, `${product.category} de Qualidade`],
           descriptions: [
-            product.description || `${product.name} com melhor preço`,
-            `Confira nossa linha de ${product.category || 'produtos'}`
+            (product.description || `${product.name} com melhor preço`).substring(0, 87) + '...',
+            `Confira nossa linha de ${product.category || 'produtos'}`.substring(0, 87) + '...'
           ],
           paths: [product.category?.toLowerCase() || 'produto', product.name.toLowerCase().replace(/\s+/g, '-')]
         },
