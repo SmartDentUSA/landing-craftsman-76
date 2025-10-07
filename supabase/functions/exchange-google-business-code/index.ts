@@ -20,7 +20,6 @@ serve(async (req: Request) => {
     const { code, clientId, clientSecret, redirectUri } = await req.json();
     const effectiveRedirectUri =
       redirectUri || Deno.env.get("GOOGLE_BUSINESS_REDIRECT_URI") || "https://landing-craftsman-76.lovable.app/oauth2/callback";
-    const expectedRedirectUri = Deno.env.get("GOOGLE_BUSINESS_REDIRECT_URI") || "https://landing-craftsman-76.lovable.app/oauth2/callback";
 
     if (!code || !clientId || !clientSecret || !effectiveRedirectUri) {
       return json({
@@ -87,9 +86,7 @@ serve(async (req: Request) => {
       google_error: tokenData?.error,
       google_error_description: tokenData?.error_description,
       clientIdLast6: clientId.slice(-6),
-      redirectUriReceived: effectiveRedirectUri,
-      expectedRedirectUri,
-      redirectMatch: effectiveRedirectUri === expectedRedirectUri,
+      redirectUriUsed: effectiveRedirectUri,
       codePreview: String(code).slice(0, 10) + "...",
       codeLength: code.length,
     });
@@ -112,8 +109,8 @@ serve(async (req: Request) => {
         probable_cause: probableCause,
         details: {
           status: tokenRes.status,
-          redirectMatch: effectiveRedirectUri === expectedRedirectUri,
           clientIdLast6: clientId.slice(-6),
+          redirectUriUsed: effectiveRedirectUri,
         },
       });
     }

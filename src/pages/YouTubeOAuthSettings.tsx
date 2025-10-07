@@ -202,24 +202,31 @@ export default function YouTubeOAuthSettings() {
         return;
       }
 
-      const { error: dbError } = await supabase
+      const { data: saved, error: dbError } = await supabase
         .from('youtube_oauth_credentials')
         .upsert({
           user_id: userData.user.id,
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: refreshToken,
-        });
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
 
       if (dbError) {
         console.error('Database save error:', dbError);
-        throw new Error('Erro ao salvar no banco de dados');
+        toast({
+          title: "⚠️ Erro ao salvar no banco",
+          description: dbError.message || "Salvo localmente apenas.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('✅ Saved to database:', saved);
+        toast({
+          title: "✅ Credenciais salvas automaticamente",
+          description: "YouTube OAuth configurado no banco de dados. Pronto para usar!",
+        });
       }
-
-      toast({
-        title: "✅ Credenciais salvas automaticamente",
-        description: "YouTube OAuth configurado no banco de dados. Pronto para usar!",
-      });
 
       // Auto-test after saving
       await testConnection();
@@ -233,6 +240,43 @@ export default function YouTubeOAuthSettings() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      // Limpar localStorage
+      localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
+      localStorage.removeItem(STORAGE_KEYS.CLIENT_SECRET);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+
+      // Limpar banco de dados
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("youtube_oauth_credentials")
+          .delete()
+          .eq("user_id", user.id);
+      }
+
+      // Resetar estado
+      setClientId("");
+      setClientSecret("");
+      setRefreshToken("");
+      setStatus("not_configured");
+      setChannelInfo(null);
+
+      toast({
+        title: "🧹 Tudo limpo!",
+        description: "Todas as credenciais YouTube foram removidas.",
+      });
+    } catch (error: any) {
+      console.error("Clear all error:", error);
+      toast({
+        title: "❌ Erro ao limpar",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -386,23 +430,26 @@ export default function YouTubeOAuthSettings() {
         return;
       }
 
-      const { error: dbError } = await supabase
+      const { data: saved, error: dbError } = await supabase
         .from('youtube_oauth_credentials')
         .upsert({
           user_id: userData.user.id,
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: newRefreshToken,
-        });
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
 
       if (dbError) {
         console.error("Database save error:", dbError);
         toast({
-          title: "⚠️ Token obtido",
-          description: "Token salvo localmente, mas erro ao salvar no banco. Use o botão Salvar.",
+          title: "⚠️ Erro ao salvar no banco",
+          description: dbError.message || "Token salvo apenas localmente.",
           variant: "destructive",
         });
       } else {
+        console.log('✅ Token saved to database:', saved);
         toast({
           title: "✅ Configuração completa!",
           description: "Credenciais salvas automaticamente no banco de dados. Pronto para usar!",
@@ -734,16 +781,10 @@ export default function YouTubeOAuthSettings() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              localStorage.clear();
-              setClientId('');
-              setClientSecret('');
-              setRefreshToken('');
-              window.location.reload();
-            }}
+            onClick={handleClearAll}
             className="w-full"
           >
-            🧹 Limpar Cache e Recarregar
+            🧹 Limpar Tudo
           </Button>
         </CardContent>
       </Card>

@@ -253,9 +253,10 @@ export default function GoogleBusinessOAuthSettings() {
         setStatus('connected');
         setAccountInfo({ name: data.accountName, count: data.accountCount });
         const source = data.credentialSource === 'form' ? 'formulário' : data.credentialSource === 'database' ? 'banco de dados' : 'environment';
+        const accounts = data.accountCount || 0;
         toast({
           title: "✅ Conectado",
-          description: `Conta: ${data.accountName} (Fonte: ${source})`,
+          description: `Via ${source}. ${accounts > 0 ? `${accounts} conta(s) disponível(is).` : data.accountName}`,
         });
       } else {
         setStatus('error');
@@ -266,7 +267,7 @@ export default function GoogleBusinessOAuthSettings() {
           setShowDiagnosticCard(true);
           toast({
             title: "⚠️ Credencial incorreta detectada",
-            description: "Client Secret foi detectado no campo Refresh Token. Use o botão 'Limpar e Reconfigurar' abaixo.",
+            description: "Client Secret foi detectado no campo Refresh Token. Use o botão 'Limpar Tudo' abaixo.",
             variant: "destructive",
           });
         } else {
@@ -369,18 +370,26 @@ export default function GoogleBusinessOAuthSettings() {
         return;
       }
 
-      const { error: dbError } = await supabase
+      const { data: saved, error: dbError } = await supabase
         .from('google_business_oauth_credentials')
         .upsert({
           user_id: userData.user.id,
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: refreshToken,
-        });
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
 
       if (dbError) {
         console.error('Database save error:', dbError);
-        throw new Error('Erro ao salvar no banco de dados');
+        toast({
+          title: "⚠️ Erro ao salvar no banco",
+          description: dbError.message || "Salvo localmente apenas.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('✅ Saved to database:', saved);
       }
 
       // Update database credentials status
@@ -526,23 +535,26 @@ export default function GoogleBusinessOAuthSettings() {
         return;
       }
 
-      const { error: dbError } = await supabase
+      const { data: saved, error: dbError } = await supabase
         .from('google_business_oauth_credentials')
         .upsert({
           user_id: userData.user.id,
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: newRefreshToken,
-        });
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
 
       if (dbError) {
         console.error("Database save error:", dbError);
         toast({
-          title: "⚠️ Token obtido",
-          description: "Token salvo localmente, mas erro ao salvar no banco. Use o botão Salvar.",
+          title: "⚠️ Erro ao salvar no banco",
+          description: dbError.message || "Token salvo apenas localmente.",
           variant: "destructive",
         });
       } else {
+        console.log('✅ Token saved to database:', saved);
         toast({
           title: "✅ Configuração completa!",
           description: "Credenciais salvas automaticamente no banco de dados. Pronto para usar!",
@@ -607,48 +619,51 @@ export default function GoogleBusinessOAuthSettings() {
     } catch (error: any) {
       toast({
         title: "❌ Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      // Limpar localStorage
+      localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
+      localStorage.removeItem(STORAGE_KEYS.CLIENT_SECRET);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+
+      // Limpar banco de dados
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("google_business_oauth_credentials")
+          .delete()
+          .eq("user_id", user.id);
+      }
+
+      // Resetar estado
+      setClientId("");
+      setClientSecret("");
+      setRefreshToken("");
+      setStatus("not_configured");
+      setAccountInfo(null);
+      setDbCredentials(null);
+
+      toast({
+        title: "🧹 Tudo limpo!",
+        description: "Todas as credenciais Google Business foram removidas.",
+      });
+    } catch (error: any) {
+      console.error("Clear all error:", error);
+      toast({
+        title: "❌ Erro",
         description: error.message || "Erro ao apagar credenciais",
         variant: "destructive",
       });
     }
   };
 
-  const handleClearCredentials = async () => {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja limpar o formulário E apagar do banco de dados?"
-    );
-
-    if (!confirmed) return;
-
-    console.log('🧹 Limpando TODOS os dados do Google Business OAuth...');
-    
-    localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
-    localStorage.removeItem(STORAGE_KEYS.CLIENT_SECRET);
-    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from('google_business_oauth_credentials')
-        .delete()
-        .eq('user_id', user.id);
-    }
-    
-    setClientId('');
-    setClientSecret('');
-    setRefreshToken('');
-    setStatus('not_configured');
-    setAccountInfo(null);
-    setShowDiagnosticCard(false);
-    setIsClientIdValid(false);
-    setDbCredentials(null);
-    setShowFormatWarning(false);
-    
-    toast({ 
-      title: "🧹 Cache limpo completamente", 
-      description: "Todos os dados foram removidos. Configure as credenciais novamente." 
-    });
-  };
+  const handleClearCredentials = handleClearAll;
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -1048,24 +1063,20 @@ export default function GoogleBusinessOAuthSettings() {
             </Button>
 
             <Button
-              variant="outline"
+              onClick={handleClearAll}
+              variant="destructive"
               size="sm"
-              onClick={handleClearCredentials}
               className="flex-1"
             >
-              🗑️ Limpar Tudo
+              🧹 Limpar Tudo
             </Button>
-            
             <Button
+              onClick={handleDeleteFromDatabase}
               variant="outline"
               size="sm"
-              onClick={() => {
-                localStorage.clear();
-                window.location.reload();
-              }}
               className="flex-1"
             >
-              🧹 Limpar Cache e Recarregar
+              🗑️ Deletar do Banco
             </Button>
           </div>
         </CardContent>
