@@ -19,7 +19,6 @@ interface WhatsAppMessage {
   content: string;
   generated_at: string;
   editable: boolean;
-  external_link?: string;
 }
 
 interface WhatsAppMessageGeneratorProps {
@@ -39,11 +38,13 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const [currentMessage, setCurrentMessage] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
-  const [editingLink, setEditingLink] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'text' | 'html'>('edit');
+  const [showTemplateConfig, setShowTemplateConfig] = useState(false);
+  const [templateCanvaUrl, setTemplateCanvaUrl] = useState<string>('');
+  const [editingTemplateUrl, setEditingTemplateUrl] = useState<string>('');
   const { toast } = useToast();
   const { allLinks, isLoading: linksLoading } = useLinksRepository();
 
@@ -66,7 +67,10 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
 
       const whatsappData = data.whatsapp_messages as any;
       const messagesData = whatsappData?.messages || [];
+      const templateUrl = whatsappData?.template_canva_url || '';
       setMessages(messagesData);
+      setTemplateCanvaUrl(templateUrl);
+      setEditingTemplateUrl(templateUrl);
       
       if (messagesData.length > 0) {
         setCurrentMessage(messagesData[0].content);
@@ -222,7 +226,6 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
   const startEditing = (message: WhatsAppMessage) => {
     setEditingId(message.id);
     setEditingContent(message.content);
-    setEditingLink(message.external_link || '');
   };
 
   const saveEdit = async () => {
@@ -231,7 +234,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
     try {
       // Atualizar na lista local
       const updatedMessages = messages.map(msg => 
-        msg.id === editingId ? { ...msg, content: editingContent, external_link: editingLink } : msg
+        msg.id === editingId ? { ...msg, content: editingContent } : msg
       );
       
       // Atualizar no banco
@@ -240,7 +243,8 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
         .update({ 
           whatsapp_messages: { 
             messages: updatedMessages, 
-            last_generated: new Date().toISOString() 
+            last_generated: new Date().toISOString(),
+            template_canva_url: templateCanvaUrl
           } as any
         })
         .eq('id', productId);
@@ -271,14 +275,45 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
     }
   };
 
+  const saveTemplateUrl = async () => {
+    try {
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ 
+          whatsapp_messages: { 
+            messages: messages,
+            last_generated: new Date().toISOString(),
+            template_canva_url: editingTemplateUrl
+          } as any
+        })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      setTemplateCanvaUrl(editingTemplateUrl);
+      setShowTemplateConfig(false);
+
+      toast({
+        title: "Template Salvo",
+        description: "URL do Template Canva atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar template:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o template.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const cancelEdit = () => {
     setEditingId(null);
     setEditingContent('');
-    setEditingLink('');
   };
 
   const getCharacterCount = (text: string) => text.length;
-  const isOverLimit = (text: string) => getCharacterCount(text) > 1000;
+  const isOverLimit = (text: string) => getCharacterCount(text) > 5000;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -314,7 +349,58 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
               <History className="h-4 w-4" />
               {showHistory ? 'Ocultar' : 'Ver'} Histórico
             </Button>
+
+            <Button 
+              variant="outline" 
+              onClick={() => setShowTemplateConfig(!showTemplateConfig)}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {templateCanvaUrl ? '✓ Template Canva' : 'Configurar Template Canva'}
+            </Button>
           </div>
+
+          {/* Configuração do Template Canva */}
+          {showTemplateConfig && (
+            <Card>
+              <CardContent className="p-4">
+                <label className="text-sm font-medium mb-2 block">
+                  🎨 Template Canva (URL)
+                </label>
+                <Input
+                  type="url"
+                  value={editingTemplateUrl}
+                  onChange={(e) => setEditingTemplateUrl(e.target.value)}
+                  placeholder="https://www.canva.com/design/..."
+                  className="mb-2"
+                />
+                <p className="text-xs text-muted-foreground mb-3">
+                  Este link será usado para todas as mensagens WhatsApp deste produto
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveTemplateUrl}>
+                    <Save className="h-4 w-4 mr-1" />
+                    Salvar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowTemplateConfig(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Botão Abrir Template Canva */}
+          {templateCanvaUrl && (
+            <Button
+              variant="outline"
+              onClick={() => window.open(templateCanvaUrl, '_blank')}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Abrir Template Canva
+            </Button>
+          )}
 
           {/* Mensagem atual */}
           {currentMessage && (
@@ -393,7 +479,7 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                 
                 <div className="flex justify-between items-center mt-2">
                   <Badge variant={isOverLimit(currentMessage) ? "destructive" : "secondary"}>
-                    {getCharacterCount(currentMessage)}/1000 caracteres
+                    {getCharacterCount(currentMessage)}/5000 caracteres
                   </Badge>
                 </div>
               </CardContent>
@@ -434,7 +520,6 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                                 <Button
                                   size="sm"
                                   onClick={saveEdit}
-                                  disabled={isOverLimit(editingContent)}
                                 >
                                   <Save className="h-4 w-4" />
                                 </Button>
@@ -460,20 +545,6 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                                   </TooltipTrigger>
                                   <TooltipContent>Editar</TooltipContent>
                                 </Tooltip>
-                                {message.external_link && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => window.open(message.external_link, '_blank')}
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Link Canva</TooltipContent>
-                                  </Tooltip>
-                                )}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -512,17 +583,8 @@ export const WhatsAppMessageGenerator: React.FC<WhatsAppMessageGeneratorProps> =
                               placeholder="Edite a mensagem..."
                             />
                             <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
-                              {getCharacterCount(editingContent)}/1000 caracteres
+                              {getCharacterCount(editingContent)}/5000 caracteres
                             </Badge>
-                            <div className="pt-2">
-                              <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
-                              <Input
-                                value={editingLink}
-                                onChange={(e) => setEditingLink(e.target.value)}
-                                placeholder="https://exemplo.com"
-                                className="text-sm"
-                              />
-                            </div>
                           </div>
                         ) : (
                           <div className="bg-gray-50 border rounded p-3">

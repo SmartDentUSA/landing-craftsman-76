@@ -11,13 +11,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ContentViewToggle } from '@/components/ui/content-view-toggle';
+import { ProductVideosList } from '@/components/ProductVideosList';
 
 interface YouTubeDescription {
   id: string;
   content: any;
   generated_at: string;
   editable: boolean;
-  external_link?: string;
 }
 
 interface YouTubeDescriptionGeneratorProps {
@@ -37,11 +37,13 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
   const [currentDescription, setCurrentDescription] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
-  const [editingLink, setEditingLink] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplateConfig, setShowTemplateConfig] = useState(false);
+  const [showCanvaConfig, setShowCanvaConfig] = useState(false);
+  const [templateCanvaUrl, setTemplateCanvaUrl] = useState<string>('');
+  const [editingTemplateUrl, setEditingTemplateUrl] = useState<string>('');
   const [companyTemplate, setCompanyTemplate] = useState<string>('');
   const [editingTemplate, setEditingTemplate] = useState<string>('');
   const [viewMode, setViewMode] = useState<'edit' | 'text' | 'html'>('edit');
@@ -67,7 +69,10 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
 
       const youtubeData = data.youtube_descriptions as any;
       const descriptionsData = youtubeData?.descriptions || [];
+      const templateUrl = youtubeData?.template_canva_url || '';
       setDescriptions(descriptionsData);
+      setTemplateCanvaUrl(templateUrl);
+      setEditingTemplateUrl(templateUrl);
       
       if (descriptionsData.length > 0) {
         setCurrentDescription(descriptionsData[0].content);
@@ -182,7 +187,6 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
       ? description.content 
       : description.content?.description || '';
     setEditingContent(content);
-    setEditingLink(description.external_link || '');
   };
 
   const saveEdit = async () => {
@@ -196,8 +200,7 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
               ...desc, 
               content: typeof desc.content === 'string' 
                 ? editingContent 
-                : { ...desc.content, description: editingContent },
-              external_link: editingLink
+                : { ...desc.content, description: editingContent }
             } 
           : desc
       );
@@ -208,7 +211,8 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
         .update({ 
           youtube_descriptions: { 
             descriptions: updatedDescriptions, 
-            last_generated: new Date().toISOString() 
+            last_generated: new Date().toISOString(),
+            template_canva_url: templateCanvaUrl
           } as any
         })
         .eq('id', productId);
@@ -239,10 +243,41 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
     }
   };
 
+  const saveTemplateUrl = async () => {
+    try {
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ 
+          youtube_descriptions: { 
+            descriptions: descriptions,
+            last_generated: new Date().toISOString(),
+            template_canva_url: editingTemplateUrl
+          } as any
+        })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      setTemplateCanvaUrl(editingTemplateUrl);
+      setShowCanvaConfig(false);
+
+      toast({
+        title: "Template Salvo",
+        description: "URL do Template Canva atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar template:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o template.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const cancelEdit = () => {
     setEditingId(null);
     setEditingContent('');
-    setEditingLink('');
   };
 
   const getCharacterCount = (text: string) => text.length;
@@ -394,7 +429,58 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
               <Settings className="h-4 w-4" />
               Configurar Template
             </Button>
+
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCanvaConfig(!showCanvaConfig)}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {templateCanvaUrl ? '✓ Template Canva' : 'Configurar Template Canva'}
+            </Button>
           </div>
+
+          {/* Configuração do Template Canva */}
+          {showCanvaConfig && (
+            <Card>
+              <CardContent className="p-4">
+                <label className="text-sm font-medium mb-2 block">
+                  🎨 Template Canva (URL)
+                </label>
+                <Input
+                  type="url"
+                  value={editingTemplateUrl}
+                  onChange={(e) => setEditingTemplateUrl(e.target.value)}
+                  placeholder="https://www.canva.com/design/..."
+                  className="mb-2"
+                />
+                <p className="text-xs text-muted-foreground mb-3">
+                  Este link será usado para todas as descrições YouTube deste produto
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveTemplateUrl}>
+                    <Save className="h-4 w-4 mr-1" />
+                    Salvar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowCanvaConfig(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Botão Abrir Template Canva */}
+          {templateCanvaUrl && (
+            <Button
+              variant="outline"
+              onClick={() => window.open(templateCanvaUrl, '_blank')}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Abrir Template Canva
+            </Button>
+          )}
 
           {/* Configuração do template da empresa */}
           {showTemplateConfig && (
@@ -643,20 +729,6 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                                   </TooltipTrigger>
                                   <TooltipContent>Editar</TooltipContent>
                                 </Tooltip>
-                                {description.external_link && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => window.open(description.external_link, '_blank')}
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Link Canva</TooltipContent>
-                                  </Tooltip>
-                                )}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -704,15 +776,10 @@ export const YouTubeDescriptionGenerator: React.FC<YouTubeDescriptionGeneratorPr
                             <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
                               {getCharacterCount(editingContent)}/5000 caracteres
                             </Badge>
-                            <div className="pt-2">
-                              <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
-                              <Input
-                                value={editingLink}
-                                onChange={(e) => setEditingLink(e.target.value)}
-                                placeholder="https://exemplo.com"
-                                className="text-sm"
-                              />
-                            </div>
+                            <ProductVideosList 
+                              productId={productId}
+                              onInsert={(text) => setEditingContent(prev => prev + text)}
+                            />
                           </div>
                         ) : (
                           <div className="space-y-3">

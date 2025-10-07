@@ -31,7 +31,6 @@ interface WhatsAppSequenceMessage {
   content: string;
   editable: boolean;
   approach: 'beneficio' | 'prova_social' | 'urgencia' | 'tecnica' | 'curiosidade' | 'garantia' | 'ultima_chamada';
-  external_link?: string;
 }
 
 interface WhatsAppSequenceGeneration {
@@ -62,10 +61,12 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const [currentSequence, setCurrentSequence] = useState<WhatsAppSequenceMessage[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
-  const [editingLink, setEditingLink] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showTemplateConfig, setShowTemplateConfig] = useState(false);
+  const [templateCanvaUrl, setTemplateCanvaUrl] = useState<string>('');
+  const [editingTemplateUrl, setEditingTemplateUrl] = useState<string>('');
   const [messageViewModes, setMessageViewModes] = useState<Record<string, 'edit' | 'text' | 'html'>>({});
   const { toast } = useToast();
   const { allLinks, isLoading: linksLoading } = useLinksRepository();
@@ -97,6 +98,9 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
         setSequences(sequencesData.sequences);
         setCurrentSequence(sequencesData.sequences[0].messages);
       }
+      const templateUrl = (sequencesData as any)?.template_canva_url || '';
+      setTemplateCanvaUrl(templateUrl);
+      setEditingTemplateUrl(templateUrl);
     } catch (error) {
       console.error('Erro ao carregar sequências:', error);
       toast({
@@ -182,23 +186,23 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const startEditing = (message: WhatsAppSequenceMessage) => {
     setEditingId(message.id);
     setEditingContent(message.content);
-    setEditingLink(message.external_link || '');
   };
 
   const saveEdit = async () => {
-    if (!editingId || isOverLimit(editingContent)) return;
+    if (!editingId) return;
 
     try {
       const updatedSequences = sequences.map(seq => ({
         ...seq,
         messages: seq.messages.map(msg =>
-          msg.id === editingId ? { ...msg, content: editingContent, external_link: editingLink } : msg
+          msg.id === editingId ? { ...msg, content: editingContent } : msg
         )
       }));
 
-      const updatedData: WhatsAppSequences = {
+      const updatedData: any = {
         sequences: updatedSequences,
-        last_generated: sequences[0]?.generated_at || new Date().toISOString()
+        last_generated: sequences[0]?.generated_at || new Date().toISOString(),
+        template_canva_url: templateCanvaUrl
       };
 
       const { error } = await supabase
@@ -227,14 +231,45 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
     }
   };
 
+  const saveTemplateUrl = async () => {
+    try {
+      const updatedData: any = {
+        sequences: sequences,
+        last_generated: sequences[0]?.generated_at || new Date().toISOString(),
+        template_canva_url: editingTemplateUrl
+      };
+
+      const { error } = await supabase
+        .from('products_repository')
+        .update({ whatsapp_sequences: updatedData })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      setTemplateCanvaUrl(editingTemplateUrl);
+      setShowTemplateConfig(false);
+
+      toast({
+        title: "Template Salvo",
+        description: "URL do Template Canva atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar template:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o template.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const cancelEdit = () => {
     setEditingId(null);
     setEditingContent('');
-    setEditingLink('');
   };
 
   const getCharacterCount = (text: string) => text.length;
-  const isOverLimit = (text: string) => getCharacterCount(text) > 1000;
+  const isOverLimit = (text: string) => getCharacterCount(text) > 5000;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -270,7 +305,58 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
               <History className="h-4 w-4" />
               {showHistory ? 'Ocultar' : 'Ver'} Histórico de Sequências
             </Button>
+
+            <Button 
+              variant="outline" 
+              onClick={() => setShowTemplateConfig(!showTemplateConfig)}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {templateCanvaUrl ? '✓ Template Canva' : 'Configurar Template Canva'}
+            </Button>
           </div>
+
+          {/* Configuração do Template Canva */}
+          {showTemplateConfig && (
+            <Card>
+              <CardContent className="p-4">
+                <label className="text-sm font-medium mb-2 block">
+                  🎨 Template Canva (URL)
+                </label>
+                <Input
+                  type="url"
+                  value={editingTemplateUrl}
+                  onChange={(e) => setEditingTemplateUrl(e.target.value)}
+                  placeholder="https://www.canva.com/design/..."
+                  className="mb-2"
+                />
+                <p className="text-xs text-muted-foreground mb-3">
+                  Este link será usado para todas as mensagens da sequência WhatsApp deste produto
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveTemplateUrl}>
+                    <Save className="h-4 w-4 mr-1" />
+                    Salvar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowTemplateConfig(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Botão Abrir Template Canva */}
+          {templateCanvaUrl && (
+            <Button
+              variant="outline"
+              onClick={() => window.open(templateCanvaUrl, '_blank')}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Abrir Template Canva
+            </Button>
+          )}
 
           {/* Sequência Atual */}
           {currentSequence.length > 0 && (
@@ -316,20 +402,6 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                                   </TooltipTrigger>
                                   <TooltipContent>Editar</TooltipContent>
                                 </Tooltip>
-                                {message.external_link && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        onClick={() => window.open(message.external_link, '_blank')}
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Link Canva</TooltipContent>
-                                  </Tooltip>
-                                )}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button size="sm" variant="outline" onClick={() => copyToClipboard(message.content)}>
@@ -364,17 +436,8 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
                             onInsert={(text) => setEditingContent(prev => prev + text)}
                           />
                           <Badge variant={isOverLimit(editingContent) ? "destructive" : "secondary"}>
-                            {getCharacterCount(editingContent)}/1000 caracteres
+                            {getCharacterCount(editingContent)}/5000 caracteres
                           </Badge>
-                          <div className="pt-2">
-                            <label className="text-sm font-medium mb-1 block">Link Externo (opcional)</label>
-                            <Input
-                              value={editingLink}
-                              onChange={(e) => setEditingLink(e.target.value)}
-                              placeholder="https://exemplo.com"
-                              className="text-sm"
-                            />
-                          </div>
                         </div>
                       ) : (
                         <>

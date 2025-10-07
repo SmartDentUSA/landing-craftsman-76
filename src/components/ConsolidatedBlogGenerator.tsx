@@ -11,6 +11,7 @@ import { useSelectedProducts } from '@/hooks/useSelectedProducts';
 import { useLandingPagesSupabase } from '@/hooks/useLandingPagesSupabase';
 import { generateAdvancedIntelligentLinks, processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { supabase } from '@/integrations/supabase/client';
+import { ProductVideosList } from '@/components/ProductVideosList';
 
 interface ConsolidatedBlogGeneratorProps {
   approvedLandingPages: any[];

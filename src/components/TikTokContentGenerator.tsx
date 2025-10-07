@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Copy, Edit, Save, X, Zap, Code, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,14 +33,14 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
   const [videoScript, setVideoScript] = useState('');
   const [hookText, setHookText] = useState('');
   const [ctaText, setCtaText] = useState('');
-  const [scriptLink, setScriptLink] = useState('');
-  const [hookLink, setHookLink] = useState('');
-  const [ctaLink, setCtaLink] = useState('');
   const [editingScript, setEditingScript] = useState(false);
   const [editingHook, setEditingHook] = useState(false);
   const [editingCta, setEditingCta] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showTemplateConfig, setShowTemplateConfig] = useState(false);
+  const [templateCanvaUrl, setTemplateCanvaUrl] = useState<string>('');
+  const [editingTemplateUrl, setEditingTemplateUrl] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,10 +67,10 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         setVideoScript(latestCopy.video_script || '');
         setHookText(latestCopy.hook || '');
         setCtaText(latestCopy.call_to_action || '');
-        setScriptLink(latestCopy.script_link || '');
-        setHookLink(latestCopy.hook_link || '');
-        setCtaLink(latestCopy.cta_link || '');
       }
+      const templateUrl = tiktokData?.template_canva_url || '';
+      setTemplateCanvaUrl(templateUrl);
+      setEditingTemplateUrl(templateUrl);
     } catch (error) {
       console.error('Erro ao carregar conteúdo TikTok:', error);
       toast({
@@ -259,7 +260,7 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
     }
   };
 
-  const saveContent = async (type: 'script' | 'hook' | 'cta', content: string, link?: string) => {
+  const saveContent = async (type: 'script' | 'hook' | 'cta', content: string) => {
     try {
       const { data: existingData } = await supabase
         .from('products_repository')
@@ -276,9 +277,6 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
           video_script: type === 'script' ? content : videoScript,
           hook: type === 'hook' ? content : hookText,
           call_to_action: type === 'cta' ? content : ctaText,
-          script_link: type === 'script' ? (link || '') : scriptLink,
-          hook_link: type === 'hook' ? (link || '') : hookLink,
-          cta_link: type === 'cta' ? (link || '') : ctaLink,
           hashtags: [],
           trending_references: [],
           generated_at: new Date().toISOString(),
@@ -290,21 +288,19 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
         
         if (type === 'script') {
           latestCopy.video_script = content;
-          latestCopy.script_link = link || '';
         }
         if (type === 'hook') {
           latestCopy.hook = content;
-          latestCopy.hook_link = link || '';
         }
         if (type === 'cta') {
           latestCopy.call_to_action = content;
-          latestCopy.cta_link = link || '';
         }
         
         existingContent.copies[0] = latestCopy;
       }
       
       existingContent.last_updated = new Date().toISOString();
+      existingContent.template_canva_url = templateCanvaUrl;
 
       const { error } = await supabase
         .from('products_repository')
@@ -334,6 +330,46 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
     }
   };
 
+  const saveTemplateUrl = async () => {
+    try {
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('tiktok_content')
+        .eq('id', productId)
+        .single();
+
+      const existingContent = existingData?.tiktok_content as any || { copies: [], last_generated: null };
+      existingContent.template_canva_url = editingTemplateUrl;
+
+      const { error } = await supabase
+        .from('products_repository')
+        .update({
+          tiktok_content: existingContent
+        })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      setTemplateCanvaUrl(editingTemplateUrl);
+      setShowTemplateConfig(false);
+
+      toast({
+        title: "Template Salvo",
+        description: "URL do Template Canva atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar template:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o template.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getCharacterCount = (text: string) => text.length;
+  const isOverLimit = (text: string) => getCharacterCount(text) > 5000;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -354,8 +390,8 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
 
           {!loading && (
             <>
-              {/* Botão principal para gerar conteúdo */}
-              <div className="flex justify-center">
+              {/* Botões principais */}
+              <div className="flex flex-wrap gap-2 justify-center">
                 <Button
                   onClick={generateTikTokContent}
                   disabled={generating}
@@ -369,7 +405,58 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                   )}
                   Gerar Conteúdo TikTok
                 </Button>
+
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowTemplateConfig(!showTemplateConfig)}
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {templateCanvaUrl ? '✓ Template Canva' : 'Configurar Template Canva'}
+                </Button>
               </div>
+
+              {/* Configuração do Template Canva */}
+              {showTemplateConfig && (
+                <Card>
+                  <CardContent className="p-4">
+                    <label className="text-sm font-medium mb-2 block">
+                      🎨 Template Canva (URL)
+                    </label>
+                    <Input
+                      type="url"
+                      value={editingTemplateUrl}
+                      onChange={(e) => setEditingTemplateUrl(e.target.value)}
+                      placeholder="https://www.canva.com/design/..."
+                      className="mb-2"
+                    />
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Este link será usado para todos os conteúdos TikTok deste produto
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveTemplateUrl}>
+                        <Save className="h-4 w-4 mr-1" />
+                        Salvar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowTemplateConfig(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Botão Abrir Template Canva */}
+              {templateCanvaUrl && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(templateCanvaUrl, '_blank')}
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir Template Canva
+                </Button>
+              )}
 
               {/* Hook (Primeiros 3 segundos) */}
               <Card>
@@ -384,18 +471,10 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                     placeholder="O hook será gerado aqui..."
                     readOnly={!editingHook}
                   />
-                  <Input
-                    type="url"
-                    placeholder="URL do link externo (Canva, etc.)"
-                    value={hookLink}
-                    onChange={(e) => setHookLink(e.target.value)}
-                    className="mt-2"
-                    disabled={!editingHook}
-                  />
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {hookText.length} caracteres
-                    </span>
+                    <Badge variant={isOverLimit(hookText) ? "destructive" : "secondary"}>
+                      {getCharacterCount(hookText)}/5000 caracteres
+                    </Badge>
                     <div className="flex gap-2">
                       {hookText && (
                         <TooltipProvider>
@@ -410,22 +489,6 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Copiar Texto</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      {hookLink && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open(hookLink, '_blank')}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Link Canva</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
@@ -469,7 +532,7 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    saveContent('hook', hookText, hookLink);
+                                    saveContent('hook', hookText);
                                     setEditingHook(false);
                                   }}
                                 >
@@ -513,18 +576,10 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                     placeholder="O script do vídeo será gerado aqui..."
                     readOnly={!editingScript}
                   />
-                  <Input
-                    type="url"
-                    placeholder="URL do link externo (Canva, etc.)"
-                    value={scriptLink}
-                    onChange={(e) => setScriptLink(e.target.value)}
-                    className="mt-2"
-                    disabled={!editingScript}
-                  />
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {videoScript.length} caracteres
-                    </span>
+                    <Badge variant={isOverLimit(videoScript) ? "destructive" : "secondary"}>
+                      {getCharacterCount(videoScript)}/5000 caracteres
+                    </Badge>
                     <div className="flex gap-2">
                       {videoScript && (
                         <TooltipProvider>
@@ -541,23 +596,7 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                             <TooltipContent>Copiar Texto</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      )}
-                      {scriptLink && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open(scriptLink, '_blank')}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Link Canva</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
+                       )}
                       {videoScript && (
                         <TooltipProvider>
                           <Tooltip>
@@ -598,7 +637,7 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    saveContent('script', videoScript, scriptLink);
+                                    saveContent('script', videoScript);
                                     setEditingScript(false);
                                   }}
                                 >
@@ -639,21 +678,13 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                     value={ctaText}
                     onChange={(e) => setCtaText(e.target.value)}
                     className="min-h-[100px]"
-                    placeholder="O call-to-action será gerado aqui..."
-                    readOnly={!editingCta}
-                  />
-                  <Input
-                    type="url"
-                    placeholder="URL do link externo (Canva, etc.)"
-                    value={ctaLink}
-                    onChange={(e) => setCtaLink(e.target.value)}
-                    className="mt-2"
-                    disabled={!editingCta}
-                  />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {ctaText.length} caracteres
-                    </span>
+                  placeholder="O call-to-action será gerado aqui..."
+                  readOnly={!editingCta}
+                />
+                <div className="flex justify-between items-center">
+                  <Badge variant={isOverLimit(ctaText) ? "destructive" : "secondary"}>
+                    {getCharacterCount(ctaText)}/5000 caracteres
+                  </Badge>
                     <div className="flex gap-2">
                       {ctaText && (
                         <TooltipProvider>
@@ -670,24 +701,8 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                             <TooltipContent>Copiar Texto</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      )}
-                      {ctaLink && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open(ctaLink, '_blank')}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Link Canva</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      {ctaText && (
+                    )}
+                    {ctaText && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -724,13 +739,13 @@ export function TikTokContentGenerator({ productId, productName, isOpen, onClose
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    saveContent('cta', ctaText, ctaLink);
-                                    setEditingCta(false);
-                                  }}
-                                >
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  saveContent('cta', ctaText);
+                                  setEditingCta(false);
+                                }}
+                              >
                                   <Save className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
