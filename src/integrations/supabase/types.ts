@@ -549,6 +549,39 @@ export type Database = {
         }
         Relationships: []
       }
+      google_oauth_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          provider_refresh_token: string | null
+          provider_token: string | null
+          scopes: string[] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          provider_refresh_token?: string | null
+          provider_token?: string | null
+          scopes?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          provider_refresh_token?: string | null
+          provider_token?: string | null
+          scopes?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       key_opinion_leaders: {
         Row: {
           approved: boolean

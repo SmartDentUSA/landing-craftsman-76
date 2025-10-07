@@ -141,6 +141,64 @@ const DashboardContent = () => {
     getCurrentUser();
   }, [getCurrentUser]);
 
+  // Capturar e salvar tokens Google automaticamente
+  useEffect(() => {
+    let mounted = true;
+
+    const captureGoogleTokens = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Validar se há tokens Google
+        if (!session?.provider_token || !session?.provider_refresh_token) {
+          return;
+        }
+
+        // Verificar se já existe registro (evita duplicatas)
+        const { data: existingTokens } = await supabase
+          .from('google_oauth_tokens')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (existingTokens) {
+          console.log('✅ Google tokens já salvos');
+          return;
+        }
+
+        console.log('✅ Salvando tokens Google...');
+        
+        const { error } = await supabase
+          .from('google_oauth_tokens')
+          .upsert({
+            user_id: session.user.id,
+            provider_token: session.provider_token,
+            provider_refresh_token: session.provider_refresh_token,
+            scopes: ['youtube.force-ssl', 'business.manage'],
+            expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+        
+        if (error) {
+          console.error('❌ Erro ao salvar tokens:', error);
+        } else {
+          console.log('✅ Tokens Google salvos com sucesso');
+        }
+
+      } catch (err) {
+        console.error('❌ Erro inesperado ao capturar tokens:', err);
+      }
+    };
+
+    if (mounted) {
+      captureGoogleTokens();
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Separate effect to react to landing page approval/disapproval changes
   useEffect(() => {
     console.log('📊 Landing pages changed, approved IDs:', approvedLandingPagesIds);

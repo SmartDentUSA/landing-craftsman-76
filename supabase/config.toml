@@ -95,3 +95,6 @@ verify_jwt = true
 
 [functions.test-google-business-connection]
 verify_jwt = true
+
+[functions.refresh-google-token]
+verify_jwt = true
