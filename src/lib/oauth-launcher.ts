@@ -5,48 +5,55 @@
  */
 
 export interface OAuthLaunchOptions {
+  /** URL completa de autenticação do Google */
   authUrl: string;
+
+  /** Identificador do fluxo (YouTube ou Google Business) */
   source: 'youtube' | 'google-business';
+
+  /** Origem usada para rota de fallback (/oauth/launch) */
+  fallbackOrigin?: string;
+
+  /** Callback opcional quando popup é bloqueado */
   onBlocked?: () => void;
 }
 
-export function launchGoogleOAuth({ authUrl, source, onBlocked }: OAuthLaunchOptions): void {
+export function launchGoogleOAuth({
+  authUrl,
+  source,
+  fallbackOrigin = window.location.origin,
+  onBlocked,
+}: OAuthLaunchOptions): void {
   if (!authUrl || typeof authUrl !== "string") {
     console.error("❌ URL OAuth inválida:", authUrl);
     throw new Error("URL de autenticação inválida");
   }
 
   const inIframe = window.self !== window.top;
-  console.log(`🔍 [${source}] Ambiente detectado:`, {
+  console.log(`🔍 [${source}] Diagnóstico OAuth:`, {
     inIframe,
     currentOrigin: window.location.origin,
-    topOrigin: inIframe ? 'cross-origin (blocked)' : window.location.origin,
+    fallbackOrigin,
+    authUrlPreview: authUrl.substring(0, 60) + '...',
   });
 
   try {
     if (inIframe) {
-      console.warn(`⚠️ [${source}] Executando em iframe Lovable — forçando navegação top-level`);
-      if (window.top) {
-        window.top.location.href = authUrl;
+      console.warn(`⚠️ [${source}] Iframe detectado — usando rota intermediária /oauth/launch`);
+      const launchUrl = `${fallbackOrigin}/oauth/launch?target=${encodeURIComponent(authUrl)}`;
+      const newTab = window.open(launchUrl, "_blank", "noopener,noreferrer");
+      if (!newTab) {
+        console.error("❌ Nova aba bloqueada pelo navegador");
+        if (onBlocked) onBlocked();
       } else {
-        window.location.assign(authUrl);
+        console.log("✅ Nova aba aberta com sucesso:", launchUrl);
       }
     } else {
-      console.log(`✅ [${source}] Ambiente principal — navegação normal`);
+      console.log(`✅ [${source}] Ambiente top-level — redirecionamento direto`);
       window.location.assign(authUrl);
     }
   } catch (error) {
-    console.error(`❌ [${source}] Erro ao iniciar OAuth:`, error);
-    try {
-      const popup = window.open(authUrl, 'GoogleOAuth', 'width=600,height=700');
-      if (!popup && onBlocked) {
-        onBlocked();
-      }
-    } catch (popupError) {
-      console.error('❌ Popup também bloqueado:', popupError);
-      if (onBlocked) {
-        onBlocked();
-      }
-    }
+    console.error(`❌ [${source}] Erro crítico ao iniciar OAuth:`, error);
+    if (onBlocked) onBlocked();
   }
 }

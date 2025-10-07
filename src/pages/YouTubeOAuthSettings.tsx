@@ -347,15 +347,18 @@ export default function YouTubeOAuthSettings() {
       redirectUri: REDIRECT_URI,
       loginHint: user?.email || 'nenhum',
     });
+    
+    const fallbackOrigin = new URL(REDIRECT_URI).origin;
 
     // Usar utilitário que detecta iframe
     launchGoogleOAuth({
       authUrl: authUrl.toString(),
       source: 'youtube',
+      fallbackOrigin,
       onBlocked: () => {
         toast({
           title: "⚠️ Popup bloqueado",
-          description: "Permita popups neste site para continuar com a autenticação.",
+          description: "Se a nova aba não abriu, permita pop-ups neste site e tente novamente.",
           variant: "destructive"
         });
       }
