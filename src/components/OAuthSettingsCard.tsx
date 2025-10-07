@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { OAuthProvider } from "@/lib/oauth";
+import { useOAuth } from "@/hooks/useOAuth";
 import { Loader2, CheckCircle, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
@@ -34,6 +35,7 @@ export function OAuthSettingsCard({
 }: OAuthSettingsCardProps) {
   const { toast } = useToast();
   const location = useLocation();
+  const { start, exchange } = useOAuth(provider);
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -68,9 +70,6 @@ export function OAuthSettingsCard({
 
   const loadConfigs = async () => {
     try {
-      // Temporário: Mock data enquanto migrations não são executadas
-      // TODO: Descomentar após executar migrations
-      /*
       const { data, error } = await supabase
         .from("oauth_client_configs")
         .select("id, client_id")
@@ -85,7 +84,6 @@ export function OAuthSettingsCard({
         setClientId(firstConfig.client_id);
         await testConnection();
       }
-      */
     } catch (err) {
       console.error("Erro ao carregar configs:", err);
     }
@@ -107,15 +105,6 @@ export function OAuthSettingsCard({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      // Temporário: Aviso enquanto migrations não são executadas
-      toast({
-        title: "⚠️ Migrations pendentes",
-        description: "Execute as migrations SQL no Supabase antes de salvar",
-        variant: "destructive",
-      });
-      
-      // TODO: Descomentar após executar migrations
-      /*
       const { data, error } = await supabase
         .from("oauth_client_configs")
         .upsert({
@@ -136,7 +125,6 @@ export function OAuthSettingsCard({
         title: "✅ Configuração salva",
         description: "Credenciais armazenadas com segurança",
       });
-      */
 
     } catch (err) {
       toast({
@@ -159,14 +147,6 @@ export function OAuthSettingsCard({
       return;
     }
 
-    toast({
-      title: "⚠️ Migrations pendentes",
-      description: "Execute as migrations SQL no Supabase antes de gerar tokens",
-      variant: "destructive",
-    });
-
-    // TODO: Descomentar após executar migrations e implementar useOAuth
-    /*
     try {
       await start(configId);
     } catch (err) {
@@ -176,7 +156,6 @@ export function OAuthSettingsCard({
         variant: "destructive",
       });
     }
-    */
   };
 
   const handleExchange = async (code: string) => {
@@ -192,12 +171,15 @@ export function OAuthSettingsCard({
     try {
       setIsExchanging(true);
 
-      // TODO: Usar hook useOAuth após migrations
+      await exchange(code, configId);
+
+      setShowOAuthModal(false);
       toast({
-        title: "⚠️ Migrations pendentes",
-        description: "Execute as migrations SQL no Supabase",
-        variant: "destructive",
+        title: "✅ Token gerado com sucesso",
+        description: "Credenciais OAuth configuradas",
       });
+
+      await testConnection();
 
     } catch (err) {
       toast({
@@ -246,14 +228,6 @@ export function OAuthSettingsCard({
   };
 
   const handleDisconnect = async () => {
-    toast({
-      title: "⚠️ Migrations pendentes",
-      description: "Execute as migrations SQL no Supabase",
-      variant: "destructive",
-    });
-
-    // TODO: Descomentar após migrations
-    /*
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
@@ -277,7 +251,6 @@ export function OAuthSettingsCard({
         variant: "destructive",
       });
     }
-    */
   };
 
   const getStatusBadge = () => {
@@ -390,15 +363,6 @@ export function OAuthSettingsCard({
             )}
           </div>
 
-          {/* Aviso de Migrations Pendentes */}
-          <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-              ⚠️ Migrations SQL pendentes
-            </p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-              Execute os arquivos SQL em <code className="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">supabase/migrations/</code> no Supabase SQL Editor antes de usar este componente.
-            </p>
-          </div>
         </CardContent>
       </Card>
 
