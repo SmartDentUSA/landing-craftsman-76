@@ -78,9 +78,11 @@ serve(async (req) => {
       robotsContent += '\n';
     }
 
-    // Add sitemap reference
+    // Add sitemap references
     const sitemapUrl = `https://${domain}/functions/v1/generate-sitemap`;
+    const videoSitemapUrl = `https://${domain}/functions/v1/generate-video-sitemap`;
     robotsContent += `Sitemap: ${sitemapUrl}\n`;
+    robotsContent += `Sitemap: ${videoSitemapUrl}\n`;
 
     console.log('Generated robots.txt content:', robotsContent);
 

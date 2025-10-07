@@ -81,6 +81,9 @@ verify_jwt = false
 [functions.generate-robots-txt]
 verify_jwt = false
 
+[functions.generate-video-sitemap]
+verify_jwt = false
+
 [functions.auto-seo-enhancer]
 verify_jwt = true
 

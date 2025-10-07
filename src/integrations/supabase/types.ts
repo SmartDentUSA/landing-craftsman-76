@@ -1119,6 +1119,7 @@ export type Database = {
           ftp_remote_path: string | null
           ftp_user: string | null
           id: string
+          seo_settings: Json | null
           updated_at: string
           user_id: string
           wordpress_app_password_encrypted: string | null
@@ -1134,6 +1135,7 @@ export type Database = {
           ftp_remote_path?: string | null
           ftp_user?: string | null
           id?: string
+          seo_settings?: Json | null
           updated_at?: string
           user_id: string
           wordpress_app_password_encrypted?: string | null
@@ -1149,6 +1151,7 @@ export type Database = {
           ftp_remote_path?: string | null
           ftp_user?: string | null
           id?: string
+          seo_settings?: Json | null
           updated_at?: string
           user_id?: string
           wordpress_app_password_encrypted?: string | null
