@@ -340,19 +340,8 @@ export default function YouTubeOAuthSettings() {
       redirectUri,
     });
 
-    setShowOAuthModal(true);
-    
-    // 🚀 Abrir em nova aba segura
-    const newWindow = window.open(authUrl.toString(), "_blank", "noopener,noreferrer");
-    
-    // ⚠️ Caso o popup seja bloqueado
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
-      toast({
-        title: "⚠️ Popup bloqueado",
-        description: "Permita popups neste site e tente novamente.",
-        variant: "destructive",
-      });
-    }
+    // Abrir na mesma aba para garantir que o callback retorne ao app
+    window.location.assign(authUrl.toString());
   };
 
   const handleOAuthCode = async (code: string) => {
