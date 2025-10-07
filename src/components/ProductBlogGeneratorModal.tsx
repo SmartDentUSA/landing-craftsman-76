@@ -15,6 +15,7 @@ import { usePromptsConfiguration } from '@/hooks/usePromptsConfiguration';
 import { ProductVideosList } from '@/components/ProductVideosList';
 import { ProductResourceCTAsList } from '@/components/ProductResourceCTAsList';
 import { RelatedLandingPagesList } from '@/components/RelatedLandingPagesList';
+import { useSEOHTMLGenerator } from '@/hooks/useSEOHTMLGenerator';
 
 interface Product {
   id: string;
@@ -27,6 +28,8 @@ interface Product {
   keywords?: string[];
   benefits?: string[];
   features?: string[];
+  image_url?: string;
+  product_url?: string;
   individual_blog_content?: {
     commercial?: string;
     technical?: string;
@@ -58,6 +61,7 @@ export const ProductBlogGeneratorModal = ({
   const [useIntelligentLinks, setUseIntelligentLinks] = useState(true);
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
+  const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
 
   // Sincronizar dados do produto quando props mudam
   useEffect(() => {
@@ -147,8 +151,8 @@ export const ProductBlogGeneratorModal = ({
           content: content,
           productName: product.name,
           productId: product.id,
-          productImageUrl: product.image_url,
-          productUrl: product.product_url,
+          productImageUrl: product.image_url ?? undefined,
+          productUrl: product.product_url ?? undefined,
           keywords: product.keywords || [],
         }],
         preview: true,
