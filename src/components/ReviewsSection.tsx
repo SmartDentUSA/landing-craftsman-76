@@ -417,7 +417,8 @@ export function ReviewsSection() {
                         author_name: r.author_name,
                         rating: r.rating,
                         review_text: r.review_text,
-                        review_date: new Date().toISOString()
+                        review_date: new Date().toISOString(),
+                        approved: r.approved ?? true
                       }))
                     };
                     setReviews(updatedData);

@@ -92,6 +92,12 @@ export function useCompanyReviews() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      console.log('💾 Salvando reviews:', {
+        user_id: user.id,
+        reviews_count: reviews.manual_reviews?.length ?? 0,
+        reviews_preview: reviews.manual_reviews?.slice(0, 2)
+      });
+
       const { error } = await supabase
         .from("company_profile")
         .update({
@@ -102,9 +108,11 @@ export function useCompanyReviews() {
 
       if (error) throw error;
 
+      console.log('✅ Reviews salvos com sucesso');
+
       toast({
         title: "✅ Reviews salvos",
-        description: "Reviews da empresa salvos com sucesso"
+        description: `${reviews.manual_reviews?.length ?? 0} reviews salvos com sucesso`
       });
 
       return true;

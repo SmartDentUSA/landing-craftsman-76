@@ -37,6 +37,7 @@ export interface CompanyReviewsJSONB {
     rating: number;
     review_text: string;
     review_date?: string;
+    approved?: boolean;
   }>;
   google_reviews_imported: boolean;
   google_place_id: string | null;
