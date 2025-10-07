@@ -97,53 +97,64 @@ export default function YouTubeOAuthSettings() {
 
   // Detectar retorno do OAuth callback
   useEffect(() => {
-    // 1️⃣ Ler de location.state (compatibilidade com Google Business)
-    const stateCode = location.state?.code;
-    
-    // 2️⃣ Ler de query params (mais confiável para YouTube)
     const queryCode = searchParams.get("code");
     
-    const code = queryCode || stateCode; // Prioriza query params
-    
-    if (code) {
-      console.log("✅ Código OAuth detectado:", code.substring(0, 10) + "...");
-      setOauthCode(code);
-      setShowOAuthModal(true);
+    if (queryCode) {
+      console.log("✅ Código OAuth detectado:", queryCode.substring(0, 10) + "...");
       
-      if (!manualMode) {
-        setIsExchanging(true);
-        
-        toast({
-          title: "🔄 Trocando código automaticamente...",
-          description: "Aguarde enquanto convertemos 4/... em 1//...",
-        });
-        
-        handleOAuthCode(code)
-          .then(() => {
-            setExchangeSuccess(true);
-          })
-          .catch((error) => {
-            console.error("Auto exchange failed:", error);
-            setIsExchanging(false);
-            toast({
-              title: "⚠️ Troca automática falhou",
-              description: "Clique em 'Trocar por Token' para tentar novamente.",
-              variant: "destructive",
-            });
+      // 🔒 VALIDAR SESSÃO LOVABLE ANTES DE PROCESSAR OAUTH
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.user) {
+          console.error("❌ Sessão Lovable expirada");
+          toast({
+            title: "❌ Sessão expirada",
+            description: "Faça login novamente no Lovable",
+            variant: "destructive"
           });
-      } else {
-        toast({
-          title: "📋 Código OAuth recebido",
-          description: "Modo manual ativo. Clique em 'Trocar por Token' quando estiver pronto.",
-        });
-      }
-      
-      // Limpa a URL para evitar reprocessamento (apenas se vier de query params)
-      if (queryCode) {
+          navigate('/auth');
+          return;
+        }
+        
+        console.log("✅ Sessão Lovable válida:", session.user.email);
+        setOauthCode(queryCode);
+        setShowOAuthModal(true);
+        
+        if (!manualMode) {
+          setIsExchanging(true);
+          
+          toast({
+            title: "🔄 Trocando código...",
+            description: "Aguarde enquanto convertemos 4/... em 1//...",
+          });
+          
+          handleOAuthCode(queryCode)
+            .then(() => {
+              setExchangeSuccess(true);
+            })
+            .catch((error) => {
+              console.error("❌ Erro ao trocar código:", error);
+              setIsExchanging(false);
+              toast({
+                title: "⚠️ Erro ao trocar código",
+                description: error.message || 'Erro desconhecido',
+                variant: "destructive",
+              });
+            })
+            .finally(() => {
+              setIsExchanging(false);
+            });
+        } else {
+          toast({
+            title: "📋 Código detectado",
+            description: "Cole manualmente no campo abaixo",
+          });
+        }
+        
+        // Limpa a URL para evitar reprocessamento
         window.history.replaceState({}, document.title, window.location.pathname);
-      }
+      });
     }
-  }, [location.state, manualMode]);
+  }, [searchParams, manualMode, navigate]);
 
   const testConnection = async () => {
     setIsTesting(true);
