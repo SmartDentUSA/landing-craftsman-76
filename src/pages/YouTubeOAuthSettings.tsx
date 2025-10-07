@@ -517,7 +517,7 @@ export default function YouTubeOAuthSettings() {
     }
   };
 
-  const getRedirectUri = () => `${window.location.origin}/oauth2/callback`;
+  const getRedirectUri = () => REDIRECT_URI;
   
   const getGcpConsentScreenUrl = () => {
     if (!clientId) return 'https://console.cloud.google.com/apis/credentials/consent';
