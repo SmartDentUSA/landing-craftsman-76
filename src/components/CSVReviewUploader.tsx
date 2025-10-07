@@ -117,17 +117,9 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
         return;
       }
 
-      // Replace existing reviews with new ones
+      // O salvamento é feito através do callback onReviewsUpdate
+      // que chama saveCompanyReviews() no componente pai
       onReviewsUpdate(newReviews);
-      
-      // Save to database
-      try {
-        const useLandingPages = (await import('@/hooks/useLandingPages')).default;
-        const landingPageId = window.location.pathname.split('/').pop() || 'default';
-        await useLandingPages.getState().saveManualReviews(landingPageId, newReviews);
-      } catch (error) {
-        console.error('Error saving to database:', error);
-      }
       
       toast({
         title: "✅ Reviews importadas!",
