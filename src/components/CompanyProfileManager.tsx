@@ -154,6 +154,8 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
   };
 
   const saveProfile = async () => {
+    console.log("🧪 saveProfile: click recebido", { hasName: !!profile.company_name });
+    
     if (!profile.company_name.trim()) {
       toast({
         title: "Nome da empresa obrigatório",
@@ -602,7 +604,11 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
         </Tabs>
 
         <div className="flex justify-end">
-          <Button onClick={saveProfile} disabled={saving || !profile.company_name}>
+          <Button 
+            onClick={saveProfile} 
+            disabled={saving}
+            title={!profile.company_name ? "Preencha 'Nome da Empresa' para salvar" : undefined}
+          >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
