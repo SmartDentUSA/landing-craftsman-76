@@ -59,11 +59,19 @@ export function ReviewsSection() {
     
     const success = await syncGoogleReviews(googleMapsUrl);
     if (success) {
-      await loadReviews(); // Recarregar após sync
+      const updatedReviews = await loadCompanyReviews();
+      if (updatedReviews) {
+        // Salvar a URL/Place ID após sincronizar
+        await saveCompanyReviews({
+          ...updatedReviews,
+          google_place_id: googleMapsUrl
+        });
+      }
+      await loadReviews();
     }
   };
 
-  const handleAddReview = () => {
+  const handleAddReview = async () => {
     if (!formAuthor.trim() || !formText.trim()) return;
 
     const newReview = {
@@ -73,18 +81,23 @@ export function ReviewsSection() {
       review_date: new Date().toISOString()
     };
 
+    let updatedReviews: CompanyReviewsJSONB;
+
     if (editingReview !== null) {
       // Editar existente
       const updated = [...reviews.manual_reviews];
       updated[editingReview] = newReview;
-      setReviews({ ...reviews, manual_reviews: updated });
+      updatedReviews = { ...reviews, manual_reviews: updated };
     } else {
       // Adicionar novo
-      setReviews({
+      updatedReviews = {
         ...reviews,
         manual_reviews: [...reviews.manual_reviews, newReview]
-      });
+      };
     }
+
+    setReviews(updatedReviews);
+    await saveCompanyReviews(updatedReviews);
 
     // Reset form
     setFormAuthor("");
@@ -103,9 +116,11 @@ export function ReviewsSection() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteReview = (index: number) => {
+  const handleDeleteReview = async (index: number) => {
     const updated = reviews.manual_reviews.filter((_, i) => i !== index);
-    setReviews({ ...reviews, manual_reviews: updated });
+    const updatedReviews = { ...reviews, manual_reviews: updated };
+    setReviews(updatedReviews);
+    await saveCompanyReviews(updatedReviews);
   };
 
   const renderStars = (rating: number) => {
@@ -395,8 +410,8 @@ export function ReviewsSection() {
                     review_text: r.review_text || '',
                     approved: true
                   }))}
-                  onReviewsUpdate={(updatedReviews) => {
-                    setReviews({
+                  onReviewsUpdate={async (updatedReviews) => {
+                    const updatedData = {
                       ...reviews,
                       manual_reviews: updatedReviews.map(r => ({
                         author_name: r.author_name,
@@ -404,7 +419,9 @@ export function ReviewsSection() {
                         review_text: r.review_text,
                         review_date: new Date().toISOString()
                       }))
-                    });
+                    };
+                    setReviews(updatedData);
+                    await saveCompanyReviews(updatedData);
                   }}
                 />
               </CardContent>

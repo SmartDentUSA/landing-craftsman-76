@@ -27,9 +27,34 @@ export function useCompanyReviews() {
         .from("company_profile")
         .select("company_reviews")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+
+      // Se não existir company_profile, cria automaticamente
+      if (!data) {
+        const { error: insertError } = await supabase
+          .from("company_profile")
+          .insert({
+            user_id: user.id,
+            company_name: "Nova Empresa",
+            company_reviews: {
+              manual_reviews: [],
+              google_reviews_imported: false,
+              google_place_id: null,
+              last_google_sync: null
+            }
+          });
+
+        if (insertError) throw insertError;
+
+        return {
+          manual_reviews: [],
+          google_reviews_imported: false,
+          google_place_id: null,
+          last_google_sync: null
+        };
+      }
 
       if (!data?.company_reviews) {
         return {
