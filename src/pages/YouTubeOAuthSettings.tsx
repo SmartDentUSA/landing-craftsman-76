@@ -493,7 +493,11 @@ export default function YouTubeOAuthSettings() {
         // Copiar token para clipboard automaticamente
         try {
           await navigator.clipboard.writeText(newRefreshToken);
-        } catch {}
+          console.log('✅ Token copiado automaticamente para área de transferência');
+        } catch (error) {
+          console.warn('⚠️ Cópia automática falhou (permissão negada ou bloqueada):', error);
+          // Não mostrar toast aqui para não ser intrusivo
+        }
         
         toast({
           title: "✅ Refresh Token (1//) gerado e salvo!",
@@ -1028,7 +1032,58 @@ export default function YouTubeOAuthSettings() {
                   Refresh Token (1//...) salvo com sucesso!
                 </span>
               </div>
-              <Button variant="outline" onClick={() => setShowOAuthModal(false)}>Fechar</Button>
+              
+              {/* Campo de texto para cópia manual */}
+              <div className="space-y-2">
+                <Label htmlFor="token-manual-copy">Refresh Token (para cópia manual)</Label>
+                <Input
+                  id="token-manual-copy"
+                  value={refreshToken}
+                  readOnly
+                  className="font-mono text-xs"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={async () => {
+                    console.log('🔘 Botão "Copiar Token" clicado (YouTube)');
+                    console.log('📋 refreshToken disponível?', !!refreshToken);
+                    console.log('📋 refreshToken (primeiros 10 chars):', refreshToken?.substring(0, 10));
+                    
+                    if (!refreshToken) {
+                      toast({
+                        title: "❌ Token não encontrado",
+                        description: "O Refresh Token não está disponível",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
+                    try {
+                      await navigator.clipboard.writeText(refreshToken);
+                      console.log('✅ Token copiado com sucesso');
+                      toast({
+                        title: "✅ Copiado!",
+                        description: "Refresh Token copiado para área de transferência"
+                      });
+                    } catch (error) {
+                      console.error('❌ Erro ao copiar:', error);
+                      toast({
+                        title: "❌ Erro ao copiar",
+                        description: `Tente copiar manualmente do campo acima: ${error instanceof Error ? error.message : 'Permissão negada'}`,
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar Token
+                </Button>
+                <Button variant="outline" onClick={() => setShowOAuthModal(false)}>Fechar</Button>
+              </div>
             </div>
           )}
 

@@ -1290,16 +1290,50 @@ export default function GoogleBusinessOAuthSettings() {
                   Refresh Token (1//...) salvo com sucesso!
                 </span>
               </div>
+              
+              {/* Campo de texto para cópia manual */}
+              <div className="space-y-2">
+                <Label htmlFor="token-manual-copy">Refresh Token (para cópia manual)</Label>
+                <Input
+                  id="token-manual-copy"
+                  value={refreshToken}
+                  readOnly
+                  className="font-mono text-xs"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+              </div>
+              
               <div className="flex gap-2">
                 <Button
                   onClick={async () => {
+                    console.log('🔘 Botão "Copiar Token" clicado');
+                    console.log('📋 refreshToken disponível?', !!refreshToken);
+                    console.log('📋 refreshToken (primeiros 10 chars):', refreshToken?.substring(0, 10));
+                    
+                    if (!refreshToken) {
+                      toast({
+                        title: "❌ Token não encontrado",
+                        description: "O Refresh Token não está disponível",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
                     try {
                       await navigator.clipboard.writeText(refreshToken);
+                      console.log('✅ Token copiado com sucesso');
                       toast({
                         title: "✅ Copiado!",
                         description: "Refresh Token copiado para área de transferência"
                       });
-                    } catch {}
+                    } catch (error) {
+                      console.error('❌ Erro ao copiar:', error);
+                      toast({
+                        title: "❌ Erro ao copiar",
+                        description: `Tente copiar manualmente do campo acima: ${error instanceof Error ? error.message : 'Permissão negada'}`,
+                        variant: "destructive"
+                      });
+                    }
                   }}
                   className="flex-1"
                 >
