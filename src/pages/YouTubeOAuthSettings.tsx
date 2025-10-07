@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDown } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ExternalLink, Info, Copy, ChevronDown, Check } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
+import { Switch } from '@/components/ui/switch';
 
 const STORAGE_KEYS = {
   CLIENT_ID: 'youtube_client_id',
@@ -43,6 +44,9 @@ export default function YouTubeOAuthSettings() {
   const [showGcpGuide, setShowGcpGuide] = useState(false);
   const [oauthCode, setOauthCode] = useState('');
   const [isClientIdValid, setIsClientIdValid] = useState(false);
+  const [isExchanging, setIsExchanging] = useState(false);
+  const [exchangeSuccess, setExchangeSuccess] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
 
   const redirectUri = `${window.location.origin}/oauth2/callback`;
 
@@ -93,25 +97,45 @@ export default function YouTubeOAuthSettings() {
   useEffect(() => {
     const state = location.state as any;
     if (state?.openOAuthModal && state?.code) {
-      console.log("OAuth callback detected, automatically exchanging code");
+      console.log("✅ OAuth callback detectado - abrindo modal com código pré-preenchido");
       
-      // Trocar código automaticamente
-      toast({
-        title: "🔄 Trocando código automaticamente...",
-        description: "Aguarde enquanto convertemos o código OAuth em Refresh Token.",
-      });
+      // Sempre abrir o modal com o código
+      setOauthCode(state.code);
+      setShowOAuthModal(true);
       
-      handleOAuthCode(state.code).catch((error) => {
-        console.error("Auto exchange failed:", error);
-        // Se falhar, abrir modal para retry manual
-        setOauthCode(state.code);
-        setShowOAuthModal(true);
-      });
+      // Trocar automaticamente se NÃO estiver em modo manual
+      if (!manualMode) {
+        setIsExchanging(true);
+        
+        toast({
+          title: "🔄 Trocando código automaticamente...",
+          description: "Aguarde enquanto convertemos 4/... em 1//...",
+        });
+        
+        handleOAuthCode(state.code)
+          .then(() => {
+            setExchangeSuccess(true);
+          })
+          .catch((error) => {
+            console.error("Auto exchange failed:", error);
+            setIsExchanging(false);
+            toast({
+              title: "⚠️ Troca automática falhou",
+              description: "Clique em 'Trocar por Token' para tentar novamente.",
+              variant: "destructive",
+            });
+          });
+      } else {
+        toast({
+          title: "📋 Código OAuth recebido",
+          description: "Modo manual ativo. Clique em 'Trocar por Token' quando estiver pronto.",
+        });
+      }
       
       // Limpar state para evitar reprocessar
       window.history.replaceState({}, document.title);
     }
-  }, [location]);
+  }, [location, manualMode]);
 
   const testConnection = async () => {
     setIsTesting(true);
@@ -338,6 +362,7 @@ export default function YouTubeOAuthSettings() {
         description: "Preencha Client ID, Client Secret e Código OAuth.",
         variant: "destructive"
       });
+      setIsExchanging(false);
       return;
     }
 
@@ -351,6 +376,8 @@ export default function YouTubeOAuthSettings() {
     });
 
     setIsSaving(true);
+    setIsExchanging(true);
+    setExchangeSuccess(false);
 
     try {
       const { data } = await supabase.functions.invoke('exchange-youtube-code', {
@@ -448,21 +475,32 @@ export default function YouTubeOAuthSettings() {
           description: dbError.message || "Token salvo apenas localmente.",
           variant: "destructive",
         });
+        setExchangeSuccess(false);
       } else {
         console.log('✅ Token saved to database:', saved);
+        setExchangeSuccess(true);
+        
+        // Copiar token para clipboard automaticamente
+        try {
+          await navigator.clipboard.writeText(newRefreshToken);
+        } catch {}
+        
         toast({
-          title: "✅ Configuração completa!",
-          description: "Credenciais salvas automaticamente no banco de dados. Pronto para usar!",
+          title: "✅ Refresh Token (1//) gerado e salvo!",
+          description: "Copiado para área de transferência. Testando conexão...",
         });
+        
+        // Auto-test connection
+        setTimeout(() => {
+          testConnection();
+        }, 1000);
       }
       
-      setShowOAuthModal(false);
       setOauthCode("");
       
-      // Auto-test connection
-      setTimeout(() => testConnection(), 500);
     } catch (err) {
       console.error("OAuth exchange exception", err);
+      setExchangeSuccess(false);
       toast({
         title: "❌ Erro no OAuth",
         description: "Falha inesperada. Veja o console para detalhes.",
@@ -470,6 +508,7 @@ export default function YouTubeOAuthSettings() {
       });
     } finally {
       setIsSaving(false);
+      setIsExchanging(false);
     }
   };
 
@@ -723,27 +762,41 @@ export default function YouTubeOAuthSettings() {
             />
           </div>
 
+          {/* Alert de diferença entre 4/ e 1// */}
+          <Alert className="mb-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>📋 Entenda a diferença:</strong><br />
+              • <code>4/...</code> = código temporário (expira em 10 min)<br />
+              • <code>1//...</code> = Refresh Token permanente (o que você precisa)
+            </AlertDescription>
+          </Alert>
+
           <div className="space-y-2">
-            <Label htmlFor="refreshToken">Refresh Token</Label>
+            <Label htmlFor="refreshToken" className="flex items-center gap-2">
+              Refresh Token
+              <span className="text-xs text-green-600 font-normal">
+                ✓ O token válido começa com 1//
+              </span>
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="refreshToken"
                 type="password"
-                placeholder="1//0xxxxxxxxxxxxx"
+                placeholder="Será preenchido após a troca do código 4/ pelo botão Gerar Token"
                 value={refreshToken}
                 onChange={(e) => setRefreshToken(e.target.value)}
                 className="flex-1"
+                readOnly={isExchanging}
               />
               <Button
                 variant="outline"
                 onClick={openOAuthFlow}
+                disabled={isExchanging}
               >
                 Gerar Token
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Clique em "Gerar Token" para obter via fluxo OAuth
-            </p>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -937,56 +990,70 @@ export default function YouTubeOAuthSettings() {
         </CardHeader>
       </Card>
 
-      <Dialog open={showOAuthModal} onOpenChange={setShowOAuthModal}>
+      <Dialog open={showOAuthModal} onOpenChange={(open) => {
+        setShowOAuthModal(open);
+        if (!open) { setIsExchanging(false); setExchangeSuccess(false); setOauthCode(''); }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Código de Autorização</DialogTitle>
+            <DialogTitle>
+              {isExchanging ? "🔄 Trocando código..." : exchangeSuccess ? "✅ Refresh Token gerado!" : "Código de Autorização"}
+            </DialogTitle>
             <DialogDescription>
-              Cole o código OAuth recebido após autorização:
+              {isExchanging ? "Aguarde enquanto trocamos o código 4/ por um Refresh Token 1//..." : exchangeSuccess ? "Seu Refresh Token foi gerado e salvo com sucesso!" : "Cole o código que começa com 4/... Ele será trocado por um Refresh Token (1//...) automaticamente."}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <Input
-              type="text"
-              placeholder="4/0AfJoh..."
-              value={oauthCode}
-              onChange={(e) => setOauthCode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleOAuthCode(oauthCode);
-                }
-              }}
-              autoFocus
-            />
-
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleOAuthCode(oauthCode)}
-                disabled={isSaving || !oauthCode}
-                className="flex-1"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Trocando...
-                  </>
-                ) : (
-                  'Trocar por Token'
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowOAuthModal(false);
-                  setOauthCode('');
-                }}
-                disabled={isSaving}
-              >
-                Cancelar
-              </Button>
+          {isExchanging && (
+            <div className="flex items-center justify-center p-6">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          </div>
+          )}
+
+          {exchangeSuccess && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+                <Check className="w-6 h-6 text-green-600 mr-2" />
+                <span className="text-green-700 dark:text-green-300 font-medium">
+                  Refresh Token (1//...) salvo com sucesso!
+                </span>
+              </div>
+              <Button variant="outline" onClick={() => setShowOAuthModal(false)}>Fechar</Button>
+            </div>
+          )}
+
+          {!isExchanging && !exchangeSuccess && (
+            <div className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="flex items-center gap-2">
+                    <Switch id="manual-mode" checked={manualMode} onCheckedChange={setManualMode} />
+                    <Label htmlFor="manual-mode">Modo manual</Label>
+                  </div>
+                </AlertDescription>
+              </Alert>
+
+              <Input
+                type="text"
+                placeholder="4/0AfJoh..."
+                value={oauthCode}
+                onChange={(e) => setOauthCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !isSaving && oauthCode && handleOAuthCode(oauthCode)}
+                autoFocus
+                disabled={isSaving}
+              />
+
+              <div className="flex gap-2">
+                <Button onClick={() => handleOAuthCode(oauthCode)} disabled={isSaving || !oauthCode} className="flex-1">
+                  {isSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Trocando...</> : 'Trocar por Token'}
+                </Button>
+                <Button variant="outline" onClick={() => { setShowOAuthModal(false); setOauthCode(''); }} disabled={isSaving}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       </div>
