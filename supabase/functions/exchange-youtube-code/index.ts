@@ -20,7 +20,7 @@ serve(async (req: Request) => {
   try {
     const { code, clientId, clientSecret, redirectUri } = await req.json();
     const effectiveRedirectUri =
-      redirectUri || Deno.env.get("YOUTUBE_REDIRECT_URI") || "";
+      redirectUri || Deno.env.get("YOUTUBE_REDIRECT_URI") || "https://landing-craftsman-76.lovable.app/oauth2/callback";
 
     if (!code || !clientId || !clientSecret || !effectiveRedirectUri) {
       return json({

@@ -48,7 +48,7 @@ export default function YouTubeOAuthSettings() {
   const [exchangeSuccess, setExchangeSuccess] = useState(false);
   const [manualMode, setManualMode] = useState(false);
 
-  const redirectUri = `${window.location.origin}/oauth2/callback`;
+  const REDIRECT_URI = 'https://landing-craftsman-76.lovable.app/oauth2/callback';
 
   // 🧹 Limpar chaves inválidas e carregar valores
   useEffect(() => {
@@ -328,7 +328,7 @@ export default function YouTubeOAuthSettings() {
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('access_type', 'offline');
@@ -337,7 +337,7 @@ export default function YouTubeOAuthSettings() {
 
     console.log('🚀 Abrindo OAuth:', {
       clientIdLast6: clientId.slice(-6),
-      redirectUri,
+      redirectUri: REDIRECT_URI,
     });
 
     // Abrir na mesma aba para garantir que o callback retorne ao app
@@ -361,7 +361,7 @@ export default function YouTubeOAuthSettings() {
       clientIdLength: clientId.length,
       clientIdValid: /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId),
       clientSecretLength: clientSecret.length,
-      redirectUri,
+      redirectUri: REDIRECT_URI,
     });
 
     setIsSaving(true);
@@ -374,7 +374,7 @@ export default function YouTubeOAuthSettings() {
           code: code.trim(),
           clientId,
           clientSecret,
-          redirectUri,
+          redirectUri: REDIRECT_URI,
         },
       });
 
@@ -384,7 +384,7 @@ export default function YouTubeOAuthSettings() {
         
         switch (data?.error) {
           case "redirect_uri_mismatch":
-            errorMessage = `❌ Redirect URI incorreto!\n\nAdicione EXATAMENTE esta URL no Google Cloud Console:\n${redirectUri}`;
+            errorMessage = `❌ Redirect URI incorreto!\n\nAdicione EXATAMENTE esta URL no Google Cloud Console:\n${REDIRECT_URI}`;
             break;
           case "invalid_grant":
             errorMessage =
@@ -422,7 +422,7 @@ export default function YouTubeOAuthSettings() {
           error: data?.error,
           error_description: data?.error_description,
           details: data?.details,
-          redirectUri,
+          redirectUri: REDIRECT_URI,
         });
         return;
       }
@@ -643,7 +643,7 @@ export default function YouTubeOAuthSettings() {
         <AlertDescription>
           <p className="text-sm mb-2">Certifique-se de que você adicionou no Google Cloud Console:</p>
           <ul className="list-none space-y-1 text-xs font-mono bg-muted p-2 rounded">
-            <li>✅ Redirect URI: <code className="text-green-600">{redirectUri}</code></li>
+            <li>✅ Redirect URI: <code className="text-green-600">{REDIRECT_URI}</code></li>
             <li>✅ Client ID termina com: <code className="text-blue-600">...{clientId?.slice(-6) || "------"}</code></li>
             <li>✅ Scope: <code>youtube.force-ssl</code></li>
           </ul>
