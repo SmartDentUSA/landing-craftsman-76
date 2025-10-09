@@ -6,6 +6,10 @@ import { isSEOContextEnabled, logSEODebug } from '@/config/feature-flags';
 import { buildStrategicBlogInput } from '@/services/strategicBlogInput';
 import { stripInternalLabels } from '@/lib/sanitize-internal-labels';
 import { getDomainConfig } from '@/config/domain-config';
+import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from '@/lib/company-profile-helper';
+import { generateSchemaFromCompanyProfile } from '@/lib/schema-reviews';
+import { supabase } from '@/integrations/supabase/client';
+import type { UnifiedReview } from '@/types/reviews';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -263,6 +267,12 @@ interface ConsolidatedBlogOptions {
     search_intent_keywords?: string[];
     category?: string;
     target_audience?: string[];
+    seo_title_override?: string;
+    seo_description_override?: string;
+    canonical_url?: string;
+    gtin?: string;
+    mpn?: string;
+    brand?: string;
   }>;
   aggregatedKeywords?: string[];
   landingPageData?: any;
@@ -742,16 +752,89 @@ export const useSEOHTMLGenerator = () => {
     const attrEscape = (s = '') => collapse(stripTags(s)).replace(/"/g, '&quot;'); // para atributos HTML
     const jsonText = (s = '') => collapse(stripTags(s)); // para JSON.stringify
 
+    // ============= SEO CRÍTICO 1: Buscar Company Profile para SEO =============
+    const companyProfile = await getCompanyProfileForSEO();
+    const companySEO = companyProfile ? buildSEOMetaFromCompany(companyProfile) : null;
+
+    // ============= SEO CRÍTICO 2: Buscar Reviews para Schema =============
+    let allReviews: UnifiedReview[] = [];
+    if (landingPageIdForSEOContext) {
+      try {
+        // Buscar approved_reviews
+        const { data: approvedReviews } = await supabase
+          .from('approved_reviews')
+          .select(`
+            raw_review_id,
+            raw_reviews!inner(author_name, rating, review_text, review_date)
+          `)
+          .eq('landing_page_id', landingPageIdForSEOContext)
+          .limit(10);
+
+        if (approvedReviews) {
+          allReviews.push(...approvedReviews.map((r: any) => ({
+            type: 'google_approved' as const,
+            author_name: r.raw_reviews.author_name,
+            rating: r.raw_reviews.rating,
+            review_text: r.raw_reviews.review_text || undefined,
+            review_date: r.raw_reviews.review_date || undefined,
+          })));
+        }
+
+        // Buscar video_testimonials
+        const { data: videoTestimonials } = await supabase
+          .from('video_testimonials')
+          .select('*')
+          .eq('landing_page_id', landingPageIdForSEOContext)
+          .eq('approved', true)
+          .limit(5);
+
+        if (videoTestimonials) {
+          allReviews.push(...videoTestimonials.map((v: any) => ({
+            type: 'video_testimonial' as const,
+            author_name: v.client_name,
+            rating: 5, // Video testimonials são sempre 5 estrelas
+            review_text: v.testimonial_text,
+            profession: v.profession || undefined,
+            location: v.location || undefined,
+            state: v.state || undefined,
+            specialty: v.specialty || undefined,
+            youtube_url: v.youtube_url || undefined,
+            instagram_url: v.instagram_url || undefined,
+          })));
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar reviews para schema:', error);
+      }
+    }
+
+    // ============= SEO CRÍTICO 3: Aplicar Overrides de Produto =============
+    let finalTitle = title;
+    let finalDescription = description;
+    let finalCanonicalUrl = '';
+
+    if (selectedProducts && selectedProducts.length > 0) {
+      const firstProduct = selectedProducts[0];
+      if (firstProduct.seo_title_override) {
+        finalTitle = firstProduct.seo_title_override;
+      }
+      if (firstProduct.seo_description_override) {
+        finalDescription = firstProduct.seo_description_override;
+      }
+      if (firstProduct.canonical_url) {
+        finalCanonicalUrl = firstProduct.canonical_url;
+      }
+    }
+
     // ============= PATCH 5: Normalizar BaseURL =============
     const baseURL = domain.includes('.com.br') 
       ? `https://${domain}` 
       : `https://${domain}.com.br`;
-    const blogURL = `${baseURL}/blog`;
+    const blogURL = finalCanonicalUrl || `${baseURL}/blog`;
     const canonicalUrl = baseURL; // manter compatibilidade
 
     // ============= PATCH 2: Sanitizar description para uso seguro =============
-    const safeDesc = attrEscape(description || '');
-    const safeJsonDesc = jsonText(description || '');
+    const safeDesc = attrEscape(finalDescription || '');
+    const safeJsonDesc = jsonText(finalDescription || '');
 
     // Use aggregated keywords from landing pages + products + blogs if provided
     const allKeywords = aggregatedKeywords && aggregatedKeywords.length > 0 
@@ -806,6 +889,16 @@ export const useSEOHTMLGenerator = () => {
       return articleSchema;
     });
 
+    // ============= SEO CRÍTICO 4: Gerar Reviews Schema =============
+    let reviewsSchemaJSON = null;
+    if (companyProfile && allReviews.length > 0) {
+      try {
+        reviewsSchemaJSON = generateSchemaFromCompanyProfile(companyProfile, allReviews, 15);
+      } catch (error) {
+        console.error('❌ Erro ao gerar reviews schema:', error);
+      }
+    }
+
     // Generate complete schema including products for SEO
     let completeSchema;
     
@@ -834,8 +927,8 @@ export const useSEOHTMLGenerator = () => {
         undefined, // companyData
         undefined, // faqItems
         undefined, // reviewsData
-        title,
-        description
+        finalTitle,
+        finalDescription
       );
       
       // Add blogs ItemList to the schema graph
@@ -857,13 +950,27 @@ export const useSEOHTMLGenerator = () => {
       } else {
         completeSchema = [schemas, blogsItemList];
       }
+
+      // ✨ ADICIONAR REVIEWS SCHEMA se disponível
+      if (reviewsSchemaJSON) {
+        try {
+          const parsedReviewsSchema = JSON.parse(reviewsSchemaJSON);
+          if (Array.isArray(completeSchema)) {
+            completeSchema.push(parsedReviewsSchema);
+          } else {
+            completeSchema = [completeSchema, parsedReviewsSchema];
+          }
+        } catch (error) {
+          console.error('❌ Erro ao parsear reviews schema:', error);
+        }
+      }
     } else {
       // Only blogs schema
       completeSchema = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": title,
-        "description": description,
+        "name": finalTitle,
+        "description": finalDescription,
         "numberOfItems": blogs.length,
         "itemListElement": blogSchemas.map((schema, index) => ({
           "@type": "ListItem",
@@ -1066,23 +1173,24 @@ export const useSEOHTMLGenerator = () => {
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
   <!-- SEO Meta Tags -->
-  <title>${sanitizeHTMLAttributes(truncateSEOTitle(title))}</title>
+  <title>${sanitizeHTMLAttributes(truncateSEOTitle(finalTitle))}</title>
   <meta name="description" content="${safeDesc}">
   <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
-  <link rel="canonical" href="${blogURL}">
+  ${preview ? '' : `<link rel="canonical" href="${blogURL}">`}
   <link rel="alternate" href="${blogURL}" hreflang="pt-br">
   <link rel="alternate" href="${blogURL}" hreflang="x-default">
   
   <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="${sanitizeHTMLAttributes(truncateSEOTitle(title))}">
+  <meta property="og:title" content="${sanitizeHTMLAttributes(truncateSEOTitle(finalTitle))}">
   <meta property="og:description" content="${safeDesc}">
   <meta property="og:url" content="${blogURL}">
+  ${companySEO?.siteNameMeta ? `<meta property="og:site_name" content="${sanitizeHTMLAttributes(companySEO.siteNameMeta)}">` : ''}
   ${ogImage ? `<meta property="og:image" content="${ogImage}">` : `<meta property="og:image" content="${baseURL}/static/og/blog.jpg">`}
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${sanitizeHTMLAttributes(truncateSEOTitle(title))}">
+  <meta name="twitter:title" content="${sanitizeHTMLAttributes(truncateSEOTitle(finalTitle))}">
   <meta name="twitter:description" content="${safeDesc}">
   ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : `<meta name="twitter:image" content="${baseURL}/static/og/blog.jpg">`}
   
@@ -1090,6 +1198,8 @@ export const useSEOHTMLGenerator = () => {
   <meta name="author" content="${domain}">
   <meta name="generator" content="Blog Consolidado SEO">
   <meta name="theme-color" content="#007bff">
+  
+  ${companySEO?.additionalKeywords.length ? companySEO.additionalKeywords.map(k => `<meta name="keyword" content="${sanitizeHTMLAttributes(k)}">`).join('\n  ') : ''}
   
   <!-- WebPage JSON-LD -->
   <script type="application/ld+json">
@@ -1566,7 +1676,14 @@ export const useSEOHTMLGenerator = () => {
     </section>
     ` : ''}
     
-    ${excludeFooter ? '' : `<footer>
+    ${excludeFooter ? '' : `
+    ${companySEO?.companyFooter || ''}
+    ${companySEO?.institutionalLinksHtml ? `
+    <section class="institutional-links">
+      ${companySEO.institutionalLinksHtml}
+    </section>
+    ` : ''}
+    <footer>
       <p>&copy; ${new Date().getFullYear()} ${domain}. Todos os direitos reservados.</p>
       <p><small>Conteúdo gerado com tecnologia avançada de SEO</small></p>
       <p><small>URL: ${canonicalUrl}</small></p>
