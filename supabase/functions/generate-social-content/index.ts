@@ -141,7 +141,12 @@ Instruções:
 5. Linguagem persuasiva e direta
 6. Foque na transformação/resultado que o produto traz
 
-Retorne apenas o texto da mensagem formatada, sem explicações.`;
+Retorne apenas o texto da mensagem formatada, sem explicações.
+
+⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO:**
+- Use APENAS informações do produto fornecidas
+- NÃO invente benefícios ou características
+- Descontos e preços devem ser baseados em dados reais`;
 
       const promoContent = await generateWithDeepSeek(deepseekApiKey, promoPrompt, 'whatsapp', product);
 
@@ -248,8 +253,18 @@ Retorne apenas o texto da mensagem formatada, sem explicações.`;
     // Processar variáveis no prompt
     const processedPrompt = processPromptVariables(finalPrompt, product, company, externalLinks || [], landingPages || []);
 
+    // Adicionar instruções anti-alucinação
+    const finalPromptWithProtection = `${processedPrompt}
+
+⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO:**
+- Use APENAS informações do produto e empresa fornecidas
+- NÃO invente características, benefícios ou especificações
+- Se dados estiverem ausentes, seja genérico mas honesto
+- Evite termos técnicos não mencionados nos dados
+- Base todo conteúdo em informações reais do contexto`;
+
     // Gerar conteúdo com DeepSeek
-    const generatedContent = await generateWithDeepSeek(deepseekApiKey, processedPrompt, type, product);
+    const generatedContent = await generateWithDeepSeek(deepseekApiKey, finalPromptWithProtection, type, product);
 
     // Salvar no banco
     let fieldName: string = '';

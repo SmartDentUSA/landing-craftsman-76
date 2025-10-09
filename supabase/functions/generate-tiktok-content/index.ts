@@ -70,8 +70,17 @@ serve(async (req) => {
     // Processar variáveis no prompt
     const processedPrompt = processPromptVariables(finalPrompt, product, company);
 
+    // Adicionar instruções anti-alucinação
+    const finalPromptWithProtection = `${processedPrompt}
+
+⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO:**
+- Use APENAS informações do produto fornecidas
+- NÃO invente benefícios ou características
+- Scripts devem ser baseados nos dados reais do produto
+- Evite promessas ou claims não fundamentados nos dados`;
+
     // Gerar conteúdo com DeepSeek
-    const generatedContent = await generateWithDeepSeek(deepseekApiKey, processedPrompt, product);
+    const generatedContent = await generateWithDeepSeek(deepseekApiKey, finalPromptWithProtection, product);
 
     // Salvar no banco
     const currentData = product.tiktok_content || { copies: [], last_generated: null };

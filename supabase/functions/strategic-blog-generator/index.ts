@@ -312,6 +312,13 @@ CONTEXTO SEO PROFISSIONAL:
 - Expertise: ${context.seoContext.technicalExpertise || 'N/A'}
 ` : ''}
 
+⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO OBRIGATÓRIAS:**
+- Use APENAS dados fornecidos no contexto acima
+- NÃO invente especificações técnicas, benefícios ou características
+- Se um dado não estiver disponível, seja genérico mas NÃO crie informações falsas
+- PROIBIDO usar termos como "biocompatível", "precisão milimétrica", "tecnologia de ponta" se não estiverem nos dados
+- Base TUDO em evidências explícitas do contexto fornecido
+
 GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que demonstre autoridade técnica e seja útil para profissionais da odontologia.
 `;
 }
@@ -338,6 +345,13 @@ CONTEXTO SEO COMERCIAL:
 - Palavras-chave de compra: ${context.seoContext.contextKeywords?.filter((k: string) => k.includes('comprar') || k.includes('preço')).join(', ') || 'N/A'}
 - Diferenciação comercial: ${context.seoContext.competitiveAdvantages || 'N/A'}
 ` : ''}
+
+⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO OBRIGATÓRIAS:**
+- Use APENAS dados fornecidos no contexto acima
+- NÃO invente especificações, preços ou características de produtos
+- Se um dado não estiver disponível, seja genérico mas NÃO crie informações falsas
+- Foque em benefícios e soluções REAIS baseadas nos dados fornecidos
+- PROIBIDO inventar diferenciais competitivos não mencionados
 
 GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que seja persuasivo e ajude o consumidor a tomar uma decisão de compra informada.
 `;
