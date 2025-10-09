@@ -7,7 +7,7 @@ import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GoogleAdsTab } from "@/components/google-ads/GoogleAdsTab";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, CheckCircle } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
@@ -3301,71 +3301,118 @@ const EditorContent = () => {
                     
                     {((data.explanatory_video_section?.visible_desktop ?? false) || (data.explanatory_video_section?.visible_mobile ?? false)) && (
                       <>
-                        <div>
-                          <Label>Vídeo Técnico do Produto</Label>
-                          <Select
-                            value={data.explanatory_video_section?.selected_video?.product_id || ''}
-                            onValueChange={(productId) => {
-                              // Encontrar o produto selecionado
-                              const selectedProduct = (data.schema?.offers || []).find(
-                                (offer: any) => offer.product_id === productId
-                              );
-                              
-                              if (selectedProduct && selectedProduct.technical_videos?.length > 0) {
-                                const video = selectedProduct.technical_videos[0];
-                                const updatedData = {
-                                  ...data,
-                                  explanatory_video_section: {
-                                    ...data.explanatory_video_section!,
-                                    selected_video: {
-                                      url: video.url,
-                                      title: video.description || selectedProduct.name,
-                                      product_name: selectedProduct.name,
-                                      product_id: productId
-                                    }
-                                  }
-                                };
-                                setData(updatedData);
-                                saveExplanatoryVideo(updatedData);
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione um vídeo técnico" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(data.schema?.offers || [])
-                                .filter((offer: any) => 
-                                  selectedProductIds.includes(offer.product_id) && 
-                                  offer.technical_videos?.length > 0
-                                )
-                                .map((offer: any) => (
-                                  <SelectItem key={offer.product_id} value={offer.product_id}>
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{offer.name}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {offer.technical_videos[0]?.description || 'Vídeo técnico'}
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          {data.explanatory_video_section?.selected_video && (
-                            <div className="mt-2 p-3 bg-muted rounded-md">
-                              <p className="text-sm font-medium">{data.explanatory_video_section.selected_video.title}</p>
-                              <p className="text-xs text-muted-foreground">{data.explanatory_video_section.selected_video.product_name}</p>
-                              <a 
-                                href={data.explanatory_video_section.selected_video.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:underline mt-1 inline-block"
-                              >
-                                Ver vídeo no YouTube ↗
-                              </a>
-                            </div>
-                          )}
-                        </div>
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <VideoIcon className="w-4 h-4" />
+                              Vídeos Técnicos dos Produtos Selecionados
+                            </CardTitle>
+                            <CardDescription>
+                              Selecione um vídeo técnico dos produtos disponíveis nesta landing page
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {(data.schema?.offers || []).filter((offer: any) => 
+                              selectedProductIds.includes(offer.product_id) && 
+                              offer.technical_videos?.length > 0
+                            ).length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <VideoIcon className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                                <p>Nenhum vídeo técnico disponível nos produtos selecionados</p>
+                              </div>
+                            ) : (
+                              <Accordion type="single" collapsible className="w-full">
+                                {(data.schema?.offers || [])
+                                  .filter((offer: any) => 
+                                    selectedProductIds.includes(offer.product_id) && 
+                                    offer.technical_videos?.length > 0
+                                  )
+                                  .map((offer: any) => (
+                                    <AccordionItem key={offer.product_id} value={offer.product_id}>
+                                      <AccordionTrigger>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xl">🔬</span>
+                                          <span className="font-semibold">{offer.name}</span>
+                                          <Badge variant="secondary">
+                                            {offer.technical_videos.length} vídeo(s)
+                                          </Badge>
+                                        </div>
+                                      </AccordionTrigger>
+                                      <AccordionContent>
+                                        <div className="space-y-2">
+                                          {offer.technical_videos.map((video: any, index: number) => {
+                                            const isSelected = data.explanatory_video_section?.selected_video?.url === video.url;
+                                            return (
+                                              <div 
+                                                key={index} 
+                                                className={`grid grid-cols-[1fr_auto] gap-3 p-3 border rounded-lg transition-colors ${
+                                                  isSelected ? 'bg-green-50 border-green-200' : 'bg-background hover:bg-muted/50'
+                                                }`}
+                                              >
+                                                <div className="space-y-1">
+                                                  <div className="flex items-center gap-2">
+                                                    <p className="font-medium text-sm">{video.description || video.title || 'Vídeo Técnico'}</p>
+                                                    {isSelected && (
+                                                      <Badge variant="default" className="bg-green-600 text-white">
+                                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                                        Selecionado
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                  <a 
+                                                    href={video.url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                                                  >
+                                                    Ver vídeo no YouTube ↗
+                                                  </a>
+                                                </div>
+                                                <Button
+                                                  size="sm"
+                                                  variant={isSelected ? "default" : "outline"}
+                                                  className={isSelected ? "bg-green-600 hover:bg-green-700" : ""}
+                                                  onClick={() => {
+                                                    const updatedData = {
+                                                      ...data,
+                                                      explanatory_video_section: {
+                                                        ...data.explanatory_video_section!,
+                                                        selected_video: {
+                                                          url: video.url,
+                                                          title: video.description || video.title || offer.name,
+                                                          product_name: offer.name,
+                                                          product_id: offer.product_id
+                                                        }
+                                                      }
+                                                    };
+                                                    setData(updatedData);
+                                                    saveExplanatoryVideo(updatedData);
+                                                    toast({
+                                                      title: "Vídeo selecionado",
+                                                      description: `${video.description || 'Vídeo técnico'} de ${offer.name}`,
+                                                    });
+                                                  }}
+                                                >
+                                                  {isSelected ? (
+                                                    <>
+                                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                                      Selecionado
+                                                    </>
+                                                  ) : (
+                                                    "Selecionar"
+                                                  )}
+                                                </Button>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  ))}
+                              </Accordion>
+                            )}
+                          </CardContent>
+                        </Card>
                       </>
                     )}
                   </AccordionContent>
