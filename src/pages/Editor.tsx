@@ -40,6 +40,7 @@ import { useProductSync } from "@/hooks/useProductSync";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
+import { useExplanatoryVideoAutoSave } from "@/hooks/useExplanatoryVideoAutoSave";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
@@ -976,6 +977,7 @@ const EditorContent = () => {
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
   const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
+  const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
   
   // Debounced auto-save for desktop info
   const debouncedDesktopSave = useDebounce((updatedData: any) => {
@@ -1811,7 +1813,7 @@ const EditorContent = () => {
     const html = generatePreviewHTML(previewData);
     console.timeEnd('preview-generation');
     return html;
-  }, [data]);
+  }, [data, data.explanatory_video_section]);
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {
@@ -3262,26 +3264,34 @@ const EditorContent = () => {
                           <div className="flex items-center space-x-2">
                             <Switch 
                               checked={data.explanatory_video_section?.visible_desktop ?? true}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                explanatory_video_section: { 
-                                  ...prev.explanatory_video_section!, 
-                                  visible_desktop: checked 
-                                }
-                              }))}
+                              onCheckedChange={(checked) => {
+                                const updatedData = {
+                                  ...data,
+                                  explanatory_video_section: { 
+                                    ...data.explanatory_video_section!, 
+                                    visible_desktop: checked 
+                                  }
+                                };
+                                setData(updatedData);
+                                saveExplanatoryVideo(updatedData);
+                              }}
                             />
                             <Label className="font-medium">Visível no desktop</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Switch 
                               checked={data.explanatory_video_section?.visible_mobile ?? true}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                explanatory_video_section: { 
-                                  ...prev.explanatory_video_section!, 
-                                  visible_mobile: checked 
-                                }
-                              }))}
+                              onCheckedChange={(checked) => {
+                                const updatedData = {
+                                  ...data,
+                                  explanatory_video_section: { 
+                                    ...data.explanatory_video_section!, 
+                                    visible_mobile: checked 
+                                  }
+                                };
+                                setData(updatedData);
+                                saveExplanatoryVideo(updatedData);
+                              }}
                             />
                             <Label className="font-medium">Visível no mobile</Label>
                           </div>
@@ -3303,10 +3313,10 @@ const EditorContent = () => {
                               
                               if (selectedProduct && selectedProduct.technical_videos?.length > 0) {
                                 const video = selectedProduct.technical_videos[0];
-                                setData(prev => ({
-                                  ...prev,
+                                const updatedData = {
+                                  ...data,
                                   explanatory_video_section: {
-                                    ...prev.explanatory_video_section!,
+                                    ...data.explanatory_video_section!,
                                     selected_video: {
                                       url: video.url,
                                       title: video.description || selectedProduct.name,
@@ -3314,7 +3324,9 @@ const EditorContent = () => {
                                       product_id: productId
                                     }
                                   }
-                                }));
+                                };
+                                setData(updatedData);
+                                saveExplanatoryVideo(updatedData);
                               }
                             }}
                           >
