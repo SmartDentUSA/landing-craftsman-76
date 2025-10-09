@@ -3470,73 +3470,61 @@ const EditorContent = () => {
                         {/* Preview do Vídeo Selecionado */}
                         {data.explanatory_video_section?.selected_video && (
                           <Card className="border-green-200 bg-green-50/30">
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2 text-green-700">
-                                <CheckCircle className="w-5 h-5" />
-                                Vídeo Selecionado para Preview
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-green-700 text-sm">
+                                <CheckCircle className="w-4 h-4" />
+                                Vídeo Selecionado
                               </CardTitle>
-                              <CardDescription>
-                                Este vídeo será exibido na seção "Vídeo Explicativo" da landing page
-                              </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-2 pt-0">
                               {/* Informações do vídeo */}
-                              <div className="p-4 bg-white rounded-lg border">
-                                <div className="space-y-2">
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1 space-y-1">
-                                      <p className="font-semibold text-sm">
-                                        {data.explanatory_video_section.selected_video.title}
-                                      </p>
-                                      <p className="text-sm text-muted-foreground">
-                                        Produto: {data.explanatory_video_section.selected_video.product_name}
-                                      </p>
-                                      <a 
-                                        href={data.explanatory_video_section.selected_video.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
-                                      >
-                                        {data.explanatory_video_section.selected_video.url} ↗
-                                      </a>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        const updatedData = {
-                                          ...data,
-                                          explanatory_video_section: {
-                                            ...data.explanatory_video_section!,
-                                            selected_video: null
-                                          }
-                                        };
-                                        setData(updatedData);
-                                        saveExplanatoryVideo(updatedData);
-                                        toast({
-                                          title: "Vídeo removido",
-                                          description: "A seleção foi limpa",
-                                        });
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                              <div className="flex items-center justify-between gap-2 p-2 bg-white rounded border">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-xs truncate">
+                                    {data.explanatory_video_section.selected_video.title}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {data.explanatory_video_section.selected_video.product_name}
+                                  </p>
                                 </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 shrink-0"
+                                  onClick={() => {
+                                    const updatedData = {
+                                      ...data,
+                                      explanatory_video_section: {
+                                        ...data.explanatory_video_section!,
+                                        selected_video: null
+                                      }
+                                    };
+                                    setData(updatedData);
+                                    saveExplanatoryVideo(updatedData);
+                                    toast({
+                                      title: "Vídeo removido",
+                                      description: "A seleção foi limpa",
+                                    });
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                               
-                              {/* Preview do embed do YouTube */}
-                              <div className="aspect-video rounded-lg overflow-hidden bg-gray-100">
-                                <iframe
-                                  width="100%"
-                                  height="100%"
-                                  src={`https://www.youtube.com/embed/${extractYouTubeId(data.explanatory_video_section.selected_video.url)}`}
-                                  title={data.explanatory_video_section.selected_video.title}
-                                  frameBorder="0"
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                  allowFullScreen
-                                  className="w-full h-full"
+                              {/* Thumbnail do YouTube */}
+                              <div className="relative w-full h-32 rounded overflow-hidden bg-gray-100 group cursor-pointer">
+                                <img 
+                                  src={`https://img.youtube.com/vi/${extractYouTubeId(data.explanatory_video_section.selected_video.url)}/mqdefault.jpg`}
+                                  alt={data.explanatory_video_section.selected_video.title}
+                                  className="w-full h-full object-cover"
                                 />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                                  <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                  </div>
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
