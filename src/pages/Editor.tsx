@@ -782,6 +782,26 @@ const generateImageAltText = (image: ImageData, context: string): string => {
   return `Imagem ${contextWords} - Smart Dent tecnologia odontológica`;
 };
 
+// Função para extrair ID do YouTube de uma URL
+const extractYouTubeId = (url: string): string => {
+  if (!url) return '';
+  
+  // Padrões de URL do YouTube
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\?\/]+)/,
+    /^([a-zA-Z0-9_-]{11})$/ // ID direto
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return '';
+};
+
 // 🔧 FUNÇÃO SANITIZAÇÃO APRIMORADA - Evita URLs duplicadas
 const sanitizeDomain = (domain: string): string => {
   if (!domain) return '';
@@ -2284,6 +2304,14 @@ const EditorContent = () => {
               ]
             };
           }
+          // Garantir bloco explanatory_video_section
+          if (!migratedData.explanatory_video_section) {
+            migratedData.explanatory_video_section = {
+              visible_desktop: false,
+              visible_mobile: false,
+              selected_video: null
+            };
+          }
           if (!migratedData.offers_section) {
             migratedData.offers_section = {
               visible_desktop: true,
@@ -3438,6 +3466,81 @@ const EditorContent = () => {
                             )}
                           </CardContent>
                         </Card>
+
+                        {/* Preview do Vídeo Selecionado */}
+                        {data.explanatory_video_section?.selected_video && (
+                          <Card className="border-green-200 bg-green-50/30">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2 text-green-700">
+                                <CheckCircle className="w-5 h-5" />
+                                Vídeo Selecionado para Preview
+                              </CardTitle>
+                              <CardDescription>
+                                Este vídeo será exibido na seção "Vídeo Explicativo" da landing page
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              {/* Informações do vídeo */}
+                              <div className="p-4 bg-white rounded-lg border">
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 space-y-1">
+                                      <p className="font-semibold text-sm">
+                                        {data.explanatory_video_section.selected_video.title}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Produto: {data.explanatory_video_section.selected_video.product_name}
+                                      </p>
+                                      <a 
+                                        href={data.explanatory_video_section.selected_video.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                                      >
+                                        {data.explanatory_video_section.selected_video.url} ↗
+                                      </a>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const updatedData = {
+                                          ...data,
+                                          explanatory_video_section: {
+                                            ...data.explanatory_video_section!,
+                                            selected_video: null
+                                          }
+                                        };
+                                        setData(updatedData);
+                                        saveExplanatoryVideo(updatedData);
+                                        toast({
+                                          title: "Vídeo removido",
+                                          description: "A seleção foi limpa",
+                                        });
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Preview do embed do YouTube */}
+                              <div className="aspect-video rounded-lg overflow-hidden bg-gray-100">
+                                <iframe
+                                  width="100%"
+                                  height="100%"
+                                  src={`https://www.youtube.com/embed/${extractYouTubeId(data.explanatory_video_section.selected_video.url)}`}
+                                  title={data.explanatory_video_section.selected_video.title}
+                                  frameBorder="0"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                  className="w-full h-full"
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </>
                     )}
                   </AccordionContent>
