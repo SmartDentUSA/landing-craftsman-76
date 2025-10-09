@@ -257,12 +257,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             background: var(--white);
         }
         
-        .explanatory-video-section h2 {
-            text-align: center;
-            margin-bottom: 0.5rem;
-            font-size: 1.75rem;
-            color: var(--text-color);
-        }
+    .explanatory-video-section h2 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      font-size: 1.125rem;
+      font-weight: 500;
+      color: var(--text-color);
+    }
         
         .video-container {
             position: relative;
@@ -297,9 +298,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 padding: 1.5rem 0;
             }
             
-            .explanatory-video-section h2 {
-                font-size: 1.5rem;
-            }
+      .explanatory-video-section h2 {
+        font-size: 1rem;
+      }
             
             .video-container {
                 max-width: 100%;
