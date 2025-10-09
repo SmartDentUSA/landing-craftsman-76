@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { TopNavigation } from '@/components/TopNavigation';
+import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
-import { Settings, Youtube, Building2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
@@ -20,6 +22,7 @@ import { CSManager } from '@/components/CSManager';
 
 const Repository = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
@@ -38,9 +41,21 @@ const Repository = () => {
         
         <main className="flex-1 container mx-auto px-6 py-8">
           <div className="space-y-6">
+            <BreadcrumbNavigation className="mb-4" />
+            
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar ao Dashboard
+                </Button>
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">
                   {activeView === 'repository' ? 'Repositório Central de Dados' : 
                    activeView === 'categories' ? 'Gerenciar Categorias' : 
                    activeView === 'links' ? 'Gerenciador de Links' : 
@@ -73,137 +88,124 @@ const Repository = () => {
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex bg-muted rounded-lg p-1">
-                  <Button
-                    variant={activeView === 'repository' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('repository')}
-                  >
-                    Repositório
-                  </Button>
-                  <Button
-                    variant={activeView === 'categories' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('categories')}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Categorias
-                  </Button>
-                  <Button
-                    variant={activeView === 'links' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('links')}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Links
-                  </Button>
-                  <Button
-                    variant={activeView === 'prompts' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('prompts')}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Prompts IA
-                  </Button>
-                  <Button
-                    variant={activeView === 'merchant' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('merchant')}
-                  >
-                    Google Merchant
-                  </Button>
-                  <Button
-                    variant={activeView === 'youtube' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('youtube')}
-                  >
-                    YouTube OAuth
-                  </Button>
-                  <Button
-                    variant={activeView === 'google-business' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveView('google-business')}
-                  >
-                    Google Business
-                  </Button>
-          <Button
-            variant={activeView === 'coupons' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveView('coupons')}
-          >
-            Cupons
-          </Button>
-          <Button
-            variant={activeView === 'aftersales' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveView('aftersales')}
-          >
-            Pós-Venda
-          </Button>
-          <Button
-            variant={activeView === 'cs' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveView('cs')}
-          >
-            CS
-          </Button>
                 </div>
-                <AdminStatusBadge />
               </div>
+              <AdminStatusBadge />
             </div>
             
-            {activeView === 'repository' ? (
-              <div className="space-y-6">
-                <ProductSEOBatchEnhancer />
-                <RepositoryPanel 
-                  landingPageId="repository"
-                  onProductSelectionChange={() => {}}
-                  onCompanyProfileChange={() => {}}
-                />
-              </div>
-            ) : activeView === 'categories' ? (
-              <CategoryManager />
-            ) : activeView === 'links' ? (
-              <LinksManager />
-            ) : activeView === 'merchant' ? (
-              <GoogleMerchantManager />
-            ) : activeView === 'youtube' ? (
-              <div className="space-y-6">
-                <OAuthSettingsCard
-                  provider="youtube"
-                  title="YouTube Data API"
-                  icon={<Youtube className="w-5 h-5" />}
-                  testFunctionName="test-youtube-connection"
-                />
-                <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
-                  <p><strong>Componente OAuth Moderno:</strong> Segurança de produção com client_secret protegido no backend.</p>
-                  <p><strong>⚠️ Ação Necessária:</strong> Execute primeiro as migrations SQL em supabase/migrations/</p>
+            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as typeof activeView)}>
+              <TabsList className="flex flex-wrap h-auto w-full justify-start">
+                <TabsTrigger value="repository" className="gap-2">
+                  <Package className="h-4 w-4" />
+                  Repositório
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Categorias
+                </TabsTrigger>
+                <TabsTrigger value="links" className="gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Links
+                </TabsTrigger>
+                <TabsTrigger value="prompts" className="gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Prompts IA
+                </TabsTrigger>
+                <TabsTrigger value="merchant" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Google Merchant
+                </TabsTrigger>
+                <TabsTrigger value="youtube" className="gap-2">
+                  <Youtube className="h-4 w-4" />
+                  YouTube OAuth
+                </TabsTrigger>
+                <TabsTrigger value="google-business" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Google Business
+                </TabsTrigger>
+                <TabsTrigger value="coupons" className="gap-2">
+                  <Tag className="h-4 w-4" />
+                  Cupons
+                </TabsTrigger>
+                <TabsTrigger value="aftersales" className="gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Pós-Venda
+                </TabsTrigger>
+                <TabsTrigger value="cs" className="gap-2">
+                  <Headphones className="h-4 w-4" />
+                  CS
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="repository">
+                <div className="space-y-6">
+                  <ProductSEOBatchEnhancer />
+                  <RepositoryPanel 
+                    landingPageId="repository"
+                    onProductSelectionChange={() => {}}
+                    onCompanyProfileChange={() => {}}
+                  />
                 </div>
-              </div>
-            ) : activeView === 'google-business' ? (
-              <div className="space-y-6">
-                <OAuthSettingsCard
-                  provider="googleBusiness"
-                  title="Google Business Profile"
-                  icon={<Building2 className="w-5 h-5" />}
-                  testFunctionName="test-google-business-connection"
-                />
-                <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
-                  <p><strong>Componente OAuth Moderno:</strong> Segurança de produção com client_secret protegido no backend.</p>
-                  <p><strong>⚠️ Ação Necessária:</strong> Execute primeiro as migrations SQL em supabase/migrations/</p>
+              </TabsContent>
+
+              <TabsContent value="categories">
+                <CategoryManager />
+              </TabsContent>
+
+              <TabsContent value="links">
+                <LinksManager />
+              </TabsContent>
+
+              <TabsContent value="merchant">
+                <GoogleMerchantManager />
+              </TabsContent>
+
+              <TabsContent value="youtube">
+                <div className="space-y-6">
+                  <OAuthSettingsCard
+                    provider="youtube"
+                    title="YouTube Data API"
+                    icon={<Youtube className="w-5 h-5" />}
+                    testFunctionName="test-youtube-connection"
+                  />
+                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
+                    <p><strong>Componente OAuth Moderno:</strong> Segurança de produção com client_secret protegido no backend.</p>
+                    <p><strong>⚠️ Ação Necessária:</strong> Execute primeiro as migrations SQL em supabase/migrations/</p>
+                  </div>
                 </div>
-              </div>
-            ) : activeView === 'coupons' ? (
-              <CouponsManager />
-            ) : activeView === 'aftersales' ? (
-              <AfterSalesManager />
-            ) : activeView === 'cs' ? (
-              <CSManager />
-            ) : (
-              <EnhancedPromptsManager />
-            )}
+              </TabsContent>
+
+              <TabsContent value="google-business">
+                <div className="space-y-6">
+                  <OAuthSettingsCard
+                    provider="googleBusiness"
+                    title="Google Business Profile"
+                    icon={<Building2 className="w-5 h-5" />}
+                    testFunctionName="test-google-business-connection"
+                  />
+                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
+                    <p><strong>Componente OAuth Moderno:</strong> Segurança de produção com client_secret protegido no backend.</p>
+                    <p><strong>⚠️ Ação Necessária:</strong> Execute primeiro as migrations SQL em supabase/migrations/</p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="coupons">
+                <CouponsManager />
+              </TabsContent>
+
+              <TabsContent value="aftersales">
+                <AfterSalesManager />
+              </TabsContent>
+
+              <TabsContent value="cs">
+                <CSManager />
+              </TabsContent>
+
+              <TabsContent value="prompts">
+                <EnhancedPromptsManager />
+              </TabsContent>
+            </Tabs>
           </div>
         </main>
       </div>
