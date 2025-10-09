@@ -3679,6 +3679,34 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
                 padding: 0.6rem 1.2rem;
                 font-size: 0.875rem;
             }
+            
+            .service-text-overlay {
+                padding: 0.75rem;
+                font-weight: 600;
+            }
+
+            .service-text-overlay h2 {
+                font-size: 0.9rem;
+                line-height: 1.2;
+                margin-bottom: 0.25rem;
+            }
+
+            .service-text-overlay p {
+                font-size: 0.78rem;
+                line-height: 1.3;
+                margin-bottom: 0.5rem;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .service-text-overlay .button {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.82rem;
+                border-radius: 0.4rem;
+                font-weight: 600;
+            }
         }
         
         .cover-image {
