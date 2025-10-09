@@ -1057,45 +1057,6 @@ export const useSEOHTMLGenerator = () => {
       `;
     }
     
-    // PATCH 3: Strategic Blog Input (SEO Context com auto-linking)
-    let strategicBlock = '';
-    if (isSEOContextEnabled() && landingPageIdForSEOContext) {
-      logSEODebug('Tentando carregar SEO Context', { landingPageId: landingPageIdForSEOContext });
-      try {
-        const cfg = getDomainConfig(domain);
-        const strategic = await buildStrategicBlogInput(landingPageIdForSEOContext, cfg.BASE_URL);
-        if (strategic?.baseTextHTML) {
-          logSEODebug('SEO Context carregado com sucesso', { keywordsCount: strategic.keywords.length });
-          const previewStrategic = strategic.baseTextHTML.slice(0, 300);
-          const hasMore = strategic.baseTextHTML.length > 300;
-          
-          strategicBlock = `
-          <section class="blog-item strategic" id="blog-strategic">
-            <h2>
-              <a href="${cfg.BASE_URL}${cfg.BLOG_PATH}" class="blog-link">
-                Insights Estratégicos
-              </a>
-            </h2>
-            <div class="blog-content post-card-content">
-              <div class="preview-content">
-                ${previewStrategic}${hasMore ? '…' : ''}
-              </div>
-              ${hasMore ? `
-                <button class="read-more-btn" onclick="toggleReadMore(this)">Leia mais →</button>
-                <div class="full-content">
-                  ${strategic.baseTextHTML}
-                </div>
-              ` : ''}
-            </div>
-          </section>`;
-        } else {
-          logSEODebug('SEO Context vazio ou não encontrado');
-        }
-      } catch (err) {
-        console.error('❌ Erro ao compor SEO Context:', err);
-        logSEODebug('Erro ao compor SEO Context', err);
-      }
-    }
 
     const finalHTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1591,10 +1552,9 @@ export const useSEOHTMLGenerator = () => {
     
     
     
-    <main class="blog-section">
-      ${strategicBlock}
-      ${blogContents}
-    </main>
+        <main class="blog-section">
+          ${blogContents}
+        </main>
     
     
     ${uniqueKeywords.length > 0 ? `

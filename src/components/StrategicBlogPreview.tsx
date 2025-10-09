@@ -77,8 +77,6 @@ export function StrategicBlogPreview({
         ? productBlogs.filter(blog => selectedProductIds.includes(blog.productId))
         : productBlogs;
       
-      // SEO Context removido - funcionalidade obsoleta
-      const seoContext = null;
       
       // Buscar dados dos produtos selecionados para incluir image_url
       const supabase = (await import('@/integrations/supabase/client')).supabase;
@@ -93,7 +91,7 @@ export function StrategicBlogPreview({
         totalProductBlogs: productBlogs.length,
         filteredProductBlogs: filteredBlogs.length,
         selectedProductIds: selectedProductIds.length,
-        hasSEOContext: !!seoContext,
+        hasStrategicBlog: !!strategicBlog?.content,
         includedProducts: filteredBlogs.map(b => b.productName)
       });
 
@@ -103,11 +101,17 @@ export function StrategicBlogPreview({
         description: strategicBlog.meta_description || '',
         domain: domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br',
         blogs: [
-          ...(seoContext ? [{
-            title: 'Blog Estratégico',
-            content: seoContext.baseTextMarkdown || '',
-            keywords: seoContext.aiKeywords?.map(k => k.term) || [],
-          }] : []),
+          // ✅ INCLUIR BLOG ESTRATÉGICO PRIMEIRO (Dentala ou Eodonto)
+          {
+            title: strategicBlog.title || `Blog Estratégico ${domain}`,
+            content: strategicBlog.content || '',
+            keywords: Array.isArray(strategicBlog.keywords) 
+              ? strategicBlog.keywords 
+              : (typeof strategicBlog.keywords === 'string' 
+                ? [strategicBlog.keywords] 
+                : []),
+          },
+          // ✅ DEPOIS OS BLOGS DE PRODUTOS
           ...filteredBlogs.map(pb => {
             const product = selectedProductsData?.find(p => p.id === pb.productId);
             return {
