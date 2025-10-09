@@ -300,7 +300,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     });
 
     return productBlogs;
-  }, [productsWithBlogs, preferences]);
+  }, [productsWithBlogs, preferences, approvedLandingPages]);
 
   // Create blog entries filtered by domain with landing page context
   const getProductBlogsForHTMLByDomain = useMemo(() => {
@@ -376,7 +376,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       console.log(`📊 Debug: Generated ${productBlogs.length} blogs for domain "${domain}" ${landingPageId ? `from landing page "${landingPageId}"` : '(all landing pages)'}`);
       return productBlogs;
     };
-  }, [productsWithBlogs, preferences]);
+  }, [productsWithBlogs, preferences, approvedLandingPages]);
 
   // Count active product blogs based on preferences
   const getActiveProductBlogsCount = useMemo((): number => {

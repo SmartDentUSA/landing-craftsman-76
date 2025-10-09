@@ -52,7 +52,7 @@ export function StrategicBlogPreview({
     }, 500); // 500ms debounce
     
     return () => clearTimeout(timer);
-  }, [refreshKey, dentalaData, eodontoData]);
+  }, [refreshKey, dentalaData, eodontoData, approvedLandingPages]);
 
   const generateHTML = useCallback(async (domain: 'dentala' | 'eodonto') => {
     try {
@@ -140,7 +140,7 @@ export function StrategicBlogPreview({
         </body>
         </html>`;
     }
-  }, [dentalaData, eodontoData, productBlogsForHTMLByDomain, landingPageId, generateConsolidatedBlogHTML]);
+  }, [dentalaData, eodontoData, productBlogsForHTMLByDomain, landingPageId, generateConsolidatedBlogHTML, selectedProductIds]);
 
   const doGenerateAll = useCallback(async () => {
     try {
