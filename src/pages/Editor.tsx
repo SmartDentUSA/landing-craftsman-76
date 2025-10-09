@@ -998,6 +998,7 @@ const EditorContent = () => {
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
   const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
   const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
+  const [productsWithTechnicalVideos, setProductsWithTechnicalVideos] = useState<any[]>([]);
   
   // Debounced auto-save for desktop info
   const debouncedDesktopSave = useDebounce((updatedData: any) => {
@@ -1051,6 +1052,7 @@ const EditorContent = () => {
       }
     }
   }, [id, navigate, toast, landingPages]);
+  
   const [autoMetaDesc, setAutoMetaDesc] = useState('');
   const [autoSeoTitle, setAutoSeoTitle] = useState('');
   const [aiLoading, setAiLoading] = useState({ hidden: false, keywords: false, meta: false, title: false, faqKeywords: false, blog: false });
@@ -1064,6 +1066,39 @@ const EditorContent = () => {
   
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  
+  // Carregar vídeos técnicos dos produtos selecionados
+  useEffect(() => {
+    const loadTechnicalVideos = async () => {
+      if (!selectedProductIds || selectedProductIds.length === 0) {
+        setProductsWithTechnicalVideos([]);
+        return;
+      }
+
+      try {
+        const { data: products, error } = await supabase
+          .from('products_repository')
+          .select('id, name, technical_videos')
+          .in('id', selectedProductIds)
+          .eq('approved', true);
+
+        if (error) throw error;
+
+        // Filtrar apenas produtos que têm vídeos técnicos
+        const withVideos = (products || []).filter(
+          (p: any) => p.technical_videos && Array.isArray(p.technical_videos) && p.technical_videos.length > 0
+        );
+
+        setProductsWithTechnicalVideos(withVideos);
+        console.log('🎬 [TECHNICAL VIDEOS] Produtos carregados:', withVideos);
+      } catch (error) {
+        console.error('❌ Erro ao carregar vídeos técnicos:', error);
+        setProductsWithTechnicalVideos([]);
+      }
+    };
+
+    loadTechnicalVideos();
+  }, [selectedProductIds]);
   
   // ✅ PATCH 0.2: Estados para Blogs Estratégicos
   const [dentalaBlogPost, setDentalaBlogPost] = useState<BlogPost | null>(null);
@@ -3365,99 +3400,92 @@ const EditorContent = () => {
                             </CardDescription>
                           </CardHeader>
                           <CardContent>
-                            {(data.schema?.offers || []).filter((offer: any) => 
-                              selectedProductIds.includes(offer.id ?? offer.product_id ?? '') && 
-                              offer.technical_videos?.length > 0
-                            ).length === 0 ? (
+                            {productsWithTechnicalVideos.length === 0 ? (
                               <div className="text-center py-8 text-muted-foreground">
                                 <VideoIcon className="w-12 h-12 mx-auto mb-2 opacity-20" />
                                 <p>Nenhum vídeo técnico disponível nos produtos selecionados</p>
+                                <p className="text-xs mt-2">Adicione vídeos técnicos aos produtos no Repositório</p>
                               </div>
                             ) : (
                               <Accordion type="single" collapsible className="w-full">
-                                {(data.schema?.offers || [])
-                                  .filter((offer: any) => 
-                                    selectedProductIds.includes(offer.id ?? offer.product_id ?? '') && 
-                                    offer.technical_videos?.length > 0
-                                  )
-                                  .map((offer: any) => (
-                                    <AccordionItem key={offer.id} value={offer.id}>
-                                      <AccordionTrigger>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xl">🔬</span>
-                                          <span className="font-semibold">{offer.name}</span>
-                                          <Badge variant="secondary">
-                                            {offer.technical_videos.length} vídeo(s)
-                                          </Badge>
-                                        </div>
-                                      </AccordionTrigger>
-                                      <AccordionContent>
-                                        <div className="space-y-2">
-                                          {offer.technical_videos.map((video: any, index: number) => {
-                                            const isSelected = data.explanatory_video_section?.selected_video?.url === video.url;
-                                            return (
-                                              <div 
-                                                key={index} 
-                                                className={`grid grid-cols-[1fr_auto] gap-3 p-3 border rounded-lg transition-colors ${
-                                                  isSelected ? 'bg-green-50 border-green-200' : 'bg-background hover:bg-muted/50'
-                                                }`}
-                                              >
-                                                <div className="space-y-1">
-                                                  <div className="flex items-center gap-2">
-                                                    <p className="font-medium text-xs">{video.description || video.title || 'Vídeo Técnico'}</p>
-                                                    {isSelected && (
-                                                      <Badge variant="default" className="bg-green-600 text-white">
-                                                        <CheckCircle className="w-3 h-3 mr-1" />
-                                                        Selecionado
-                                                      </Badge>
-                                                    )}
-                                                  </div>
-                                                  <a 
-                                                    href={video.url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
-                                                  >
-                                                    Ver vídeo no YouTube ↗
-                                                  </a>
-                                                </div>
-                                                <Button
-                                                  size="sm"
-                                                  variant={isSelected ? "default" : "outline"}
-                                                  className={isSelected ? "bg-green-600 hover:bg-green-700" : ""}
-                                                  onClick={() => {
-                                                    const updatedData = {
-                                                      ...data,
-                                                      explanatory_video_section: {
-                                                        ...data.explanatory_video_section!,
-                                                        selected_video: {
-                                                          url: video.url,
-                                                          title: video.description || video.title || offer.name,
-                                                          product_name: offer.name,
-                                                          product_id: offer.id
-                                                        }
-                                                      }
-                                                    };
-                                                    setData(updatedData);
-                                                    saveExplanatoryVideo(updatedData);
-                                                    toast({
-                                                      title: "Vídeo selecionado",
-                                                      description: `${video.description || 'Vídeo técnico'} de ${offer.name}`,
-                                                    });
-                                                  }}
-                                                >
-                                                  {isSelected ? (
-                                                    <>
-                                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                {productsWithTechnicalVideos.map((product: any) => (
+                                  <AccordionItem key={product.id} value={product.id}>
+                                    <AccordionTrigger>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xl">🔬</span>
+                                        <span className="font-semibold">{product.name}</span>
+                                        <Badge variant="secondary">
+                                          {product.technical_videos.length} vídeo(s)
+                                        </Badge>
+                                      </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="space-y-2">
+                                        {product.technical_videos.map((video: any, index: number) => {
+                                          const isSelected = data.explanatory_video_section?.selected_video?.url === video.url;
+                                          return (
+                                            <div 
+                                              key={index} 
+                                              className={`grid grid-cols-[1fr_auto] gap-3 p-3 border rounded-lg transition-colors ${
+                                                isSelected ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' : 'bg-background hover:bg-muted/50'
+                                              }`}
+                                            >
+                                              <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                  <p className="font-medium text-xs">{video.description || video.title || 'Vídeo Técnico'}</p>
+                                                  {isSelected && (
+                                                    <Badge variant="default" className="bg-green-600 text-white">
+                                                      <CheckCircle className="w-3 h-3 mr-1" />
                                                       Selecionado
-                                                    </>
-                                                  ) : (
-                                                    "Selecionar"
+                                                    </Badge>
                                                   )}
-                                                </Button>
+                                                </div>
+                                                <a 
+                                                  href={video.url} 
+                                                  target="_blank" 
+                                                  rel="noopener noreferrer"
+                                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                                                >
+                                                  Ver vídeo no YouTube ↗
+                                                </a>
                                               </div>
-                                            );
-                                          })}
+                                              <Button
+                                                size="sm"
+                                                variant={isSelected ? "default" : "outline"}
+                                                className={isSelected ? "bg-green-600 hover:bg-green-700" : ""}
+                                                onClick={() => {
+                                                  const updatedData = {
+                                                    ...data,
+                                                    explanatory_video_section: {
+                                                      ...data.explanatory_video_section!,
+                                                      selected_video: {
+                                                        url: video.url,
+                                                        title: video.description || video.title || product.name,
+                                                        product_name: product.name,
+                                                        product_id: product.id
+                                                      }
+                                                    }
+                                                  };
+                                                  setData(updatedData);
+                                                  saveExplanatoryVideo(updatedData);
+                                                  toast({
+                                                    title: "Vídeo selecionado",
+                                                    description: `${video.description || 'Vídeo técnico'} de ${product.name}`,
+                                                  });
+                                                }}
+                                              >
+                                                {isSelected ? (
+                                                  <>
+                                                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                                    Selecionado
+                                                  </>
+                                                ) : (
+                                                  "Selecionar"
+                                                )}
+                                              </Button>
+                                            </div>
+                                          );
+                                        })}
                                         </div>
                                       </AccordionContent>
                                     </AccordionItem>
