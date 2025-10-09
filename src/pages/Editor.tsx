@@ -3376,7 +3376,7 @@ const EditorContent = () => {
                                               >
                                                 <div className="space-y-1">
                                                   <div className="flex items-center gap-2">
-                                                    <p className="font-medium text-sm">{video.description || video.title || 'Vídeo Técnico'}</p>
+                                                    <p className="font-medium text-xs">{video.description || video.title || 'Vídeo Técnico'}</p>
                                                     {isSelected && (
                                                       <Badge variant="default" className="bg-green-600 text-white">
                                                         <CheckCircle className="w-3 h-3 mr-1" />
