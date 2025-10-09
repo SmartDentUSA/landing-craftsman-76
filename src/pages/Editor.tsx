@@ -3313,7 +3313,7 @@ const EditorContent = () => {
                           </CardHeader>
                           <CardContent>
                             {(data.schema?.offers || []).filter((offer: any) => 
-                              selectedProductIds.includes(offer.product_id) && 
+                              selectedProductIds.includes(offer.id) && 
                               offer.technical_videos?.length > 0
                             ).length === 0 ? (
                               <div className="text-center py-8 text-muted-foreground">
@@ -3324,11 +3324,11 @@ const EditorContent = () => {
                               <Accordion type="single" collapsible className="w-full">
                                 {(data.schema?.offers || [])
                                   .filter((offer: any) => 
-                                    selectedProductIds.includes(offer.product_id) && 
+                                    selectedProductIds.includes(offer.id) && 
                                     offer.technical_videos?.length > 0
                                   )
                                   .map((offer: any) => (
-                                    <AccordionItem key={offer.product_id} value={offer.product_id}>
+                                    <AccordionItem key={offer.id} value={offer.id}>
                                       <AccordionTrigger>
                                         <div className="flex items-center gap-2">
                                           <span className="text-xl">🔬</span>
@@ -3381,7 +3381,7 @@ const EditorContent = () => {
                                                           url: video.url,
                                                           title: video.description || video.title || offer.name,
                                                           product_name: offer.name,
-                                                          product_id: offer.product_id
+                                                          product_id: offer.id
                                                         }
                                                       }
                                                     };
