@@ -177,6 +177,8 @@ interface SchemaData {
     resource_cta1?: { label: string; url: string; visible: boolean };
     resource_cta2?: { label: string; url: string; visible: boolean };
     resource_cta3?: { label: string; url: string; visible: boolean };
+    product_id?: string;
+    technical_videos?: Array<{ url: string; description: string }>;
   }>;
   breadcrumb: Array<{ name: string; url: string }>;
 }
@@ -270,6 +272,16 @@ interface LandingPageData {
     cta_primary: { label: string; href: string; visible?: boolean };
     cta_secondary: { label: string; href: string; visible?: boolean };
     images: Array<ImageData>;
+  };
+  explanatory_video_section: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+    selected_video: {
+      url: string;
+      title: string;
+      product_name: string;
+      product_id: string;
+    } | null;
   };
   solutions_title: string;
   solutions: Solution[];
@@ -1576,6 +1588,11 @@ const EditorContent = () => {
       title: 'Recursos e Downloads',
       subtitle: 'Materiais técnicos e informações dos produtos'
     },
+    explanatory_video_section: {
+      visible_desktop: true,
+      visible_mobile: true,
+      selected_video: null
+    },
     advisory: {
       title: 'Consultoria personalizada para o seu negócio',
       paragraph: 'Nossa equipe de especialistas oferece consultoria completa para implementação de odontologia digital em clínicas de todos os portes.',
@@ -2088,6 +2105,13 @@ const EditorContent = () => {
               visible_mobile: true,
               title: 'Recursos e Downloads',
               subtitle: 'Materiais técnicos e informações dos produtos'
+            };
+          }
+          if (!loadedData.explanatory_video_section) {
+            loadedData.explanatory_video_section = {
+              visible_desktop: true,
+              visible_mobile: true,
+              selected_video: null
             };
           }
           
@@ -3214,6 +3238,124 @@ const EditorContent = () => {
                         {(data.banner?.images?.length || 0) >= 3 ? "Máximo de 3 imagens atingido" : "Adicionar Imagem"}
                       </Button>
                     </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Vídeo Explicativo do Produto */}
+                <AccordionItem value="explanatory-video">
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      <VideoIcon className="w-4 h-4" />
+                      Vídeo Explicativo do Produto
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4" />
+                          Visibilidade da Seção
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.explanatory_video_section?.visible_desktop ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                explanatory_video_section: { 
+                                  ...prev.explanatory_video_section!, 
+                                  visible_desktop: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no desktop</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.explanatory_video_section?.visible_mobile ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                explanatory_video_section: { 
+                                  ...prev.explanatory_video_section!, 
+                                  visible_mobile: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no mobile</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    {((data.explanatory_video_section?.visible_desktop ?? false) || (data.explanatory_video_section?.visible_mobile ?? false)) && (
+                      <>
+                        <div>
+                          <Label>Vídeo Técnico do Produto</Label>
+                          <Select
+                            value={data.explanatory_video_section?.selected_video?.product_id || ''}
+                            onValueChange={(productId) => {
+                              // Encontrar o produto selecionado
+                              const selectedProduct = (data.schema?.offers || []).find(
+                                (offer: any) => offer.product_id === productId
+                              );
+                              
+                              if (selectedProduct && selectedProduct.technical_videos?.length > 0) {
+                                const video = selectedProduct.technical_videos[0];
+                                setData(prev => ({
+                                  ...prev,
+                                  explanatory_video_section: {
+                                    ...prev.explanatory_video_section!,
+                                    selected_video: {
+                                      url: video.url,
+                                      title: video.description || selectedProduct.name,
+                                      product_name: selectedProduct.name,
+                                      product_id: productId
+                                    }
+                                  }
+                                }));
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um vídeo técnico" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(data.schema?.offers || [])
+                                .filter((offer: any) => 
+                                  selectedProductIds.includes(offer.product_id) && 
+                                  offer.technical_videos?.length > 0
+                                )
+                                .map((offer: any) => (
+                                  <SelectItem key={offer.product_id} value={offer.product_id}>
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{offer.name}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {offer.technical_videos[0]?.description || 'Vídeo técnico'}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          {data.explanatory_video_section?.selected_video && (
+                            <div className="mt-2 p-3 bg-muted rounded-md">
+                              <p className="text-sm font-medium">{data.explanatory_video_section.selected_video.title}</p>
+                              <p className="text-xs text-muted-foreground">{data.explanatory_video_section.selected_video.product_name}</p>
+                              <a 
+                                href={data.explanatory_video_section.selected_video.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                              >
+                                Ver vídeo no YouTube ↗
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 

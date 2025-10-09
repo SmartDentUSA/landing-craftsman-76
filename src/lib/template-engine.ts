@@ -251,6 +251,61 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             opacity: 0.9;
         }
 
+        /* Vídeo Explicativo */
+        .explanatory-video-section {
+            padding: 2.5rem 0;
+            background: var(--white);
+        }
+        
+        .explanatory-video-section h2 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-size: 1.75rem;
+            color: var(--text-color);
+        }
+        
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            max-width: 900px;
+            margin: 1.5rem auto 0;
+            border-radius: 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            background: #000;
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .video-product-name {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .explanatory-video-section {
+                padding: 1.5rem 0;
+            }
+            
+            .explanatory-video-section h2 {
+                font-size: 1.5rem;
+            }
+            
+            .video-container {
+                max-width: 100%;
+            }
+        }
+
         /* Seção soluções / controle */
         .control-section { padding: 2.5rem 0 0.5rem 0; }
         
@@ -1363,6 +1418,29 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </header>
 
+    <!-- Vídeo Explicativo do Produto -->
+    {{#explanatory_video_section}}
+    {{#visible_desktop_explanatory_video}}
+    <section class="explanatory-video-section">
+        <div class="container">
+            <h2>{{video_title}}</h2>
+            <div class="video-container">
+                <iframe 
+                    src="https://www.youtube.com/embed/{{youtube_id}}"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy">
+                </iframe>
+            </div>
+            {{#product_name}}
+            <p class="video-product-name">{{product_name}}</p>
+            {{/product_name}}
+        </div>
+    </section>
+    {{/visible_desktop_explanatory_video}}
+    {{/explanatory_video_section}}
+
     <!-- Soluções / Controle -->
     {{#solutions_section.visible_any}}
     <section class="control-section {{solutions_section.visibility_class}}">
@@ -2086,6 +2164,22 @@ const isPlaceholderUrl = (url: string): boolean => {
          url.includes('placehold.it');
 };
 
+// 🆕 Função para extrair YouTube ID de URLs
+const extractYouTubeID = (url: string): string | null => {
+  if (!url) return null;
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\?\/]+)/,
+    /^([a-zA-Z0-9_-]{11})$/ // ID direto
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
 // Função para gerar hreflang automático
 const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.br'): Array<{ lang: string; url: string }> => {
   if (!pageName) return [];
@@ -2157,12 +2251,30 @@ export const generatePreviewHTML = (data: any): string => {
     };
   };
 
+  // Process explanatory video section
+  let explanatoryVideoData = null;
+  if (data.explanatory_video_section?.selected_video) {
+    const youtubeId = extractYouTubeID(data.explanatory_video_section.selected_video.url);
+    if (youtubeId) {
+      explanatoryVideoData = {
+        visible_desktop_explanatory_video: data.explanatory_video_section.visible_desktop,
+        visible_mobile_explanatory_video: data.explanatory_video_section.visible_mobile,
+        youtube_id: youtubeId,
+        video_title: data.explanatory_video_section.selected_video.title,
+        product_name: data.explanatory_video_section.selected_video.product_name
+      };
+    }
+  }
+
   // Minimal processing for template compatibility
   const previewData = {
     ...data,
     // SEO image URLs from image objects
     og_image_url: data.seo?.og_image?.src || '',
     twitter_image_url: data.seo?.twitter_image?.src || '',
+    
+    // Explanatory video section
+    explanatory_video_section: explanatoryVideoData,
     
     // Section visibility calculations with correct format
     desktop_info: {
