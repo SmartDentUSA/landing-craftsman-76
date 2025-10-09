@@ -1378,7 +1378,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
           </Card>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* Linha 1: Preço e Moeda (grid-cols-2) */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="price">Preço de venda *</Label>
               <Input
@@ -1394,41 +1395,69 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="promo_price">Preço Promocional</Label>
-                {promoPrice && promoPrice > 0 && formData.price && promoPrice < formData.price && (
-                  <Badge variant="success" className="text-xs">
-                    Promo Ativa ({Math.round(((formData.price - promoPrice) / formData.price) * 100)}% OFF)
-                  </Badge>
-                )}
-              </div>
-              <Input
-                id="promo_price"
-                type="text"
-                step="0.01"
-                value={promoPrice || ''}
-                onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="0.00"
-              />
-              <p className="text-xs text-muted-foreground">
-                💡 Gera mensagens promocionais automáticas (De/Por) no WhatsApp
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="currency">Moeda</Label>
               <Select value={formData.currency} onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Selecione a moeda" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BRL">BRL</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="BRL">BRL (R$)</SelectItem>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
+          {/* Linha 2: Preço Promocional (sem badge) */}
+          <div className="space-y-2">
+            <Label htmlFor="promo_price">Preço Promocional (Opcional)</Label>
+            <Input
+              id="promo_price"
+              type="text"
+              step="0.01"
+              value={promoPrice || ''}
+              onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+              placeholder="0.00 - Deixe vazio se não houver promoção"
+            />
+            <p className="text-xs text-muted-foreground">
+              💡 Quando preenchido, gera automaticamente mensagens "De/Por" no WhatsApp
+            </p>
+          </div>
+
+          {/* Linha 3: Preview da Promoção (condicional) */}
+          {promoPrice && promoPrice > 0 && formData.price && promoPrice < formData.price && (
+            <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="success" className="text-xs">
+                  Promoção Ativa ({Math.round(((formData.price - promoPrice) / formData.price) * 100)}% OFF)
+                </Badge>
+              </div>
+              <div className="text-sm flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-xs">De:</span>
+                  <span className="line-through font-medium">
+                    {new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: formData.currency || 'BRL' 
+                    }).format(formData.price)}
+                  </span>
+                </div>
+                <span className="text-muted-foreground">→</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-xs">Por:</span>
+                  <span className="font-bold text-green-600 dark:text-green-400">
+                    {new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: formData.currency || 'BRL' 
+                    }).format(promoPrice)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="subcategory">Subcategoria</Label>
               <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
