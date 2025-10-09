@@ -82,6 +82,9 @@ export function ProductBlogCuratorPanel({
     // Salvar preferências no localStorage e notificar parent
     localStorage.setItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES, JSON.stringify(preferences));
     onPreferencesChange(preferences);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event('blog-preferences-changed'));
   }, [preferences, onPreferencesChange]);
 
   // Realtime subscription para mudanças na tabela products_repository
@@ -150,13 +153,17 @@ export function ProductBlogCuratorPanel({
   );
 
   const toggleBlogUse = (productId: string, blogType: 'commercial' | 'technical', enabled: boolean) => {
-    setPreferences(prev => ({
-      ...prev,
+    const newPreferences = {
+      ...preferences,
       [productId]: {
-        ...prev[productId],
+        ...preferences[productId],
         [blogType === 'commercial' ? 'useCommercial' : 'useTechnical']: enabled
       }
-    }));
+    };
+    
+    console.log('🔄 Toggling blog use:', { productId, blogType, enabled, newPreferences });
+    
+    setPreferences(newPreferences);
   };
 
   const viewBlogContent = (content: string, productName: string, blogType: string) => {
@@ -513,6 +520,24 @@ export function ProductBlogCuratorPanel({
                                             <Eye className="h-4 w-4" />
                                           </Button>
                                         </DialogTrigger>
+                                        <DialogContent className="max-w-4xl max-h-[80vh]">
+                                          <DialogHeader>
+                                            <DialogTitle>{selectedBlogContent?.title}</DialogTitle>
+                                          </DialogHeader>
+                                          <ScrollArea className="max-h-[60vh]">
+                                            <div 
+                                              className="prose prose-sm max-w-none p-4"
+                                              dangerouslySetInnerHTML={{ 
+                                                __html: selectedBlogContent?.content
+                                                  ?.replace(/#{1,6}\s/g, '')
+                                                  ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                  ?.replace(/\n\n/g, '</p><p>')
+                                                  ?.replace(/^/, '<p>')
+                                                  ?.replace(/$/, '</p>') || ''
+                                              }}
+                                            />
+                                          </ScrollArea>
+                                        </DialogContent>
                                       </Dialog>
                                       
                                       <div className="flex items-center gap-2">

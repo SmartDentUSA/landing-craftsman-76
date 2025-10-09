@@ -35,6 +35,12 @@ export function StrategicBlogPreview({
   const [previewEodontoHTML, setPreviewEodontoHTML] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
+  console.log('📊 StrategicBlogPreview props:', { 
+    selectedProductIds, 
+    refreshKey, 
+    landingPageId 
+  });
+
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
   const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
 

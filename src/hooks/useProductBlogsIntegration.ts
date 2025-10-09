@@ -56,6 +56,7 @@ const sanitizeBlogContent = (content: string): string => {
 
 export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
   const [productsWithBlogs, setProductsWithBlogs] = useState<any[]>([]);
+  const [preferences, setPreferences] = useState<BlogConsolidationPreferences>({});
   const { loadProductsByIds } = useSelectedProducts();
 
   // Load products with individual blogs when approved landing pages change
@@ -204,25 +205,49 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     }
   }, [productsWithBlogs]);
 
-  // Get blog consolidation preferences from localStorage
+  // Listen to localStorage changes for preferences
+  useEffect(() => {
+    const loadPreferences = () => {
+      const savedPreferences = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
+      const prefs = savedPreferences ? JSON.parse(savedPreferences) : {};
+      console.log('📖 Reading blog preferences from localStorage:', prefs);
+      setPreferences(prefs);
+    };
+
+    // Load initial preferences
+    loadPreferences();
+
+    // Listen for storage events (changes from other tabs/windows)
+    window.addEventListener('storage', loadPreferences);
+
+    // Custom event for same-window changes
+    const handlePreferencesChange = () => loadPreferences();
+    window.addEventListener('blog-preferences-changed', handlePreferencesChange);
+
+    return () => {
+      window.removeEventListener('storage', loadPreferences);
+      window.removeEventListener('blog-preferences-changed', handlePreferencesChange);
+    };
+  }, []);
+
+  // Get blog consolidation preferences from state
   const getBlogPreferences = (): BlogConsolidationPreferences => {
-    const savedPreferences = localStorage.getItem(STORAGE_KEYS.BLOG_CONSOLIDATION_PREFERENCES);
-    return savedPreferences ? JSON.parse(savedPreferences) : {};
+    return preferences;
   };
 
   // Create blog entries for HTML generation based on preferences
   const getProductBlogsForHTML = useMemo((): ProductBlog[] => {
-    const preferences = getBlogPreferences();
+    const currentPreferences = getBlogPreferences();
     const productBlogs: ProductBlog[] = [];
 
     console.log('🔍 Debug: Creating blogs for HTML generation:', {
       productsWithBlogs: productsWithBlogs.length,
-      preferences: Object.keys(preferences).length,
-      preferenceDetails: preferences
+      preferences: Object.keys(currentPreferences).length,
+      preferenceDetails: currentPreferences
     });
 
     productsWithBlogs.forEach(product => {
-      const productPrefs = preferences[product.id];
+      const productPrefs = currentPreferences[product.id];
       
       // Usar valores padrão quando não há preferências salvas
       const useCommercial = productPrefs ? productPrefs.useCommercial : !!product.individual_blog_content?.commercial;
@@ -275,17 +300,17 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
     });
 
     return productBlogs;
-  }, [productsWithBlogs]);
+  }, [productsWithBlogs, preferences]);
 
   // Create blog entries filtered by domain with landing page context
   const getProductBlogsForHTMLByDomain = useMemo(() => {
     return (domain: string, landingPageId?: string): ProductBlog[] => {
-      const preferences = getBlogPreferences();
+      const currentPreferences = getBlogPreferences();
       const productBlogs: ProductBlog[] = [];
 
       console.log(`🔍 Debug: Creating blogs for domain "${domain}" ${landingPageId ? `from landing page "${landingPageId}"` : '(all landing pages)'}:`, {
         productsWithBlogs: productsWithBlogs.length,
-        preferences: Object.keys(preferences).length
+        preferences: Object.keys(currentPreferences).length
       });
 
       // Filter products by landing page if specified
@@ -296,7 +321,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
         : productsWithBlogs;
 
       relevantProducts.forEach(product => {
-        const productPrefs = preferences[product.id];
+        const productPrefs = currentPreferences[product.id];
         
         // Usar valores padrão quando não há preferências salvas
         const useCommercial = productPrefs ? productPrefs.useCommercial : !!product.individual_blog_content?.commercial;
@@ -351,7 +376,7 @@ export const useProductBlogsIntegration = (approvedLandingPages: any[]) => {
       console.log(`📊 Debug: Generated ${productBlogs.length} blogs for domain "${domain}" ${landingPageId ? `from landing page "${landingPageId}"` : '(all landing pages)'}`);
       return productBlogs;
     };
-  }, [productsWithBlogs]);
+  }, [productsWithBlogs, preferences]);
 
   // Count active product blogs based on preferences
   const getActiveProductBlogsCount = useMemo((): number => {
