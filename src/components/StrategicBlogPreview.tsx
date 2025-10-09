@@ -4,7 +4,6 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Copy, ExternalLink } from "lucide-react";
 import { useProductBlogsIntegration } from "@/hooks/useProductBlogsIntegration";
 import { useSEOHTMLGenerator } from "@/hooks/useSEOHTMLGenerator";
-import { getLatestSEOContext } from "@/services/seoContextStore";
 
 interface BlogData {
   title?: string;
@@ -78,8 +77,8 @@ export function StrategicBlogPreview({
         ? productBlogs.filter(blog => selectedProductIds.includes(blog.productId))
         : productBlogs;
       
-      // Buscar SEO Context do Supabase
-      const seoContext = await getLatestSEOContext(landingPageId);
+      // SEO Context removido - funcionalidade obsoleta
+      const seoContext = null;
       
       // Buscar dados dos produtos selecionados para incluir image_url
       const supabase = (await import('@/integrations/supabase/client')).supabase;

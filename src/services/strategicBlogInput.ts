@@ -1,9 +1,11 @@
 /**
  * Strategic Blog Input Builder
  * Constrói o bloco estratégico do blog consolidado com auto-linking
+ * 
+ * NOTA: Esta funcionalidade foi removida pois era redundante com strategic-blog-generator
+ * Este arquivo está mantido apenas para compatibilidade, mas retorna null
  */
 
-import { getLatestSEOContext } from './seoContextStore';
 import { stripInternalLabels, sanitizeAnchors } from '@/lib/sanitize-internal-labels';
 import { applyAutoLinksOncePerTerm } from '@/lib/auto-link';
 
@@ -49,32 +51,8 @@ export async function buildStrategicBlogInput(
   landingPageId: string,
   domainBaseUrl: string
 ): Promise<StrategicBlogInput | null> {
-  const ctx = await getLatestSEOContext(landingPageId);
-  if (!ctx) return null;
-  
-  // 1. Limpar rótulos internos
-  const cleanMarkdown = stripInternalLabels(ctx.baseTextMarkdown || '');
-  
-  // 2. Converter MD → HTML
-  let html = convertMarkdownToHTML(cleanMarkdown);
-  
-  // 3. Montar lista de keywords aprovados (1ª ocorrência)
-  const approved = ctx.resolvedKeywords.filter(
-    (k) => k.status === 'approved' && k.url
-  );
-  
-  const items = approved.map((k) => ({
-    term: k.chosenAlias || k.term,
-    url: k.url!.startsWith('http') ? k.url! : `${domainBaseUrl}${k.url}`,
-  }));
-  
-  // 4. Aplicar auto-linking (máximo 12 links)
-  if (items.length > 0) {
-    html = applyAutoLinksOncePerTerm(html, items, { maxLinks: 12 });
-  }
-  
-  // 5. Blindagem final de anchors
-  html = sanitizeAnchors(html);
-  
-  return { baseTextHTML: html, keywords: items };
+  // Funcionalidade removida - era redundante com strategic-blog-generator
+  // Retorna null para não quebrar código existente
+  console.warn('⚠️ buildStrategicBlogInput: Funcionalidade obsoleta, usar strategic-blog-generator');
+  return null;
 }

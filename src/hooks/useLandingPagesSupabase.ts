@@ -190,15 +190,13 @@ export const useLandingPagesSupabase = () => {
         
         console.log('🔀 [Update LP] Fazendo deep merge:', {
           existingKeys: Object.keys(existingData),
-          updateKeys: Object.keys(updates.data),
-          hasSEOIntelligent: !!(existingData as any).seo_intelligent
+          updateKeys: Object.keys(updates.data)
         });
         
         supabaseUpdates.data = deepMerge(existingData, updates.data);
         
         console.log('✅ [Update LP] Merge concluído:', {
-          resultKeys: Object.keys(supabaseUpdates.data),
-          seoIntelligentPreserved: !!(supabaseUpdates.data as any).seo_intelligent
+          resultKeys: Object.keys(supabaseUpdates.data)
         });
       }
 

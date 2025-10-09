@@ -45,7 +45,7 @@ import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
-import { SEOIntelligentCard } from "@/components/SEOIntelligentCard";
+
 
 // ✅ PATCH 0.2: Estados para Blogs Estratégicos (Dentala + Eodonto)
 interface BlogPost {
@@ -4335,13 +4335,6 @@ const EditorContent = () => {
                   </AccordionContent>
                  </AccordionItem>
 
-                {/* SEO Inteligente com IA */}
-                <AccordionItem value="seo-intelligent">
-                  <AccordionTrigger>🔮 SEO Inteligente com IA</AccordionTrigger>
-                  <AccordionContent className="space-y-4">
-                    <SEOIntelligentCard landingPageId={id || ''} />
-                  </AccordionContent>
-                </AccordionItem>
 
                 {/* FAQ */}
                 <AccordionItem value="faq">
