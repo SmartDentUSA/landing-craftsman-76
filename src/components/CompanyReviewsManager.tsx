@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Star, Download, Plus, Edit, Trash2, Calendar, MapPin } from "lucide-react";
+import { Star, Download, Plus, Edit, Trash2, Calendar, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { useCompanyReviews } from "@/hooks/useCompanyReviews";
 import { useToast } from "@/hooks/use-toast";
 import type { CompanyReviewsJSONB } from "@/types/reviews";
@@ -23,6 +23,7 @@ export function CompanyReviewsManager() {
   const [reviewsData, setReviewsData] = useState<CompanyReviewsJSONB | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -281,53 +282,78 @@ export function CompanyReviewsManager() {
           </div>
         </div>
 
+        {/* Expand/Collapse Button */}
+        {stats.total > 0 && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-full max-w-md"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4 mr-2" />
+                  Ocultar reviews
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4 mr-2" />
+                  Ver todos os {stats.total} reviews
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Reviews List */}
-        <div className="space-y-3">
-          <h3 className="font-semibold">Reviews Manuais ({reviewsData?.manual_reviews.length || 0})</h3>
-          {reviewsData?.manual_reviews.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Star className="h-12 w-12 mx-auto mb-2 opacity-20" />
-              <p>Nenhum review manual cadastrado</p>
-              <p className="text-sm">Clique em "Adicionar Manual" ou "Importar do Google"</p>
-            </div>
-          ) : (
-            reviewsData?.manual_reviews.map((review, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{review.author_name}</p>
-                      <div className="flex">{renderStars(review.rating)}</div>
+        {isExpanded && (
+          <div className="space-y-3">
+            <h3 className="font-semibold">Reviews Manuais ({reviewsData?.manual_reviews.length || 0})</h3>
+            {reviewsData?.manual_reviews.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Star className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                <p>Nenhum review manual cadastrado</p>
+                <p className="text-sm">Clique em "Adicionar Manual" ou "Importar do Google"</p>
+              </div>
+            ) : (
+              reviewsData?.manual_reviews.map((review, index) => (
+                <div key={index} className="p-4 border rounded-lg space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{review.author_name}</p>
+                        <div className="flex">{renderStars(review.rating)}</div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{review.review_text}</p>
+                      {review.review_date && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          <Calendar className="h-3 w-3 inline mr-1" />
+                          {new Date(review.review_date).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{review.review_text}</p>
-                    {review.review_date && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        <Calendar className="h-3 w-3 inline mr-1" />
-                        {new Date(review.review_date).toLocaleDateString('pt-BR')}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditReview(index)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteReview(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditReview(index)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteReview(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
 
         {reviewsData?.google_place_id && (
           <div className="pt-4 border-t">
