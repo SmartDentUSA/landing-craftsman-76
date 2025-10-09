@@ -351,7 +351,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         @media (max-width: 768px) {
             .control-item-text-overlay {
-                padding: 1.5rem;
+                padding: 1rem;
                 background: linear-gradient(transparent 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.85) 100%);
                 font-size: 1rem;
                 line-height: 1.4;
@@ -359,14 +359,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
             
             .control-item-text-overlay h2 {
-                font-size: 1.25rem;
-                line-height: 1.3;
-                margin-bottom: 0.5rem;
+                font-size: 0.95rem;
+                line-height: 1.2;
+                margin-bottom: 0.4rem;
             }
             
             .control-item-text-overlay p {
-                font-size: 0.95rem;
-                line-height: 1.4;
+                font-size: 0.8rem;
+                line-height: 1.3;
+                margin-bottom: 0.75rem;
             }
             
             .image-container-large {
@@ -3671,6 +3672,13 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
             text-decoration: none;
             font-weight: 600;
             transition: transform 0.2s;
+        }
+        
+        @media (max-width: 768px) {
+            .cta-button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.875rem;
+            }
         }
         
         .cover-image {
