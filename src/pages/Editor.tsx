@@ -1083,6 +1083,8 @@ const EditorContent = () => {
           if (repoProducts && repoProducts.length > 0) {
             // Converter produtos do repositório para formato offers
             const newOffers = repoProducts.map(product => ({
+              // Identificação e metadados principais
+              id: product.id,
               name: product.name,
               description: product.description || '',
               price: product.price?.toString() || '',
@@ -1091,15 +1093,38 @@ const EditorContent = () => {
               valid_through: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
               productUrl: product.product_url || '',
               image: product.image_url || '',
+              category: product.category || undefined,
+              subcategory: product.subcategory || undefined,
+
+              // Origem e controle
               sourceType: 'repository' as const,
               lastUpdated: new Date().toISOString(),
               selected: product.selected || false,
+
+              // Conteúdos de vídeo e tutoriais
+              youtube_videos: product.youtube_videos || [],
+              instagram_videos: product.instagram_videos || [],
+              testimonial_videos: product.testimonial_videos || [],
+              technical_videos: (Array.isArray(product.technical_videos)
+                ? (product.technical_videos as any[]).map((v: any) =>
+                    typeof v === 'string'
+                      ? { url: v, description: '' }
+                      : { url: v.url ?? '', description: v.description ?? v.title ?? '' }
+                  )
+                : []) as Array<{ url: string; description: string }>,
+              tiktok_videos: product.tiktok_videos || [],
+              tutorial_resources: product.tutorial_resources || { tutorials: [] },
+              video_captions: product.video_captions || {},
+
+              // CTAs e recursos
               show_in_resources: product.show_in_resources || false,
-              resource_cta1: product.resource_cta1 as any || { label: '', url: '', visible: false },
-              resource_cta2: product.resource_cta2 as any || { label: '', url: '', visible: false },
-              resource_cta3: product.resource_cta3 as any || { label: '', url: '', visible: false },
-              offer_discount_cta: product.offer_discount_cta as any || { label: 'Comprar com Desconto', url: '', visible: false },
+              resource_cta1: (product.resource_cta1 as any) || { label: '', url: '', visible: false },
+              resource_cta2: (product.resource_cta2 as any) || { label: '', url: '', visible: false },
+              resource_cta3: (product.resource_cta3 as any) || { label: '', url: '', visible: false },
+              offer_discount_cta: (product.offer_discount_cta as any) || { label: 'Comprar com Desconto', url: '', visible: false },
             }));
+
+            console.info('🎬 Offers (id, techVideos):', newOffers.map(o => ({ id: o.id, tech: o.technical_videos?.length || 0 })));
 
             // Atualizar data.schema.offers - substituir completamente para garantir sincronização
             setData(prev => ({
@@ -3313,7 +3338,7 @@ const EditorContent = () => {
                           </CardHeader>
                           <CardContent>
                             {(data.schema?.offers || []).filter((offer: any) => 
-                              selectedProductIds.includes(offer.id) && 
+                              selectedProductIds.includes(offer.id ?? offer.product_id ?? '') && 
                               offer.technical_videos?.length > 0
                             ).length === 0 ? (
                               <div className="text-center py-8 text-muted-foreground">
@@ -3324,7 +3349,7 @@ const EditorContent = () => {
                               <Accordion type="single" collapsible className="w-full">
                                 {(data.schema?.offers || [])
                                   .filter((offer: any) => 
-                                    selectedProductIds.includes(offer.id) && 
+                                    selectedProductIds.includes(offer.id ?? offer.product_id ?? '') && 
                                     offer.technical_videos?.length > 0
                                   )
                                   .map((offer: any) => (
