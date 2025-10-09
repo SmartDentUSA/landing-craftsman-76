@@ -284,6 +284,13 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     ? extractKeywordsFromVideoCaptions(product.video_captions)
     : [];
   
+  console.log('🎬 Video Captions Debug:', {
+    hasVideoCaptions: !!product.video_captions,
+    captionTypes: product.video_captions ? Object.keys(product.video_captions) : [],
+    extractedKeywords: videoCaptionKeywords,
+    sampleCaption: product.video_captions?.youtube_videos?.[0]?.captions?.substring(0, 100)
+  });
+  
   let prompt = '';
   
   if (promptConfig?.custom_prompt) {

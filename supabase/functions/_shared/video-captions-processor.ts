@@ -6,11 +6,11 @@
  */
 
 interface VideoCaptions {
-  youtube_videos?: Array<{ caption?: string; ai_analysis?: any }>;
-  instagram_videos?: Array<{ caption?: string; ai_analysis?: any }>;
-  testimonial_videos?: Array<{ caption?: string; ai_analysis?: any }>;
-  technical_videos?: Array<{ caption?: string; ai_analysis?: any }>;
-  tiktok_videos?: Array<{ caption?: string; ai_analysis?: any }>;
+  youtube_videos?: Array<{ captions?: string; analysis?: any; url?: string }>;
+  instagram_videos?: Array<{ captions?: string; analysis?: any; url?: string }>;
+  testimonial_videos?: Array<{ captions?: string; analysis?: any; url?: string }>;
+  technical_videos?: Array<{ captions?: string; analysis?: any; url?: string }>;
+  tiktok_videos?: Array<{ captions?: string; analysis?: any; url?: string }>;
 }
 
 /**
@@ -41,10 +41,11 @@ export function extractVideoCaptionsForBlog(
     if (!Array.isArray(videos)) continue;
 
     for (const video of videos) {
-      if (!video.caption || typeof video.caption !== 'string') continue;
+      const normalized = normalizeVideoCaption(video);
+      if (!normalized.captions || typeof normalized.captions !== 'string') continue;
       
       // Limpar e truncar legenda se necessário
-      let caption = video.caption.trim();
+      let caption = normalized.captions.trim();
       if (caption.length > maxExcerptLength) {
         caption = caption.substring(0, maxExcerptLength) + '...';
       }
@@ -97,14 +98,16 @@ export function extractKeywordsFromVideoCaptions(
     if (!Array.isArray(videos)) continue;
 
     for (const video of videos) {
-      // Extrair de caption
-      if (video.caption && typeof video.caption === 'string') {
-        extractWordsFromText(video.caption).forEach(word => allKeywords.add(word));
+      const normalized = normalizeVideoCaption(video);
+      
+      // Extrair de captions
+      if (normalized.captions && typeof normalized.captions === 'string') {
+        extractWordsFromText(normalized.captions).forEach(word => allKeywords.add(word));
       }
       
-      // Extrair de ai_analysis se disponível
-      if (video.ai_analysis && typeof video.ai_analysis === 'object') {
-        const analysis = video.ai_analysis as any;
+      // Extrair de analysis se disponível
+      if (normalized.analysis && typeof normalized.analysis === 'object') {
+        const analysis = normalized.analysis as any;
         
         // Palavras-chave da análise
         if (Array.isArray(analysis.keywords)) {
@@ -159,9 +162,10 @@ export function extractQuotesFromCaptions(
     if (!Array.isArray(videos)) continue;
 
     for (const video of videos) {
-      if (!video.caption || typeof video.caption !== 'string') continue;
+      const normalized = normalizeVideoCaption(video);
+      if (!normalized.captions || typeof normalized.captions !== 'string') continue;
       
-      const caption = video.caption.trim();
+      const caption = normalized.captions.trim();
       
       // Procurar frases com sentimento positivo ou impacto
       const impactfulPhrases = extractImpactfulPhrases(caption);
@@ -271,10 +275,24 @@ export function hasCaptions(videoCaptions: VideoCaptions | null | undefined): bo
   for (const videoType of videoTypes) {
     const videos = videoCaptions[videoType];
     if (Array.isArray(videos) && videos.length > 0) {
-      const hasCaption = videos.some(v => v.caption && typeof v.caption === 'string' && v.caption.trim().length > 0);
+      const hasCaption = videos.some(v => {
+        const normalized = normalizeVideoCaption(v);
+        return normalized.captions && typeof normalized.captions === 'string' && normalized.captions.trim().length > 0;
+      });
       if (hasCaption) return true;
     }
   }
 
   return false;
+}
+
+/**
+ * Normaliza estrutura de dados para compatibilidade retroativa
+ * Suporta tanto "caption" (antigo) quanto "captions" (novo)
+ */
+function normalizeVideoCaption(video: any): { captions?: string; analysis?: any } {
+  return {
+    captions: video.captions || video.caption,
+    analysis: video.analysis || video.ai_analysis
+  };
 }
