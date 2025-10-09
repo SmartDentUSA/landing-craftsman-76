@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Star, Plus, Trash2, Edit, ExternalLink, Loader2, RefreshCw, CheckCircle2, Upload } from "lucide-react";
+import { Star, Plus, Trash2, Edit, ExternalLink, Loader2, RefreshCw, CheckCircle2, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { CSVReviewUploader } from "@/components/CSVReviewUploader";
 import { useCompanyReviews } from "@/hooks/useCompanyReviews";
 import type { CompanyReviewsJSONB } from "@/types/reviews";
@@ -30,6 +30,7 @@ export function ReviewsSection() {
   const [googleMapsUrl, setGoogleMapsUrl] = useState("");
   const [editingReview, setEditingReview] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set());
 
   // Form states
   const [formAuthor, setFormAuthor] = useState("");
@@ -200,40 +201,80 @@ export function ReviewsSection() {
                 {/* Lista de reviews */}
                 <div className="space-y-3">
                   {reviews.manual_reviews.length > 0 && (
-                    reviews.manual_reviews.map((review, index) => (
-                      <Card key={index} className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{review.author_name}</span>
-                              {renderStars(review.rating)}
+                    reviews.manual_reviews.map((review, index) => {
+                      const isExpanded = expandedReviews.has(index);
+                      const shouldTruncate = review.review_text && review.review_text.length > 150;
+                      const displayText = isExpanded || !shouldTruncate 
+                        ? review.review_text 
+                        : review.review_text.substring(0, 150) + '...';
+
+                      return (
+                        <Card key={index} className="p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">{review.author_name}</span>
+                                {renderStars(review.rating)}
+                              </div>
+                              <div 
+                                className={shouldTruncate ? "cursor-pointer select-none" : ""}
+                                onClick={() => {
+                                  if (shouldTruncate) {
+                                    setExpandedReviews(prev => {
+                                      const newSet = new Set(prev);
+                                      if (newSet.has(index)) {
+                                        newSet.delete(index);
+                                      } else {
+                                        newSet.add(index);
+                                      }
+                                      return newSet;
+                                    });
+                                  }
+                                }}
+                              >
+                                <p className="text-sm text-muted-foreground">
+                                  {displayText}
+                                </p>
+                                {shouldTruncate && (
+                                  <div className="flex items-center gap-1 text-primary text-xs mt-1 font-medium hover:underline">
+                                    {isExpanded ? (
+                                      <>
+                                        <span>Ver menos</span>
+                                        <ChevronUp className="h-3 w-3" />
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span>Ver mais</span>
+                                        <ChevronDown className="h-3 w-3" />
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(review.review_date || "").toLocaleDateString("pt-BR")}
+                              </span>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {review.review_text}
-                            </p>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(review.review_date || "").toLocaleDateString("pt-BR")}
-                            </span>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditReview(index)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteReview(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditReview(index)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteReview(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))
+                        </Card>
+                      );
+                    })
                   )}
                 </div>
 
