@@ -1394,7 +1394,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="promo_price">Preço promocional</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="promo_price">Preço Promocional</Label>
+                {promoPrice && promoPrice > 0 && formData.price && promoPrice < formData.price && (
+                  <Badge variant="success" className="text-xs">
+                    Promo Ativa ({Math.round(((formData.price - promoPrice) / formData.price) * 100)}% OFF)
+                  </Badge>
+                )}
+              </div>
               <Input
                 id="promo_price"
                 type="text"
@@ -1403,6 +1410,9 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="0.00"
               />
+              <p className="text-xs text-muted-foreground">
+                💡 Gera mensagens promocionais automáticas (De/Por) no WhatsApp
+              </p>
             </div>
 
             <div className="space-y-2">

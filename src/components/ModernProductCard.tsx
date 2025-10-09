@@ -40,6 +40,7 @@ import { TikTokContentGenerator } from "./TikTokContentGenerator";
 import { ProductGoogleAdsModal } from "./google-ads/ProductGoogleAdsModal";
 import { TikTokIcon } from "./icons/TikTokIcon";
 import { WhatsAppPromoGenerator } from "./WhatsAppPromoGenerator";
+import { WhatsAppPromoVariationGenerator } from "./WhatsAppPromoVariationGenerator";
 import { useCoupons } from "@/hooks/useCoupons";
 
 
@@ -122,6 +123,7 @@ export function ModernProductCard({
   const [showGoogleAdsModal, setShowGoogleAdsModal] = useState(false);
   const [showTechnicalSpecs, setShowTechnicalSpecs] = useState(false);
   const [showWhatsAppPromoModal, setShowWhatsAppPromoModal] = useState(false);
+  const [showWhatsAppPromoVariationModal, setShowWhatsAppPromoVariationModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const { getCouponByProductId } = useCoupons();
@@ -524,6 +526,22 @@ export function ModernProductCard({
               <TooltipContent>Mensagem Promocional com Cupom</TooltipContent>
             </Tooltip>
           )}
+          {product.promo_price && product.promo_price > 0 && product.price && product.promo_price < product.price && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowWhatsAppPromoVariationModal(true)}
+                  className="h-8 w-8 p-0 text-orange-700 hover:text-orange-800 relative"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 bg-orange-700 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">💰</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>WhatsApp Promo (De/Por)</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -689,6 +707,17 @@ export function ModernProductCard({
         productName={product.name}
         initialSpecs={product.technical_specifications || []}
         onSave={handleSaveTechnicalSpecs}
+      />
+
+      {/* Modal WhatsApp Promo Variação (De/Por) */}
+      <WhatsAppPromoVariationGenerator
+        isOpen={showWhatsAppPromoVariationModal}
+        onClose={() => setShowWhatsAppPromoVariationModal(false)}
+        productId={product.id}
+        productName={product.name}
+        productPrice={product.price}
+        productPromoPrice={product.promo_price}
+        productCurrency={product.currency}
       />
 
       {/* Modal de Mensagem Promocional WhatsApp */}

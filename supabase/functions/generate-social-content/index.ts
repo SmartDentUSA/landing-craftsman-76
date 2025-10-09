@@ -8,10 +8,17 @@ const corsHeaders = {
 };
 
 interface SocialContentRequest {
-  type: 'whatsapp' | 'youtube' | 'instagram' | 'whatsapp_sequence';
+  type: 'whatsapp' | 'youtube' | 'instagram' | 'whatsapp_sequence' | 'whatsapp_promo_variation';
   productId: string;
   customPrompt?: string;
   instagramType?: 'feed' | 'reels' | 'carousel';
+  priceInfo?: {
+    price?: number;
+    promo_price?: number;
+    savings?: number;
+    discount_percent?: number;
+    currency?: string;
+  };
 }
 
 serve(async (req) => {
@@ -26,7 +33,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { type, productId, customPrompt, instagramType }: SocialContentRequest = await req.json();
+    const { type, productId, customPrompt, instagramType, priceInfo }: SocialContentRequest = await req.json();
 
     console.log(`Generating ${type} content for product ${productId}`);
 
@@ -80,6 +87,72 @@ serve(async (req) => {
 
     if (landingPagesError) {
       console.warn('Erro ao carregar landing pages:', landingPagesError.message);
+    }
+
+    // Tratamento PRIORITÁRIO para whatsapp_promo_variation (early return)
+    if (type === 'whatsapp_promo_variation') {
+      console.log('💰 Gerando mensagem WhatsApp Promo (De/Por)...');
+      
+      const formatCurrency = (value?: number) => {
+        if (!value) return "R$ 0,00";
+        return new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: priceInfo?.currency || 'BRL'
+        }).format(value);
+      };
+
+      const promoPrompt = `Você é um especialista em marketing digital e comunicação para WhatsApp.
+
+Crie uma mensagem promocional EXCLUSIVA destacando a variação de preço (De/Por).
+
+Informações do Produto:
+- Nome: ${product.name}
+- Preço Original: ${formatCurrency(priceInfo?.price)}
+- Preço Promocional: ${formatCurrency(priceInfo?.promo_price)}
+- Economia: ${formatCurrency(priceInfo?.savings)}
+- Desconto: ${priceInfo?.discount_percent}%
+- Resumo Comercial: ${product.sales_pitch || 'N/A'}
+- Benefícios: ${Array.isArray(product.benefits) ? product.benefits.join(', ') : 'N/A'}
+- URL do Produto: ${product.product_url || ''}
+
+Template da Mensagem:
+🎁 PROMOÇÃO ESPECIAL! 🎁
+
+[NOME DO PRODUTO]
+
+💸 De: [PREÇO ORIGINAL]
+💰 Por: [PREÇO PROMOCIONAL]
+🔥 Economia de [VALOR] ([PERCENTUAL]% OFF)
+
+✅ PRINCIPAIS BENEFÍCIOS:
+[LISTE ATÉ 10 BENEFÍCIOS COM EMOJIS RELEVANTES]
+
+💬 Responda 'QUERO' que envio mais detalhes!
+
+🛒 Garanta já → [LINK DO PRODUTO]
+
+⏰ OFERTA POR TEMPO LIMITADO!
+
+Instruções:
+1. Use emojis relevantes e atrativos
+2. Destaque a economia e o percentual de desconto
+3. Crie senso de urgência ("Oferta limitada", "Aproveite agora")
+4. Máximo 1000 caracteres
+5. Linguagem persuasiva e direta
+6. Foque na transformação/resultado que o produto traz
+
+Retorne apenas o texto da mensagem formatada, sem explicações.`;
+
+      const promoContent = await generateWithDeepSeek(deepseekApiKey, promoPrompt, 'whatsapp', product);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          content: promoContent,
+          type: 'whatsapp_promo_variation'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Tratamento PRIORITÁRIO para whatsapp_sequence (early return)

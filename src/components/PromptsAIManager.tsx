@@ -167,6 +167,7 @@ const EDGE_FUNCTIONS = [
     status: "active" as const,
     prompts: [
       "WhatsApp",
+      "WhatsApp Promo (De/Por)",
       "Instagram",
       "TikTok",
       "YouTube",
