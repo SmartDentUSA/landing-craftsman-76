@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Percent, Tag, CheckCircle, XCircle, Edit, Save, X } from 'lucide-react';
+import { Trash2, Plus, Percent, Tag, CheckCircle, XCircle, Edit, Save, X, MessageSquare } from 'lucide-react';
 import { useCoupons } from '@/hooks/useCoupons';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { WhatsAppPromoGenerator } from '@/components/WhatsAppPromoGenerator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export function CouponsManager() {
   const { coupons, loading, createCoupon, updateCoupon, deleteCoupon, refetch } = useCoupons();
@@ -20,6 +22,7 @@ export function CouponsManager() {
   const [discountPercentage, setDiscountPercentage] = useState(10);
   const [allowPromotions, setAllowPromotions] = useState(true);
   const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
+  const [selectedCouponForMessage, setSelectedCouponForMessage] = useState<any | null>(null);
 
   React.useEffect(() => {
     fetchProducts();
@@ -108,6 +111,11 @@ export function CouponsManager() {
   const getProductName = (productId: string) => {
     const product = products.find((p) => p.id === productId);
     return product?.name || 'Produto não encontrado';
+  };
+
+  const getProductPrice = (productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    return product?.price || 0;
   };
 
   const getAvailableProducts = () => {
@@ -263,6 +271,26 @@ export function CouponsManager() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {coupon.allow_promotions && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => setSelectedCouponForMessage(coupon)}
+                              >
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Gerar Mensagem
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Gerar mensagem promocional para WhatsApp</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -293,6 +321,19 @@ export function CouponsManager() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Geração de Mensagem WhatsApp */}
+      {selectedCouponForMessage && (
+        <WhatsAppPromoGenerator
+          isOpen={!!selectedCouponForMessage}
+          onClose={() => setSelectedCouponForMessage(null)}
+          productId={selectedCouponForMessage.product_id}
+          productName={getProductName(selectedCouponForMessage.product_id)}
+          productPrice={getProductPrice(selectedCouponForMessage.product_id)}
+          discountPercentage={selectedCouponForMessage.discount_percentage}
+          couponCode={selectedCouponForMessage.coupon_code}
+        />
+      )}
     </div>
   );
 }
