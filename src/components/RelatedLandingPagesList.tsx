@@ -38,7 +38,7 @@ export const RelatedLandingPagesList: React.FC<RelatedLandingPagesListProps> = (
       const { data, error } = await supabase
         .from('landing_pages')
         .select('id, name, status, selected_product_ids')
-        .eq('status', 'published');
+        .eq('status', 'approved');
 
       if (error) throw error;
 

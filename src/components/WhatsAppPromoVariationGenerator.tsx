@@ -7,6 +7,7 @@ import { Copy, Check, RefreshCw, MessageSquare, Sparkles, Code, AlignLeft, Video
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductVideosList } from "./ProductVideosList";
+import { RelatedLandingPagesList } from "./RelatedLandingPagesList";
 
 interface WhatsAppPromoVariationGeneratorProps {
   isOpen: boolean;
@@ -351,6 +352,11 @@ export function WhatsAppPromoVariationGenerator({
               <h3 className="font-semibold">Biblioteca de Vídeos do Produto</h3>
             </div>
             <ProductVideosList 
+              productId={productId}
+              onInsert={handleVideoInsert}
+            />
+            
+            <RelatedLandingPagesList
               productId={productId}
               onInsert={handleVideoInsert}
             />
