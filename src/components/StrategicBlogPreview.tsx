@@ -33,6 +33,7 @@ export function StrategicBlogPreview({
   const [previewDentalaHTML, setPreviewDentalaHTML] = useState("");
   const [previewEodontoHTML, setPreviewEodontoHTML] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   console.log('📊 StrategicBlogPreview props:', { 
     selectedProductIds, 
@@ -158,10 +159,14 @@ export function StrategicBlogPreview({
       setPreviewDentalaHTML(dentalaHTML);
       setPreviewEodontoHTML(eodontoHTML);
       
-      toast({ 
-        title: "✅ Previews atualizados",
-        description: "Previews consolidados gerados com sucesso"
-      });
+      // ✅ Apenas exibir toast se for ação manual do usuário
+      if (showSuccessToast) {
+        toast({ 
+          title: "✅ Previews atualizados",
+          description: "Previews consolidados gerados com sucesso"
+        });
+        setShowSuccessToast(false);
+      }
     } catch (err: any) {
       console.error("Erro ao gerar previews:", err);
       toast({
@@ -172,7 +177,7 @@ export function StrategicBlogPreview({
     } finally {
       setIsGenerating(false);
     }
-  }, [generateHTML]);
+  }, [generateHTML, showSuccessToast]);
 
   // Gera ao montar e quando debounceTick muda
   useEffect(() => {
@@ -204,7 +209,15 @@ export function StrategicBlogPreview({
           <h3 className="font-semibold text-lg">
             📰 Preview Consolidado (Blog Estratégico + Produtos)
           </h3>
-          <Button onClick={doGenerateAll} disabled={isGenerating} size="sm" variant="outline">
+          <Button 
+            onClick={() => {
+              setShowSuccessToast(true);
+              doGenerateAll();
+            }} 
+            disabled={isGenerating} 
+            size="sm" 
+            variant="outline"
+          >
           {isGenerating ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
