@@ -92,13 +92,26 @@ function generateMerchantFeed(products: any[], baseUrl: string, companyName: str
     <link>${escapeXML(baseUrl)}</link>
     <description>${escapeXML(companyDescription)}</description>`
 
-  const items = products.map(product => generateMerchantItem(product, baseUrl)).join('\n')
+  // ✨ FASE 3: Processar produtos + variações
+  const allItems: string[] = []
+  
+  products.forEach(product => {
+    // Produto principal
+    allItems.push(generateMerchantItem(product, baseUrl))
+    
+    // Variações (se existirem)
+    if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
+      product.variations.forEach((variation: any, index: number) => {
+        allItems.push(generateVariationItem(product, variation, index, baseUrl))
+      })
+    }
+  })
 
   const feedFooter = `
   </channel>
 </rss>`
 
-  return feedHeader + items + feedFooter
+  return feedHeader + allItems.join('\n') + feedFooter
 }
 
 function generateMerchantItem(product: any, baseUrl: string): string {
@@ -150,6 +163,61 @@ function generateMerchantItem(product: any, baseUrl: string): string {
           `<g:custom_label_${index}>${escapeXML(feature.substring(0, 100))}</g:custom_label_${index}>`
         ).join('\n      ') : ''
       }
+    </item>`
+}
+
+// ✨ FASE 3: Gerar item de variação do produto
+function generateVariationItem(product: any, variation: any, index: number, baseUrl: string): string {
+  const parentId = product.id
+  const variationId = `${parentId}-var-${index}`
+  const title = `${product.name} - ${variation.name || `Variação ${index + 1}`}`
+  const description = product.description || product.sales_pitch || 'Variação do produto'
+  const link = product.product_url || `${baseUrl}/produto/${parentId}#variation-${index}`
+  const imageLink = variation.image_url || product.image_url || `${baseUrl}/images/placeholder.jpg`
+  
+  // Preço da variação (ou do produto pai)
+  const price = variation.price || product.price || 0
+  const promoPrice = variation.promo_price || product.promo_price
+  
+  // Disponibilidade baseada no estoque da variação
+  const stock = variation.stock || 0
+  const availabilityStatus = stock > 0 ? 'in_stock' : 'out_of_stock'
+  
+  // Atributos da variação
+  const color = variation.color ? escapeXML(variation.color) : (product.color ? escapeXML(product.color) : '')
+  const size = variation.size ? escapeXML(variation.size) : (product.size ? escapeXML(product.size) : '')
+  const material = variation.material ? escapeXML(variation.material) : (product.material ? escapeXML(product.material) : '')
+  
+  // Herdar GTIN/MPN/Brand do produto pai
+  const gtin = product.gtin || extractGTIN(product.original_data)
+  const ean = product.ean || product.original_data?.ean
+  const mpn = product.mpn || extractMPN(product.original_data) || parentId
+  const brand = product.brand || extractBrandFromName(product.name) || 'Marca'
+  const condition = product.condition || 'new'
+  const category = product.category || 'Geral'
+  const productType = `${product.category || 'Geral'}${product.subcategory ? ' > ' + product.subcategory : ''}`
+
+  return `
+    <item>
+      <g:id>${escapeXML(variationId)}</g:id>
+      <g:item_group_id>${escapeXML(parentId)}</g:item_group_id>
+      <g:title>${escapeXML(title.substring(0, 150))}</g:title>
+      <g:description>${escapeXML(description.substring(0, 5000))}</g:description>
+      <g:link>${escapeXML(link)}</g:link>
+      <g:image_link>${escapeXML(imageLink)}</g:image_link>
+      <g:availability>${availabilityStatus}</g:availability>
+      <g:price>${price} ${product.currency || 'BRL'}</g:price>
+      ${promoPrice && promoPrice < price ? `<g:sale_price>${promoPrice} ${product.currency || 'BRL'}</g:sale_price>` : ''}
+      <g:brand>${brand}</g:brand>
+      <g:condition>${condition}</g:condition>
+      ${gtin ? `<g:gtin>${escapeXML(gtin)}</g:gtin>` : ''}
+      ${ean ? `<g:ean>${escapeXML(ean)}</g:ean>` : ''}
+      <g:mpn>${escapeXML(mpn)}</g:mpn>
+      ${color ? `<g:color>${color}</g:color>` : ''}
+      ${size ? `<g:size>${size}</g:size>` : ''}
+      ${material ? `<g:material>${material}</g:material>` : ''}
+      <g:google_product_category>${escapeXML(mapToGoogleCategory(category))}</g:google_product_category>
+      <g:product_type>${escapeXML(productType)}</g:product_type>
     </item>`
 }
 

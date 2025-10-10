@@ -918,7 +918,9 @@ export const useSEOHTMLGenerator = () => {
         availability: 'in stock',
         condition: 'new',
         gtin: product.gtin || '',
-        mpn: product.mpn || ''
+        mpn: product.mpn || '',
+        // ✨ FASE 1: Incluir technical_specifications no schema
+        technical_specifications: product.technical_specifications || []
       }));
 
       // Use advanced schema generator for complete page schema
@@ -1607,9 +1609,79 @@ export const useSEOHTMLGenerator = () => {
       margin-bottom: 0;
     }
     
+    /* ✨ FASE 1: Especificações Técnicas */
+    .technical-specs-section {
+      padding: 3rem 0;
+      margin: 3rem 0;
+      background: var(--background-alt);
+      border-radius: var(--border-radius);
+    }
+    
+    .technical-specs-section h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.75rem;
+      color: var(--text-color);
+      font-weight: 600;
+    }
+    
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    
+    .spec-item {
+      background: var(--card-background);
+      padding: 1.25rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: var(--transition-smooth);
+      border: 1px solid var(--border-color);
+    }
+    
+    .spec-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .spec-item dt {
+      font-weight: 600;
+      color: var(--primary-color);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .spec-item dd {
+      margin: 0;
+      color: var(--text-color);
+      font-size: 1rem;
+    }
+    
     @media (max-width: 768px) {
       .container {
         padding: 2rem 1rem;
+      }
+      
+      .technical-specs-section {
+        padding: 2rem 0;
+        margin: 2rem 0;
+      }
+      
+      .specs-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+      
+      .spec-item {
+        padding: 1rem;
       }
       
       .header {
@@ -1672,6 +1744,23 @@ export const useSEOHTMLGenerator = () => {
       <h3>🏷️ Palavras-chave relacionadas</h3>
       <div>
         ${uniqueKeywords.map(keyword => `<span class="tag">${keyword}</span>`).join('')}
+      </div>
+    </section>
+    ` : ''}
+    
+    ${selectedProducts && selectedProducts.length > 0 && selectedProducts.some((p: any) => p.technical_specifications && p.technical_specifications.length > 0) ? `
+    <section class="technical-specs-section">
+      <h2>Especificações Técnicas</h2>
+      <div class="specs-grid">
+        ${selectedProducts
+          .flatMap((p: any) => p.technical_specifications || [])
+          .filter((spec: any) => spec.label && spec.value)
+          .map((spec: any) => `
+            <div class="spec-item">
+              <dt>${spec.label || spec.property || spec.name}</dt>
+              <dd>${spec.value || spec.description}</dd>
+            </div>
+          `).join('')}
       </div>
     </section>
     ` : ''}

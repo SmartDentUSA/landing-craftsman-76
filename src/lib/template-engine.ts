@@ -815,6 +815,74 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
         }
         
+        /* ✨ FASE 1: Especificações Técnicas */
+        .technical-specs-section {
+            padding: 3rem 0;
+            background: var(--background-alt);
+        }
+        
+        .technical-specs-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.75rem;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .spec-item {
+            background: var(--card-background);
+            padding: 1.25rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: var(--transition-smooth);
+            border: 1px solid var(--border-color);
+        }
+        
+        .spec-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .spec-item dt {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .spec-item dd {
+            margin: 0;
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .technical-specs-section {
+                padding: 2rem 0;
+            }
+            
+            .specs-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            
+            .spec-item {
+                padding: 1rem;
+            }
+        }
+        
         /* Card Styles */
         .offer-card {
             flex: 0 0 280px;
@@ -1739,6 +1807,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             {{/cta_final.secondary}}
         </div>
     </section>
+
+    <!-- ✨ FASE 1: Especificações Técnicas Section -->
+    {{#technical_specs_section}}
+    <section class="technical-specs-section">
+      <div class="container">
+        <h2>Especificações Técnicas</h2>
+        <div class="specs-grid">
+          {{#technical_specs}}
+          <div class="spec-item">
+            <dt>{{label}}</dt>
+            <dd>{{value}}</dd>
+          </div>
+          {{/technical_specs}}
+        </div>
+      </div>
+    </section>
+    {{/technical_specs_section}}
 
     <!-- Footer -->
     <footer class="footer">

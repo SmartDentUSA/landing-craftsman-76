@@ -861,6 +861,24 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     console.log('[DEBUG] Dados do formulário:', formData);
     console.log('[DEBUG] botTriggerWords state:', botTriggerWords);
     
+    // ✨ FASE 3: Validação de variações para Google Merchant
+    if (variations.length > 0) {
+      const invalidVariations = variations.filter(v => 
+        !v.name || 
+        (v.price === undefined || v.price === null) || 
+        (v.stock === undefined || v.stock === null)
+      );
+      
+      if (invalidVariations.length > 0) {
+        toast({
+          title: "⚠️ Variações Incompletas",
+          description: `${invalidVariations.length} variação(ões) sem nome, preço ou estoque. Complete todos os campos para exportar no Google Shopping.`,
+          variant: "destructive"
+        });
+        // NÃO BLOQUEIA O SALVAMENTO, apenas avisa
+      }
+    }
+    
     // Capturar texto pendente do TagInput e consolidar palavras gatilho
     const pendingBotWord = botTagRef.current?.getPendingValue()?.trim();
     console.log('[DEBUG] Palavra pendente no input:', pendingBotWord);
