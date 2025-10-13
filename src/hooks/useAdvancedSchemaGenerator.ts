@@ -370,7 +370,7 @@ export const useAdvancedSchemaGenerator = () => {
   }, []);
 
   // Gerar Schema de LocalBusiness
-  const generateLocalBusinessSchema = useCallback((companyData: CompanyData) => {
+  const generateLocalBusinessSchema = useCallback((companyData: CompanyData, seoDomains?: Array<any>) => {
     if (!companyData.company_name) return null;
 
     const schema: any = {
@@ -379,6 +379,17 @@ export const useAdvancedSchemaGenerator = () => {
       "name": companyData.company_name,
       "description": companyData.company_description || `${companyData.company_name} - Empresa especializada em soluções de qualidade`
     };
+    
+    // ✅ ADICIONAR DOMÍNIOS SEO AO sameAs
+    if (seoDomains && seoDomains.length > 0) {
+      const schemaEnabled = seoDomains
+        .filter((d: any) => d.enabled && d.use_in_schema)
+        .sort((a: any, b: any) => a.priority - b.priority);
+      
+      if (schemaEnabled.length > 0) {
+        schema.sameAs = schemaEnabled.map((d: any) => `https://${d.domain}`);
+      }
+    }
 
     if (companyData.location) {
       schema.address = {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAdvancedSchemaGenerator } from './useAdvancedSchemaGenerator';
 import { processContentWithAdvancedIntelligentLinks } from '@/lib/intelligent-links-advanced';
 import { useLinksRepository } from './useLinksRepository';
@@ -10,6 +10,7 @@ import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from '@/lib/company-
 import { generateSchemaFromCompanyProfile } from '@/lib/schema-reviews';
 import { supabase } from '@/integrations/supabase/client';
 import type { UnifiedReview } from '@/types/reviews';
+import { getTrackingConfig, injectTrackingPixels, injectGTMNoScript, generateSEODomainTags, generateSchemaSameAs, generateFooterLinks, type TrackingConfig } from '@/lib/tracking-injector';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -290,6 +291,13 @@ interface ConsolidatedBlogOptions {
 }
 
 export const useSEOHTMLGenerator = () => {
+  const [trackingConfig, setTrackingConfig] = useState<TrackingConfig | null>(null);
+
+  // Carregar configurações de tracking ao montar
+  useEffect(() => {
+    getTrackingConfig().then(setTrackingConfig);
+  }, []);
+
   // Função helper para limpar tags HTML e markdown do texto (para JSON-LD)
   const stripHtmlTags = (html: string): string => {
     let clean = html;
@@ -476,6 +484,11 @@ export const useSEOHTMLGenerator = () => {
   <meta property="product:price:currency:${index}" content="${product.currency || 'BRL'}">`).join('');
     };
 
+    // ✅ INJETAR TRACKING PIXELS E DOMÍNIOS SEO
+    const trackingSnippets = injectTrackingPixels(trackingConfig);
+    const gtmNoScript = injectGTMNoScript(trackingConfig);
+    const seoDomainTags = generateSEODomainTags(trackingConfig);
+
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -483,8 +496,12 @@ export const useSEOHTMLGenerator = () => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
+  ${trackingSnippets}
+  
   <!-- SEO Meta Tags -->
-  <title>${seoTitle}</title>
+  <title>${truncateSEOTitle(seoTitle)}</title>
+  <meta name="description" content="${seoDescription}">
+  ${seoDomainTags}
   <meta name="description" content="${seoDescription}">
   ${uniqueKeywords.length > 0 ? `<meta name="keywords" content="${uniqueKeywords.join(', ')}">` : ''}
   <meta name="robots" content="index, follow">
@@ -688,6 +705,8 @@ export const useSEOHTMLGenerator = () => {
   </style>
 </head>
 <body>
+  ${gtmNoScript}
+  
   <div class="container">
     <header>
       <h1>${title}</h1>
@@ -717,9 +736,11 @@ export const useSEOHTMLGenerator = () => {
       ${canonical ? `<p><small>URL: ${canonical}</small></p>` : ''}
     </footer>
   </div>
+  
+  ${generateFooterLinks(trackingConfig)}
 </body>
 </html>`;
-  }, [generateCompletePageSchema]);
+  }, [generateCompletePageSchema, trackingConfig]);
 
   const generateConsolidatedBlogHTML = useCallback(async (options: ConsolidatedBlogOptions & {
     excludeMetaInfo?: boolean;

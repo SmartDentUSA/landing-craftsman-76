@@ -8,11 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube, Search } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe } from "lucide-react";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
 import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
+import { TrackingSEOTab } from "./TrackingSEOTab";
 
 interface Video {
   url: string;
@@ -45,6 +46,23 @@ interface CompanyProfile {
     testimonial_videos: Video[];
     technical_videos: Video[];
   };
+  // ✨ Rastreamento Granular + Domínios SEO
+  tracking_pixels?: {
+    meta_pixel: { enabled: boolean; pixel_id: string | null; note?: string };
+    google_analytics: { enabled: boolean; measurement_id: string | null; note?: string };
+    google_tag_manager: { enabled: boolean; container_id: string | null; note?: string };
+    tiktok_pixel: { enabled: boolean; pixel_id: string | null; note?: string };
+  };
+  seo_domains?: Array<{
+    name: string;
+    domain: string;
+    description: string;
+    enabled: boolean;
+    use_in_seo: boolean;
+    use_in_schema: boolean;
+    use_in_footer: boolean;
+    priority: number;
+  }>;
 }
 
 interface CompanyProfileManagerProps {

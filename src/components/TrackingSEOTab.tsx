@@ -1,0 +1,171 @@
+import React from 'react';
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Plus, Trash2 } from "lucide-react";
+
+interface TrackingSEOTabProps {
+  profile: any;
+  setProfile: (profile: any) => void;
+}
+
+export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
+  return (
+    <div className="space-y-6">
+      {/* PIXELS */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">📊 Pixels e Analytics Globais</h3>
+        
+        {/* GTM */}
+        <Card className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h4 className="font-semibold">Google Tag Manager</h4>
+              <p className="text-xs text-muted-foreground">Recomendado como única fonte de tags</p>
+            </div>
+            <Switch
+              checked={profile.tracking_pixels?.google_tag_manager?.enabled ?? false}
+              onCheckedChange={(checked) => 
+                setProfile({
+                  ...profile,
+                  tracking_pixels: {
+                    ...profile.tracking_pixels,
+                    google_tag_manager: {
+                      enabled: checked,
+                      container_id: profile.tracking_pixels?.google_tag_manager?.container_id || null
+                    }
+                  }
+                })
+              }
+            />
+          </div>
+          <Input
+            value={profile.tracking_pixels?.google_tag_manager?.container_id || ''}
+            onChange={(e) => 
+              setProfile({
+                ...profile,
+                tracking_pixels: {
+                  ...profile.tracking_pixels,
+                  google_tag_manager: {
+                    ...profile.tracking_pixels?.google_tag_manager,
+                    container_id: e.target.value || null
+                  }
+                }
+              })
+            }
+            placeholder="GTM-XXXXXXX"
+            disabled={!profile.tracking_pixels?.google_tag_manager?.enabled}
+          />
+          <div className="mt-2">
+            {!profile.tracking_pixels?.google_tag_manager?.enabled ? (
+              <Badge variant="secondary">🔴 Desabilitado - HTML puro</Badge>
+            ) : !profile.tracking_pixels?.google_tag_manager?.container_id ? (
+              <Badge variant="outline">🟡 Configuração incompleta</Badge>
+            ) : (
+              <Badge>🟢 Ativo</Badge>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* DOMÍNIOS SEO */}
+      <div className="space-y-4 border-t pt-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">🌐 Domínios SEO Multi-Site</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newDomain = {
+                name: '',
+                domain: '',
+                description: '',
+                enabled: true,
+                use_in_seo: true,
+                use_in_schema: true,
+                use_in_footer: true,
+                priority: (profile.seo_domains?.length || 0) + 1
+              };
+              setProfile({
+                ...profile,
+                seo_domains: [...(profile.seo_domains || []), newDomain]
+              });
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Adicionar Domínio
+          </Button>
+        </div>
+
+        {(profile.seo_domains || []).map((domain: any, index: number) => (
+          <Card key={index} className="p-4">
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <Input
+                value={domain.name}
+                onChange={(e) => {
+                  const updated = [...(profile.seo_domains || [])];
+                  updated[index].name = e.target.value;
+                  setProfile({...profile, seo_domains: updated});
+                }}
+                placeholder="Nome do Site"
+              />
+              <Input
+                value={domain.domain}
+                onChange={(e) => {
+                  const updated = [...(profile.seo_domains || [])];
+                  updated[index].domain = e.target.value;
+                  setProfile({...profile, seo_domains: updated});
+                }}
+                placeholder="smartdent.com.br"
+              />
+              <Input
+                value={domain.description}
+                onChange={(e) => {
+                  const updated = [...(profile.seo_domains || [])];
+                  updated[index].description = e.target.value;
+                  setProfile({...profile, seo_domains: updated});
+                }}
+                placeholder="Descrição"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch checked={domain.use_in_seo} onCheckedChange={(c) => {
+                    const updated = [...(profile.seo_domains || [])];
+                    updated[index].use_in_seo = c;
+                    setProfile({...profile, seo_domains: updated});
+                  }} disabled={!domain.enabled} />
+                  <Label className="text-xs">SEO</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={domain.use_in_schema} onCheckedChange={(c) => {
+                    const updated = [...(profile.seo_domains || [])];
+                    updated[index].use_in_schema = c;
+                    setProfile({...profile, seo_domains: updated});
+                  }} disabled={!domain.enabled} />
+                  <Label className="text-xs">Schema</Label>
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() => {
+                  const updated = (profile.seo_domains || []).filter((_: any, i: number) => i !== index);
+                  setProfile({...profile, seo_domains: updated});
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
