@@ -74,10 +74,20 @@ export function LandingPageProgressCard({ landingPage, onMarkComplete, onEdit }:
     { key: 'email', label: 'Template Email', icon: Mail },
   ];
 
+  // Safeguards for optional details
+  const linkedProductsCount =
+    (completion as any)?.score_details?.linked_products?.count ??
+    (landingPage as any)?.selected_product_ids?.length ??
+    0;
+  const hasBlog =
+    Boolean(
+      (completion as any)?.score_details?.has_blog ??
+      ((landingPage as any)?.blog_generated && (landingPage as any)?.blog_generated_at)
+    );
+
   const totalScore = Object.values(completion.score_details)
     .filter(v => typeof v === 'object' && 'score' in v)
-    .reduce((sum, v: any) => sum + v.score, 0);
-
+    .reduce((sum, v: any) => sum + (v as any).score, 0);
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
@@ -109,13 +119,13 @@ export function LandingPageProgressCard({ landingPage, onMarkComplete, onEdit }:
                 {landingPage.status}
               </Badge>
 
-              {completion.score_details.linked_products.count > 0 && (
+              {linkedProductsCount > 0 && (
                 <Badge variant="secondary">
-                  {completion.score_details.linked_products.count} produto(s)
+                  {linkedProductsCount} produto(s)
                 </Badge>
               )}
 
-              {completion.score_details.has_blog && (
+              {hasBlog && (
                 <Badge variant="default">
                   <FileText className="h-3 w-3 mr-1" />
                   Blog publicado
