@@ -95,7 +95,14 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       instagram_videos: [],
       testimonial_videos: [],
       technical_videos: [],
-    }
+    },
+    tracking_pixels: {
+      meta_pixel: { enabled: false, pixel_id: null, note: 'Meta Pixel global para todos os domínios' },
+      google_analytics: { enabled: false, measurement_id: null, note: 'Google Analytics 4 (pode ser gerenciado via GTM)' },
+      google_tag_manager: { enabled: false, container_id: null, note: 'GTM - Única fonte de tags recomendada' },
+      tiktok_pixel: { enabled: false, pixel_id: null, note: 'TikTok Pixel para remarketing' }
+    },
+    seo_domains: []
   });
   
   const [loading, setLoading] = useState(true);
@@ -155,6 +162,13 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           seo_technical_expertise: (data as any).seo_technical_expertise || "",
           seo_service_areas: (data as any).seo_service_areas || "",
           company_videos: videos,
+          tracking_pixels: (data as any).tracking_pixels || {
+            meta_pixel: { enabled: false, pixel_id: null, note: 'Meta Pixel global para todos os domínios' },
+            google_analytics: { enabled: false, measurement_id: null, note: 'Google Analytics 4 (pode ser gerenciado via GTM)' },
+            google_tag_manager: { enabled: false, container_id: null, note: 'GTM - Única fonte de tags recomendada' },
+            tiktok_pixel: { enabled: false, pixel_id: null, note: 'TikTok Pixel para remarketing' }
+          },
+          seo_domains: Array.isArray((data as any).seo_domains) ? (data as any).seo_domains : []
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
@@ -208,6 +222,8 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
         seo_competitive_advantages: profile.seo_competitive_advantages,
         seo_technical_expertise: profile.seo_technical_expertise,
         seo_service_areas: profile.seo_service_areas,
+        tracking_pixels: profile.tracking_pixels || null,
+        seo_domains: profile.seo_domains || [],
         updated_at: new Date().toISOString()
       };
 
@@ -317,12 +333,16 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
             <TabsTrigger value="social">Redes Sociais</TabsTrigger>
             <TabsTrigger value="videos">Vídeos da Empresa</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="seo">SEO Hidden</TabsTrigger>
+            <TabsTrigger value="tracking" className="flex items-center gap-1">
+              <Activity className="h-3 w-3" />
+              Rastreamento & SEO
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="basic" className="space-y-4">
@@ -618,6 +638,13 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
 
           <TabsContent value="reviews" className="space-y-4">
             <ReviewsSection />
+          </TabsContent>
+
+          <TabsContent value="tracking" className="space-y-4">
+            <TrackingSEOTab 
+              profile={profile}
+              setProfile={setProfile}
+            />
           </TabsContent>
         </Tabs>
 
