@@ -1,17 +1,15 @@
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Search, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useProductCompletion } from '@/hooks/useProductCompletion';
 import { ProductProgressStats } from './ProductProgressStats';
 import { ProductProgressCard } from './ProductProgressCard';
-import { ProductEditModal } from './ProductEditModal';
 
 export function ProductProgressManager() {
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const navigate = useNavigate();
   
   const { 
     data, 
@@ -24,18 +22,12 @@ export function ProductProgressManager() {
   } = useProductCompletion();
 
   const handleEditProduct = (id: string) => {
-    const product = data.find(p => p.id === id);
-    if (product) {
-      setEditingProduct(product);
-      setEditingProductId(id);
-    }
-  };
-
-  const handleSaveProduct = async (updatedProduct: any) => {
-    // O ProductEditModal já salva no banco, então só precisamos fechar e atualizar
-    setEditingProductId(null);
-    setEditingProduct(null);
-    refresh();
+    navigate('/repository', { 
+      state: { 
+        activeView: 'repository', 
+        editProductId: id 
+      } 
+    });
   };
 
   if (isLoading) {
@@ -170,16 +162,6 @@ export function ProductProgressManager() {
           </div>
         )}
       </div>
-
-      <ProductEditModal
-        isOpen={editingProductId !== null}
-        onClose={() => {
-          setEditingProductId(null);
-          setEditingProduct(null);
-        }}
-        product={editingProduct}
-        onSave={handleSaveProduct}
-      />
     </div>
   );
 }

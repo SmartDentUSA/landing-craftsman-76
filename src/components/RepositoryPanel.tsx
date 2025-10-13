@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -105,6 +105,7 @@ interface RepositoryPanelProps {
   className?: string;
   onSyncTriggered?: () => void;
   onCompanyProfileChange?: (profile: any) => void;
+  initialEditProductId?: string;
 }
 
 export function RepositoryPanel({ 
@@ -112,7 +113,8 @@ export function RepositoryPanel({
   onProductSelectionChange, 
   className,
   onSyncTriggered,
-  onCompanyProfileChange 
+  onCompanyProfileChange,
+  initialEditProductId
 }: RepositoryPanelProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -130,6 +132,7 @@ export function RepositoryPanel({
   const [exportingData, setExportingData] = useState(false);
   const [showUnapproved, setShowUnapproved] = useState(false);
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const initialEditHandled = useRef(false);
   const { toast } = useToast();
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
@@ -269,6 +272,19 @@ export function RepositoryPanel({
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
     onProductSelectionChange(selectedProducts);
   }, [selectedProductIds, products, onProductSelectionChange]);
+
+  // Handle initial edit product from progress dashboard
+  useEffect(() => {
+    if (!initialEditHandled.current && initialEditProductId && products.length > 0) {
+      const product = products.find(p => p.id === initialEditProductId);
+      if (product) {
+        console.log("✏️ Abrindo modal de edição para produto:", product.name);
+        setActiveTab('products');
+        handleEditProduct(product);
+        initialEditHandled.current = true;
+      }
+    }
+  }, [initialEditProductId, products]);
 
   const loadProducts = async () => {
     try {
