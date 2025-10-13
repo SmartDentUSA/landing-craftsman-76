@@ -6,6 +6,7 @@
 import type { UnifiedReview } from "@/types/reviews";
 import type { CompanyProfileData } from "./company-profile-helper";
 import { sanitizeReviewRating, truncateReviewsForSize, validateJsonLdSize } from "./validate-jsonld";
+import { generateSchemaSameAs, getTrackingConfig } from "./tracking-injector";
 
 interface ReviewsSchemaOptions {
   company_name: string;
@@ -22,11 +23,11 @@ interface ReviewsSchemaOptions {
 
 /**
  * Gera schema LocalBusiness + AggregateRating + Reviews para footer
- * Função PURA sem hooks - pode ser chamada do template-engine
+ * Função assíncrona que integra domínios SEO ao sameAs
  */
-export function generateReviewsAndLocalBusinessForFooter(
+export async function generateReviewsAndLocalBusinessForFooter(
   options: ReviewsSchemaOptions
-): string | null {
+): Promise<string | null> {
   const {
     company_name,
     company_description,
@@ -67,10 +68,20 @@ export function generateReviewsAndLocalBusinessForFooter(
   if (contact_email) schema.email = contact_email;
   if (location) schema.address = { "@type": "PostalAddress", addressLocality: location };
 
-  // Same As (redes sociais)
+  // Same As (redes sociais + domínios SEO)
   const sameAs: string[] = [];
   if (instagram_profile) sameAs.push(instagram_profile);
   if (youtube_channel) sameAs.push(youtube_channel);
+  
+  // ✅ Adicionar domínios SEO ao sameAs
+  try {
+    const trackingConfig = await getTrackingConfig();
+    const seoDomains = generateSchemaSameAs(trackingConfig);
+    sameAs.push(...seoDomains);
+  } catch (error) {
+    console.warn('⚠️ Não foi possível carregar domínios SEO para sameAs:', error);
+  }
+  
   if (sameAs.length > 0) schema.sameAs = sameAs;
 
   // AggregateRating
@@ -145,12 +156,12 @@ export function generateReviewsAndLocalBusinessForFooter(
 /**
  * Helper para gerar schema a partir de CompanyProfileData
  */
-export function generateSchemaFromCompanyProfile(
+export async function generateSchemaFromCompanyProfile(
   companyData: CompanyProfileData,
   reviews: UnifiedReview[],
   maxReviews?: number
-): string | null {
-  return generateReviewsAndLocalBusinessForFooter({
+): Promise<string | null> {
+  return await generateReviewsAndLocalBusinessForFooter({
     company_name: companyData.company_name,
     company_description: companyData.company_description,
     website_url: companyData.website_url,

@@ -307,6 +307,14 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                   }} disabled={!domain.enabled} />
                   <Label className="text-xs">Schema</Label>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={domain.use_in_footer ?? false} onCheckedChange={(c) => {
+                    const updated = [...(profile.seo_domains || [])];
+                    updated[index].use_in_footer = c;
+                    setProfile({...profile, seo_domains: updated});
+                  }} disabled={!domain.enabled} />
+                  <Label className="text-xs">Footer</Label>
+                </div>
               </div>
               <Button
                 variant="destructive"

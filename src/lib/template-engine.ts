@@ -3380,7 +3380,7 @@ export const generateHTML = (data: any): string => {
         console.log(`📊 Reviews encontrados: ${stats.total} (Google: ${stats.google_approved}, Manual: ${stats.manual}, Vídeo: ${stats.video_testimonial})`);
 
         // Gerar schema
-        const reviewsSchema = generateSchemaFromCompanyProfile(
+        const reviewsSchema = await generateSchemaFromCompanyProfile(
           companyData,
           all_reviews,
           15 // Máximo 15 reviews
