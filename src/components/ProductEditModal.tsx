@@ -131,6 +131,8 @@ interface Product {
   offer_discount_cta?: { label: string; url: string; visible: boolean };
   // FAQ
   faq?: Array<{ question: string; answer: string }>;
+  // Technical Specifications
+  technical_specifications?: Array<{ label: string; value: string }>;
 }
 
 interface ProductEditModalProps {
@@ -189,7 +191,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // Offer discount CTA
     offer_discount_cta: { label: 'Comprar com Desconto', url: '', visible: false },
     // FAQ
-    faq: []
+    faq: [],
+    // Technical Specifications
+    technical_specifications: []
   });
   const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -314,7 +318,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // Offer discount CTA
         offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
         // FAQ
-        faq: product.faq || []
+        faq: product.faq || [],
+        // Technical Specifications
+        technical_specifications: product.technical_specifications || []
       });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -998,6 +1004,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         offer_discount_cta: formData.offer_discount_cta,
         // FAQ
         faq: formData.faq,
+        // Technical Specifications
+        technical_specifications: formData.technical_specifications || [],
         // Resource Descriptions
         resource_descriptions: formData.resource_descriptions,
         updated_at: new Date().toISOString()
