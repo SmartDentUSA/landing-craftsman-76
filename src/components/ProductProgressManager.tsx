@@ -3,12 +3,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Search, RefreshCw } from 'lucide-react';
-import { useLandingPageCompletion } from '@/hooks/useLandingPageCompletion';
-import { LandingPageProgressStats } from './LandingPageProgressStats';
-import { LandingPageProgressCard } from './LandingPageProgressCard';
+import { useProductCompletion } from '@/hooks/useProductCompletion';
+import { ProductProgressStats } from './ProductProgressStats';
+import { ProductProgressCard } from './ProductProgressCard';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-export function LandingPageProgressManager() {
+export function ProductProgressManager() {
   const { 
     data, 
     isLoading, 
@@ -17,9 +18,18 @@ export function LandingPageProgressManager() {
     stats, 
     markAsComplete, 
     refresh 
-  } = useLandingPageCompletion();
+  } = useProductCompletion();
   
+  const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handleEditProduct = (id: string) => {
+    toast({
+      title: "Editar Produto",
+      description: "Navegue para Repositório > aba Repositório para editar este produto",
+    });
+    navigate('/repository');
+  };
 
   if (isLoading) {
     return (
@@ -31,7 +41,7 @@ export function LandingPageProgressManager() {
 
   return (
     <div className="space-y-6">
-      <LandingPageProgressStats stats={stats} />
+      <ProductProgressStats stats={stats} />
 
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
@@ -39,7 +49,7 @@ export function LandingPageProgressManager() {
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Nome da landing page..."
+              placeholder="Nome do produto..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               className="pl-8"
@@ -48,19 +58,19 @@ export function LandingPageProgressManager() {
         </div>
 
         <div className="w-40">
-          <label className="text-sm font-medium mb-1.5 block">Status</label>
+          <label className="text-sm font-medium mb-1.5 block">Categoria</label>
           <Select 
-            value={filters.status} 
-            onValueChange={(v) => setFilters({ ...filters, status: v })}
+            value={filters.category} 
+            onValueChange={(v) => setFilters({ ...filters, category: v })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="equipamento">Equipamento</SelectItem>
+              <SelectItem value="material">Material</SelectItem>
+              <SelectItem value="software">Software</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -76,10 +86,10 @@ export function LandingPageProgressManager() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="complete">Completas</SelectItem>
-              <SelectItem value="good">Boas</SelectItem>
+              <SelectItem value="complete">Completos</SelectItem>
+              <SelectItem value="good">Bons</SelectItem>
               <SelectItem value="regular">Regulares</SelectItem>
-              <SelectItem value="critical">Críticas</SelectItem>
+              <SelectItem value="critical">Críticos</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -94,11 +104,11 @@ export function LandingPageProgressManager() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="week">Atualizadas esta semana</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="week">Atualizados esta semana</SelectItem>
               <SelectItem value="stale_30">Sem update há 30+ dias</SelectItem>
               <SelectItem value="stale_90">Sem update há 90+ dias</SelectItem>
-              <SelectItem value="abandoned">Abandonadas (180+ dias)</SelectItem>
+              <SelectItem value="abandoned">Abandonados (180+ dias)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -106,21 +116,21 @@ export function LandingPageProgressManager() {
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
             <Checkbox 
-              checked={filters.hasProducts}
+              checked={filters.hasVideos}
               onCheckedChange={(checked) => 
-                setFilters({ ...filters, hasProducts: checked as boolean })
+                setFilters({ ...filters, hasVideos: checked as boolean })
               }
             />
-            <label className="text-sm">Com Produtos</label>
+            <label className="text-sm">Com Vídeos</label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox 
-              checked={filters.hasBlog}
+              checked={filters.seoOptimized}
               onCheckedChange={(checked) => 
-                setFilters({ ...filters, hasBlog: checked as boolean })
+                setFilters({ ...filters, seoOptimized: checked as boolean })
               }
             />
-            <label className="text-sm">Com Blog</label>
+            <label className="text-sm">SEO Otimizado</label>
           </div>
         </div>
 
@@ -132,27 +142,28 @@ export function LandingPageProgressManager() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">
-            Landing Pages ({data.length})
+            Produtos ({data.length})
           </h3>
         </div>
 
         {data.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            Nenhuma landing page encontrada com os filtros aplicados.
+            Nenhum produto encontrado com os filtros aplicados.
           </div>
         ) : (
           <div className="space-y-3">
-            {data.map(lp => (
-              <LandingPageProgressCard
-                key={lp.id}
-                landingPage={lp}
+            {data.map(product => (
+              <ProductProgressCard
+                key={product.id}
+                product={product}
                 onMarkComplete={markAsComplete}
-                onEdit={(id) => navigate(`/?id=${id}`)}
+                onEdit={handleEditProduct}
               />
             ))}
           </div>
         )}
       </div>
+
     </div>
   );
 }

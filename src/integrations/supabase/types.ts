@@ -1601,6 +1601,10 @@ export type Database = {
         Args: { lp_id: string }
         Returns: Json
       }
+      calculate_product_score: {
+        Args: { product_id: string }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]

@@ -19,7 +19,7 @@ import { OAuthSettingsCard } from '@/components/OAuthSettingsCard';
 import { CouponsManager } from '@/components/CouponsManager';
 import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
-import { LandingPageProgressManager } from '@/components/LandingPageProgressManager';
+import { ContentProgressDashboard } from '@/components/ContentProgressDashboard';
 
 const Repository = () => {
   const location = useLocation();
@@ -72,7 +72,7 @@ const Repository = () => {
                   {activeView === 'repository' 
                     ? 'Gerencie produtos, avaliações e depoimentos centralizados para suas landing pages'
                     : activeView === 'progress'
-                    ? 'Monitore o status de preenchimento das landing pages'
+                    ? 'Monitore o status de preenchimento das landing pages e produtos'
                     : activeView === 'categories'
                     ? 'Configure campos padrões para categorias e subcategorias'
                     : activeView === 'links'
@@ -157,7 +157,7 @@ const Repository = () => {
               </TabsContent>
 
               <TabsContent value="progress">
-                <LandingPageProgressManager />
+                <ContentProgressDashboard />
               </TabsContent>
 
               <TabsContent value="categories">
