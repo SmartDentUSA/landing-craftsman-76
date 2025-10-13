@@ -252,7 +252,22 @@ function sanitizeTitle(rawTitle: string, fallback: string = "Blog Estratégico")
 }
 
 function extractBlogMetadata(markdown: string) {
-  const lines = markdown.split('\n').filter(line => line.trim());
+  // ✅ CORREÇÃO: Remover possível JSON wrapper se existir
+  let cleanMarkdown = markdown.trim();
+  if (cleanMarkdown.startsWith('```json') || cleanMarkdown.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(cleanMarkdown.replace(/^```json\s*/, '').replace(/```\s*$/, ''));
+      if (parsed.content) {
+        cleanMarkdown = parsed.content;
+        console.log('⚠️ JSON wrapper detectado e removido');
+      }
+    } catch {
+      // Se falhar, continuar com o markdown original
+      console.log('✅ Conteúdo já está em formato limpo');
+    }
+  }
+  
+  const lines = cleanMarkdown.split('\n').filter(line => line.trim());
   const rawTitle = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico";
   
   // ✅ Sanitizar título ANTES de retornar

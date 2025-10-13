@@ -64,9 +64,27 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
 
       console.log("🔍 DualBlogGeneratorWithKOL - Resposta da AI:", data);
       
-      if (data?.success && data?.content) {
-        console.log("✅ DualBlogGeneratorWithKOL - Conteúdo encontrado:", data.content);
-        setBlogVersions(data.content);
+      if (data?.success && data?.dentala && data?.eodonto) {
+        console.log("✅ DualBlogGeneratorWithKOL - Blogs recebidos:", {
+          dentala: data.dentala.title,
+          eodonto: data.eodonto.title
+        });
+        
+        // ✅ CORREÇÃO: Usar dados diretos do edge function sem re-wrapping
+        setBlogVersions({
+          dentala: {
+            title: data.dentala.title,
+            content: data.dentala.content,
+            meta_description: data.dentala.meta_description,
+            keywords: data.dentala.keywords || []
+          },
+          eodonto: {
+            title: data.eodonto.title,
+            content: data.eodonto.content,
+            meta_description: data.eodonto.meta_description,
+            keywords: data.eodonto.keywords || []
+          }
+        });
         await saveBlogVersions(data.content);
         markBlogGenerated(landingPageId);
         
