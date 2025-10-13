@@ -371,6 +371,57 @@ export type Database = {
         }
         Relationships: []
       }
+      content_completion_tracking: {
+        Row: {
+          completion_score: number
+          completion_status: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          last_calculated_at: string
+          marked_complete: boolean | null
+          marked_complete_at: string | null
+          marked_complete_by: string | null
+          missing_fields: string[] | null
+          required_fields: string[] | null
+          score_details: Json
+          updated_at: string
+        }
+        Insert: {
+          completion_score?: number
+          completion_status?: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_calculated_at?: string
+          marked_complete?: boolean | null
+          marked_complete_at?: string | null
+          marked_complete_by?: string | null
+          missing_fields?: string[] | null
+          required_fields?: string[] | null
+          score_details?: Json
+          updated_at?: string
+        }
+        Update: {
+          completion_score?: number
+          completion_status?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_calculated_at?: string
+          marked_complete?: boolean | null
+          marked_complete_at?: string | null
+          marked_complete_by?: string | null
+          missing_fields?: string[] | null
+          required_fields?: string[] | null
+          score_details?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cs_messages: {
         Row: {
           created_at: string
@@ -1546,6 +1597,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_landing_page_score: {
+        Args: { lp_id: string }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
