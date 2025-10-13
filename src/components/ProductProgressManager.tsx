@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -6,10 +7,12 @@ import { Search, RefreshCw } from 'lucide-react';
 import { useProductCompletion } from '@/hooks/useProductCompletion';
 import { ProductProgressStats } from './ProductProgressStats';
 import { ProductProgressCard } from './ProductProgressCard';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { ProductEditModal } from './ProductEditModal';
 
 export function ProductProgressManager() {
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  
   const { 
     data, 
     isLoading, 
@@ -19,16 +22,20 @@ export function ProductProgressManager() {
     markAsComplete, 
     refresh 
   } = useProductCompletion();
-  
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleEditProduct = (id: string) => {
-    toast({
-      title: "Editar Produto",
-      description: "Navegue para Repositório > aba Repositório para editar este produto",
-    });
-    navigate('/repository');
+    const product = data.find(p => p.id === id);
+    if (product) {
+      setEditingProduct(product);
+      setEditingProductId(id);
+    }
+  };
+
+  const handleSaveProduct = async (updatedProduct: any) => {
+    // O ProductEditModal já salva no banco, então só precisamos fechar e atualizar
+    setEditingProductId(null);
+    setEditingProduct(null);
+    refresh();
   };
 
   if (isLoading) {
@@ -164,6 +171,15 @@ export function ProductProgressManager() {
         )}
       </div>
 
+      <ProductEditModal
+        isOpen={editingProductId !== null}
+        onClose={() => {
+          setEditingProductId(null);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
+        onSave={handleSaveProduct}
+      />
     </div>
   );
 }
