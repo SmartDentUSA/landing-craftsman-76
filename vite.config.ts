@@ -26,19 +26,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // ✅ PERFORMANCE: Minificação agressiva em produção
+  // ✅ PERFORMANCE: Minificação com esbuild (nativo do Vite)
   build: {
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log em produção
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info'], // Remove logs específicos
-      },
-      mangle: true, // Ofusca nomes de variáveis
-      format: {
-        comments: false, // Remove comentários
-      },
+    minify: 'esbuild',
+    esbuild: {
+      drop: ['console', 'debugger'], // Remove console.log em produção
     },
     rollupOptions: {
       output: {
