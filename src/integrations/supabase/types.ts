@@ -110,6 +110,7 @@ export type Database = {
           id: string
           include_offers: boolean | null
           intelligent_links: Json | null
+          keyword_ids: string[] | null
           keywords: string[] | null
           landing_page_id: string
           meta_description: string | null
@@ -129,6 +130,7 @@ export type Database = {
           id?: string
           include_offers?: boolean | null
           intelligent_links?: Json | null
+          keyword_ids?: string[] | null
           keywords?: string[] | null
           landing_page_id: string
           meta_description?: string | null
@@ -148,6 +150,7 @@ export type Database = {
           id?: string
           include_offers?: boolean | null
           intelligent_links?: Json | null
+          keyword_ids?: string[] | null
           keywords?: string[] | null
           landing_page_id?: string
           meta_description?: string | null
@@ -175,6 +178,7 @@ export type Database = {
           category: string
           created_at: string
           id: string
+          keyword_ids: string[] | null
           keywords: Json | null
           market_keywords: Json | null
           search_intent_keywords: Json | null
@@ -186,6 +190,7 @@ export type Database = {
           category: string
           created_at?: string
           id?: string
+          keyword_ids?: string[] | null
           keywords?: Json | null
           market_keywords?: Json | null
           search_intent_keywords?: Json | null
@@ -197,6 +202,7 @@ export type Database = {
           category?: string
           created_at?: string
           id?: string
+          keyword_ids?: string[] | null
           keywords?: Json | null
           market_keywords?: Json | null
           search_intent_keywords?: Json | null
@@ -405,37 +411,106 @@ export type Database = {
       }
       external_links: {
         Row: {
+          ai_generated: boolean | null
           approved: boolean
           category: string
+          competition_level: string | null
+          cpc_estimate: number | null
           created_at: string
           description: string | null
           id: string
+          keyword_type: string | null
+          last_used_at: string | null
+          monthly_searches: number | null
           name: string
+          related_keywords: string[] | null
+          relevance_score: number | null
+          search_intent: string | null
+          source_products: string[] | null
           subcategory: string | null
           updated_at: string
           url: string
+          usage_count: number | null
         }
         Insert: {
+          ai_generated?: boolean | null
           approved?: boolean
           category?: string
+          competition_level?: string | null
+          cpc_estimate?: number | null
           created_at?: string
           description?: string | null
           id?: string
+          keyword_type?: string | null
+          last_used_at?: string | null
+          monthly_searches?: number | null
           name: string
+          related_keywords?: string[] | null
+          relevance_score?: number | null
+          search_intent?: string | null
+          source_products?: string[] | null
           subcategory?: string | null
           updated_at?: string
           url: string
+          usage_count?: number | null
         }
         Update: {
+          ai_generated?: boolean | null
           approved?: boolean
           category?: string
+          competition_level?: string | null
+          cpc_estimate?: number | null
           created_at?: string
           description?: string | null
           id?: string
+          keyword_type?: string | null
+          last_used_at?: string | null
+          monthly_searches?: number | null
           name?: string
+          related_keywords?: string[] | null
+          relevance_score?: number | null
+          search_intent?: string | null
+          source_products?: string[] | null
           subcategory?: string | null
           updated_at?: string
           url?: string
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
+      external_links_backup_20251013: {
+        Row: {
+          approved: boolean | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          name: string | null
+          subcategory: string | null
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          approved?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          name?: string | null
+          subcategory?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          approved?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          name?: string | null
+          subcategory?: string | null
+          updated_at?: string | null
+          url?: string | null
         }
         Relationships: []
       }
@@ -854,6 +929,7 @@ export type Database = {
           individual_blog_content: Json | null
           instagram_copies: Json | null
           instagram_videos: Json | null
+          keyword_ids: string[] | null
           keywords: Json | null
           launch: boolean | null
           market_keywords: Json | null
@@ -952,6 +1028,7 @@ export type Database = {
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
           instagram_videos?: Json | null
+          keyword_ids?: string[] | null
           keywords?: Json | null
           launch?: boolean | null
           market_keywords?: Json | null
@@ -1050,6 +1127,7 @@ export type Database = {
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
           instagram_videos?: Json | null
+          keyword_ids?: string[] | null
           keywords?: Json | null
           launch?: boolean | null
           market_keywords?: Json | null

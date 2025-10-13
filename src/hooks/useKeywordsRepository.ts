@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface Keyword {
   id: string;
-  keyword: string;
+  name: string; // MANTIDO: backward compatibility
   url: string;
   category: string;
   subcategory?: string;
@@ -99,7 +99,7 @@ export function useKeywordsRepository(): UseKeywordsRepositoryReturn {
       setKeywords(prev => [...prev, data as unknown as Keyword]);
       toast({
         title: 'Keyword adicionada',
-        description: `"${(data as unknown as Keyword).keyword}" foi adicionada com sucesso.`
+        description: `"${(data as unknown as Keyword).name}" foi adicionada com sucesso.`
       });
 
       return data as unknown as Keyword;
@@ -202,7 +202,7 @@ export function useKeywordsRepository(): UseKeywordsRepositoryReturn {
   const searchKeywords = useCallback((query: string) => {
     const lowerQuery = query.toLowerCase();
     return keywords.filter(kw =>
-      kw.keyword.toLowerCase().includes(lowerQuery) ||
+      kw.name.toLowerCase().includes(lowerQuery) ||
       kw.description?.toLowerCase().includes(lowerQuery) ||
       kw.category.toLowerCase().includes(lowerQuery)
     );

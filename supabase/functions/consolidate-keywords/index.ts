@@ -9,6 +9,7 @@ interface ConsolidationResult {
   success: boolean;
   stats: {
     keywords_deduplicated: number;
+    keywords_classified: number;
     products_synced: number;
     categories_synced: number;
     blogs_synced: number;
@@ -31,70 +32,72 @@ Deno.serve(async (req) => {
     
     const { dryRun = false } = await req.json().catch(() => ({ dryRun: false }));
     const errors: string[] = [];
+    let keywordsClassified = 0;
     
     // ============================================================
-    // FASE 1: Deduplicação de Keywords em external_links
+    // FASE 1: Classificar Keywords Existentes
     // ============================================================
-    console.log('📋 FASE 1: Deduplicando keywords...');
+    console.log('📋 FASE 1: Classificando keywords...');
     
     const { data: allKeywords, error: fetchError } = await supabase
       .from('external_links')
-      .select('id, keyword, category, subcategory, url, description, approved, created_at');
+      .select('id, name, category, subcategory, url, description, approved, created_at, keyword_type, search_intent');
     
     if (fetchError) {
       throw new Error(`Erro ao buscar keywords: ${fetchError.message}`);
     }
 
-    // Agrupar keywords duplicadas (case-insensitive)
-    const keywordMap = new Map<string, any[]>();
-    allKeywords?.forEach(kw => {
-      const normalized = kw.keyword.toLowerCase().trim();
-      if (!keywordMap.has(normalized)) {
-        keywordMap.set(normalized, []);
+    // Classificar keywords que ainda não têm tipo/intenção
+    for (const keyword of allKeywords || []) {
+      if (keyword.keyword_type && keyword.search_intent) continue; // Já classificada
+      
+      const name = keyword.name.toLowerCase();
+      let keyword_type = 'primary';
+      let search_intent = 'informational';
+
+      // Classificar por categoria
+      if (keyword.category === 'produto') {
+        keyword_type = 'primary';
+        search_intent = 'commercial';
+      } else if (keyword.category === 'mercado') {
+        keyword_type = 'secondary';
+        search_intent = 'informational';
       }
-      keywordMap.get(normalized)!.push(kw);
-    });
 
-    let deduplicatedCount = 0;
-    const deduplicationLog: any[] = [];
+      // Detectar long-tail (>4 palavras)
+      if (name.split(' ').length > 4) {
+        keyword_type = 'long_tail';
+      }
 
-    for (const [normalized, duplicates] of keywordMap.entries()) {
-      if (duplicates.length > 1) {
-        // Manter o mais antigo/aprovado
-        duplicates.sort((a, b) => {
-          if (a.approved !== b.approved) return b.approved ? 1 : -1;
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        });
+      // Inferir search_intent por padrões
+      if (name.match(/como|o que é|tutorial|guia/)) {
+        search_intent = 'informational';
+      } else if (name.match(/melhor|comparar|versus|vs/)) {
+        search_intent = 'commercial';
+      } else if (name.match(/comprar|preço|custo|orçamento/)) {
+        search_intent = 'transactional';
+      } else if (name.match(/marca|fabricante/) || keyword.category === 'produto') {
+        search_intent = 'navigational';
+      }
 
-        const keeper = duplicates[0];
-        const toDelete = duplicates.slice(1);
+      if (!dryRun) {
+        const { error: updateError } = await supabase
+          .from('external_links')
+          .update({ keyword_type, search_intent })
+          .eq('id', keyword.id);
 
-        deduplicationLog.push({
-          keyword: normalized,
-          keeper_id: keeper.id,
-          deleted_ids: toDelete.map(d => d.id),
-          count: duplicates.length
-        });
-
-        if (!dryRun) {
-          // Deletar duplicatas
-          for (const dup of toDelete) {
-            const { error: delError } = await supabase
-              .from('external_links')
-              .delete()
-              .eq('id', dup.id);
-            
-            if (delError) {
-              errors.push(`Erro ao deletar duplicata ${dup.id}: ${delError.message}`);
-            }
-          }
+        if (updateError) {
+          errors.push(`Erro ao classificar ${keyword.name}: ${updateError.message}`);
+        } else {
+          keywordsClassified++;
         }
-
-        deduplicatedCount += toDelete.length;
+      } else {
+        keywordsClassified++;
       }
     }
 
-    console.log(`✅ ${deduplicatedCount} keywords duplicadas removidas`);
+    console.log(`✅ ${keywordsClassified} keywords classificadas`);
+
 
     // ============================================================
     // FASE 2: Sincronizar produtos → keyword_ids
@@ -141,7 +144,7 @@ Deno.serve(async (req) => {
         const { data: existing } = await supabase
           .from('external_links')
           .select('id')
-          .ilike('keyword', kw)
+          .ilike('name', kw)
           .limit(1)
           .single();
 
@@ -158,7 +161,7 @@ Deno.serve(async (req) => {
           .from('external_links')
           .insert(
             newKeywordsToCreate.map(kw => ({
-              keyword: kw,
+              name: kw,
               url: '#',
               category: 'keyword-auto',
               approved: true,
@@ -231,7 +234,7 @@ Deno.serve(async (req) => {
         const { data: existing } = await supabase
           .from('external_links')
           .select('id')
-          .ilike('keyword', kw)
+          .ilike('name', kw)
           .limit(1)
           .single();
 
@@ -269,12 +272,11 @@ Deno.serve(async (req) => {
         event_data: {
           timestamp: new Date().toISOString(),
           stats: {
-            keywords_deduplicated: deduplicatedCount,
+            keywords_classified: keywordsClassified,
             products_synced: productsSynced,
             categories_synced: categoriesSynced,
             total_keyword_ids: totalKeywordIds,
           },
-          deduplication_log: deduplicationLog,
           errors: errors.length > 0 ? errors : null
         },
         severity: errors.length > 0 ? 'warning' : 'info',
@@ -285,10 +287,11 @@ Deno.serve(async (req) => {
     const result: ConsolidationResult = {
       success: errors.length === 0,
       stats: {
-        keywords_deduplicated: deduplicatedCount,
+        keywords_deduplicated: 0, // Já foram removidas na migração anterior
+        keywords_classified: keywordsClassified,
         products_synced: productsSynced,
         categories_synced: categoriesSynced,
-        blogs_synced: 0, // TODO: Implementar quando houver blogs com keywords
+        blogs_synced: 0,
         total_keyword_ids_created: totalKeywordIds
       },
       errors: errors.length > 0 ? errors : undefined
