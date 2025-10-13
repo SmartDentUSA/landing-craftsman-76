@@ -70,6 +70,162 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
             )}
           </div>
         </Card>
+
+        {/* META PIXEL */}
+        <Card className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h4 className="font-semibold">Meta Pixel (Facebook)</h4>
+              <p className="text-xs text-muted-foreground">Para remarketing no Facebook/Instagram Ads</p>
+            </div>
+            <Switch
+              checked={profile.tracking_pixels?.meta_pixel?.enabled ?? false}
+              onCheckedChange={(checked) => 
+                setProfile({
+                  ...profile,
+                  tracking_pixels: {
+                    ...profile.tracking_pixels,
+                    meta_pixel: {
+                      enabled: checked,
+                      pixel_id: profile.tracking_pixels?.meta_pixel?.pixel_id || null,
+                      note: 'Meta Pixel global para todos os domínios'
+                    }
+                  }
+                })
+              }
+            />
+          </div>
+          <Input
+            value={profile.tracking_pixels?.meta_pixel?.pixel_id || ''}
+            onChange={(e) => 
+              setProfile({
+                ...profile,
+                tracking_pixels: {
+                  ...profile.tracking_pixels,
+                  meta_pixel: {
+                    ...profile.tracking_pixels?.meta_pixel,
+                    pixel_id: e.target.value || null
+                  }
+                }
+              })
+            }
+            placeholder="123456789012345"
+            disabled={!profile.tracking_pixels?.meta_pixel?.enabled}
+          />
+          <div className="mt-2">
+            {!profile.tracking_pixels?.meta_pixel?.enabled ? (
+              <Badge variant="secondary">🔴 Desabilitado</Badge>
+            ) : !profile.tracking_pixels?.meta_pixel?.pixel_id ? (
+              <Badge variant="outline">🟡 Configuração incompleta</Badge>
+            ) : (
+              <Badge>🟢 Ativo</Badge>
+            )}
+          </div>
+        </Card>
+
+        {/* TIKTOK PIXEL */}
+        <Card className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h4 className="font-semibold">TikTok Pixel</h4>
+              <p className="text-xs text-muted-foreground">Para remarketing no TikTok Ads</p>
+            </div>
+            <Switch
+              checked={profile.tracking_pixels?.tiktok_pixel?.enabled ?? false}
+              onCheckedChange={(checked) => 
+                setProfile({
+                  ...profile,
+                  tracking_pixels: {
+                    ...profile.tracking_pixels,
+                    tiktok_pixel: {
+                      enabled: checked,
+                      pixel_id: profile.tracking_pixels?.tiktok_pixel?.pixel_id || null,
+                      note: 'TikTok Pixel para remarketing'
+                    }
+                  }
+                })
+              }
+            />
+          </div>
+          <Input
+            value={profile.tracking_pixels?.tiktok_pixel?.pixel_id || ''}
+            onChange={(e) => 
+              setProfile({
+                ...profile,
+                tracking_pixels: {
+                  ...profile.tracking_pixels,
+                  tiktok_pixel: {
+                    ...profile.tracking_pixels?.tiktok_pixel,
+                    pixel_id: e.target.value || null
+                  }
+                }
+              })
+            }
+            placeholder="C9ABC123456789DEF"
+            disabled={!profile.tracking_pixels?.tiktok_pixel?.enabled}
+          />
+          <div className="mt-2">
+            {!profile.tracking_pixels?.tiktok_pixel?.enabled ? (
+              <Badge variant="secondary">🔴 Desabilitado</Badge>
+            ) : !profile.tracking_pixels?.tiktok_pixel?.pixel_id ? (
+              <Badge variant="outline">🟡 Configuração incompleta</Badge>
+            ) : (
+              <Badge>🟢 Ativo</Badge>
+            )}
+          </div>
+        </Card>
+
+        {/* GOOGLE ANALYTICS 4 */}
+        <Card className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h4 className="font-semibold">Google Analytics 4</h4>
+              <p className="text-xs text-muted-foreground">Pode ser gerenciado via GTM (recomendado)</p>
+            </div>
+            <Switch
+              checked={profile.tracking_pixels?.google_analytics?.enabled ?? false}
+              onCheckedChange={(checked) => 
+                setProfile({
+                  ...profile,
+                  tracking_pixels: {
+                    ...profile.tracking_pixels,
+                    google_analytics: {
+                      enabled: checked,
+                      measurement_id: profile.tracking_pixels?.google_analytics?.measurement_id || null,
+                      note: 'Google Analytics 4 (pode ser gerenciado via GTM)'
+                    }
+                  }
+                })
+              }
+            />
+          </div>
+          <Input
+            value={profile.tracking_pixels?.google_analytics?.measurement_id || ''}
+            onChange={(e) => 
+              setProfile({
+                ...profile,
+                tracking_pixels: {
+                  ...profile.tracking_pixels,
+                  google_analytics: {
+                    ...profile.tracking_pixels?.google_analytics,
+                    measurement_id: e.target.value || null
+                  }
+                }
+              })
+            }
+            placeholder="G-XXXXXXXXXX"
+            disabled={!profile.tracking_pixels?.google_analytics?.enabled}
+          />
+          <div className="mt-2">
+            {!profile.tracking_pixels?.google_analytics?.enabled ? (
+              <Badge variant="secondary">🔴 Desabilitado</Badge>
+            ) : !profile.tracking_pixels?.google_analytics?.measurement_id ? (
+              <Badge variant="outline">🟡 Configuração incompleta</Badge>
+            ) : (
+              <Badge>🟢 Ativo</Badge>
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* DOMÍNIOS SEO */}
