@@ -24,6 +24,16 @@ export const useBlogReadMore = () => {
       const isExpanded = fullContent.classList.contains('expanded');
       fullContent.classList.toggle('expanded');
       
+      // ✅ ACESSIBILIDADE: Atualizar ARIA
+      button.setAttribute('aria-expanded', String(!isExpanded));
+      
+      // ✅ ACESSIBILIDADE: Label descritivo
+      const blogTitle = cardContent.querySelector('h2, h3')?.textContent || 'artigo';
+      button.setAttribute(
+        'aria-label', 
+        isExpanded ? `Expandir conteúdo completo de ${blogTitle}` : `Fechar conteúdo completo de ${blogTitle}`
+      );
+      
       // Atualizar o texto do botão
       button.textContent = isExpanded ? 'Leia mais →' : 'Fechar ↑';
     };

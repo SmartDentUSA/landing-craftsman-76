@@ -189,4 +189,90 @@
   .read-more-btn:hover {
     background-color: hsl(var(--primary-hover));
   }
+
+  /* ========================================
+     ACCESSIBILITY UTILITIES
+     ======================================== */
+
+  /* Screen Reader Only - esconde visualmente mas mantém acessível */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Variant para contexto de blog */
+  .blog-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* Skip Navigation Links */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    border-radius: 0 0 0.5rem 0;
+    z-index: 1070;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+
+  /* ========================================
+     CSS GRID FALLBACKS (IE 11 / Old Browsers)
+     ======================================== */
+
+  /* Fallback para navegadores sem suporte a CSS Grid */
+  @supports not (display: grid) {
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    
+    .grid > * {
+      flex: 1 1 auto;
+      min-width: 250px;
+    }
+  }
+
+  /* ========================================
+     SEMANTIC LINKS (SEO)
+     ======================================== */
+
+  /* Botões que são semanticamente links (CTA, "Leia mais", etc) */
+  .semantic-link-as-button {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-sm font-medium;
+    @apply text-primary-foreground bg-primary hover:bg-primary-hover;
+    @apply rounded-lg transition-smooth cursor-pointer border-0;
+    @apply no-underline; /* Remove underline de <a> */
+  }
+
+  .semantic-link-as-button:hover {
+    background-color: hsl(var(--primary-hover));
+    text-decoration: none; /* Força sem underline no hover */
+  }
+
+  /* Preserva estilo visual idêntico ao botão anterior */
+  .read-more-link {
+    @apply semantic-link-as-button mt-4;
+  }
 }
