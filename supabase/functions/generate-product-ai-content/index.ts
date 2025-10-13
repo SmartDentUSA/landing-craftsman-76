@@ -216,7 +216,7 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
       'Gere APENAS 3 benefícios complementares que NÃO duplicem os existentes e preencham lacunas identificadas:' :
       'Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:';
     
-    prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
+  prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -225,8 +225,6 @@ Subcategoria: ${product.subcategory || 'Não informada'}
 Preço: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado'}
 
 ${instruction}
-
-["benefício 1", "benefício 2", "benefício 3"]
 
 INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 1. **Destaque benefícios específicos da categoria/subcategoria**
@@ -238,7 +236,17 @@ Foque em:
 - Soluções para problemas da categoria
 - Vantagens competitivas dentro da categoria
 - Economia de tempo/dinheiro específica da categoria
-- Qualidade e confiabilidade da categoria`;
+- Qualidade e confiabilidade da categoria
+
+FORMATO DE RESPOSTA OBRIGATÓRIO:
+- Retorne APENAS o array JSON puro
+- NÃO inclua explicações, saudações ou texto adicional
+- NÃO use markdown (\`\`\`json)
+- Exemplo CORRETO: ["benefício 1", "benefício 2", "benefício 3"]
+- Exemplo INCORRETO: "Com certeza! Aqui estão os benefícios: ..."
+
+RESPOSTA ESPERADA (copie este formato exato):
+["benefício 1", "benefício 2", "benefício 3"]`;
   }
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -249,8 +257,14 @@ Foque em:
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
+      messages: [
+        { 
+          role: 'system', 
+          content: 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
       max_tokens: 500,
     }),
   });
@@ -317,12 +331,10 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
-Subcategoria: ${product.subcategory || 'Não informada'}
+Subcategoria: ${product.subcategoria || 'Não informada'}
 Público-alvo: ${product.target_audience || 'Não informado'}
 
 ${instruction}
-
-["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]
 
 INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 1. **PRIORIZE categoria e subcategoria como palavras-chave primárias**
@@ -336,7 +348,17 @@ Inclua NESTA ORDEM DE PRIORIDADE:
 3. Categoria + subcategoria + benefícios
 4. Palavras-chave long-tail com categorias (especialmente as mencionadas em vídeos)
 5. Termos técnicos da categoria (priorizar os dos vídeos)
-6. Categoria + público-alvo`;
+6. Categoria + público-alvo
+
+FORMATO DE RESPOSTA OBRIGATÓRIO:
+- Retorne APENAS o array JSON puro
+- NÃO inclua explicações, saudações ou texto adicional
+- NÃO use markdown (\`\`\`json)
+- Exemplo CORRETO: ["palavra-chave 1", "palavra-chave 2"]
+- Exemplo INCORRETO: "Com certeza! Aqui estão as palavras-chave: ..."
+
+RESPOSTA ESPERADA (copie este formato exato):
+["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]`;
   }
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -347,8 +369,14 @@ Inclua NESTA ORDEM DE PRIORIDADE:
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.5,
+      messages: [
+        { 
+          role: 'system', 
+          content: 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
       max_tokens: 400,
     }),
   });
@@ -403,8 +431,6 @@ Subcategoria: ${product.subcategory || 'Não informada'}
 
 ${instruction}
 
-["característica 1", "característica 2", "característica 3"]
-
 INSTRUÇÕES PARA CATEGORIAS:
 1. **Mencione características relevantes da categoria**
 2. **Contextualize recursos dentro da subcategoria**
@@ -415,7 +441,17 @@ Foque em:
 - Materiais e componentes típicos da categoria
 - Dimensões ou capacidades padrão da categoria
 - Compatibilidades dentro da categoria
-- Certificações ou padrões da categoria/subcategoria`;
+- Certificações ou padrões da categoria/subcategoria
+
+FORMATO DE RESPOSTA OBRIGATÓRIO:
+- Retorne APENAS o array JSON puro
+- NÃO inclua explicações, saudações ou texto adicional
+- NÃO use markdown (\`\`\`json)
+- Exemplo CORRETO: ["característica 1", "característica 2"]
+- Exemplo INCORRETO: "Com certeza! Aqui estão as características: ..."
+
+RESPOSTA ESPERADA (copie este formato exato):
+["característica 1", "característica 2", "característica 3"]`;
   }
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -426,8 +462,14 @@ Foque em:
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.6,
+      messages: [
+        { 
+          role: 'system', 
+          content: 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
       max_tokens: 400,
     }),
   });
@@ -473,28 +515,34 @@ async function parseAIArrayResponse(response: Response, type: string): Promise<s
     throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
   }
 
-  const content = data.choices[0].message.content;
+  let content = data.choices[0].message.content.trim();
   
   try {
-    let cleanContent = content.trim();
-    
-    // Remove markdown code blocks if present
-    if (cleanContent.startsWith('```json')) {
-      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanContent.startsWith('```')) {
-      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    // 🔧 NOVO: Extrair primeiro array JSON do texto (remove conversação)
+    const jsonMatch = content.match(/\[.*\]/s);
+    if (jsonMatch) {
+      content = jsonMatch[0];
     }
     
-    const parsed = JSON.parse(cleanContent);
+    // Remove markdown code blocks if present
+    content = content
+      .replace(/^```json\s*/gm, '')
+      .replace(/^```\s*/gm, '')
+      .replace(/\s*```$/gm, '')
+      .trim();
+    
+    const parsed = JSON.parse(content);
     
     if (Array.isArray(parsed)) {
       return parsed.filter(item => typeof item === 'string' && item.trim().length > 0);
     } else {
-      console.error(`Invalid AI response for ${type}:`, content);
+      console.error(`❌ Invalid AI response for ${type} (not an array):`, content);
       return [];
     }
   } catch (error) {
-    console.error(`Failed to parse AI ${type}:`, content);
+    console.error(`❌ Failed to parse AI ${type}:`, content);
+    // 🔧 NOVO: Log completo da resposta raw para debugging
+    console.error('Raw API response:', data.choices[0].message.content);
     return [];
   }
 }
