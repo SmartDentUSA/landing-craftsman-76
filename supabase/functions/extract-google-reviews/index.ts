@@ -572,7 +572,7 @@ async function extractAndSaveReviews(
           refreshToken = credData.refresh_token;
           console.log('✅ Using Google Business credentials from database for user:', user.id);
         } else if (!credData && configData) {
-          // Fallback para OAuth Google genérico se não tiver googleBusiness
+          // FALLBACK 1: OAuth Google genérico (oauth_credentials)
           const { data: genericCred } = await supabase
             .from('oauth_credentials')
             .select('refresh_token')
@@ -580,11 +580,27 @@ async function extractAndSaveReviews(
             .eq('provider', 'google')
             .maybeSingle();
             
-          if (genericCred && configData) {
+          if (genericCred) {
             clientId = configData.client_id;
             clientSecret = configData.client_secret;
             refreshToken = genericCred.refresh_token;
             console.log('⚠️ Using generic Google OAuth (not Business-specific) for user:', user.id);
+          } else {
+            // FALLBACK 2: Arquitetura antiga (google_oauth_tokens)
+            const { data: legacyToken } = await supabase
+              .from('google_oauth_tokens')
+              .select('provider_refresh_token')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+              
+            if (legacyToken) {
+              clientId = configData.client_id;
+              clientSecret = configData.client_secret;
+              refreshToken = legacyToken.provider_refresh_token;
+              console.log('⚠️ Using legacy google_oauth_tokens for user:', user.id);
+            }
           }
         }
       }
@@ -599,6 +615,7 @@ async function extractAndSaveReviews(
       has_client_id: !!clientId,
       has_client_secret: !!clientSecret,
       has_refresh_token: !!refreshToken,
+      token_source: refreshToken ? (credData ? 'oauth_credentials' : (genericCred ? 'oauth_credentials_generic' : 'google_oauth_tokens_legacy')) : 'none',
       user_id: user?.id || 'no user',
       auth_header_present: !!authHeader
     });
