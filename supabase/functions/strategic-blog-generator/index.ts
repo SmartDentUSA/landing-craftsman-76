@@ -251,14 +251,46 @@ function sanitizeTitle(rawTitle: string, fallback: string = "Blog Estratégico")
   return clean;
 }
 
-function extractBlogMetadata(markdown: string) {
-  const lines = markdown.split('\n').filter(line => line.trim());
-  const rawTitle = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico";
+function extractBlogMetadata(rawMarkdown: string) {
+  // ✅ STEP 1: Limpeza agressiva de code fences
+  let cleanedMarkdown = rawMarkdown.trim();
   
-  // ✅ Sanitizar título ANTES de retornar
+  // Remover ```json ... ``` (case insensitive, multiline)
+  cleanedMarkdown = cleanedMarkdown.replace(/^```json\s*/gi, '').replace(/```\s*$/gm, '').trim();
+  
+  // ✅ STEP 2: Tentar parsear como JSON e extrair campo "content"
+  let contentToProcess = cleanedMarkdown;
+  try {
+    const parsed = JSON.parse(cleanedMarkdown);
+    if (parsed.content) {
+      console.log('🔄 JSON detectado - extraindo campo "content"');
+      contentToProcess = parsed.content;
+    }
+    if (parsed.title) {
+      console.log(`📝 Título extraído do JSON: "${parsed.title}"`);
+    }
+  } catch {
+    // Não é JSON, continuar com raw content
+    console.log('✅ Conteúdo não é JSON, processando como markdown');
+  }
+  
+  // ✅ STEP 3: Validar que não há JSON residual
+  if (contentToProcess.includes('```json') || contentToProcess.includes('"title":') || contentToProcess.includes('"content":')) {
+    console.error('❌ ALERTA: Conteúdo ainda contém JSON wrapping!');
+    console.log('Raw (primeiros 200 chars):', contentToProcess.substring(0, 200));
+    // Tentar limpeza adicional agressiva
+    contentToProcess = contentToProcess.replace(/```json\s*\{[^}]*"content":\s*"/g, '');
+    contentToProcess = contentToProcess.replace(/"[^"]*\}\s*```/g, '');
+    contentToProcess = contentToProcess.replace(/^\{.*?"content":\s*"/g, '');
+    contentToProcess = contentToProcess.replace(/".*?\}$/g, '');
+  }
+  
+  // Extrair título e metadata
+  const lines = contentToProcess.split('\n').filter(line => line.trim());
+  const rawTitle = lines[0]?.replace(/^#+\s*/, '') || "Blog Estratégico";
   const title = sanitizeTitle(rawTitle);
   
-  // Extrair primeira seção como meta description
+  // Extrair meta description
   const firstParagraph = lines.find(line => 
     !line.startsWith('#') && 
     !line.startsWith('**') && 
@@ -268,9 +300,9 @@ function extractBlogMetadata(markdown: string) {
     ? firstParagraph.substring(0, 155).trim() + '...'
     : '';
   
-  // Extrair keywords (palavras em negrito ou títulos H2/H3)
+  // Extrair keywords
   const keywords: string[] = [];
-  const keywordMatches = markdown.match(/\*\*([^*]+)\*\*/g);
+  const keywordMatches = contentToProcess.match(/\*\*([^*]+)\*\*/g);
   if (keywordMatches) {
     keywords.push(
       ...keywordMatches
@@ -284,7 +316,7 @@ function extractBlogMetadata(markdown: string) {
     title, 
     metaDescription, 
     keywords,
-    cleanContent: markdown // ✅ Retornar conteúdo limpo separadamente
+    cleanContent: contentToProcess
   };
 }
 
@@ -422,12 +454,21 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
 
   console.log('🟡 Tentando salvar blog DENTALA...');
   
+  // ✅ VALIDAÇÃO ANTES DE SALVAR
+  if (dentalaMetadata.cleanContent.includes('```json') || 
+      dentalaMetadata.cleanContent.includes('"title":') ||
+      dentalaMetadata.cleanContent.includes('"content":')) {
+    console.error('❌ DENTALA: Conteúdo malformado detectado!');
+    console.log('Primeiros 300 chars:', dentalaMetadata.cleanContent.substring(0, 300));
+    throw new Error('Conteúdo Dentala contém JSON wrapping residual');
+  }
+  
   const dentalaPayload: any = {
     landing_page_id: landingPageId,
-    title: dentalaMetadata.title, // ✅ Campo separado
-    content: dentalaMetadata.cleanContent, // ✅ Apenas HTML limpo
-    meta_description: dentalaMetadata.metaDescription, // ✅ Campo separado
-    keywords: dentalaMetadata.keywords, // ✅ Campo separado
+    title: dentalaMetadata.title,
+    content: dentalaMetadata.cleanContent,
+    meta_description: dentalaMetadata.metaDescription,
+    keywords: dentalaMetadata.keywords,
     published_domains: ['dentala.com.br'],
     version_history: updatedDentalaHistory,
     status: 'draft',
@@ -477,12 +518,21 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
 
   console.log('🟡 Tentando salvar blog EODONTO...');
   
+  // ✅ VALIDAÇÃO ANTES DE SALVAR
+  if (eodontoMetadata.cleanContent.includes('```json') || 
+      eodontoMetadata.cleanContent.includes('"title":') ||
+      eodontoMetadata.cleanContent.includes('"content":')) {
+    console.error('❌ EODONTO: Conteúdo malformado detectado!');
+    console.log('Primeiros 300 chars:', eodontoMetadata.cleanContent.substring(0, 300));
+    throw new Error('Conteúdo Eodonto contém JSON wrapping residual');
+  }
+  
   const eodontoPayload: any = {
     landing_page_id: landingPageId,
-    title: eodontoMetadata.title, // ✅ Campo separado
-    content: eodontoMetadata.cleanContent, // ✅ Apenas HTML limpo
-    meta_description: eodontoMetadata.metaDescription, // ✅ Campo separado
-    keywords: eodontoMetadata.keywords, // ✅ Campo separado
+    title: eodontoMetadata.title,
+    content: eodontoMetadata.cleanContent,
+    meta_description: eodontoMetadata.metaDescription,
+    keywords: eodontoMetadata.keywords,
     published_domains: ['eodonto.com.br'],
     version_history: updatedEodontoHistory,
     status: 'draft',
@@ -554,7 +604,16 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
       model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: prompt },
-        { role: 'user', content: 'Gere um artigo estratégico completo em PORTUGUÊS BRASILEIRO baseado no contexto fornecido. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.' }
+        { 
+          role: 'user', 
+          content: `Gere um artigo estratégico completo em PORTUGUÊS BRASILEIRO baseado no contexto fornecido. 
+
+IMPORTANTE: 
+- Use apenas português brasileiro, nunca espanhol
+- Retorne APENAS o conteúdo markdown do artigo
+- NÃO retorne JSON, NÃO use code fences (\`\`\`json), NÃO envolva em objetos
+- Comece diretamente com o título markdown (# Título)` 
+        }
       ],
       max_tokens: 3000,
       temperature: 0.7,
@@ -592,7 +651,16 @@ async function generateWithDeepSeek(prompt: string): Promise<string> {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: prompt },
-        { role: 'user', content: 'Gere um artigo estratégico completo em PORTUGUÊS BRASILEIRO baseado no contexto fornecido. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.' }
+        { 
+          role: 'user', 
+          content: `Gere um artigo estratégico completo em PORTUGUÊS BRASILEIRO baseado no contexto fornecido. 
+
+IMPORTANTE: 
+- Use apenas português brasileiro, nunca espanhol
+- Retorne APENAS o conteúdo markdown do artigo
+- NÃO retorne JSON, NÃO use code fences (\`\`\`json), NÃO envolva em objetos
+- Comece diretamente com o título markdown (# Título)` 
+        }
       ],
       max_tokens: 3000,
       temperature: 0.7,
