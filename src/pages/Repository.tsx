@@ -5,7 +5,7 @@ import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones, Activity } from 'lucide-react';
+import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
@@ -19,12 +19,11 @@ import { OAuthSettingsCard } from '@/components/OAuthSettingsCard';
 import { CouponsManager } from '@/components/CouponsManager';
 import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
-import { ContentProgressDashboard } from '@/components/ContentProgressDashboard';
 
 const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'progress' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
@@ -58,7 +57,6 @@ const Repository = () => {
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
                   {activeView === 'repository' ? 'Repositório Central de Dados' : 
-                   activeView === 'progress' ? 'Progresso de Conteúdo' :
                    activeView === 'categories' ? 'Gerenciar Categorias' : 
                    activeView === 'links' ? 'Gerenciador de Links' : 
                    activeView === 'merchant' ? 'Google Merchant Center' : 
@@ -71,8 +69,6 @@ const Repository = () => {
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
                     ? 'Gerencie produtos, avaliações e depoimentos centralizados para suas landing pages'
-                    : activeView === 'progress'
-                    ? 'Monitore o status de preenchimento das landing pages e produtos'
                     : activeView === 'categories'
                     ? 'Configure campos padrões para categorias e subcategorias'
                     : activeView === 'links'
@@ -102,10 +98,6 @@ const Repository = () => {
                 <TabsTrigger value="repository" className="gap-2">
                   <Package className="h-4 w-4" />
                   Repositório
-                </TabsTrigger>
-                <TabsTrigger value="progress" className="gap-2">
-                  <Activity className="h-4 w-4" />
-                  Progresso
                 </TabsTrigger>
                 <TabsTrigger value="categories" className="gap-2">
                   <Settings className="h-4 w-4" />
@@ -154,10 +146,6 @@ const Repository = () => {
                     onCompanyProfileChange={() => {}}
                   />
                 </div>
-              </TabsContent>
-
-              <TabsContent value="progress">
-                <ContentProgressDashboard />
               </TabsContent>
 
               <TabsContent value="categories">
