@@ -342,7 +342,7 @@ async function getGoogleBusinessAccessToken(
   clientSecret: string,
   refreshToken: string
 ): Promise<string> {
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+  let tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -353,13 +353,44 @@ async function getGoogleBusinessAccessToken(
     }),
   });
 
-  if (!tokenResponse.ok) {
-    const errorData = await tokenResponse.json();
-    console.error('❌ Token exchange failed:', errorData);
-    throw new Error(`Failed to exchange refresh token: ${errorData.error_description || errorData.error}`);
+  let tokenData = await tokenResponse.json();
+
+  // 🔥 FALLBACK: Se OAuth falhou com deleted_client ou invalid_grant, tentar env vars
+  if (!tokenResponse.ok && (tokenData.error === 'deleted_client' || tokenData.error === 'invalid_grant')) {
+    console.error(`❌ Token exchange failed (${tokenData.error}):`, tokenData);
+    
+    const envClientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID') || Deno.env.get('GOOGLE_CLIENT_ID');
+    const envClientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET') || Deno.env.get('GOOGLE_CLIENT_SECRET');
+    const envRefreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
+    
+    if (envClientId && envClientSecret && envRefreshToken) {
+      console.log('🔄 Retrying token exchange with environment variables fallback...');
+      
+      tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: envClientId,
+          client_secret: envClientSecret,
+          refresh_token: envRefreshToken,
+          grant_type: 'refresh_token',
+        }),
+      });
+      
+      tokenData = await tokenResponse.json();
+      
+      if (tokenResponse.ok) {
+        console.log('✅ Access token obtained successfully with env vars fallback!');
+        return tokenData.access_token;
+      }
+    }
   }
 
-  const tokenData = await tokenResponse.json();
+  if (!tokenResponse.ok) {
+    console.error('❌ Token exchange failed:', tokenData);
+    throw new Error(`Failed to exchange refresh token: ${tokenData.error_description || tokenData.error}`);
+  }
+
   console.log('✅ Access token obtained successfully');
   return tokenData.access_token;
 }

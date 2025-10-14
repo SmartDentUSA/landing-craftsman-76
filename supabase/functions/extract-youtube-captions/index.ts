@@ -382,8 +382,19 @@ async function getAccessTokenFromRefresh(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to refresh access token: ${error}`);
+    const errorText = await response.text();
+    let errorData;
+    try {
+      errorData = JSON.parse(errorText);
+    } catch {
+      errorData = { error: 'unknown', error_description: errorText };
+    }
+    
+    // 🔒 Criar erro tipado para detectar deleted_client/invalid_grant
+    const error: any = new Error(`Failed to refresh access token: ${errorText}`);
+    error.oauth_error = errorData.error;
+    error.oauth_description = errorData.error_description;
+    throw error;
   }
 
   const data = await response.json();
@@ -392,6 +403,7 @@ async function getAccessTokenFromRefresh(
 
 /**
  * OAuth 2.0: Download de legendas via captions.download endpoint
+ * ✅ COM FALLBACK AUTOMÁTICO para env vars se OAuth falhar com deleted_client
  */
 async function downloadCaptionsOAuth(
   videoId: string,
@@ -399,52 +411,116 @@ async function downloadCaptionsOAuth(
   clientSecret: string,
   refreshToken: string
 ): Promise<{ captions: string; language: string }> {
-  // 1. Obter access token
-  const accessToken = await getAccessTokenFromRefresh(clientId, clientSecret, refreshToken);
+  try {
+    // 1. Obter access token
+    const accessToken = await getAccessTokenFromRefresh(clientId, clientSecret, refreshToken);
 
-  // 2. Listar caption tracks
-  const listUrl = `https://www.googleapis.com/youtube/v3/captions?videoId=${videoId}&part=snippet`;
-  const listResponse = await fetch(listUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+    // 2. Listar caption tracks
+    const listUrl = `https://www.googleapis.com/youtube/v3/captions?videoId=${videoId}&part=snippet`;
+    const listResponse = await fetch(listUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-  if (!listResponse.ok) {
-    const error = await listResponse.text();
-    throw new Error(`Failed to list captions: ${error}`);
+    if (!listResponse.ok) {
+      const error = await listResponse.text();
+      throw new Error(`Failed to list captions: ${error}`);
+    }
+
+    const listData = await listResponse.json();
+    const tracks = listData.items || [];
+
+    if (tracks.length === 0) {
+      throw new Error("No caption tracks available");
+    }
+
+    // 3. Priorizar legendas (pt-BR > pt > en > primeiro disponível)
+    const prioritizedTrack =
+      tracks.find((t: any) => t.snippet.language === "pt-BR") ||
+      tracks.find((t: any) => t.snippet.language === "pt") ||
+      tracks.find((t: any) => t.snippet.language === "en") ||
+      tracks[0];
+
+    const captionId = prioritizedTrack.id;
+    const language = prioritizedTrack.snippet.language;
+
+    console.info(`[Method 1] Selected track: ${language} (id: ${captionId})`);
+
+    // 4. Download da legenda
+    const downloadUrl = `https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`;
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!downloadResponse.ok) {
+      const error = await downloadResponse.text();
+      throw new Error(`Failed to download captions: ${error}`);
+    }
+
+    const captionsText = await downloadResponse.text();
+    return { captions: captionsText, language };
+    
+  } catch (error: any) {
+    // 🔥 FALLBACK: Se OAuth falhou com deleted_client ou invalid_grant, tentar env vars
+    if (error.oauth_error === 'deleted_client' || error.oauth_error === 'invalid_grant') {
+      console.log(`[Method 1] ⚠️ OAuth error (${error.oauth_error}), trying env vars fallback...`);
+      
+      const envClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
+      const envClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
+      const envRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
+      
+      if (envClientId && envClientSecret && envRefreshToken) {
+        console.log('[Method 1] 🔄 Retrying with environment variables...');
+        
+        // Tentar novamente com env vars
+        const accessToken = await getAccessTokenFromRefresh(envClientId, envClientSecret, envRefreshToken);
+        
+        const listUrl = `https://www.googleapis.com/youtube/v3/captions?videoId=${videoId}&part=snippet`;
+        const listResponse = await fetch(listUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (!listResponse.ok) {
+          const error = await listResponse.text();
+          throw new Error(`Failed to list captions (env fallback): ${error}`);
+        }
+
+        const listData = await listResponse.json();
+        const tracks = listData.items || [];
+
+        if (tracks.length === 0) {
+          throw new Error("No caption tracks available (env fallback)");
+        }
+
+        const prioritizedTrack =
+          tracks.find((t: any) => t.snippet.language === "pt-BR") ||
+          tracks.find((t: any) => t.snippet.language === "pt") ||
+          tracks.find((t: any) => t.snippet.language === "en") ||
+          tracks[0];
+
+        const captionId = prioritizedTrack.id;
+        const language = prioritizedTrack.snippet.language;
+
+        console.info(`[Method 1 - ENV FALLBACK] ✅ Selected track: ${language}`);
+
+        const downloadUrl = `https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`;
+        const downloadResponse = await fetch(downloadUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (!downloadResponse.ok) {
+          const error = await downloadResponse.text();
+          throw new Error(`Failed to download captions (env fallback): ${error}`);
+        }
+
+        const captionsText = await downloadResponse.text();
+        console.log('[Method 1 - ENV FALLBACK] ✅ Captions downloaded successfully!');
+        return { captions: captionsText, language };
+      }
+    }
+    
+    // Se não conseguiu fazer fallback, propagar erro original
+    throw error;
   }
-
-  const listData = await listResponse.json();
-  const tracks = listData.items || [];
-
-  if (tracks.length === 0) {
-    throw new Error("No caption tracks available");
-  }
-
-  // 3. Priorizar legendas (pt-BR > pt > en > primeiro disponível)
-  const prioritizedTrack =
-    tracks.find((t: any) => t.snippet.language === "pt-BR") ||
-    tracks.find((t: any) => t.snippet.language === "pt") ||
-    tracks.find((t: any) => t.snippet.language === "en") ||
-    tracks[0];
-
-  const captionId = prioritizedTrack.id;
-  const language = prioritizedTrack.snippet.language;
-
-  console.info(`[Method 1] Selected track: ${language} (id: ${captionId})`);
-
-  // 4. Download da legenda
-  const downloadUrl = `https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`;
-  const downloadResponse = await fetch(downloadUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!downloadResponse.ok) {
-    const error = await downloadResponse.text();
-    throw new Error(`Failed to download captions: ${error}`);
-  }
-
-  const captionsText = await downloadResponse.text();
-  return { captions: captionsText, language };
 }
 
 async function extractCaptionsFromVideo(

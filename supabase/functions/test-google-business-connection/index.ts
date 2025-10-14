@@ -183,7 +183,7 @@ serve(async (req) => {
     console.log(`🔍 Token type: ${refreshToken?.startsWith("1/") ? "Production" : "Playground/Test"}`);
 
     console.log('🔄 Exchanging refresh_token for access_token...');
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    let tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -194,7 +194,41 @@ serve(async (req) => {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    let tokenData = await tokenResponse.json();
+
+    // 🔥 FALLBACK: Se OAuth falhou com deleted_client ou invalid_grant, tentar env vars
+    if (!tokenResponse.ok && (tokenData.error === 'deleted_client' || tokenData.error === 'invalid_grant')) {
+      console.error(`❌ Token refresh failed (${tokenData.error}):`, tokenData);
+      
+      const envClientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID') || Deno.env.get('GOOGLE_CLIENT_ID');
+      const envClientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET') || Deno.env.get('GOOGLE_CLIENT_SECRET');
+      const envRefreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
+      
+      if (envClientId && envClientSecret && envRefreshToken && credentialSource !== 'environment') {
+        console.log('🔄 Retrying with environment variables fallback...');
+        
+        tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: envClientId,
+            client_secret: envClientSecret,
+            refresh_token: envRefreshToken,
+            grant_type: 'refresh_token',
+          }),
+        });
+        
+        tokenData = await tokenResponse.json();
+        
+        if (tokenResponse.ok) {
+          clientId = envClientId;
+          clientSecret = envClientSecret;
+          refreshToken = envRefreshToken;
+          credentialSource = 'environment_fallback';
+          console.log('✅ Token refresh successful with env vars fallback!');
+        }
+      }
+    }
 
     if (!tokenResponse.ok) {
       console.error('❌ Token refresh failed:', tokenData);
