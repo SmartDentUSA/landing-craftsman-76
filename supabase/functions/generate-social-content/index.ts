@@ -148,7 +148,7 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
 - NÃO invente benefícios ou características
 - Descontos e preços devem ser baseados em dados reais`;
 
-      const promoContent = await generateWithDeepSeek(deepseekApiKey, promoPrompt, 'whatsapp', product);
+      const promoContent = await generateWithDualAI(deepseekApiKey, promoPrompt, 'whatsapp', product);
 
       return new Response(
         JSON.stringify({ 
@@ -165,7 +165,7 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
       console.log('🔄 Gerando sequência de 7 mensagens WhatsApp...');
       
       const sequencePrompt = getSequencePrompt(product, company, externalLinks || [], landingPages || []);
-      const sequenceContent = await generateSequenceWithDeepSeek(deepseekApiKey, sequencePrompt);
+      const sequenceContent = await generateSequenceWithDualAI(deepseekApiKey, sequencePrompt);
       
       const newGeneration = {
         id: crypto.randomUUID(),
@@ -263,8 +263,8 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
 - Evite termos técnicos não mencionados nos dados
 - Base todo conteúdo em informações reais do contexto`;
 
-    // Gerar conteúdo com DeepSeek
-    const generatedContent = await generateWithDeepSeek(deepseekApiKey, finalPromptWithProtection, type, product);
+    // Gerar conteúdo com Dual-AI Competition
+    const generatedContent = await generateWithDualAI(deepseekApiKey, finalPromptWithProtection, type, product);
 
     // Salvar no banco
     let fieldName: string = '';
@@ -720,32 +720,28 @@ function createIntelligentFallback(type: string, product: any): any {
   }
 }
 
-async function generateWithDeepSeek(apiKey: string, prompt: string, type: 'whatsapp' | 'youtube' | 'instagram', product?: any): Promise<any> {
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-      max_tokens: type === 'whatsapp' ? 500 : 1500,
-    }),
+async function generateWithDualAI(apiKey: string, prompt: string, type: 'whatsapp' | 'youtube' | 'instagram', product?: any): Promise<any> {
+  const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
+  
+  const systemPrompt = type === 'whatsapp' 
+    ? 'Você é especialista em WhatsApp marketing. Retorne mensagens persuasivas e naturais.'
+    : type === 'youtube'
+    ? 'Você é especialista em SEO para YouTube. Sempre retorne apenas JSON válido, sem markdown.'
+    : 'Você é especialista em Instagram marketing. Sempre retorne apenas JSON válido, sem markdown.';
+  
+  console.log(`🏁 Dual-AI: Generating ${type} content...`);
+  const result = await compareAndSelectBest(systemPrompt, prompt, {
+    contentType: 'social',
+    minLength: type === 'whatsapp' ? 100 : 200,
+    maxLength: type === 'whatsapp' ? 300 : 1500,
+    requiredKeywords: Array.isArray(product?.keywords) ? product.keywords : []
   });
+  
+  console.log(`✅ Social ${type} winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+  
+  let content = result.content;
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(`DeepSeek API error: ${response.status} - ${errorData}`);
-  }
-
-  const data = await response.json();
-  let content = data.choices[0].message.content;
-
-  console.log('Raw content from DeepSeek:', content);
+  console.log(`Raw content from Dual-AI (${result.winner}):`, content);
 
   // Para YouTube e Instagram, tentar parsear como JSON
   if (type === 'youtube' || type === 'instagram') {
@@ -940,33 +936,24 @@ function formatLinksForPrompt(externalLinks: any[], landingPages: any[]): string
     : '';
 }
 
-async function generateSequenceWithDeepSeek(apiKey: string, prompt: string): Promise<Array<{number: number, approach: string, content: string}>> {
+async function generateSequenceWithDualAI(apiKey: string, prompt: string): Promise<Array<{number: number, approach: string, content: string}>> {
   try {
-    console.log('Gerando sequência com DeepSeek...');
+    console.log('🏁 Dual-AI: Gerando sequência WhatsApp...');
     
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: 'Você é um especialista em marketing digital para WhatsApp.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 3000
-      })
+    const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
+    
+    const systemPrompt = 'Você é um especialista em marketing digital para WhatsApp. Sempre retorne apenas JSON válido, sem markdown.';
+    
+    const result = await compareAndSelectBest(systemPrompt, prompt, {
+      contentType: 'social',
+      minLength: 500,
+      maxLength: 3000,
+      requiredKeywords: []
     });
-
-    if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    let content = data.choices[0].message.content.trim();
+    
+    console.log(`✅ Sequence winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+    
+    let content = result.content.trim();
     
     // Limpar markdown
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();

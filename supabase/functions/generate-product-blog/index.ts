@@ -377,33 +377,25 @@ Gere o blog post completo agora:`;
 
   console.log(`🤖 Generating ${blogType} blog for product: ${product.name}`);
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Gere um blog ${blogType} completo em PORTUGUÊS BRASILEIRO para o produto ${product.name}. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.` }
-      ],
-      max_tokens: 2500,
-      temperature: 0.7,
-    }),
+  // Gerar com Dual-AI Competition
+  const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
+  
+  const userPrompt = `Gere um blog ${blogType} completo em PORTUGUÊS BRASILEIRO para o produto ${product.name}. IMPORTANTE: Use apenas português brasileiro, nunca espanhol.`;
+  
+  console.log('🏁 Dual-AI: Generating product blog...');
+  const result = await compareAndSelectBest(systemPrompt, userPrompt, {
+    contentType: 'blog',
+    minLength: 1200,
+    maxLength: 2500,
+    requiredKeywords: Array.isArray(product.keywords) ? product.keywords : []
   });
-
-  if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(`Erro na API DeepSeek: ${response.status} - ${errorData}`);
-  }
-
-  const data = await response.json();
-  const blogContent = data.choices[0]?.message?.content;
+  
+  console.log(`✅ Product blog winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+  
+  const blogContent = result.content;
 
   if (!blogContent) {
-    throw new Error('Resposta vazia da API DeepSeek');
+    throw new Error('Resposta vazia da Dual-AI Competition');
   }
 
   console.log(`✅ Blog content generated: ${blogContent.length} characters`);

@@ -79,8 +79,42 @@ serve(async (req) => {
 - Scripts devem ser baseados nos dados reais do produto
 - Evite promessas ou claims não fundamentados nos dados`;
 
-    // Gerar conteúdo com DeepSeek
-    const generatedContent = await generateWithDeepSeek(deepseekApiKey, finalPromptWithProtection, product);
+    // Gerar conteúdo com Dual-AI Competition
+    const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
+    
+    const systemPrompt = 'Você é um especialista em criação de conteúdo viral para TikTok. Sempre retorne apenas JSON válido, sem markdown ou explicações adicionais.';
+    
+    console.log('🏁 Dual-AI: Generating TikTok content...');
+    const result = await compareAndSelectBest(systemPrompt, finalPromptWithProtection, {
+      contentType: 'tiktok',
+      minLength: 150,
+      maxLength: 500,
+      requiredKeywords: Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : []
+    });
+    
+    console.log(`✅ TikTok winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+    
+    let generatedContent;
+    try {
+      const cleanedContent = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      generatedContent = JSON.parse(cleanedContent);
+      
+      // Validar estrutura esperada
+      if (!generatedContent.hook || !generatedContent.video_script || !generatedContent.call_to_action) {
+        throw new Error('Estrutura JSON inválida: campos obrigatórios ausentes');
+      }
+    } catch (parseError) {
+      console.error('Erro ao parsear JSON:', parseError);
+      // Fallback manual
+      generatedContent = {
+        hook: `🔥 Descubra o segredo de ${product.name}!`,
+        video_script: `POV: Você finalmente encontrou ${product.name} que vai revolucionar sua vida!\n\n✨ Olha só isso...\n\n[Mostrar produto]\n\nEu não acreditava até testar!\n\n[Demonstração]\n\nE o resultado? INCRÍVEL! 🤯`,
+        call_to_action: `💬 Comenta 'QUERO' que te mando o link!`,
+        hashtags: ["#viral", "#fyp", "#trending"],
+        trending_references: ["produto revolucionário", "antes e depois", "teste real"],
+        estimated_duration: "30-45 segundos"
+      };
+    }
 
     // Salvar no banco
     const currentData = product.tiktok_content || { copies: [], last_generated: null };

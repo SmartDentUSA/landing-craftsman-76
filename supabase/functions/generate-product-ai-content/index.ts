@@ -182,6 +182,8 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
   
+  const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
+  
   // Buscar configuração de prompt customizado com selected_fields
   const { data: promptConfig } = await supabase
     .from('prompts_configuration')
@@ -200,7 +202,6 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
   let prompt = '';
   
   if (promptConfig?.custom_prompt) {
-    // Usar prompt customizado com seleção de campos
     const { extractSelectedData, processPromptWithSelectedData } = await import('../_shared/prompt-processor.ts');
     const selectedData = extractSelectedData(product, companyProfile, {
       selectedFields: promptConfig.selected_fields || {},
@@ -208,7 +209,6 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
     });
     prompt = processPromptWithSelectedData(promptConfig.custom_prompt, selectedData, existingBenefits);
   } else {
-    // Usar prompt padrão
     const existingContext = existingBenefits.length > 0 ? 
       `\n\nDADOS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingBenefits.join(', ')}` : '';
     
@@ -216,7 +216,7 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
       'Gere APENAS 3 benefícios complementares que NÃO duplicem os existentes e preencham lacunas identificadas:' :
       'Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:';
     
-  prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
+    prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -249,33 +249,33 @@ RESPOSTA ESPERADA (copie este formato exato):
 ["benefício 1", "benefício 2", "benefício 3"]`;
   }
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { 
-          role: 'system', 
-          content: 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.'
-        },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 500,
-    }),
+  const systemPrompt = 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.';
+
+  console.log('🏁 Dual-AI: Generating benefits...');
+  const result = await compareAndSelectBest(systemPrompt, prompt, {
+    contentType: 'product',
+    minLength: 100,
+    requiredKeywords: Array.isArray(product.keywords) ? product.keywords : []
   });
 
-  return await parseAIArrayResponse(response, 'benefits');
+  console.log(`✅ Benefits winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+
+  try {
+    const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('❌ Failed to parse benefits JSON:', error);
+    return [];
+  }
 }
 
 async function generateProductKeywords(apiKey: string, product: any, existingKeywords: string[] = [], complementOnly: boolean = false): Promise<string[]> {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
   
   // Buscar configuração de prompt customizado
   const { data: promptConfig } = await supabase
@@ -361,33 +361,33 @@ RESPOSTA ESPERADA (copie este formato exato):
 ["palavra-chave 1", "palavra-chave 2", "palavra-chave 3"]`;
   }
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { 
-          role: 'system', 
-          content: 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.'
-        },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 400,
-    }),
+  const systemPrompt = 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.';
+
+  console.log('🏁 Dual-AI: Generating keywords...');
+  const result = await compareAndSelectBest(systemPrompt, prompt, {
+    contentType: 'product',
+    minLength: 100,
+    requiredKeywords: videoCaptionKeywords
   });
 
-  return await parseAIArrayResponse(response, 'keywords');
+  console.log(`✅ Keywords winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+
+  try {
+    const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('❌ Failed to parse keywords JSON:', error);
+    return [];
+  }
 }
 
 async function generateProductFeatures(apiKey: string, product: any, existingFeatures: string[] = [], complementOnly: boolean = false): Promise<string[]> {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
   
   // Buscar configuração de prompt customizado
   const { data: promptConfig } = await supabase
@@ -454,27 +454,25 @@ RESPOSTA ESPERADA (copie este formato exato):
 ["característica 1", "característica 2", "característica 3"]`;
   }
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { 
-          role: 'system', 
-          content: 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.'
-        },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 400,
-    }),
+  const systemPrompt = 'Você é um assistente de extração de dados. SEMPRE retorne APENAS arrays JSON puros sem texto explicativo, markdown ou formatação. Exemplo correto: ["item1", "item2"]. NUNCA inclua explicações, saudações ou qualquer texto fora do JSON.';
+
+  console.log('🏁 Dual-AI: Generating features...');
+  const result = await compareAndSelectBest(systemPrompt, prompt, {
+    contentType: 'product',
+    minLength: 100,
+    requiredKeywords: []
   });
 
-  return await parseAIArrayResponse(response, 'features');
+  console.log(`✅ Features winner: ${result.winner} (score: ${result.score.toFixed(1)})`);
+
+  try {
+    const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('❌ Failed to parse features JSON:', error);
+    return [];
+  }
 }
 
 // Função para processar variáveis nos prompts customizados
