@@ -233,6 +233,22 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
     });
   };
 
+  const collapseAll = () => {
+    setExpandedCategories(new Set());
+  };
+
+  const expandAll = () => {
+    setExpandedCategories(new Set(Object.keys(CATEGORY_CONFIG)));
+  };
+
+  const toggleAll = () => {
+    if (expandedCategories.size === 0) {
+      expandAll();
+    } else {
+      collapseAll();
+    }
+  };
+
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -246,6 +262,23 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
           <Badge variant={counts.percentage >= 80 ? 'default' : counts.percentage >= 50 ? 'secondary' : 'destructive'}>
             {counts.configured}/{counts.total} itens
           </Badge>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={toggleAll}
+          >
+            {expandedCategories.size === 0 ? (
+              <>
+                <ChevronDown className="h-4 w-4 mr-2" />
+                Expandir Tudo
+              </>
+            ) : (
+              <>
+                <ChevronRight className="h-4 w-4 mr-2" />
+                Colapsar Tudo
+              </>
+            )}
+          </Button>
           {onEdit && (
             <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
               <Pencil className="h-4 w-4 mr-2" />
