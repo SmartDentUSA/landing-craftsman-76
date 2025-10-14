@@ -2,14 +2,18 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Search, RefreshCw } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Search, RefreshCw, BarChart3, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProductCompletion } from '@/hooks/useProductCompletion';
 import { ProductProgressStats } from './ProductProgressStats';
 import { ProductProgressCard } from './ProductProgressCard';
+import { ProductConfigChecklistView } from './ProductConfigChecklistView';
+import { useState } from 'react';
 
 export function ProductProgressManager() {
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<'progress' | 'checklist'>('progress');
   
   const { 
     data, 
@@ -41,6 +45,19 @@ export function ProductProgressManager() {
   return (
     <div className="space-y-6">
       <ProductProgressStats stats={stats} />
+
+      <div className="flex items-center justify-between">
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
+          <ToggleGroupItem value="progress" aria-label="Visualização de progresso">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Progresso
+          </ToggleGroupItem>
+          <ToggleGroupItem value="checklist" aria-label="Visualização de checklist">
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Checklist
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
@@ -152,12 +169,19 @@ export function ProductProgressManager() {
         ) : (
           <div className="space-y-3">
             {data.map(product => (
-              <ProductProgressCard
-                key={product.id}
-                product={product}
-                onMarkComplete={markAsComplete}
-                onEdit={handleEditProduct}
-              />
+              viewMode === 'progress' ? (
+                <ProductProgressCard
+                  key={product.id}
+                  product={product}
+                  onMarkComplete={markAsComplete}
+                  onEdit={handleEditProduct}
+                />
+              ) : (
+                <ProductConfigChecklistView
+                  key={product.id}
+                  product={product}
+                />
+              )
             ))}
           </div>
         )}
