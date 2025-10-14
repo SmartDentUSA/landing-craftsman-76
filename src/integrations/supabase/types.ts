@@ -651,36 +651,6 @@ export type Database = {
           },
         ]
       }
-      google_business_oauth_credentials: {
-        Row: {
-          client_id: string
-          client_secret: string
-          created_at: string | null
-          id: string
-          refresh_token: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          client_id: string
-          client_secret: string
-          created_at?: string | null
-          id?: string
-          refresh_token: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          client_id?: string
-          client_secret?: string
-          created_at?: string | null
-          id?: string
-          refresh_token?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       google_oauth_tokens: {
         Row: {
           created_at: string | null
@@ -878,6 +848,8 @@ export type Database = {
       }
       oauth_credentials: {
         Row: {
+          client_id: string | null
+          client_secret: string | null
           created_at: string
           id: string
           provider: string
@@ -886,6 +858,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           id?: string
           provider: string
@@ -894,6 +868,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           id?: string
           provider?: string
@@ -1562,36 +1538,6 @@ export type Database = {
           testimonial_text?: string
           updated_at?: string
           youtube_url?: string | null
-        }
-        Relationships: []
-      }
-      youtube_oauth_credentials: {
-        Row: {
-          client_id: string
-          client_secret: string
-          created_at: string
-          id: string
-          refresh_token: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          client_id: string
-          client_secret: string
-          created_at?: string
-          id?: string
-          refresh_token: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          client_id?: string
-          client_secret?: string
-          created_at?: string
-          id?: string
-          refresh_token?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

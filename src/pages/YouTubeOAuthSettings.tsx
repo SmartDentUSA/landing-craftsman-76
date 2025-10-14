@@ -160,9 +160,10 @@ export default function YouTubeOAuthSettings() {
       }
 
       const { data: dbCreds } = await supabase
-        .from('youtube_oauth_credentials')
+        .from('oauth_credentials')
         .select('client_id, client_secret, refresh_token, updated_at')
         .eq('user_id', userData.user.id)
+        .eq('provider', 'youtube')
         .maybeSingle();
 
       const hasDbCredentials = dbCreds?.refresh_token && dbCreds?.client_id && dbCreds?.client_secret;
@@ -274,13 +275,14 @@ export default function YouTubeOAuthSettings() {
       }
 
       const { data: saved, error: dbError } = await supabase
-        .from('youtube_oauth_credentials')
+        .from('oauth_credentials')
         .upsert({
           user_id: userData.user.id,
+          provider: 'youtube',
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: refreshToken,
-        }, { onConflict: 'user_id' })
+        })
         .select()
         .single();
 
@@ -325,9 +327,10 @@ export default function YouTubeOAuthSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase
-          .from("youtube_oauth_credentials")
+          .from("oauth_credentials")
           .delete()
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .eq("provider", "youtube");
       }
 
       // Resetar estado
@@ -524,13 +527,14 @@ export default function YouTubeOAuthSettings() {
       }
 
       const { data: saved, error: dbError } = await supabase
-        .from('youtube_oauth_credentials')
+        .from('oauth_credentials')
         .upsert({
           user_id: userData.user.id,
+          provider: 'youtube',
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: newRefreshToken,
-        }, { onConflict: 'user_id' })
+        })
         .select()
         .single();
 

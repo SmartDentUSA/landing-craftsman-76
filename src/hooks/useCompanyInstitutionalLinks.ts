@@ -18,9 +18,17 @@ export function useCompanyInstitutionalLinks() {
   const loadInstitutionalLinks = async () => {
     try {
       setLoading(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('company_profile')
         .select('institutional_links')
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) {

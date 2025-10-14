@@ -137,12 +137,16 @@ export default function GoogleBusinessOAuthSettings() {
       if (!userData.user) return;
 
       const { data: dbCreds } = await supabase
-        .from('google_business_oauth_credentials')
-        .select('refresh_token, updated_at')
+        .from('oauth_credentials')
+        .select('client_id, client_secret, refresh_token, updated_at')
         .eq('user_id', userData.user.id)
+        .eq('provider', 'google_business')
         .maybeSingle();
 
       if (dbCreds) {
+        setClientId(dbCreds.client_id || '');
+        setClientSecret(dbCreds.client_secret || '');
+        setRefreshToken(dbCreds.refresh_token || '');
         setDbCredentials({
           token: dbCreds.refresh_token || '',
           updatedAt: dbCreds.updated_at || '',
@@ -262,9 +266,10 @@ export default function GoogleBusinessOAuthSettings() {
       }
 
       const { data: dbCreds } = await supabase
-        .from('google_business_oauth_credentials')
+        .from('oauth_credentials')
         .select('client_id, client_secret, refresh_token, updated_at')
         .eq('user_id', userData.user.id)
+        .eq('provider', 'google_business')
         .maybeSingle();
 
       const hasDbCredentials = dbCreds?.refresh_token && dbCreds?.client_id && dbCreds?.client_secret;
@@ -278,6 +283,9 @@ export default function GoogleBusinessOAuthSettings() {
 
       // Atualizar status visual de credenciais do banco
       if (hasDbCredentials) {
+        setClientId(dbCreds.client_id || '');
+        setClientSecret(dbCreds.client_secret || '');
+        setRefreshToken(dbCreds.refresh_token || '');
         setDbCredentials({
           token: dbCreds.refresh_token,
           updatedAt: dbCreds.updated_at,
@@ -444,13 +452,14 @@ export default function GoogleBusinessOAuthSettings() {
       }
 
       const { data: saved, error: dbError } = await supabase
-        .from('google_business_oauth_credentials')
+        .from('oauth_credentials')
         .upsert({
           user_id: userData.user.id,
+          provider: 'google_business',
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: refreshToken,
-        }, { onConflict: 'user_id' })
+        })
         .select()
         .single();
 
@@ -633,13 +642,14 @@ export default function GoogleBusinessOAuthSettings() {
       }
 
       const { data: saved, error: dbError } = await supabase
-        .from('google_business_oauth_credentials')
+        .from('oauth_credentials')
         .upsert({
           user_id: userData.user.id,
+          provider: 'google_business',
           client_id: clientId,
           client_secret: clientSecret,
           refresh_token: newRefreshToken,
-        }, { onConflict: 'user_id' })
+        })
         .select()
         .single();
 
@@ -707,9 +717,10 @@ export default function GoogleBusinessOAuthSettings() {
 
     try {
       const { error } = await supabase
-        .from("google_business_oauth_credentials")
+        .from("oauth_credentials")
         .delete()
-        .eq("user_id", userData.user.id);
+        .eq("user_id", userData.user.id)
+        .eq("provider", "google_business");
 
       if (error) {
         toast({
@@ -745,9 +756,10 @@ export default function GoogleBusinessOAuthSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase
-          .from("google_business_oauth_credentials")
+          .from("oauth_credentials")
           .delete()
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .eq("provider", "google_business");
       }
 
       // Resetar estado

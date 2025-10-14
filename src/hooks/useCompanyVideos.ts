@@ -21,12 +21,11 @@ export const useCompanyVideos = () => {
     try {
       const { error } = await supabase
         .from('company_profile')
-        .upsert({
-          user_id: userId,
+        .update({
           company_videos: videos as any,
-          company_name: 'Empresa', // Campo obrigatório
           updated_at: new Date().toISOString()
-        });
+        })
+        .eq('user_id', userId);
 
       if (error) throw error;
 
@@ -50,7 +49,7 @@ export const useCompanyVideos = () => {
         .from('company_profile')
         .select('company_videos')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (profile?.company_videos) {
         return profile.company_videos as unknown as CompanyVideos;
