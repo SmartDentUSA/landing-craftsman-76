@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CheckCircle2, XCircle, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { detectProductConfiguration, countConfiguredItems } from '@/lib/product-config-detector';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -199,19 +199,18 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
   const status = detectProductConfiguration(product, csMessages, aftersalesMessages);
   const counts = countConfiguredItems(status);
 
-  // Determina qual categoria tem mais pendências para expandir por padrão
-  const categoryWithMostPending = useMemo(() => {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // Expande apenas a categoria com mais pendências após dados carregarem
+  useEffect(() => {
     const pending = Object.entries(counts.byCategory).map(([key, stats]) => ({
       key,
       pending: stats.total - stats.configured
     }));
     pending.sort((a, b) => b.pending - a.pending);
-    return pending[0]?.key || 'basic';
+    const categoryWithMostPending = pending[0]?.key || 'basic';
+    setExpandedCategories(new Set([categoryWithMostPending]));
   }, [counts.byCategory]);
-
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set([categoryWithMostPending])
-  );
 
   const toggleCategory = (categoryKey: string) => {
     setExpandedCategories(prev => {
@@ -249,7 +248,7 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
 
       <Progress value={counts.percentage} className="h-2 mb-6" />
 
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
         {Object.entries(CATEGORY_CONFIG).map(([categoryKey, config]) => {
           const categoryData = status[categoryKey as keyof typeof status];
           const categoryStats = counts.byCategory[categoryKey];
@@ -263,7 +262,9 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
               onOpenChange={() => toggleCategory(categoryKey)}
             >
               <CollapsibleTrigger className="w-full">
-                <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors">
+                <div className={`flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors ${
+                  isExpanded ? 'bg-accent/50 shadow-sm' : ''
+                }`}>
                   {isExpanded ? (
                     <ChevronDown className="h-4 w-4 flex-shrink-0" />
                   ) : (

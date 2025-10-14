@@ -184,11 +184,11 @@ export function detectProductConfiguration(
       ncm: hasText(product.ncm),
     },
     social_content: {
-      whatsapp_messages: hasArray(product.whatsapp_messages?.messages),
-      whatsapp_sequences: hasArray(product.whatsapp_sequences?.sequences),
-      instagram_copies: hasArray(product.instagram_copies?.copies),
-      youtube_descriptions: hasArray(product.youtube_descriptions?.descriptions),
-      tiktok_content: hasArray(product.tiktok_content?.copies),
+      whatsapp_messages: hasArray(product.whatsapp_messages?.messages) || (product.whatsapp_messages && Object.keys(product.whatsapp_messages).length > 0),
+      whatsapp_sequences: hasArray(product.whatsapp_sequences?.sequences) || (product.whatsapp_sequences && Object.keys(product.whatsapp_sequences).length > 0),
+      instagram_copies: hasArray(product.instagram_copies?.copies) || (product.instagram_copies && Object.keys(product.instagram_copies).length > 0),
+      youtube_descriptions: hasArray(product.youtube_descriptions?.descriptions) || (product.youtube_descriptions && Object.keys(product.youtube_descriptions).length > 0),
+      tiktok_content: hasArray(product.tiktok_content?.copies) || (product.tiktok_content && Object.keys(product.tiktok_content).length > 0),
     },
     additional_content: {
       individual_blog: !!(product.individual_blog_content?.technical || product.individual_blog_content?.commercial),
