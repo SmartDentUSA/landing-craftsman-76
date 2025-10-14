@@ -24,6 +24,7 @@ export function CompanyReviewsManager() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("https://maps.app.goo.gl/XCU7EwqCUmS9kCsx7");
   
   // Form state
   const [formData, setFormData] = useState({
@@ -45,8 +46,8 @@ export function CompanyReviewsManager() {
     }
   };
 
-  const handleSyncGoogle = async () => {
-    const success = await syncGoogleReviews("https://maps.app.goo.gl/XCU7EwqCUmS9kCsx7");
+  const handleSyncGoogle = async (url: string) => {
+    const success = await syncGoogleReviews(url);
     if (success) {
       await loadReviews();
     }
@@ -167,16 +168,25 @@ export function CompanyReviewsManager() {
               Gerencie reviews da empresa que aparecem no SEO de todas as páginas
             </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            <Input
+              placeholder="URL do Google Maps"
+              value={googleMapsUrl}
+              onChange={(e) => setGoogleMapsUrl(e.target.value)}
+              className="min-w-[300px]"
+            />
             <Button
-              onClick={handleSyncGoogle}
-              disabled={syncing}
+              onClick={() => handleSyncGoogle(googleMapsUrl)}
+              disabled={syncing || !googleMapsUrl}
               variant="outline"
               size="sm"
+              className="w-full"
             >
               <Download className="h-4 w-4 mr-2" />
               {syncing ? "Sincronizando..." : "Importar do Google"}
             </Button>
+          </div>
+          <div className="flex gap-2">
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" onClick={() => {

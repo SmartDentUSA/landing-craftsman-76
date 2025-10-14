@@ -142,15 +142,19 @@ export function useCompanyReviews() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Chamar edge function com flags de sincronização
+      console.log('🔍 Syncing Google reviews:', {
+        url: googleMapsUrl,
+        user_id: user.id
+      });
+
       const { data, error } = await supabase.functions.invoke(
         "extract-google-reviews",
         {
           body: {
             url: googleMapsUrl,
             extract_individual_reviews: true,
-            sync_to_company_profile: true, // 🆕 Flag para sincronizar
-            company_id: user.id // 🆕 ID do company_profile
+            sync_to_company_profile: true,
+            company_id: user.id
           }
         }
       );
