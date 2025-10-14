@@ -551,17 +551,41 @@ async function extractAndSaveReviews(
       const { data: { user } } = await supabase.auth.getUser(token);
       
       if (user) {
-        const { data: credsData } = await supabase
-          .from('google_business_oauth_credentials')
-          .select('client_id, client_secret, refresh_token')
-          .eq('user_id', user.id)
-          .single();
+        // Buscar Client ID e Secret de oauth_client_configs
+        const { data: configData } = await supabase
+          .from('oauth_client_configs')
+          .select('client_id, client_secret')
+          .eq('provider', 'googleBusiness')
+          .maybeSingle();
 
-        if (credsData) {
-          clientId = credsData.client_id;
-          clientSecret = credsData.client_secret;
-          refreshToken = credsData.refresh_token;
+        // Buscar Refresh Token de oauth_credentials
+        const { data: credData } = await supabase
+          .from('oauth_credentials')
+          .select('refresh_token')
+          .eq('user_id', user.id)
+          .eq('provider', 'googleBusiness')
+          .maybeSingle();
+
+        if (configData && credData) {
+          clientId = configData.client_id;
+          clientSecret = configData.client_secret;
+          refreshToken = credData.refresh_token;
           console.log('✅ Using Google Business credentials from database for user:', user.id);
+        } else if (!credData && configData) {
+          // Fallback para OAuth Google genérico se não tiver googleBusiness
+          const { data: genericCred } = await supabase
+            .from('oauth_credentials')
+            .select('refresh_token')
+            .eq('user_id', user.id)
+            .eq('provider', 'google')
+            .maybeSingle();
+            
+          if (genericCred && configData) {
+            clientId = configData.client_id;
+            clientSecret = configData.client_secret;
+            refreshToken = genericCred.refresh_token;
+            console.log('⚠️ Using generic Google OAuth (not Business-specific) for user:', user.id);
+          }
         }
       }
     }
@@ -570,6 +594,14 @@ async function extractAndSaveReviews(
     if (!clientId) clientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID');
     if (!clientSecret) clientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET');
     if (!refreshToken) refreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
+    
+    console.log('🔍 OAuth credentials check:', {
+      has_client_id: !!clientId,
+      has_client_secret: !!clientSecret,
+      has_refresh_token: !!refreshToken,
+      user_id: user?.id || 'no user',
+      auth_header_present: !!authHeader
+    });
     
     // PRIORITY 1: Try Business Profile API (OAuth)
     if (clientId && clientSecret && refreshToken) {
@@ -588,16 +620,27 @@ async function extractAndSaveReviews(
     // PRIORITY 2 & 3: Fallback to web scraping if Business API failed
     if (reviews.length === 0) {
       console.log('🥈 Attempting web scraping extraction...');
-      // Fetch the page to get business name and initial reviews
+      
+      // User-Agents rotativos para melhorar scraping
+      const userAgents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      ];
+      const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
+      
       const response = await fetch(normalizedUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'User-Agent': randomUA,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.8,en;q=0.6',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
         'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.google.com/',
         'DNT': '1',
         'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-Mode': 'navigate'
       }
     });
 
