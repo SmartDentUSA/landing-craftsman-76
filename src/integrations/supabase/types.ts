@@ -102,6 +102,126 @@ export type Database = {
           },
         ]
       }
+      backup_company_profile_20250114: {
+        Row: {
+          brand_values: string | null
+          business_sector: string | null
+          company_culture: string | null
+          company_description: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_reviews: Json | null
+          company_videos: Json | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          delivery_approach: string | null
+          differentiators: string | null
+          founded_year: number | null
+          id: string | null
+          instagram_profile: string | null
+          institutional_links: Json | null
+          location: string | null
+          main_products_services: string | null
+          mission_statement: string | null
+          seo_competitive_advantages: string | null
+          seo_context_keywords: Json | null
+          seo_domains: Json | null
+          seo_market_positioning: string | null
+          seo_service_areas: string | null
+          seo_technical_expertise: string | null
+          social_media_links: Json | null
+          target_audience: string | null
+          team_size: string | null
+          tracking_pixels: Json | null
+          updated_at: string | null
+          user_id: string | null
+          vision_statement: string | null
+          website_url: string | null
+          working_methodology: string | null
+          youtube_channel: string | null
+          youtube_company_footer: string | null
+        }
+        Insert: {
+          brand_values?: string | null
+          business_sector?: string | null
+          company_culture?: string | null
+          company_description?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_reviews?: Json | null
+          company_videos?: Json | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          delivery_approach?: string | null
+          differentiators?: string | null
+          founded_year?: number | null
+          id?: string | null
+          instagram_profile?: string | null
+          institutional_links?: Json | null
+          location?: string | null
+          main_products_services?: string | null
+          mission_statement?: string | null
+          seo_competitive_advantages?: string | null
+          seo_context_keywords?: Json | null
+          seo_domains?: Json | null
+          seo_market_positioning?: string | null
+          seo_service_areas?: string | null
+          seo_technical_expertise?: string | null
+          social_media_links?: Json | null
+          target_audience?: string | null
+          team_size?: string | null
+          tracking_pixels?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+          vision_statement?: string | null
+          website_url?: string | null
+          working_methodology?: string | null
+          youtube_channel?: string | null
+          youtube_company_footer?: string | null
+        }
+        Update: {
+          brand_values?: string | null
+          business_sector?: string | null
+          company_culture?: string | null
+          company_description?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_reviews?: Json | null
+          company_videos?: Json | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          delivery_approach?: string | null
+          differentiators?: string | null
+          founded_year?: number | null
+          id?: string | null
+          instagram_profile?: string | null
+          institutional_links?: Json | null
+          location?: string | null
+          main_products_services?: string | null
+          mission_statement?: string | null
+          seo_competitive_advantages?: string | null
+          seo_context_keywords?: Json | null
+          seo_domains?: Json | null
+          seo_market_positioning?: string | null
+          seo_service_areas?: string | null
+          seo_technical_expertise?: string | null
+          social_media_links?: Json | null
+          target_audience?: string | null
+          team_size?: string | null
+          tracking_pixels?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+          vision_statement?: string | null
+          website_url?: string | null
+          working_methodology?: string | null
+          youtube_channel?: string | null
+          youtube_company_footer?: string | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_kol_id: string | null

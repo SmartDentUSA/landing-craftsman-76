@@ -112,7 +112,10 @@ serve(async (req) => {
 
     const { error: updateError } = await supabase
       .from('products_repository')
-      .update({ individual_blog_content: updatedBlogContent })
+      .update({ 
+        individual_blog_content: updatedBlogContent,
+        updated_at: new Date().toISOString() // ✅ Fase 1.2: Rastreamento de modificações
+      })
       .eq('id', productId);
 
     if (updateError) {
