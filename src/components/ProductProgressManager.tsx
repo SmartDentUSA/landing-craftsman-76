@@ -51,7 +51,7 @@ export function ProductProgressManager() {
 
   return (
     <div className="space-y-6">
-      <ProductProgressStats stats={stats} />
+      {/* Stats cards removed for cleaner interface */}
 
       <div className="flex items-center justify-between">
         <ToggleGroup 

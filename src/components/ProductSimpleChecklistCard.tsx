@@ -18,148 +18,148 @@ const CATEGORY_CONFIG = {
     label: 'DADOS BÁSICOS',
     fields: {
       name: 'Nome do Produto',
-      description: 'Descrição (min 50 chars)',
+      description: 'Descrição (mínimo 50 caracteres)',
       price: 'Preço',
       category: 'Categoria',
       subcategory: 'Subcategoria',
       main_image: 'Imagem Principal',
-      gallery_min: 'Galeria (min 3 imagens)',
+      gallery_min: 'Galeria (mínimo 3 imagens)',
     }
   },
   seo: {
-    emoji: '🎯',
-    label: 'SEO & CATEGORIZAÇÃO',
+    emoji: '🔍',
+    label: 'SEO',
     fields: {
-      seo_title: 'Título SEO',
-      seo_description: 'Descrição SEO',
-      canonical_url: 'URL Canônica',
-      slug: 'Slug/URL amigável',
-      has_keywords: 'Keywords configuradas',
+      seo_title: 'Título SEO customizado',
+      seo_description: 'Meta descrição customizada',
+      canonical_url: 'URL canônica',
+      slug: 'URL amigável (slug)',
+      has_keywords: 'Palavras-chave configuradas',
       has_target_audience: 'Público-alvo definido',
     }
   },
   keywords: {
-    emoji: '🔑',
-    label: 'KEYWORDS & PÚBLICO',
+    emoji: '🎯',
+    label: 'PALAVRAS-CHAVE',
     fields: {
-      primary_keywords: 'Keywords primárias (min 3)',
-      market_keywords: 'Market keywords (min 2)',
-      search_intent: 'Search intent keywords',
-      audience_segmented: 'Público segmentado (min 2)',
+      primary_keywords: 'Palavras-chave principais (mínimo 3)',
+      market_keywords: 'Palavras-chave de mercado (mínimo 2)',
+      search_intent: 'Palavras-chave de intenção',
+      audience_segmented: 'Público segmentado (mínimo 2)',
     }
   },
   images: {
     emoji: '🎨',
-    label: 'IMAGENS & GALERIA',
+    label: 'IMAGENS',
     fields: {
       main_image_url: 'Imagem principal configurada',
-      gallery_count: 'Galeria com 3+ imagens',
-      all_images_have_alt: 'Todas imagens com alt text',
+      gallery_count: 'Galeria com 3 ou mais imagens',
+      all_images_have_alt: 'Todas imagens com texto alternativo',
     }
   },
   specs: {
-    emoji: '📊',
-    label: 'ESPECIFICAÇÕES TÉCNICAS',
+    emoji: '📋',
+    label: 'ESPECIFICAÇÕES',
     fields: {
-      technical_specs_min: 'Especificações técnicas (min 5)',
-      faq_min: 'FAQ (min 3 perguntas)',
-      dimensions: 'Dimensões (A×L×P)',
+      technical_specs_min: 'Especificações técnicas (mínimo 5)',
+      faq_min: 'Perguntas frequentes (mínimo 3)',
+      dimensions: 'Dimensões (Altura × Largura × Profundidade)',
       weight: 'Peso',
       material: 'Material',
     }
   },
   ai_content: {
     emoji: '🤖',
-    label: 'CONTEÚDO AI',
+    label: 'CONTEÚDO GERADO',
     fields: {
-      benefits: 'Benefícios (min 3)',
-      features: 'Características (min 3)',
-      ai_keywords: 'Keywords geradas por AI',
-      ai_category: 'Categoria gerada por AI',
-      sales_pitch: 'Sales Pitch',
-      tags: 'Tags (min 2)',
+      benefits: 'Lista de benefícios (mínimo 3)',
+      features: 'Lista de características (mínimo 3)',
+      ai_keywords: 'Palavras-chave geradas automaticamente',
+      ai_category: 'Categoria sugerida automaticamente',
+      sales_pitch: 'Texto de venda',
+      tags: 'Etiquetas (mínimo 2)',
     }
   },
   videos: {
-    emoji: '🎬',
+    emoji: '🎥',
     label: 'VÍDEOS',
     fields: {
-      youtube_videos: 'Vídeos YouTube',
-      instagram_videos: 'Vídeos Instagram',
-      technical_videos: 'Vídeos Técnicos',
-      testimonial_videos: 'Vídeos de Depoimentos',
+      youtube_videos: 'Vídeos do YouTube',
+      instagram_videos: 'Vídeos do Instagram',
+      technical_videos: 'Vídeos técnicos',
+      testimonial_videos: 'Vídeos de depoimentos',
     }
   },
   ctas: {
     emoji: '🔗',
-    label: 'CTAs & RECURSOS',
+    label: 'LINKS E RECURSOS',
     fields: {
-      product_url: 'URL do Produto',
-      resource_cta1: 'CTA Recurso 1',
-      resource_cta2: 'CTA Recurso 2',
-      resource_cta3: 'CTA Recurso 3',
+      product_url: 'Link do produto',
+      resource_cta1: 'Recurso 1',
+      resource_cta2: 'Recurso 2',
+      resource_cta3: 'Recurso 3',
     }
   },
   merchant: {
     emoji: '🏪',
     label: 'GOOGLE MERCHANT',
     fields: {
-      gtin: 'GTIN/EAN',
-      mpn: 'MPN',
+      gtin: 'Código GTIN/EAN',
+      mpn: 'Código MPN',
       brand: 'Marca',
       google_category: 'Categoria Google',
     }
   },
   ecommerce: {
     emoji: '💰',
-    label: 'E-COMMERCE',
+    label: 'LOJA ONLINE',
     fields: {
       promo_price: 'Preço promocional',
       stock_managed: 'Controle de estoque ativo',
-      stock_quantity: 'Quantidade em estoque',
-      min_order_quantity: 'Quantidade mínima',
-      max_order_quantity: 'Quantidade máxima',
+      stock_quantity: 'Quantidade disponível',
+      min_order_quantity: 'Pedido mínimo',
+      max_order_quantity: 'Pedido máximo',
       free_shipping: 'Frete grátis',
-      ean: 'Código EAN',
-      ncm: 'Código NCM',
+      ean: 'Código de barras (EAN)',
+      ncm: 'Código fiscal (NCM)',
     }
   },
   social_content: {
     emoji: '📱',
-    label: 'CONTEÚDO SOCIAL',
+    label: 'REDES SOCIAIS',
     fields: {
-      whatsapp_messages: 'Mensagens WhatsApp',
-      whatsapp_sequences: 'Sequências WhatsApp',
-      instagram_copies: 'Copies Instagram',
-      youtube_descriptions: 'Descrições YouTube',
-      tiktok_content: 'Conteúdo TikTok',
+      whatsapp_messages: 'Mensagens para WhatsApp',
+      whatsapp_sequences: 'Fluxos de conversa WhatsApp',
+      instagram_copies: 'Textos para Instagram',
+      youtube_descriptions: 'Descrições de vídeos',
+      tiktok_content: 'Scripts para TikTok',
     }
   },
   additional_content: {
-    emoji: '📝',
-    label: 'CONTEÚDO ADICIONAL',
+    emoji: '📚',
+    label: 'MATERIAIS EXTRAS',
     fields: {
-      individual_blog: 'Blog individual do produto',
-      tutorial_resources: 'Recursos e tutoriais',
-      bot_trigger_words: 'Palavras-gatilho para bot',
+      individual_blog: 'Artigo de blog próprio',
+      tutorial_resources: 'Tutoriais e guias',
+      bot_trigger_words: 'Palavras-chave para chatbot',
     }
   },
   cs_messages: {
-    emoji: '📞',
-    label: 'MENSAGENS DE CS',
+    emoji: '💬',
+    label: 'ATENDIMENTO AO CLIENTE',
     fields: {
-      has_cs_messages: 'Mensagens de CS configuradas',
-      has_active_cs_messages: 'Mensagens de CS ativas',
-      cs_messages_count: 'Quantidade mínima (min 3 ativas)',
+      has_cs_messages: 'Tem mensagens automáticas',
+      has_active_cs_messages: 'Tem mensagens ativas',
+      cs_messages_count: 'Pelo menos 3 mensagens ativas',
     }
   },
   aftersales_messages: {
-    emoji: '📦',
-    label: 'MENSAGENS DE PÓS-VENDA',
+    emoji: '🎁',
+    label: 'PÓS-VENDA',
     fields: {
-      has_aftersales_messages: 'Mensagens de pós-venda configuradas',
-      has_active_aftersales_messages: 'Mensagens de pós-venda ativas',
-      aftersales_messages_count: 'Quantidade mínima (min 3 ativas)',
+      has_aftersales_messages: 'Tem mensagens pós-compra',
+      has_active_aftersales_messages: 'Tem mensagens ativas',
+      aftersales_messages_count: 'Pelo menos 3 mensagens ativas',
     }
   },
 };
