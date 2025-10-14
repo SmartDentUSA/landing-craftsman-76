@@ -100,34 +100,77 @@ serve(async (req) => {
       }
     }
 
-    // Try to get YouTube OAuth credentials from database first (per-user config)
+    // ✅ NOVA ARQUITETURA: Buscar OAuth em 3 níveis de fallback
     const authHeader = req.headers.get('Authorization');
     let youtubeClientId, youtubeClientSecret, youtubeRefreshToken;
+    let credData = null;
+    let genericCred = null;
+    let legacyToken = null;
 
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabase.auth.getUser(token);
       
       if (user) {
-        const { data: credsData } = await supabase
-          .from('youtube_oauth_credentials')
-          .select('client_id, client_secret, refresh_token')
-          .eq('user_id', user.id)
-          .single();
-
-        if (credsData) {
-          youtubeClientId = credsData.client_id;
-          youtubeClientSecret = credsData.client_secret;
-          youtubeRefreshToken = credsData.refresh_token;
-          console.log('✅ Using YouTube credentials from database for user:', user.id);
+        // 1️⃣ Buscar Client ID/Secret de oauth_client_configs
+        const { data: configData } = await supabase
+          .from('oauth_client_configs')
+          .select('client_id, client_secret')
+          .eq('provider', 'youtube')
+          .maybeSingle();
+        
+        if (configData) {
+          // 2️⃣ Buscar Refresh Token em oauth_credentials (provider=youtube)
+          const { data: credDataTemp } = await supabase
+            .from('oauth_credentials')
+            .select('refresh_token')
+            .eq('user_id', user.id)
+            .eq('provider', 'youtube')
+            .maybeSingle();
+          
+          credData = credDataTemp;
+          
+          if (credData) {
+            youtubeClientId = configData.client_id;
+            youtubeClientSecret = configData.client_secret;
+            youtubeRefreshToken = credData.refresh_token;
+            console.log('✅ Using YouTube credentials from oauth_credentials');
+          } else {
+            // 3️⃣ FALLBACK: google_oauth_tokens (arquitetura antiga)
+            const { data: legacyTokenTemp } = await supabase
+              .from('google_oauth_tokens')
+              .select('provider_refresh_token')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            legacyToken = legacyTokenTemp;
+            
+            if (legacyToken) {
+              youtubeClientId = configData.client_id;
+              youtubeClientSecret = configData.client_secret;
+              youtubeRefreshToken = legacyToken.provider_refresh_token;
+              console.log('⚠️ Using legacy google_oauth_tokens for YouTube');
+            }
+          }
         }
       }
     }
 
-    // Fallback to environment variables if not in database
+    // 4️⃣ FALLBACK FINAL: variáveis de ambiente
     if (!youtubeClientId) youtubeClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
     if (!youtubeClientSecret) youtubeClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
     if (!youtubeRefreshToken) youtubeRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
+
+    console.log('🔍 YouTube OAuth check:', {
+      has_client_id: !!youtubeClientId,
+      has_refresh_token: !!youtubeRefreshToken,
+      token_source: youtubeRefreshToken 
+        ? (credData ? 'oauth_credentials' 
+          : (legacyToken ? 'google_oauth_tokens_legacy' : 'env_vars')) 
+        : 'none'
+    });
 
     // Fetch product with current updated_at for optimistic locking
     const { data: product, error: productError } = await supabase
