@@ -334,10 +334,7 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
 
     const { error: updateError } = await supabase
       .from('products_repository')
-      .update({ 
-        [fieldName]: currentData,
-        updated_at: new Date().toISOString() // ✅ Fase 1.2: Rastreamento de modificações
-      })
+      .update({ [fieldName]: currentData })
       .eq('id', productId);
 
     if (updateError) {

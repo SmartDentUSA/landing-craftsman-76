@@ -37,9 +37,6 @@ export interface LandingPageWithCompletion {
   completion: CompletionTracking;
   selected_product_ids?: string[];
   blog_generated?: boolean;
-  data?: any;
-  template?: string;
-  embed?: string;
 }
 
 export const useLandingPageCompletion = () => {
@@ -61,7 +58,7 @@ export const useLandingPageCompletion = () => {
 
       const { data: lpData, error: lpError } = await supabase
         .from('landing_pages')
-        .select('id, name, status, last_modified, selected_product_ids, blog_generated, data, template, embed')
+        .select('id, name, status, last_modified, selected_product_ids, blog_generated')
         .order('last_modified', { ascending: false });
 
       if (lpError) throw lpError;

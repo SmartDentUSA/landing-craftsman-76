@@ -1,26 +1,14 @@
-import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RefreshCw, BarChart3, CheckSquare, List } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { useLandingPageCompletion } from '@/hooks/useLandingPageCompletion';
 import { LandingPageProgressStats } from './LandingPageProgressStats';
 import { LandingPageProgressCard } from './LandingPageProgressCard';
-import { LandingPageConfigChecklistView } from './LandingPageConfigChecklistView';
-import { LandingPageSimpleChecklistCard } from './LandingPageSimpleChecklistCard';
 import { useNavigate } from 'react-router-dom';
 
 export function LandingPageProgressManager() {
-  const [viewMode, setViewMode] = useState<'checklist' | 'detailed' | 'progress'>(() => {
-    return (localStorage.getItem('landing_pages_view_mode') as 'checklist' | 'detailed' | 'progress') || 'checklist';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('landing_pages_view_mode', viewMode);
-  }, [viewMode]);
-  
   const { 
     data, 
     isLoading, 
@@ -44,27 +32,6 @@ export function LandingPageProgressManager() {
   return (
     <div className="space-y-6">
       <LandingPageProgressStats stats={stats} />
-
-      <div className="flex justify-end">
-        <ToggleGroup 
-          type="single" 
-          value={viewMode} 
-          onValueChange={(v) => v && setViewMode(v as 'checklist' | 'detailed' | 'progress')}
-        >
-          <ToggleGroupItem value="checklist" aria-label="Checklist Simples">
-            <CheckSquare className="h-4 w-4 mr-2" />
-            Checklist
-          </ToggleGroupItem>
-          <ToggleGroupItem value="detailed" aria-label="Checklist Detalhado">
-            <List className="h-4 w-4 mr-2" />
-            Detalhado
-          </ToggleGroupItem>
-          <ToggleGroupItem value="progress" aria-label="Modo Progresso">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Progresso
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
 
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
@@ -176,25 +143,12 @@ export function LandingPageProgressManager() {
         ) : (
           <div className="space-y-3">
             {data.map(lp => (
-              viewMode === 'checklist' ? (
-                <LandingPageSimpleChecklistCard
-                  key={lp.id}
-                  landingPage={lp}
-                  onEdit={(id) => navigate(`/?id=${id}`)}
-                />
-              ) : viewMode === 'detailed' ? (
-                <LandingPageConfigChecklistView
-                  key={lp.id}
-                  landingPage={lp}
-                />
-              ) : (
-                <LandingPageProgressCard
-                  key={lp.id}
-                  landingPage={lp}
-                  onMarkComplete={markAsComplete}
-                  onEdit={(id) => navigate(`/?id=${id}`)}
-                />
-              )
+              <LandingPageProgressCard
+                key={lp.id}
+                landingPage={lp}
+                onMarkComplete={markAsComplete}
+                onEdit={(id) => navigate(`/?id=${id}`)}
+              />
             ))}
           </div>
         )}

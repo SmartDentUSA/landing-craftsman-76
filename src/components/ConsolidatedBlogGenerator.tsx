@@ -129,26 +129,17 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         ])
       ];
 
-      // ✅ CORREÇÃO: Buscar blogs corretos do blog_posts ao invés do individual_blog_content
-      const { data: blogPosts } = await supabase
-        .from('blog_posts')
-        .select('title, content, keywords, landing_page_id')
-        .eq('landing_page_id', landingPageId || approvedLandingPages[0]?.id)
-        .contains('published_domains', domain === 'dentala' ? ['dentala.com.br'] : ['eodonto.com']);
-
-      console.log(`📝 Blogs encontrados para ${domain}:`, blogPosts?.length || 0);
-
       // Generate advanced intelligent links for each blog
       const blogsWithAdvancedLinks = await Promise.all(
-        (blogPosts || []).map(async (blog) => {
+        blogsForDomain.map(async (blog) => {
           const intelligentLinks = await generateAdvancedIntelligentLinks({
             content: blog.content,
-            customLinks: {},
+            customLinks: {}, // Could be enhanced with custom links
             landingPagesData: landingPageSEOData,
-            productUrl: selectedProductsData[0]?.productUrl,
-            relatedProducts: selectedProductsData,
-            productKeywords: blog.keywords || [],
-            productCategories: []
+            productUrl: selectedProductsData.find(p => p.name === blog.productName)?.productUrl,
+            relatedProducts: selectedProductsData.filter(p => p.name !== blog.productName),
+            productKeywords: selectedProductsData.find(p => p.name === blog.productName)?.keywords || [],
+            productCategories: selectedProductsData.find(p => p.name === blog.productName)?.category ? [selectedProductsData.find(p => p.name === blog.productName)?.category] : []
           });
 
           const processedContent = processContentWithAdvancedIntelligentLinks(blog.content, intelligentLinks);
@@ -156,7 +147,8 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
           return {
             title: blog.title,
             content: processedContent,
-            keywords: blog.keywords || []
+            productName: blog.productName,
+            keywords: []
           };
         })
       );

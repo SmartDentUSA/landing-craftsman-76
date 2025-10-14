@@ -1044,9 +1044,6 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         slug: result.data.slug
       });
       
-      // ✅ FASE 1.3: Aguardar trigger SQL atualizar score (~500ms)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       const seoFieldsFilled = !!(result.data.seo_title_override || result.data.seo_description_override || result.data.slug);
       
       toast({

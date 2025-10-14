@@ -25,23 +25,15 @@ const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<'repository' | 'progress' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs'>('repository');
-  const [editProductIdFromProgress, setEditProductIdFromProgress] = useState<string | null>(null);
 
-  // Detectar redirecionamento OAuth e navegação de edição de produto
+  // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
     const state = location.state as any;
     if (state?.activeView) {
       console.log("🔄 Mudando para aba:", state.activeView);
       setActiveView(state.activeView);
     }
-    if (state?.editProductId) {
-      console.log("✏️ Abrindo edição de produto:", state.editProductId);
-      setEditProductIdFromProgress(state.editProductId);
-      setActiveView('repository');
-      // Limpar state da URL
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location, navigate]);
+  }, [location]);
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -160,7 +152,6 @@ const Repository = () => {
                     landingPageId="repository"
                     onProductSelectionChange={() => {}}
                     onCompanyProfileChange={() => {}}
-                    initialEditProductId={editProductIdFromProgress ?? undefined}
                   />
                 </div>
               </TabsContent>

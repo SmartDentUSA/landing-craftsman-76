@@ -2,26 +2,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RefreshCw, BarChart3, CheckSquare, List } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, RefreshCw } from 'lucide-react';
 import { useProductCompletion } from '@/hooks/useProductCompletion';
 import { ProductProgressStats } from './ProductProgressStats';
 import { ProductProgressCard } from './ProductProgressCard';
-import { ProductConfigChecklistView } from './ProductConfigChecklistView';
-import { ProductSimpleChecklistCard } from './ProductSimpleChecklistCard';
-import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export function ProductProgressManager() {
-  const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'checklist' | 'detailed' | 'progress'>(() => {
-    return (localStorage.getItem('products_view_mode') as 'checklist' | 'detailed' | 'progress') || 'checklist';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('products_view_mode', viewMode);
-  }, [viewMode]);
-  
   const { 
     data, 
     isLoading, 
@@ -31,14 +19,16 @@ export function ProductProgressManager() {
     markAsComplete, 
     refresh 
   } = useProductCompletion();
+  
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleEditProduct = (id: string) => {
-    navigate('/repository', { 
-      state: { 
-        activeView: 'repository', 
-        editProductId: id 
-      } 
+    toast({
+      title: "Editar Produto",
+      description: "Navegue para Repositório > aba Repositório para editar este produto",
     });
+    navigate('/repository');
   };
 
   if (isLoading) {
@@ -51,28 +41,7 @@ export function ProductProgressManager() {
 
   return (
     <div className="space-y-6">
-      {/* Stats cards removed for cleaner interface */}
-
-      <div className="flex items-center justify-between">
-        <ToggleGroup 
-          type="single" 
-          value={viewMode} 
-          onValueChange={(v) => v && setViewMode(v as 'checklist' | 'detailed' | 'progress')}
-        >
-          <ToggleGroupItem value="checklist" aria-label="Checklist Simples">
-            <CheckSquare className="h-4 w-4 mr-2" />
-            Checklist
-          </ToggleGroupItem>
-          <ToggleGroupItem value="detailed" aria-label="Checklist Detalhado">
-            <List className="h-4 w-4 mr-2" />
-            Detalhado
-          </ToggleGroupItem>
-          <ToggleGroupItem value="progress" aria-label="Modo Progresso">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Progresso
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+      <ProductProgressStats stats={stats} />
 
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
@@ -184,29 +153,17 @@ export function ProductProgressManager() {
         ) : (
           <div className="space-y-3">
             {data.map(product => (
-              viewMode === 'checklist' ? (
-                <ProductSimpleChecklistCard
-                  key={product.id}
-                  product={product}
-                  onEdit={handleEditProduct}
-                />
-              ) : viewMode === 'detailed' ? (
-                <ProductConfigChecklistView
-                  key={product.id}
-                  product={product}
-                />
-              ) : (
-                <ProductProgressCard
-                  key={product.id}
-                  product={product}
-                  onMarkComplete={markAsComplete}
-                  onEdit={handleEditProduct}
-                />
-              )
+              <ProductProgressCard
+                key={product.id}
+                product={product}
+                onMarkComplete={markAsComplete}
+                onEdit={handleEditProduct}
+              />
             ))}
           </div>
         )}
       </div>
+
     </div>
   );
 }
