@@ -545,6 +545,9 @@ async function extractAndSaveReviews(
   const normalizedUrl = normalizeGoogleMapsUrl(url);
   console.log('Using URL for individual extraction:', normalizedUrl);
   
+  // ✅ Declarar userId no escopo correto
+  let userId: string | null = null;
+  
   // Extract place_id from URL
   const placeIdMatch = normalizedUrl.match(/cid=([^&]+)/);
   const place_id = placeIdMatch ? placeIdMatch[1] : generatePlaceIdFromUrl(url);
@@ -585,6 +588,9 @@ async function extractAndSaveReviews(
       const { data: { user } } = await supabase.auth.getUser(token);
       
       if (user) {
+        userId = user.id; // ✅ Setar userId aqui
+        console.log('🔐 User authenticated, attempting Google Business API extraction...');
+        
         // Buscar Client ID e Secret de oauth_client_configs
         const { data: configData } = await supabase
           .from('oauth_client_configs')

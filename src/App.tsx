@@ -13,6 +13,7 @@ import PublicationSettings from "./pages/PublicationSettings";
 import BlogEditor from "./pages/BlogEditor";
 import Repository from "./pages/Repository";
 import YouTubeOAuthSettings from "./pages/YouTubeOAuthSettings";
+import GoogleBusinessOAuthSettings from "./pages/GoogleBusinessOAuthSettings";
 import OAuthCallback from "./pages/OAuthCallback";
 import OAuthLaunch from "./pages/OAuthLaunch";
 import AuthLaunch from "./pages/AuthLaunch";
@@ -43,8 +44,9 @@ const App = () => (
           <Route path="/repository" element={<ProtectedRoute><Repository /></ProtectedRoute>} />
           <Route path="/blog-generator/:id" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
           <Route path="/blog/:id" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
-          <Route path="/youtube-settings" element={<ProtectedRoute><YouTubeOAuthSettings /></ProtectedRoute>} />
-          <Route path="/oauth2/callback" element={<OAuthCallback />} />
+            <Route path="/google-business-settings" element={<ProtectedRoute><GoogleBusinessOAuthSettings /></ProtectedRoute>} />
+            <Route path="/youtube-settings" element={<ProtectedRoute><YouTubeOAuthSettings /></ProtectedRoute>} />
+            <Route path="/oauth2/callback" element={<OAuthCallback />} />
           <Route path="/oauth/launch" element={<OAuthLaunch />} />
           <Route path="/auth/launch" element={<AuthLaunch />} />
           <Route path="/password-reset" element={<PasswordReset />} />

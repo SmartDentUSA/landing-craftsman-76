@@ -161,15 +161,32 @@ export function useCompanyReviews() {
 
       if (error) throw error;
 
-      console.log('✅ Google Reviews sync response:', {
-        reviews_extracted: data?.reviews_extracted,
-        place_id: data?.place_id,
-        success: data?.success
-      });
+      console.log('✅ Google Reviews sync response:', data);
 
+      // ✅ Verificar success do retorno
+      if (!data?.success) {
+        toast({
+          title: "❌ Erro ao importar reviews",
+          description: data?.error || "Não foi possível extrair reviews. Verifique a URL ou configure OAuth do Google Business em /google-business-settings.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // ✅ Verificar se realmente extraiu reviews
+      if (data.data?.reviews_extracted === 0) {
+        toast({
+          title: "⚠️ Nenhuma review encontrada",
+          description: "Configure as credenciais do Google Business API em /google-business-settings para melhores resultados.",
+          variant: "default"
+        });
+        return false;
+      }
+
+      // ✅ Só mostra sucesso se realmente extraiu
       toast({
         title: "✅ Google Reviews importados",
-        description: `${data?.reviews_extracted || 0} reviews extraídos e sincronizados`,
+        description: `${data.data.reviews_extracted} reviews extraídos e sincronizados`,
       });
 
       return true;
