@@ -237,18 +237,6 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
     setExpandedCategories(new Set());
   };
 
-  const expandAll = () => {
-    setExpandedCategories(new Set(Object.keys(CATEGORY_CONFIG)));
-  };
-
-  const toggleAll = () => {
-    if (expandedCategories.size === 0) {
-      expandAll();
-    } else {
-      collapseAll();
-    }
-  };
-
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -265,19 +253,11 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={toggleAll}
+            onClick={collapseAll}
+            title="Fechar todas as categorias"
           >
-            {expandedCategories.size === 0 ? (
-              <>
-                <ChevronDown className="h-4 w-4 mr-2" />
-                Expandir Tudo
-              </>
-            ) : (
-              <>
-                <ChevronRight className="h-4 w-4 mr-2" />
-                Colapsar Tudo
-              </>
-            )}
+            <ChevronRight className="h-4 w-4 mr-2" />
+            Colapsar Tudo
           </Button>
           {onEdit && (
             <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
