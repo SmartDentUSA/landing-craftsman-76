@@ -1,14 +1,19 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Search, RefreshCw } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Search, RefreshCw, BarChart3, CheckSquare } from 'lucide-react';
 import { useLandingPageCompletion } from '@/hooks/useLandingPageCompletion';
 import { LandingPageProgressStats } from './LandingPageProgressStats';
 import { LandingPageProgressCard } from './LandingPageProgressCard';
+import { LandingPageConfigChecklistView } from './LandingPageConfigChecklistView';
 import { useNavigate } from 'react-router-dom';
 
 export function LandingPageProgressManager() {
+  const [viewMode, setViewMode] = useState<'progress' | 'checklist'>('progress');
+  
   const { 
     data, 
     isLoading, 
@@ -32,6 +37,23 @@ export function LandingPageProgressManager() {
   return (
     <div className="space-y-6">
       <LandingPageProgressStats stats={stats} />
+
+      <div className="flex justify-end">
+        <ToggleGroup 
+          type="single" 
+          value={viewMode} 
+          onValueChange={(v) => v && setViewMode(v as 'progress' | 'checklist')}
+        >
+          <ToggleGroupItem value="progress" aria-label="Modo Progresso">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Progresso
+          </ToggleGroupItem>
+          <ToggleGroupItem value="checklist" aria-label="Modo Checklist">
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Checklist
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
@@ -143,12 +165,19 @@ export function LandingPageProgressManager() {
         ) : (
           <div className="space-y-3">
             {data.map(lp => (
-              <LandingPageProgressCard
-                key={lp.id}
-                landingPage={lp}
-                onMarkComplete={markAsComplete}
-                onEdit={(id) => navigate(`/?id=${id}`)}
-              />
+              viewMode === 'checklist' ? (
+                <LandingPageConfigChecklistView
+                  key={lp.id}
+                  landingPage={lp}
+                />
+              ) : (
+                <LandingPageProgressCard
+                  key={lp.id}
+                  landingPage={lp}
+                  onMarkComplete={markAsComplete}
+                  onEdit={(id) => navigate(`/?id=${id}`)}
+                />
+              )
             ))}
           </div>
         )}
