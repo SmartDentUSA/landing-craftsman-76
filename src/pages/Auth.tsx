@@ -157,13 +157,15 @@ const Auth = () => {
     try {
       console.log('🔐 Iniciando login com Google...');
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      const inIframe = window.self !== window.top;
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
           queryParams: {
-            access_type: "offline", // ⚠️ CRÍTICO para refresh_token
-            prompt: "consent", // Força seleção de conta
+            access_type: "offline",
+            prompt: "consent",
           },
           scopes: [
             "openid",
@@ -172,6 +174,7 @@ const Auth = () => {
             "https://www.googleapis.com/auth/youtube.force-ssl",
             "https://www.googleapis.com/auth/business.manage"
           ].join(" "),
+          skipBrowserRedirect: true,
         },
       });
 
@@ -179,8 +182,29 @@ const Auth = () => {
         console.error('❌ Google login error:', error);
         throw error;
       }
-      
-      console.log('✅ Redirecionando para Google OAuth...');
+
+      if (!data?.url) {
+        throw new Error('URL de autorização não retornada');
+      }
+
+      if (inIframe) {
+        console.log('⚠️ Iframe detectado — usando /auth/launch');
+        const launchUrl = `${window.location.origin}/auth/launch?target=${encodeURIComponent(data.url)}`;
+        const newTab = window.open(launchUrl, "_blank", "noopener,noreferrer");
+        
+        if (!newTab) {
+          toast({
+            title: "Bloqueio de popup detectado",
+            description: "Permita popups para este site e tente novamente",
+            variant: "destructive",
+          });
+        } else {
+          console.log('✅ Nova aba aberta com sucesso');
+        }
+      } else {
+        console.log('✅ Ambiente top-level — redirecionamento direto');
+        window.location.assign(data.url);
+      }
       
     } catch (error: any) {
       console.error('❌ Unexpected Google login error:', error);

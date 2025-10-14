@@ -15,6 +15,7 @@ import Repository from "./pages/Repository";
 import YouTubeOAuthSettings from "./pages/YouTubeOAuthSettings";
 import OAuthCallback from "./pages/OAuthCallback";
 import OAuthLaunch from "./pages/OAuthLaunch";
+import AuthLaunch from "./pages/AuthLaunch";
 import Auth from "./pages/Auth";
 import PasswordReset from "./pages/PasswordReset";
 import NotFound from "./pages/NotFound";
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/youtube-settings" element={<ProtectedRoute><YouTubeOAuthSettings /></ProtectedRoute>} />
           <Route path="/oauth2/callback" element={<OAuthCallback />} />
           <Route path="/oauth/launch" element={<OAuthLaunch />} />
+          <Route path="/auth/launch" element={<AuthLaunch />} />
           <Route path="/password-reset" element={<PasswordReset />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
