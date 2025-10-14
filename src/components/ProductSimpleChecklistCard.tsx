@@ -2,10 +2,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CheckCircle2, XCircle, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
+import { CheckCircle2, XCircle, Pencil } from 'lucide-react';
 import { detectProductConfiguration, countConfiguredItems } from '@/lib/product-config-detector';
-import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -199,46 +197,9 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
   const status = detectProductConfiguration(product, csMessages, aftersalesMessages);
   const counts = countConfiguredItems(status);
 
-  // 🔍 DEBUG: Ver dados reais do produto
-  console.log('🔍 ProductSimpleChecklistCard - Produto:', product.name);
-  console.log('📊 Status detectado:', status);
-  console.log('📈 Counts:', counts);
-
-  // Determina qual categoria tem mais pendências (ESTÁVEL com JSON.stringify)
-  const categoryWithMostPending = useMemo(() => {
-    const pending = Object.entries(counts.byCategory).map(([key, stats]) => ({
-      key,
-      pending: stats.total - stats.configured
-    }));
-    pending.sort((a, b) => b.pending - a.pending);
-    const result = pending[0]?.key || 'basic';
-    console.log('📂 Categoria com mais pendências:', result, '- pendências:', pending);
-    return result;
-  }, [JSON.stringify(counts.byCategory)]);
-
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
-    console.log('🎯 Inicializando com categoria expandida:', categoryWithMostPending);
-    return new Set([categoryWithMostPending]);
-  });
-
-  const toggleCategory = (categoryKey: string) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev);
-      if (next.has(categoryKey)) {
-        next.delete(categoryKey);
-      } else {
-        next.add(categoryKey);
-      }
-      return next;
-    });
-  };
-
-  const collapseAll = () => {
-    setExpandedCategories(new Set());
-  };
-
   return (
     <Card className="p-5">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold truncate">{product.name}</h3>
@@ -246,19 +207,10 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
             {product.category || 'Sem categoria'} {product.subcategory && `› ${product.subcategory}`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Badge variant={counts.percentage >= 80 ? 'default' : counts.percentage >= 50 ? 'secondary' : 'destructive'}>
-            {counts.configured}/{counts.total} itens
+            {counts.configured}/{counts.total}
           </Badge>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={collapseAll}
-            title="Fechar todas as categorias"
-          >
-            <ChevronRight className="h-4 w-4 mr-2" />
-            Colapsar Tudo
-          </Button>
           {onEdit && (
             <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
               <Pencil className="h-4 w-4 mr-2" />
@@ -268,75 +220,52 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
         </div>
       </div>
 
+      {/* Progress Bar */}
       <Progress value={counts.percentage} className="h-2 mb-6" />
 
-      <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+      {/* Simple Checklist - ALL OPEN */}
+      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
         {Object.entries(CATEGORY_CONFIG).map(([categoryKey, config]) => {
           const categoryData = status[categoryKey as keyof typeof status];
           const categoryStats = counts.byCategory[categoryKey];
           
-          // 🛡️ Verificação de segurança
-          if (!categoryData || !categoryStats) {
-            console.error('❌ categoryData ou categoryStats undefined para:', categoryKey);
-            return null;
-          }
+          if (!categoryData || !categoryStats) return null;
 
           const bgColor = getCategoryBgColor(categoryStats.configured, categoryStats.total);
-          const isExpanded = expandedCategories.has(categoryKey);
-
-          console.log(`📦 Categoria "${categoryKey}":`, {
-            stats: categoryStats,
-            expanded: isExpanded,
-            configured: categoryStats.configured,
-            total: categoryStats.total
-          });
 
           return (
-            <Collapsible
-              key={categoryKey}
-              open={isExpanded}
-              onOpenChange={() => toggleCategory(categoryKey)}
-            >
-              <CollapsibleTrigger className="w-full">
-                <div className={`flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors ${
-                  isExpanded ? 'bg-accent/50 shadow-sm' : ''
-                }`}>
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
-                  )}
-                  <span className="text-xl">{config.emoji}</span>
-                  <span className="font-semibold text-sm flex-1 text-left">{config.label}</span>
-                  <Badge variant="outline">
-                    {categoryStats.configured}/{categoryStats.total}
-                  </Badge>
-                </div>
-              </CollapsibleTrigger>
+            <div key={categoryKey} className="space-y-2">
+              {/* Category Header */}
+              <div className="flex items-center gap-2 py-2">
+                <span className="text-xl">{config.emoji}</span>
+                <span className="font-semibold text-sm flex-1">{config.label}</span>
+                <Badge variant="outline" className="text-xs">
+                  {categoryStats.configured}/{categoryStats.total}
+                </Badge>
+              </div>
 
-              <CollapsibleContent className="mt-2">
-                <div className={`border rounded-lg p-3 ${bgColor}`}>
-                  <div className="space-y-1.5">
-                    {Object.entries(config.fields).map(([fieldKey, fieldLabel]) => {
-                      const isConfigured = categoryData[fieldKey as keyof typeof categoryData];
-                      
-                      return (
-                        <div key={fieldKey} className="flex items-center gap-2">
-                          {isConfigured ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                          )}
-                          <span className={`text-xs ${isConfigured ? 'text-foreground' : 'text-muted-foreground'}`}>
-                            {fieldLabel}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+              {/* Fields List */}
+              <div className={`border rounded-lg p-3 ${bgColor}`}>
+                <div className="space-y-1.5">
+                  {Object.entries(config.fields).map(([fieldKey, fieldLabel]) => {
+                    const isConfigured = categoryData[fieldKey as keyof typeof categoryData];
+                    
+                    return (
+                      <div key={fieldKey} className="flex items-center gap-2">
+                        {isConfigured ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                        )}
+                        <span className={`text-xs ${isConfigured ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {fieldLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              </div>
+            </div>
           );
         })}
       </div>
