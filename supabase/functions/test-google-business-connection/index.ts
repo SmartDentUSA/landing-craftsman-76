@@ -16,6 +16,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let credentialSource = 'environment';
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -34,7 +35,6 @@ serve(async (req) => {
     } = body;
 
     let clientId, clientSecret, refreshToken;
-    let credentialSource = 'environment';
 
     // Priority: body > database > environment
     if (bodyClientId && bodyClientSecret && bodyRefreshToken) {
@@ -52,10 +52,11 @@ serve(async (req) => {
         
         if (user) {
           const { data: credsData } = await supabaseClient
-            .from('google_business_oauth_credentials')
+            .from('oauth_credentials')
             .select('client_id, client_secret, refresh_token')
             .eq('user_id', user.id)
-            .single();
+            .eq('provider', 'google_business')
+            .maybeSingle();
 
           if (credsData) {
             clientId = credsData.client_id;

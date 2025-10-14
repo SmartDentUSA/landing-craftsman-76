@@ -112,11 +112,11 @@ export function OAuthSettingsCard({
         {session?.user?.email && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{hasCredentials ? 'API Configurada' : 'Apenas Login'}</AlertTitle>
+            <AlertTitle>{hasCredentials ? 'API Configurada' : 'Quase lá 😉'}</AlertTitle>
             <AlertDescription>
               {hasCredentials 
                 ? `Credenciais OAuth configuradas para ${session.user.email}` 
-                : `Você está logado como ${session.user.email}, mas ainda precisa configurar as credenciais da API ${title}`
+                : `Você já está logado. Para ativar esta integração, informe o Client ID, Client Secret e gere o Refresh Token. Leva menos de 1 minuto — clique em "Configurar ${title}".`
               }
             </AlertDescription>
           </Alert>
