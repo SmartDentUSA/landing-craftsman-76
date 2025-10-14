@@ -103,6 +103,21 @@ export function detectProductConfiguration(
   const hasText = (text: any) => !!text && text.toString().trim().length > 0;
   const hasNumber = (num: any) => typeof num === 'number' && num > 0;
 
+  console.log('🔍 detectProductConfiguration - Input:', {
+    productName: product.name,
+    hasKeywords: hasArray(product.keywords),
+    keywordsLength: product.keywords?.length,
+    hasBenefits: hasArray(product.benefits),
+    benefitsLength: product.benefits?.length,
+    hasFeatures: hasArray(product.features),
+    featuresLength: product.features?.length,
+    descriptionLength: product.description?.length,
+    category: product.category,
+    whatsapp_messages: product.whatsapp_messages,
+    instagram_copies: product.instagram_copies,
+    price: product.price
+  });
+
   return {
     basic: {
       name: hasText(product.name),
@@ -225,12 +240,23 @@ export function countConfiguredItems(status: ProductConfigStatus): {
     byCategory[category] = { configured, total };
     totalConfigured += configured;
     totalItems += total;
+
+    console.log(`📊 Categoria "${category}":`, {
+      configured,
+      total,
+      percentage: Math.round((configured / total) * 100),
+      fields: Object.entries(fields).map(([key, value]) => ({ [key]: value }))
+    });
   });
 
-  return {
+  const result = {
     total: totalItems,
     configured: totalConfigured,
     percentage: Math.round((totalConfigured / totalItems) * 100),
     byCategory,
   };
+
+  console.log('📈 countConfiguredItems - Resultado:', result);
+
+  return result;
 }

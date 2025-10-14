@@ -199,18 +199,27 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
   const status = detectProductConfiguration(product, csMessages, aftersalesMessages);
   const counts = countConfiguredItems(status);
 
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  // 🔍 DEBUG: Ver dados reais do produto
+  console.log('🔍 ProductSimpleChecklistCard - Produto:', product.name);
+  console.log('📊 Status detectado:', status);
+  console.log('📈 Counts:', counts);
 
-  // Expande apenas a categoria com mais pendências após dados carregarem
-  useEffect(() => {
+  // Determina qual categoria tem mais pendências (ESTÁVEL com JSON.stringify)
+  const categoryWithMostPending = useMemo(() => {
     const pending = Object.entries(counts.byCategory).map(([key, stats]) => ({
       key,
       pending: stats.total - stats.configured
     }));
     pending.sort((a, b) => b.pending - a.pending);
-    const categoryWithMostPending = pending[0]?.key || 'basic';
-    setExpandedCategories(new Set([categoryWithMostPending]));
-  }, [counts.byCategory]);
+    const result = pending[0]?.key || 'basic';
+    console.log('📂 Categoria com mais pendências:', result, '- pendências:', pending);
+    return result;
+  }, [JSON.stringify(counts.byCategory)]);
+
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+    console.log('🎯 Inicializando com categoria expandida:', categoryWithMostPending);
+    return new Set([categoryWithMostPending]);
+  });
 
   const toggleCategory = (categoryKey: string) => {
     setExpandedCategories(prev => {
@@ -252,8 +261,22 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
         {Object.entries(CATEGORY_CONFIG).map(([categoryKey, config]) => {
           const categoryData = status[categoryKey as keyof typeof status];
           const categoryStats = counts.byCategory[categoryKey];
+          
+          // 🛡️ Verificação de segurança
+          if (!categoryData || !categoryStats) {
+            console.error('❌ categoryData ou categoryStats undefined para:', categoryKey);
+            return null;
+          }
+
           const bgColor = getCategoryBgColor(categoryStats.configured, categoryStats.total);
           const isExpanded = expandedCategories.has(categoryKey);
+
+          console.log(`📦 Categoria "${categoryKey}":`, {
+            stats: categoryStats,
+            expanded: isExpanded,
+            configured: categoryStats.configured,
+            total: categoryStats.total
+          });
 
           return (
             <Collapsible
