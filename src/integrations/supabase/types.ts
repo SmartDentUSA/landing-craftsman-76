@@ -1507,6 +1507,7 @@ export type Database = {
           ai_extracted_benefits: Json | null
           ai_keywords: Json | null
           approved: boolean | null
+          caption_data: Json | null
           client_name: string
           created_at: string
           display_order: number | null
@@ -1526,6 +1527,7 @@ export type Database = {
           ai_extracted_benefits?: Json | null
           ai_keywords?: Json | null
           approved?: boolean | null
+          caption_data?: Json | null
           client_name: string
           created_at?: string
           display_order?: number | null
@@ -1545,6 +1547,7 @@ export type Database = {
           ai_extracted_benefits?: Json | null
           ai_keywords?: Json | null
           approved?: boolean | null
+          caption_data?: Json | null
           client_name?: string
           created_at?: string
           display_order?: number | null

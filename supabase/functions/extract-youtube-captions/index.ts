@@ -8,7 +8,13 @@ const corsHeaders = {
 };
 
 interface CaptionRequest {
-  productId: string;
+  // Legacy support
+  productId?: string;
+  
+  // New generic approach
+  entityType?: 'product' | 'company' | 'testimonial';
+  entityId?: string;
+  
   videoType: 'youtube_videos' | 'instagram_videos' | 'testimonial_videos' | 'technical_videos';
   videoIndex?: number;
   regenerateAnalysis?: {
@@ -49,7 +55,21 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     const request: CaptionRequest = await req.json();
 
-    console.log(`Extracting captions for product ${request.productId}, video type: ${request.videoType}`);
+    // Backward compatibility
+    const entityType = request.entityType || 'product';
+    const entityId = request.entityId || request.productId;
+
+    if (!entityId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'entityId or productId is required'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`Extracting captions for ${entityType} ${entityId}, video type: ${request.videoType}`);
 
     // ✅ FASE 1: Modo de regeneração de análise
     if (request.regenerateAnalysis) {
@@ -167,21 +187,61 @@ serve(async (req) => {
       token_source: tokenSource
     });
 
-    // Fetch product with current updated_at for optimistic locking
-    const { data: product, error: productError } = await supabase
-      .from('products_repository')
-      .select('*')
-      .eq('id', request.productId)
-      .single();
+    // Fetch entity data based on type
+    let entityData: any;
+    let currentUpdatedAt: string;
+    let videoArray: any[];
+    let captionsFieldPath: string;
 
-    if (productError || !product) {
-      throw new Error('Product not found');
+    if (entityType === 'product') {
+      const { data: product, error: productError } = await supabase
+        .from('products_repository')
+        .select('*')
+        .eq('id', entityId)
+        .single();
+
+      if (productError || !product) {
+        throw new Error('Product not found');
+      }
+
+      entityData = product;
+      currentUpdatedAt = product.updated_at;
+      videoArray = Array.isArray(product[request.videoType]) ? product[request.videoType] : [];
+      captionsFieldPath = 'video_captions';
+    } else if (entityType === 'company') {
+      const { data: company, error: companyError } = await supabase
+        .from('company_profile')
+        .select('*')
+        .single();
+
+      if (companyError || !company) {
+        throw new Error('Company profile not found');
+      }
+
+      entityData = company;
+      currentUpdatedAt = company.updated_at;
+      const companyVideos = company.company_videos || {};
+      videoArray = Array.isArray(companyVideos[request.videoType]) ? companyVideos[request.videoType] : [];
+      captionsFieldPath = 'company_videos.captions';
+    } else if (entityType === 'testimonial') {
+      const { data: testimonial, error: testimonialError } = await supabase
+        .from('video_testimonials')
+        .select('*')
+        .eq('id', entityId)
+        .single();
+
+      if (testimonialError || !testimonial) {
+        throw new Error('Video testimonial not found');
+      }
+
+      entityData = testimonial;
+      currentUpdatedAt = testimonial.updated_at;
+      // For testimonials, we only have youtube_url
+      videoArray = testimonial.youtube_url ? [{ url: testimonial.youtube_url }] : [];
+      captionsFieldPath = 'caption_data';
+    } else {
+      throw new Error(`Unsupported entity type: ${entityType}`);
     }
-
-    const currentUpdatedAt = product.updated_at;
-
-    // ✅ Safe array validation
-    const videoArray = Array.isArray(product[request.videoType]) ? product[request.videoType] : [];
     
     const videosToProcess = request.videoIndex !== undefined 
       ? [videoArray[request.videoIndex]].filter(Boolean)
@@ -245,34 +305,85 @@ serve(async (req) => {
       throw new Error(`No captions could be extracted. Errors: ${errors.join(', ')}`);
     }
 
-    // ✅ Intelligent merge: preserve existing captions, update by URL
-    const currentCaptions = product.video_captions || {};
-    const existingCaptions: VideoCaption[] = Array.isArray(currentCaptions[request.videoType])
-      ? currentCaptions[request.videoType]
-      : [];
-    
-    const mergedCaptions = mergeCaptionsByUrl(existingCaptions, extractedCaptions);
-    
-    const updatedCaptions = {
-      ...currentCaptions,
-      [request.videoType]: mergedCaptions
-    };
+    // ✅ Intelligent merge and save based on entity type
+    let updatedRows: any;
+    let updateError: any;
 
-    // ✅ Optimistic locking: prevent race conditions
-    const { data: updatedRows, error: updateError } = await supabase
-      .from('products_repository')
-      .update({ 
-        video_captions: updatedCaptions,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', request.productId)
-      .eq('updated_at', currentUpdatedAt)
-      .select('id');
+    if (entityType === 'product') {
+      const currentCaptions = entityData.video_captions || {};
+      const existingCaptions: VideoCaption[] = Array.isArray(currentCaptions[request.videoType])
+        ? currentCaptions[request.videoType]
+        : [];
+      
+      const mergedCaptions = mergeCaptionsByUrl(existingCaptions, extractedCaptions);
+      
+      const updatedCaptions = {
+        ...currentCaptions,
+        [request.videoType]: mergedCaptions
+      };
+
+      const result = await supabase
+        .from('products_repository')
+        .update({ 
+          video_captions: updatedCaptions,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', entityId)
+        .eq('updated_at', currentUpdatedAt)
+        .select('id');
+
+      updatedRows = result.data;
+      updateError = result.error;
+    } else if (entityType === 'company') {
+      const companyVideos = entityData.company_videos || {};
+      const currentCaptions = companyVideos.captions || {};
+      const existingCaptions: VideoCaption[] = Array.isArray(currentCaptions[request.videoType])
+        ? currentCaptions[request.videoType]
+        : [];
+      
+      const mergedCaptions = mergeCaptionsByUrl(existingCaptions, extractedCaptions);
+      
+      const updatedCompanyVideos = {
+        ...companyVideos,
+        captions: {
+          ...currentCaptions,
+          [request.videoType]: mergedCaptions
+        }
+      };
+
+      const result = await supabase
+        .from('company_profile')
+        .update({ 
+          company_videos: updatedCompanyVideos,
+          updated_at: new Date().toISOString()
+        })
+        .eq('updated_at', currentUpdatedAt)
+        .select('id');
+
+      updatedRows = result.data;
+      updateError = result.error;
+    } else if (entityType === 'testimonial') {
+      // For testimonials, store caption in caption_data field
+      const captionData = extractedCaptions[0] || null;
+
+      const result = await supabase
+        .from('video_testimonials')
+        .update({ 
+          caption_data: captionData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', entityId)
+        .eq('updated_at', currentUpdatedAt)
+        .select('id');
+
+      updatedRows = result.data;
+      updateError = result.error;
+    }
 
     if (updateError) throw updateError;
     
     if (!updatedRows || updatedRows.length === 0) {
-      throw new Error('Product was modified by another request. Please retry.');
+      throw new Error(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} was modified by another request. Please retry.`);
     }
 
     return new Response(JSON.stringify({
