@@ -165,7 +165,9 @@ export function CompanyReviewsManager() {
               Reviews da Empresa (Global)
             </CardTitle>
             <CardDescription>
-              Gerencie reviews da empresa que aparecem no SEO de todas as páginas
+              Importe automaticamente as avaliações da sua empresa no Google Maps. 
+              Essas avaliações aparecem nos resultados de SEO de todas as páginas da sua marca.
+              Configure OAuth em /google-business-settings para melhores resultados.
             </CardDescription>
           </div>
           <div className="flex flex-col gap-2 w-full md:w-auto">

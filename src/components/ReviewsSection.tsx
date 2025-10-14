@@ -27,7 +27,7 @@ export function ReviewsSection() {
     last_google_sync: null
   });
 
-  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
+  
   const [editingReview, setEditingReview] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set());
@@ -52,9 +52,6 @@ export function ReviewsSection() {
       });
       
       setReviews(data);
-      if (data.google_place_id) {
-        setGoogleMapsUrl(`https://maps.google.com/?cid=${data.google_place_id}`);
-      }
     }
   };
 
@@ -62,15 +59,6 @@ export function ReviewsSection() {
     await saveCompanyReviews(reviews);
   };
 
-  const handleGoogleSync = async () => {
-    if (!googleMapsUrl.trim()) return;
-    
-    const success = await syncGoogleReviews(googleMapsUrl);
-    if (success) {
-      // ✅ Edge function já salvou tudo - apenas recarregar
-      await loadReviews();
-    }
-  };
 
   const handleAddReview = async () => {
     if (!formAuthor.trim() || !formText.trim()) return;
@@ -149,7 +137,7 @@ export function ReviewsSection() {
         </Button>
       </div>
 
-      <Accordion type="multiple" defaultValue={["manual-reviews"]} className="w-full space-y-4">
+      <Accordion type="multiple" defaultValue={["manual-reviews", "csv-upload"]} className="w-full space-y-4">
         {/* Seção 1: Reviews Manuais */}
         <AccordionItem value="manual-reviews">
           <AccordionTrigger className="hover:no-underline">
@@ -350,83 +338,8 @@ export function ReviewsSection() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Seção 2: Importação Google */}
-        <AccordionItem value="google-sync">
-          <AccordionTrigger className="hover:no-underline">
-            <div className="flex items-center gap-3">
-              <ExternalLink className="h-5 w-5 text-blue-500" />
-              <span className="font-semibold">Importar do Google Reviews</span>
-              {reviews.google_reviews_imported && (
-                <Badge variant="default">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Sincronizado
-                </Badge>
-              )}
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Sincronizar Google Reviews</CardTitle>
-                <CardDescription>
-                  Importe reviews do Google Maps para o perfil da empresa
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Card informativo */}
-                <Card className="bg-muted/30 border-primary/20">
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>💡 Como encontrar:</strong> Acesse o Google Maps, procure sua empresa, copie a URL da página (ex: https://maps.google.com/?cid=123456789) e cole abaixo.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <div>
-                  <Label>Google Maps URL ou Place ID</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={googleMapsUrl}
-                      onChange={(e) => setGoogleMapsUrl(e.target.value)}
-                      placeholder="https://maps.google.com/?cid=..."
-                    />
-                    <Button
-                      onClick={handleGoogleSync}
-                      disabled={syncing || !googleMapsUrl.trim()}
-                    >
-                      {syncing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Status da sincronização */}
-                <div className="flex flex-col gap-2">
-                  {reviews.last_google_sync && (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        <CheckCircle2 className="h-3 w-3 mr-1 text-success" />
-                        Última sincronização: {new Date(reviews.last_google_sync).toLocaleString("pt-BR")}
-                      </Badge>
-                    </div>
-                  )}
-
-                  {reviews.google_place_id && (
-                    <div className="text-sm text-muted-foreground">
-                      <strong>Place ID:</strong> <code className="bg-muted px-2 py-0.5 rounded">{reviews.google_place_id}</code>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Seção 3: Importação via CSV */}
-        <AccordionItem value="csv-import">
+        {/* Seção 2: Importação via CSV */}
+        <AccordionItem value="csv-upload">
           <AccordionTrigger className="hover:no-underline">
             <div className="flex items-center gap-3">
               <Upload className="h-5 w-5 text-purple-500" />
