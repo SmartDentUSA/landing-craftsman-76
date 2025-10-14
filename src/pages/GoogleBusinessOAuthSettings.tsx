@@ -451,26 +451,46 @@ export default function GoogleBusinessOAuthSettings() {
         return;
       }
 
+      console.log(`[OAuth Save] Saving credentials for user: ${userData.user.id}, provider: google_business`);
+      
       const { data: saved, error: dbError } = await supabase
         .from('oauth_credentials')
-        .upsert({
-          user_id: userData.user.id,
-          provider: 'google_business',
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: refreshToken,
-        })
+        .upsert(
+          {
+            user_id: userData.user.id,
+            provider: 'google_business',
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+          },
+          {
+            onConflict: 'user_id,provider',
+          }
+        )
         .select()
-        .single();
+        .maybeSingle();
 
       if (dbError) {
-        console.error('Database save error:', dbError);
+        console.error('[OAuth Save] Database error:', dbError);
         toast({
-          title: "⚠️ Erro ao salvar no banco",
-          description: dbError.message || "Salvo localmente apenas.",
+          title: "❌ Erro ao salvar no banco",
+          description: dbError.message || "Verifique suas permissões e tente novamente.",
           variant: "destructive",
         });
+        return;
+      }
+      
+      if (saved) {
+        console.log(`[OAuth Save] ✅ Credentials saved successfully with ID: ${saved.id}`);
+        setDbCredentials({
+          token: refreshToken,
+          updatedAt: new Date().toISOString(),
+        });
       } else {
+        console.warn('[OAuth Save] No data returned from upsert');
+      }
+      
+      {
         console.log('✅ Saved to database:', saved);
       }
 

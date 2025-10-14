@@ -51,19 +51,27 @@ serve(async (req) => {
         const { data: { user } } = await supabaseClient.auth.getUser(token);
         
         if (user) {
-          const { data: credsData } = await supabaseClient
+          console.log(`[Edge Function] Querying oauth_credentials for user: ${user.id}, provider: google_business`);
+          
+          const { data: credsData, error: queryError } = await supabaseClient
             .from('oauth_credentials')
             .select('client_id, client_secret, refresh_token')
             .eq('user_id', user.id)
             .eq('provider', 'google_business')
             .maybeSingle();
+          
+          if (queryError) {
+            console.error('[Edge Function] Query error:', queryError);
+          }
 
           if (credsData) {
+            console.log('[Edge Function] ✅ Found credentials in database');
             clientId = credsData.client_id;
             clientSecret = credsData.client_secret;
             refreshToken = credsData.refresh_token;
             credentialSource = 'database';
-            console.log('✅ Using credentials from database for user:', user.id);
+          } else {
+            console.log('[Edge Function] ⚠️ No credentials found in database for this user');
           }
         }
       }
