@@ -545,6 +545,9 @@ async function extractAndSaveReviews(
     
     // ✅ Try to get Google Business OAuth credentials from database first (per-user config)
     let clientId, clientSecret, refreshToken;
+    let credData = null;
+    let genericCred = null;
+    let legacyToken = null;
 
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
@@ -559,12 +562,14 @@ async function extractAndSaveReviews(
           .maybeSingle();
 
         // Buscar Refresh Token de oauth_credentials
-        const { data: credData } = await supabase
+        const { data: credDataTemp } = await supabase
           .from('oauth_credentials')
           .select('refresh_token')
           .eq('user_id', user.id)
           .eq('provider', 'googleBusiness')
           .maybeSingle();
+        
+        credData = credDataTemp;
 
         if (configData && credData) {
           clientId = configData.client_id;
@@ -573,12 +578,14 @@ async function extractAndSaveReviews(
           console.log('✅ Using Google Business credentials from database for user:', user.id);
         } else if (!credData && configData) {
           // FALLBACK 1: OAuth Google genérico (oauth_credentials)
-          const { data: genericCred } = await supabase
+          const { data: genericCredTemp } = await supabase
             .from('oauth_credentials')
             .select('refresh_token')
             .eq('user_id', user.id)
             .eq('provider', 'google')
             .maybeSingle();
+          
+          genericCred = genericCredTemp;
             
           if (genericCred) {
             clientId = configData.client_id;
@@ -587,13 +594,15 @@ async function extractAndSaveReviews(
             console.log('⚠️ Using generic Google OAuth (not Business-specific) for user:', user.id);
           } else {
             // FALLBACK 2: Arquitetura antiga (google_oauth_tokens)
-            const { data: legacyToken } = await supabase
+            const { data: legacyTokenTemp } = await supabase
               .from('google_oauth_tokens')
               .select('provider_refresh_token')
               .eq('user_id', user.id)
               .order('created_at', { ascending: false })
               .limit(1)
               .maybeSingle();
+            
+            legacyToken = legacyTokenTemp;
               
             if (legacyToken) {
               clientId = configData.client_id;
@@ -615,7 +624,7 @@ async function extractAndSaveReviews(
       has_client_id: !!clientId,
       has_client_secret: !!clientSecret,
       has_refresh_token: !!refreshToken,
-      token_source: refreshToken ? (credData ? 'oauth_credentials' : (genericCred ? 'oauth_credentials_generic' : 'google_oauth_tokens_legacy')) : 'none',
+      token_source: refreshToken ? (credData ? 'oauth_credentials_business' : (genericCred ? 'oauth_credentials_generic' : (legacyToken ? 'google_oauth_tokens_legacy' : 'env_vars'))) : 'none',
       user_id: user?.id || 'no user',
       auth_header_present: !!authHeader
     });
