@@ -3,17 +3,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RefreshCw, BarChart3, CheckSquare } from 'lucide-react';
+import { Search, RefreshCw, BarChart3, CheckSquare, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProductCompletion } from '@/hooks/useProductCompletion';
 import { ProductProgressStats } from './ProductProgressStats';
 import { ProductProgressCard } from './ProductProgressCard';
 import { ProductConfigChecklistView } from './ProductConfigChecklistView';
-import { useState } from 'react';
+import { ProductSimpleChecklistCard } from './ProductSimpleChecklistCard';
+import { useState, useEffect } from 'react';
 
 export function ProductProgressManager() {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'progress' | 'checklist'>('progress');
+  const [viewMode, setViewMode] = useState<'checklist' | 'detailed' | 'progress'>(() => {
+    return (localStorage.getItem('products_view_mode') as 'checklist' | 'detailed' | 'progress') || 'checklist';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('products_view_mode', viewMode);
+  }, [viewMode]);
   
   const { 
     data, 
@@ -47,14 +54,22 @@ export function ProductProgressManager() {
       <ProductProgressStats stats={stats} />
 
       <div className="flex items-center justify-between">
-        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
-          <ToggleGroupItem value="progress" aria-label="Visualização de progresso">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Progresso
-          </ToggleGroupItem>
-          <ToggleGroupItem value="checklist" aria-label="Visualização de checklist">
+        <ToggleGroup 
+          type="single" 
+          value={viewMode} 
+          onValueChange={(v) => v && setViewMode(v as 'checklist' | 'detailed' | 'progress')}
+        >
+          <ToggleGroupItem value="checklist" aria-label="Checklist Simples">
             <CheckSquare className="h-4 w-4 mr-2" />
             Checklist
+          </ToggleGroupItem>
+          <ToggleGroupItem value="detailed" aria-label="Checklist Detalhado">
+            <List className="h-4 w-4 mr-2" />
+            Detalhado
+          </ToggleGroupItem>
+          <ToggleGroupItem value="progress" aria-label="Modo Progresso">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Progresso
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -169,17 +184,23 @@ export function ProductProgressManager() {
         ) : (
           <div className="space-y-3">
             {data.map(product => (
-              viewMode === 'progress' ? (
+              viewMode === 'checklist' ? (
+                <ProductSimpleChecklistCard
+                  key={product.id}
+                  product={product}
+                  onEdit={handleEditProduct}
+                />
+              ) : viewMode === 'detailed' ? (
+                <ProductConfigChecklistView
+                  key={product.id}
+                  product={product}
+                />
+              ) : (
                 <ProductProgressCard
                   key={product.id}
                   product={product}
                   onMarkComplete={markAsComplete}
                   onEdit={handleEditProduct}
-                />
-              ) : (
-                <ProductConfigChecklistView
-                  key={product.id}
-                  product={product}
                 />
               )
             ))}
