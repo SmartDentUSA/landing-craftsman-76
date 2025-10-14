@@ -6,6 +6,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { CheckCircle2, XCircle, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { detectProductConfiguration, countConfiguredItems } from '@/lib/product-config-detector';
 import { useState, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface Props {
   product: any;
@@ -144,6 +146,24 @@ const CATEGORY_CONFIG = {
       bot_trigger_words: 'Palavras-gatilho para bot',
     }
   },
+  cs_messages: {
+    emoji: '📞',
+    label: 'MENSAGENS DE CS',
+    fields: {
+      has_cs_messages: 'Mensagens de CS configuradas',
+      has_active_cs_messages: 'Mensagens de CS ativas',
+      cs_messages_count: 'Quantidade mínima (min 3 ativas)',
+    }
+  },
+  aftersales_messages: {
+    emoji: '📦',
+    label: 'MENSAGENS DE PÓS-VENDA',
+    fields: {
+      has_aftersales_messages: 'Mensagens de pós-venda configuradas',
+      has_active_aftersales_messages: 'Mensagens de pós-venda ativas',
+      aftersales_messages_count: 'Quantidade mínima (min 3 ativas)',
+    }
+  },
 };
 
 const getCategoryBgColor = (configured: number, total: number) => {
@@ -154,7 +174,29 @@ const getCategoryBgColor = (configured: number, total: number) => {
 };
 
 export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
-  const status = detectProductConfiguration(product);
+  const { data: csMessages = [] } = useQuery({
+    queryKey: ['cs-messages', product.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cs_messages')
+        .select('*')
+        .eq('product_id', product.id);
+      return data || [];
+    },
+  });
+
+  const { data: aftersalesMessages = [] } = useQuery({
+    queryKey: ['aftersales-messages', product.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('aftersales_messages')
+        .select('*')
+        .eq('product_id', product.id);
+      return data || [];
+    },
+  });
+
+  const status = detectProductConfiguration(product, csMessages, aftersalesMessages);
   const counts = countConfiguredItems(status);
 
   // Determina qual categoria tem mais pendências para expandir por padrão

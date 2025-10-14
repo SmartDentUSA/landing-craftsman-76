@@ -82,9 +82,23 @@ export interface ProductConfigStatus {
     tutorial_resources: boolean;
     bot_trigger_words: boolean;
   };
+  cs_messages: {
+    has_cs_messages: boolean;
+    has_active_cs_messages: boolean;
+    cs_messages_count: boolean;
+  };
+  aftersales_messages: {
+    has_aftersales_messages: boolean;
+    has_active_aftersales_messages: boolean;
+    aftersales_messages_count: boolean;
+  };
 }
 
-export function detectProductConfiguration(product: any): ProductConfigStatus {
+export function detectProductConfiguration(
+  product: any,
+  csMessages?: any[],
+  aftersalesMessages?: any[]
+): ProductConfigStatus {
   const hasArray = (arr: any) => Array.isArray(arr) && arr.length > 0;
   const hasText = (text: any) => !!text && text.toString().trim().length > 0;
   const hasNumber = (num: any) => typeof num === 'number' && num > 0;
@@ -180,6 +194,16 @@ export function detectProductConfiguration(product: any): ProductConfigStatus {
       individual_blog: !!(product.individual_blog_content?.technical || product.individual_blog_content?.commercial),
       tutorial_resources: hasArray(product.tutorial_resources?.tutorials),
       bot_trigger_words: hasArray(product.bot_trigger_words),
+    },
+    cs_messages: {
+      has_cs_messages: hasArray(csMessages),
+      has_active_cs_messages: (csMessages?.filter(m => m.is_active) || []).length > 0,
+      cs_messages_count: (csMessages?.filter(m => m.is_active) || []).length >= 3,
+    },
+    aftersales_messages: {
+      has_aftersales_messages: hasArray(aftersalesMessages),
+      has_active_aftersales_messages: (aftersalesMessages?.filter(m => m.is_active) || []).length > 0,
+      aftersales_messages_count: (aftersalesMessages?.filter(m => m.is_active) || []).length >= 3,
     },
   };
 }
