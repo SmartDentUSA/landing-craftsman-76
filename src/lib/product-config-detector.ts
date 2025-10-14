@@ -60,6 +60,28 @@ export interface ProductConfigStatus {
     brand: boolean;
     google_category: boolean;
   };
+  ecommerce: {
+    promo_price: boolean;
+    stock_managed: boolean;
+    stock_quantity: boolean;
+    min_order_quantity: boolean;
+    max_order_quantity: boolean;
+    free_shipping: boolean;
+    ean: boolean;
+    ncm: boolean;
+  };
+  social_content: {
+    whatsapp_messages: boolean;
+    whatsapp_sequences: boolean;
+    instagram_copies: boolean;
+    youtube_descriptions: boolean;
+    tiktok_content: boolean;
+  };
+  additional_content: {
+    individual_blog: boolean;
+    tutorial_resources: boolean;
+    bot_trigger_words: boolean;
+  };
 }
 
 export function detectProductConfiguration(product: any): ProductConfigStatus {
@@ -136,6 +158,28 @@ export function detectProductConfiguration(product: any): ProductConfigStatus {
       mpn: hasText(product.mpn),
       brand: hasText(product.brand),
       google_category: hasText(product.google_product_category),
+    },
+    ecommerce: {
+      promo_price: hasNumber(product.promo_price),
+      stock_managed: product.stock_managed === true,
+      stock_quantity: product.stock_managed === true && hasNumber(product.stock_quantity),
+      min_order_quantity: hasNumber(product.min_order_quantity),
+      max_order_quantity: hasNumber(product.max_order_quantity),
+      free_shipping: product.free_shipping === true,
+      ean: hasText(product.ean),
+      ncm: hasText(product.ncm),
+    },
+    social_content: {
+      whatsapp_messages: hasArray(product.whatsapp_messages?.messages),
+      whatsapp_sequences: hasArray(product.whatsapp_sequences?.sequences),
+      instagram_copies: hasArray(product.instagram_copies?.copies),
+      youtube_descriptions: hasArray(product.youtube_descriptions?.descriptions),
+      tiktok_content: hasArray(product.tiktok_content?.copies),
+    },
+    additional_content: {
+      individual_blog: !!(product.individual_blog_content?.technical || product.individual_blog_content?.commercial),
+      tutorial_resources: hasArray(product.tutorial_resources?.tutorials),
+      bot_trigger_words: hasArray(product.bot_trigger_words),
     },
   };
 }

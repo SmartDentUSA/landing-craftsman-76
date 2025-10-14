@@ -2,8 +2,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Package, Search, Tag, Image, FileText, Sparkles, Video, MousePointer, ShoppingCart, Pencil } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CheckCircle2, XCircle, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { detectProductConfiguration, countConfiguredItems } from '@/lib/product-config-detector';
+import { useState, useMemo } from 'react';
 
 interface Props {
   product: any;
@@ -14,7 +16,6 @@ const CATEGORY_CONFIG = {
   basic: {
     emoji: '📦',
     label: 'DADOS BÁSICOS',
-    icon: Package,
     fields: {
       name: 'Nome do Produto',
       description: 'Descrição (min 50 chars)',
@@ -28,7 +29,6 @@ const CATEGORY_CONFIG = {
   seo: {
     emoji: '🎯',
     label: 'SEO & CATEGORIZAÇÃO',
-    icon: Search,
     fields: {
       seo_title: 'Título SEO',
       seo_description: 'Descrição SEO',
@@ -41,7 +41,6 @@ const CATEGORY_CONFIG = {
   keywords: {
     emoji: '🔑',
     label: 'KEYWORDS & PÚBLICO',
-    icon: Tag,
     fields: {
       primary_keywords: 'Keywords primárias (min 3)',
       market_keywords: 'Market keywords (min 2)',
@@ -52,7 +51,6 @@ const CATEGORY_CONFIG = {
   images: {
     emoji: '🎨',
     label: 'IMAGENS & GALERIA',
-    icon: Image,
     fields: {
       main_image_url: 'Imagem principal configurada',
       gallery_count: 'Galeria com 3+ imagens',
@@ -62,7 +60,6 @@ const CATEGORY_CONFIG = {
   specs: {
     emoji: '📊',
     label: 'ESPECIFICAÇÕES TÉCNICAS',
-    icon: FileText,
     fields: {
       technical_specs_min: 'Especificações técnicas (min 5)',
       faq_min: 'FAQ (min 3 perguntas)',
@@ -74,7 +71,6 @@ const CATEGORY_CONFIG = {
   ai_content: {
     emoji: '🤖',
     label: 'CONTEÚDO AI',
-    icon: Sparkles,
     fields: {
       benefits: 'Benefícios (min 3)',
       features: 'Características (min 3)',
@@ -87,7 +83,6 @@ const CATEGORY_CONFIG = {
   videos: {
     emoji: '🎬',
     label: 'VÍDEOS',
-    icon: Video,
     fields: {
       youtube_videos: 'Vídeos YouTube',
       instagram_videos: 'Vídeos Instagram',
@@ -98,7 +93,6 @@ const CATEGORY_CONFIG = {
   ctas: {
     emoji: '🔗',
     label: 'CTAs & RECURSOS',
-    icon: MousePointer,
     fields: {
       product_url: 'URL do Produto',
       resource_cta1: 'CTA Recurso 1',
@@ -109,12 +103,45 @@ const CATEGORY_CONFIG = {
   merchant: {
     emoji: '🏪',
     label: 'GOOGLE MERCHANT',
-    icon: ShoppingCart,
     fields: {
       gtin: 'GTIN/EAN',
       mpn: 'MPN',
       brand: 'Marca',
       google_category: 'Categoria Google',
+    }
+  },
+  ecommerce: {
+    emoji: '💰',
+    label: 'E-COMMERCE',
+    fields: {
+      promo_price: 'Preço promocional',
+      stock_managed: 'Controle de estoque ativo',
+      stock_quantity: 'Quantidade em estoque',
+      min_order_quantity: 'Quantidade mínima',
+      max_order_quantity: 'Quantidade máxima',
+      free_shipping: 'Frete grátis',
+      ean: 'Código EAN',
+      ncm: 'Código NCM',
+    }
+  },
+  social_content: {
+    emoji: '📱',
+    label: 'CONTEÚDO SOCIAL',
+    fields: {
+      whatsapp_messages: 'Mensagens WhatsApp',
+      whatsapp_sequences: 'Sequências WhatsApp',
+      instagram_copies: 'Copies Instagram',
+      youtube_descriptions: 'Descrições YouTube',
+      tiktok_content: 'Conteúdo TikTok',
+    }
+  },
+  additional_content: {
+    emoji: '📝',
+    label: 'CONTEÚDO ADICIONAL',
+    fields: {
+      individual_blog: 'Blog individual do produto',
+      tutorial_resources: 'Recursos e tutoriais',
+      bot_trigger_words: 'Palavras-gatilho para bot',
     }
   },
 };
@@ -129,6 +156,32 @@ const getCategoryBgColor = (configured: number, total: number) => {
 export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
   const status = detectProductConfiguration(product);
   const counts = countConfiguredItems(status);
+
+  // Determina qual categoria tem mais pendências para expandir por padrão
+  const categoryWithMostPending = useMemo(() => {
+    const pending = Object.entries(counts.byCategory).map(([key, stats]) => ({
+      key,
+      pending: stats.total - stats.configured
+    }));
+    pending.sort((a, b) => b.pending - a.pending);
+    return pending[0]?.key || 'basic';
+  }, [counts.byCategory]);
+
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set([categoryWithMostPending])
+  );
+
+  const toggleCategory = (categoryKey: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryKey)) {
+        next.delete(categoryKey);
+      } else {
+        next.add(categoryKey);
+      }
+      return next;
+    });
+  };
 
   return (
     <Card className="p-5">
@@ -154,41 +207,57 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
 
       <Progress value={counts.percentage} className="h-2 mb-6" />
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Object.entries(CATEGORY_CONFIG).map(([categoryKey, config]) => {
           const categoryData = status[categoryKey as keyof typeof status];
           const categoryStats = counts.byCategory[categoryKey];
           const bgColor = getCategoryBgColor(categoryStats.configured, categoryStats.total);
+          const isExpanded = expandedCategories.has(categoryKey);
 
           return (
-            <div key={categoryKey} className={`border rounded-lg p-4 ${bgColor}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">{config.emoji}</span>
-                <span className="font-semibold text-sm">{config.label}</span>
-                <Badge variant="outline" className="ml-auto">
-                  {categoryStats.configured}/{categoryStats.total}
-                </Badge>
-              </div>
+            <Collapsible
+              key={categoryKey}
+              open={isExpanded}
+              onOpenChange={() => toggleCategory(categoryKey)}
+            >
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors">
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span className="text-xl">{config.emoji}</span>
+                  <span className="font-semibold text-sm flex-1 text-left">{config.label}</span>
+                  <Badge variant="outline">
+                    {categoryStats.configured}/{categoryStats.total}
+                  </Badge>
+                </div>
+              </CollapsibleTrigger>
 
-              <div className="space-y-1.5">
-                {Object.entries(config.fields).map(([fieldKey, fieldLabel]) => {
-                  const isConfigured = categoryData[fieldKey as keyof typeof categoryData];
-                  
-                  return (
-                    <div key={fieldKey} className="flex items-center gap-2">
-                      {isConfigured ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                      )}
-                      <span className={`text-sm ${isConfigured ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {fieldLabel}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+              <CollapsibleContent className="mt-2">
+                <div className={`border rounded-lg p-3 ${bgColor}`}>
+                  <div className="space-y-1.5">
+                    {Object.entries(config.fields).map(([fieldKey, fieldLabel]) => {
+                      const isConfigured = categoryData[fieldKey as keyof typeof categoryData];
+                      
+                      return (
+                        <div key={fieldKey} className="flex items-center gap-2">
+                          {isConfigured ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          )}
+                          <span className={`text-xs ${isConfigured ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {fieldLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </div>

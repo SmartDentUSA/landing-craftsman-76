@@ -2,9 +2,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Pencil } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CheckCircle2, XCircle, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
 import type { LandingPageWithCompletion } from '@/hooks/useLandingPageCompletion';
 import { detectLandingPageConfiguration, countConfiguredItems } from '@/lib/landing-page-config-detector';
+import { useState, useMemo } from 'react';
 
 interface Props {
   landingPage: LandingPageWithCompletion;
@@ -165,6 +167,32 @@ export function LandingPageSimpleChecklistCard({ landingPage, onEdit }: Props) {
   const status = detectLandingPageConfiguration(landingPage);
   const counts = countConfiguredItems(status);
 
+  // Determina qual categoria tem mais pendências para expandir por padrão
+  const categoryWithMostPending = useMemo(() => {
+    const pending = Object.entries(counts.byCategory).map(([key, stats]) => ({
+      key,
+      pending: stats.total - stats.configured
+    }));
+    pending.sort((a, b) => b.pending - a.pending);
+    return pending[0]?.key || 'basic';
+  }, [counts.byCategory]);
+
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set([categoryWithMostPending])
+  );
+
+  const toggleCategory = (categoryKey: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryKey)) {
+        next.delete(categoryKey);
+      } else {
+        next.add(categoryKey);
+      }
+      return next;
+    });
+  };
+
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -189,41 +217,57 @@ export function LandingPageSimpleChecklistCard({ landingPage, onEdit }: Props) {
 
       <Progress value={counts.percentage} className="h-2 mb-6" />
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Object.entries(CATEGORY_CONFIG).map(([categoryKey, config]) => {
           const categoryData = status[categoryKey as keyof typeof status];
           const categoryStats = counts.byCategory[categoryKey];
           const bgColor = getCategoryBgColor(categoryStats.configured, categoryStats.total);
+          const isExpanded = expandedCategories.has(categoryKey);
 
           return (
-            <div key={categoryKey} className={`border rounded-lg p-4 ${bgColor}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">{config.emoji}</span>
-                <span className="font-semibold text-sm">{config.label}</span>
-                <Badge variant="outline" className="ml-auto">
-                  {categoryStats.configured}/{categoryStats.total}
-                </Badge>
-              </div>
+            <Collapsible
+              key={categoryKey}
+              open={isExpanded}
+              onOpenChange={() => toggleCategory(categoryKey)}
+            >
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors">
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span className="text-xl">{config.emoji}</span>
+                  <span className="font-semibold text-sm flex-1 text-left">{config.label}</span>
+                  <Badge variant="outline">
+                    {categoryStats.configured}/{categoryStats.total}
+                  </Badge>
+                </div>
+              </CollapsibleTrigger>
 
-              <div className="space-y-1.5">
-                {Object.entries(config.fields).map(([fieldKey, fieldLabel]) => {
-                  const isConfigured = categoryData[fieldKey as keyof typeof categoryData];
-                  
-                  return (
-                    <div key={fieldKey} className="flex items-center gap-2">
-                      {isConfigured ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                      )}
-                      <span className={`text-sm ${isConfigured ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {fieldLabel}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+              <CollapsibleContent className="mt-2">
+                <div className={`border rounded-lg p-3 ${bgColor}`}>
+                  <div className="space-y-1.5">
+                    {Object.entries(config.fields).map(([fieldKey, fieldLabel]) => {
+                      const isConfigured = categoryData[fieldKey as keyof typeof categoryData];
+                      
+                      return (
+                        <div key={fieldKey} className="flex items-center gap-2">
+                          {isConfigured ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          )}
+                          <span className={`text-xs ${isConfigured ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {fieldLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </div>
