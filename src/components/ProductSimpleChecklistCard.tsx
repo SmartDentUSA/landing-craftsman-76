@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Pencil } from 'lucide-react';
+import { CheckCircle2, XCircle, Pencil, Bug } from 'lucide-react';
 import { detectProductConfiguration, countConfiguredItems } from '@/lib/product-config-detector';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -197,6 +197,14 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
   const status = detectProductConfiguration(product, csMessages, aftersalesMessages);
   const counts = countConfiguredItems(status);
 
+  const debugProduct = () => {
+    console.log('🐛 DEBUG - Product Raw Data:', product);
+    console.log('🐛 DEBUG - CS Messages:', csMessages);
+    console.log('🐛 DEBUG - Aftersales Messages:', aftersalesMessages);
+    console.log('🐛 DEBUG - Detection Status:', status);
+    console.log('🐛 DEBUG - Counts:', counts);
+  };
+
   return (
     <Card className="p-5">
       {/* Header */}
@@ -217,6 +225,9 @@ export function ProductSimpleChecklistCard({ product, onEdit }: Props) {
               Editar
             </Button>
           )}
+          <Button variant="ghost" size="sm" onClick={debugProduct} title="Debug no console">
+            <Bug className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 

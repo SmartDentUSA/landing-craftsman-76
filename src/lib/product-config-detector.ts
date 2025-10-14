@@ -103,19 +103,62 @@ export function detectProductConfiguration(
   const hasText = (text: any) => !!text && text.toString().trim().length > 0;
   const hasNumber = (num: any) => typeof num === 'number' && num > 0;
 
-  console.log('🔍 detectProductConfiguration - Input:', {
-    productName: product.name,
-    hasKeywords: hasArray(product.keywords),
-    keywordsLength: product.keywords?.length,
-    hasBenefits: hasArray(product.benefits),
-    benefitsLength: product.benefits?.length,
-    hasFeatures: hasArray(product.features),
-    featuresLength: product.features?.length,
-    descriptionLength: product.description?.length,
+  console.log('🔍 Product Full Data:', {
+    id: product.id,
+    name: product.name,
+    // BASIC
+    description_length: product.description?.length,
+    price: product.price,
     category: product.category,
+    subcategory: product.subcategory,
+    image_url: product.image_url,
+    images_gallery_count: product.images_gallery?.length,
+    
+    // SEO
+    seo_title: product.seo_title_override,
+    seo_description: product.seo_description_override,
+    canonical_url: product.canonical_url,
+    slug: product.slug,
+    
+    // KEYWORDS
+    keywords_count: product.keywords?.length,
+    market_keywords_count: product.market_keywords?.length,
+    search_intent_count: product.search_intent_keywords?.length,
+    target_audience_count: product.target_audience?.length,
+    
+    // SPECS
+    technical_specs_count: product.technical_specifications?.length,
+    faq_count: product.faq?.length,
+    dimensions: { h: product.height, w: product.width, d: product.depth },
+    weight: product.weight,
+    material: product.material,
+    
+    // AI CONTENT
+    benefits_count: product.benefits?.length,
+    features_count: product.features?.length,
+    tags_count: product.tags?.length,
+    sales_pitch_length: product.sales_pitch?.length,
+    
+    // MERCHANT
+    brand: product.brand,
+    gtin: product.gtin,
+    mpn: product.mpn,
+    google_category: product.google_product_category,
+    
+    // SOCIAL
     whatsapp_messages: product.whatsapp_messages,
+    whatsapp_messages_type: typeof product.whatsapp_messages,
+    whatsapp_messages_keys: product.whatsapp_messages ? Object.keys(product.whatsapp_messages) : [],
     instagram_copies: product.instagram_copies,
-    price: product.price
+    instagram_copies_type: typeof product.instagram_copies,
+    
+    // VIDEOS
+    youtube_videos_count: product.youtube_videos?.length,
+    instagram_videos_count: product.instagram_videos?.length,
+    
+    // MESSAGES
+    cs_messages_count: csMessages?.length,
+    aftersales_messages_count: aftersalesMessages?.length,
   });
 
   return {
@@ -199,11 +242,51 @@ export function detectProductConfiguration(
       ncm: hasText(product.ncm),
     },
     social_content: {
-      whatsapp_messages: hasArray(product.whatsapp_messages?.messages) || (product.whatsapp_messages && Object.keys(product.whatsapp_messages).length > 0),
-      whatsapp_sequences: hasArray(product.whatsapp_sequences?.sequences) || (product.whatsapp_sequences && Object.keys(product.whatsapp_sequences).length > 0),
-      instagram_copies: hasArray(product.instagram_copies?.copies) || (product.instagram_copies && Object.keys(product.instagram_copies).length > 0),
-      youtube_descriptions: hasArray(product.youtube_descriptions?.descriptions) || (product.youtube_descriptions && Object.keys(product.youtube_descriptions).length > 0),
-      tiktok_content: hasArray(product.tiktok_content?.copies) || (product.tiktok_content && Object.keys(product.tiktok_content).length > 0),
+      whatsapp_messages: (() => {
+        if (!product.whatsapp_messages) return false;
+        if (hasArray(product.whatsapp_messages?.messages)) return true;
+        const keys = Object.keys(product.whatsapp_messages);
+        return keys.some(key => {
+          const value = product.whatsapp_messages[key];
+          return hasText(value) || hasArray(value);
+        });
+      })(),
+      whatsapp_sequences: (() => {
+        if (!product.whatsapp_sequences) return false;
+        if (hasArray(product.whatsapp_sequences?.sequences)) return true;
+        const keys = Object.keys(product.whatsapp_sequences);
+        return keys.some(key => {
+          const value = product.whatsapp_sequences[key];
+          return hasText(value) || hasArray(value);
+        });
+      })(),
+      instagram_copies: (() => {
+        if (!product.instagram_copies) return false;
+        if (hasArray(product.instagram_copies?.copies)) return true;
+        const keys = Object.keys(product.instagram_copies);
+        return keys.some(key => {
+          const value = product.instagram_copies[key];
+          return hasText(value) || hasArray(value);
+        });
+      })(),
+      youtube_descriptions: (() => {
+        if (!product.youtube_descriptions) return false;
+        if (hasArray(product.youtube_descriptions?.descriptions)) return true;
+        const keys = Object.keys(product.youtube_descriptions);
+        return keys.some(key => {
+          const value = product.youtube_descriptions[key];
+          return hasText(value) || hasArray(value);
+        });
+      })(),
+      tiktok_content: (() => {
+        if (!product.tiktok_content) return false;
+        if (hasArray(product.tiktok_content?.copies)) return true;
+        const keys = Object.keys(product.tiktok_content);
+        return keys.some(key => {
+          const value = product.tiktok_content[key];
+          return hasText(value) || hasArray(value);
+        });
+      })(),
     },
     additional_content: {
       individual_blog: !!(product.individual_blog_content?.technical || product.individual_blog_content?.commercial),
