@@ -51,6 +51,7 @@ import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML 
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
 import { validateMetaDescription, validateCanonicalURL } from "@/lib/seo-validators";
+import { generateBlogHTML as generateSEOBlogHTML } from '@/services/seo/blogHTMLGenerator';
 
 
 // ✅ PATCH 0.2: Estados para Blogs Estratégicos (Dentala + Eodonto)
@@ -2952,33 +2953,60 @@ const EditorContent = () => {
         });
       }
       
+      // 3. GERAR HTML COMPLETO PARA VALIDAÇÃO DE SCHEMAS
+      const htmlForValidation = await generateSEOBlogHTML({
+        blogs: [{
+          title: data.name,
+          content: data.banner?.subtitle || '',
+          meta_description: data.seo_description,
+          keywords: data.seo?.ai_keywords || []
+        }],
+        domain: data.seo?.domain || 'eodonto',
+        canonicalUrl: data.seo?.canonical_url || '',
+        finalTitle: data.seo?.seo_title || data.name,
+        finalDescription: data.seo_description || '',
+        selectedProducts: selectedProducts || [],
+        intelligentLinks: data.seo?.intelligent_links || {},
+        schemas: Object.values(data.schema || {}),
+        preview: true,
+        keywords: data.seo?.ai_keywords || []
+      });
+      
+      // 4. CHAMAR EDGE FUNCTION COM HTML COMPLETO
       let schemaValidation: any = { valid: true };
       
-      if (schemasToValidate.length > 0) {
-        const { data: validationResult, error } = await supabase.functions.invoke('validate-schema', {
-          body: { schemas: schemasToValidate }
-        });
-        
-        if (!error && validationResult) {
-          schemaValidation = validationResult;
+      const { data: validationResult, error } = await supabase.functions.invoke('validate-schema', {
+        body: { 
+          html: htmlForValidation, 
+          url: data.seo?.canonical_url || '' 
         }
+      });
+      
+      if (!error && validationResult) {
+        schemaValidation = validationResult;
+      } else if (error) {
+        console.error('Erro na validação de schemas:', error);
+        schemaValidation = { 
+          valid: false, 
+          errors: [error.message] 
+        };
       }
       
-      // 4. Verificar produtos selecionados
+      // 5. Verificar produtos selecionados
       const hasProducts = selectedProducts && selectedProducts.length > 0;
       
-      // 5. Calcular score geral
+      // 6. Calcular score geral
       const totalChecks = 4;
       let passedChecks = 0;
       
       if (descValidation.valid) passedChecks++;
       if (canonicalValidation.valid) passedChecks++;
-      if (schemaValidation.valid) passedChecks++;
+      if (schemaValidation.isValid) passedChecks++;
       if (hasProducts) passedChecks++;
       
       const overallScore = Math.round((passedChecks / totalChecks) * 100);
       
-      // 6. Mostrar resultados
+      // 7. Mostrar resultados detalhados
       const resultMessage = `
         ✅ Meta Description: ${descValidation.valid ? 'Válida' : '❌ Inválida'} (Score: ${descValidation.score})
         ${!descValidation.valid ? `\n  Avisos: ${descValidation.warnings.join(', ')}` : ''}
@@ -2986,7 +3014,9 @@ const EditorContent = () => {
         ${canonicalValidation.valid ? '✅' : '❌'} Canonical URL: ${canonicalValidation.valid ? 'Válida' : 'Inválida'}
         ${!canonicalValidation.valid ? `\n  Erros: ${canonicalValidation.errors.join(', ')}` : ''}
         
-        ${schemaValidation.valid ? '✅' : '❌'} Schemas: ${schemaValidation.valid ? 'Válidos' : 'Com problemas'}
+        ${schemaValidation.isValid ? '✅' : '❌'} Schemas: ${schemaValidation.isValid ? 'Válidos' : 'Com problemas'}
+        ${schemaValidation.errors?.length > 0 ? `\n  Erros: ${schemaValidation.errors.join(', ')}` : ''}
+        ${schemaValidation.warnings?.length > 0 ? `\n  Avisos: ${schemaValidation.warnings.join(', ')}` : ''}
         
         ${hasProducts ? '✅' : '⚠️'} Produtos: ${hasProducts ? `${selectedProducts.length} selecionados` : 'Nenhum produto selecionado'}
         

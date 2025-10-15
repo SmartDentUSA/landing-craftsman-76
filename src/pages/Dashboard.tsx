@@ -11,9 +11,10 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useLandingPagesSupabase } from "@/hooks/useLandingPagesSupabase";
 import { type LandingPage } from "@/hooks/useLandingPagesSupabase";
 import { useDebounce } from "@/hooks/useDebounce";
-import { generateHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import { useSEOHTMLGenerator } from "@/hooks/useSEOHTMLGenerator";
+import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
+import { getTrackingConfig, type TrackingConfig } from '@/lib/tracking-injector';
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
@@ -61,9 +62,14 @@ const DashboardContent = () => {
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [trackingConfig, setTrackingConfig] = useState<TrackingConfig | null>(null);
   
   // Ativar funcionalidade "Leia mais" para blogs
   useBlogReadMore();
+
+  useEffect(() => {
+    getTrackingConfig().then(setTrackingConfig);
+  }, []);
 
   const debouncedFetchBlogPosts = useDebounce(async () => {
     try {
@@ -350,70 +356,61 @@ const DashboardContent = () => {
   const handleCopyCode = async (landingPage: LandingPage) => {
     if (landingPage.status === 'approved') {
       try {
-        // Gera o HTML real usando os dados da landing page
-        let htmlCode: string;
+        const { data: lpData, error: lpError } = await supabase
+          .from('landing_pages')
+          .select('*')
+          .eq('id', landingPage.id)
+          .single();
         
-        if (landingPage.data) {
-          // Enhance with selected products SEO data
-          const selectedProductIds = landingPage.selected_product_ids || [];
-          let enhancedData = { ...landingPage.data };
-          
-          if (selectedProductIds.length > 0) {
-            try {
-              const { data: products } = await supabase
-                .from('products_repository')
-                .select('*')
-                .in('id', selectedProductIds);
-              
-              if (products && products.length > 0) {
-                // Aggregate keywords from selected products
-                const productKeywords = products.flatMap(p => [
-                  ...(Array.isArray(p.keywords) ? p.keywords : []),
-                  ...(Array.isArray(p.market_keywords) ? p.market_keywords : []),
-                  ...(Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [])
-                ]);
-                
-                // Enhance SEO data with product information
-                enhancedData = {
-                  ...landingPage.data,
-                  seo: {
-                    ...landingPage.data.seo,
-                    ai_keywords: [
-                      ...(Array.isArray(landingPage.data.seo?.ai_keywords) ? landingPage.data.seo.ai_keywords : []),
-                      ...productKeywords
-                    ].slice(0, 50), // Limit to 50 keywords for better performance
-                    seo_hidden_content: `${landingPage.data.seo?.seo_hidden_content || ''} Produtos relacionados: ${products.map(p => p.name).join(', ')}`
-                  },
-                  selectedProductsForSEO: products.map(p => ({
-                    name: p.name,
-                    description: p.description,
-                    category: p.category,
-                    keywords: Array.isArray(p.keywords) ? p.keywords : [],
-                    market_keywords: Array.isArray(p.market_keywords) ? p.market_keywords : []
-                  }))
-                };
-              }
-            } catch (error) {
-              console.error('Erro ao carregar produtos para SEO:', error);
-            }
-          }
-          
-          htmlCode = generateHTML(enhancedData);
-        } else {
-          htmlCode = '<!DOCTYPE html><html><head><title>Landing Page</title></head><body><h1>Landing Page Gerada</h1><p>Dados não encontrados.</p></body></html>';
+        if (lpError || !lpData) {
+          throw new Error('Landing page não encontrada');
         }
         
+        // Buscar produtos selecionados
+        let selectedProducts: any[] = [];
+        if (lpData.selected_product_ids && lpData.selected_product_ids.length > 0) {
+          const { data: products } = await supabase
+            .from('products_repository')
+            .select('*')
+            .in('id', lpData.selected_product_ids);
+          
+          selectedProducts = products || [];
+        }
+        
+        // USAR NOVO GERADOR SEO
+        const pageData = lpData.data as any;
+        const htmlCode = await generateBlogHTML({
+          blogs: [{
+            title: lpData.name,
+            content: pageData?.content || '',
+            meta_description: pageData?.seo_description,
+            keywords: pageData?.seo?.ai_keywords || []
+          }],
+          domain: pageData?.seo?.domain || 'eodonto',
+          canonicalUrl: pageData?.seo?.canonical_url || `https://${pageData?.seo?.domain || 'eodonto'}/lp`,
+          finalTitle: pageData?.seo?.seo_title || lpData.name,
+          finalDescription: pageData?.seo_description || '',
+          selectedProducts: selectedProducts,
+          intelligentLinks: pageData?.seo?.intelligent_links || {},
+          schemas: Object.values(pageData?.schema || {}),
+          trackingConfig: trackingConfig,
+          preview: false,
+          ogImage: pageData?.banner?.images?.[0]?.src,
+          keywords: pageData?.seo?.ai_keywords || []
+        });
+        
         await navigator.clipboard.writeText(htmlCode);
-        // Refresh landing pages to sync names
         await loadLandingPages();
         
         toast({
-          title: "HTML SEO Completo Copiado!",
-          description: `HTML da landing page com dados de ${(landingPage.selected_product_ids || []).length} produtos selecionados copiado`,
+          title: "✅ HTML SEO Completo Copiado!",
+          description: `HTML otimizado com ${selectedProducts.length} produtos, schemas consolidados e tracking pixels`,
         });
+        
       } catch (err) {
+        console.error('Erro ao gerar HTML:', err);
         toast({
-          title: "Erro ao copiar",
+          title: "❌ Erro ao copiar",
           description: "Não foi possível copiar o código. Tente novamente.",
           variant: "destructive",
         });
@@ -471,63 +468,55 @@ const DashboardContent = () => {
   // Function to generate clean HTML for copying (without preview structure)
   const generateCleanHTML = useCallback(async (blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
-    console.log(`🎨 Generating clean ${domainName} HTML for copying using corrected function`);
+    console.log(`🎨 Generating clean ${domainName} HTML using NEW SEO generator`);
     
-    // Create individual product blogs filtered by domain
+    // Buscar produtos para o domínio
     const domainProductBlogs = productBlogsForHTMLByDomain(domain);
-    const productBlogs: BlogPost[] = domainProductBlogs.map(productBlog => ({
-      id: productBlog.id,
-      title: productBlog.title,
-      created_at: productBlog.created_at,
+    
+    // Converter product blogs para formato BlogPost
+    const productBlogs: BlogPost[] = domainProductBlogs.map(pb => ({
+      id: pb.id,
+      title: pb.title,
+      created_at: pb.created_at,
       status: 'published',
-      landing_page_id: `product-${productBlog.productId}`,
-      content: productBlog.content,
-      meta_description: productBlog.type === 'commercial' 
-        ? `Descubra todas as vantagens e benefícios do ${productBlog.productName}. Saiba por que é a melhor escolha para seu consultório.`
-        : `Conheça as especificações técnicas e funcionamento detalhado do ${productBlog.productName}. Tecnologia avançada para odontologia.`,
+      landing_page_id: `product-${pb.productId}`,
+      content: pb.content,
+      meta_description: pb.type === 'commercial' 
+        ? `Descubra ${pb.productName}. Saiba por que é a melhor escolha.`
+        : `Especificações técnicas de ${pb.productName}.`,
       keywords: [],
       intelligent_links: {}
-    } as BlogPost));
+    }));
     
-    // If no published blogs, create fallback from consolidatedBlogs
-    const landingPageBlogs = blogs.length > 0 ? blogs : consolidatedBlogs.map(lp => ({
-      id: lp.id,
-      title: lp.name,
-      created_at: new Date().toISOString(),
-      status: 'draft',
-      landing_page_id: lp.id,
-      content: 'Conteúdo será gerado após a publicação do blog.',
-      meta_description: `Conteúdo sobre ${lp.name}`,
-      keywords: [],
-      intelligent_links: {}
-    } as BlogPost));
+    // Combinar blogs de landing pages + produtos
+    const allBlogs = [...blogs, ...productBlogs];
     
-    // Combine landing page blogs and product blogs
-    const approvedBlogs = [...landingPageBlogs, ...productBlogs].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-
-    // Use the corrected generateConsolidatedBlogHTML function
-    return await generateConsolidatedBlogHTML({
-      title: `Blog ${domainName} - Odontologia Digital`,
-      description: `Blog de odontologia digital do ${domainName} com conteúdo especializado e atualizado sobre tecnologia odontológica.`,
-      domain: domain,
-      blogs: approvedBlogs.map(blog => ({
+    // USAR NOVO GERADOR SEO
+    return await generateBlogHTML({
+      blogs: allBlogs.map(blog => ({
         title: blog.title,
-        content: blog.content || 'Conteúdo será gerado após a publicação do blog.',
-        productName: blog.title,
+        content: blog.content || '',
+        meta_description: blog.meta_description,
         keywords: Array.isArray(blog.keywords) ? blog.keywords : []
       })),
+      domain: domain,
+      canonicalUrl: `https://${domain}/blog`,
+      finalTitle: `Blog ${domainName} - Odontologia Digital`,
+      finalDescription: `Conteúdo especializado de odontologia digital do ${domainName}`,
       selectedProducts: domainProductBlogs.map(p => ({
         id: p.productId,
         name: p.productName,
         description: p.content,
         keywords: [],
         category: 'Odontologia'
-      }))
+      })),
+      intelligentLinks: {},
+      schemas: [],
+      trackingConfig: trackingConfig,
+      preview: false,
+      keywords: []
     });
-
-  }, [productBlogsForHTMLByDomain, consolidatedBlogs, generateConsolidatedBlogHTML]);
+  }, [productBlogsForHTMLByDomain, trackingConfig]);
 
   const generateConsolidatedHTML = useCallback((blogs: BlogPost[], domain: string) => {
     const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
@@ -739,14 +728,21 @@ const DashboardContent = () => {
         }
 
         .full-content {
-            display: none;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--light-gray);
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            margin-top: 0;
+            padding-top: 0;
+            border-top: 1px solid transparent;
+            transition: max-height 0.5s ease, opacity 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease;
         }
         
         .full-content.expanded {
-            display: block;
+            max-height: 5000px;
+            opacity: 1;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--light-gray);
         }
         
         .main-content {
