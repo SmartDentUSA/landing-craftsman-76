@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, CheckCircle, Search } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
@@ -50,6 +50,7 @@ import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
+import { validateMetaDescription, validateCanonicalURL } from "@/lib/seo-validators";
 
 
 // ✅ PATCH 0.2: Estados para Blogs Estratégicos (Dentala + Eodonto)
@@ -2928,6 +2929,86 @@ const EditorContent = () => {
     }
   };
 
+  // ✅ FASE 1: Função de Validação SEO
+  const handleValidateSEO = async () => {
+    try {
+      // 1. Validar meta description
+      const descValidation = validateMetaDescription(data.seo_description || '');
+      
+      // 2. Validar canonical URL
+      const canonicalValidation = await validateCanonicalURL(
+        data.seo?.canonical_url || '',
+        data.seo?.domain || ''
+      );
+      
+      // 3. Validar schemas (chamar edge function validate-schema)
+      const schemasToValidate = [];
+      
+      if (data.schema?.offers && data.schema.offers.length > 0) {
+        schemasToValidate.push({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "offers": data.schema.offers
+        });
+      }
+      
+      let schemaValidation: any = { valid: true };
+      
+      if (schemasToValidate.length > 0) {
+        const { data: validationResult, error } = await supabase.functions.invoke('validate-schema', {
+          body: { schemas: schemasToValidate }
+        });
+        
+        if (!error && validationResult) {
+          schemaValidation = validationResult;
+        }
+      }
+      
+      // 4. Verificar produtos selecionados
+      const hasProducts = selectedProducts && selectedProducts.length > 0;
+      
+      // 5. Calcular score geral
+      const totalChecks = 4;
+      let passedChecks = 0;
+      
+      if (descValidation.valid) passedChecks++;
+      if (canonicalValidation.valid) passedChecks++;
+      if (schemaValidation.valid) passedChecks++;
+      if (hasProducts) passedChecks++;
+      
+      const overallScore = Math.round((passedChecks / totalChecks) * 100);
+      
+      // 6. Mostrar resultados
+      const resultMessage = `
+        ✅ Meta Description: ${descValidation.valid ? 'Válida' : '❌ Inválida'} (Score: ${descValidation.score})
+        ${!descValidation.valid ? `\n  Avisos: ${descValidation.warnings.join(', ')}` : ''}
+        
+        ${canonicalValidation.valid ? '✅' : '❌'} Canonical URL: ${canonicalValidation.valid ? 'Válida' : 'Inválida'}
+        ${!canonicalValidation.valid ? `\n  Erros: ${canonicalValidation.errors.join(', ')}` : ''}
+        
+        ${schemaValidation.valid ? '✅' : '❌'} Schemas: ${schemaValidation.valid ? 'Válidos' : 'Com problemas'}
+        
+        ${hasProducts ? '✅' : '⚠️'} Produtos: ${hasProducts ? `${selectedProducts.length} selecionados` : 'Nenhum produto selecionado'}
+        
+        Score Geral: ${overallScore}%
+      `;
+      
+      toast({
+        title: overallScore >= 75 ? "✅ Validação SEO Completa" : "⚠️ SEO Precisa de Melhorias",
+        description: resultMessage,
+        variant: overallScore >= 75 ? "default" : "destructive"
+      });
+      
+    } catch (error) {
+      console.error('Erro ao validar SEO:', error);
+      toast({
+        title: "❌ Erro na validação",
+        description: "Não foi possível validar o SEO. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Debug function - temporary
   const handleTestHTML = () => {
     console.log('🧪 Testing HTML generation...');
@@ -3000,6 +3081,10 @@ const EditorContent = () => {
                 {historyLength} versões
               </Badge>
               
+              <Button variant="outline" size="sm" onClick={handleValidateSEO}>
+                <Search className="h-4 w-4 mr-2" />
+                Validar SEO
+              </Button>
               <Button variant="outline" size="sm" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar
