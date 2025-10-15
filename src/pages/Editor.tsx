@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
-import { validateCanonicalURL } from "@/lib/seo-validators";
 import { RotateCcw, RotateCw } from "lucide-react";
+import { BannerSection } from "@/components/editor/BannerSection";
+import { SolutionsSection } from "@/components/editor/SolutionsSection";
+import { SEOSection } from "@/components/editor/SEOSection";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -1775,6 +1777,23 @@ const EditorContent = () => {
     }
   });
 
+  // ✅ Keyboard shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
   // Optimized handler for desktop info updates  
   const updateDesktopInfo = useCallback((updates: any) => {
     console.time('desktop-info-update');
@@ -3173,208 +3192,10 @@ const EditorContent = () => {
                 <AccordionItem value="banner">
                   <AccordionTrigger>Banner Principal</AccordionTrigger>
                   <AccordionContent className="space-y-4">
-                    <div>
-                      <Label>Badge do Banner</Label>
-                      <Input
-                        value={data.banner.badge_text}
-                        onChange={(e) => setData(prev => ({
-                          ...prev,
-                          banner: { ...prev.banner, badge_text: e.target.value }
-                        }))}
-                        placeholder="Texto do badge"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Título Principal</Label>
-                      <Textarea
-                        value={data.banner.title}
-                        onChange={(e) => setData(prev => ({
-                          ...prev,
-                          banner: { ...prev.banner, title: e.target.value }
-                        }))}
-                        placeholder="Título principal do banner"
-                        rows={2}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Subtítulo</Label>
-                      <Textarea
-                        value={data.banner.subtitle}
-                        onChange={(e) => setData(prev => ({
-                          ...prev,
-                          banner: { ...prev.banner, subtitle: e.target.value }
-                        }))}
-                        placeholder="Subtítulo do banner"
-                        rows={3}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>CTAs do Banner</Label>
-                      <div className="space-y-4 mt-2">
-                        {/* CTA Primário */}
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={data.banner.cta_primary.visible !== false}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                banner: {
-                                  ...prev.banner,
-                                  cta_primary: { ...prev.banner.cta_primary, visible: checked }
-                                }
-                              }))}
-                            />
-                            <Label className="font-medium">CTA Primário</Label>
-                          </div>
-                          
-                          {data.banner.cta_primary.visible !== false && (
-                            <div className="grid grid-cols-2 gap-4 ml-6">
-                              <div>
-                                <Label>Label</Label>
-                                <Input
-                                  value={data.banner.cta_primary.label}
-                                  onChange={(e) => setData(prev => ({
-                                    ...prev,
-                                    banner: {
-                                      ...prev.banner,
-                                      cta_primary: { ...prev.banner.cta_primary, label: e.target.value }
-                                    }
-                                  }))}
-                                  placeholder="Texto do botão primário"
-                                />
-                              </div>
-                              <div>
-                                <Label>URL</Label>
-                                <Input
-                                  value={data.banner.cta_primary.href}
-                                  onChange={(e) => setData(prev => ({
-                                    ...prev,
-                                    banner: {
-                                      ...prev.banner,
-                                      cta_primary: { ...prev.banner.cta_primary, href: e.target.value }
-                                    }
-                                  }))}
-                                  placeholder="URL do botão primário"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* CTA Secundário */}
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={data.banner.cta_secondary.visible !== false}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                banner: {
-                                  ...prev.banner,
-                                  cta_secondary: { ...prev.banner.cta_secondary, visible: checked }
-                                }
-                              }))}
-                            />
-                            <Label className="font-medium">CTA Secundário</Label>
-                          </div>
-                          
-                          {data.banner.cta_secondary.visible !== false && (
-                            <div className="grid grid-cols-2 gap-4 ml-6">
-                              <div>
-                                <Label>Label</Label>
-                                <Input
-                                  value={data.banner.cta_secondary.label}
-                                  onChange={(e) => setData(prev => ({
-                                    ...prev,
-                                    banner: {
-                                      ...prev.banner,
-                                      cta_secondary: { ...prev.banner.cta_secondary, label: e.target.value }
-                                    }
-                                  }))}
-                                  placeholder="Texto do botão secundário"
-                                />
-                              </div>
-                              <div>
-                                <Label>URL</Label>
-                                <Input
-                                  value={data.banner.cta_secondary.href}
-                                  onChange={(e) => setData(prev => ({
-                                    ...prev,
-                                    banner: {
-                                      ...prev.banner,
-                                      cta_secondary: { ...prev.banner.cta_secondary, href: e.target.value }
-                                    }
-                                  }))}
-                                  placeholder="URL do botão secundário"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label>Imagens do Banner</Label>
-                        <span className="text-sm text-muted-foreground">
-                          {(data.banner?.images?.length || 0)}/3 imagens
-                        </span>
-                      </div>
-                      {(data.banner?.images || []).map((image, index) => (
-                        <div key={index} className="mt-4 p-4 border rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <Label>Imagem {index + 1} do Banner</Label>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newImages = data.banner.images.filter((_, i) => i !== index);
-                                setData(prev => ({
-                                  ...prev,
-                                  banner: { ...prev.banner, images: newImages }
-                                }));
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <ImageUploader
-                            value={image}
-                            onChange={(imageData) => {
-                              const newImages = [...data.banner.images];
-                              newImages[index] = imageData;
-                              setData(prev => ({
-                                ...prev,
-                                banner: { ...prev.banner, images: newImages }
-                              }));
-                            }}
-                            placeholder={`URL da imagem ${index + 1} do banner`}
-                            proportionInfo="200px (largura) x 300px (altura) - Proporção: 16:9"
-                          />
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setData(prev => ({
-                            ...prev,
-                            banner: {
-                              ...prev.banner,
-                              images: [...prev.banner.images, createImageData()]
-                            }
-                          }));
-                        }}
-                        className="mt-2"
-                        disabled={(data.banner?.images?.length || 0) >= 3}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        {(data.banner?.images?.length || 0) >= 3 ? "Máximo de 3 imagens atingido" : "Adicionar Imagem"}
-                      </Button>
-                    </div>
+                    <BannerSection 
+                      data={data.banner}
+                      onChange={(banner) => setData(prev => ({ ...prev, banner }))}
+                    />
                   </AccordionContent>
                 </AccordionItem>
 
@@ -3653,129 +3474,12 @@ const EditorContent = () => {
                     </Card>
                     
                     {((data.solutions_section?.visible_desktop ?? false) || (data.solutions_section?.visible_mobile ?? false)) && (
-                      <>
-                    <div>
-                      <Label>Título da Seção</Label>
-                      <Input
-                        value={data.solutions_title}
-                        onChange={(e) => setData(prev => ({ ...prev, solutions_title: e.target.value }))}
-                        placeholder="Título da seção de soluções"
+                      <SolutionsSection
+                        title={data.solutions_title}
+                        solutions={data.solutions}
+                        onTitleChange={(title) => setData(prev => ({ ...prev, solutions_title: title }))}
+                        onSolutionsChange={(solutions) => setData(prev => ({ ...prev, solutions }))}
                       />
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">
-                        {(data.solutions?.length || 0)}/5 soluções
-                      </span>
-                    </div>
-                    
-                    {(data.solutions || []).map((solution, index) => {
-                      // Determinar a proporção baseada no índice
-                      const getProportionInfo = (idx: number) => {
-                        if (idx <= 2) {
-                          // Imagens 1-3 (índices 0-2) - Container fixo 220px altura
-                          return "480x720px ou 768x1152px ou 1200x1800px - Proporção vertical 2:3 (mais altas que largas). Use uma das variantes do Cloudflare: 480px, 768px ou 1200px de largura";
-                        } else {
-                          // Imagens 4-5 (índices 3-4) - Container com altura flexível  
-                          return "480x320px ou 768x512px ou 1200x800px - Proporção horizontal 3:2 (mais largas que altas). Use uma das variantes do Cloudflare: 480px, 768px ou 1200px de largura";
-                        }
-                      };
-
-                      return (
-                        <div key={index} className="p-4 border rounded-lg space-y-4">
-                          <div className="flex justify-between items-center">
-                            <Label>Solução {index + 1}</Label>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newSolutions = (data.solutions || []).filter((_, i) => i !== index);
-                                setData(prev => ({ ...prev, solutions: newSolutions }));
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div>
-                            <Label>Texto</Label>
-                            <Textarea
-                              value={solution.text}
-                              onChange={(e) => {
-                                const newSolutions = [...(data.solutions || [])];
-                                newSolutions[index].text = e.target.value;
-                                setData(prev => ({ ...prev, solutions: newSolutions }));
-                              }}
-                              placeholder="Descrição da solução"
-                              rows={3}
-                            />
-                          </div>
-                          <div>
-                            <Label>Imagem da Solução {index + 1}</Label>
-                            <ImageUploader
-                              value={solution.image}
-                              onChange={(imageData) => {
-                                const newSolutions = [...(data.solutions || [])];
-                                newSolutions[index].image = imageData;
-                                setData(prev => ({ ...prev, solutions: newSolutions }));
-                              }}
-                              placeholder={`URL da imagem da solução ${index + 1}`}
-                              proportionInfo={getProportionInfo(index)}
-                            />
-                          </div>
-                          <div>
-                            <Label>Proporção do Container (Desktop)</Label>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                <span>Mínimo (0.3)</span>
-                                <span>Normal (1.0)</span>
-                                <span>Destaque (2.0)</span>
-                              </div>
-                              <Slider
-                                value={[solution.containerScale || 1.0]}
-                                onValueChange={(value) => {
-                                  const newSolutions = [...(data.solutions || [])];
-                                  newSolutions[index].containerScale = value[0];
-                                  setData(prev => ({ ...prev, solutions: newSolutions }));
-                                }}
-                                min={0.3}
-                                max={2.0}
-                                step={0.1}
-                                className="w-full"
-                              />
-                              <div className="text-sm text-muted-foreground">
-                                Atual: {(solution.containerScale || 1.0).toFixed(1)}x
-                                {!solution.image?.src && solution.containerScale && solution.containerScale > 0.6 && (
-                                  <span className="text-orange-600 ml-2">
-                                    ⚠️ Sugestão: Use escala menor (≤0.5) para containers sem imagem
-                                  </span>
-                                )}
-                                {solution.image?.src && solution.containerScale && solution.containerScale < 0.7 && (
-                                  <span className="text-blue-600 ml-2">
-                                    💡 Sugestão: Use escala maior (≥0.8) para destacar conteúdo com imagem
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setData(prev => ({
-                          ...prev,
-                          solutions: [...(prev.solutions || []), { text: '', image: createImageData(), containerScale: 1.0 }]
-                        }));
-                      }}
-                      disabled={(data.solutions?.length || 0) >= 5}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {(data.solutions?.length || 0) >= 5 ? "Máximo de 5 soluções atingido" : "Adicionar Solução"}
-                    </Button>
-                      </>
                     )}
                   </AccordionContent>
                 </AccordionItem>
@@ -4885,148 +4589,26 @@ const EditorContent = () => {
                     <AccordionItem value="basic-seo">
                       <AccordionTrigger>SEO Básico</AccordionTrigger>
                       <AccordionContent className="space-y-4">
-                        <div>
-                           <Label>Domínio a ser utilizado</Label>
-                           <Input
-                             value={data.seo.domain}
-                             onChange={(e) => {
-                               setData(prev => ({
-                                 ...prev,
-                                 seo: { 
-                                   ...prev.seo, 
-                                   domain: e.target.value,
-                                   // Auto-generate canonical URL when domain changes
-                                   canonical_url: e.target.value && prev.seo.seo_title ? 
-                                     `https://${e.target.value}/${prev.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` :
-                                     prev.seo.canonical_url
-                                 }
-                               }));
-                             }}
-                             placeholder="exemplo.com.br"
-                           />
-                          {data.seo.domain && data.seo.seo_title && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              URL Canônica: https://{data.seo.domain}/{data.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}
-                            </p>
-                          )}
-                        </div>
-                        
-                        <div>
-                           <Label>Título SEO</Label>
-                           <Input
-                             value={data.seo.seo_title}
-                             onChange={(e) => {
-                               setData(prev => ({
-                                 ...prev,
-                                 seo: { 
-                                   ...prev.seo, 
-                                   seo_title: e.target.value,
-                                   // Auto-generate canonical URL when title changes
-                                   canonical_url: prev.seo.domain && e.target.value ? 
-                                     `https://${prev.seo.domain}/${e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` :
-                                     prev.seo.canonical_url
-                                 }
-                               }));
-                             }}
-                             placeholder="Título otimizado para SEO"
-                           />
-                           <p className="text-xs text-gray-500 mt-1">
-                             {(data.seo?.seo_title || '').length}/60 caracteres
-                           </p>
-                        </div>
-                        
-                        <div>
-                          <Label>Descrição SEO</Label>
-                          <Textarea
-                            value={data.seo.seo_description}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              seo: { ...prev.seo, seo_description: e.target.value }
-                            }))}
-                            placeholder="Descrição otimizada para SEO"
-                            rows={3}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label className="flex items-center gap-2">
-                            URL Canônica
-                            {data.seo.canonical_url && data.seo.canonical_url.startsWith('https://') ? (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                ✓ HTTPS
-                              </Badge>
-                            ) : data.seo.canonical_url ? (
-                              <Badge variant="destructive" className="text-xs">
-                                ⚠ Requer HTTPS
-                              </Badge>
-                            ) : null}
-                          </Label>
-                          <div className="space-y-2">
-                            <Input
-                              value={data.seo.canonical_url}
-                              onChange={(e) => setData(prev => ({
-                                ...prev,
-                                seo: { ...prev.seo, canonical_url: e.target.value }
-                              }))}
-                              placeholder="https://exemplo.com/pagina"
-                              className={cn(
-                                data.seo.canonical_url && !data.seo.canonical_url.startsWith('https://') 
-                                  ? "border-destructive focus-visible:ring-destructive" 
-                                  : ""
-                              )}
-                            />
-                            {data.seo.domain && data.seo.seo_title && !data.seo.canonical_url && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-full text-xs"
-                                onClick={() => {
-                                  const slug = data.seo.seo_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-                                  const suggested = `https://${data.seo.domain}/${slug}`;
-                                  setData(prev => ({
-                                    ...prev,
-                                    seo: { ...prev.seo, canonical_url: suggested }
-                                  }));
-                                }}
-                              >
-                                <span className="mr-1">✨</span>
-                                Gerar URL: https://{data.seo.domain}/{data.seo.seo_title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pagina'}
-                              </Button>
-                            )}
-                            {data.seo.canonical_url && !data.seo.canonical_url.startsWith('https://') && (
-                              <div className="text-xs text-destructive p-2 bg-destructive/10 rounded">
-                                <strong>Google Ads requer HTTPS:</strong> URLs devem começar com https:// para campanhas publicitárias.
-                              </div>
-                            )}
-                            {data.seo.canonical_url && data.seo.canonical_url.startsWith('https://') && (
-                              <div className="text-xs text-green-600 p-2 bg-green-50 rounded">
-                                <strong>✓ URL válida:</strong> Esta URL será usada no Google Ads como destino final.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label>Meta Robots</Label>
-                          <Select
-                            value={data.seo.meta_robots}
-                            onValueChange={(value) => setData(prev => ({
-                              ...prev,
-                              seo: { ...prev.seo, meta_robots: value }
-                            }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="index, follow">index, follow</SelectItem>
-                              <SelectItem value="noindex, nofollow">noindex, nofollow</SelectItem>
-                              <SelectItem value="index, nofollow">index, nofollow</SelectItem>
-                              <SelectItem value="noindex, follow">noindex, follow</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <SEOSection
+                          data={data.seo}
+                          seoTitle={data.seo_title}
+                          seoDescription={data.seo_description}
+                          landingPageId={id}
+                          onChange={(seoData) => setData(prev => ({
+                            ...prev,
+                            seo: { ...prev.seo, ...seoData }
+                          }))}
+                          onSEOTitleChange={(title) => setData(prev => ({
+                            ...prev,
+                            seo_title: title,
+                            seo: { ...prev.seo, seo_title: title }
+                          }))}
+                          onSEODescriptionChange={(description) => setData(prev => ({
+                            ...prev,
+                            seo_description: description,
+                            seo: { ...prev.seo, seo_description: description }
+                          }))}
+                        />
 
                         {/* Painel de Automação SEO com IA */}
                         <div className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
