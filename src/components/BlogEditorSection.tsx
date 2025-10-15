@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { validateMetaDescription } from '@/lib/seo-validators';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +63,13 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [activeEditor, setActiveEditor] = useState<'dentala' | 'eodonto' | null>(null);
   const [dentalaEditorInstance, setDentalaEditorInstance] = useState<any>(null);
   const [eodontoEditorInstance, setEodontoEditorInstance] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [metaValidation, setMetaValidation] = useState({ 
+    valid: true, 
+    warnings: [] as string[], 
+    score: 100 
+  });
   
   const { toast } = useToast();
   const { getConfigurationByFunction } = usePromptsConfiguration();
@@ -298,6 +308,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
 
   const saveDualBlog = async () => {
     setSaving(true);
+    setIsSaving(true);
     
     try {
       const currentBlog = selectedDomain === 'dentala' ? dentalaBlogPost : eodontoBlogPost;
@@ -350,6 +361,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         setEodontoHistory(updatedHistory.versions);
       }
       
+      setLastSaved(new Date());
+      
       toast({
         title: "✅ Blog salvo com sucesso!",
         description: `Blog ${selectedDomain === 'dentala' ? 'Dentala' : 'Eodonto'} atualizado.`,
@@ -370,6 +383,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       });
     } finally {
       setSaving(false);
+      setIsSaving(false);
     }
   };
 
@@ -476,6 +490,15 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     setVersionToDelete({ domain, index });
     setDeleteDialogOpen(true);
   };
+
+  // Validar meta description quando mudar
+  useEffect(() => {
+    const currentBlog = selectedDomain === 'dentala' ? dentalaBlogPost : eodontoBlogPost;
+    if (currentBlog?.meta_description) {
+      const validation = validateMetaDescription(currentBlog.meta_description);
+      setMetaValidation(validation);
+    }
+  }, [dentalaBlogPost?.meta_description, eodontoBlogPost?.meta_description, selectedDomain]);
 
   const updateDentalaBlog = (field: keyof BlogPost, value: any) => {
     setDentalaBlogPost(prev => prev ? ({ ...prev, [field]: value }) : null);

@@ -29,9 +29,9 @@ interface BlogPost {
   created_at: string;
   status: string;
   landing_page_id: string;
-  content: string;
-  meta_description: string;
-  keywords: string[];
+  content?: string;
+  meta_description?: string;
+  keywords?: string[];
   intelligent_links?: any; // Handle Json type from Supabase
 }
 
@@ -77,24 +77,20 @@ const DashboardContent = () => {
         return;
       }
 
-      const blogsPromises = approvedLandingPages.map(async (lp) => {
-        const { data: blogs, error } = await supabase
-          .from('blog_posts')
-          .select('*')
-          .eq('landing_page_id', lp.id)
-          .eq('status', 'published')
-          .order('created_at', { ascending: false })
-          .limit(1);
+      // ✅ OTIMIZAÇÃO: 1 query em vez de N queries
+      const landingPageIds = approvedLandingPages.map(lp => lp.id);
+      
+      const { data: blogs, error } = await supabase
+        .from('blog_posts')
+        .select('id, title, status, created_at, landing_page_id, meta_description')
+        .in('landing_page_id', landingPageIds)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        return blogs || [];
-      });
-
-      const blogArrays = await Promise.all(blogsPromises);
-      const allBlogs = blogArrays.flat();
-      console.log('📚 Total blogs found:', allBlogs.length);
-
-      setBlogPosts(allBlogs);
+      if (error) throw error;
+      
+      console.log('📚 Total blogs found:', blogs?.length || 0);
+      setBlogPosts(blogs || []);
     } catch (error: any) {
       console.error('❌ Erro ao buscar blogs:', error);
       toast({

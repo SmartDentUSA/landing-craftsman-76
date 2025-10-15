@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, Copy, ExternalLink } from "lucide-react";
+import { Loader2, RefreshCw, Copy, ExternalLink, Monitor, Tablet, Smartphone } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useProductBlogsIntegration } from "@/hooks/useProductBlogsIntegration";
 import { useSEOHTMLGenerator } from "@/hooks/useSEOHTMLGenerator";
 
@@ -34,6 +35,13 @@ export function StrategicBlogPreview({
   const [previewEodontoHTML, setPreviewEodontoHTML] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [deviceMode, setDeviceMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+
+  const DEVICE_SIZES = {
+    desktop: { width: '100%', height: '800px', scale: 1 },
+    tablet: { width: '768px', height: '1024px', scale: 0.8 },
+    mobile: { width: '375px', height: '667px', scale: 0.6 }
+  };
 
   console.log('📊 StrategicBlogPreview props:', { 
     selectedProductIds, 
@@ -209,27 +217,40 @@ export function StrategicBlogPreview({
           <h3 className="font-semibold text-lg">
             📰 Preview Consolidado (Blog Estratégico + Produtos)
           </h3>
-          <Button 
-            onClick={() => {
-              setShowSuccessToast(true);
-              doGenerateAll();
-            }} 
-            disabled={isGenerating} 
-            size="sm" 
-            variant="outline"
-          >
-          {isGenerating ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Gerando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar Preview
-            </>
-          )}
-        </Button>
+          <div className="flex gap-2 items-center">
+            <ToggleGroup type="single" value={deviceMode} onValueChange={(v) => v && setDeviceMode(v as any)}>
+              <ToggleGroupItem value="desktop" aria-label="Desktop">
+                <Monitor className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="tablet" aria-label="Tablet">
+                <Tablet className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="mobile" aria-label="Mobile">
+                <Smartphone className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button
+              onClick={() => {
+                setShowSuccessToast(true);
+                doGenerateAll();
+              }} 
+              disabled={isGenerating} 
+              size="sm" 
+              variant="outline"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Atualizar Preview
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         <div className="text-sm text-muted-foreground">
           📌 Mostrando apenas produtos desta landing page
@@ -263,12 +284,22 @@ export function StrategicBlogPreview({
               </Button>
             </div>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden flex justify-center items-start" style={{
+            transform: `scale(${DEVICE_SIZES[deviceMode].scale})`,
+            transformOrigin: 'top center'
+          }}>
             {previewDentalaHTML ? (
               <iframe
                 title="Dentala Preview Consolidado"
                 srcDoc={previewDentalaHTML}
-                className="w-full h-full border-0"
+                style={{
+                  width: DEVICE_SIZES[deviceMode].width,
+                  height: DEVICE_SIZES[deviceMode].height,
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: deviceMode !== 'desktop' ? '0 10px 40px rgba(0,0,0,0.1)' : 'none'
+                }}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -301,12 +332,22 @@ export function StrategicBlogPreview({
               </Button>
             </div>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden flex justify-center items-start" style={{
+            transform: `scale(${DEVICE_SIZES[deviceMode].scale})`,
+            transformOrigin: 'top center'
+          }}>
             {previewEodontoHTML ? (
               <iframe
                 title="Eodonto Preview Consolidado"
                 srcDoc={previewEodontoHTML}
-                className="w-full h-full border-0"
+                style={{
+                  width: DEVICE_SIZES[deviceMode].width,
+                  height: DEVICE_SIZES[deviceMode].height,
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: deviceMode !== 'desktop' ? '0 10px 40px rgba(0,0,0,0.1)' : 'none'
+                }}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">

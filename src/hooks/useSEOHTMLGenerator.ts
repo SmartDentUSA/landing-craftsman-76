@@ -11,6 +11,10 @@ import { generateSchemaFromCompanyProfile } from '@/lib/schema-reviews';
 import { supabase } from '@/integrations/supabase/client';
 import type { UnifiedReview } from '@/types/reviews';
 import { getTrackingConfig, injectTrackingPixels, injectGTMNoScript, generateSEODomainTags, generateSchemaSameAs, generateFooterLinks, type TrackingConfig } from '@/lib/tracking-injector';
+import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
+import { buildIntelligentLinksMap, applyIntelligentLinks } from '@/services/seo/intelligentLinksProcessor';
+import { generateSchema } from '@/services/seo/schemaGenerator';
+import { buildMetaTags } from '@/services/seo/metaTagsBuilder';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -317,7 +321,7 @@ export const useSEOHTMLGenerator = () => {
   const { generateAdvancedProductSchema, generateFAQSchema, generateCompletePageSchema } = useAdvancedSchemaGenerator();
   const { allLinks } = useLinksRepository();
 
-  const generateOptimizedHTML = useCallback((options: SEOHTMLOptions): string => {
+  const generateOptimizedHTML = useCallback(async (options: SEOHTMLOptions): Promise<string> => {
     const {
       title,
       description,
@@ -361,10 +365,10 @@ export const useSEOHTMLGenerator = () => {
       if (type === 'product' && products.length > 0) {
         // ✨ GENERATE SCHEMA FOR MULTIPLE PRODUCTS
         if (products.length === 1) {
-          const { schemas } = generateCompletePageSchema(products, undefined, undefined, undefined, seoTitle, seoDescription);
+          const schemaResult = await generateCompletePageSchema(products, undefined, undefined, undefined, seoTitle, seoDescription);
           schemaJson = `
           <script type="application/ld+json">
-          ${JSON.stringify(schemas, null, 2)}
+          ${JSON.stringify(schemaResult.schemas, null, 2)}
           </script>`;
         } else {
           // Generate ItemList schema for multiple products
@@ -971,15 +975,16 @@ export const useSEOHTMLGenerator = () => {
       }));
 
       // Use advanced schema generator for complete page schema
-      const { schemas } = generateCompletePageSchema(
+      const schemaResult = await generateCompletePageSchema(
         productDataArray,
         undefined, // companyData
         undefined, // faqItems
-        undefined, // reviewsData
+        undefined, // reviewsData,
         finalTitle,
         finalDescription,
         authorKol // ✨ E-E-A-T: Pass author data
       );
+      const { schemas } = schemaResult;
       
       // Add blogs ItemList to the schema graph
       const blogsItemList = {
@@ -1941,16 +1946,16 @@ export const useSEOHTMLGenerator = () => {
     return stripInternalLabels(finalHTML);
   }, []);
 
-  const generateEmailWebViewHTML = useCallback((options: {
+  const generateEmailWebViewHTML = useCallback(async (options: {
     subject: string;
     content: string;
     domain: string;
     unsubscribeUrl?: string;
-  }): string => {
+  }): Promise<string> => {
     const { subject, content, domain, unsubscribeUrl } = options;
     const canonicalUrl = `https://${domain}/email-view`;
 
-    return generateOptimizedHTML({
+    return await generateOptimizedHTML({
       title: `Email: ${subject}`,
       description: `Visualização web do email: ${subject}`,
       content: `

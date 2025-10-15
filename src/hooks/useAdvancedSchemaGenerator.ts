@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { validateSchemaOrg } from '@/lib/seo-validators';
 
 interface ProductData {
   id: string;
@@ -514,7 +515,7 @@ export const useAdvancedSchemaGenerator = () => {
   }, []);
 
   // Combinar TODOS os schemas em um estruturado
-  const generateCompletePageSchema = useCallback((
+  const generateCompletePageSchema = useCallback(async (
     products: ProductData[],
     companyData?: CompanyData,
     faqItems?: FAQItem[],
@@ -613,13 +614,30 @@ export const useAdvancedSchemaGenerator = () => {
       technicalSpecsProducts: products?.filter(p => p.technical_specifications?.length > 0).length || 0,
       botTriggerWordsProducts: products?.filter(p => p.bot_trigger_words?.length > 0).length || 0
     });
+    
+    // ✅ VALIDAR SCHEMAS CONSOLIDADOS
+    const allSchemasValid = await validateSchemaOrg(schemas);
+    
+    if (!allSchemasValid.valid) {
+      console.error('❌ Schemas inválidos:', allSchemasValid.errors);
+      toast({
+        title: "⚠️ Aviso de Schema",
+        description: `Alguns schemas não estão totalmente válidos: ${allSchemasValid.errors.join(', ')}`,
+        variant: "default"
+      });
+    }
+    
+    if (allSchemasValid.warnings.length > 0) {
+      console.warn('⚠️ Schema warnings:', allSchemasValid.warnings);
+    }
 
     return {
       schemas,
       formatted: JSON.stringify(schemas, null, 2),
-      preview: `${schemas.length} schemas gerados: ${schemas.map(s => s['@type']).join(', ')}`
+      preview: `${schemas.length} schemas gerados: ${schemas.map(s => s['@type']).join(', ')}`,
+      validation: allSchemasValid
     };
-  }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema, generateProductFAQSchema]);
+  }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema, generateProductFAQSchema, toast]);
 
   return {
     generateAdvancedProductSchema,
