@@ -779,6 +779,9 @@ export const useSEOHTMLGenerator = () => {
 
     // ============= SEO CRÍTICO 2: Buscar Reviews para Schema =============
     let allReviews: UnifiedReview[] = [];
+    
+    // ============= E-E-A-T: FETCH AUTHOR FROM BLOG POST =============
+    let authorKol = null;
     if (landingPageIdForSEOContext) {
       try {
         // Buscar approved_reviews
@@ -825,6 +828,29 @@ export const useSEOHTMLGenerator = () => {
         }
       } catch (error) {
         console.error('❌ Erro ao buscar reviews para schema:', error);
+      }
+    }
+
+    // ========================================
+    // ✨ E-E-A-T: FETCH AUTHOR FROM BLOG POST
+    // ========================================
+    if (landingPageIdForSEOContext) {
+      try {
+        const { data: blogPost } = await supabase
+          .from('blog_posts')
+          .select(`
+            author_kol_id,
+            key_opinion_leaders!inner(*)
+          `)
+          .eq('landing_page_id', landingPageIdForSEOContext)
+          .maybeSingle();
+
+        if (blogPost?.key_opinion_leaders) {
+          authorKol = blogPost.key_opinion_leaders;
+          console.log('✅ Author loaded for E-E-A-T:', authorKol.full_name);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching blog author:', error);
       }
     }
 
@@ -951,7 +977,8 @@ export const useSEOHTMLGenerator = () => {
         undefined, // faqItems
         undefined, // reviewsData
         finalTitle,
-        finalDescription
+        finalDescription,
+        authorKol // ✨ E-E-A-T: Pass author data
       );
       
       // Add blogs ItemList to the schema graph
@@ -1217,9 +1244,10 @@ export const useSEOHTMLGenerator = () => {
   <meta name="twitter:description" content="${safeDesc}">
   ${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : `<meta name="twitter:image" content="${baseURL}/static/og/blog.jpg">`}
   
-  <!-- Additional SEO Meta Tags -->
-  <meta name="author" content="${domain}">
-  <meta name="generator" content="Blog Consolidado SEO">
+    <!-- Additional SEO Meta Tags -->
+    <meta name="author" content="${authorKol?.full_name || domain}">
+    ${authorKol ? `<meta property="article:author" content="${authorKol.full_name}">` : ''}
+    <meta name="generator" content="Blog Consolidado SEO">
   <meta name="theme-color" content="#007bff">
   
   ${companySEO?.additionalKeywords.length ? companySEO.additionalKeywords.map(k => `<meta name="keyword" content="${sanitizeHTMLAttributes(k)}">`).join('\n  ') : ''}
@@ -1765,6 +1793,94 @@ export const useSEOHTMLGenerator = () => {
       <h3>🏷️ Palavras-chave relacionadas</h3>
       <div>
         ${uniqueKeywords.map(keyword => `<span class="tag">${keyword}</span>`).join('')}
+      </div>
+    </section>
+    ` : ''}
+
+    ${authorKol ? `
+    <!-- Author Bio Section (E-E-A-T) -->
+    <section class="author-bio" style="
+      margin-top: 3rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, hsl(210, 40%, 98%), hsl(210, 40%, 96%));
+      border-radius: 12px;
+      border-left: 4px solid var(--primary-color);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      gap: 1.5rem;
+      align-items: start;
+    ">
+      ${authorKol.photo_url ? `
+      <img 
+        src="${authorKol.photo_url}" 
+        alt="${authorKol.full_name}"
+        style="
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 3px solid var(--primary-color);
+          box-shadow: var(--shadow-sm);
+          flex-shrink: 0;
+        "
+      />
+      ` : ''}
+      <div style="flex: 1;">
+        <h3 style="
+          color: var(--text-color);
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        ">Sobre o Autor</h3>
+        <p style="
+          color: var(--secondary-color);
+          font-weight: 500;
+          margin-bottom: 0.75rem;
+        ">${authorKol.full_name}${authorKol.specialty ? ` - ${authorKol.specialty}` : ''}</p>
+        ${authorKol.mini_cv ? `
+        <p style="
+          color: var(--text-color);
+          line-height: 1.6;
+          margin-bottom: 1rem;
+        ">${authorKol.mini_cv}</p>
+        ` : ''}
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          ${authorKol.lattes_url ? `
+          <a href="${authorKol.lattes_url}" target="_blank" rel="noopener" style="
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: var(--transition-smooth);
+          ">📄 Currículo Lattes</a>
+          ` : ''}
+          ${authorKol.website_url ? `
+          <a href="${authorKol.website_url}" target="_blank" rel="noopener" style="
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-smooth);
+          ">🌐 Website</a>
+          ` : ''}
+          ${authorKol.instagram_url ? `
+          <a href="${authorKol.instagram_url}" target="_blank" rel="noopener" style="
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-smooth);
+          ">📷 Instagram</a>
+          ` : ''}
+          ${authorKol.youtube_url ? `
+          <a href="${authorKol.youtube_url}" target="_blank" rel="noopener" style="
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-smooth);
+          ">🎥 YouTube</a>
+          ` : ''}
+        </div>
       </div>
     </section>
     ` : ''}

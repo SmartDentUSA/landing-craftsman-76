@@ -467,6 +467,52 @@ export const useAdvancedSchemaGenerator = () => {
     };
   }, []);
 
+  // ✅ AUTHOR SCHEMA (E-E-A-T for Google)
+  const generateAuthorSchema = useCallback((author: {
+    id: string;
+    full_name: string;
+    photo_url?: string;
+    mini_cv?: string;
+    specialty?: string;
+    lattes_url?: string;
+    website_url?: string;
+    instagram_url?: string;
+    youtube_url?: string;
+  }) => {
+    const schema: any = {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": author.full_name,
+      "@id": `#author-${author.id}`
+    };
+
+    if (author.photo_url) {
+      schema.image = author.photo_url;
+    }
+
+    if (author.mini_cv) {
+      schema.description = author.mini_cv;
+    }
+
+    if (author.specialty) {
+      schema.jobTitle = author.specialty;
+    }
+
+    // ✅ sameAs for E-E-A-T (critical for authority)
+    const socialLinks = [
+      author.lattes_url,
+      author.website_url,
+      author.instagram_url,
+      author.youtube_url
+    ].filter(Boolean);
+
+    if (socialLinks.length > 0) {
+      schema.sameAs = socialLinks;
+    }
+
+    return schema;
+  }, []);
+
   // Combinar TODOS os schemas em um estruturado
   const generateCompletePageSchema = useCallback((
     products: ProductData[],
@@ -474,18 +520,32 @@ export const useAdvancedSchemaGenerator = () => {
     faqItems?: FAQItem[],
     reviews?: ReviewData[],
     pageTitle?: string,
-    pageDescription?: string
+    pageDescription?: string,
+    authorKol?: any // ✨ NEW: E-E-A-T author data
   ) => {
     const schemas: any[] = [];
 
     // Schema da página principal
-    schemas.push({
+    const pageSchema: any = {
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": pageTitle || "Nossa Página",
       "description": pageDescription || "Página especializada em soluções de qualidade",
       "url": window.location.href
-    });
+    };
+
+    // ✨ Add author reference to page (E-E-A-T)
+    if (authorKol) {
+      pageSchema.author = { "@id": `#author-${authorKol.id}` };
+    }
+
+    schemas.push(pageSchema);
+
+    // ✨ Add Person schema for author (E-E-A-T)
+    if (authorKol) {
+      const authorSchema = generateAuthorSchema(authorKol);
+      schemas.push(authorSchema);
+    }
 
     // LocalBusiness schema
     const businessSchema = generateLocalBusinessSchema(companyData || {});

@@ -165,8 +165,10 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
   };
 
   const generateCompleteHTML = async (blogVersion: BlogVersion, domain: string) => {
-    // Get author information if selected
+    // Build author info and section for E-E-A-T
     let authorInfo = undefined;
+    let authorSection = '';
+    
     if (selectedAuthorId && selectedAuthorId !== "none") {
       try {
         const { data: author } = await supabase
@@ -180,26 +182,55 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
             name: author.full_name,
             url: author.website_url ? normalizeUrl(author.website_url) : undefined
           };
+
+          authorSection = `
+            <section class="author-bio" style="
+              margin-top: 40px;
+              padding: 20px;
+              background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+              border-radius: 12px;
+              border-left: 4px solid #007bff;
+              display: flex;
+              gap: 1.5rem;
+              align-items: start;
+            ">
+              ${author.photo_url ? `
+              <img 
+                src="${author.photo_url}" 
+                alt="${author.full_name}"
+                style="
+                  width: 80px;
+                  height: 80px;
+                  border-radius: 50%;
+                  object-fit: cover;
+                  border: 3px solid #007bff;
+                  flex-shrink: 0;
+                "
+              />
+              ` : ''}
+              <div>
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Sobre o Autor</h4>
+                <p style="font-weight: 600; margin-bottom: 0.5rem; color: #333;">
+                  ${author.full_name}${author.specialty ? ` - ${author.specialty}` : ''}
+                </p>
+                ${author.mini_cv ? `<p style="margin-bottom: 1rem; line-height: 1.6;">${author.mini_cv}</p>` : ''}
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                  ${author.lattes_url ? `<a href="${author.lattes_url}" target="_blank" rel="noopener" style="color: #007bff; text-decoration: none; font-weight: 500;">📄 Lattes</a>` : ''}
+                  ${author.website_url ? `<a href="${author.website_url}" target="_blank" rel="noopener" style="color: #007bff; text-decoration: none; font-weight: 500;">🌐 Website</a>` : ''}
+                  ${author.instagram_url ? `<a href="${author.instagram_url}" target="_blank" rel="noopener" style="color: #007bff; text-decoration: none; font-weight: 500;">📷 Instagram</a>` : ''}
+                  ${author.youtube_url ? `<a href="${author.youtube_url}" target="_blank" rel="noopener" style="color: #007bff; text-decoration: none; font-weight: 500;">🎥 YouTube</a>` : ''}
+                </div>
+              </div>
+            </section>
+          `;
         }
       } catch (error) {
-        console.error('Error fetching author:', error);
+        console.error('Error fetching author for bio:', error);
       }
     }
 
     // Generate SEO optimized HTML directly
     const processedContent = processContentWithIntelligentLinks(blogVersion.content);
-    
-    // Generate author section if available
-    let authorSection = '';
-    if (selectedAuthorId && selectedAuthorId !== "none") {
-      // This would be replaced by actual author data in real implementation
-      authorSection = `
-        <div class="author-section" style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
-          <h4>Sobre o Autor</h4>
-          <p>Artigo escrito por especialista da área.</p>
-        </div>
-      `;
-    }
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -428,9 +459,8 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
     <main>
       <article class="content">
         ${processedContent}
+        ${authorSection}
       </article>
-      
-      ${authorSection}
       
       <section class="keywords">
         <h4>🏷️ Palavras-chave relacionadas:</h4>
