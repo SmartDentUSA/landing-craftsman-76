@@ -7,7 +7,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ConnectionTestPanel } from "@/components/ConnectionTestPanel";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useLandingPagesSupabase } from "@/hooks/useLandingPagesSupabase";
 import { type LandingPage } from "@/hooks/useLandingPagesSupabase";
@@ -928,11 +927,6 @@ const DashboardContent = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
         <BreadcrumbNavigation />
-      </div>
-      
-      {/* Connection Test Panel */}
-      <div className="container mx-auto px-6 pb-6">
-        <ConnectionTestPanel />
       </div>
 
       {/* Admin Promotion Banner */}
