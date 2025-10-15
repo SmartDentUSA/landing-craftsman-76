@@ -424,10 +424,7 @@ const DashboardContent = () => {
   const handleDelete = (landingPage: LandingPage) => {
     if (confirm(`Tem certeza que deseja excluir "${landingPage.name}"? Esta ação não pode ser desfeita.`)) {
       deleteLandingPage(landingPage.id);
-      toast({
-        title: "Landing page excluída",
-        description: `"${landingPage.name}" foi removida com sucesso.`,
-      });
+      // Toast is now handled in the hook
     }
   };
 

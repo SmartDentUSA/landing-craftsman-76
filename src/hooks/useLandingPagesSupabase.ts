@@ -222,19 +222,70 @@ export const useLandingPagesSupabase = () => {
   // Deletar landing page
   const deleteLandingPage = useCallback(async (id: string) => {
     try {
+      // ✅ 1. Verificar autenticação
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast({
+          title: "❌ Não autenticado",
+          description: "Faça login para deletar landing pages",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // ✅ 2. Verificar permissão de admin
+      const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+
+      if (roleError) {
+        console.error('❌ Erro ao verificar role:', roleError);
+        toast({
+          title: "❌ Erro de permissão",
+          description: `Falha ao verificar permissões: ${roleError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!isAdmin) {
+        toast({
+          title: "🚫 Sem permissão",
+          description: "Apenas administradores podem deletar landing pages",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // ✅ 3. Tentar deletar
       const { error } = await supabase
         .from('landing_pages')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao deletar:', {
+          message: error.message,
+          code: error.code,
+          hint: error.hint,
+          details: error.details
+        });
+        throw error;
+      }
+
+      // ✅ 4. Sucesso
+      toast({
+        title: "✅ Landing page excluída",
+        description: "A landing page foi removida com sucesso",
+      });
 
       await loadLandingPages();
-    } catch (error) {
-      console.error('Erro ao deletar landing page:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao deletar landing page:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao deletar landing page",
+        title: "❌ Erro ao deletar",
+        description: error.message || "Falha ao deletar landing page. Verifique permissões.",
         variant: "destructive"
       });
     }

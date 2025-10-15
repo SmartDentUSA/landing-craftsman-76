@@ -619,12 +619,8 @@ export const useAdvancedSchemaGenerator = () => {
     const allSchemasValid = await validateSchemaOrg(schemas);
     
     if (!allSchemasValid.valid) {
-      console.error('❌ Schemas inválidos:', allSchemasValid.errors);
-      toast({
-        title: "⚠️ Aviso de Schema",
-        description: `Alguns schemas não estão totalmente válidos: ${allSchemasValid.errors.join(', ')}`,
-        variant: "default"
-      });
+      console.warn('⚠️ Schemas com avisos (não crítico):', allSchemasValid.errors);
+      // Validação explícita será feita no botão "Aprovar" do Editor
     }
     
     if (allSchemasValid.warnings.length > 0) {
