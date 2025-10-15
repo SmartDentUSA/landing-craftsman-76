@@ -44,7 +44,7 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
         console.log('Session found for user:', session.user.email);
         setUser(session.user);
 
-        // 🔧 SIMPLIFICADO: Sempre verificar role sem cache
+        // Verificar role do usuário via RPC
         let role: 'admin' | 'user' = 'user';
         
         try {
@@ -54,18 +54,22 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
               _role: 'admin' 
             });
 
-          if (!roleError && isAdmin) {
-            role = 'admin';
-          } else if (roleError) {
-            console.error('Role check failed:', roleError);
-            // Fallback APENAS para email específico conhecido
-            role = session.user.email === 'danilohen@gmail.com' ? 'admin' : 'user';
-          } else {
+          if (roleError) {
+            console.error('❌ Role check failed:', {
+              message: roleError.message,
+              code: roleError.code,
+              hint: roleError.hint,
+              details: roleError.details,
+              user: session.user.email
+            });
             role = 'user';
+          } else {
+            role = isAdmin ? 'admin' : 'user';
+            console.log('✅ Role verificado:', role, 'para', session.user.email);
           }
         } catch (rpcError) {
-          console.error('RPC has_role exception:', rpcError);
-          role = session.user.email === 'danilohen@gmail.com' ? 'admin' : 'user';
+          console.error('❌ RPC has_role exception:', rpcError);
+          role = 'user';
         }
 
         if (!mounted) return;

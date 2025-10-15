@@ -479,17 +479,70 @@ export function RepositoryPanel({
 
   const handleDeleteProduct = async (productId: string) => {
     try {
-      console.log('[DEBUG] Deletando produto:', productId);
+      console.log('[DEBUG] Verificando permissões antes de deletar produto:', productId);
+      
+      // Verificar se usuário está autenticado
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('[DEBUG] Erro ao obter usuário:', userError);
+        toast({
+          title: "Erro de autenticação",
+          description: "Você precisa estar logado para deletar produtos. Faça login novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Verificar se usuário é admin
+      const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+      
+      if (roleError) {
+        console.error('[DEBUG] Erro ao verificar role:', roleError);
+        toast({
+          title: "Erro de permissão",
+          description: `Não foi possível verificar suas permissões. ${roleError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (!isAdmin) {
+        console.warn('[DEBUG] Usuário não é admin:', user.email);
+        toast({
+          title: "Acesso negado",
+          description: "Você não tem permissão de administrador para deletar produtos. Entre em contato com o suporte.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('[DEBUG] Permissões OK. Deletando produto:', productId);
       const { error } = await supabase
         .from('products_repository')
         .delete()
         .eq('id', productId);
 
       if (error) {
-        console.error('[DEBUG] Erro ao deletar produto:', error);
-        throw error;
+        console.error('[DEBUG] Erro ao deletar produto:', {
+          message: error.message,
+          code: error.code,
+          hint: error.hint,
+          details: error.details
+        });
+        
+        toast({
+          title: "Erro ao deletar",
+          description: error.message || "Erro desconhecido ao deletar produto",
+          variant: "destructive"
+        });
+        return;
       }
 
+      // Atualizar UI apenas se deleção foi bem-sucedida
       setProducts(prev => prev.filter(p => p.id !== productId));
       setSelectedProductIds(prev => {
         const newSet = new Set(prev);
@@ -501,11 +554,11 @@ export function RepositoryPanel({
         title: "Sucesso",
         description: "Produto deletado com sucesso",
       });
-    } catch (error) {
-      console.error('Error deleting product:', error);
+    } catch (error: any) {
+      console.error('[DEBUG] Erro fatal ao deletar produto:', error);
       toast({
         title: "Erro",
-        description: "Erro ao deletar produto",
+        description: error?.message || "Erro desconhecido ao deletar produto",
         variant: "destructive"
       });
     }

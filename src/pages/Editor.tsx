@@ -354,6 +354,205 @@ const createImageData = (src: string = '', alt: string = ''): ImageData => ({
   scale: 1.0
 });
 
+/**
+ * Garante que os dados da landing page tenham todos os campos obrigatórios
+ * Previne erros "Cannot read properties of undefined"
+ */
+const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageData => {
+  // Schema SEMPRE deve existir com estrutura mínima
+  const schema: SchemaData = {
+    software_app: data.schema?.software_app || {
+      name: 'Smart Dent',
+      category: 'HealthApplication',
+      rating_value: '4.8',
+      rating_count: '150',
+      price: '0',
+      price_currency: 'BRL',
+      operating_system: 'Web',
+      application_category: 'HealthApplication'
+    },
+    google_reviews: data.schema?.google_reviews || {
+      url: '',
+      auto_extract: false,
+      last_extracted: '',
+      status: 'idle'
+    },
+    offers: data.schema?.offers || [],
+    breadcrumb: data.schema?.breadcrumb || []
+  };
+
+  // Banner sempre deve existir
+  const banner = {
+    badge_text: data.banner?.badge_text || '',
+    title: data.banner?.title || '',
+    subtitle: data.banner?.subtitle || '',
+    cta_primary: data.banner?.cta_primary || { label: '', href: '' },
+    cta_secondary: data.banner?.cta_secondary || { label: '', href: '' },
+    images: Array.isArray(data.banner?.images) && data.banner.images.length > 0 
+      ? data.banner.images 
+      : [createImageData()]
+  };
+
+  // Email sempre deve existir
+  const email: EmailData = {
+    sections: data.email?.sections || {
+      header: { enabled: true },
+      content: { enabled: true },
+      ctas: { enabled: true },
+      highlights: { enabled: true },
+      benefits: { enabled: true },
+      main_image: { enabled: true },
+      solutions: { enabled: false },
+      footer: { enabled: true }
+    },
+    assunto_email: data.email?.assunto_email || '',
+    preheader_texto: data.email?.preheader_texto || '',
+    url_site: data.email?.url_site || '',
+    logo_src: data.email?.logo_src || createImageData(),
+    imagem_src: data.email?.imagem_src || createImageData(),
+    logo_alt: data.email?.logo_alt || '',
+    selo: data.email?.selo || '',
+    titulo_principal: data.email?.titulo_principal || '',
+    subtitulo: data.email?.subtitulo || '',
+    cta_href: data.email?.cta_href || '',
+    cta_label: data.email?.cta_label || '',
+    cta_subcopy: data.email?.cta_subcopy || '',
+    bloco1_titulo: data.email?.bloco1_titulo || '',
+    bloco1_texto: data.email?.bloco1_texto || '',
+    bloco2_titulo: data.email?.bloco2_titulo || '',
+    bloco2_texto: data.email?.bloco2_texto || '',
+    beneficio_1: data.email?.beneficio_1 || '',
+    beneficio_2: data.email?.beneficio_2 || '',
+    beneficio_3: data.email?.beneficio_3 || '',
+    imagem_href: data.email?.imagem_href || '',
+    imagem_alt: data.email?.imagem_alt || '',
+    cta2_href: data.email?.cta2_href || '',
+    cta2_label: data.email?.cta2_label || '',
+    brand_name: data.email?.brand_name || '',
+    endereco_completo: data.email?.endereco_completo || '',
+    link_suporte: data.email?.link_suporte || '',
+    link_descadastro: data.email?.link_descadastro || '',
+    link_preferencias: data.email?.link_preferencias || '',
+    show_solutions_in_email: data.email?.show_solutions_in_email || false,
+    solutions_title: data.email?.solutions_title || 'Nossos Serviços'
+  };
+
+  // Seções de visibilidade
+  const desktop_info = data.desktop_info || {
+    title: '',
+    text: '',
+    visible_desktop: false,
+    visible_mobile: false,
+    show_table: false,
+    table_title: 'Especificações Técnicas',
+    table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
+    table_data: []
+  };
+
+  const advisory = {
+    title: data.advisory?.title || '',
+    paragraph: data.advisory?.paragraph || '',
+    visible_desktop: data.advisory?.visible_desktop !== false,
+    visible_mobile: data.advisory?.visible_mobile !== false,
+    cta: data.advisory?.cta || { label: '', href: '' },
+    image: data.advisory?.image || createImageData()
+  };
+
+  const cta_final = {
+    title: data.cta_final?.title || '',
+    paragraph: data.cta_final?.paragraph || '',
+    primary: data.cta_final?.primary || { label: '', href: '', visible: true },
+    secondary: data.cta_final?.secondary || { label: '', href: '', visible: false }
+  };
+
+  // Retornar objeto completo e seguro
+  return {
+    name: data.name || 'Nova Landing Page',
+    status: data.status || 'draft',
+    template: data.template || 'Smart Dent Base v1',
+    seo_title: data.seo_title || '',
+    seo_description: data.seo_description || '',
+    logo_url: data.logo_url || createImageData(),
+    logo_alt: data.logo_alt || '',
+    menu: data.menu || [],
+    banner,
+    explanatory_video_section: data.explanatory_video_section || {
+      visible_desktop: false,
+      visible_mobile: false,
+      selected_video: null
+    },
+    solutions_title: data.solutions_title || 'Nossas Soluções',
+    solutions: data.solutions || [],
+    desktop_info,
+    resources_section: data.resources_section || {
+      visible_desktop: true,
+      visible_mobile: true,
+      title: 'Recursos e Downloads',
+      subtitle: ''
+    },
+    offers_section: data.offers_section || {
+      visible_desktop: true,
+      visible_mobile: true,
+      title: 'Ofertas Especiais',
+      subtitle: ''
+    },
+    advisory,
+    solutions_section: data.solutions_section || {
+      visible_desktop: true,
+      visible_mobile: true
+    },
+    faq_section: data.faq_section || {
+      visible_desktop: true,
+      visible_mobile: true
+    },
+    faq_title: data.faq_title || 'Perguntas Frequentes',
+    faq: data.faq || [],
+    cta_final,
+    footer_links_title: data.footer_links_title || 'Links Úteis',
+    footer: data.footer || {
+      locations: [],
+      links: [],
+      social: []
+    },
+    email,
+    seo: {
+      domain: data.seo?.domain || '',
+      seo_title: data.seo?.seo_title || data.seo_title || '',
+      seo_description: data.seo?.seo_description || data.seo_description || '',
+      canonical_url: data.seo?.canonical_url || '',
+      meta_robots: data.seo?.meta_robots || 'index, follow',
+      og_title: data.seo?.og_title || '',
+      og_description: data.seo?.og_description || '',
+      og_image: data.seo?.og_image || createImageData(),
+      og_type: data.seo?.og_type || 'website',
+      og_site_name: data.seo?.og_site_name || '',
+      twitter_card: data.seo?.twitter_card || 'summary_large_image',
+      twitter_title: data.seo?.twitter_title || '',
+      twitter_description: data.seo?.twitter_description || '',
+      twitter_image: data.seo?.twitter_image || createImageData(),
+      twitter_site: data.seo?.twitter_site || '',
+      twitter_creator: data.seo?.twitter_creator || '',
+      hreflang: data.seo?.hreflang || [],
+      hreflang_auto: data.seo?.hreflang_auto || false,
+      publish_date: data.seo?.publish_date || new Date().toISOString(),
+      lastmod: data.seo?.lastmod || new Date().toISOString(),
+      faq_enable: data.seo?.faq_enable !== false,
+      intelligent_links: data.seo?.intelligent_links || {}
+    },
+    schema,
+    brand: data.brand || {
+      legal_name: '',
+      same_as: [],
+      policies: {
+        privacy_url: '',
+        terms_url: '',
+        security_url: '',
+        cookies_url: ''
+      }
+    }
+  } as LandingPageData;
+};
+
 // Opções de redes sociais com ícones fixos
 const SOCIAL_PLATFORMS = [
   { value: 'instagram', label: 'Instagram', icon: Instagram },
@@ -1543,12 +1742,13 @@ const EditorContent = () => {
   const { 
     current: data, 
     set: setData,
+    setReplace,
     undo, 
     redo, 
     canUndo, 
     canRedo,
     historyLength
-  } = useUndoRedo<LandingPageData>({
+  } = useUndoRedo<LandingPageData>(ensureLandingPageDefaults({
     name: 'Smart Dent Campanha Q1',
     status: 'draft',
     template: 'Smart Dent Base v1',
@@ -1580,202 +1780,8 @@ const EditorContent = () => {
       lastmod: new Date().toISOString(),
       faq_enable: true,
       intelligent_links: {}
-    },
-    
-    // Schema & Offers
-    schema: {
-      software_app: {
-        name: 'Smart Dent',
-        category: 'HealthApplication',
-        rating_value: '4.8',
-        rating_count: '150',
-        price: '0',
-        price_currency: 'BRL',
-        operating_system: 'Web',
-        application_category: 'HealthApplication'
-      },
-      google_reviews: {
-        url: '',
-        auto_extract: false,
-        last_extracted: '',
-        status: 'idle'
-      },
-      offers: [],
-      breadcrumb: []
-    },
-    
-    // Marca & Confiança
-    brand: {
-      legal_name: 'Smart Dent Tecnologia Ltda',
-      same_as: [],
-      policies: {
-        privacy_url: '',
-        terms_url: '',
-        security_url: '',
-        cookies_url: ''
-      }
-    },
-    
-    logo_url: createImageData('https://via.placeholder.com/140x40?text=LOGO', 'Smart Dent Logo'),
-    logo_alt: 'Smart Dent Logo',
-    menu: [
-      { label: 'Institucional', href: 'https://smartdent.com.br/institucional' },
-      { label: 'Resinas', href: 'https://smartdent.com.br/resinas3d' },
-      { label: 'Scanner intraoral', href: 'https://smartdent.com.br/odontologia-digital-scanners-intraorais' },
-      { label: 'Contato', href: 'https://smartdent.com.br/#institucional' }
-    ],
-    banner: {
-      badge_text: 'Smart Dent 16 anos de inovação',
-      title: 'Odontologia Digital: simples, eficiente e lucrativa',
-      subtitle: 'A Smart Dent é uma referência em odontologia digital no Brasil, combinando tecnologia avançada, automação eficiente e qualidade.',
-      cta_primary: { label: 'Falar com comercial', href: 'https://wa.me/5516993831794?text=Ol%C3%A1!Gostaria+de+mais+informa%C3%A7%C3%B5es' },
-      cta_secondary: { label: 'Loja online', href: 'https://loja.smartdent.com.br/' },
-      images: [
-        createImageData('https://via.placeholder.com/200x300?text=Imagem1', 'Pessoa sorrindo'),
-        createImageData('https://via.placeholder.com/200x300?text=Imagem2', 'Equipamento odontológico'),
-        createImageData('https://via.placeholder.com/200x300?text=Imagem3', 'Consultório moderno')
-      ]
-    },
-    solutions_title: 'Soluções de alto padrão para inovar sua clínica',
-    solutions: [
-      { 
-        text: 'Resinas 3D: material biocompatível com alta resistência e acabamento superior para restaurações duradouras.',
-        image: createImageData('https://via.placeholder.com/200x150?text=Resinas', 'Resinas 3D de alta qualidade'),
-        containerScale: 1.0
-      },
-      { 
-        text: 'Scanner intraoral: precisão milimétrica para diagnósticos certeiros e tratamentos mais eficazes.',
-        image: createImageData('https://via.placeholder.com/200x150?text=Scanner', 'Scanner intraoral de última geração'),
-        containerScale: 1.0
-      }
-    ],
-    desktop_info: {
-      title: 'Excelência em Odontologia Digital',
-      text: 'Com mais de 10 anos de experiência no mercado, a Smart Dent se consolidou como referência em soluções tecnológicas para clínicas odontológicas. Nossa missão é democratizar o acesso à tecnologia de ponta, oferecendo equipamentos, materiais e consultoria especializada para profissionais que buscam excelência.',
-      visible_desktop: true,
-      visible_mobile: true,
-      show_table: false,
-      table_title: 'Especificações Técnicas',
-      table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
-      table_data: [
-        { 'Propriedade': 'Performance', 'Requisito': 'Alta', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 9001' },
-        { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
-        { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
-      ]
-    },
-    offers_section: {
-      visible_desktop: true,
-      visible_mobile: true,
-      title: 'Ofertas Especiais',
-      subtitle: 'Produtos em destaque com preços promocionais'
-    },
-    resources_section: {
-      visible_desktop: false,
-      visible_mobile: false,
-      title: 'Recursos e Downloads',
-      subtitle: 'Materiais técnicos e informações dos produtos'
-    },
-    explanatory_video_section: {
-      visible_desktop: true,
-      visible_mobile: true,
-      selected_video: null
-    },
-    advisory: {
-      title: 'Consultoria personalizada para o seu negócio',
-      paragraph: 'Nossa equipe de especialistas oferece consultoria completa para implementação de odontologia digital em clínicas de todos os portes.',
-      visible_desktop: true,
-      visible_mobile: true,
-      cta: { label: 'Agendar consultoria', href: 'https://smartdent.com.br/consultoria' },
-      image: createImageData('https://via.placeholder.com/400x300?text=Consultoria', 'Equipe de consultores especializados')
-    },
-    solutions_section: {
-      visible_desktop: true,
-      visible_mobile: true
-    },
-    faq_section: {
-      visible_desktop: true,
-      visible_mobile: true
-    },
-    faq_title: 'Perguntas frequentes',
-    faq: [
-      {
-        question: 'Como funciona a garantia dos equipamentos?',
-        answer: 'Todos os equipamentos possuem garantia de 2 anos contra defeitos de fabricação, além do suporte técnico especializado.'
-      },
-      {
-        question: 'Vocês oferecem treinamento?',
-        answer: 'Sim, oferecemos treinamento completo para toda a equipe, incluindo certificação em odontologia digital.'
-      }
-    ],
-    cta_final: {
-      title: 'Pronto para revolucionar sua clínica?',
-      paragraph: 'Entre em contato conosco e descubra como a Smart Dent pode transformar seu consultório com tecnologia de ponta.',
-      primary: { label: 'Falar com especialista', href: 'https://wa.me/5516993831794' },
-      secondary: { label: 'Ver produtos', href: 'https://loja.smartdent.com.br/' }
-    },
-    footer_links_title: 'Encontre-nos',
-    footer: {
-      locations: [
-        { title: 'Ribeirão Preto - SP', address: 'Rua Exemplo, 123 - Centro' },
-        { title: 'São Paulo - SP', address: 'Av. Paulista, 456 - Bela Vista' }
-      ],
-      links: [
-        { label: 'Sobre nós', href: 'https://smartdent.com.br/sobre' },
-        { label: 'Produtos', href: 'https://loja.smartdent.com.br/' },
-        { label: 'Contato', href: 'https://smartdent.com.br/contato' },
-        { label: 'Política de Privacidade', href: 'https://smartdent.com.br/privacidade' }
-      ],
-      social: [
-        { platform: 'instagram', href: 'https://instagram.com/smartdent', icon_src: '', icon_alt: 'Instagram Smart Dent' },
-        { platform: 'facebook', href: 'https://facebook.com/smartdent', icon_src: '', icon_alt: 'Facebook Smart Dent' }
-      ]
-    },
-    email: {
-      // Configurações de visibilidade das seções
-      sections: {
-        header: { enabled: true },
-        content: { enabled: true },
-        ctas: { enabled: true },
-        highlights: { enabled: true },
-        benefits: { enabled: true },
-        main_image: { enabled: true },
-        solutions: { enabled: false },
-        footer: { enabled: true }
-      },
-      // Campos do email existentes
-      assunto_email: 'Novidades Smart Dent - Odontologia Digital',
-      preheader_texto: 'Conheça as últimas inovações em tecnologia odontológica',
-      url_site: 'https://smartdent.com.br',
-      logo_src: createImageData('https://via.placeholder.com/140x40?text=LOGO', 'Smart Dent Logo'),
-      logo_alt: 'Smart Dent Logo',
-      selo: 'LÍDER EM INOVAÇÃO',
-      titulo_principal: 'Transforme sua clínica com tecnologia de ponta',
-      subtitulo: 'Descubra as soluções que estão revolucionando a odontologia no Brasil',
-      cta_href: 'https://smartdent.com.br/produtos',
-      cta_label: 'Ver Produtos',
-      cta_subcopy: 'Acesso imediato ao catálogo completo',
-      bloco1_titulo: 'Resinas 3D Premium',
-      bloco1_texto: 'Material biocompatível com resistência superior',
-      bloco2_titulo: 'Scanner Intraoral',
-      bloco2_texto: 'Precisão milimétrica para diagnósticos certeiros',
-      beneficio_1: '98% de satisfação dos clientes',
-      beneficio_2: '16 anos de experiência no mercado',
-      beneficio_3: 'Suporte técnico especializado',
-      imagem_href: 'https://smartdent.com.br/produtos',
-      imagem_src: createImageData('https://via.placeholder.com/300x200?text=Produto', 'Equipamentos Smart Dent'),
-      imagem_alt: 'Equipamentos Smart Dent',
-      cta2_href: 'https://wa.me/5516993831794',
-      cta2_label: 'Falar com Especialista',
-      brand_name: 'Smart Dent',
-      endereco_completo: 'Rua Exemplo, 123 - Centro, Ribeirão Preto - SP',
-      link_suporte: 'https://smartdent.com.br/suporte',
-      link_descadastro: 'https://smartdent.com.br/descadastro',
-      link_preferencias: 'https://smartdent.com.br/preferencias',
-      // Campos de compatibilidade
-      show_solutions_in_email: false,
-      solutions_title: 'Nossos Serviços'
     }
-  });
+  }));
 
   // ✅ Keyboard shortcuts for Undo/Redo
   useEffect(() => {
@@ -2355,7 +2361,10 @@ const EditorContent = () => {
             };
           }
           
-          setData(loadedData);
+          // Usar setReplace para não adicionar ao histórico do undo
+          const safeData = ensureLandingPageDefaults(loadedData);
+          setReplace(safeData);
+          console.log('✅ Dados carregados do banco e normalizados:', safeData.name);
         } else {
           // Migrar dados antigos para novo formato se necessário
           const migratedData: any = { ...landingPage.data || {} };
@@ -2520,13 +2529,15 @@ const EditorContent = () => {
             setLocalName(landingPage.name);
           }
           
-          setData({
-            ...data,
+          // Normalizar dados migrados e usar setReplace
+          const safeMigratedData = ensureLandingPageDefaults({
             ...migratedData,
             name: isEditingName ? data.name : landingPage.name,
             status: landingPage.status,
             template: landingPage.template
           });
+          setReplace(safeMigratedData);
+          console.log('✅ Dados migrados e normalizados:', safeMigratedData.name);
           dirtyRef.current = false; // Reset dirty flag after loading
           }
         }

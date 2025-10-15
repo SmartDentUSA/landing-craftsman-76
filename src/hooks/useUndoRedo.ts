@@ -8,11 +8,12 @@ export function useUndoRedo<T>(initialState: T) {
   const [history, setHistory] = useState<T[]>([initialState]);
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  const current = history[currentIndex];
+  const current = history[currentIndex] ?? initialState;
   
   const set = useCallback((newState: T | ((prev: T) => T)) => {
     setHistory(prevHistory => {
-      const currentState = prevHistory[currentIndex];
+      // Garantir que temos um estado válido na posição atual
+      const currentState = prevHistory[currentIndex] ?? initialState;
       
       // Calcular o novo estado
       const stateToAdd = typeof newState === 'function'
@@ -39,6 +40,20 @@ export function useUndoRedo<T>(initialState: T) {
       
       return newHistory;
     });
+  }, [currentIndex, initialState]);
+  
+  // Função para substituir o estado atual sem adicionar ao histórico
+  const setReplace = useCallback((newState: T) => {
+    if (newState === undefined || newState === null) {
+      console.error('❌ [useUndoRedo] Tentativa de substituir com estado inválido:', newState);
+      return;
+    }
+    
+    setHistory(prevHistory => {
+      const newHistory = [...prevHistory];
+      newHistory[currentIndex] = newState;
+      return newHistory;
+    });
   }, [currentIndex]);
   
   const undo = useCallback(() => {
@@ -63,7 +78,8 @@ export function useUndoRedo<T>(initialState: T) {
   
   return { 
     current, 
-    set, 
+    set,
+    setReplace,
     undo, 
     redo, 
     canUndo, 
