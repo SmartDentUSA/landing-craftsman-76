@@ -16,8 +16,6 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
   const navigate = useNavigate();
   const hasNavigated = useRef(false);
 
-  // Simple role cache to avoid excessive RPC calls (1 minute cache)
-  const [roleCache, setRoleCache] = useState<{role: 'admin' | 'user', timestamp: number} | null>(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   useEffect(() => {
@@ -46,15 +44,7 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
         console.log('Session found for user:', session.user.email);
         setUser(session.user);
 
-        // Check cached role first (1 minute cache)
-        const now = Date.now();
-        if (roleCache && (now - roleCache.timestamp) < 60000) {
-          setUserRole(roleCache.role);
-          setLoading(false);
-          return;
-        }
-
-        // Check if user has admin role with fallback
+        // 🔧 SIMPLIFICADO: Sempre verificar role sem cache
         let role: 'admin' | 'user' = 'user';
         
         try {
@@ -67,16 +57,14 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
           if (!roleError && isAdmin) {
             role = 'admin';
           } else if (roleError) {
-            // Se RPC falhar, logar erro mas manter fallback seguro
             console.error('Role check failed:', roleError);
             // Fallback APENAS para email específico conhecido
             role = session.user.email === 'danilohen@gmail.com' ? 'admin' : 'user';
           } else {
-            role = 'user'; // RPC retornou false
+            role = 'user';
           }
         } catch (rpcError) {
           console.error('RPC has_role exception:', rpcError);
-          // Fallback APENAS para email específico em caso de erro crítico
           role = session.user.email === 'danilohen@gmail.com' ? 'admin' : 'user';
         }
 
@@ -84,7 +72,6 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
 
         console.log('User role determined:', role);
         setUserRole(role);
-        setRoleCache({ role, timestamp: now });
         setLoading(false);
       } catch (error) {
         console.error('Authentication check failed:', error);
@@ -111,7 +98,6 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
         if (event === 'SIGNED_OUT' || !session?.user) {
           setUser(null);
           setUserRole(null);
-          setRoleCache(null);
           if (!hasNavigated.current) {
             hasNavigated.current = true;
             console.log('User signed out, redirecting to auth');

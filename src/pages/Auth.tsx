@@ -17,32 +17,42 @@ const Auth = () => {
 
   useEffect(() => {
     let mounted = true;
+    let redirectTimer: NodeJS.Timeout;
 
-    // Check current session and redirect if authenticated
-    const checkSession = async () => {
+    const checkAndRedirect = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.warn('Error getting session:', error);
-          return;
+          console.warn('⚠️ Erro ao obter sessão:', error);
         }
 
-        if (mounted) {
-          if (session?.user) {
-            setUser(session.user);
-            // Redirect authenticated users to dashboard
-            navigate('/dashboard', { replace: true });
-          } else {
-            setUser(null);
-          }
+        if (mounted && session?.user) {
+          console.log('✅ USUÁRIO AUTENTICADO DETECTADO');
+          console.log('📧 Email:', session.user.email);
+          console.log('🔑 User ID:', session.user.id);
+          
+          setUser(session.user);
+          
+          // 🔧 FORÇA redirecionamento imediato
+          console.log('🚀 Redirecionando para /dashboard...');
+          navigate('/dashboard', { replace: true });
+        } else {
+          setUser(null);
         }
       } catch (error) {
-        console.error('Session check failed:', error);
+        console.error('❌ Falha ao verificar sessão:', error);
       }
     };
 
-    checkSession();
+    // Verificar sessão IMEDIATAMENTE
+    checkAndRedirect();
+    
+    // 🔧 ADICIONAR: Verificação periódica a cada 2 segundos
+    redirectTimer = setInterval(() => {
+      console.log('🔄 Verificando sessão novamente...');
+      checkAndRedirect();
+    }, 2000);
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -65,6 +75,7 @@ const Auth = () => {
 
     return () => {
       mounted = false;
+      clearInterval(redirectTimer);
       subscription.unsubscribe();
     };
   }, [navigate]);
@@ -263,13 +274,34 @@ const Auth = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <Card className="w-[400px]">
           <CardHeader>
-            <CardTitle>Welcome Back</CardTitle>
-            <CardDescription>You are signed in as {user.email}</CardDescription>
+            <CardTitle>✅ Você já está logado</CardTitle>
+            <CardDescription>
+              Conectado como: <strong>{user.email}</strong>
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={handleSignOut} className="w-full" variant="outline">
-              Sign Out
+          <CardContent className="space-y-3">
+            {/* 🔧 BOTÃO PRINCIPAL */}
+            <Button 
+              onClick={() => navigate('/dashboard', { replace: true })} 
+              className="w-full"
+              size="lg"
+            >
+              Acessar Dashboard
             </Button>
+            
+            {/* 🔧 BOTÃO SECUNDÁRIO */}
+            <Button 
+              onClick={handleSignOut} 
+              className="w-full" 
+              variant="outline"
+            >
+              Sair da Conta
+            </Button>
+            
+            {/* 🔧 INFORMAÇÃO EXTRA */}
+            <div className="text-xs text-muted-foreground text-center pt-2">
+              Se não for redirecionado automaticamente, clique no botão acima
+            </div>
           </CardContent>
         </Card>
       </div>
