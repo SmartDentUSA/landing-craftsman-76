@@ -577,19 +577,20 @@ async function extractAndSaveReviews(
     let reviews: any[] = [];
     let businessName = '';
     
-    // ✅ Try to get Google Business OAuth credentials from database first (per-user config)
-    let clientId, clientSecret, refreshToken;
-    let credData = null;
-    let genericCred = null;
-    let legacyToken = null;
+    // 🔥 PRIORIDADE 1: Environment Variables
+    let clientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID');
+    let clientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET');
+    let refreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
+    let tokenSource = 'environment_variables';
 
-    if (authHeader) {
+    // 🔄 FALLBACK: Database (oauth_credentials table only)
+    if (authHeader && (!clientId || !clientSecret || !refreshToken)) {
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabase.auth.getUser(token);
       
       if (user) {
-        userId = user.id; // ✅ Setar userId aqui
-        console.log('🔐 User authenticated, attempting Google Business API extraction...');
+        userId = user.id;
+        console.log('🔐 User authenticated, checking oauth_credentials...');
         
         // Buscar Client ID e Secret de oauth_client_configs
         const { data: configData } = await supabase
@@ -599,70 +600,29 @@ async function extractAndSaveReviews(
           .maybeSingle();
 
         // Buscar Refresh Token de oauth_credentials
-        const { data: credDataTemp } = await supabase
+        const { data: credData } = await supabase
           .from('oauth_credentials')
           .select('refresh_token')
           .eq('user_id', user.id)
           .eq('provider', 'googleBusiness')
           .maybeSingle();
-        
-        credData = credDataTemp;
 
         if (configData && credData) {
-          clientId = configData.client_id;
-          clientSecret = configData.client_secret;
-          refreshToken = credData.refresh_token;
-          console.log('✅ Using Google Business credentials from database for user:', user.id);
-        } else if (!credData && configData) {
-          // FALLBACK 1: OAuth Google genérico (oauth_credentials)
-          const { data: genericCredTemp } = await supabase
-            .from('oauth_credentials')
-            .select('refresh_token')
-            .eq('user_id', user.id)
-            .eq('provider', 'google')
-            .maybeSingle();
-          
-          genericCred = genericCredTemp;
-            
-          if (genericCred) {
-            clientId = configData.client_id;
-            clientSecret = configData.client_secret;
-            refreshToken = genericCred.refresh_token;
-            console.log('⚠️ Using generic Google OAuth (not Business-specific) for user:', user.id);
-          } else {
-            // FALLBACK 2: Arquitetura antiga (google_oauth_tokens)
-            const { data: legacyTokenTemp } = await supabase
-              .from('google_oauth_tokens')
-              .select('provider_refresh_token')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            
-            legacyToken = legacyTokenTemp;
-              
-            if (legacyToken) {
-              clientId = configData.client_id;
-              clientSecret = configData.client_secret;
-              refreshToken = legacyToken.provider_refresh_token;
-              console.log('⚠️ Using legacy google_oauth_tokens for user:', user.id);
-            }
-          }
+          if (!clientId) clientId = configData.client_id;
+          if (!clientSecret) clientSecret = configData.client_secret;
+          if (!refreshToken) refreshToken = credData.refresh_token;
+          tokenSource = 'oauth_credentials_database';
+          console.log('✅ Using Google Business credentials from oauth_credentials table');
         }
       }
     }
-
-    // Fallback to environment variables if not in database
-    if (!clientId) clientId = Deno.env.get('GOOGLE_BUSINESS_CLIENT_ID');
-    if (!clientSecret) clientSecret = Deno.env.get('GOOGLE_BUSINESS_CLIENT_SECRET');
-    if (!refreshToken) refreshToken = Deno.env.get('GOOGLE_BUSINESS_REFRESH_TOKEN');
     
     console.log('🔍 OAuth credentials check:', {
       has_client_id: !!clientId,
       has_client_secret: !!clientSecret,
       has_refresh_token: !!refreshToken,
-      token_source: refreshToken ? (credData ? 'oauth_credentials_business' : (genericCred ? 'oauth_credentials_generic' : (legacyToken ? 'google_oauth_tokens_legacy' : 'env_vars'))) : 'none',
-      user_id: user?.id || 'no user',
+      token_source: tokenSource,
+      user_id: userId || 'no user',
       auth_header_present: !!authHeader
     });
     

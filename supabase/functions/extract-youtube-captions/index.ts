@@ -120,13 +120,13 @@ serve(async (req) => {
       }
     }
 
-    // 🔥 PRIORIDADE MÁXIMA: Env vars (sempre funcionam)
+    // 🔥 PRIORIDADE 1: Environment Variables
     let youtubeClientId = Deno.env.get('YOUTUBE_CLIENT_ID');
     let youtubeClientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET');
     let youtubeRefreshToken = Deno.env.get('YOUTUBE_REFRESH_TOKEN');
-    let tokenSource = 'env_vars_primary';
+    let tokenSource = 'environment_variables';
 
-    // ✅ FALLBACK: Buscar no DB apenas se env vars não existirem
+    // 🔄 FALLBACK: Database (oauth_credentials table only)
     if (!youtubeClientId || !youtubeClientSecret || !youtubeRefreshToken) {
       const authHeader = req.headers.get('Authorization');
       
@@ -135,46 +135,27 @@ serve(async (req) => {
         const { data: { user } } = await supabase.auth.getUser(token);
         
         if (user) {
-          // 1️⃣ Buscar Client ID/Secret de oauth_client_configs
+          // Buscar Client ID/Secret de oauth_client_configs
           const { data: configData } = await supabase
             .from('oauth_client_configs')
             .select('client_id, client_secret')
             .eq('provider', 'youtube')
             .maybeSingle();
           
-          if (configData) {
-            // 2️⃣ Buscar Refresh Token em oauth_credentials (provider=youtube)
-            const { data: credData } = await supabase
-              .from('oauth_credentials')
-              .select('refresh_token')
-              .eq('user_id', user.id)
-              .eq('provider', 'youtube')
-              .maybeSingle();
-            
-            if (credData) {
-              if (!youtubeClientId) youtubeClientId = configData.client_id;
-              if (!youtubeClientSecret) youtubeClientSecret = configData.client_secret;
-              if (!youtubeRefreshToken) youtubeRefreshToken = credData.refresh_token;
-              tokenSource = 'oauth_credentials_db';
-              console.log('✅ Using YouTube credentials from oauth_credentials (DB fallback)');
-            } else {
-              // 3️⃣ FALLBACK: google_oauth_tokens (arquitetura antiga)
-              const { data: legacyToken } = await supabase
-                .from('google_oauth_tokens')
-                .select('provider_refresh_token')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              
-              if (legacyToken) {
-                if (!youtubeClientId) youtubeClientId = configData.client_id;
-                if (!youtubeClientSecret) youtubeClientSecret = configData.client_secret;
-                if (!youtubeRefreshToken) youtubeRefreshToken = legacyToken.provider_refresh_token;
-                tokenSource = 'google_oauth_tokens_legacy';
-                console.log('⚠️ Using legacy google_oauth_tokens for YouTube (DB fallback)');
-              }
-            }
+          // Buscar Refresh Token em oauth_credentials
+          const { data: credData } = await supabase
+            .from('oauth_credentials')
+            .select('refresh_token')
+            .eq('user_id', user.id)
+            .eq('provider', 'youtube')
+            .maybeSingle();
+          
+          if (configData && credData) {
+            if (!youtubeClientId) youtubeClientId = configData.client_id;
+            if (!youtubeClientSecret) youtubeClientSecret = configData.client_secret;
+            if (!youtubeRefreshToken) youtubeRefreshToken = credData.refresh_token;
+            tokenSource = 'oauth_credentials_database';
+            console.log('✅ Using YouTube credentials from oauth_credentials table');
           }
         }
       }
