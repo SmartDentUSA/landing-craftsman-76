@@ -58,12 +58,11 @@ interface BlogPost {
 
 // SelFlux mode completely removed - using only standard template engine
 
-// Interface de dados de imagem para o novo sistema
+// Interface de dados de imagem - migrado de Cloudflare para Supabase Storage
 interface ImageData {
-  mode: 'url' | 'cloudflare';
+  mode: 'url' | 'supabase';
   src: string;
-  cf_id?: string;
-  variant?: 'w-480' | 'w-768' | 'w-1200';
+  supabase_path?: string;
   alt: string;
   scale: number;
   href?: string;
@@ -345,8 +344,7 @@ interface LandingPageData {
 const createImageData = (src: string = '', alt: string = ''): ImageData => ({
   mode: 'url',
   src,
-  cf_id: undefined,
-  variant: 'w-768',
+  supabase_path: undefined,
   alt,
   scale: 1.0
 });
@@ -364,21 +362,13 @@ const SOCIAL_PLATFORMS = [
 
 // Função para resolver URLs das imagens antes do preview
 const beforePreview = (data: LandingPageData): LandingPageData => {
-  // TODO: Implementar resolução automática de URLs Cloudflare
-  // Substituir ACCOUNT_HASH_PLACEHOLDER pela hash real
   const resolveImageSrc = (image: ImageData | undefined): ImageData => {
     if (!image || !image.mode) {
       console.log('🚨 Warning: Undefined or invalid image object, creating default:', image);
       return createImageData('', '');
     }
     
-    if (image.mode === 'cloudflare' && image.cf_id) {
-      const accountHash = localStorage.getItem('cloudflareAccountHash') || 'ACCOUNT_HASH_PLACEHOLDER';
-      return {
-        ...image,
-        src: `https://imagedelivery.net/${accountHash}/${image.cf_id}/${image.variant || 'w-768'}`
-      };
-    }
+    // Imagens Supabase ou URL já possuem src completo
     return image;
   };
 

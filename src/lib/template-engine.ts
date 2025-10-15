@@ -2722,15 +2722,6 @@ export const generateHTML = (data: any): string => {
         }
       }
       
-      // Handle image URL processing (Cloudflare support)
-      if (offer.image) {
-        if (offer.image.includes('ACCOUNT_HASH_PLACEHOLDER') && typeof window !== 'undefined') {
-          const accountHash = localStorage.getItem('cloudflareAccountHash');
-          if (accountHash) {
-            processedOffer.image = offer.image.replace('ACCOUNT_HASH_PLACEHOLDER', accountHash);
-          }
-        }
-      }
       
       return processedOffer;
     }) || [];
