@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { validateCanonicalURL } from "@/lib/seo-validators";
+import { RotateCcw, RotateCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -1533,7 +1536,17 @@ const EditorContent = () => {
   };
   
   const { breadcrumbs } = useBreadcrumbs();
-  const [data, setData] = useState<LandingPageData>({
+  
+  // ✅ SUBSTITUIR useState por useUndoRedo
+  const { 
+    current: data, 
+    set: setData,
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo,
+    historyLength
+  } = useUndoRedo<LandingPageData>({
     name: 'Smart Dent Campanha Q1',
     status: 'draft',
     template: 'Smart Dent Base v1',
@@ -2113,6 +2126,23 @@ const EditorContent = () => {
       setPreviewVersion(v => v + 1);
     }
   }, [generatedHTML]);
+
+  // ✅ Atalhos de teclado para Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   useEffect(() => {
     if (id) {
@@ -2913,6 +2943,33 @@ const EditorContent = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Undo/Redo Buttons */}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={undo} 
+                disabled={!canUndo}
+                title="Desfazer (Ctrl+Z)"
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Desfazer
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={redo} 
+                disabled={!canRedo}
+                title="Refazer (Ctrl+Y)"
+              >
+                <RotateCw className="h-4 w-4 mr-1" />
+                Refazer
+              </Button>
+              
+              <Badge variant="secondary" className="ml-2">
+                {historyLength} versões
+              </Badge>
+              
               <Button variant="outline" size="sm" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar
