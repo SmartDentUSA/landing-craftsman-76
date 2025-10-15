@@ -320,29 +320,219 @@ function extractBlogMetadata(rawMarkdown: string) {
   };
 }
 
+/**
+ * ✅ PATCH: Extrai target_audience dinamicamente com fallback inteligente
+ * Prioridade:
+ * 1. company_profile.target_audience
+ * 2. products_repository (agregado de produtos selecionados)
+ * 3. categories_config.target_audience
+ * 4. FALLBACK INTELIGENTE: SEO Hidden fields
+ * 5. FALLBACK GENÉRICO: "Profissionais e empresas do setor odontológico"
+ */
+function extractTargetAudience(context: any): string {
+  console.log('🎯 Extracting target audience with priority fallback...');
+  
+  // 1ª PRIORIDADE: Company Profile
+  if (context.companyProfile?.target_audience) {
+    const audience = Array.isArray(context.companyProfile.target_audience)
+      ? context.companyProfile.target_audience.join(', ')
+      : context.companyProfile.target_audience;
+    console.log(`✅ Target audience from company_profile: "${audience}"`);
+    return audience;
+  }
+  
+  // 2ª PRIORIDADE: Produtos selecionados (agregado)
+  if (context.selectedProducts?.length > 0) {
+    const audiences = new Set<string>();
+    context.selectedProducts.forEach((p: any) => {
+      if (Array.isArray(p.target_audience)) {
+        p.target_audience.forEach((a: string) => {
+          if (a && a.trim()) audiences.add(a.trim());
+        });
+      }
+    });
+    if (audiences.size > 0) {
+      const result = Array.from(audiences).join(', ');
+      console.log(`✅ Target audience from products (aggregated): "${result}"`);
+      return result;
+    }
+  }
+  
+  // 3ª PRIORIDADE: Landing Page (se tiver configurado)
+  if (context.landingPage?.data?.target_audience) {
+    const audience = Array.isArray(context.landingPage.data.target_audience)
+      ? context.landingPage.data.target_audience.join(', ')
+      : context.landingPage.data.target_audience;
+    console.log(`✅ Target audience from landing_page: "${audience}"`);
+    return audience;
+  }
+  
+  // 4ª PRIORIDADE: FALLBACK INTELIGENTE usando SEO Hidden fields
+  if (context.seoContext) {
+    const parts: string[] = [];
+    
+    if (context.seoContext.marketPositioning) {
+      parts.push(context.seoContext.marketPositioning);
+    }
+    if (context.seoContext.technicalExpertise) {
+      parts.push(`especialistas em ${context.seoContext.technicalExpertise}`);
+    }
+    if (context.seoContext.serviceAreas) {
+      parts.push(`atuantes em ${context.seoContext.serviceAreas}`);
+    }
+    
+    if (parts.length > 0) {
+      const intelligentFallback = parts.join(' e ');
+      console.warn(`⚠️ Using intelligent fallback from SEO Hidden: "${intelligentFallback}"`);
+      return intelligentFallback;
+    }
+  }
+  
+  // 5ª PRIORIDADE: FALLBACK GENÉRICO FINAL
+  const genericFallback = 'Profissionais e empresas do setor odontológico';
+  console.warn(`⚠️⚠️ Using GENERIC fallback: "${genericFallback}"`);
+  return genericFallback;
+}
+
+/**
+ * ✅ Extrai keywords técnicas do contexto (Dentala)
+ */
+function extractKeywords(context: any): string[] {
+  const keywords = new Set<string>();
+  
+  // De produtos selecionados
+  context.selectedProducts?.forEach((p: any) => {
+    if (Array.isArray(p.keywords)) {
+      p.keywords.forEach((k: string) => {
+        if (k && k.trim()) keywords.add(k.trim());
+      });
+    }
+    if (Array.isArray(p.market_keywords)) {
+      p.market_keywords.forEach((k: string) => {
+        if (k && k.trim()) keywords.add(k.trim());
+      });
+    }
+  });
+  
+  // De company profile SEO
+  if (Array.isArray(context.seoContext?.contextKeywords)) {
+    context.seoContext.contextKeywords.forEach((k: string) => {
+      if (k && k.trim()) keywords.add(k.trim());
+    });
+  }
+  
+  const result = Array.from(keywords).slice(0, 10);
+  console.log(`🔑 Extracted ${result.length} technical keywords`);
+  return result;
+}
+
+/**
+ * ✅ Extrai keywords comerciais (intenção de compra) (Eodonto)
+ */
+function extractCommercialKeywords(context: any): string[] {
+  const allKeywords = extractKeywords(context);
+  
+  // Filtrar keywords com intenção comercial
+  const commercialTerms = ['comprar', 'preço', 'oferta', 'desconto', 'promoção', 'onde encontrar', 'melhor', 'barato', 'custo'];
+  const commercial = allKeywords.filter(k => 
+    commercialTerms.some(term => k.toLowerCase().includes(term))
+  );
+  
+  // Se não houver keywords comerciais explícitas, adicionar genéricas baseadas em produtos
+  if (commercial.length === 0 && context.selectedProducts?.length > 0) {
+    const productNames = context.selectedProducts.map((p: any) => p.name).filter(Boolean);
+    const generated = productNames.flatMap((name: string) => [
+      `comprar ${name}`,
+      `${name} preço`,
+      `${name} promoção`
+    ]);
+    console.log(`🛒 Generated ${generated.length} commercial keywords from products`);
+    return generated.slice(0, 10);
+  }
+  
+  console.log(`🛒 Extracted ${commercial.length} commercial keywords`);
+  return commercial.slice(0, 10);
+}
+
+/**
+ * ✅ Extrai benefícios/features dos produtos
+ */
+function extractBenefits(context: any): string[] {
+  const benefits = new Set<string>();
+  
+  context.selectedProducts?.forEach((p: any) => {
+    if (Array.isArray(p.benefits)) {
+      p.benefits.forEach((b: string) => {
+        if (b && b.trim()) benefits.add(b.trim());
+      });
+    }
+    if (Array.isArray(p.features)) {
+      p.features.forEach((f: string) => {
+        if (f && f.trim()) benefits.add(f.trim());
+      });
+    }
+  });
+  
+  const result = Array.from(benefits).slice(0, 8);
+  console.log(`💡 Extracted ${result.length} benefits/features`);
+  return result;
+}
+
+/**
+ * ✅ Constrói contexto SEO dinâmico baseado nos campos selecionados
+ */
+function buildDynamicSEOContext(context: any): string {
+  if (!context.seoContext) return '';
+  
+  const parts = [];
+  
+  if (Array.isArray(context.seoContext.contextKeywords) && context.seoContext.contextKeywords.length > 0) {
+    parts.push(`- Palavras-chave contextuais: ${context.seoContext.contextKeywords.join(', ')}`);
+  }
+  
+  if (context.seoContext.marketPositioning) {
+    parts.push(`- Posicionamento de mercado: ${context.seoContext.marketPositioning}`);
+  }
+  
+  if (context.seoContext.competitiveAdvantages) {
+    parts.push(`- Vantagens competitivas: ${context.seoContext.competitiveAdvantages}`);
+  }
+  
+  if (context.seoContext.technicalExpertise) {
+    parts.push(`- Expertise técnica: ${context.seoContext.technicalExpertise}`);
+  }
+  
+  if (context.seoContext.serviceAreas) {
+    parts.push(`- Áreas de atuação: ${context.seoContext.serviceAreas}`);
+  }
+  
+  return parts.length > 0 
+    ? `\n## CONTEXTO SEO ESTRATÉGICO:\n${parts.join('\n')}\n`
+    : '';
+}
+
 function buildDentalaPrompt(context: any, customPrompts: any): string {
   const basePrompt = customPrompts['Artigo Estratégico Contextual'] || '';
+  
+  // ✅ EXTRAIR DINAMICAMENTE
+  const targetAudience = extractTargetAudience(context);
+  const keywords = extractKeywords(context);
+  const benefits = extractBenefits(context);
   
   return `${basePrompt}
 
 # CONTEXTO ESPECÍFICO: Dentala.com.br
-PÚBLICO-ALVO: Dentistas, clínicas odontológicas, profissionais da área
-FOCO EDITORIAL: Educação profissional, aplicações clínicas, evidências científicas
+ABORDAGEM EDITORIAL: Técnica, baseada em dados e especificações
+PÚBLICO-ALVO: ${targetAudience}
 
 ## DIRETRIZES DENTALA:
-- **Tom:** Técnico-profissional, baseado em evidências e estudos de caso
-- **Linguagem:** Precisa, utilizando terminologia odontológica adequada
-- **Estrutura:** Introdução técnica → Aplicações clínicas → Evidências científicas → Resultados esperados
-- **CTAs:** "Saiba mais", "Consulte nossos especialistas", "Agende uma demonstração"
-- **Keywords:** Termos técnicos + aplicações clínicas + nomenclatura científica
-- **SEO:** Otimizar para buscas de profissionais (ex: "melhor scanner intraoral para clínica")
+- **Tom:** Técnico-profissional, baseado em evidências
+- **Foco:** Especificações técnicas, diferenciais tecnológicos, aplicações práticas
+- **CTAs:** "Veja especificações completas", "Compare modelos", "Entenda a tecnologia"
+- **Keywords Prioritárias:** ${keywords.length > 0 ? keywords.join(', ') : 'N/A'}
+- **Benefícios a Destacar:** ${benefits.length > 0 ? benefits.join(', ') : 'N/A'}
 
-${context.seoContext ? `
-CONTEXTO SEO PROFISSIONAL:
-- Palavras-chave técnicas: ${context.seoContext.contextKeywords?.join(', ') || 'N/A'}
-- Posicionamento: ${context.seoContext.marketPositioning || 'N/A'}
-- Expertise: ${context.seoContext.technicalExpertise || 'N/A'}
-` : ''}
+${buildDynamicSEOContext(context)}
 
 ⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO OBRIGATÓRIAS:**
 - Use APENAS dados fornecidos no contexto acima
@@ -358,25 +548,25 @@ GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que demonstre autoridade técnica e seja
 function buildEodontoPrompt(context: any, customPrompts: any): string {
   const basePrompt = customPrompts['Artigo Estratégico Contextual'] || '';
   
+  // ✅ EXTRAIR DINAMICAMENTE
+  const targetAudience = extractTargetAudience(context);
+  const commercialKeywords = extractCommercialKeywords(context);
+  const benefits = extractBenefits(context);
+  
   return `${basePrompt}
 
-# CONTEXTO ESPECÍFICO: Eodonto.com.br  
-PÚBLICO-ALVO: Consumidores finais, pacientes, compradores de produtos odontológicos
-FOCO EDITORIAL: Benefícios práticos, facilidade de uso, custo-benefício, guias de compra
+# CONTEXTO ESPECÍFICO: Eodonto.com.br
+ABORDAGEM EDITORIAL: Persuasiva, focada em soluções e benefícios práticos
+PÚBLICO-ALVO: ${targetAudience}
 
 ## DIRETRIZES EODONTO:
-- **Tom:** Acessível, didático, orientado a benefícios e resultados
-- **Linguagem:** Simples e clara, evitando jargão técnico excessivo
-- **Estrutura:** Problema do consumidor → Solução prática → Benefícios → Como comprar
-- **CTAs:** "Compre agora", "Confira ofertas", "Veja preços", "Adicione ao carrinho"
-- **Keywords:** Termos de busca comerciais + intenção de compra (ex: "comprar", "preço", "onde encontrar")
-- **SEO:** Otimizar para buscas transacionais (ex: "comprar scanner intraoral barato")
+- **Tom:** Persuasivo, orientado a resultados e benefícios
+- **Foco:** Soluções práticas, facilidade de uso, impacto real no negócio
+- **CTAs:** "Descubra a solução", "Transforme seu consultório", "Veja os resultados"
+- **Keywords Comerciais:** ${commercialKeywords.length > 0 ? commercialKeywords.join(', ') : 'N/A'}
+- **Benefícios Práticos:** ${benefits.length > 0 ? benefits.join(', ') : 'N/A'}
 
-${context.seoContext ? `
-CONTEXTO SEO COMERCIAL:
-- Palavras-chave de compra: ${context.seoContext.contextKeywords?.filter((k: string) => k.includes('comprar') || k.includes('preço')).join(', ') || 'N/A'}
-- Diferenciação comercial: ${context.seoContext.competitiveAdvantages || 'N/A'}
-` : ''}
+${buildDynamicSEOContext(context)}
 
 ⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO OBRIGATÓRIAS:**
 - Use APENAS dados fornecidos no contexto acima
