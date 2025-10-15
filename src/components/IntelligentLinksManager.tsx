@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ProductKeywordsImportModal } from "./ProductKeywordsImportModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLinksRepository } from "@/hooks/useLinksRepository";
+import { sanitizeBlogContent } from "@/utils/sanitize-html";
 
 interface IntelligentLink {
   keyword: string;
@@ -164,13 +165,15 @@ export function IntelligentLinksManager({
                   <div 
                     className="prose prose-sm max-w-none p-6 bg-background"
                     dangerouslySetInnerHTML={{ 
-                      __html: generatePreviewContent()
-                        .replace(/#{1,6}\s/g, '')
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank" rel="noopener">$1 🔗</a>')
-                        .replace(/\n\n/g, '</p><p class="mb-4">')
-                        .replace(/^/, '<div class="leading-relaxed"><p class="mb-4">')
-                        .replace(/$/, '</p></div>')
+                      __html: sanitizeBlogContent(
+                        generatePreviewContent()
+                          .replace(/#{1,6}\s/g, '')
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank" rel="noopener">$1 🔗</a>')
+                          .replace(/\n\n/g, '</p><p class="mb-4">')
+                          .replace(/^/, '<div class="leading-relaxed"><p class="mb-4">')
+                          .replace(/$/, '</p></div>')
+                      )
                     }}
                   />
                 </ScrollArea>

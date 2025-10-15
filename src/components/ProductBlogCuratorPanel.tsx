@@ -13,6 +13,7 @@ import { IntelligentLinksManager } from "./IntelligentLinksManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { STORAGE_KEYS } from "@/constants/storage-keys";
+import { sanitizeBlogContent } from "@/utils/sanitize-html";
 
 interface Product {
   id: string;
@@ -452,12 +453,14 @@ export function ProductBlogCuratorPanel({
                                             <div 
                                               className="prose prose-sm max-w-none p-4"
                                               dangerouslySetInnerHTML={{ 
-                                                __html: selectedBlogContent?.content
-                                                  ?.replace(/#{1,6}\s/g, '')
-                                                  ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                                  ?.replace(/\n\n/g, '</p><p>')
-                                                  ?.replace(/^/, '<p>')
-                                                  ?.replace(/$/, '</p>') || ''
+                                                __html: sanitizeBlogContent(
+                                                  selectedBlogContent?.content
+                                                    ?.replace(/#{1,6}\s/g, '')
+                                                    ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                    ?.replace(/\n\n/g, '</p><p>')
+                                                    ?.replace(/^/, '<p>')
+                                                    ?.replace(/$/, '</p>') || ''
+                                                )
                                               }}
                                             />
                                           </ScrollArea>
@@ -528,12 +531,14 @@ export function ProductBlogCuratorPanel({
                                             <div 
                                               className="prose prose-sm max-w-none p-4"
                                               dangerouslySetInnerHTML={{ 
-                                                __html: selectedBlogContent?.content
-                                                  ?.replace(/#{1,6}\s/g, '')
-                                                  ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                                  ?.replace(/\n\n/g, '</p><p>')
-                                                  ?.replace(/^/, '<p>')
-                                                  ?.replace(/$/, '</p>') || ''
+                                                __html: sanitizeBlogContent(
+                                                  selectedBlogContent?.content
+                                                    ?.replace(/#{1,6}\s/g, '')
+                                                    ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                    ?.replace(/\n\n/g, '</p><p>')
+                                                    ?.replace(/^/, '<p>')
+                                                    ?.replace(/$/, '</p>') || ''
+                                                )
                                               }}
                                             />
                                           </ScrollArea>

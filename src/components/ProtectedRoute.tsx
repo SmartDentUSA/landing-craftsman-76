@@ -66,18 +66,18 @@ const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps
 
           if (!roleError && isAdmin) {
             role = 'admin';
+          } else if (roleError) {
+            // Se RPC falhar, logar erro mas manter fallback seguro
+            console.error('Role check failed:', roleError);
+            // Fallback APENAS para email específico conhecido
+            role = session.user.email === 'danilohen@gmail.com' ? 'admin' : 'user';
           } else {
-            // Fallback for known admin emails
-            const isKnownAdmin = session.user.email === 'danilohen@gmail.com' || 
-                                 session.user.email?.includes('admin');
-            role = isKnownAdmin ? 'admin' : 'user';
+            role = 'user'; // RPC retornou false
           }
         } catch (rpcError) {
-          console.warn('RPC has_role failed, using fallback:', rpcError);
-          // Fallback for known admin emails
-          const isKnownAdmin = session.user.email === 'danilohen@gmail.com' || 
-                               session.user.email?.includes('admin');
-          role = isKnownAdmin ? 'admin' : 'user';
+          console.error('RPC has_role exception:', rpcError);
+          // Fallback APENAS para email específico em caso de erro crítico
+          role = session.user.email === 'danilohen@gmail.com' ? 'admin' : 'user';
         }
 
         if (!mounted) return;

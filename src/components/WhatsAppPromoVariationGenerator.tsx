@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductVideosList } from "./ProductVideosList";
 import { RelatedLandingPagesList } from "./RelatedLandingPagesList";
+import { sanitizeSimpleText } from "@/utils/sanitize-html";
 
 interface WhatsAppPromoVariationGeneratorProps {
   isOpen: boolean;
@@ -211,7 +212,7 @@ export function WhatsAppPromoVariationGenerator({
 
   const renderMessage = () => {
     if (viewMode === 'html') {
-      return <div dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, '<br>') }} />;
+      return <div dangerouslySetInnerHTML={{ __html: sanitizeSimpleText(message.replace(/\n/g, '<br>')) }} />;
     }
     return message;
   };

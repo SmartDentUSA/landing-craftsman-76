@@ -11,6 +11,7 @@ import { ProductBlogCuratorPanel } from "./ProductBlogCuratorPanel";
 import { usePromptsConfiguration } from "@/hooks/usePromptsConfiguration";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { calculateProductStats } from "./ProductStatsHelper";
+import { sanitizeBlogContent } from "@/utils/sanitize-html";
 
 interface BlogPreviewProps {
   landingPageId: string;
@@ -480,12 +481,14 @@ export function BlogPreview({ landingPageId, landingPageData, selectedProductIds
                 <div 
                   className={`prose prose-sm max-w-none transition-all duration-300 ${expanded ? '' : 'line-clamp-6'}`}
                   dangerouslySetInnerHTML={{ 
-                    __html: blogPost.content
-                      .replace(/#{1,6}\s/g, '')
-                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/\n\n/g, '</p><p>')
-                      .replace(/^/, '<p>')
-                      .replace(/$/, '</p>')
+                    __html: sanitizeBlogContent(
+                      blogPost.content
+                        .replace(/#{1,6}\s/g, '')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\n\n/g, '</p><p>')
+                        .replace(/^/, '<p>')
+                        .replace(/$/, '</p>')
+                    )
                   }}
                 />
                 <Button 

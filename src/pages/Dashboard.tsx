@@ -18,6 +18,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useBlogStatusMonitor } from '@/hooks/useBlogStatusMonitor';
 import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
+import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 import { useBlogReadMore } from "@/hooks/useBlogReadMore";
 
@@ -1236,7 +1237,7 @@ const DashboardContent = () => {
                             <div className="full-content text-xs leading-relaxed">
                               <div 
                                 dangerouslySetInnerHTML={{ 
-                                  __html: eodontoHTML 
+                                  __html: sanitizeBlogContent(eodontoHTML)
                                 }}
                               />
                             </div>
@@ -1317,7 +1318,7 @@ const DashboardContent = () => {
                             <div className="full-content text-xs leading-relaxed">
                               <div 
                                 dangerouslySetInnerHTML={{ 
-                                  __html: dentalaHTML 
+                                  __html: sanitizeBlogContent(dentalaHTML)
                                 }}
                               />
                             </div>

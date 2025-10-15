@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import useLandingPages from "@/hooks/useLandingPages";
+import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { generateBlogHTML } from "@/lib/template-engine";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
@@ -1597,7 +1598,9 @@ function PreviewContent({ blogData }: { blogData: BlogPost }) {
         <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto border rounded p-2">
           {blogData.content ? (
             <div dangerouslySetInnerHTML={{ 
-              __html: blogData.content.substring(0, 500) + (blogData.content.length > 500 ? '...' : '') 
+              __html: sanitizeBlogContent(
+                blogData.content.substring(0, 500) + (blogData.content.length > 500 ? '...' : '')
+              )
             }} />
           ) : (
             "Sem conteúdo"

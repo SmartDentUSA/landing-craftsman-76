@@ -33,18 +33,14 @@ const CloudflareSettings = () => {
   }, []);
 
   const loadCurrentConfig = async () => {
-    // Carregar configurações do localStorage para esta sessão
-    const savedAccountId = localStorage.getItem('cloudflare_account_id') || '';
-    const savedApiToken = localStorage.getItem('cloudflare_api_token') || '';
-    
+    // NÃO carregar do localStorage por segurança
+    // Usuário precisará inserir credenciais sempre que quiser atualizar
     setConfig({
-      accountId: savedAccountId,
-      apiToken: savedApiToken
+      accountId: '',
+      apiToken: ''
     });
-
-    if (savedAccountId && savedApiToken) {
-      setConnectionStatus('success');
-    }
+    
+    setConnectionStatus('unknown');
   };
 
   const handleSave = async () => {
@@ -60,16 +56,12 @@ const CloudflareSettings = () => {
     setIsLoading(true);
     
     try {
-      // Salvar localmente para esta sessão
-      localStorage.setItem('cloudflare_account_id', config.accountId);
-      localStorage.setItem('cloudflare_api_token', config.apiToken);
-
       // Configurar automaticamente no Supabase
       await configureSupabaseSecrets();
 
       toast({
-        title: "Configuração automática completa!",
-        description: "Credenciais salvas localmente e configuradas no Supabase automaticamente.",
+        title: "Configuração segura completa!",
+        description: "Credenciais configuradas como Supabase Secrets. Por segurança, não são salvas no navegador.",
       });
 
       setConnectionStatus('success');
@@ -267,7 +259,12 @@ const CloudflareSettings = () => {
             <CardHeader>
               <CardTitle>Credenciais do Cloudflare Images</CardTitle>
               <CardDescription>
-                Configure sua conta do Cloudflare para habilitar o upload de imagens
+                Configure sua conta do Cloudflare para habilitar o upload de imagens.
+                <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    🔒 <strong>Segurança:</strong> As credenciais são salvas apenas no backend (Supabase Secrets) e não no seu navegador.
+                  </p>
+                </div>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
