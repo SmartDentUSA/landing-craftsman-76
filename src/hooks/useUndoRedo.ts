@@ -12,28 +12,34 @@ export function useUndoRedo<T>(initialState: T) {
   
   const set = useCallback((newState: T | ((prev: T) => T)) => {
     setHistory(prevHistory => {
-      setCurrentIndex(prevIndex => {
-        const newIndex = prevIndex + 1;
-        const newHistory = prevHistory.slice(0, newIndex);
-        
-        const stateToAdd = typeof newState === 'function'
-          ? (newState as (prev: T) => T)(prevHistory[prevIndex])
-          : newState;
-        
-        newHistory.push(stateToAdd);
-        
-        // Limitar histórico a 50 versões
-        if (newHistory.length > 50) {
-          newHistory.shift();
-          return prevIndex; // Index não muda pois removemos do início
-        }
-        
-        return newIndex;
-      });
+      const currentState = prevHistory[currentIndex];
       
-      return prevHistory;
+      // Calcular o novo estado
+      const stateToAdd = typeof newState === 'function'
+        ? (newState as (prev: T) => T)(currentState)
+        : newState;
+      
+      // Validação: não aceitar undefined/null
+      if (stateToAdd === undefined || stateToAdd === null) {
+        console.error('❌ [useUndoRedo] Tentativa de adicionar estado inválido:', stateToAdd);
+        return prevHistory;
+      }
+      
+      const newIndex = currentIndex + 1;
+      const newHistory = prevHistory.slice(0, newIndex);
+      newHistory.push(stateToAdd);
+      
+      // Limitar histórico a 50 versões
+      if (newHistory.length > 50) {
+        newHistory.shift();
+        setCurrentIndex(currentIndex); // Index não muda pois removemos do início
+      } else {
+        setCurrentIndex(newIndex);
+      }
+      
+      return newHistory;
     });
-  }, []);
+  }, [currentIndex]);
   
   const undo = useCallback(() => {
     if (currentIndex > 0) {
