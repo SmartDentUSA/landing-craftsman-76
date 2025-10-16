@@ -55,7 +55,15 @@ Deno.serve(async (req) => {
       query = query.eq('id', product_id);
     }
     if (slug) {
-      query = query.eq('slug', slug);
+      // Extrai slug de URL completa se necessário
+      const cleanSlug = slug.includes('://') 
+        ? slug.split('/').pop() || slug
+        : slug;
+      
+      console.log('🔍 Slug limpo para busca:', cleanSlug);
+      
+      // Busca flexível com ILIKE para aceitar slug parcial
+      query = query.ilike('slug', `%${cleanSlug}%`);
     }
     if (category) {
       query = query.eq('category', category);
