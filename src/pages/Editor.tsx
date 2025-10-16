@@ -3040,10 +3040,10 @@ const EditorContent = () => {
   };
 
   // Debug function - temporary
-  const handleTestHTML = () => {
+  const handleTestHTML = async () => {
     console.log('🧪 Testing HTML generation...');
     
-    const testHTML = generateHTML(data);
+    const testHTML = await generateHTML(data);
     console.log('🧪 Generated standard HTML:', testHTML.substring(0, 1000));
     
     toast({
@@ -6921,7 +6921,7 @@ const EditorContent = () => {
                       const processedData = beforePreview(onSave(data));
                       console.log('✅ Dados processados com sucesso');
                       
-                      const completeHTML = generateHTML(processedData);
+                      const completeHTML = await generateHTML(processedData);
                       console.log('✅ HTML gerado com sucesso, comprimento:', completeHTML.length);
                       
                       await navigator.clipboard.writeText(completeHTML);
@@ -7115,7 +7115,7 @@ dataLayer = [{
                       console.log('🔄 Validando Schema...', { hasData: !!data });
                       
                       const processedData = beforePreview(onSave(data));
-                      const html = generateHTML(processedData);
+                      const html = await generateHTML(processedData);
                       
                       console.log('✅ HTML gerado para validação, comprimento:', html.length);
                       

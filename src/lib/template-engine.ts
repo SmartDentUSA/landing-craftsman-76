@@ -2436,7 +2436,7 @@ export const generatePreviewHTML = (data: any): string => {
   return Mustache.render(TEMPLATE_HTML, previewData);
 };
 
-export const generateHTML = (data: any): string => {
+export const generateHTML = async (data: any): Promise<string> => {
   
   // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
   const calculateColumnWidths = (solutions: any[]) => {
@@ -3347,27 +3347,21 @@ export const generateHTML = (data: any): string => {
   
   validateFinalSEO(processedData);
 
-  // 🆕 REVIEWS SCHEMA: Adicionar LocalBusiness + Reviews ao footer
-  if (data?.schema?.reviews_enabled) {
-    console.log('🔍 Reviews Schema habilitado, gerando schema...');
-    
-    (async () => {
-      try {
-        // Buscar company profile
-        const companyData = await getCompanyProfileForSEO();
-        if (!companyData) {
-          console.warn('⚠️ Company profile não encontrado, schema de reviews não gerado');
-          return;
-        }
-
-        // Buscar todos os reviews consolidados
-        const { all_reviews, stats } = await fetchAllReviewsForSchema(data.id);
-        
-        if (all_reviews.length === 0) {
-          console.warn('⚠️ Nenhum review encontrado, schema não gerado');
-          return;
-        }
-
+  // 🆕 REVIEWS SCHEMA: Sempre tentar gerar LocalBusiness + Reviews para SEO
+  console.log('🔍 Iniciando geração de Reviews Schema...');
+  
+  try {
+    // Buscar company profile
+    const companyData = await getCompanyProfileForSEO();
+    if (!companyData) {
+      console.warn('⚠️ Company profile não encontrado, schema de reviews não gerado');
+    } else {
+      // Buscar todos os reviews consolidados
+      const { all_reviews, stats } = await fetchAllReviewsForSchema(data.id);
+      
+      if (all_reviews.length === 0) {
+        console.warn('⚠️ Nenhum review encontrado, schema não gerado');
+      } else {
         console.log(`📊 Reviews encontrados: ${stats.total} (Google: ${stats.google_approved}, Manual: ${stats.manual}, Vídeo: ${stats.video_testimonial})`);
 
         // Gerar schema
@@ -3379,27 +3373,25 @@ export const generateHTML = (data: any): string => {
 
         if (!reviewsSchema) {
           console.error('❌ Erro ao gerar schema de reviews');
-          return;
-        }
-
-        // Validar tamanho
-        const sizeKB = estimateJsonSizeKB(JSON.parse(reviewsSchema));
-        console.log(`✅ Schema de reviews gerado: ${sizeKB.toFixed(2)}KB`);
-
-        // Adicionar ao schema_json_ld existente
-        if (processedData.schema_json_ld) {
-          // Se já existe schema, combinar
-          processedData.schema_json_ld += '\n' + reviewsSchema;
         } else {
-          processedData.schema_json_ld = reviewsSchema;
-        }
+          // Validar tamanho
+          const sizeKB = estimateJsonSizeKB(JSON.parse(reviewsSchema));
+          console.log(`✅ Schema de reviews gerado: ${sizeKB.toFixed(2)}KB`);
 
-        console.log('✅ Reviews schema adicionado ao footer');
-        
-      } catch (error) {
-        console.error('❌ Erro ao gerar reviews schema:', error);
+          // Adicionar ao schema_json_ld existente
+          if (processedData.schema_json_ld) {
+            // Se já existe schema, combinar
+            processedData.schema_json_ld += '\n' + reviewsSchema;
+          } else {
+            processedData.schema_json_ld = reviewsSchema;
+          }
+
+          console.log('✅ Reviews schema adicionado ao footer');
+        }
       }
-    })();
+    }
+  } catch (error) {
+    console.error('❌ Erro ao gerar reviews schema:', error);
   }
 
   return Mustache.render(TEMPLATE_HTML, processedData);
