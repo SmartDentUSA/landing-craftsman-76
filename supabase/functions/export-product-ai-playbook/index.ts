@@ -72,6 +72,13 @@ interface ProductData {
   testimonial_videos?: any[];
   tiktok_videos?: any[];
   video_captions?: any;
+  tutorial_resources?: {
+    tutorials?: Array<{
+      id: string;
+      courseName: string;
+      courseUrl: string;
+    }>;
+  };
   
   // AI Generated Content
   individual_blog_content?: {
@@ -234,7 +241,8 @@ function generateAIPlaybookJSON(product: ProductData & {
       technical_videos: product.technical_videos || [],
       testimonial_videos: product.testimonial_videos || [],
       tiktok_videos: product.tiktok_videos || [],
-      video_captions: product.video_captions || {}
+      video_captions: product.video_captions || {},
+      tutorial_resources: product.tutorial_resources || { tutorials: [] }
     },
     ai_content_history: {
       blog_content: product.individual_blog_content || {},
@@ -402,7 +410,19 @@ ${product.target_audience?.map(audience => `- ${audience}`).join('\n') || '- Pú
 ${product.technical_specifications?.map(spec => `- ${spec.label}: ${spec.value}`).join('\n') || '- Especificações não disponíveis'}
 
 ## ❓ PERGUNTAS FREQUENTES (FAQ)
-${product.faq?.map(item => `Q: ${item.question}\nR: ${item.answer}\n`).join('\n') || 'FAQ não disponível'}
+
+${product.faq?.length ? 
+  product.faq.map((item: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${idx + 1}. ❓ ${item.question}
+
+✅ RESPOSTA:
+${item.answer}
+
+  `).join('\n') 
+: '📭 FAQ não disponível'}
+
+📌 Total de Perguntas: ${product.faq?.length || 0}
 
 ## 🔍 PALAVRAS-CHAVE PARA IA
 
@@ -491,12 +511,64 @@ ${product.product_blogs?.generated_at ? `📅 Gerado em: ${new Date(product.prod
 - Galeria de Imagens: ${product.images_gallery?.length ? `${product.images_gallery.length} imagens` : 'Sem galeria'}
 
 ### Vídeos:
-- Vídeos YouTube: ${product.youtube_videos?.length || 0}
-- Vídeos Instagram: ${product.instagram_videos?.length || 0}
-- Vídeos Técnicos: ${product.technical_videos?.length || 0}
-- Vídeos Depoimentos: ${product.testimonial_videos?.length || 0}
-- Vídeos TikTok: ${product.tiktok_videos?.length || 0}
-${Object.keys(product.video_captions || {}).length > 0 ? `- Legendas Extraídas: ${Object.keys(product.video_captions).length} vídeos` : ''}
+
+#### 📺 Vídeos YouTube (${product.youtube_videos?.length || 0}):
+${product.youtube_videos?.length ? 
+  product.youtube_videos.map((video: any, idx: number) => `
+  ${idx + 1}. URL: ${video.url}
+     Descrição: ${video.description || 'Sem descrição'}
+  `).join('\n')
+: '📭 Nenhum vídeo YouTube cadastrado'}
+
+#### 📷 Vídeos Instagram (${product.instagram_videos?.length || 0}):
+${product.instagram_videos?.length ?
+  product.instagram_videos.map((video: any, idx: number) => `
+  ${idx + 1}. URL: ${video.url}
+     Descrição: ${video.description || 'Sem descrição'}
+  `).join('\n')
+: '📭 Nenhum vídeo Instagram cadastrado'}
+
+#### 🔧 Vídeos Técnicos (${product.technical_videos?.length || 0}):
+${product.technical_videos?.length ?
+  product.technical_videos.map((video: any, idx: number) => `
+  ${idx + 1}. URL: ${video.url}
+     Descrição: ${video.description || 'Sem descrição'}
+  `).join('\n')
+: '📭 Nenhum vídeo técnico cadastrado'}
+
+#### 💬 Vídeos Depoimentos (${product.testimonial_videos?.length || 0}):
+${product.testimonial_videos?.length ?
+  product.testimonial_videos.map((video: any, idx: number) => `
+  ${idx + 1}. URL: ${video.url}
+     Descrição: ${video.description || 'Sem descrição'}
+  `).join('\n')
+: '📭 Nenhum vídeo depoimento cadastrado'}
+
+#### 🎵 Vídeos TikTok (${product.tiktok_videos?.length || 0}):
+${product.tiktok_videos?.length ?
+  product.tiktok_videos.map((video: any, idx: number) => `
+  ${idx + 1}. URL: ${video.url}
+     Descrição: ${video.description || 'Sem descrição'}
+  `).join('\n')
+: '📭 Nenhum vídeo TikTok cadastrado'}
+
+${Object.keys(product.video_captions || {}).length > 0 ? `
+#### 📝 Legendas Extraídas (${Object.keys(product.video_captions).length} vídeos):
+${Object.entries(product.video_captions || {}).map(([videoId, captions]: [string, any]) => `
+  - ${videoId}: ${captions?.text?.substring(0, 100) || 'Sem texto'}...
+`).join('\n')}
+` : ''}
+
+### 📚 Tutoriais do Produto:
+${product.tutorial_resources?.tutorials?.length ? 
+  product.tutorial_resources.tutorials.map((tutorial: any, idx: number) => `
+${idx + 1}. 📚 ${tutorial.courseName}
+   URL: ${tutorial.courseUrl}
+   ID: ${tutorial.id}
+  `).join('\n') 
+: '📭 Nenhum tutorial cadastrado'}
+
+📌 Total: ${product.tutorial_resources?.tutorials?.length || 0} tutoriais
 
 ## 🎁 CONFIGURAÇÃO DE LANDING PAGE
 
