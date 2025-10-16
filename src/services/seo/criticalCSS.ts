@@ -1,0 +1,314 @@
+/**
+ * Critical CSS - Apenas estilos above-the-fold essenciais para First Paint
+ * Será injetado inline no <head> para eliminar render-blocking
+ */
+
+export const CRITICAL_CSS = `
+/* Reset & Base - Apenas o essencial */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.6;color:#333;background:#fff}
+
+/* Layout Above-the-Fold */
+.container{max-width:1200px;margin:0 auto;padding:20px}
+header{margin-bottom:30px}
+h1{font-size:clamp(1.75rem,5vw,2.5rem);font-weight:700;color:#1a1a1a;line-height:1.2;margin-bottom:15px}
+
+/* Critical Navigation */
+nav.institutional-links{display:flex;flex-wrap:wrap;gap:10px;padding:10px;background:#f8f9fa;border-radius:5px;margin:20px 0}
+nav.institutional-links a{color:#007bff;text-decoration:none;font-size:0.9rem}
+
+/* Loading State - Evita CLS */
+img{max-width:100%;height:auto;display:block}
+article{margin-bottom:40px}
+
+/* Mobile First */
+@media (max-width:768px){
+  .container{padding:15px}
+  h1{font-size:1.75rem}
+}
+`.trim();
+
+/**
+ * Non-Critical CSS - Carregado externamente com preload
+ * Contém estilos de interação, decorativos e below-the-fold
+ */
+export const FULL_CSS = `
+/* Typography & Content */
+h2 {
+  color: #2c3e50;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  margin: 30px 0 15px 0;
+  border-left: 4px solid #007bff;
+  padding-left: 15px;
+  font-weight: 600;
+}
+
+h3 {
+  color: #34495e;
+  font-size: 1.4rem;
+  margin: 25px 0 12px 0;
+  font-weight: 600;
+}
+
+/* Paragraphs & Lists */
+.blog-content p {
+  margin-bottom: 18px;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.blog-content ul,
+.blog-content ol {
+  margin: 15px 0 15px 25px;
+  padding-left: 15px;
+}
+
+.blog-content li {
+  margin-bottom: 8px;
+}
+
+.blog-content blockquote {
+  border-left: 4px solid #e0e0e0;
+  padding-left: 20px;
+  margin: 20px 0;
+  color: #666;
+  font-style: italic;
+}
+
+/* Links & Interactive Elements */
+.blog-content a {
+  color: #007bff;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.3s ease, color 0.3s ease;
+}
+
+.blog-content a:hover {
+  border-bottom-color: #007bff;
+  color: #0056b3;
+}
+
+.blog-content a:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* Images & Media */
+.blog-content img {
+  border-radius: 8px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.blog-content figure {
+  margin: 25px 0;
+}
+
+.blog-content figcaption {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 8px;
+}
+
+/* Code Blocks */
+.blog-content code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.blog-content pre {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.blog-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tables */
+.blog-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+.blog-content th,
+.blog-content td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.blog-content th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+/* Company Footer & Info Sections */
+.company-footer-info,
+.company-info {
+  margin-top: 40px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.company-footer-info h3,
+.company-info h3 {
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+/* Multi-Domain Footer */
+.multi-domain-footer {
+  margin-top: 60px;
+  padding: 30px 0;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.multi-domain-footer a {
+  display: inline-block;
+  margin: 0 15px;
+  color: #007bff;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: color 0.3s ease;
+}
+
+.multi-domain-footer a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Article Schema Microdata */
+article[itemscope] {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 30px;
+}
+
+article[itemscope]:last-of-type {
+  border-bottom: none;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip Link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #007bff;
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Performance: Will-Change Hints */
+.blog-content a,
+nav.institutional-links a,
+.multi-domain-footer a {
+  will-change: border-bottom-color, color;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  
+  a {
+    text-decoration: underline;
+  }
+  
+  .institutional-links,
+  .multi-domain-footer {
+    display: none;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  h2 {
+    font-size: 1.4rem;
+    margin: 20px 0 12px 0;
+  }
+  
+  h3 {
+    font-size: 1.2rem;
+  }
+  
+  .blog-content p {
+    text-align: left;
+  }
+  
+  nav.institutional-links {
+    flex-direction: column;
+  }
+  
+  .multi-domain-footer a {
+    display: block;
+    margin: 10px 0;
+  }
+  
+  .company-footer-info,
+  .company-info {
+    padding: 15px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+`.trim();
+
+/**
+ * Gera tags <link> para CSS externo com resource hints
+ */
+export function generateCSSLinks(cssUrl: string): string {
+  return `
+  <!-- Preconnect para CDN/Storage -->
+  <link rel="preconnect" href="${new URL(cssUrl).origin}" crossorigin>
+  
+  <!-- Preload CSS Critical -->
+  <link rel="preload" href="${cssUrl}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  
+  <!-- Fallback para navegadores sem preload -->
+  <noscript><link rel="stylesheet" href="${cssUrl}"></noscript>
+`.trim();
+}
+
+/**
+ * Inline Critical CSS no <head>
+ */
+export function inlineCriticalCSS(): string {
+  return `<style>${CRITICAL_CSS}</style>`;
+}

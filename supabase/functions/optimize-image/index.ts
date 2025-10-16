@@ -11,7 +11,13 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, format = 'webp', quality = 85, maxWidth = 1920 } = await req.json();
+    const { 
+      imageUrl, 
+      format = 'webp', 
+      quality = 85, 
+      maxWidth = 1920,
+      responsive = false // Gerar múltiplas resoluções
+    } = await req.json();
 
     if (!imageUrl) {
       return new Response(
@@ -20,30 +26,105 @@ serve(async (req) => {
       );
     }
 
+    console.log('🖼️ Otimizando imagem:', { imageUrl, format, quality, maxWidth, responsive });
+
     // Fetch the original image
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch image' }),
+        JSON.stringify({ error: 'Failed to fetch image', status: imageResponse.status }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
-    const imageBlob = new Blob([imageBuffer]);
+    const originalSize = imageBuffer.byteLength;
 
-    // For now, return the original image URL with optimization parameters
-    // In a production environment, you would use a service like Cloudflare Images
-    // or implement actual image processing
+    console.log('✅ Imagem baixada:', { originalSize, sizeKB: (originalSize / 1024).toFixed(2) });
+
+    // OPÇÃO 1: Usar Cloudflare Images API (se configurado)
+    const cloudflareAccountHash = Deno.env.get('CLOUDFLARE_ACCOUNT_HASH');
+    const cloudflareApiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
+    
+    if (cloudflareAccountHash && cloudflareApiToken) {
+      console.log('☁️ Usando Cloudflare Images para otimização');
+      
+      // Upload para Cloudflare Images
+      const formData = new FormData();
+      formData.append('file', new Blob([imageBuffer]));
+      
+      const uploadResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountHash}/images/v1`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cloudflareApiToken}`,
+          },
+          body: formData
+        }
+      );
+
+      if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json();
+        const cfImageId = uploadData.result.id;
+        
+        // Gerar URLs otimizadas
+        const optimizedUrl = `https://imagedelivery.net/${cloudflareAccountHash}/${cfImageId}/w=${maxWidth},format=${format},quality=${quality}`;
+        
+        let variants = {};
+        if (responsive) {
+          variants = {
+            mobile: `https://imagedelivery.net/${cloudflareAccountHash}/${cfImageId}/w=400,format=${format},quality=${quality}`,
+            tablet: `https://imagedelivery.net/${cloudflareAccountHash}/${cfImageId}/w=800,format=${format},quality=${quality}`,
+            desktop: `https://imagedelivery.net/${cloudflareAccountHash}/${cfImageId}/w=1200,format=${format},quality=${quality}`,
+            large: `https://imagedelivery.net/${cloudflareAccountHash}/${cfImageId}/w=1600,format=${format},quality=${quality}`
+          };
+        }
+
+        console.log('✅ Imagem otimizada com Cloudflare');
+
+        return new Response(
+          JSON.stringify({ 
+            optimizedUrl,
+            variants,
+            originalSize,
+            estimatedSize: Math.round(originalSize * 0.3), // WebP ~70% menor
+            format,
+            quality,
+            maxWidth,
+            provider: 'cloudflare'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // OPÇÃO 2: Fallback - Retornar URL com query params (sem conversão real)
+    console.log('⚠️ Cloudflare não configurado, usando fallback');
+    
     const optimizedUrl = `${imageUrl}?format=${format}&quality=${quality}&width=${maxWidth}`;
+    
+    let variants = {};
+    if (responsive) {
+      variants = {
+        mobile: `${imageUrl}?format=${format}&quality=${quality}&width=400`,
+        tablet: `${imageUrl}?format=${format}&quality=${quality}&width=800`,
+        desktop: `${imageUrl}?format=${format}&quality=${quality}&width=1200`,
+        large: `${imageUrl}?format=${format}&quality=${quality}&width=1600`
+      };
+    }
 
     return new Response(
       JSON.stringify({ 
         optimizedUrl,
-        originalSize: imageBuffer.byteLength,
+        variants,
+        originalSize,
+        estimatedSize: originalSize, // Sem otimização real
         format,
         quality,
-        maxWidth
+        maxWidth,
+        provider: 'fallback',
+        warning: 'Cloudflare Images não configurado. Configure CLOUDFLARE_ACCOUNT_HASH e CLOUDFLARE_API_TOKEN para otimização real.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

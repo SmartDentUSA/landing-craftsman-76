@@ -26,6 +26,20 @@ import {
   truncateReviewsForSize, 
   estimateJsonSizeKB 
 } from '@/lib/validate-jsonld';
+import { 
+  inlineCriticalCSS, 
+  generateCSSLinks, 
+  FULL_CSS 
+} from './criticalCSS';
+import { 
+  optimizeContentImages, 
+  generateImagePreloadHints,
+  markLCPImage 
+} from './imageOptimizer';
+import { 
+  validateConsolidatedSchemas, 
+  generateSchemaErrorAlert 
+} from './schemaValidator';
 
 export interface BlogHTMLOptions {
   // Dados dos blogs
@@ -54,6 +68,8 @@ export interface BlogHTMLOptions {
   preview?: boolean; // FASE 1: Flag de preview (noindex, sem tracking)
   ogImage?: string;
   keywords?: string[];
+  cssUrl?: string; // URL do CSS externo (opcional, se não fornecido usa inline)
+  validateSchema?: boolean; // Validar schemas antes de gerar HTML (default: true)
 }
 
 export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string> {
@@ -147,7 +163,11 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     `;
   }).join('\n');
 
-  // ✅ 6. FASE 2: GERAR SCHEMAS DE PRODUTOS SELECIONADOS
+  // ✅ 6. OTIMIZAR IMAGENS NO CONTEÚDO
+  const blogContentsOptimized = optimizeContentImages(blogContents);
+  const blogContentsWithLCP = markLCPImage(blogContentsOptimized);
+  
+  // ✅ 7. GERAR SCHEMAS DE PRODUTOS SELECIONADOS
   const allSchemas = [...schemas];
   
   if (selectedProducts && selectedProducts.length > 0) {
@@ -173,12 +193,29 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     console.log(`✅ ${productSchemas.length} product schemas adicionados`);
   }
 
-  // ✅ 7. CONSOLIDAR SCHEMAS COM @graph PATTERN + VALIDAÇÃO DE TAMANHO
+  // ✅ 8. CONSOLIDAR E VALIDAR SCHEMAS
   let consolidatedSchemaJson = '';
+  let schemaValidationAlert = '';
+  
   if (allSchemas.length > 0) {
     let schemaJson = consolidateSchemas(allSchemas);
     
-    // FASE 2: Validar tamanho do schema (100KB limit)
+    // VALIDAÇÃO DE SCHEMA (apenas se não for preview)
+    if (options.validateSchema !== false && !preview) {
+      const validation = await validateConsolidatedSchemas(
+        allSchemas, 
+        validatedCanonical
+      );
+      
+      if (!validation.isValid) {
+        console.error('❌ Schema inválido:', validation.errors);
+        schemaValidationAlert = generateSchemaErrorAlert(validation);
+      } else {
+        console.log('✅ Schema validado com sucesso');
+      }
+    }
+    
+    // Validar tamanho do schema (100KB limit)
     if (!validateJsonLdSize(schemaJson)) {
       console.warn('⚠️ Schema muito grande, truncando reviews...');
       
@@ -214,7 +251,7 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     });
   }
 
-  // ✅ 8. GERAR META TAGS COMPLETAS
+  // ✅ 9. GERAR META TAGS COMPLETAS
   const metaTags = buildMetaTags({
     title: finalTitle,
     description: validatedDescription,
@@ -227,123 +264,75 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     robots: preview ? 'noindex, nofollow' : 'index, follow' // PREVIEW MODE
   });
 
-  // ✅ 9. GERAR SEO DOMAIN TAGS (hreflang)
+  // ✅ 10. GERAR RESOURCE HINTS PARA IMAGENS
+  const heroImages = selectedProducts
+    .filter(p => p.image_url)
+    .map(p => p.image_url)
+    .slice(0, 2);
+  const imagePreloadHints = generateImagePreloadHints(heroImages);
+
+  // ✅ 11. GERAR SEO DOMAIN TAGS (hreflang)
   const seoDomainTags = generateSEODomainTags(trackingConfig);
 
-  // ✅ 10. INJETAR TRACKING PIXELS (apenas se NÃO for preview)
+  // ✅ 12. INJETAR TRACKING PIXELS (apenas se NÃO for preview)
   const trackingPixelsHTML = preview ? '' : injectTrackingPixels(trackingConfig);
   const gtmNoScriptHTML = preview ? '' : injectGTMNoScript(trackingConfig);
 
-  // ✅ 11. GERAR FOOTER MULTI-DOMAIN
+  // ✅ 13. GERAR FOOTER MULTI-DOMAIN
   const multiDomainFooter = excludeFooter ? '' : generateFooterLinks(trackingConfig);
 
-  // ✅ 12. GERAR HTML FINAL COMPLETO
+  // ✅ 14. PREPARAR CSS (Critical Inline + External)
+  const cssUrl = options.cssUrl || '';
+  const criticalCSS = inlineCriticalCSS();
+  const externalCSSLinks = cssUrl ? generateCSSLinks(cssUrl) : '';
+
+  // ✅ 15. GERAR HTML FINAL COMPLETO COM OTIMIZAÇÕES SEO
   const htmlOutput = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  
+  <!-- Preconnect para recursos externos -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.google-analytics.com">
+  
+  ${imagePreloadHints}
+  
   <title>${finalTitle}</title>
   ${metaTags}
   ${seoDomainTags}
   ${trackingPixelsHTML}
   ${consolidatedSchemaJson}
   
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.7;
-      color: #333;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #ffffff;
-    }
-    
-    h1 {
-      color: #1a1a1a;
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 15px;
-      line-height: 1.2;
-    }
-    
-    h2 {
-      color: #2c3e50;
-      font-size: 1.8rem;
-      margin: 30px 0 15px 0;
-      border-left: 4px solid #007bff;
-      padding-left: 15px;
-    }
-    
-    .blog-content p {
-      margin-bottom: 18px;
-      text-align: justify;
-    }
-    
-    .blog-content a {
-      color: #007bff;
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: all 0.3s ease;
-    }
-    
-    .blog-content a:hover {
-      border-bottom-color: #007bff;
-    }
-    
-    .institutional-links {
-      margin: 20px 0;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 5px;
-    }
-    
-    .institutional-links a {
-      margin: 0 10px;
-      color: #007bff;
-      text-decoration: none;
-    }
-    
-    .company-footer-info {
-      margin-top: 40px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-    
-    @media (max-width: 768px) {
-      body {
-        padding: 15px;
-      }
-      
-      h1 {
-        font-size: 2rem;
-      }
-      
-      h2 {
-        font-size: 1.5rem;
-      }
-    }
-  </style>
+  <!-- Critical CSS Inline (First Paint) -->
+  ${criticalCSS}
+  
+  <!-- External CSS com Preload (Non-blocking) -->
+  ${externalCSSLinks || `<style>${FULL_CSS}</style>`}
 </head>
 <body>
   ${gtmNoScriptHTML}
   
-  <main role="main" class="container">
+  <!-- Skip Link para Acessibilidade -->
+  <a href="#main-content" class="skip-link">Pular para conteúdo principal</a>
+  
+  <main role="main" id="main-content" class="container">
     <header>
       <h1>${finalTitle}</h1>
-      ${institutionalLinksHTML ? `<nav class="institutional-links">${institutionalLinksHTML}</nav>` : ''}
+      ${institutionalLinksHTML ? `<nav aria-label="Links institucionais" class="institutional-links">${institutionalLinksHTML}</nav>` : ''}
     </header>
     
-    ${blogContents}
+    ${schemaValidationAlert}
     
-    ${!excludeFooter && companyFooterHTML ? `<section class="company-info">${companyFooterHTML}</section>` : ''}
+    ${blogContentsWithLCP}
+    
+    ${!excludeFooter && companyFooterHTML ? `<section aria-label="Informações da empresa" class="company-info">${companyFooterHTML}</section>` : ''}
   </main>
   
   ${multiDomainFooter}
   
-  ${preview ? '<!-- PREVIEW MODE: noindex, sem tracking -->' : ''}
+  ${preview ? '<!-- PREVIEW MODE: noindex, sem tracking, sem validação de schema -->' : ''}
 </body>
 </html>`;
 
