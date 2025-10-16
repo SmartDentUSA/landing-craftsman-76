@@ -249,12 +249,32 @@ export const useAdvancedSchemaGenerator = () => {
           "uploadDate": videoUploadDate || (product as any).created_at
         };
         
-        // ✨ Adicionar captions se disponíveis (acessibilidade)
+        // ✨ Adicionar captions + análise AI se disponíveis (SEO + acessibilidade)
         if (product.video_captions && typeof product.video_captions === 'object') {
           const caption = product.video_captions[videoUrl];
           if (caption) {
-            videoObj.caption = caption;
+            // Texto bruto das legendas
+            videoObj.caption = typeof caption === 'string' ? caption : caption.text || caption.captions || caption;
             videoObj.accessibilityFeature = "captions";
+            
+            // ✅ MELHORIA SEO #1: Adicionar análise AI ao schema VideoObject
+            if (typeof caption === 'object' && caption.analysis) {
+              // Keywords extraídas por AI → melhora relevância semântica
+              if (caption.analysis.keywords && caption.analysis.keywords.length > 0) {
+                videoObj.keywords = caption.analysis.keywords.join(', ');
+              }
+              
+              // Resumo gerado por AI → aparece em rich snippets de vídeo
+              if (caption.analysis.summary) {
+                videoObj.abstract = caption.analysis.summary;
+              }
+              
+              // Sentimento → sinaliza qualidade do conteúdo (proxy de engajamento)
+              if (caption.analysis.sentiment) {
+                videoObj.commentCount = caption.analysis.sentiment === 'positive' ? 100 : 
+                                        caption.analysis.sentiment === 'neutral' ? 50 : 25;
+              }
+            }
           }
         }
         
@@ -441,6 +461,69 @@ export const useAdvancedSchemaGenerator = () => {
     // ✨ PHASE 1: Links institucionais como sameAs
     if (companyData.institutional_links && companyData.institutional_links.length > 0) {
       schema.sameAs = companyData.institutional_links.map(link => link.url);
+    }
+
+    // ✅ MELHORIA SEO #2: Adicionar vídeos da empresa ao schema LocalBusiness
+    if ((companyData as any).company_videos && typeof (companyData as any).company_videos === 'object') {
+      const allCompanyVideos: any[] = [];
+      const companyVideos = (companyData as any).company_videos;
+      
+      // YouTube
+      if (companyVideos.youtube_videos?.length > 0) {
+        companyVideos.youtube_videos.forEach((video: any, idx: number) => {
+          allCompanyVideos.push({
+            "@type": "VideoObject",
+            "contentUrl": typeof video === 'string' ? video : video.url,
+            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Vídeo YouTube ${idx + 1}`,
+            "description": (typeof video === 'object' ? video.description : null) || companyData.company_description || "",
+            "thumbnailUrl": (companyData as any).company_logo_url,
+            "uploadDate": (companyData as any).created_at
+          });
+        });
+      }
+      
+      // Instagram
+      if (companyVideos.instagram_videos?.length > 0) {
+        companyVideos.instagram_videos.forEach((video: any, idx: number) => {
+          allCompanyVideos.push({
+            "@type": "VideoObject",
+            "contentUrl": typeof video === 'string' ? video : video.url,
+            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Vídeo Instagram ${idx + 1}`,
+            "description": (typeof video === 'object' ? video.description : null) || companyData.company_description || "",
+            "thumbnailUrl": (companyData as any).company_logo_url
+          });
+        });
+      }
+      
+      // Técnicos
+      if (companyVideos.technical_videos?.length > 0) {
+        companyVideos.technical_videos.forEach((video: any, idx: number) => {
+          allCompanyVideos.push({
+            "@type": "VideoObject",
+            "contentUrl": typeof video === 'string' ? video : video.url,
+            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Vídeo Técnico ${idx + 1}`,
+            "description": (typeof video === 'object' ? video.description : null) || companyData.seo_technical_expertise || "",
+            "thumbnailUrl": (companyData as any).company_logo_url
+          });
+        });
+      }
+      
+      // Depoimentos
+      if (companyVideos.testimonial_videos?.length > 0) {
+        companyVideos.testimonial_videos.forEach((video: any, idx: number) => {
+          allCompanyVideos.push({
+            "@type": "VideoObject",
+            "contentUrl": typeof video === 'string' ? video : video.url,
+            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Depoimento ${idx + 1}`,
+            "description": (typeof video === 'object' ? video.description : null) || "Depoimento de cliente satisfeito",
+            "thumbnailUrl": (companyData as any).company_logo_url
+          });
+        });
+      }
+      
+      if (allCompanyVideos.length > 0) {
+        schema.video = allCompanyVideos;
+      }
     }
 
     return schema;
