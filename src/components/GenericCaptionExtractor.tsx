@@ -137,12 +137,27 @@ export function GenericCaptionExtractor({
       }
     }
     
-    console.error('Error extracting captions:', lastError);
+    // Ativar modo manual ao invés de mostrar erro
+    console.log('ℹ️ Extração automática não disponível. Ativando modo manual para:', videos.map(v => v.url));
+
+    // Criar caption vazio para cada vídeo, permitindo edição manual
+    const manualCaptions: VideoCaption[] = videos.map(video => ({
+      url: video.url,
+      captions: '',
+      language: 'manual',
+      extracted_at: new Date().toISOString(),
+      method: 'manual_input',
+      analysis: undefined
+    }));
+
+    onCaptionsExtracted(manualCaptions);
+
     toast({
-      title: "Erro",
-      description: lastError?.message || "Erro ao extrair legendas. Tente novamente.",
-      variant: "destructive"
+      title: "✍️ Modo Manual Ativado",
+      description: "Clique em 'Editar' nas legendas para adicionar o texto manualmente.",
+      variant: "default"
     });
+
     setExtracting(false);
   };
 
