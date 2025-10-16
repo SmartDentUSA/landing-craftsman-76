@@ -233,6 +233,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   
   // Tutorial states
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
+  const [editingTutorialId, setEditingTutorialId] = useState<string | null>(null);
+  const [editTutorialName, setEditTutorialName] = useState('');
+  const [editTutorialUrl, setEditTutorialUrl] = useState('');
   
   // Caption states
   const [videoCaptions, setVideoCaptions] = useState<any>({});
@@ -648,6 +651,52 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     }
   };
 
+  const editVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical' | 'tiktok', index: number, url: string, description: string) => {
+    const newVideo: Video = { url, description };
+    
+    switch (type) {
+      case 'instagram':
+        const updatedInstagram = [...instagramVideos];
+        updatedInstagram[index] = newVideo;
+        setInstagramVideos(updatedInstagram);
+        setFormData(prev => ({ ...prev, instagram_videos: updatedInstagram }));
+        break;
+        
+      case 'youtube':
+        const updatedYoutube = [...youtubeVideos];
+        updatedYoutube[index] = newVideo;
+        setYoutubeVideos(updatedYoutube);
+        setFormData(prev => ({ ...prev, youtube_videos: updatedYoutube }));
+        break;
+        
+      case 'testimonial':
+        const updatedTestimonial = [...testimonialVideos];
+        updatedTestimonial[index] = newVideo;
+        setTestimonialVideos(updatedTestimonial);
+        setFormData(prev => ({ ...prev, testimonial_videos: updatedTestimonial }));
+        break;
+        
+      case 'technical':
+        const updatedTechnical = [...technicalVideos];
+        updatedTechnical[index] = newVideo;
+        setTechnicalVideos(updatedTechnical);
+        setFormData(prev => ({ ...prev, technical_videos: updatedTechnical }));
+        break;
+        
+      case 'tiktok':
+        const updatedTiktok = [...tiktokVideos];
+        updatedTiktok[index] = newVideo;
+        setTiktokVideos(updatedTiktok);
+        setFormData(prev => ({ ...prev, tiktok_videos: updatedTiktok }));
+        break;
+    }
+
+    toast({
+      title: "Vídeo atualizado",
+      description: "As alterações foram salvas com sucesso"
+    });
+  };
+
   const removeVideo = (type: 'instagram' | 'youtube' | 'testimonial' | 'technical' | 'tiktok', index: number) => {
     switch (type) {
       case 'instagram':
@@ -721,6 +770,44 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     toast({
       title: "Tutorial adicionado",
       description: `"${courseName}" foi adicionado com sucesso`,
+    });
+  };
+
+  const editTutorial = (tutorialId: string, courseName: string, courseUrl: string) => {
+    if (!courseName.trim() || !courseUrl.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Nome do curso e URL são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      new URL(courseUrl);
+    } catch {
+      toast({
+        title: "URL inválida",
+        description: "Por favor, insira uma URL válida",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updated = tutorials.map(t => 
+      t.id === tutorialId 
+        ? { ...t, course_name: courseName, course_url: courseUrl }
+        : t
+    );
+    setTutorials(updated);
+    setFormData(prev => ({ 
+      ...prev, 
+      tutorial_resources: { tutorials: updated } 
+    }));
+
+    toast({
+      title: "Tutorial atualizado",
+      description: `"${courseName}" foi atualizado com sucesso`,
     });
   };
 
@@ -919,6 +1006,10 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         slug: formData.slug,
         product_url: formData.product_url
       });
+      
+      console.log('🔍 [FAQ DEBUG] FAQ antes de salvar:', formData.faq);
+      console.log('🔍 [FAQ DEBUG] FAQ length:', formData.faq?.length || 0);
+      console.log('🔍 [FAQ DEBUG] FAQ é array?', Array.isArray(formData.faq));
 
       const dataToSave = {
         name: formData.name!,
@@ -1002,8 +1093,10 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         resource_cta3: formData.resource_cta3,
         // Offer Discount CTA
         offer_discount_cta: formData.offer_discount_cta,
-        // FAQ
-        faq: formData.faq,
+        // FAQ - com validação e log detalhado
+        faq: Array.isArray(formData.faq) ? formData.faq.filter(item => 
+          item.question?.trim() && item.answer?.trim()
+        ) : [],
         // Technical Specifications
         technical_specifications: formData.technical_specifications || [],
         // Resource Descriptions
@@ -1013,6 +1106,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
       console.log('[DEBUG] Dados que serão salvos:', dataToSave);
       console.log('[DEBUG] bot_trigger_words especificamente:', dataToSave.bot_trigger_words);
+      console.log('🔍 [FAQ DEBUG] FAQ no dataToSave:', dataToSave.faq);
+      console.log('🔍 [FAQ DEBUG] FAQ filtrado length:', dataToSave.faq?.length || 0);
 
       let result;
       if (isEditing) {
@@ -1043,6 +1138,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         seo_description_override: result.data.seo_description_override,
         slug: result.data.slug
       });
+      console.log('✅ [FAQ DEBUG] Produto salvo! FAQ retornado:', result.data.faq);
+      console.log('✅ [FAQ DEBUG] FAQ retornado length:', result.data.faq?.length || 0);
       
       const seoFieldsFilled = !!(result.data.seo_title_override || result.data.seo_description_override || result.data.slug);
       
@@ -1634,6 +1731,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               videos={instagramVideos}
               onAdd={(url, description) => addVideo('instagram', url, description)}
               onRemove={(index) => removeVideo('instagram', index)}
+              onEdit={(index, url, description) => editVideo('instagram', index, url, description)}
               maxVideos={5}
             />
 
@@ -1647,6 +1745,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   addVideo('youtube', url, description);
                 }}
                 onRemove={(index) => removeVideo('youtube', index)}
+                onEdit={(index, url, description) => editVideo('youtube', index, url, description)}
                 maxVideos={5}
               />
               
@@ -1669,6 +1768,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 videos={testimonialVideos}
                 onAdd={(url, description) => addVideo('testimonial', url, description)}
                 onRemove={(index) => removeVideo('testimonial', index)}
+                onEdit={(index, url, description) => editVideo('testimonial', index, url, description)}
                 maxVideos={5}
               />
               
@@ -1691,6 +1791,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 videos={technicalVideos}
                 onAdd={(url, description) => addVideo('technical', url, description)}
                 onRemove={(index) => removeVideo('technical', index)}
+                onEdit={(index, url, description) => editVideo('technical', index, url, description)}
                 maxVideos={5}
               />
               
@@ -1712,6 +1813,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               videos={tiktokVideos}
               onAdd={(url, description) => addVideo('tiktok', url, description)}
               onRemove={(index) => removeVideo('tiktok', index)}
+              onEdit={(index, url, description) => editVideo('tiktok', index, url, description)}
               maxVideos={5}
             />
 
@@ -1730,32 +1832,98 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   <div className="space-y-2">
                     {tutorials.map((tutorial) => (
                       <Card key={tutorial.id} className="p-3 bg-white">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {tutorial.course_name}
-                            </p>
-                            <a 
-                              href={tutorial.course_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline truncate block"
-                            >
-                              {tutorial.course_url}
-                            </a>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Adicionado em {new Date(tutorial.created_at).toLocaleDateString('pt-BR')}
-                            </p>
+                        {editingTutorialId === tutorial.id ? (
+                          // Modo de edição
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <Label>Nome do Curso/Tutorial</Label>
+                              <Input
+                                value={editTutorialName}
+                                onChange={(e) => setEditTutorialName(e.target.value)}
+                                placeholder="Ex: Como configurar o equipamento"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>URL do Curso</Label>
+                              <Input
+                                value={editTutorialUrl}
+                                onChange={(e) => setEditTutorialUrl(e.target.value)}
+                                placeholder="https://meuplataforma.com/curso"
+                                type="url"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => {
+                                  editTutorial(tutorial.id, editTutorialName, editTutorialUrl);
+                                  setEditingTutorialId(null);
+                                }}
+                                disabled={!editTutorialName.trim() || !editTutorialUrl.trim()}
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Salvar
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingTutorialId(null);
+                                  setEditTutorialName('');
+                                  setEditTutorialUrl('');
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeTutorial(tutorial.id)}
-                          >
-                            <X className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        ) : (
+                          // Modo de visualização
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {tutorial.course_name}
+                              </p>
+                              <a 
+                                href={tutorial.course_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:underline truncate block"
+                              >
+                                {tutorial.course_url}
+                              </a>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Adicionado em {new Date(tutorial.created_at).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingTutorialId(tutorial.id);
+                                  setEditTutorialName(tutorial.course_name);
+                                  setEditTutorialUrl(tutorial.course_url);
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeTutorial(tutorial.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </Card>
                     ))}
                   </div>

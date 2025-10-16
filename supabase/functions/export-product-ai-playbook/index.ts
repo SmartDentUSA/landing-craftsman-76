@@ -159,6 +159,8 @@ function generateAIPlaybookJSON(product: ProductData & {
   aftersales_messages?: any[];
   google_ads_campaigns?: any[];
   landing_page_context?: any;
+  related_landing_pages?: any[];
+  product_blogs?: any;
 }): any {
   return {
     product_id: product.id,
@@ -279,6 +281,30 @@ function generateAIPlaybookJSON(product: ProductData & {
       }))
     },
     landing_page_context: product.landing_page_context || null,
+    product_blogs: {
+      commercial_blog: {
+        content: product.product_blogs?.commercial || null,
+        preview: product.product_blogs?.commercial?.substring(0, 200) || null,
+        has_content: !!product.product_blogs?.commercial
+      },
+      technical_blog: {
+        content: product.product_blogs?.technical || null,
+        preview: product.product_blogs?.technical?.substring(0, 200) || null,
+        has_content: !!product.product_blogs?.technical
+      },
+      generated_at: product.product_blogs?.generated_at || null
+    },
+    related_landing_pages: {
+      count: product.related_landing_pages?.length || 0,
+      landing_pages: product.related_landing_pages?.map((lp: any) => ({
+        id: lp.id,
+        name: lp.name,
+        status: lp.status,
+        seo_title: lp.data?.seo?.seo_title || null,
+        canonical_url: lp.data?.seo?.canonical_url || null,
+        has_embed: !!lp.embed
+      })) || []
+    },
     customer_service_prompts: [
       `Produto: ${product.name}`,
       `Categoria: ${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`,
@@ -310,6 +336,8 @@ function generatePlaybookTXT(product: ProductData & {
   aftersales_messages?: any[];
   google_ads_campaigns?: any[];
   landing_page_context?: any;
+  related_landing_pages?: any[];
+  product_blogs?: any;
 }): string {
   const json = generateAIPlaybookJSON(product);
   
@@ -430,6 +458,28 @@ ${product.instagram_copies?.last_generated ? `📅 Última geração: ${new Date
 ${product.tiktok_content?.copies?.length ? `✅ ${product.tiktok_content.copies.length} conteúdos gerados` : '❌ Conteúdo pendente'}
 ${product.tiktok_content?.last_generated ? `📅 Última geração: ${new Date(product.tiktok_content.last_generated).toLocaleString('pt-BR')}` : ''}
 
+## 📝 BLOGS INDIVIDUAIS DO PRODUTO
+
+### Blog Comercial:
+${product.product_blogs?.commercial ? `
+✅ Disponível
+Conteúdo (Preview):
+${product.product_blogs.commercial.substring(0, 500)}...
+
+[Conteúdo completo disponível no JSON]
+` : '❌ Blog comercial não gerado'}
+
+### Blog Técnico:
+${product.product_blogs?.technical ? `
+✅ Disponível
+Conteúdo (Preview):
+${product.product_blogs.technical.substring(0, 500)}...
+
+[Conteúdo completo disponível no JSON]
+` : '❌ Blog técnico não gerado'}
+
+${product.product_blogs?.generated_at ? `📅 Gerado em: ${new Date(product.product_blogs.generated_at).toLocaleString('pt-BR')}` : ''}
+
 ## 🔗 LINKS E MÍDIA
 
 ### URLs:
@@ -518,6 +568,21 @@ ${product.landing_page_context.approved_reviews?.slice(0, 3).map((review: any, i
 ### Depoimentos em Vídeo:
 Total: ${product.landing_page_context.video_testimonials?.length || 0} depoimentos aprovados
 ` : '❌ Produto não vinculado a uma Landing Page'}
+
+## 🌐 LANDING PAGES APROVADAS RELACIONADAS
+
+${(product.related_landing_pages && product.related_landing_pages.length > 0) ? 
+  product.related_landing_pages.map((lp: any, idx: number) => `
+${idx + 1}. 📄 ${lp.name}
+   - ID: ${lp.id}
+   - Status: ${lp.status}
+   - Embed Ativo: ${lp.embed ? '✅ Sim' : '❌ Não'}
+   - SEO Title: ${lp.data?.seo?.seo_title || 'N/A'}
+   - Canonical URL: ${lp.data?.seo?.canonical_url || 'N/A'}
+  `).join('\n') 
+: '📭 Nenhuma landing page aprovada usa este produto'}
+
+📌 Total de Landing Pages Aprovadas: ${product.related_landing_pages?.length || 0}
 
 ## 🤖 SCRIPTS PARA ATENDIMENTO IA
 ${json.customer_service_prompts.join('\n')}
@@ -718,6 +783,24 @@ serve(async (req) => {
       }
     }
 
+    // Fetch ALL landing pages that use this product
+    const { data: relatedLandingPages } = await supabase
+      .from('landing_pages')
+      .select('id, name, status, data, embed')
+      .contains('selected_product_ids', [productId])
+      .eq('status', 'approved')
+      .order('name');
+
+    // Extract individual blog content if exists
+    let productBlogs: any = null;
+    if (product.individual_blog_content) {
+      productBlogs = {
+        commercial: product.individual_blog_content.commercial || null,
+        technical: product.individual_blog_content.technical || null,
+        generated_at: product.individual_blog_content.generated_at || null
+      };
+    }
+
     // Attach all related data to product object
     const productWithAllData = {
       ...product,
@@ -725,7 +808,9 @@ serve(async (req) => {
       cs_messages: csMessages || [],
       aftersales_messages: aftersalesMessages || [],
       google_ads_campaigns: googleAdsCampaigns || [],
-      landing_page_context: landingPageContext
+      landing_page_context: landingPageContext,
+      related_landing_pages: relatedLandingPages || [],
+      product_blogs: productBlogs
     };
 
     // Generate content based on format
