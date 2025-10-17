@@ -25,7 +25,9 @@ import { normalizeAiBlog, normalizeKeywords } from "@/lib/blog-utils";
 import { useProductSchemaGenerator } from "@/hooks/useProductSchemaGenerator";
 import { KeywordsDashboard } from "@/components/KeywordsDashboard";
 import { ProductVideosList } from "@/components/ProductVideosList";
-import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag, BarChart3 } from "lucide-react";
+import { useKOLs } from "@/hooks/useKOLs";
+import { Combobox } from "@/components/ui/combobox";
+import { Loader2, Eye, Send, ArrowLeft, Sparkles, Plus, Trash2, Link, Tag, BarChart3, User } from "lucide-react";
 
 interface BlogPost {
   id?: string;
@@ -38,6 +40,7 @@ interface BlogPost {
   published_domains: string[];
   intelligent_links: Record<string, string>;
   include_offers?: boolean;
+  author_kol_id?: string | null;
 }
 
 interface DualBlogVersions {
@@ -70,6 +73,7 @@ export default function BlogGenerator() {
     published_domains: [],
     intelligent_links: {},
     include_offers: false,
+    author_kol_id: null,
   });
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -91,6 +95,7 @@ export default function BlogGenerator() {
   const { generateProductSchema, generateFAQSchema, validateSchema } = useProductSchemaGenerator();
   const [showKeywordsDashboard, setShowKeywordsDashboard] = useState(false);
   const [generatedSchema, setGeneratedSchema] = useState<any>(null);
+  const { kols, loading: loadingKOLs } = useKOLs(true);
 
   useEffect(() => {
     if (id) {
@@ -321,6 +326,7 @@ export default function BlogGenerator() {
               ...editorIntelligentLinks,
               ...(dentalaPost.intelligent_links as Record<string, string> || {})
             },
+            author_kol_id: dentalaPost.author_kol_id || null,
           };
           
           const normalizedEodonto = {
@@ -336,6 +342,7 @@ export default function BlogGenerator() {
               ...editorIntelligentLinks,
               ...(eodontoPost.intelligent_links as Record<string, string> || {})
             },
+            author_kol_id: eodontoPost.author_kol_id || null,
           };
           
           setDualVersions({
@@ -370,6 +377,7 @@ export default function BlogGenerator() {
               ...editorIntelligentLinks,
               ...(firstPost.intelligent_links as Record<string, string> || {})
             },
+            author_kol_id: firstPost.author_kol_id || null,
           };
           
           setBlogPost(loadedBlogPost);
@@ -748,6 +756,7 @@ export default function BlogGenerator() {
         status: "draft",
         intelligent_links: blogPost.intelligent_links || {},
         include_offers: blogPost.include_offers || false,
+        author_kol_id: blogPost.author_kol_id || null,
       };
 
       if (blogPost.id) {
@@ -808,6 +817,7 @@ export default function BlogGenerator() {
         status: blogPost.status || "draft",
         intelligent_links: blogPost.intelligent_links || {},
         include_offers: blogPost.include_offers || false,
+        author_kol_id: blogPost.author_kol_id || null,
       };
 
       if (blogPost.id) {
@@ -1222,15 +1232,43 @@ export default function BlogGenerator() {
                  </div>
                )}
 
-               <div>
-                 <Label htmlFor="youtube_url">URL do YouTube (opcional)</Label>
-                 <Input
-                   id="youtube_url"
-                   value={blogPost.youtube_video_url}
-                   onChange={(e) => setBlogPost(prev => ({ ...prev, youtube_video_url: e.target.value }))}
-                   placeholder="https://www.youtube.com/watch?v=..."
-                 />
-               </div>
+                <div>
+                  <Label htmlFor="author_kol">Autor (KOL)</Label>
+                  <Combobox
+                    value={
+                      blogPost.author_kol_id 
+                        ? kols.find(k => k.id === blogPost.author_kol_id)?.full_name || ""
+                        : ""
+                    }
+                    onValueChange={(value) => {
+                      const selectedKol = kols.find(k => k.full_name === value);
+                      setBlogPost(prev => ({ 
+                        ...prev, 
+                        author_kol_id: selectedKol ? selectedKol.id : null 
+                      }));
+                    }}
+                    options={kols.map(kol => 
+                      `${kol.full_name}${kol.specialty ? ` - ${kol.specialty}` : ''}`
+                    )}
+                    placeholder="Selecione um autor..."
+                    emptyText="Nenhum KOL encontrado"
+                    allowCreate={false}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <User className="h-3 w-3 inline mr-1" />
+                    Selecione um especialista para melhorar E-E-A-T do blog
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="youtube_url">URL do YouTube (opcional)</Label>
+                  <Input
+                    id="youtube_url"
+                    value={blogPost.youtube_video_url}
+                    onChange={(e) => setBlogPost(prev => ({ ...prev, youtube_video_url: e.target.value }))}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
 
               {(() => {
                 // Debug offers data
