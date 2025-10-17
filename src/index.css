@@ -276,3 +276,12 @@
     @apply semantic-link-as-button mt-4;
   }
 }
+
+/* ========================================
+   INFINITE SCROLL ANIMATION
+   ======================================== */
+
+/* Pausar animação ao hover */
+.animate-infinite-scroll:hover {
+  animation-play-state: paused;
+}

@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
 import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, CheckCircle, Search } from "lucide-react";
+import { InfinitePartnersCarousel } from "@/components/InfinitePartnersCarousel";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
@@ -67,7 +68,7 @@ interface BlogPost {
 // SelFlux mode completely removed - using only standard template engine
 
 // Interface de dados de imagem - migrado de Cloudflare para Supabase Storage
-interface ImageData {
+export interface ImageData {
   mode: 'url' | 'supabase';
   src: string;
   supabase_path?: string;
@@ -347,6 +348,17 @@ interface LandingPageData {
   };
   email: EmailData;
   author_kol_id?: string; // ID do KOL que assina o blog estratégico
+  animated_banner_section?: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+    title: string;
+    partners: Array<{
+      id: string;
+      name: string;
+      seo_description: string;
+      logo: ImageData;
+    }>;
+  };
 }
 
 // Função para criar ImageData padrão
@@ -519,6 +531,12 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
       social: []
     },
     email,
+    animated_banner_section: data.animated_banner_section || {
+      visible_desktop: true,
+      visible_mobile: true,
+      title: 'Empresas Parceiras',
+      partners: []
+    },
     seo: {
       domain: data.seo?.domain || '',
       seo_title: data.seo?.seo_title || data.seo_title || '',
@@ -1918,14 +1936,27 @@ const EditorContent = () => {
           alt: processedData.advisory?.image?.alt || '',
           scale: processedData.advisory?.image?.scale || 1
         }
-      }
+      },
+      animated_banner_section: processedData.animated_banner_section ? {
+        ...processedData.animated_banner_section,
+        partners: processedData.animated_banner_section.partners.map(p => ({
+          ...p,
+          logo: {
+            src: p.logo.src,
+            alt: p.logo.alt,
+            scale: p.logo.scale,
+            mode: p.logo.mode,
+            supabase_path: p.logo.supabase_path
+          }
+        }))
+      } : undefined
     };
     
     console.time('preview-generation');
     const html = generatePreviewHTML(previewData);
     console.timeEnd('preview-generation');
     return html;
-  }, [data, data.explanatory_video_section]);
+  }, [data, data.explanatory_video_section, data.animated_banner_section]);
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {
@@ -3609,6 +3640,240 @@ const EditorContent = () => {
                         onTitleChange={(title) => setData(prev => ({ ...prev, solutions_title: title }))}
                         onSolutionsChange={(solutions) => setData(prev => ({ ...prev, solutions }))}
                       />
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* ========== FAIXA ANIMADA ========== */}
+                <AccordionItem value="animated-banner">
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Faixa Animada
+                      <Badge variant="secondary">
+                        {data.animated_banner_section?.partners?.length || 0} logos
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  
+                  <AccordionContent className="space-y-6">
+                    {/* Card de Visibilidade */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4" />
+                          Visibilidade da Seção
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.animated_banner_section?.visible_desktop ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                animated_banner_section: { 
+                                  ...prev.animated_banner_section!, 
+                                  visible_desktop: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no desktop</Label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Switch 
+                              checked={data.animated_banner_section?.visible_mobile ?? true}
+                              onCheckedChange={(checked) => setData(prev => ({
+                                ...prev,
+                                animated_banner_section: { 
+                                  ...prev.animated_banner_section!, 
+                                  visible_mobile: checked 
+                                }
+                              }))}
+                            />
+                            <Label className="font-medium">Visível no mobile</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Configurações (só aparece se visível em alguma plataforma) */}
+                    {((data.animated_banner_section?.visible_desktop ?? false) || (data.animated_banner_section?.visible_mobile ?? false)) && (
+                      <>
+                        {/* Título da Seção */}
+                        <div className="space-y-2">
+                          <Label htmlFor="banner-title">Título da Seção</Label>
+                          <Input
+                            id="banner-title"
+                            value={data.animated_banner_section?.title ?? 'Empresas Parceiras'}
+                            onChange={(e) => setData(prev => ({
+                              ...prev,
+                              animated_banner_section: { 
+                                ...prev.animated_banner_section!, 
+                                title: e.target.value 
+                              }
+                            }))}
+                            placeholder="Ex: Parceiros de Confiança"
+                          />
+                        </div>
+
+                        {/* Botão Adicionar Logo */}
+                        <Button 
+                          onClick={() => {
+                            const newPartner = {
+                              id: crypto.randomUUID(),
+                              name: '',
+                              seo_description: '',
+                              logo: { mode: 'url' as const, src: '', alt: '', scale: 1 }
+                            };
+                            setData(prev => ({
+                              ...prev,
+                              animated_banner_section: {
+                                ...prev.animated_banner_section!,
+                                partners: [
+                                  ...(prev.animated_banner_section?.partners || []),
+                                  newPartner
+                                ]
+                              }
+                            }));
+                            toast({
+                              title: "Novo logo adicionado",
+                              description: "Faça upload da imagem",
+                            });
+                          }}
+                          className="w-full"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar Logo de Parceiro
+                        </Button>
+
+                        {/* Grid de Logos */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {data.animated_banner_section?.partners?.map((partner, index) => (
+                            <Card key={partner.id} className="relative">
+                              <CardContent className="p-4 space-y-3">
+                                {/* Upload do Logo */}
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">
+                                    Logo da Empresa
+                                  </Label>
+                                  <ImageUploader
+                                    value={partner.logo}
+                                    onChange={(imageData) => {
+                                      setData(prev => ({
+                                        ...prev,
+                                        animated_banner_section: {
+                                          ...prev.animated_banner_section!,
+                                          partners: prev.animated_banner_section!.partners.map((p, i) =>
+                                            i === index ? { ...p, logo: imageData } : p
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                    placeholder="Fazer upload do logo"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Recomendado: PNG transparente 200x100px
+                                  </p>
+                                </div>
+
+                                {/* Nome da Empresa */}
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">
+                                    Nome da Empresa
+                                  </Label>
+                                  <Input
+                                    value={partner.name}
+                                    onChange={(e) => {
+                                      setData(prev => ({
+                                        ...prev,
+                                        animated_banner_section: {
+                                          ...prev.animated_banner_section!,
+                                          partners: prev.animated_banner_section!.partners.map((p, i) =>
+                                            i === index ? { ...p, name: e.target.value } : p
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                    placeholder="Ex: SmartDent"
+                                  />
+                                </div>
+
+                                {/* Descrição SEO */}
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">
+                                    Descrição SEO
+                                  </Label>
+                                  <Textarea
+                                    value={partner.seo_description}
+                                    onChange={(e) => {
+                                      setData(prev => ({
+                                        ...prev,
+                                        animated_banner_section: {
+                                          ...prev.animated_banner_section!,
+                                          partners: prev.animated_banner_section!.partners.map((p, i) =>
+                                            i === index ? { ...p, seo_description: e.target.value } : p
+                                          )
+                                        }
+                                      }));
+                                    }}
+                                    placeholder="Ex: Líder em odontologia digital"
+                                    rows={2}
+                                    className="text-sm resize-none"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    💡 Usado no alt text para SEO
+                                  </p>
+                                </div>
+
+                                {/* Botão Remover */}
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => {
+                                    setData(prev => ({
+                                      ...prev,
+                                      animated_banner_section: {
+                                        ...prev.animated_banner_section!,
+                                        partners: prev.animated_banner_section!.partners.filter((_, i) => i !== index)
+                                      }
+                                    }));
+                                    toast({
+                                      title: "Logo removido",
+                                      description: "Alteração salva",
+                                    });
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover Logo
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+
+                        {/* Preview da Faixa Animada */}
+                        {(data.animated_banner_section?.partners?.length ?? 0) > 0 && (
+                          <Card className="bg-muted/20">
+                            <CardHeader>
+                              <CardTitle className="text-sm flex items-center gap-2">
+                                <Eye className="h-4 w-4" />
+                                Preview da Animação
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              <InfinitePartnersCarousel
+                                title={data.animated_banner_section?.title ?? 'Empresas Parceiras'}
+                                partners={data.animated_banner_section?.partners ?? []}
+                                visibleDesktop={data.animated_banner_section?.visible_desktop ?? true}
+                                visibleMobile={data.animated_banner_section?.visible_mobile ?? true}
+                              />
+                            </CardContent>
+                          </Card>
+                        )}
+                      </>
                     )}
                   </AccordionContent>
                 </AccordionItem>

@@ -825,6 +825,32 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
         }
         
+        /* ✨ Faixa Animada de Logos */
+        .animated-banner-section {
+            padding: 3rem 0;
+            background: hsl(var(--muted) / 0.3);
+        }
+        
+        @keyframes infinite-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        
+        .animate-infinite-scroll {
+            animation: infinite-scroll 25s linear infinite;
+            will-change: transform;
+        }
+        
+        .animate-infinite-scroll:hover {
+            animation-play-state: paused;
+        }
+        
+        @media (min-width: 768px) {
+            .animated-banner-section img {
+                height: 4rem !important;
+            }
+        }
+
         /* ✨ FASE 1: Especificações Técnicas */
         .technical-specs-section {
             padding: 3rem 0;
@@ -1819,6 +1845,46 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </section>
 
+    <!-- ✨ Faixa Animada de Logos -->
+    {{#animated_banner_section}}
+    {{#visible_any}}
+    <section class="animated-banner-section {{visibility_class}}" aria-label="{{title}}">
+      <div class="container">
+        <h2 style="text-align: center; font-size: 1.75rem; font-weight: 700; margin-bottom: 2rem; color: var(--text-color);">
+          {{title}}
+        </h2>
+        
+        <div style="overflow: hidden; position: relative;">
+          <div class="animate-infinite-scroll" style="display: flex; gap: 4rem; align-items: center;">
+            {{#partners}}
+            <img 
+              src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
+              alt="{{name}} - {{seo_description}}"
+              title="{{seo_description}}"
+              loading="lazy"
+              style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+              onmouseover="this.style.filter='grayscale(0%)'"
+              onmouseout="this.style.filter='grayscale(100%)'"
+            />
+            {{/partners}}
+            {{#partners}}
+            <img 
+              src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
+              alt="{{name}} - {{seo_description}}"
+              title="{{seo_description}}"
+              loading="lazy"
+              style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+              onmouseover="this.style.filter='grayscale(0%)'"
+              onmouseout="this.style.filter='grayscale(100%)'"
+            />
+            {{/partners}}
+          </div>
+        </div>
+      </div>
+    </section>
+    {{/visible_any}}
+    {{/animated_banner_section}}
+
     <!-- ✨ FASE 1: Especificações Técnicas Section -->
     {{#technical_specs_section}}
     <section class="technical-specs-section">
@@ -2398,6 +2464,12 @@ export const generatePreviewHTML = (data: any): string => {
       ...data.advisory,
       ...calculateSectionVisibility(data.advisory)
     },
+    
+    // Animated Banner Section
+    animated_banner_section: data.animated_banner_section ? {
+      ...data.animated_banner_section,
+      ...calculateSectionVisibility(data.animated_banner_section)
+    } : null,
     
     // Map schema offers to template-level offers and resources_products
     offers: (data.schema?.offers || []).map((offer: any) => ({
