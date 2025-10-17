@@ -767,6 +767,16 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             -ms-overflow-style: none;
         }
         
+        @media (max-width: 768px) {
+            .offers-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+                overflow-x: visible;
+                padding: 0;
+            }
+        }
+        
         .offers-grid::-webkit-scrollbar {
             display: none;
         }
@@ -1091,14 +1101,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             text-align: center;
         }
         
-        /* Responsive adjustments for offers carousel */
+        /* Responsive adjustments for offers grid */
         @media (max-width: 768px) {
             .offer-card {
-                flex: 0 0 240px;
+                flex: none;
+                width: 100%;
             }
             
             .offers-container {
-                padding: 0 0.5rem;
+                padding: 0 1rem;
             }
             
             .resources-grid {
