@@ -1939,14 +1939,14 @@ const EditorContent = () => {
       },
       animated_banner_section: processedData.animated_banner_section ? {
         ...processedData.animated_banner_section,
-        partners: processedData.animated_banner_section.partners.map(p => ({
+        partners: (processedData.animated_banner_section.partners || []).map(p => ({
           ...p,
           logo: {
-            src: p.logo.src,
-            alt: p.logo.alt,
-            scale: p.logo.scale,
-            mode: p.logo.mode,
-            supabase_path: p.logo.supabase_path
+            src: p.logo?.src || '',
+            alt: p.logo?.alt || '',
+            scale: p.logo?.scale || 1,
+            mode: p.logo?.mode || 'url',
+            supabase_path: p.logo?.supabase_path
           }
         }))
       } : undefined
