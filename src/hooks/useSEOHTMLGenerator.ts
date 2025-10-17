@@ -1908,10 +1908,11 @@ export const useSEOHTMLGenerator = () => {
             <!-- Author Info -->
             <div style="flex: 1; min-width: 0;">
               <p style="
-                font-size: 0.75rem;
+                font-size: 0.8rem;
+                font-weight: 600;
                 color: #6b7280;
                 text-transform: uppercase;
-                letter-spacing: 0.05em;
+                letter-spacing: 0.1em;
                 margin-bottom: 0.25rem;
               ">Sobre o autor</p>
               <h4 style="
@@ -2007,8 +2008,8 @@ export const useSEOHTMLGenerator = () => {
           <!-- Mini Bio Box -->
           ${authorKol.mini_cv ? `
           <div style="
-            border-radius: 20px;
-            border: 2px solid #000000;
+            border-radius: 30px;
+            border: 1px solid #e5e7eb;
             padding: 1rem;
             margin-bottom: 0.75rem;
           ">
@@ -2040,6 +2041,24 @@ export const useSEOHTMLGenerator = () => {
             onmouseout="this.style.textDecoration='none'"
           >Ver Currículo Lattes</a>
           ` : ''}
+          
+          <!-- Transparency Notice -->
+          <div style="
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 12px;
+            border-left: 4px solid #1877F2;
+          ">
+            <p style="
+              margin: 0;
+              font-size: 0.75rem;
+              color: #6b7280;
+              line-height: 1.5;
+            ">
+              <strong>Transparência:</strong> Este artigo foi escrito com base em testes práticos realizados pelo autor. Smart Dent apenas fornece materiais necessários para desenvolvimento do conteúdo, mas não afeta nossas recomendações.
+            </p>
+          </div>
         </div>
       </div>
     </section>
