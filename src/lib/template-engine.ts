@@ -1113,8 +1113,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
             
             .resources-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 0.5rem;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
             }
             
             .resources-grid .offer-card {
@@ -1162,7 +1162,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
             
             .resources-grid {
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(2, 1fr);
                 gap: 0.4rem;
             }
             
