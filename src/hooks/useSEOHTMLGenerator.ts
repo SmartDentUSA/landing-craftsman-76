@@ -316,8 +316,9 @@ interface ConsolidatedBlogOptions {
     technicalExpertise: string;
     serviceAreas: string;
   };
-  landingPageIdForSEOContext?: string; // PATCH 3: ID para carregar SEO Context
-  preview?: boolean; // PATCH 5: Flag de preview (noindex, sem canonical)
+  landingPageIdForSEOContext?: string;
+  preview?: boolean;
+  authorKolId?: string; // ✅ FASE 3: ID do autor KOL
 }
 
 export const useSEOHTMLGenerator = () => {
@@ -880,9 +881,26 @@ export const useSEOHTMLGenerator = () => {
     }
 
     // ========================================
-    // ✨ E-E-A-T: FETCH AUTHOR FROM BLOG POST
+    // ✅ FASE 3: FETCH AUTHOR KOL
     // ========================================
-    if (landingPageIdForSEOContext) {
+    if (options.authorKolId) {
+      try {
+        const { data: kol } = await supabase
+          .from('key_opinion_leaders')
+          .select('*')
+          .eq('id', options.authorKolId)
+          .eq('approved', true)
+          .single();
+
+        if (kol) {
+          authorKol = kol;
+          console.log('✅ Author KOL loaded:', authorKol.full_name);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching KOL author:', error);
+      }
+    } else if (landingPageIdForSEOContext) {
+      // Fallback: buscar do blog_post
       try {
         const { data: blogPost } = await supabase
           .from('blog_posts')
@@ -895,7 +913,7 @@ export const useSEOHTMLGenerator = () => {
 
         if (blogPost?.key_opinion_leaders) {
           authorKol = blogPost.key_opinion_leaders;
-          console.log('✅ Author loaded for E-E-A-T:', authorKol.full_name);
+          console.log('✅ Author loaded from blog_post:', authorKol.full_name);
         }
       } catch (error) {
         console.error('❌ Error fetching blog author:', error);

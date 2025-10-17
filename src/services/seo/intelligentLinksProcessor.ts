@@ -37,6 +37,12 @@ export function applyIntelligentLinks(
 ): string {
   let processedContent = content;
   
+  // ✅ FASE 4: Converter links markdown [texto](# "tooltip") → HTML
+  processedContent = processedContent.replace(
+    /\[([^\]]+)\]\(#\s*["']([^"']+)["']\)/g,
+    '<a href="#" title="$2">$1</a>'
+  );
+  
   // Apply links to content
   Object.entries(linksMap).forEach(([keyword, url]) => {
     // Criar regex que não substitui dentro de tags HTML

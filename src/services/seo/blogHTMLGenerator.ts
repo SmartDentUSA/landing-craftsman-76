@@ -1,6 +1,6 @@
 /**
  * Serviço responsável pela geração de HTML de blogs
- * ✅ FASE 1 + FASE 2: Implementação COMPLETA com todos os módulos SEO
+ * ✅ COMPLETO: Markdown, Schemas, Intelligent Links, KOL Author
  */
 
 import { buildMetaTags } from './metaTagsBuilder';
@@ -40,6 +40,9 @@ import {
   validateConsolidatedSchemas, 
   generateSchemaErrorAlert 
 } from './schemaValidator';
+import { marked } from 'marked';
+import { sanitizeBlogContent } from '@/utils/sanitize-html';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface BlogHTMLOptions {
   // Dados dos blogs
@@ -65,11 +68,12 @@ export interface BlogHTMLOptions {
   excludeFooter?: boolean;
   companySEO?: any;
   trackingConfig?: TrackingConfig | null;
-  preview?: boolean; // FASE 1: Flag de preview (noindex, sem tracking)
+  preview?: boolean;
   ogImage?: string;
   keywords?: string[];
-  cssUrl?: string; // URL do CSS externo (opcional, se não fornecido usa inline)
-  validateSchema?: boolean; // Validar schemas antes de gerar HTML (default: true)
+  cssUrl?: string;
+  validateSchema?: boolean;
+  authorKolId?: string; // ✅ FASE 3: ID do autor KOL
 }
 
 export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string> {
@@ -144,20 +148,26 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   // ✅ 4. CONSOLIDAR KEYWORDS (remover duplicatas)
   const uniqueKeywords = [...new Set(keywords)].slice(0, 50);
 
-  // ✅ 5. PROCESSAR CONTEÚDO DOS BLOGS COM INTELLIGENT LINKS
+  // ✅ 5. PROCESSAR CONTEÚDO DOS BLOGS COM MARKDOWN → HTML + INTELLIGENT LINKS
   const blogContents = blogs.map((blog, index) => {
     let content = blog.content;
     
-    // Aplicar intelligent links
-    if (Object.keys(intelligentLinks).length > 0) {
-      content = processContentWithAdvancedIntelligentLinks(content, intelligentLinks);
-    }
+    // ✅ FASE 1: Converter Markdown → HTML
+    const htmlContent = marked.parse(content) as string;
+    
+    // ✅ FASE 4: Aplicar intelligent links (após conversão markdown)
+    const contentWithLinks = Object.keys(intelligentLinks).length > 0
+      ? processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks)
+      : htmlContent;
+    
+    // ✅ Sanitizar HTML final
+    const sanitizedContent = sanitizeBlogContent(contentWithLinks);
     
     return `
       <article class="blog-post" data-index="${index}" itemscope itemtype="https://schema.org/Article">
         <h2 itemprop="headline">${blog.title}</h2>
         <div class="blog-content" itemprop="articleBody">
-          ${content}
+          ${sanitizedContent}
         </div>
       </article>
     `;
@@ -176,7 +186,12 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
       "@type": "Product",
       "name": product.name,
       "description": product.seo_description_override || product.description,
-      "image": product.image_url,
+      // ✅ FASE 2: Adicionar campos obrigatórios
+      "image": product.image_url || "https://via.placeholder.com/800x600?text=Produto",
+      "brand": {
+        "@type": "Brand",
+        "name": product.brand || "Smart Dent"
+      },
       "offers": {
         "@type": "Offer",
         "price": product.price || 0,
@@ -185,8 +200,7 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
         "url": product.product_url || product.canonical_url
       },
       ...(product.gtin && { "gtin": product.gtin }),
-      ...(product.mpn && { "mpn": product.mpn }),
-      ...(product.brand && { "brand": { "@type": "Brand", "name": product.brand } })
+      ...(product.mpn && { "mpn": product.mpn })
     }));
     
     allSchemas.push(...productSchemas);
@@ -278,10 +292,16 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   const trackingPixelsHTML = preview ? '' : injectTrackingPixels(trackingConfig);
   const gtmNoScriptHTML = preview ? '' : injectGTMNoScript(trackingConfig);
 
-  // ✅ 13. GERAR FOOTER MULTI-DOMAIN
+  // ✅ 13. GERAR ASSINATURA DO AUTOR KOL (FASE 3)
+  let authorSignatureHTML = '';
+  if (options.authorKolId) {
+    authorSignatureHTML = await generateAuthorSignatureHTML(options.authorKolId);
+  }
+
+  // ✅ 14. GERAR FOOTER MULTI-DOMAIN
   const multiDomainFooter = excludeFooter ? '' : generateFooterLinks(trackingConfig);
 
-  // ✅ 14. PREPARAR CSS (Critical Inline + External)
+  // ✅ 15. PREPARAR CSS (Critical Inline + External)
   const cssUrl = options.cssUrl || '';
   const criticalCSS = inlineCriticalCSS();
   const externalCSSLinks = cssUrl ? generateCSSLinks(cssUrl) : '';
@@ -327,6 +347,8 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     
     ${blogContentsWithLCP}
     
+    ${authorSignatureHTML}
+    
     ${!excludeFooter && companyFooterHTML ? `<section aria-label="Informações da empresa" class="company-info">${companyFooterHTML}</section>` : ''}
   </main>
   
@@ -340,8 +362,87 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     htmlSize: htmlOutput.length,
     hasTracking: !preview && trackingPixelsHTML.length > 0,
     hasSchemas: consolidatedSchemaJson.length > 0,
-    hasIntelligentLinks: Object.keys(intelligentLinks).length > 0
+    hasIntelligentLinks: Object.keys(intelligentLinks).length > 0,
+    hasAuthorSignature: authorSignatureHTML.length > 0
   });
 
   return htmlOutput;
+}
+
+/**
+ * ✅ FASE 3: Gera HTML da assinatura do autor KOL
+ */
+async function generateAuthorSignatureHTML(authorKolId: string): Promise<string> {
+  try {
+    const { data: kol, error } = await supabase
+      .from('key_opinion_leaders')
+      .select('*')
+      .eq('id', authorKolId)
+      .eq('approved', true)
+      .single();
+    
+    if (error || !kol) {
+      console.warn('⚠️ KOL não encontrado:', authorKolId);
+      return '';
+    }
+    
+    console.log('✅ Gerando assinatura do autor:', kol.full_name);
+    
+    return `
+    <section class="author-signature" aria-label="Sobre o autor" style="margin-top: 40px; padding: 30px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; border-left: 4px solid #007bff;">
+      <div style="display: flex; gap: 20px; align-items: start; flex-wrap: wrap;">
+        ${kol.photo_url ? `
+          <img 
+            src="${kol.photo_url}" 
+            alt="Foto de ${kol.full_name}" 
+            style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+            loading="lazy"
+          />
+        ` : ''}
+        <div style="flex: 1; min-width: 280px;">
+          <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1.5rem;">
+            Sobre o Autor
+          </h3>
+          <p style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600; color: #007bff;">
+            ${kol.full_name}${kol.specialty ? ` - ${kol.specialty}` : ''}
+          </p>
+          ${kol.mini_cv ? `
+            <p style="margin: 0 0 15px 0; line-height: 1.6; color: #555;">
+              ${kol.mini_cv}
+            </p>
+          ` : ''}
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            ${kol.lattes_url ? `
+              <a href="${kol.lattes_url}" target="_blank" rel="noopener noreferrer" 
+                 style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; transition: background 0.3s;">
+                📄 Currículo Lattes
+              </a>
+            ` : ''}
+            ${kol.website_url ? `
+              <a href="${kol.website_url}" target="_blank" rel="noopener noreferrer" 
+                 style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; transition: background 0.3s;">
+                🌐 Website
+              </a>
+            ` : ''}
+            ${kol.instagram_url ? `
+              <a href="${kol.instagram_url}" target="_blank" rel="noopener noreferrer" 
+                 style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #E1306C; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; transition: background 0.3s;">
+                📸 Instagram
+              </a>
+            ` : ''}
+            ${kol.youtube_url ? `
+              <a href="${kol.youtube_url}" target="_blank" rel="noopener noreferrer" 
+                 style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #FF0000; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; transition: background 0.3s;">
+                ▶️ YouTube
+              </a>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    </section>
+    `;
+  } catch (error) {
+    console.error('❌ Erro ao gerar assinatura do autor:', error);
+    return '';
+  }
 }

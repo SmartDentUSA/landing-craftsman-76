@@ -89,7 +89,7 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         };
       });
 
-      // Fetch company profile with SEO Hidden fields
+      // Fetch company profile with SEO Hidden fields + author_kol_id
       const { data: companyProfile } = await supabase
         .from('company_profile')
         .select(`
@@ -102,6 +102,15 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
           seo_service_areas
         `)
         .single();
+      
+      // Buscar author_kol_id da primeira landing page que tiver
+      const authorKolId = landingPageSEOData.find(lp => {
+        const lpData = getLandingPage(lp.id);
+        return lpData?.data?.author_kol_id;
+      })?.id ? getLandingPage(landingPageSEOData.find(lp => {
+        const lpData = getLandingPage(lp.id);
+        return lpData?.data?.author_kol_id;
+      })!.id)?.data?.author_kol_id : undefined;
       
       // Extract SEO Hidden data for enhanced meta descriptions and schemas
       const seoHiddenData = companyProfile ? {
@@ -158,7 +167,7 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         `${seoHiddenData.marketPositioning || `Conteúdo técnico e comercial consolidado para ${domain}`} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos. ${seoHiddenData.competitiveAdvantages}`.substring(0, 160) :
         `Conteúdo técnico e comercial consolidado para ${domain} com ${blogsForDomain.length} blogs e ${selectedProductsData.length} produtos`;
 
-      // Generate consolidated HTML with full SEO integration
+      // Generate consolidated HTML with full SEO integration + KOL author
       const consolidatedHTML = await generateConsolidatedBlogHTML({
         title: `Blog Consolidado - ${domain === 'dentala' ? 'Dentala' : 'Eodonto'}`,
         description: enhancedDescription,
@@ -172,7 +181,8 @@ export function ConsolidatedBlogGenerator({ approvedLandingPages }: Consolidated
         landingPageIdForSEOContext: landingPageId,
         excludeMetaInfo: true,
         excludeFooter: true,
-        excludeSubtitle: true
+        excludeSubtitle: true,
+        authorKolId: authorKolId // ✅ Passar KOL ID
       });
 
       // Copy to clipboard
