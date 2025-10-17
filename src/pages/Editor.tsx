@@ -48,6 +48,7 @@ import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
 import { useExplanatoryVideoAutoSave } from "@/hooks/useExplanatoryVideoAutoSave";
+import { useAnimatedBannerAutoSave } from "@/hooks/useAnimatedBannerAutoSave";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
@@ -1214,6 +1215,7 @@ const EditorContent = () => {
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
   const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
   const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
+  const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner } = useAnimatedBannerAutoSave(updateLandingPage, id);
   const [productsWithTechnicalVideos, setProductsWithTechnicalVideos] = useState<any[]>([]);
   
   // Debounced auto-save for desktop info
@@ -1939,8 +1941,18 @@ const EditorContent = () => {
       },
       animated_banner_section: processedData.animated_banner_section ? {
         ...processedData.animated_banner_section,
+        visible_any: (processedData.animated_banner_section.visible_desktop || processedData.animated_banner_section.visible_mobile) && 
+                      (processedData.animated_banner_section.partners || []).length > 0,
+        visibility_class: processedData.animated_banner_section.visible_desktop && processedData.animated_banner_section.visible_mobile 
+          ? '' 
+          : processedData.animated_banner_section.visible_desktop 
+            ? 'desktop-only' 
+            : 'mobile-only',
         partners: (processedData.animated_banner_section.partners || []).map(p => ({
           ...p,
+          logo_url: p.logo?.supabase_path 
+            ? `https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/${p.logo.supabase_path}`
+            : p.logo?.src || '',
           logo: {
             src: p.logo?.src || '',
             alt: p.logo?.alt || '',
@@ -2208,6 +2220,13 @@ const EditorContent = () => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
+        console.log('🔄 [Editor] Landing page carregada:', {
+          id: landingPage.id,
+          name: landingPage.name,
+          has_animated_banner: !!landingPage.data?.animated_banner_section,
+          partners_count: landingPage.data?.animated_banner_section?.partners?.length || 0
+        });
+        
         // Check if backend data is newer than current state to prevent overwriting local edits
         const backendLastModified = new Date(landingPage.last_modified || 0).getTime();
         const currentLastModified = new Date(data.seo?.lastmod || 0).getTime();
@@ -3653,6 +3672,10 @@ const EditorContent = () => {
                       <Badge variant="secondary">
                         {data.animated_banner_section?.partners?.length || 0} logos
                       </Badge>
+                      <AutoSaveIndicator 
+                        lastSaved={lastSaveAnimatedBanner}
+                        className="ml-auto"
+                      />
                     </div>
                   </AccordionTrigger>
                   
@@ -3670,13 +3693,19 @@ const EditorContent = () => {
                           <div className="flex items-center space-x-2">
                             <Switch 
                               checked={data.animated_banner_section?.visible_desktop ?? true}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                animated_banner_section: { 
-                                  ...prev.animated_banner_section!, 
-                                  visible_desktop: checked 
-                                }
-                              }))}
+                              onCheckedChange={(checked) => {
+                                setData(prev => {
+                                  const updatedData = {
+                                    ...prev,
+                                    animated_banner_section: { 
+                                      ...prev.animated_banner_section!, 
+                                      visible_desktop: checked 
+                                    }
+                                  };
+                                  saveAnimatedBanner(updatedData);
+                                  return updatedData;
+                                });
+                              }}
                             />
                             <Label className="font-medium">Visível no desktop</Label>
                           </div>
@@ -3684,13 +3713,19 @@ const EditorContent = () => {
                           <div className="flex items-center space-x-2">
                             <Switch 
                               checked={data.animated_banner_section?.visible_mobile ?? true}
-                              onCheckedChange={(checked) => setData(prev => ({
-                                ...prev,
-                                animated_banner_section: { 
-                                  ...prev.animated_banner_section!, 
-                                  visible_mobile: checked 
-                                }
-                              }))}
+                              onCheckedChange={(checked) => {
+                                setData(prev => {
+                                  const updatedData = {
+                                    ...prev,
+                                    animated_banner_section: { 
+                                      ...prev.animated_banner_section!, 
+                                      visible_mobile: checked 
+                                    }
+                                  };
+                                  saveAnimatedBanner(updatedData);
+                                  return updatedData;
+                                });
+                              }}
                             />
                             <Label className="font-medium">Visível no mobile</Label>
                           </div>
@@ -3707,13 +3742,19 @@ const EditorContent = () => {
                           <Input
                             id="banner-title"
                             value={data.animated_banner_section?.title ?? 'Empresas Parceiras'}
-                            onChange={(e) => setData(prev => ({
-                              ...prev,
-                              animated_banner_section: { 
-                                ...prev.animated_banner_section!, 
-                                title: e.target.value 
-                              }
-                            }))}
+                            onChange={(e) => {
+                              setData(prev => {
+                                const updatedData = {
+                                  ...prev,
+                                  animated_banner_section: { 
+                                    ...prev.animated_banner_section!, 
+                                    title: e.target.value 
+                                  }
+                                };
+                                saveAnimatedBanner(updatedData);
+                                return updatedData;
+                              });
+                            }}
                             placeholder="Ex: Parceiros de Confiança"
                           />
                         </div>
@@ -3727,16 +3768,20 @@ const EditorContent = () => {
                               seo_description: '',
                               logo: { mode: 'url' as const, src: '', alt: '', scale: 1 }
                             };
-                            setData(prev => ({
-                              ...prev,
-                              animated_banner_section: {
-                                ...prev.animated_banner_section!,
-                                partners: [
-                                  ...(prev.animated_banner_section?.partners || []),
-                                  newPartner
-                                ]
-                              }
-                            }));
+                            setData(prev => {
+                              const updatedData = {
+                                ...prev,
+                                animated_banner_section: {
+                                  ...prev.animated_banner_section!,
+                                  partners: [
+                                    ...(prev.animated_banner_section?.partners || []),
+                                    newPartner
+                                  ]
+                                }
+                              };
+                              saveAnimatedBanner(updatedData);
+                              return updatedData;
+                            });
                             toast({
                               title: "Novo logo adicionado",
                               description: "Faça upload da imagem",
@@ -3761,15 +3806,19 @@ const EditorContent = () => {
                                   <ImageUploader
                                     value={partner.logo}
                                     onChange={(imageData) => {
-                                      setData(prev => ({
-                                        ...prev,
-                                        animated_banner_section: {
-                                          ...prev.animated_banner_section!,
-                                          partners: prev.animated_banner_section!.partners.map((p, i) =>
-                                            i === index ? { ...p, logo: imageData } : p
-                                          )
-                                        }
-                                      }));
+                                      setData(prev => {
+                                        const updatedData = {
+                                          ...prev,
+                                          animated_banner_section: {
+                                            ...prev.animated_banner_section!,
+                                            partners: prev.animated_banner_section!.partners.map((p, i) =>
+                                              i === index ? { ...p, logo: imageData } : p
+                                            )
+                                          }
+                                        };
+                                        saveAnimatedBanner(updatedData);
+                                        return updatedData;
+                                      });
                                     }}
                                     placeholder="Fazer upload do logo"
                                   />
@@ -3786,15 +3835,19 @@ const EditorContent = () => {
                                   <Input
                                     value={partner.name}
                                     onChange={(e) => {
-                                      setData(prev => ({
-                                        ...prev,
-                                        animated_banner_section: {
-                                          ...prev.animated_banner_section!,
-                                          partners: prev.animated_banner_section!.partners.map((p, i) =>
-                                            i === index ? { ...p, name: e.target.value } : p
-                                          )
-                                        }
-                                      }));
+                                      setData(prev => {
+                                        const updatedData = {
+                                          ...prev,
+                                          animated_banner_section: {
+                                            ...prev.animated_banner_section!,
+                                            partners: prev.animated_banner_section!.partners.map((p, i) =>
+                                              i === index ? { ...p, name: e.target.value } : p
+                                            )
+                                          }
+                                        };
+                                        saveAnimatedBanner(updatedData);
+                                        return updatedData;
+                                      });
                                     }}
                                     placeholder="Ex: SmartDent"
                                   />
@@ -3808,15 +3861,19 @@ const EditorContent = () => {
                                   <Textarea
                                     value={partner.seo_description}
                                     onChange={(e) => {
-                                      setData(prev => ({
-                                        ...prev,
-                                        animated_banner_section: {
-                                          ...prev.animated_banner_section!,
-                                          partners: prev.animated_banner_section!.partners.map((p, i) =>
-                                            i === index ? { ...p, seo_description: e.target.value } : p
-                                          )
-                                        }
-                                      }));
+                                      setData(prev => {
+                                        const updatedData = {
+                                          ...prev,
+                                          animated_banner_section: {
+                                            ...prev.animated_banner_section!,
+                                            partners: prev.animated_banner_section!.partners.map((p, i) =>
+                                              i === index ? { ...p, seo_description: e.target.value } : p
+                                            )
+                                          }
+                                        };
+                                        saveAnimatedBanner(updatedData);
+                                        return updatedData;
+                                      });
                                     }}
                                     placeholder="Ex: Líder em odontologia digital"
                                     rows={2}
@@ -3833,13 +3890,17 @@ const EditorContent = () => {
                                   size="sm"
                                   className="w-full"
                                   onClick={() => {
-                                    setData(prev => ({
-                                      ...prev,
-                                      animated_banner_section: {
-                                        ...prev.animated_banner_section!,
-                                        partners: prev.animated_banner_section!.partners.filter((_, i) => i !== index)
-                                      }
-                                    }));
+                                    setData(prev => {
+                                      const updatedData = {
+                                        ...prev,
+                                        animated_banner_section: {
+                                          ...prev.animated_banner_section!,
+                                          partners: prev.animated_banner_section!.partners.filter((_, i) => i !== index)
+                                        }
+                                      };
+                                      saveAnimatedBanner(updatedData);
+                                      return updatedData;
+                                    });
                                     toast({
                                       title: "Logo removido",
                                       description: "Alteração salva",
