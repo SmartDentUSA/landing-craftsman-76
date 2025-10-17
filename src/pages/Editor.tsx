@@ -4,6 +4,7 @@ import { RotateCcw, RotateCw } from "lucide-react";
 import { BannerSection } from "@/components/editor/BannerSection";
 import { SolutionsSection } from "@/components/editor/SolutionsSection";
 import { SEOSection } from "@/components/editor/SEOSection";
+import { KOLSection } from "@/components/editor/KOLSection";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -345,6 +346,7 @@ interface LandingPageData {
     social: Array<{ platform: string; href: string; icon_src: string; icon_alt: string }>;
   };
   email: EmailData;
+  author_kol_id?: string; // ID do KOL que assina o blog estratégico
 }
 
 // Função para criar ImageData padrão
@@ -3165,10 +3167,11 @@ const EditorContent = () => {
           */}
 
           <Tabs defaultValue="landing-page" className="w-full">
-            <TabsList className={`grid w-full ${data.status === 'approved' ? 'grid-cols-5' : 'grid-cols-4'}`}>
+            <TabsList className={`grid w-full ${data.status === 'approved' ? 'grid-cols-6' : 'grid-cols-5'}`}>
               <TabsTrigger value="landing-page">Conteúdo</TabsTrigger>
               <TabsTrigger value="seo-social">SEO & Social</TabsTrigger>
               <TabsTrigger value="schema-offers">Schema & Offers</TabsTrigger>
+              <TabsTrigger value="author">Autor</TabsTrigger>
               <TabsTrigger value="email">Email Marketing</TabsTrigger>
               {data.status === 'approved' && (
                 <TabsTrigger value="google-ads">Google Ads</TabsTrigger>
@@ -6302,6 +6305,16 @@ const EditorContent = () => {
               </Card>
             </TabsContent>
 
+            {/* Aba Autor (KOL) */}
+            <TabsContent value="author" className="space-y-4">
+              <KOLSection
+                selectedKolId={data.author_kol_id}
+                onKolChange={(kolId) => {
+                  setData(prev => ({ ...prev, author_kol_id: kolId }));
+                  dirtyRef.current = true;
+                }}
+              />
+            </TabsContent>
 
             {/* Aba Email Marketing */}
             <TabsContent value="email" className="space-y-4">

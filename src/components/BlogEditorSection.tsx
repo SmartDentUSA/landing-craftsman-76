@@ -348,6 +348,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         content: currentBlog.content,
         meta_description: currentBlog.meta_description,
         keywords: currentBlog.keywords,
+        author_kol_id: landingPageData?.author_kol_id,
         published_domains: [domain],
         version_history: updatedHistory,
         status: 'draft',

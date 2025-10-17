@@ -42,8 +42,6 @@ const App = () => (
           <Route path="/cloudflare-settings" element={<ProtectedRoute><CloudflareSettings /></ProtectedRoute>} />
           <Route path="/publication-settings" element={<ProtectedRoute><PublicationSettings /></ProtectedRoute>} />
           <Route path="/repository" element={<ProtectedRoute><Repository /></ProtectedRoute>} />
-          <Route path="/blog-generator/:id" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
-          <Route path="/blog/:id" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
             <Route path="/google-business-settings" element={<ProtectedRoute><GoogleBusinessOAuthSettings /></ProtectedRoute>} />
             <Route path="/youtube-settings" element={<ProtectedRoute><YouTubeOAuthSettings /></ProtectedRoute>} />
             <Route path="/oauth2/callback" element={<OAuthCallback />} />

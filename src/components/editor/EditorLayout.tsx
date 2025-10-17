@@ -11,12 +11,13 @@ export function EditorLayout({ currentTab, onTabChange, children }: EditorLayout
   return (
     <div className="w-full">
       <Tabs value={currentTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid grid-cols-7 w-full">
+        <TabsList className="grid grid-cols-8 w-full">
           <TabsTrigger value="basic">Básico</TabsTrigger>
           <TabsTrigger value="banner">Banner</TabsTrigger>
           <TabsTrigger value="content">Conteúdo</TabsTrigger>
           <TabsTrigger value="seo">SEO</TabsTrigger>
           <TabsTrigger value="schema">Schema</TabsTrigger>
+          <TabsTrigger value="author">Autor</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="footer">Rodapé</TabsTrigger>
         </TabsList>

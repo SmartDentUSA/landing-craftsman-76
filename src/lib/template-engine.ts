@@ -4017,7 +4017,7 @@ export const generateBlogHTML = (blogData: any, landingPageData: any) => {
     <div class="header">
         <div class="container">
             <div class="header-content">
-                <div class="logo">${landingPageData.brand?.legal_name || 'Blog'}</div>
+                <div class="logo">${landingPageData.brand?.legal_name || landingPageData.company_profile?.company_name || landingPageData.name || 'Blog'}</div>
                 <a href="${landing_page_url}" class="back-link">← Voltar ao site</a>
             </div>
         </div>
