@@ -856,13 +856,34 @@ const DashboardContent = () => {
 
   useEffect(() => {
     const loadHTML = async () => {
-      const eodonto = await generateCleanHTML(blogPosts, 'eodonto');
-      const dentala = await generateCleanHTML(blogPosts, 'dentala');
-      setEodontoCleanHTML(eodonto);
-      setDentalaCleanHTML(dentala);
+      try {
+        const eodonto = await generateCleanHTML(blogPosts, 'eodonto');
+        const dentala = await generateCleanHTML(blogPosts, 'dentala');
+        
+        if (eodonto && eodonto.length > 100) {
+          setEodontoCleanHTML(eodonto);
+          console.log('✅ Eodonto HTML gerado:', eodonto.length, 'caracteres');
+        } else {
+          console.error('❌ Eodonto HTML vazio ou inválido');
+        }
+        
+        if (dentala && dentala.length > 100) {
+          setDentalaCleanHTML(dentala);
+          console.log('✅ Dentala HTML gerado:', dentala.length, 'caracteres');
+        } else {
+          console.error('❌ Dentala HTML vazio ou inválido');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao gerar HTML limpo:', error);
+        toast({
+          title: "Erro ao gerar HTML",
+          description: "Verifique o console para detalhes",
+          variant: "destructive"
+        });
+      }
     };
     loadHTML();
-  }, [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain]);
+  }, [blogPosts, generateCleanHTML, consolidatedBlogs, productBlogsForHTMLByDomain, toast]);
 
   // Cached clean text extraction for preview
   const eodontoCleanText = useMemo(() => 
@@ -876,23 +897,38 @@ const DashboardContent = () => {
   );
 
   const copyConsolidatedHTML = useCallback(async (domain: string) => {
-    // Use clean HTML for copying (without preview structure)
     const html = domain === 'eodonto' ? eodontoCleanHTML : dentalaCleanHTML;
+    const domainName = domain === 'dentala' ? 'Dentala' : 'Eodonto';
+    
+    // Validar antes de copiar
+    if (!html || html.length < 100) {
+      toast({
+        title: "❌ HTML não disponível",
+        description: `O HTML consolidado do ${domainName} ainda não foi gerado. Aguarde ou recarregue a página.`,
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       await navigator.clipboard.writeText(html);
+      const blogsCount = domain === 'eodonto' 
+        ? activeProductBlogsCountByDomain('eodonto')
+        : activeProductBlogsCountByDomain('dentala');
+      
       toast({
-        title: "HTML consolidado copiado!",
-        description: `HTML consolidado do ${domain === 'dentala' ? 'Dentala' : 'Eodonto'} copiado para a área de transferência.`,
+        title: "✅ HTML consolidado copiado!",
+        description: `${(html.length / 1024).toFixed(1)}KB copiados com ${blogsCount} blogs de produtos`,
       });
     } catch (err) {
+      console.error('Erro ao copiar:', err);
       toast({
         title: "Erro ao copiar",
         description: "Não foi possível copiar o HTML. Tente novamente.",
         variant: "destructive",
       });
     }
-  }, [eodontoCleanHTML, dentalaCleanHTML, toast]);
+  }, [eodontoCleanHTML, dentalaCleanHTML, toast, activeProductBlogsCountByDomain]);
 
   const getApprovedBlogsCount = (domain: string) => {
     // Calculate total blogs including products with individual blogs by domain

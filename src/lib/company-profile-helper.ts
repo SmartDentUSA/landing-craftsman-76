@@ -61,15 +61,16 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         institutional_links,
         social_media_links
       `)
-      .maybeSingle();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
     if (error) {
       console.error('Error fetching company profile for SEO:', error);
       return null;
     }
 
-    if (data) {
-      companyProfileCache = data as CompanyProfileData;
+    if (data && data.length > 0) {
+      companyProfileCache = data[0] as CompanyProfileData;
       cacheTimestamp = now;
       return companyProfileCache;
     }
