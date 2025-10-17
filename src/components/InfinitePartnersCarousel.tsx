@@ -8,7 +8,7 @@ interface Partner {
 }
 
 interface Props {
-  title: string;
+  title?: string;
   partners: Partner[];
   visibleDesktop: boolean;
   visibleMobile: boolean;
@@ -34,14 +34,10 @@ export function InfinitePartnersCarousel({
   
   return (
     <section 
-      className={`py-12 bg-muted/30 ${!visibleDesktop ? 'md:hidden' : ''} ${!visibleMobile ? 'hidden md:block' : ''}`}
+      className={`py-6 bg-transparent ${!visibleDesktop ? 'md:hidden' : ''} ${!visibleMobile ? 'hidden md:block' : ''}`}
       aria-label="Empresas Parceiras"
     >
       <div className="container mx-auto px-4">
-        <h2 className="text-center text-2xl md:text-3xl font-bold mb-8 text-foreground">
-          {title}
-        </h2>
-        
         <div className="overflow-hidden">
           <div className="animate-infinite-scroll flex gap-16 items-center">
             {duplicatedPartners.map((partner, index) => (

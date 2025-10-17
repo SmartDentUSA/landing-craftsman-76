@@ -831,6 +831,16 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             background: hsl(var(--muted) / 0.3);
         }
         
+        .animated-banner-inline {
+            margin: 1.25rem 0 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .animated-banner-inline img {
+                height: 4rem !important;
+            }
+        }
+        
         @keyframes infinite-scroll {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
@@ -1604,6 +1614,39 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 <h2>{{desktop_info.title}}</h2>
                 <p>{{desktop_info.text}}</p>
                 
+                {{#animated_banner_section}}
+                {{#visible_any}}
+                <div class="animated-banner-inline {{visibility_class}}">
+                  <div style="overflow: hidden; position: relative;">
+                    <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
+                      {{#partners}}
+                      <img 
+                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
+                        alt="{{name}} - {{seo_description}}"
+                        title="{{seo_description}}"
+                        loading="lazy"
+                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+                        onmouseover="this.style.filter='grayscale(0%)'"
+                        onmouseout="this.style.filter='grayscale(100%)'"
+                      />
+                      {{/partners}}
+                      {{#partners}}
+                      <img 
+                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
+                        alt="{{name}} - {{seo_description}}"
+                        title="{{seo_description}}"
+                        loading="lazy"
+                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+                        onmouseover="this.style.filter='grayscale(0%)'"
+                        onmouseout="this.style.filter='grayscale(100%)'"
+                      />
+                      {{/partners}}
+                    </div>
+                  </div>
+                </div>
+                {{/visible_any}}
+                {{/animated_banner_section}}
+                
                 {{#desktop_info.show_table}}
                 <h3 class="desktop-table-title">{{desktop_info.table_title}}</h3>
                 <table class="desktop-table">
@@ -1845,45 +1888,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </section>
 
-    <!-- ✨ Faixa Animada de Logos -->
-    {{#animated_banner_section}}
-    {{#visible_any}}
-    <section class="animated-banner-section {{visibility_class}}" aria-label="{{title}}">
-      <div class="container">
-        <h2 style="text-align: center; font-size: 1.75rem; font-weight: 700; margin-bottom: 2rem; color: var(--text-color);">
-          {{title}}
-        </h2>
-        
-        <div style="overflow: hidden; position: relative;">
-          <div class="animate-infinite-scroll" style="display: flex; gap: 4rem; align-items: center;">
-            {{#partners}}
-            <img 
-              src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
-              alt="{{name}} - {{seo_description}}"
-              title="{{seo_description}}"
-              loading="lazy"
-              style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
-              onmouseover="this.style.filter='grayscale(0%)'"
-              onmouseout="this.style.filter='grayscale(100%)'"
-            />
-            {{/partners}}
-            {{#partners}}
-            <img 
-              src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
-              alt="{{name}} - {{seo_description}}"
-              title="{{seo_description}}"
-              loading="lazy"
-              style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
-              onmouseover="this.style.filter='grayscale(0%)'"
-              onmouseout="this.style.filter='grayscale(100%)'"
-            />
-            {{/partners}}
-          </div>
-        </div>
-      </div>
-    </section>
-    {{/visible_any}}
-    {{/animated_banner_section}}
 
     <!-- ✨ FASE 1: Especificações Técnicas Section -->
     {{#technical_specs_section}}
