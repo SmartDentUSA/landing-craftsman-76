@@ -107,6 +107,32 @@ const sanitizeBlogContent = (content: string): string => {
   return sanitized.trim();
 };
 
+/**
+ * Gera ícones SVG inline para redes sociais com cores de marca
+ */
+const getSocialIconSVG = (platform: string): string => {
+  const icons = {
+    instagram: `<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`,
+    youtube: `<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>`,
+    lattes: `<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`,
+    website: `<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.9-4.33-3.56zm2.95-8H5.08c.96-1.66 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>`
+  };
+  return icons[platform as keyof typeof icons] || '';
+};
+
+/**
+ * Retorna cor de fundo da marca para cada rede social
+ */
+const getSocialBrandColor = (platform: string): string => {
+  const colors = {
+    instagram: 'background: linear-gradient(135deg, #feda75 0%, #d62976 25%, #962fbf 50%, #4f5bd5 100%)',
+    youtube: 'background: #FF0000',
+    lattes: 'background: #1877F2',
+    website: 'background: #000000'
+  };
+  return colors[platform as keyof typeof colors] || 'background: #000000';
+};
+
 // Função para extrair título do markdown (com filtro de termos banidos)
 const extractTitleFromMarkdown = (content: string): string => {
   if (!content) return '';
@@ -704,6 +730,24 @@ export const useSEOHTMLGenerator = () => {
       
       .content h3 {
         font-size: 1.2rem;
+      }
+    }
+    
+    /* Author Signature Mobile Responsiveness */
+    @media (max-width: 640px) {
+      .author-signature > div {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+      }
+      
+      .author-signature h4,
+      .author-signature p {
+        text-align: center !important;
+      }
+      
+      .author-signature > div > div:first-of-type {
+        justify-content: center !important;
       }
     }
   </style>
@@ -1803,87 +1847,198 @@ export const useSEOHTMLGenerator = () => {
     ` : ''}
 
     ${authorKol ? `
-    <!-- Author Bio Section (E-E-A-T) -->
-    <section class="author-bio" style="
+    <!-- 👤 Author Signature Section (E-E-A-T Enhanced) -->
+    <section class="author-signature" style="
       margin-top: 3rem;
-      padding: 2rem;
-      background: linear-gradient(135deg, hsl(210, 40%, 98%), hsl(210, 40%, 96%));
-      border-radius: 12px;
-      border-left: 4px solid var(--primary-color);
-      box-shadow: var(--shadow-md);
-      display: flex;
-      gap: 1.5rem;
-      align-items: start;
+      background: white;
+      border-radius: 0.75rem;
+      border: 1px solid #e5e7eb;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     ">
-      ${authorKol.photo_url ? `
-      <img 
-        src="${authorKol.photo_url}" 
-        alt="${authorKol.full_name}"
-        style="
-          width: 100px;
-          height: 100px;
+      <div style="
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      ">
+        <!-- Author Photo -->
+        ${authorKol.photo_url ? `
+        <img 
+          src="${authorKol.photo_url}" 
+          alt="${authorKol.full_name}"
+          style="
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #000000;
+            flex-shrink: 0;
+          "
+        />
+        ` : `
+        <div style="
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
-          object-fit: cover;
-          border: 3px solid var(--primary-color);
-          box-shadow: var(--shadow-sm);
+          background: #f3f4f6;
+          border: 2px solid #000000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           flex-shrink: 0;
-        "
-      />
-      ` : ''}
-      <div style="flex: 1;">
-        <h3 style="
-          color: var(--text-color);
-          font-size: 1.25rem;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
-        ">Sobre o Autor</h3>
-        <p style="
-          color: var(--secondary-color);
-          font-weight: 500;
-          margin-bottom: 0.75rem;
-        ">${authorKol.full_name}${authorKol.specialty ? ` - ${authorKol.specialty}` : ''}</p>
-        ${authorKol.mini_cv ? `
-        <p style="
-          color: var(--text-color);
-          line-height: 1.6;
-          margin-bottom: 1rem;
-        ">${authorKol.mini_cv}</p>
-        ` : ''}
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        ">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="#6b7280">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+        </div>
+        `}
+        
+        <!-- Author Content -->
+        <div style="flex: 1; min-width: 0;">
+          <!-- Header: Name + Social Icons -->
+          <div style="
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+          ">
+            <!-- Author Info -->
+            <div style="flex: 1; min-width: 0;">
+              <p style="
+                font-size: 0.75rem;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 0.25rem;
+              ">Sobre o autor</p>
+              <h4 style="
+                font-size: 1.125rem;
+                font-weight: 900;
+                text-transform: uppercase;
+                color: #000000;
+                line-height: 1.25;
+                margin: 0 0 0.25rem 0;
+              ">${authorKol.full_name}</h4>
+              ${authorKol.specialty ? `
+              <p style="
+                font-size: 0.875rem;
+                color: #6b7280;
+                margin-top: 0.25rem;
+              ">${authorKol.specialty}</p>
+              ` : ''}
+            </div>
+            
+            <!-- Social Icons -->
+            <div style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+              align-items: flex-start;
+            ">
+              ${authorKol.instagram_url ? `
+              <a
+                href="${authorKol.instagram_url}"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  border-radius: 50%;
+                  ${getSocialBrandColor('instagram')};
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: opacity 0.2s;
+                  text-decoration: none;
+                "
+                onmouseover="this.style.opacity='0.9'"
+                onmouseout="this.style.opacity='1'"
+              >${getSocialIconSVG('instagram')}</a>
+              ` : ''}
+              ${authorKol.youtube_url ? `
+              <a
+                href="${authorKol.youtube_url}"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="YouTube"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  border-radius: 50%;
+                  ${getSocialBrandColor('youtube')};
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: opacity 0.2s;
+                  text-decoration: none;
+                "
+                onmouseover="this.style.opacity='0.9'"
+                onmouseout="this.style.opacity='1'"
+              >${getSocialIconSVG('youtube')}</a>
+              ` : ''}
+              ${authorKol.website_url ? `
+              <a
+                href="${authorKol.website_url}"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Website"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  border-radius: 50%;
+                  ${getSocialBrandColor('website')};
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: opacity 0.2s;
+                  text-decoration: none;
+                "
+                onmouseover="this.style.opacity='0.9'"
+                onmouseout="this.style.opacity='1'"
+              >${getSocialIconSVG('website')}</a>
+              ` : ''}
+            </div>
+          </div>
+          
+          <!-- Mini Bio Box -->
+          ${authorKol.mini_cv ? `
+          <div style="
+            border-radius: 20px;
+            border: 2px solid #000000;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+          ">
+            <p style="
+              font-size: 0.875rem;
+              color: #000000;
+              line-height: 1.625;
+              text-align: left;
+              margin: 0;
+            ">${authorKol.mini_cv}</p>
+          </div>
+          ` : ''}
+          
+          <!-- Lattes Link -->
           ${authorKol.lattes_url ? `
-          <a href="${authorKol.lattes_url}" target="_blank" rel="noopener" style="
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            transition: var(--transition-smooth);
-          ">📄 Currículo Lattes</a>
-          ` : ''}
-          ${authorKol.website_url ? `
-          <a href="${authorKol.website_url}" target="_blank" rel="noopener" style="
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition-smooth);
-          ">🌐 Website</a>
-          ` : ''}
-          ${authorKol.instagram_url ? `
-          <a href="${authorKol.instagram_url}" target="_blank" rel="noopener" style="
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition-smooth);
-          ">📷 Instagram</a>
-          ` : ''}
-          ${authorKol.youtube_url ? `
-          <a href="${authorKol.youtube_url}" target="_blank" rel="noopener" style="
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition-smooth);
-          ">🎥 YouTube</a>
+          <a
+            href="${authorKol.lattes_url}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              display: inline-block;
+              margin-top: 0.75rem;
+              font-size: 0.875rem;
+              color: #1877F2;
+              text-decoration: none;
+              transition: text-decoration 0.2s;
+            "
+            onmouseover="this.style.textDecoration='underline'"
+            onmouseout="this.style.textDecoration='none'"
+          >Ver Currículo Lattes</a>
           ` : ''}
         </div>
       </div>
