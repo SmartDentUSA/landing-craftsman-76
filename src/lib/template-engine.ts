@@ -28,10 +28,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <!-- Canonical URL -->
     {{#canonical_url}}<link rel="canonical" href="{{canonical_url}}">{{/canonical_url}}
     
-    <!-- Hreflang Tags -->
-    {{#hreflang}}
-    <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
-    {{/hreflang}}
+  <!-- Hreflang Tags -->
+  <link rel="alternate" hreflang="pt-br" href="{{canonical_url}}">
+  {{#hreflang}}
+  {{#lang}}
+  <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
+  {{/lang}}
+  {{/hreflang}}
     
     <!-- Open Graph Tags -->
     {{#og_title}}<meta property="og:title" content="{{og_title}}">{{/og_title}}
@@ -88,6 +91,37 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             --col-4: {{col4}};
             {{/columnVars}}
         }
+        
+        /* Screen reader only - visível para leitores de tela, oculto visualmente */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Skip to main content link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 0 0 4px 0;
+            z-index: 9999;
+            font-weight: 600;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+        
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -1469,11 +1503,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </script>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    
     <!-- Header -->
-    <header class="header-menu">
+    <header class="header-menu" role="banner">
         <div class="container header-menu-container">
             <img class="logo-img" src="{{logo_url}}" alt="{{logo_alt}}">
-            <nav>
+            <nav aria-label="Menu principal de navegação">
                 {{#menu}}
                 <a href="{{href}}">{{label}}</a>
                 {{/menu}}
@@ -1490,20 +1526,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     <div class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
     
     <!-- Mobile menu -->
-    <div class="mobile-menu">
+    <div class="mobile-menu" role="dialog" aria-label="Menu móvel">
         <div class="mobile-menu-header">
             <img class="logo-img" src="{{logo_url}}" alt="{{logo_alt}}">
             <button class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Fechar menu">&times;</button>
         </div>
-        <nav>
+        <nav aria-label="Menu de navegação móvel">
             {{#menu}}
             <a href="{{href}}" onclick="closeMobileMenu()">{{label}}</a>
             {{/menu}}
         </nav>
     </div>
 
-    <!-- Banner principal -->
-    <header class="main-banner">
+    <!-- Conteúdo Principal -->
+    <main id="main-content">
+        <!-- H1 Principal para SEO e Acessibilidade -->
+        <h1 class="sr-only">{{seo_title}}</h1>
+        
+        <!-- Banner principal -->
+        <header class="main-banner">
         <div class="container banner-content">
             <div class="banner-text">
                 <p>{{banner.badge_text}}</p>
@@ -1617,6 +1658,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#animated_banner_section}}
                 {{#visible_any}}
                 <div class="animated-banner-inline {{visibility_class}}">
+                  <h2 class="sr-only">Empresas Parceiras</h2>
                   <div style="overflow: hidden; position: relative;">
                     <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
                       {{#partners}}
@@ -1905,9 +1947,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
       </div>
     </section>
     {{/technical_specs_section}}
+    
+  </main>
 
-    <!-- Footer -->
-    <footer class="footer">
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
         <div class="container footer-grid">
             <div class="footer-info">
                 {{#footer.locations}}
