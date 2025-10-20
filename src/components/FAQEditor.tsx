@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,10 @@ interface FAQEditorProps {
   };
 }
 
-export function FAQEditor({ 
+export const FAQEditor = forwardRef<
+  { blurAllEditors: () => void },
+  FAQEditorProps
+>(({ 
   faqs, 
   onChange, 
   onInsertProductLink,
@@ -28,8 +31,16 @@ export function FAQEditor({
     question: "Pergunta",
     answer: "Digite a resposta com formatação rica..."
   }
-}: FAQEditorProps) {
+}, ref) => {
   const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(null);
+  const editorRefs = useRef<Map<number, { blur: () => void }>>(new Map());
+
+  // Expor método para forçar blur de todos os editores
+  useImperativeHandle(ref, () => ({
+    blurAllEditors: () => {
+      editorRefs.current.forEach(editorRef => editorRef?.blur());
+    }
+  }), []);
 
   const addFaq = () => {
     onChange([...faqs, { question: '', answer: '' }]);
@@ -78,6 +89,10 @@ export function FAQEditor({
           <div>
             <Label>Resposta</Label>
             <RichTextEditor
+              ref={(el) => {
+                if (el) editorRefs.current.set(index, el);
+                else editorRefs.current.delete(index);
+              }}
               content={faqItem.answer}
               onChange={(content) => updateFaq(index, 'answer', content)}
               placeholder={placeholder.answer}
@@ -97,4 +112,4 @@ export function FAQEditor({
       </Button>
     </div>
   );
-}
+});

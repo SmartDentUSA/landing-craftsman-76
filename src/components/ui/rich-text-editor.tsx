@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -17,7 +17,10 @@ interface RichTextEditorProps {
   className?: string;
 }
 
-export const RichTextEditor: React.FC<RichTextEditorProps> = ({
+export const RichTextEditor = forwardRef<
+  { blur: () => void },
+  RichTextEditorProps
+>(({
   content,
   onChange,
   placeholder = "Digite sua resposta...",
@@ -25,7 +28,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onInsertSolutionImage,
   onEditorReady,
   className
-}) => {
+}, ref) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -51,6 +54,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       onEditorReady?.(editor);
     },
   });
+
+  // Expor método blur via ref
+  useImperativeHandle(ref, () => ({
+    blur: () => {
+      if (editor && editor.isFocused) {
+        editor.commands.blur();
+        // Forçar sincronização imediata
+        onChange(editor.getHTML());
+      }
+    }
+  }), [editor, onChange]);
 
   // Sincronizar content prop com o editor interno
   useEffect(() => {
@@ -196,4 +210,4 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       />
     </div>
   );
-};
+});

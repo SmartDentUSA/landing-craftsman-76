@@ -226,6 +226,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [storeCategory, setStoreCategory] = useState('');
   
   const botTagRef = useRef<TagInputHandle>(null);
+  const faqEditorRef = useRef<{ blurAllEditors: () => void }>(null);
   
   // Video states
   const [instagramVideos, setInstagramVideos] = useState<Video[]>([]);
@@ -953,9 +954,40 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
   };
 
   const handleSave = async () => {
+    // ✅ FORÇAR BLUR de todos os editores FAQ antes de salvar
+    faqEditorRef.current?.blurAllEditors();
+    
+    // Aguardar microtask para garantir sincronização
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     console.log('[DEBUG] Iniciando salvamento do produto...');
     console.log('[DEBUG] Dados do formulário:', formData);
     console.log('[DEBUG] botTriggerWords state:', botTriggerWords);
+    
+    // 🔍 DEBUG: Log detalhado dos FAQs antes de salvar
+    console.log('🔍 [FAQ DEBUG] FAQs no momento do salvamento:', {
+      faq: formData.faq,
+      length: formData.faq?.length || 0,
+      items: formData.faq?.map((f, i) => ({
+        index: i,
+        question: f.question?.substring(0, 50) || '(vazio)',
+        answer: f.answer?.substring(0, 50) || '(vazio)',
+        questionLength: f.question?.length || 0,
+        answerLength: f.answer?.length || 0
+      }))
+    });
+    
+    // ⚠️ VALIDAÇÃO: Verificar FAQs incompletos
+    const incompleteFaqs = formData.faq?.filter(item => 
+      !item.question?.trim() || !item.answer?.trim()
+    );
+
+    if (incompleteFaqs && incompleteFaqs.length > 0) {
+      toast({
+        title: "⚠️ FAQs Incompletos",
+        description: `${incompleteFaqs.length} FAQ(s) sem pergunta ou resposta serão removidos ao salvar.`,
+      });
+    }
     
     // ✨ FASE 3: Validação de variações para Google Merchant
     if (variations.length > 0) {
@@ -2108,6 +2140,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </p>
             
             <FAQEditor
+              ref={faqEditorRef}
               faqs={formData.faq || []}
               onChange={(faqs) => setFormData(prev => ({ ...prev, faq: faqs }))}
               placeholder={{
