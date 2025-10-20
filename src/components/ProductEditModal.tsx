@@ -28,6 +28,7 @@ import { ProductAISmartMerge } from './ProductAISmartMerge';
 import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 import { VariationCard } from './VariationCard';
+import { GalleryImageUploader } from './GalleryImageUploader';
 
 interface Video {
   url: string;
@@ -52,6 +53,7 @@ interface Product {
   category?: string;
   subcategory?: string;
   image_url?: string;
+  image_supabase_path?: string;
   product_url?: string;
   target_audience?: string[];
   use_in_ai_generation: boolean;
@@ -73,7 +75,7 @@ interface Product {
   };
   video_captions?: any;
   original_data?: any;
-  images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
+  images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean; supabase_path?: string }>;
   // Google Merchant Center fields
   gtin?: string;
   ean?: string;
@@ -1642,81 +1644,31 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Imagem do Produto</Label>
-            <div className="flex gap-2">
-              <Input
-                type="url"
+          <div className="space-y-4">
+            <div>
+              <Label>Imagem Principal do Produto</Label>
+              <ImageUploader
                 value={formData.image_url || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                onChange={(imageData) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    image_url: imageData.src,
+                    image_supabase_path: imageData.supabase_path 
+                  }));
+                }}
                 placeholder="URL da imagem do produto"
-                className="flex-1"
+                proportionInfo="Recomendado: 800x800px (quadrado) ou 1200x1200px para alta qualidade"
               />
-              {formData.image_url && (
-                 <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                   <OptimizedImage 
-                     src={formData.image_url} 
-                     alt="Preview"
-                     className="w-full h-full object-cover"
-                     width={48}
-                     height={48}
-                     priority={false}
-                   />
-                 </div>
-              )}
             </div>
-            
-            {/* ✨ Galeria de Imagens Importadas */}
-            {imagesGallery.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Galeria Importada ({imagesGallery.length} imagens)</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setImagesGallery([])}
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Limpar
-                  </Button>
-                </div>
-                <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
-                  {imagesGallery.map((img, index) => (
-                    <div 
-                      key={index} 
-                      className="relative rounded-md overflow-hidden bg-muted aspect-square group"
-                    >
-                      <OptimizedImage 
-                        src={img.url} 
-                        alt={img.alt || `Imagem ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        width={80}
-                        height={80}
-                        priority={false}
-                      />
-                      {img.is_main && (
-                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1 py-0.5 rounded">
-                          Principal
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute bottom-1 right-1 h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => {
-                          const newGallery = imagesGallery.filter((_, i) => i !== index);
-                          setImagesGallery(newGallery);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
+            {/* Galeria de Imagens */}
+            <div>
+              <GalleryImageUploader
+                images={imagesGallery}
+                onChange={(newImages) => setImagesGallery(newImages)}
+                maxImages={10}
+              />
+            </div>
           </div>
 
           {/* REMOVIDO: Duplicação do importer */}
