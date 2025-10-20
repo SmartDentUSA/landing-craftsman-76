@@ -466,11 +466,81 @@ function generateAIPlaybookJSON(product: ProductData & {
     },
     ai_content_history: {
       blog_content: product.individual_blog_content || {},
-      whatsapp_messages: product.whatsapp_messages || {},
-      whatsapp_sequences: product.whatsapp_sequences || {},
-      youtube_descriptions: product.youtube_descriptions || {},
-      instagram_copies: product.instagram_copies || {},
-      tiktok_content: product.tiktok_content || {}
+      whatsapp_messages: {
+        messages: (product.whatsapp_messages?.messages || []).map((msg: any) => ({
+          content: msg.content || msg.message,
+          type: msg.type || 'promotional',
+          variation: msg.variation,
+          promo_data: msg.promo_data ? {
+            has_coupon: !!msg.promo_data.coupon_code,
+            coupon_code: msg.promo_data.coupon_code,
+            discount_percentage: msg.promo_data.discount_percentage,
+            original_price: msg.promo_data.original_price,
+            promo_price: msg.promo_data.promo_price,
+            savings: msg.promo_data.savings
+          } : null
+        })),
+        total_messages: product.whatsapp_messages?.messages?.length || 0,
+        last_generated: product.whatsapp_messages?.last_generated
+      },
+      whatsapp_sequences: {
+        sequences: (product.whatsapp_sequences?.sequences || []).map((seq: any) => ({
+          name: seq.name,
+          approach: seq.approach || 'educational',
+          total_messages: seq.messages?.length || 0,
+          messages: (seq.messages || []).map((msg: any) => ({
+            day: msg.day,
+            message: msg.message,
+            content_html: msg.content_html || null,
+            has_media: !!msg.media_url,
+            media_url: msg.media_url
+          }))
+        })),
+        total_sequences: product.whatsapp_sequences?.sequences?.length || 0,
+        last_generated: product.whatsapp_sequences?.last_generated
+      },
+      youtube_descriptions: {
+        descriptions: (product.youtube_descriptions?.descriptions || []).map((desc: any) => ({
+          description: desc.description,
+          suggested_title: desc.suggested_title || desc.title || null,
+          suggested_tags: desc.suggested_tags || desc.tags || [],
+          variation: desc.variation,
+          video_type: desc.video_type || 'promotional',
+          company_footer_template: desc.company_footer_template || desc.footer || null,
+          total_length: desc.description?.length || 0
+        })),
+        total_descriptions: product.youtube_descriptions?.descriptions?.length || 0,
+        last_generated: product.youtube_descriptions?.last_generated
+      },
+      instagram_copies: {
+        copies: (product.instagram_copies?.copies || []).map((copy: any) => ({
+          copy: copy.copy,
+          type: copy.type || 'carousel',
+          hashtags: copy.hashtags || [],
+          call_to_action: copy.call_to_action || copy.cta || null,
+          external_link: copy.external_link || copy.link || null,
+          variation: copy.variation,
+          total_hashtags: (copy.hashtags || []).length,
+          total_length: copy.copy?.length || 0
+        })),
+        total_copies: product.instagram_copies?.copies?.length || 0,
+        last_generated: product.instagram_copies?.last_generated,
+        template_config: product.instagram_copies?.template_config || {}
+      },
+      tiktok_content: {
+        copies: (product.tiktok_content?.copies || []).map((copy: any) => ({
+          copy: copy.copy,
+          hook_3_seconds: copy.hook_3_seconds || copy.hook || null,
+          video_script: copy.video_script || copy.script || null,
+          call_to_action: copy.call_to_action || copy.cta || null,
+          trending_references: copy.trending_references || copy.trends || [],
+          hashtags: copy.hashtags || [],
+          variation: copy.variation,
+          total_length: copy.copy?.length || 0
+        })),
+        total_copies: product.tiktok_content?.copies?.length || 0,
+        last_generated: product.tiktok_content?.last_generated
+      }
     },
     ai_automation: {
       bot_trigger_words: product.bot_trigger_words || [],
@@ -513,12 +583,16 @@ function generateAIPlaybookJSON(product: ProductData & {
       commercial_blog: {
         content: product.product_blogs?.commercial || null,
         preview: product.product_blogs?.commercial?.substring(0, 200) || null,
-        has_content: !!product.product_blogs?.commercial
+        has_content: !!product.product_blogs?.commercial,
+        intelligent_links: extractIntelligentLinks(product.product_blogs?.commercial || ''),
+        ctas: extractCTAs(product.product_blogs?.commercial || '')
       },
       technical_blog: {
         content: product.product_blogs?.technical || null,
         preview: product.product_blogs?.technical?.substring(0, 200) || null,
-        has_content: !!product.product_blogs?.technical
+        has_content: !!product.product_blogs?.technical,
+        intelligent_links: extractIntelligentLinks(product.product_blogs?.technical || ''),
+        ctas: extractCTAs(product.product_blogs?.technical || '')
       },
       generated_at: product.product_blogs?.generated_at || null
     },
@@ -559,7 +633,52 @@ function generateAIPlaybookJSON(product: ProductData & {
   };
 }
 
-function generatePlaybookTXT(product: ProductData & { 
+/**
+ * Extrai links inteligentes de conteúdo de blog
+ */
+function extractIntelligentLinks(blogContent: string): Array<{url: string; anchor: string; position: number}> {
+  if (!blogContent) return [];
+  
+  const linkRegex = /<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  const links: Array<{url: string; anchor: string; position: number}> = [];
+  let match;
+  
+  while ((match = linkRegex.exec(blogContent)) !== null) {
+    links.push({
+      url: match[1],
+      anchor: match[2],
+      position: match.index
+    });
+  }
+  
+  return links;
+}
+
+/**
+ * Extrai CTAs de conteúdo de blog
+ */
+function extractCTAs(blogContent: string): Array<{text: string; url?: string; type: string}> {
+  if (!blogContent) return [];
+  
+  const ctas: Array<{text: string; url?: string; type: string}> = [];
+  
+  // CTAs com links
+  const ctaLinkRegex = /<a[^>]+href="([^"]+)"[^>]*class="[^"]*cta[^"]*"[^>]*>([^<]+)<\/a>/gi;
+  let match;
+  while ((match = ctaLinkRegex.exec(blogContent)) !== null) {
+    ctas.push({ text: match[2], url: match[1], type: 'link' });
+  }
+  
+  // Botões CTA
+  const ctaButtonRegex = /<button[^>]*class="[^"]*cta[^"]*"[^>]*>([^<]+)<\/button>/gi;
+  while ((match = ctaButtonRegex.exec(blogContent)) !== null) {
+    ctas.push({ text: match[1], type: 'button' });
+  }
+  
+  return ctas;
+}
+
+function generatePlaybookTXT(product: ProductData & {
   cs_messages?: any[]; 
   aftersales_messages?: any[];
   google_ads_campaigns?: any[];
@@ -669,42 +788,155 @@ ${product.bot_trigger_words?.length ? product.bot_trigger_words.map(word => `- "
 - Status IA: ${product.use_in_ai_generation ? '✅ HABILITADO' : '❌ DESABILITADO'}
 
 ## 📱 CONTEÚDO IA GERADO
+${'='.repeat(80)}
 
-### Blog Content:
+### 📝 Blog Content:
 ${product.individual_blog_content?.commercial ? '✅ Blog Comercial Disponível' : '❌ Blog Comercial Pendente'}
 ${product.individual_blog_content?.technical ? '✅ Blog Técnico Disponível' : '❌ Blog Técnico Pendente'}
 ${product.individual_blog_content?.generated_at ? `📅 Gerado em: ${new Date(product.individual_blog_content.generated_at).toLocaleString('pt-BR')}` : ''}
 
-### WhatsApp Messages:
-${product.whatsapp_messages?.messages?.length ? `✅ ${product.whatsapp_messages.messages.length} mensagens geradas` : '❌ Mensagens pendentes'}
+### 💬 WhatsApp Messages:
+${product.whatsapp_messages?.messages?.length ? `
+✅ ${product.whatsapp_messages.messages.length} mensagens geradas
+${product.whatsapp_messages.messages.slice(0, 3).map((msg: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Mensagem ${idx + 1} (${msg.type || 'promotional'}):
+${msg.content || msg.message}
+${msg.promo_data ? `
+💰 Dados Promocionais:
+  • Cupom: ${msg.promo_data.coupon_code || 'N/A'}
+  • Desconto: ${msg.promo_data.discount_percentage || 0}%
+  • Preço Original: R$ ${msg.promo_data.original_price || 'N/A'}
+  • Preço Promo: R$ ${msg.promo_data.promo_price || 'N/A'}
+  • Economia: R$ ${msg.promo_data.savings || 'N/A'}
+` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`).join('\n')}
+${product.whatsapp_messages.messages.length > 3 ? `\n... e mais ${product.whatsapp_messages.messages.length - 3} mensagens` : ''}
+` : '❌ Mensagens pendentes'}
 ${product.whatsapp_messages?.last_generated ? `📅 Última geração: ${new Date(product.whatsapp_messages.last_generated).toLocaleString('pt-BR')}` : ''}
 
-### WhatsApp Sequences (Sequências):
-${product.whatsapp_sequences?.sequences?.length ? `✅ ${product.whatsapp_sequences.sequences.length} sequências geradas` : '❌ Sequências pendentes'}
-${product.whatsapp_sequences?.sequences?.map((seq: any, idx: number) => 
-  `  Sequência ${idx + 1}: ${seq.messages?.length || 0} mensagens`
-).join('\n') || ''}
+### 🔄 WhatsApp Sequences (Sequências):
+${product.whatsapp_sequences?.sequences?.length ? `
+✅ ${product.whatsapp_sequences.sequences.length} sequências geradas
+${product.whatsapp_sequences.sequences.map((seq: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Sequência ${idx + 1}: ${seq.name}
+Abordagem: ${seq.approach || 'educational'}
+Total de Mensagens: ${seq.messages?.length || 0}
+
+${seq.messages?.slice(0, 2).map((msg: any) => `
+  📅 Dia ${msg.day}:
+  ${msg.message}
+  ${msg.content_html ? '[HTML disponível]' : ''}
+  ${msg.media_url ? `📎 Mídia: ${msg.media_url}` : ''}
+`).join('\n')}
+${seq.messages?.length > 2 ? `  ... e mais ${seq.messages.length - 2} mensagens` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`).join('\n')}
+` : '❌ Sequências pendentes'}
 ${product.whatsapp_sequences?.last_generated ? `📅 Última geração: ${new Date(product.whatsapp_sequences.last_generated).toLocaleString('pt-BR')}` : ''}
 
-### YouTube Descriptions:
-${product.youtube_descriptions?.descriptions?.length ? `✅ ${product.youtube_descriptions.descriptions.length} descrições geradas` : '❌ Descrições pendentes'}
+### 📺 YouTube Descriptions:
+${product.youtube_descriptions?.descriptions?.length ? `
+✅ ${product.youtube_descriptions.descriptions.length} descrições geradas
+${product.youtube_descriptions.descriptions.slice(0, 2).map((desc: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Descrição ${idx + 1} (${desc.video_type || 'promotional'}):
+
+📌 Título Sugerido: ${desc.suggested_title || desc.title || 'N/A'}
+
+📝 Descrição:
+${desc.description.substring(0, 300)}...
+
+🏷️ Tags Sugeridas:
+${(desc.suggested_tags || desc.tags || []).slice(0, 10).join(', ')}${(desc.suggested_tags || desc.tags || []).length > 10 ? ` e mais ${(desc.suggested_tags || desc.tags).length - 10}` : ''}
+
+${desc.company_footer_template || desc.footer ? `
+📍 Rodapé da Empresa:
+${(desc.company_footer_template || desc.footer).substring(0, 200)}...
+` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`).join('\n')}
+${product.youtube_descriptions.descriptions.length > 2 ? `\n... e mais ${product.youtube_descriptions.descriptions.length - 2} descrições` : ''}
+` : '❌ Descrições pendentes'}
 ${product.youtube_descriptions?.last_generated ? `📅 Última geração: ${new Date(product.youtube_descriptions.last_generated).toLocaleString('pt-BR')}` : ''}
 
-### Instagram Copies:
-${product.instagram_copies?.copies?.length ? `✅ ${product.instagram_copies.copies.length} copies gerados` : '❌ Copies pendentes'}
+### 📸 Instagram Copies:
+${product.instagram_copies?.copies?.length ? `
+✅ ${product.instagram_copies.copies.length} copies gerados
+${product.instagram_copies.copies.slice(0, 2).map((copy: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Copy ${idx + 1} (${copy.type || 'carousel'}):
+
+${copy.copy.substring(0, 200)}...
+
+🏷️ Hashtags (${(copy.hashtags || []).length}):
+${(copy.hashtags || []).slice(0, 10).join(' ')}${(copy.hashtags || []).length > 10 ? ` +${(copy.hashtags || []).length - 10}` : ''}
+
+${copy.call_to_action || copy.cta ? `📢 CTA: ${copy.call_to_action || copy.cta}` : ''}
+${copy.external_link || copy.link ? `🔗 Link: ${copy.external_link || copy.link}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`).join('\n')}
+${product.instagram_copies.copies.length > 2 ? `\n... e mais ${product.instagram_copies.copies.length - 2} copies` : ''}
+` : '❌ Copies pendentes'}
 ${product.instagram_copies?.last_generated ? `📅 Última geração: ${new Date(product.instagram_copies.last_generated).toLocaleString('pt-BR')}` : ''}
 
-### TikTok Content:
-${product.tiktok_content?.copies?.length ? `✅ ${product.tiktok_content.copies.length} conteúdos gerados` : '❌ Conteúdo pendente'}
+### 🎵 TikTok Content:
+${product.tiktok_content?.copies?.length ? `
+✅ ${product.tiktok_content.copies.length} conteúdos gerados
+${product.tiktok_content.copies.slice(0, 2).map((copy: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Conteúdo ${idx + 1}:
+
+${copy.hook_3_seconds || copy.hook ? `🎣 Hook (3 seg): "${copy.hook_3_seconds || copy.hook}"` : ''}
+
+${copy.video_script || copy.script ? `
+🎬 Script do Vídeo:
+${(copy.video_script || copy.script).substring(0, 200)}...
+` : ''}
+
+📝 Copy:
+${copy.copy.substring(0, 200)}...
+
+${copy.call_to_action || copy.cta ? `📢 CTA: ${copy.call_to_action || copy.cta}` : ''}
+
+${(copy.trending_references || copy.trends || []).length > 0 ? `
+🔥 Tendências Usadas:
+${(copy.trending_references || copy.trends).slice(0, 3).map((t: any) => `  • ${t}`).join('\n')}
+` : ''}
+
+🏷️ Hashtags: ${(copy.hashtags || []).slice(0, 5).join(' ')}${(copy.hashtags || []).length > 5 ? ` +${(copy.hashtags || []).length - 5}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`).join('\n')}
+${product.tiktok_content.copies.length > 2 ? `\n... e mais ${product.tiktok_content.copies.length - 2} conteúdos` : ''}
+` : '❌ Conteúdo pendente'}
 ${product.tiktok_content?.last_generated ? `📅 Última geração: ${new Date(product.tiktok_content.last_generated).toLocaleString('pt-BR')}` : ''}
 
 ## 📝 BLOGS INDIVIDUAIS DO PRODUTO
+${'='.repeat(80)}
 
 ### Blog Comercial:
 ${product.product_blogs?.commercial ? `
 ✅ Disponível
+
 Conteúdo (Preview):
 ${product.product_blogs.commercial.substring(0, 500)}...
+
+${(product as any).product_blogs?.commercial_intelligent_links?.length > 0 ? `
+🔗 Links Inteligentes (${(product as any).product_blogs.commercial_intelligent_links.length}):
+${(product as any).product_blogs.commercial_intelligent_links.slice(0, 3).map((link: any) => 
+  `  • ${link.anchor} → ${link.url}`
+).join('\n')}
+${(product as any).product_blogs.commercial_intelligent_links.length > 3 ? `  ... e mais ${(product as any).product_blogs.commercial_intelligent_links.length - 3} links` : ''}
+` : ''}
+
+${(product as any).product_blogs?.commercial_ctas?.length > 0 ? `
+📢 CTAs Detectados (${(product as any).product_blogs.commercial_ctas.length}):
+${(product as any).product_blogs.commercial_ctas.map((cta: any) => 
+  `  • [${cta.type}] ${cta.text}${cta.url ? ` → ${cta.url}` : ''}`
+).join('\n')}
+` : ''}
 
 [Conteúdo completo disponível no JSON]
 ` : '❌ Blog comercial não gerado'}
@@ -712,8 +944,24 @@ ${product.product_blogs.commercial.substring(0, 500)}...
 ### Blog Técnico:
 ${product.product_blogs?.technical ? `
 ✅ Disponível
+
 Conteúdo (Preview):
 ${product.product_blogs.technical.substring(0, 500)}...
+
+${(product as any).product_blogs?.technical_intelligent_links?.length > 0 ? `
+🔗 Links Inteligentes (${(product as any).product_blogs.technical_intelligent_links.length}):
+${(product as any).product_blogs.technical_intelligent_links.slice(0, 3).map((link: any) => 
+  `  • ${link.anchor} → ${link.url}`
+).join('\n')}
+${(product as any).product_blogs.technical_intelligent_links.length > 3 ? `  ... e mais ${(product as any).product_blogs.technical_intelligent_links.length - 3} links` : ''}
+` : ''}
+
+${(product as any).product_blogs?.technical_ctas?.length > 0 ? `
+📢 CTAs Detectados (${(product as any).product_blogs.technical_ctas.length}):
+${(product as any).product_blogs.technical_ctas.map((cta: any) => 
+  `  • [${cta.type}] ${cta.text}${cta.url ? ` → ${cta.url}` : ''}`
+).join('\n')}
+` : ''}
 
 [Conteúdo completo disponível no JSON]
 ` : '❌ Blog técnico não gerado'}
