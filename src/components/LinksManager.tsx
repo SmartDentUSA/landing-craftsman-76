@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, ExternalLink, Edit, Trash2, Search, Filter, Download } from 'lucide-react';
+import { Plus, ExternalLink, Edit, Trash2, Search, Filter, Download, RefreshCw } from 'lucide-react';
 import { useLinksRepository, ExternalLink as ExternalLinkType } from '@/hooks/useLinksRepository';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useCategoryConfig } from '@/hooks/useCategoryConfig';
@@ -24,7 +24,7 @@ interface KeywordLink {
 }
 
 export const LinksManager = () => {
-  const { allLinks, isLoading, addExternalLink, updateExternalLink, deleteExternalLink, externalLinks } = useLinksRepository();
+  const { allLinks, isLoading, addExternalLink, updateExternalLink, deleteExternalLink, externalLinks, syncWithProducts } = useLinksRepository();
   const { categories, getSubcategoriesForCategory, loading: categoriesLoading } = useProductCategories();
   const { configs: categoryConfigs, loading: configsLoading } = useCategoryConfig();
   
@@ -343,91 +343,11 @@ export const LinksManager = () => {
     }
   };
 
-  const handleImportKeywords = async () => {
+  const handleSyncWithProducts = async () => {
     try {
-      const { data: products, error } = await supabase
-        .from('products_repository')
-        .select('id, name, keywords, search_intent_keywords, category, subcategory')
-        .eq('approved', true);
-
-      if (error) {
-        console.error('Erro ao buscar produtos:', error);
-        toast.error('Não foi possível buscar os produtos.');
-        return;
-      }
-
-      if (!products || products.length === 0) {
-        toast.error('Não há produtos aprovados para importar keywords.');
-        return;
-      }
-
-      const allKeywords = new Set<string>();
-      
-      products.forEach(product => {
-        if (product.keywords && Array.isArray(product.keywords)) {
-          product.keywords.forEach((keyword: string) => {
-            if (keyword && keyword.trim()) {
-              allKeywords.add(keyword.trim().toLowerCase());
-            }
-          });
-        }
-        
-        if (product.search_intent_keywords && Array.isArray(product.search_intent_keywords)) {
-          product.search_intent_keywords.forEach((keyword: string) => {
-            if (keyword && keyword.trim()) {
-              allKeywords.add(keyword.trim().toLowerCase());
-            }
-          });
-        }
-      });
-
-      const existingKeywords = new Set(
-        externalLinks
-          .filter(link => link.category?.includes('keyword'))
-          .map(link => link.name.toLowerCase())
-      );
-      const newKeywords = Array.from(allKeywords).filter(keyword => !existingKeywords.has(keyword));
-
-      if (newKeywords.length === 0) {
-        toast.error('Todas as keywords dos produtos já estão na lista.');
-        return;
-      }
-
-      const promises = newKeywords.map(keyword => {
-        const sourceProduct = products.find(p => {
-          const keywords = Array.isArray(p.keywords) ? p.keywords : [];
-          const searchIntentKeywords = Array.isArray(p.search_intent_keywords) ? p.search_intent_keywords : [];
-          
-          return keywords.some((k: string) => k.toLowerCase() === keyword) ||
-                 searchIntentKeywords.some((k: string) => k.toLowerCase() === keyword);
-        });
-        
-        // Use actual registered categories as fallback instead of hardcoded values
-        const originalCategory = sourceProduct?.category || dynamicCategories[0]?.value || '';
-        const originalSubcategory = sourceProduct?.subcategory || (originalCategory ? dynamicSubcategories[originalCategory]?.[0] || '' : '');
-        
-        // Formato da descrição atualizado para facilitar a detecção
-        const description = sourceProduct 
-          ? `Keyword do produto: ${sourceProduct.name} (${originalCategory}${originalSubcategory && originalSubcategory !== 'geral' ? ` • ${originalSubcategory}` : ''})`
-          : 'Keyword importada dos produtos (origem não identificada)';
-        
-        return addExternalLink({
-          name: keyword,
-          url: sourceProduct ? `/produto/${sourceProduct.id}` : '#',
-          category: originalCategory,
-          subcategory: originalSubcategory,
-          description,
-          approved: true
-        });
-      });
-
-      await Promise.all(promises);
-      
-      toast.success(`${newKeywords.length} keywords importadas com suas categorias originais dos produtos.`);
-
+      await syncWithProducts();
     } catch (error) {
-      console.error('Erro ao importar keywords:', error);
-      toast.error('Ocorreu um erro inesperado ao importar keywords.');
+      console.error('Erro ao sincronizar:', error);
     }
   };
 
@@ -460,19 +380,13 @@ export const LinksManager = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={handleImportKeywords}
+            onClick={handleSyncWithProducts}
             variant="outline"
             className="flex items-center gap-2"
+            disabled={isLoading}
           >
-            <Download className="w-4 h-4" />
-            Importar dos Produtos
-          </Button>
-          <Button 
-            onClick={() => window.location.reload()}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            Recarregar
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Sincronizar com Produtos
           </Button>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>

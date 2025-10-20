@@ -159,6 +159,97 @@ export const useLinksRepository = () => {
     }
   };
 
+  const syncWithProducts = async () => {
+    try {
+      setIsLoading(true);
+      toast.info('Sincronizando keywords com produtos...');
+
+      const { data: products, error: productsError } = await supabase
+        .from('products_repository')
+        .select('id, name, product_url, category, subcategory, description, keywords, search_intent_keywords')
+        .eq('approved', true);
+
+      if (productsError) throw productsError;
+
+      if (!products || products.length === 0) {
+        toast.warning('Nenhum produto aprovado encontrado.');
+        setIsLoading(false);
+        return;
+      }
+
+      const upsertPromises: Promise<void>[] = [];
+      let keywordsProcessed = 0;
+
+      products.forEach(product => {
+        const productKeywords = new Set<string>();
+        
+        if (product.name) {
+          productKeywords.add(product.name.toLowerCase().trim());
+        }
+        
+        if (Array.isArray(product.keywords)) {
+          product.keywords.forEach((kw: any) => {
+            const keyword = typeof kw === 'string' ? kw : kw?.keyword || kw?.name;
+            if (keyword?.trim()) {
+              productKeywords.add(keyword.toLowerCase().trim());
+            }
+          });
+        }
+        
+        if (Array.isArray(product.search_intent_keywords)) {
+          product.search_intent_keywords.forEach((kw: any) => {
+            const keyword = typeof kw === 'string' ? kw : kw?.keyword || kw?.name;
+            if (keyword?.trim()) {
+              productKeywords.add(keyword.toLowerCase().trim());
+            }
+          });
+        }
+
+        Array.from(productKeywords).forEach(keyword => {
+          keywordsProcessed++;
+          
+          const destinationUrl = product.product_url || `/produto/${product.id}`;
+          const description = `Keyword sincronizada do produto: ${product.name} (${product.category}${product.subcategory ? ` • ${product.subcategory}` : ''})`;
+          
+          const upsertData = {
+            name: keyword,
+            url: destinationUrl,
+            category: product.category || 'produto',
+            subcategory: product.subcategory || null,
+            description: description,
+            approved: true,
+            source_products: [product.id],
+            ai_generated: false
+          };
+
+          const promise = (async () => {
+            await supabase
+              .from('external_links')
+              .upsert(upsertData, {
+                onConflict: 'name',
+                ignoreDuplicates: false
+              })
+              .select();
+          })();
+
+          upsertPromises.push(promise);
+        });
+      });
+
+      await Promise.allSettled(upsertPromises);
+      await loadExternalLinks();
+
+      toast.success(`Sincronização concluída! ${keywordsProcessed} keywords processadas.`);
+
+    } catch (error) {
+      console.error('Error syncing with products:', error);
+      toast.error('Erro ao sincronizar com produtos');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -177,6 +268,7 @@ export const useLinksRepository = () => {
     addExternalLink,
     updateExternalLink,
     deleteExternalLink,
+    syncWithProducts,
     refreshData: () => Promise.all([loadExternalLinks(), loadInternalLinks()])
   };
 };

@@ -529,6 +529,75 @@ export type Database = {
         }
         Relationships: []
       }
+      external_links_backup_20250120: {
+        Row: {
+          ai_generated: boolean | null
+          approved: boolean | null
+          category: string | null
+          competition_level: string | null
+          cpc_estimate: number | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          keyword_type: string | null
+          last_used_at: string | null
+          monthly_searches: number | null
+          name: string | null
+          related_keywords: string[] | null
+          relevance_score: number | null
+          search_intent: string | null
+          source_products: string[] | null
+          subcategory: string | null
+          updated_at: string | null
+          url: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          approved?: boolean | null
+          category?: string | null
+          competition_level?: string | null
+          cpc_estimate?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          keyword_type?: string | null
+          last_used_at?: string | null
+          monthly_searches?: number | null
+          name?: string | null
+          related_keywords?: string[] | null
+          relevance_score?: number | null
+          search_intent?: string | null
+          source_products?: string[] | null
+          subcategory?: string | null
+          updated_at?: string | null
+          url?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          ai_generated?: boolean | null
+          approved?: boolean | null
+          category?: string | null
+          competition_level?: string | null
+          cpc_estimate?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          keyword_type?: string | null
+          last_used_at?: string | null
+          monthly_searches?: number | null
+          name?: string | null
+          related_keywords?: string[] | null
+          relevance_score?: number | null
+          search_intent?: string | null
+          source_products?: string[] | null
+          subcategory?: string | null
+          updated_at?: string | null
+          url?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       external_links_backup_20251013: {
         Row: {
           approved: boolean | null
