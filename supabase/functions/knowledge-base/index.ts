@@ -20,30 +20,6 @@ interface KnowledgeBaseParams {
   offset?: number;
 }
 
-// Rate limiting simple (em memória)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(apiKey: string): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const limit = 100; // 100 requests per minute
-  const window = 60 * 1000; // 1 minute
-  
-  const existing = rateLimitMap.get(apiKey);
-  
-  if (!existing || now > existing.resetAt) {
-    const resetAt = now + window;
-    rateLimitMap.set(apiKey, { count: 1, resetAt });
-    return { allowed: true, remaining: limit - 1, resetAt };
-  }
-  
-  if (existing.count >= limit) {
-    return { allowed: false, remaining: 0, resetAt: existing.resetAt };
-  }
-  
-  existing.count++;
-  return { allowed: true, remaining: limit - existing.count, resetAt: existing.resetAt };
-}
-
 function formatAsJSON(data: any): any {
   return {
     api_version: "1.0.0",
@@ -239,67 +215,7 @@ serve(async (req) => {
   }
 
   try {
-    // Validar API Key
-    const apiKey = req.headers.get('x-api-key');
-    const validApiKey = Deno.env.get('KNOWLEDGE_BASE_API_KEY');
-    
-    console.log('🔐 API Key validation:', {
-      received: apiKey ? '***' + apiKey.slice(-4) : 'null',
-      expected: validApiKey ? '***' + validApiKey.slice(-4) : 'null',
-      match: apiKey === validApiKey
-    });
-    
-    if (!apiKey) {
-      console.warn('⚠️ Missing x-api-key header');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing authorization header',
-          message: 'Please provide x-api-key header with your API key'
-        }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    
-    if (apiKey !== validApiKey) {
-      console.warn('⚠️ Invalid API key provided');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid API key',
-          message: 'The provided API key is not valid'
-        }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    
-    console.log('✅ API Key validated successfully');
-    
-    // Rate limiting
-    const rateLimit = checkRateLimit(apiKey);
-    if (!rateLimit.allowed) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded',
-          message: 'Maximum 100 requests per minute',
-          reset_at: new Date(rateLimit.resetAt).toISOString()
-        }),
-        { 
-          status: 429,
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json',
-            'X-RateLimit-Limit': '100',
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(rateLimit.resetAt).toISOString()
-          }
-        }
-      );
-    }
+    console.log('🌐 Public API - No authentication required');
 
     // Parse query parameters
     const url = new URL(req.url);
@@ -364,10 +280,7 @@ serve(async (req) => {
       {
         headers: {
           ...corsHeaders,
-          'Content-Type': contentType,
-          'X-RateLimit-Limit': '100',
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-          'X-RateLimit-Reset': new Date(rateLimit.resetAt).toISOString()
+          'Content-Type': contentType
         }
       }
     );

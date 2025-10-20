@@ -1,5 +1,8 @@
 project_id = "pgfgripuanuwwolmtknn"
 
+[functions.knowledge-base]
+verify_jwt = false
+
 [functions.get-product-data]
 verify_jwt = false
 
