@@ -87,7 +87,13 @@ export function ProductLojaIntegradaImporter({
   // Helper function to check if field should be updated
   const shouldUpdate = (currentValue: any): boolean => {
     if (overwriteData) return true;
-    if (currentValue === null || currentValue === undefined || currentValue === '') return true;
+    if (currentValue === null || currentValue === undefined) return true;
+    
+    // Treat 0 or "0" as empty for numeric fields
+    if (typeof currentValue === 'number' && (isNaN(currentValue) || currentValue <= 0)) return true;
+    if (typeof currentValue === 'string' && currentValue.trim() === '') return true;
+    if (typeof currentValue === 'string' && /^0+(,0+|\.0+)?$/.test(currentValue.trim())) return true; // "0", "0,00", "0.00"
+    
     if (Array.isArray(currentValue) && currentValue.length === 0) return true;
     return false;
   };
@@ -289,7 +295,7 @@ export function ProductLojaIntegradaImporter({
         const { data, error } = await supabase.functions.invoke('import-loja-integrada-api', {
           body: {
             ...(productId && { productId: productId.trim() }),
-            ...(productUrl && !productId && { productUrl: productUrl.trim() }),
+            ...(productUrl && { productUrl: productUrl.trim() }), // sempre envia URL se disponível
             endpoint: 'produtos'
           }
         });
