@@ -1,0 +1,446 @@
+{
+  "info": {
+    "name": "Knowledge Base API",
+    "description": "API completa para acesso à base de conhecimento (250+ campos)\n\nDocumentação: https://github.com/seu-repo/docs/KNOWLEDGE_BASE_API.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "123456"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "value",
+        "value": "{{KNOWLEDGE_BASE_API_KEY}}",
+        "type": "string"
+      },
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-base",
+      "type": "string"
+    },
+    {
+      "key": "KNOWLEDGE_BASE_API_KEY",
+      "value": "YOUR_API_KEY_HERE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Básicos",
+      "item": [
+        {
+          "name": "Get Complete Knowledge Base (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": ["{{base_url}}"]
+            },
+            "description": "Retorna a base de conhecimento completa no formato JSON estruturado com todos os 250+ campos."
+          }
+        },
+        {
+          "name": "Get AI Training Format",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?format=ai_training",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "ai_training"
+                }
+              ]
+            },
+            "description": "Retorna a base de conhecimento em formato texto otimizado para treinar LLMs (GPT, Claude, etc)."
+          }
+        },
+        {
+          "name": "Get System B Format",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?format=system_b",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "system_b"
+                }
+              ]
+            },
+            "description": "Retorna estrutura flat otimizada para sistemas legados."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Filtros por Entidade",
+      "item": [
+        {
+          "name": "Only Company Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_categories=false&include_links=false&include_products=false",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_categories",
+                  "value": "false"
+                },
+                {
+                  "key": "include_links",
+                  "value": "false"
+                },
+                {
+                  "key": "include_products",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Retorna apenas o perfil da empresa (60+ campos)."
+          }
+        },
+        {
+          "name": "Only Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_company=false&include_categories=false&include_links=false",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_company",
+                  "value": "false"
+                },
+                {
+                  "key": "include_categories",
+                  "value": "false"
+                },
+                {
+                  "key": "include_links",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Retorna apenas produtos com relacionamentos (150+ campos por produto)."
+          }
+        },
+        {
+          "name": "Only Keywords Repository",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_company=false&include_categories=false&include_products=false",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_company",
+                  "value": "false"
+                },
+                {
+                  "key": "include_categories",
+                  "value": "false"
+                },
+                {
+                  "key": "include_products",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Retorna apenas o repositório de links/keywords (25+ campos por link)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Filtros por Categoria",
+      "item": [
+        {
+          "name": "Products by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?category=Odontologia",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Odontologia"
+                }
+              ]
+            },
+            "description": "Retorna produtos de uma categoria específica."
+          }
+        },
+        {
+          "name": "Links by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?category=Produto&include_products=false",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Produto"
+                },
+                {
+                  "key": "include_products",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Retorna links/keywords de uma categoria específica."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Paginação",
+      "item": [
+        {
+          "name": "Products - Page 1 (50 items)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?limit=50&offset=0",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Primeira página de produtos (1-50)."
+          }
+        },
+        {
+          "name": "Products - Page 2 (50 items)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?limit=50&offset=50",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Segunda página de produtos (51-100)."
+          }
+        },
+        {
+          "name": "Products - Large Batch (200 items)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?limit=200",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "200"
+                }
+              ]
+            },
+            "description": "Retorna até 200 produtos (para importação em massa)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Casos de Uso Específicos",
+      "item": [
+        {
+          "name": "Google Merchant Feed Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_company=false&include_categories=false&include_links=false&approved_only=true&limit=500",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_company",
+                  "value": "false"
+                },
+                {
+                  "key": "include_categories",
+                  "value": "false"
+                },
+                {
+                  "key": "include_links",
+                  "value": "false"
+                },
+                {
+                  "key": "approved_only",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "Dados otimizados para gerar feed do Google Merchant."
+          }
+        },
+        {
+          "name": "CRM Sync (Products + Company)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_categories=false&include_links=false&format=system_b",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_categories",
+                  "value": "false"
+                },
+                {
+                  "key": "include_links",
+                  "value": "false"
+                },
+                {
+                  "key": "format",
+                  "value": "system_b"
+                }
+              ]
+            },
+            "description": "Dados para sincronização com CRM (HubSpot, Salesforce)."
+          }
+        },
+        {
+          "name": "Analytics Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_company=false&include_links=false",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_company",
+                  "value": "false"
+                },
+                {
+                  "key": "include_links",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Dados para dashboards Power BI, Metabase, etc."
+          }
+        },
+        {
+          "name": "E-commerce Sync (Shopify, Loja Integrada)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?include_company=false&include_categories=false&include_links=false&approved_only=true",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "include_company",
+                  "value": "false"
+                },
+                {
+                  "key": "include_categories",
+                  "value": "false"
+                },
+                {
+                  "key": "include_links",
+                  "value": "false"
+                },
+                {
+                  "key": "approved_only",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Produtos aprovados para sincronizar com e-commerce."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Testes de Erro",
+      "item": [
+        {
+          "name": "Test 401 - Invalid API Key",
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "INVALID_KEY",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "x-api-key",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": ["{{base_url}}"]
+            },
+            "description": "Testa resposta com API Key inválida (deve retornar 401)."
+          }
+        },
+        {
+          "name": "Test 429 - Rate Limit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": ["{{base_url}}"]
+            },
+            "description": "Execute este request 101+ vezes em menos de 1 minuto para testar rate limiting (deve retornar 429)."
+          }
+        }
+      ]
+    }
+  ]
+}

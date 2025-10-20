@@ -1554,6 +1554,19 @@ export type Database = {
         Args: { product_id: string }
         Returns: Json
       }
+      get_complete_knowledge_base: {
+        Args: {
+          p_approved_only?: boolean
+          p_category?: string
+          p_include_categories?: boolean
+          p_include_company?: boolean
+          p_include_links?: boolean
+          p_include_products?: boolean
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
