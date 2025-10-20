@@ -3,18 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, X, GripVertical, Star, Loader2 } from "lucide-react";
+import { Upload, X, GripVertical, Star, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { sanitizeFileNameToAlt } from "@/lib/seo-image-helpers";
+import { sanitizeFileNameToAlt, validateAltText } from "@/lib/seo-image-helpers";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
-interface GalleryImage {
+export interface GalleryImage {
   url: string;
   alt: string;
   order: number;
   is_main: boolean;
   supabase_path?: string;
+  width?: number;
+  height?: number;
 }
 
 interface GalleryImageUploaderProps {
@@ -31,9 +35,33 @@ export const GalleryImageUploader = ({
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const uploadToSupabase = async (file: File): Promise<{ url: string; path: string }> => {
+  const getImageDimensions = async (file: File): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: img.width, height: img.height });
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Não foi possível carregar a imagem'));
+      };
+      
+      img.src = url;
+    });
+  };
+
+  const uploadToSupabase = async (
+    file: File
+  ): Promise<{ url: string; path: string; width: number; height: number }> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `gallery/${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+
+    // Get image dimensions before upload
+    const dimensions = await getImageDimensions(file);
 
     const { error: uploadError } = await supabase.storage
       .from('product-images')
@@ -48,7 +76,12 @@ export const GalleryImageUploader = ({
       .from('product-images')
       .getPublicUrl(fileName);
 
-    return { url: publicUrl, path: fileName };
+    return { 
+      url: publicUrl, 
+      path: fileName,
+      width: dimensions.width,
+      height: dimensions.height
+    };
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +130,9 @@ export const GalleryImageUploader = ({
         alt: sanitizeFileNameToAlt(validFiles[index].name),
         order: images.length + index,
         is_main: images.length === 0 && index === 0,
-        supabase_path: result.path
+        supabase_path: result.path,
+        width: result.width,
+        height: result.height
       }));
 
       onChange([...images, ...newImages]);
@@ -154,6 +189,9 @@ export const GalleryImageUploader = ({
     onChange(updatedImages);
   };
 
+  const hasInvalidAltTexts = images.some(img => !validateAltText(img.alt).valid);
+  const hasMainImage = images.some(img => img.is_main);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -180,6 +218,28 @@ export const GalleryImageUploader = ({
           )}
         </Button>
       </div>
+
+      {/* SEO Warnings */}
+      {images.length > 0 && (
+        <div className="space-y-2">
+          {hasInvalidAltTexts && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Algumas imagens possuem alt text inválido. Corrija para melhorar o SEO.
+              </AlertDescription>
+            </Alert>
+          )}
+          {!hasMainImage && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Nenhuma imagem marcada como principal. Marque a imagem mais importante.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
 
       <input
         id="gallery-upload"
@@ -234,21 +294,45 @@ export const GalleryImageUploader = ({
                                 src={image.url}
                                 alt={image.alt}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
+                                width={image.width}
+                                height={image.height}
                               />
                               {image.is_main && (
                                 <div className="absolute top-1 right-1">
                                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                                 </div>
                               )}
+                              {!validateAltText(image.alt).valid && (
+                                <div className="absolute top-1 left-1 bg-destructive rounded-full p-1">
+                                  <AlertCircle className="h-3 w-3 text-destructive-foreground" />
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex-1 space-y-2">
-                              <Input
-                                placeholder="Texto alternativo"
-                                value={image.alt}
-                                onChange={(e) => handleUpdateAlt(index, e.target.value)}
-                                className="text-sm"
-                              />
+                              <div className="space-y-1">
+                                <Input
+                                  placeholder="Texto alternativo (obrigatório para SEO)"
+                                  value={image.alt}
+                                  onChange={(e) => handleUpdateAlt(index, e.target.value)}
+                                  className={cn(
+                                    "text-sm",
+                                    !validateAltText(image.alt).valid && "border-destructive"
+                                  )}
+                                />
+                                {!validateAltText(image.alt).valid && (
+                                  <p className="text-xs text-destructive">
+                                    {validateAltText(image.alt).message}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {image.alt.length}/125 caracteres
+                                  {image.width && image.height && (
+                                    <> · {image.width}x{image.height}px</>
+                                  )}
+                                </p>
+                              </div>
                               <div className="flex gap-2">
                                 {!image.is_main && (
                                   <Button
