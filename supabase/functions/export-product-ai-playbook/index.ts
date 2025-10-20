@@ -356,6 +356,30 @@ function normalizeAndConsolidateVideos(
   return { by_platform: byPlatform, by_category: byCategory, all_videos: allVideos, sources_summary: sourcesSummary };
 }
 
+/**
+ * Agrupa links por categoria
+ */
+function groupLinksByCategory(links: any[]): Record<string, number> {
+  const grouped: Record<string, number> = {};
+  links.forEach(link => {
+    const category = link.category || 'sem-categoria';
+    grouped[category] = (grouped[category] || 0) + 1;
+  });
+  return grouped;
+}
+
+/**
+ * Agrupa links por tipo de keyword
+ */
+function groupLinksByType(links: any[]): Record<string, number> {
+  const grouped: Record<string, number> = {};
+  links.forEach(link => {
+    const type = link.keyword_type || 'indefinido';
+    grouped[type] = (grouped[type] || 0) + 1;
+  });
+  return grouped;
+}
+
 function generateAIPlaybookJSON(product: ProductData & {
   cs_messages?: any[]; 
   aftersales_messages?: any[];
@@ -363,6 +387,7 @@ function generateAIPlaybookJSON(product: ProductData & {
   landing_page_context?: any;
   related_landing_pages?: any[];
   product_blogs?: any;
+  intelligent_links_repository?: any[];
 }): any {
   return {
     product_id: product.id,
@@ -664,6 +689,42 @@ function generateAIPlaybookJSON(product: ProductData & {
         canonical_url: lp.data?.seo?.canonical_url || null,
         has_embed: !!lp.embed
       })) || []
+    },
+    intelligent_links_repository: {
+      total_links: (product.intelligent_links_repository || []).length,
+      by_category: groupLinksByCategory(product.intelligent_links_repository || []),
+      by_keyword_type: groupLinksByType(product.intelligent_links_repository || []),
+      top_links: (product.intelligent_links_repository || [])
+        .slice(0, 20)
+        .map((link: any) => ({
+          name: link.name,
+          url: link.url,
+          description: link.description,
+          category: link.category,
+          subcategory: link.subcategory,
+          keyword_type: link.keyword_type,
+          search_intent: link.search_intent,
+          monthly_searches: link.monthly_searches,
+          cpc_estimate: link.cpc_estimate,
+          competition_level: link.competition_level,
+          relevance_score: link.relevance_score,
+          related_keywords: link.related_keywords || [],
+          usage_stats: {
+            usage_count: link.usage_count || 0,
+            last_used_at: link.last_used_at
+          },
+          ai_generated: link.ai_generated || false,
+          source_products: link.source_products || []
+        })),
+      all_links: (product.intelligent_links_repository || []).map((link: any) => ({
+        id: link.id,
+        name: link.name,
+        url: link.url,
+        category: link.category,
+        keyword_type: link.keyword_type,
+        search_intent: link.search_intent,
+        relevance_score: link.relevance_score
+      }))
     },
     customer_service_prompts: [
       `Produto: ${product.name}`,
@@ -1110,6 +1171,41 @@ ${product.resource_cta3?.visible ? `3️⃣ ${product.resource_cta3.label || 'CT
 
 ${product.offer_discount_cta?.visible ? `🔥 ${product.offer_discount_cta.label || 'Comprar com Desconto'} → ${product.offer_discount_cta.url || 'URL não definida'}` : '🔥 CTA Desconto: ❌ Não configurado'}
 
+## 🔗 REPOSITÓRIO DE LINKS INTELIGENTES (${(product.intelligent_links_repository || []).length} links)
+
+### 📊 Distribuição por Categoria:
+${Object.entries(groupLinksByCategory(product.intelligent_links_repository || []))
+  .map(([cat, count]) => `- ${cat}: ${count} links`)
+  .join('\n') || '- Nenhuma categoria'}
+
+### 🎯 Distribuição por Tipo de Keyword:
+${Object.entries(groupLinksByType(product.intelligent_links_repository || []))
+  .map(([type, count]) => `- ${type}: ${count} links`)
+  .join('\n') || '- Nenhum tipo definido'}
+
+### 🔝 TOP 20 LINKS MAIS RELEVANTES:
+
+${(product.intelligent_links_repository || [])
+  .slice(0, 20)
+  .map((link: any, idx: number) => `
+${idx + 1}. **${link.name}**
+   🔗 URL: ${link.url}
+   📂 Categoria: ${link.category}${link.subcategory ? ` > ${link.subcategory}` : ''}
+   🎯 Tipo: ${link.keyword_type || 'N/A'} | Intenção: ${link.search_intent || 'N/A'}
+   📊 Relevância: ${link.relevance_score || 0}/100
+   📈 Buscas/mês: ${link.monthly_searches || 'N/A'} | CPC: R$ ${link.cpc_estimate || 'N/A'}
+   🔥 Concorrência: ${link.competition_level || 'N/A'}
+   📝 ${link.description || 'Sem descrição'}
+   🤖 Gerado por IA: ${link.ai_generated ? 'SIM' : 'NÃO'}
+   📊 Usado ${link.usage_count || 0} vezes${link.last_used_at ? ` | Última vez: ${new Date(link.last_used_at).toLocaleDateString('pt-BR')}` : ''}
+   ${link.related_keywords?.length ? `🏷️ Keywords relacionadas: ${link.related_keywords.join(', ')}` : ''}
+`).join('\n---\n') || '- Nenhum link disponível'}
+
+### 📋 LISTA COMPLETA DE LINKS (${(product.intelligent_links_repository || []).length} total):
+${(product.intelligent_links_repository || [])
+  .map((link: any) => `- [${link.keyword_type || '?'}] ${link.name} → ${link.url} (Relevância: ${link.relevance_score || 0})`)
+  .join('\n') || '- Nenhum link disponível'}
+
 ## 💬 MENSAGENS DE CS (CUSTOMER SUCCESS)
 ${(product.cs_messages && product.cs_messages.length > 0) ? 
   product.cs_messages.map((msg: any, idx: number) => 
@@ -1437,6 +1533,21 @@ serve(async (req) => {
       .select('*')
       .eq('product_id', productId);
 
+    // Fetch intelligent links repository (external_links)
+    const { data: intelligentLinksRepo, error: linksError } = await supabase
+      .from('external_links')
+      .select('*')
+      .eq('approved', true)
+      .order('relevance_score', { ascending: false, nullsFirst: false })
+      .order('usage_count', { ascending: false })
+      .limit(100); // Limitar aos 100 links mais relevantes
+
+    if (linksError) {
+      console.warn('⚠️ Erro ao buscar intelligent links:', linksError.message);
+    }
+
+    console.log(`🔗 Links inteligentes carregados: ${intelligentLinksRepo?.length || 0}`);
+
     // Fetch landing page context if product has source_landing_page_id
     let landingPageContext: any = null;
     let landingPageVideos: any[] = [];
@@ -1525,7 +1636,8 @@ serve(async (req) => {
       landing_page_context: landingPageContext,
       related_landing_pages: relatedLandingPages || [],
       product_blogs: productBlogs,
-      consolidatedVideos
+      consolidatedVideos,
+      intelligent_links_repository: intelligentLinksRepo || []
     };
 
     // Generate content based on format
