@@ -165,7 +165,8 @@ async function fetchWithRetry(
 }
 
 async function fetchFromLojaIntegradaAPI(
-  apiKey: string,
+  lojaApiKey: string,
+  appKey: string,
   endpoint: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   // Check circuit breaker
@@ -180,15 +181,22 @@ async function fetchFromLojaIntegradaAPI(
   const startTime = Date.now();
 
   try {
-    const url = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
+    // Garantir que endpoint sempre comece com /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${LOJA_INTEGRADA_API_BASE}${normalizedEndpoint}`;
     console.log(`📡 Fetching from Loja Integrada API: ${url}`);
+    console.log('🔑 Auth:', {
+      lojaApiKey: lojaApiKey.substring(0, 8) + '...',
+      appKey: appKey.substring(0, 8) + '...'
+    });
 
     const response = await fetchWithRetry(
       url,
       {
         method: 'GET',
         headers: {
-          'Authorization': `chave_api ${apiKey}`,
+          'Authorization': `chave_api ${lojaApiKey}`,
+          'X-Chave-Aplicacao': appKey,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
@@ -543,16 +551,17 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
+    const lojaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
+    const appKey = Deno.env.get('LOJA_INTEGRADA_APP_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!lojaIntegradaApiKey) {
-      throw new Error('LOJA_INTEGRADA_API_KEY not configured');
+    if (!lojaApiKey || !appKey) {
+      throw new Error('Chaves da Loja Integrada não configuradas (LOJA_INTEGRADA_API_KEY e LOJA_INTEGRADA_APP_KEY)');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { productId, productUrl, endpoint = '/produtos' } = await req.json();
+    const { productId, productUrl, endpoint = 'produto' } = await req.json();
 
     console.log('🚀 Starting product import:', { productId, productUrl, endpoint });
 
@@ -572,10 +581,10 @@ serve(async (req) => {
     // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, `${endpoint}/${productId}`);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/${endpoint}/${productId}`);
     } else if (!productUrl) {
       // Se não tem nem productId nem productUrl, tenta o endpoint genérico
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/${endpoint}`);
     }
 
     let finalData: any = null;
@@ -636,8 +645,9 @@ serve(async (req) => {
           if (extractedProductId && !productId) {
             console.log(`🔄 Trying API with extracted ID: ${extractedProductId}`);
             const apiRetry = await fetchFromLojaIntegradaAPI(
-              lojaIntegradaApiKey,
-              `${endpoint}/${extractedProductId}`
+              lojaApiKey,
+              appKey,
+              `/${endpoint}/${extractedProductId}`
             );
             
             if (apiRetry.success && apiRetry.data) {
