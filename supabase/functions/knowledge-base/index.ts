@@ -4,6 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
 };
 
 interface KnowledgeBaseParams {
@@ -225,7 +227,15 @@ serve(async (req) => {
 
   if (req.method === 'OPTIONS') {
     console.log('✅ CORS preflight request handled');
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204, // No Content (best practice for OPTIONS)
+      headers: corsHeaders 
+    });
+  }
+
+  // Log GET requests specifically
+  if (req.method === 'GET') {
+    console.log('🎯 GET request received - processing...');
   }
 
   try {
