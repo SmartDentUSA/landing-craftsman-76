@@ -161,7 +161,202 @@ interface ProductData {
   source_type?: string;
 }
 
-function generateAIPlaybookJSON(product: ProductData & { 
+/**
+ * Remove HTML tags e decodifica entidades HTML
+ */
+function stripHTML(html: string): string {
+  if (!html) return '';
+  
+  let text = html.replace(/<[^>]*>/g, '');
+  
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+  
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  return text;
+}
+
+/**
+ * Normaliza URL removendo parâmetros UTM
+ */
+function normalizeUrl(url: string): string {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete('utm_source');
+    parsed.searchParams.delete('utm_medium');
+    parsed.searchParams.delete('utm_campaign');
+    parsed.searchParams.delete('utm_content');
+    parsed.searchParams.delete('utm_term');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Detecta plataforma pela URL
+ */
+function detectPlatform(url: string): 'youtube' | 'instagram' | 'tiktok' | 'other' {
+  if (!url) return 'other';
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return 'youtube';
+  if (lowerUrl.includes('instagram.com')) return 'instagram';
+  if (lowerUrl.includes('tiktok.com')) return 'tiktok';
+  return 'other';
+}
+
+/**
+ * Interface para vídeo normalizado
+ */
+interface NormalizedVideo {
+  url: string;
+  description: string;
+  title?: string;
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'other';
+  source: 'product' | 'landing_page' | 'company';
+  category: 'tutorial' | 'technical' | 'testimonial' | 'promotional';
+}
+
+/**
+ * Consolida e normaliza vídeos de múltiplas fontes
+ */
+function normalizeAndConsolidateVideos(
+  product: any,
+  landingPageVideos?: any[],
+  companyVideos?: any
+): {
+  by_platform: {
+    youtube: NormalizedVideo[];
+    instagram: NormalizedVideo[];
+    tiktok: NormalizedVideo[];
+  };
+  by_category: {
+    tutorials: NormalizedVideo[];
+    technical: NormalizedVideo[];
+    testimonials: NormalizedVideo[];
+    promotional: NormalizedVideo[];
+  };
+  all_videos: NormalizedVideo[];
+  sources_summary: {
+    youtube: { product: number; landing_page: number; company: number };
+    instagram: { product: number; landing_page: number; company: number };
+    tiktok: { product: number; landing_page: number; company: number };
+    total: number;
+  };
+} {
+  const allVideos: NormalizedVideo[] = [];
+  const seenUrls = new Set<string>();
+  
+  const addVideo = (
+    url: string,
+    description: string,
+    category: 'tutorial' | 'technical' | 'testimonial' | 'promotional',
+    source: 'product' | 'landing_page' | 'company'
+  ) => {
+    if (!url) return;
+    const normalizedUrl = normalizeUrl(url);
+    if (seenUrls.has(normalizedUrl)) return;
+    
+    seenUrls.add(normalizedUrl);
+    allVideos.push({
+      url,
+      description: description || 'Vídeo sem descrição',
+      platform: detectPlatform(url),
+      source,
+      category
+    });
+  };
+  
+  // 1. PRIORIDADE: Vídeos do produto
+  (product.youtube_videos || []).forEach((v: any) => 
+    addVideo(v.url, v.description, 'promotional', 'product')
+  );
+  
+  (product.instagram_videos || []).forEach((v: any) => 
+    addVideo(v.url, v.description, 'promotional', 'product')
+  );
+  
+  (product.tiktok_videos || []).forEach((v: any) => 
+    addVideo(v.url, v.description, 'promotional', 'product')
+  );
+  
+  (product.technical_videos || []).forEach((v: any) => 
+    addVideo(v.url, v.description, 'technical', 'product')
+  );
+  
+  (product.testimonial_videos || []).forEach((v: any) => 
+    addVideo(v.url, v.description, 'testimonial', 'product')
+  );
+  
+  (product.tutorial_resources?.tutorials || []).forEach((t: any) => 
+    addVideo(t.courseUrl, t.courseName, 'tutorial', 'product')
+  );
+  
+  // 2. FALLBACK: Vídeos da landing page (até 5)
+  if (landingPageVideos && allVideos.length < 10) {
+    landingPageVideos.slice(0, 5).forEach((v: any) => 
+      addVideo(v.youtube_url || v.instagram_url, v.testimonial_text || v.client_name, 'testimonial', 'landing_page')
+    );
+  }
+  
+  // 3. FALLBACK: Vídeos da empresa (até 3 por tipo)
+  if (companyVideos && allVideos.length < 10) {
+    (companyVideos.youtube_videos || []).slice(0, 3).forEach((v: any) => 
+      addVideo(v.url, v.description, 'promotional', 'company')
+    );
+    
+    (companyVideos.instagram_videos || []).slice(0, 3).forEach((v: any) => 
+      addVideo(v.url, v.description, 'promotional', 'company')
+    );
+  }
+  
+  // Agrupar por plataforma
+  const byPlatform = {
+    youtube: allVideos.filter(v => v.platform === 'youtube'),
+    instagram: allVideos.filter(v => v.platform === 'instagram'),
+    tiktok: allVideos.filter(v => v.platform === 'tiktok')
+  };
+  
+  // Agrupar por categoria
+  const byCategory = {
+    tutorials: allVideos.filter(v => v.category === 'tutorial'),
+    technical: allVideos.filter(v => v.category === 'technical'),
+    testimonials: allVideos.filter(v => v.category === 'testimonial'),
+    promotional: allVideos.filter(v => v.category === 'promotional')
+  };
+  
+  // Resumo de fontes
+  const sourcesSummary = {
+    youtube: {
+      product: byPlatform.youtube.filter(v => v.source === 'product').length,
+      landing_page: byPlatform.youtube.filter(v => v.source === 'landing_page').length,
+      company: byPlatform.youtube.filter(v => v.source === 'company').length
+    },
+    instagram: {
+      product: byPlatform.instagram.filter(v => v.source === 'product').length,
+      landing_page: byPlatform.instagram.filter(v => v.source === 'landing_page').length,
+      company: byPlatform.instagram.filter(v => v.source === 'company').length
+    },
+    tiktok: {
+      product: byPlatform.tiktok.filter(v => v.source === 'product').length,
+      landing_page: byPlatform.tiktok.filter(v => v.source === 'landing_page').length,
+      company: byPlatform.tiktok.filter(v => v.source === 'company').length
+    },
+    total: allVideos.length
+  };
+  
+  return { by_platform: byPlatform, by_category: byCategory, all_videos: allVideos, sources_summary: sourcesSummary };
+}
+
+function generateAIPlaybookJSON(product: ProductData & {
   cs_messages?: any[]; 
   aftersales_messages?: any[];
   google_ads_campaigns?: any[];
@@ -236,11 +431,36 @@ function generateAIPlaybookJSON(product: ProductData & {
       product_image: product.image_url,
       images_gallery: product.images_gallery || [],
       product_url: product.product_url,
-      youtube_videos: product.youtube_videos || [],
-      instagram_videos: product.instagram_videos || [],
-      technical_videos: product.technical_videos || [],
-      testimonial_videos: product.testimonial_videos || [],
-      tiktok_videos: product.tiktok_videos || [],
+      
+      // VÍDEOS CONSOLIDADOS E NORMALIZADOS
+      videos_consolidated: (product as any).consolidatedVideos?.by_platform || {
+        youtube: product.youtube_videos || [],
+        instagram: product.instagram_videos || [],
+        tiktok: product.tiktok_videos || []
+      },
+      videos_by_category: (product as any).consolidatedVideos?.by_category || {
+        tutorials: [],
+        technical: product.technical_videos || [],
+        testimonials: product.testimonial_videos || [],
+        promotional: []
+      },
+      all_videos: (product as any).consolidatedVideos?.all_videos || [],
+      video_sources_summary: (product as any).consolidatedVideos?.sources_summary || {
+        youtube: { product: 0, landing_page: 0, company: 0 },
+        instagram: { product: 0, landing_page: 0, company: 0 },
+        tiktok: { product: 0, landing_page: 0, company: 0 },
+        total: 0
+      },
+      total_videos: (product as any).consolidatedVideos?.sources_summary?.total || 0,
+      
+      // Arrays originais (compatibilidade)
+      youtube_videos: (product as any).consolidatedVideos?.by_platform?.youtube || product.youtube_videos || [],
+      instagram_videos: (product as any).consolidatedVideos?.by_platform?.instagram || product.instagram_videos || [],
+      tiktok_videos: (product as any).consolidatedVideos?.by_platform?.tiktok || product.tiktok_videos || [],
+      technical_videos: (product as any).consolidatedVideos?.by_category?.technical || product.technical_videos || [],
+      testimonial_videos: (product as any).consolidatedVideos?.by_category?.testimonials || product.testimonial_videos || [],
+      tutorial_videos: (product as any).consolidatedVideos?.by_category?.tutorials || [],
+      
       video_captions: product.video_captions || {},
       tutorial_resources: product.tutorial_resources || { tutorials: [] }
     },
@@ -510,65 +730,61 @@ ${product.product_blogs?.generated_at ? `📅 Gerado em: ${new Date(product.prod
 - Imagem Principal: ${product.image_url || 'N/A'}
 - Galeria de Imagens: ${product.images_gallery?.length ? `${product.images_gallery.length} imagens` : 'Sem galeria'}
 
-### Vídeos:
+## 🎥 VÍDEOS E TUTORIAIS
+${'='.repeat(80)}
 
-#### 📺 Vídeos YouTube (${product.youtube_videos?.length || 0}):
-${product.youtube_videos?.length ? 
-  product.youtube_videos.map((video: any, idx: number) => `
-  ${idx + 1}. URL: ${video.url}
-     Descrição: ${video.description || 'Sem descrição'}
-  `).join('\n')
-: '📭 Nenhum vídeo YouTube cadastrado'}
+Links de Vídeos: ${(product as any).consolidatedVideos?.sources_summary?.total || 0} vídeos cadastrados
 
-#### 📷 Vídeos Instagram (${product.instagram_videos?.length || 0}):
-${product.instagram_videos?.length ?
-  product.instagram_videos.map((video: any, idx: number) => `
-  ${idx + 1}. URL: ${video.url}
-     Descrição: ${video.description || 'Sem descrição'}
-  `).join('\n')
-: '📭 Nenhum vídeo Instagram cadastrado'}
+${(product as any).consolidatedVideos?.by_category?.tutorials?.length > 0 ? `
+📚 TUTORIAIS (${(product as any).consolidatedVideos.by_category.tutorials.length}):
+${(product as any).consolidatedVideos.by_category.tutorials.map((v: any, i: number) => `
+  ${i+1}. ${v.description}
+     URL: ${v.url}
+     Plataforma: ${v.platform} | Fonte: ${v.source}
+`).join('')}
+` : ''}
 
-#### 🔧 Vídeos Técnicos (${product.technical_videos?.length || 0}):
-${product.technical_videos?.length ?
-  product.technical_videos.map((video: any, idx: number) => `
-  ${idx + 1}. URL: ${video.url}
-     Descrição: ${video.description || 'Sem descrição'}
-  `).join('\n')
-: '📭 Nenhum vídeo técnico cadastrado'}
+${(product as any).consolidatedVideos?.by_category?.technical?.length > 0 ? `
+🔬 VÍDEOS TÉCNICOS (${(product as any).consolidatedVideos.by_category.technical.length}):
+${(product as any).consolidatedVideos.by_category.technical.map((v: any, i: number) => `
+  ${i+1}. ${v.description}
+     URL: ${v.url}
+     Plataforma: ${v.platform} | Fonte: ${v.source}
+`).join('')}
+` : ''}
 
-#### 💬 Vídeos Depoimentos (${product.testimonial_videos?.length || 0}):
-${product.testimonial_videos?.length ?
-  product.testimonial_videos.map((video: any, idx: number) => `
-  ${idx + 1}. URL: ${video.url}
-     Descrição: ${video.description || 'Sem descrição'}
-  `).join('\n')
-: '📭 Nenhum vídeo depoimento cadastrado'}
+${(product as any).consolidatedVideos?.by_category?.testimonials?.length > 0 ? `
+🎥 DEPOIMENTOS (${(product as any).consolidatedVideos.by_category.testimonials.length}):
+${(product as any).consolidatedVideos.by_category.testimonials.map((v: any, i: number) => `
+  ${i+1}. ${v.description}
+     URL: ${v.url}
+     Plataforma: ${v.platform} | Fonte: ${v.source}
+`).join('')}
+` : ''}
 
-#### 🎵 Vídeos TikTok (${product.tiktok_videos?.length || 0}):
-${product.tiktok_videos?.length ?
-  product.tiktok_videos.map((video: any, idx: number) => `
-  ${idx + 1}. URL: ${video.url}
-     Descrição: ${video.description || 'Sem descrição'}
-  `).join('\n')
-: '📭 Nenhum vídeo TikTok cadastrado'}
+${(product as any).consolidatedVideos?.by_category?.promotional?.length > 0 ? `
+📢 VÍDEOS PROMOCIONAIS (${(product as any).consolidatedVideos.by_category.promotional.length}):
+${(product as any).consolidatedVideos.by_category.promotional.map((v: any, i: number) => `
+  ${i+1}. ${v.description.substring(0, 80)}...
+     URL: ${v.url}
+     Plataforma: ${v.platform} | Fonte: ${v.source}
+`).join('')}
+` : ''}
+
+📊 RESUMO DE FONTES:
+${(product as any).consolidatedVideos?.sources_summary ? `
+  • YouTube: ${(product as any).consolidatedVideos.sources_summary.youtube.product + (product as any).consolidatedVideos.sources_summary.youtube.landing_page + (product as any).consolidatedVideos.sources_summary.youtube.company} vídeos (${(product as any).consolidatedVideos.sources_summary.youtube.product} produto + ${(product as any).consolidatedVideos.sources_summary.youtube.landing_page} LP + ${(product as any).consolidatedVideos.sources_summary.youtube.company} empresa)
+  • Instagram: ${(product as any).consolidatedVideos.sources_summary.instagram.product + (product as any).consolidatedVideos.sources_summary.instagram.landing_page + (product as any).consolidatedVideos.sources_summary.instagram.company} vídeos (${(product as any).consolidatedVideos.sources_summary.instagram.product} produto + ${(product as any).consolidatedVideos.sources_summary.instagram.landing_page} LP + ${(product as any).consolidatedVideos.sources_summary.instagram.company} empresa)
+  • TikTok: ${(product as any).consolidatedVideos.sources_summary.tiktok.product + (product as any).consolidatedVideos.sources_summary.tiktok.landing_page + (product as any).consolidatedVideos.sources_summary.tiktok.company} vídeos (${(product as any).consolidatedVideos.sources_summary.tiktok.product} produto + ${(product as any).consolidatedVideos.sources_summary.tiktok.landing_page} LP + ${(product as any).consolidatedVideos.sources_summary.tiktok.company} empresa)
+  • TOTAL: ${(product as any).consolidatedVideos.sources_summary.total} vídeos únicos
+` : 'Nenhum vídeo consolidado'}
 
 ${Object.keys(product.video_captions || {}).length > 0 ? `
-#### 📝 Legendas Extraídas (${Object.keys(product.video_captions).length} vídeos):
+#### 📝 LEGENDAS EXTRAÍDAS (${Object.keys(product.video_captions).length} vídeos):
 ${Object.entries(product.video_captions || {}).map(([videoId, captions]: [string, any]) => `
   - ${videoId}: ${captions?.text?.substring(0, 100) || 'Sem texto'}...
 `).join('\n')}
 ` : ''}
-
-### 📚 Tutoriais do Produto:
-${product.tutorial_resources?.tutorials?.length ? 
-  product.tutorial_resources.tutorials.map((tutorial: any, idx: number) => `
-${idx + 1}. 📚 ${tutorial.courseName}
-   URL: ${tutorial.courseUrl}
-   ID: ${tutorial.id}
-  `).join('\n') 
-: '📭 Nenhum tutorial cadastrado'}
-
-📌 Total: ${product.tutorial_resources?.tutorials?.length || 0} tutoriais
 
 ## 🎁 CONFIGURAÇÃO DE LANDING PAGE
 
@@ -825,6 +1041,7 @@ serve(async (req) => {
 
     // Fetch landing page context if product has source_landing_page_id
     let landingPageContext: any = null;
+    let landingPageVideos: any[] = [];
     if (product.source_landing_page_id) {
       const { data: landingPage } = await supabase
         .from('landing_pages')
@@ -844,6 +1061,9 @@ serve(async (req) => {
           .eq('landing_page_id', product.source_landing_page_id)
           .eq('approved', true);
 
+        landingPageVideos = videoTestimonials || [];
+        console.log(`📹 Vídeos da landing page: ${landingPageVideos.length}`);
+
         landingPageContext = {
           landing_page_id: landingPage.id,
           landing_page_name: landingPage.name,
@@ -854,6 +1074,30 @@ serve(async (req) => {
         };
       }
     }
+
+    // Buscar vídeos da empresa
+    const { data: companyProfile } = await supabase
+      .from('company_profile')
+      .select('company_videos')
+      .limit(1)
+      .single();
+
+    const companyVideos = companyProfile?.company_videos || null;
+    console.log(`📹 Vídeos da empresa disponíveis: ${companyVideos ? 'SIM' : 'NÃO'}`);
+
+    // Consolidar vídeos
+    const consolidatedVideos = normalizeAndConsolidateVideos(
+      product,
+      landingPageVideos,
+      companyVideos
+    );
+
+    console.log('📊 Vídeos consolidados:', {
+      total: consolidatedVideos.sources_summary.total,
+      youtube: consolidatedVideos.by_platform.youtube.length,
+      instagram: consolidatedVideos.by_platform.instagram.length,
+      tiktok: consolidatedVideos.by_platform.tiktok.length
+    });
 
     // Fetch ALL landing pages that use this product
     const { data: relatedLandingPages } = await supabase
@@ -882,7 +1126,8 @@ serve(async (req) => {
       google_ads_campaigns: googleAdsCampaigns || [],
       landing_page_context: landingPageContext,
       related_landing_pages: relatedLandingPages || [],
-      product_blogs: productBlogs
+      product_blogs: productBlogs,
+      consolidatedVideos
     };
 
     // Generate content based on format
