@@ -19,6 +19,10 @@ interface Product {
   technical_videos?: any[];
   testimonial_videos?: any[];
   tiktok_videos?: any[];
+  seo_title_override?: string;
+  seo_description_override?: string;
+  canonical_url?: string;
+  slug?: string;
 }
 
 export interface ScoreBreakdown {
@@ -117,7 +121,7 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
     missingFields.push('Vídeos');
   }
   
-  // SEO & Marketing (15 pontos)
+  // SEO & Marketing (25 pontos)
   let seo = 0;
   if (product.keywords && product.keywords.length > 0) {
     seo += 5;
@@ -137,6 +141,33 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
     missingFields.push('Palavras-chave de Mercado');
   }
   
+  // SEO Avançado (10 pontos)
+  if (product.seo_title_override?.trim()) {
+    seo += 3;
+  } else {
+    missingFields.push('SEO Title');
+  }
+  
+  if (product.seo_description_override?.trim() && 
+      product.seo_description_override.length >= 120 && 
+      product.seo_description_override.length <= 160) {
+    seo += 4;
+  } else {
+    missingFields.push('Meta Description (120-160 chars)');
+  }
+  
+  if (product.canonical_url?.trim() && product.canonical_url.startsWith('http')) {
+    seo += 2;
+  } else {
+    missingFields.push('URL Canônica');
+  }
+  
+  if (product.slug?.trim()) {
+    seo += 1;
+  } else {
+    missingFields.push('Slug SEO');
+  }
+  
   // Comercial (10 pontos)
   let commercial = 0;
   if (product.product_url?.trim()) {
@@ -152,7 +183,7 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
   }
   
   const total = basicInfo + content + multimedia + seo + commercial;
-  const maxPoints = 100;
+  const maxPoints = 110;
   const percentage = Math.round((total / maxPoints) * 100);
   
   return {

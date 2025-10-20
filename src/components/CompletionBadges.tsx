@@ -10,7 +10,8 @@ import {
   Image, 
   Video,
   ShoppingCart,
-  Hash
+  Hash,
+  Link
 } from 'lucide-react';
 
 interface Product {
@@ -28,6 +29,10 @@ interface Product {
   tiktok_videos?: any[];
   product_url?: string;
   tags?: string[];
+  seo_title_override?: string;
+  seo_description_override?: string;
+  canonical_url?: string;
+  slug?: string;
 }
 
 interface CompletionBadgesProps {
@@ -105,6 +110,24 @@ export function CompletionBadges({ product, score, compact = false }: Completion
       label: 'Tags',
       count: product.tags?.length || 0,
       present: (product.tags?.length || 0) > 0
+    },
+    {
+      icon: FileText,
+      label: 'SEO Title',
+      count: product.seo_title_override ? 1 : 0,
+      present: !!product.seo_title_override
+    },
+    {
+      icon: FileText,
+      label: 'Meta Desc',
+      count: product.seo_description_override ? 1 : 0,
+      present: !!product.seo_description_override
+    },
+    {
+      icon: Link,
+      label: 'Canonical',
+      count: product.canonical_url ? 1 : 0,
+      present: !!product.canonical_url
     }
   ];
 
