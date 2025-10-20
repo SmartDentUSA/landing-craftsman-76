@@ -570,13 +570,71 @@ function generateAIPlaybookJSON(product: ProductData & {
       }))
     },
     ads: {
-      google_ads_campaigns: (product.google_ads_campaigns || []).map((campaign: any) => ({
-        id: campaign.id,
-        type: campaign.campaign_type,
-        config: campaign.config,
-        campaign_history: campaign.campaign_history,
-        last_exported: campaign.last_exported
-      }))
+      google_ads_campaigns: (product.google_ads_campaigns || []).map((campaign: any) => {
+        const config = campaign.config || {};
+        const history = campaign.campaign_history?.campaigns || [];
+        
+        return {
+          id: campaign.id,
+          campaign_type: campaign.campaign_type || 'landing_page',
+          last_exported: campaign.last_exported,
+          
+          configuration: {
+            enabled: config.enabled || false,
+            type: config.type || 'search',
+            objective: config.objective || 'leads',
+            daily_budget_brl: config.daily_budget_brl || 0,
+            locations: config.locations || [],
+            languages: config.languages || ['pt'],
+            
+            bidding: {
+              strategy: config.bidding?.strategy || 'MAX_CONV',
+              target: config.bidding?.target || null
+            },
+            
+            keywords: {
+              include_ai_keywords: config.include_ai_keywords !== false,
+              include_faq_longtail: config.include_faq_longtail !== false,
+              extra_keywords: config.extra_keywords || [],
+              negatives: config.negatives || []
+            },
+            
+            sitelinks: {
+              ecommerce_links: config.ecommerce_links || [],
+              include_brand_policies: config.include_brand_policies !== false,
+              custom_institutional_links: config.custom_institutional_links || []
+            },
+            
+            youtube_videos: config.youtube_videos || [],
+            
+            utm_parameters: config.utm || {},
+            
+            schedule: config.schedule || null
+          },
+          
+          campaign_history: {
+            total_versions: history.length,
+            last_generated: campaign.campaign_history?.last_generated || null,
+            versions: history.map((h: any) => ({
+              generated_at: h.generated_at,
+              campaign_name: h.campaign_name,
+              ad_groups_count: h.ad_groups?.length || 0,
+              keywords_count: h.keywords?.length || 0,
+              sitelinks_count: h.sitelinks?.length || 0,
+              videos_count: h.videos?.length || 0,
+              ad_copies: h.ad_copies ? {
+                headlines: h.ad_copies.headlines || [],
+                descriptions: h.ad_copies.descriptions || [],
+                paths: h.ad_copies.paths || [],
+                total_headlines: h.ad_copies.headlines?.length || 0,
+                total_descriptions: h.ad_copies.descriptions?.length || 0,
+                total_paths: h.ad_copies.paths?.length || 0
+              } : null,
+              warnings: h.warnings || []
+            }))
+          }
+        };
+      })
     },
     landing_page_context: product.landing_page_context || null,
     product_blogs: {
@@ -1064,15 +1122,107 @@ ${(product.aftersales_messages && product.aftersales_messages.length > 0) ?
     `${idx + 1}. [Ordem ${msg.message_order}] ${msg.message_content}${msg.is_active ? '' : ' (INATIVA)'}`
   ).join('\n') : '📭 Nenhuma mensagem de pós-venda configurada'}
 
-## 📊 CAMPANHAS GOOGLE ADS
-${(product.google_ads_campaigns && product.google_ads_campaigns.length > 0) ?
-  product.google_ads_campaigns.map((campaign: any, idx: number) => `
-${idx + 1}. Campanha ${campaign.campaign_type || 'N/A'}
-   - ID: ${campaign.id}
-   - Última exportação: ${campaign.last_exported || 'Nunca'}
-   - Total de histórico: ${campaign.campaign_history?.campaigns?.length || 0} versões
-   - Configuração: ${JSON.stringify(campaign.config || {}, null, 2).substring(0, 200)}...
-  `).join('\n') : '📭 Nenhuma campanha Google Ads configurada'}
+${(product.google_ads_campaigns || []).length > 0 ? `
+
+${'='.repeat(80)}
+## 📢 GOOGLE ADS - CAMPANHAS CONFIGURADAS
+${'='.repeat(80)}
+
+Total de Campanhas: ${(product.google_ads_campaigns || []).length}
+
+${(product.google_ads_campaigns || []).map((campaign: any, idx: number) => {
+  const config = campaign.config || {};
+  const history = campaign.campaign_history?.campaigns || [];
+  
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CAMPANHA ${idx + 1}: ${campaign.campaign_type?.toUpperCase() || 'LANDING PAGE'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 CONFIGURAÇÃO GERAL:
+  • Status: ${config.enabled ? '🟢 HABILITADA' : '🔴 DESABILITADA'}
+  • Tipo: ${config.type || 'search'}
+  • Objetivo: ${config.objective || 'leads'}
+  • Orçamento Diário: R$ ${config.daily_budget_brl || 0}
+  • Localizações: ${(config.locations || []).join(', ') || 'N/A'}
+  • Idiomas: ${(config.languages || ['pt']).join(', ')}
+  • Última Exportação: ${campaign.last_exported ? new Date(campaign.last_exported).toLocaleString('pt-BR') : 'Nunca exportada'}
+
+💰 ESTRATÉGIA DE LANCE:
+  • Estratégia: ${config.bidding?.strategy || 'MAX_CONV'}
+  ${config.bidding?.target ? `• Meta: R$ ${config.bidding.target}` : ''}
+
+🔑 KEYWORDS:
+  • Incluir Keywords IA: ${config.include_ai_keywords !== false ? '✅' : '❌'}
+  • Incluir FAQ Long-tail: ${config.include_faq_longtail !== false ? '✅' : '❌'}
+  • Keywords Extras: ${(config.extra_keywords || []).length} keywords
+  • Negativas: ${(config.negatives || []).length} keywords
+
+🔗 SITELINKS:
+  • Links E-commerce: ${(config.ecommerce_links || []).length}
+  • Incluir Políticas da Marca: ${config.include_brand_policies !== false ? '✅' : '❌'}
+  • Links Institucionais Customizados: ${(config.custom_institutional_links || []).length}
+
+🎥 VÍDEOS YOUTUBE:
+  • Total de vídeos: ${(config.youtube_videos || []).length}
+
+📊 UTM PARAMETERS:
+  ${config.utm ? Object.entries(config.utm).map(([key, value]) => `• ${key}: ${value}`).join('\n  ') : '• Nenhum UTM configurado'}
+
+📅 AGENDAMENTO:
+  ${config.schedule ? `
+  • Data Início: ${config.schedule.start || 'Não definida'}
+  • Data Fim: ${config.schedule.end || 'Indefinida'}
+  • Horários: ${(config.schedule.ad_schedules || []).join(', ') || 'Sempre ativo'}
+  ` : '• Sem agendamento específico'}
+
+${history.length > 0 ? `
+📜 HISTÓRICO DE CAMPANHAS (${history.length} versões):
+
+${history.slice(0, 3).map((h: any, hIdx: number) => `
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  VERSÃO ${hIdx + 1} - ${new Date(h.generated_at).toLocaleDateString('pt-BR')}
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  📌 Nome da Campanha: ${h.campaign_name}
+  📊 Estatísticas:
+    • Ad Groups: ${h.ad_groups?.length || 0}
+    • Keywords: ${h.keywords?.length || 0}
+    • Sitelinks: ${h.sitelinks?.length || 0}
+    • Vídeos: ${h.videos?.length || 0}
+  
+  ${h.ad_copies ? `
+  ✍️ AD COPIES GERADOS:
+  
+  📰 Headlines (${h.ad_copies.headlines?.length || 0}):
+  ${(h.ad_copies.headlines || []).slice(0, 5).map((headline: string, i: number) => 
+    `    ${i + 1}. ${headline}`
+  ).join('\n  ')}
+  ${(h.ad_copies.headlines || []).length > 5 ? `    ... e mais ${(h.ad_copies.headlines || []).length - 5} headlines` : ''}
+  
+  📝 Descriptions (${h.ad_copies.descriptions?.length || 0}):
+  ${(h.ad_copies.descriptions || []).slice(0, 3).map((desc: string, i: number) => 
+    `    ${i + 1}. ${desc}`
+  ).join('\n  ')}
+  ${(h.ad_copies.descriptions || []).length > 3 ? `    ... e mais ${(h.ad_copies.descriptions || []).length - 3} descriptions` : ''}
+  
+  🔗 Paths (${h.ad_copies.paths?.length || 0}):
+  ${(h.ad_copies.paths || []).map((path: string) => `    • ${path}`).join('\n  ')}
+  ` : '  ⚠️ Ad copies não disponíveis nesta versão'}
+  
+  ${(h.warnings || []).length > 0 ? `
+  ⚠️ AVISOS:
+  ${h.warnings.map((w: any) => `    • [${w.type?.toUpperCase()}] ${w.message}`).join('\n  ')}
+  ` : ''}
+`).join('\n')}
+
+${history.length > 3 ? `\n  ... e mais ${history.length - 3} versões no histórico\n` : ''}
+` : '📭 Nenhuma campanha gerada ainda'}
+
+`;
+}).join('\n')}
+
+` : ''}
 
 ## 🌐 CONTEXTO DA LANDING PAGE
 ${product.landing_page_context ? `
