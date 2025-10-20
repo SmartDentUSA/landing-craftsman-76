@@ -561,9 +561,16 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { productId, productUrl, endpoint = 'produto' } = await req.json();
+    const { productId, productUrl, endpoint = 'produtos' } = await req.json();
 
     console.log('🚀 Starting product import:', { productId, productUrl, endpoint });
+    console.log('🔑 Auth Keys:', {
+      apiKey: lojaApiKey.substring(0, 8) + '...',
+      appKey: appKey.substring(0, 8) + '...',
+      apiUrl: productId 
+        ? `${LOJA_INTEGRADA_API_BASE}/produtos/${productId}`
+        : `${LOJA_INTEGRADA_API_BASE}/produtos`
+    });
 
     // Log start of import
     await logToMonitoring(
@@ -578,13 +585,13 @@ serve(async (req) => {
       'info'
     );
 
-    // Try API first (if productId provided directly)
+    // Try API first - ALWAYS use /produtos (plural)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/${endpoint}/${productId}`);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/produtos/${productId}`);
     } else if (!productUrl) {
-      // Se não tem nem productId nem productUrl, tenta o endpoint genérico
-      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/${endpoint}`);
+      // List products (generic endpoint)
+      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/produtos`);
     }
 
     let finalData: any = null;
@@ -630,8 +637,8 @@ serve(async (req) => {
         throw new Error('Failed to map API data to repository format');
       }
     } else {
-      // Fallback to web scraping if API fails and we have a product URL
-      if (productUrl) {
+      // Fallback to web scraping if API fails and we have a VALID product URL
+      if (productUrl && productUrl.startsWith('http')) {
         console.log('⚠️ API failed, attempting web scraping fallback');
         fallbackUsed = true;
         
@@ -647,7 +654,7 @@ serve(async (req) => {
             const apiRetry = await fetchFromLojaIntegradaAPI(
               lojaApiKey,
               appKey,
-              `/${endpoint}/${extractedProductId}`
+              `/produtos/${extractedProductId}`
             );
             
             if (apiRetry.success && apiRetry.data) {

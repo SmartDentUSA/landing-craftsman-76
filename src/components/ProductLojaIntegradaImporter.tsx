@@ -288,9 +288,9 @@ export function ProductLojaIntegradaImporter({
       if (importMethod === 'api') {
         const { data, error } = await supabase.functions.invoke('import-loja-integrada-api', {
           body: {
-            productUrl: productUrl || undefined,
-            productId: productId || undefined,
-            endpoint: productId ? 'produto' : '/produtos'
+            ...(productId && { productId: productId.trim() }),
+            ...(productUrl && !productId && { productUrl: productUrl.trim() }),
+            endpoint: 'produtos'
           }
         });
 
