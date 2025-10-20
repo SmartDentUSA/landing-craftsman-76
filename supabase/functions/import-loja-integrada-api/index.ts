@@ -165,8 +165,7 @@ async function fetchWithRetry(
 }
 
 async function fetchFromLojaIntegradaAPI(
-  lojaApiKey: string,
-  appKey: string,
+  apiKey: string,
   endpoint: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   // Check circuit breaker
@@ -181,22 +180,15 @@ async function fetchFromLojaIntegradaAPI(
   const startTime = Date.now();
 
   try {
-    // Garantir que endpoint sempre comece com /
-    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${LOJA_INTEGRADA_API_BASE}${normalizedEndpoint}`;
+    const url = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
     console.log(`📡 Fetching from Loja Integrada API: ${url}`);
-    console.log('🔑 Auth:', {
-      lojaApiKey: lojaApiKey.substring(0, 8) + '...',
-      appKey: appKey.substring(0, 8) + '...'
-    });
 
     const response = await fetchWithRetry(
       url,
       {
         method: 'GET',
         headers: {
-          'Authorization': `chave_api ${lojaApiKey}`,
-          'X-Chave-Aplicacao': appKey,
+          'Authorization': `chave_api ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
@@ -551,26 +543,18 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const lojaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
-    const appKey = Deno.env.get('LOJA_INTEGRADA_APP_KEY');
+    const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!lojaApiKey || !appKey) {
-      throw new Error('Chaves da Loja Integrada não configuradas (LOJA_INTEGRADA_API_KEY e LOJA_INTEGRADA_APP_KEY)');
+    if (!lojaIntegradaApiKey) {
+      throw new Error('LOJA_INTEGRADA_API_KEY not configured');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { productId, productUrl, endpoint = 'produtos' } = await req.json();
+    const { productId, productUrl, endpoint = '/produtos' } = await req.json();
 
     console.log('🚀 Starting product import:', { productId, productUrl, endpoint });
-    console.log('🔑 Auth Keys:', {
-      apiKey: lojaApiKey.substring(0, 8) + '...',
-      appKey: appKey.substring(0, 8) + '...',
-      apiUrl: productId 
-        ? `${LOJA_INTEGRADA_API_BASE}/produtos/${productId}`
-        : `${LOJA_INTEGRADA_API_BASE}/produtos`
-    });
 
     // Log start of import
     await logToMonitoring(
@@ -585,13 +569,13 @@ serve(async (req) => {
       'info'
     );
 
-    // Try API first - ALWAYS use /produtos (plural)
+    // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/produtos/${productId}`);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, `${endpoint}/${productId}`);
     } else if (!productUrl) {
-      // List products (generic endpoint)
-      apiResult = await fetchFromLojaIntegradaAPI(lojaApiKey, appKey, `/produtos`);
+      // Se não tem nem productId nem productUrl, tenta o endpoint genérico
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
     }
 
     let finalData: any = null;
@@ -637,8 +621,8 @@ serve(async (req) => {
         throw new Error('Failed to map API data to repository format');
       }
     } else {
-      // Fallback to web scraping if API fails and we have a VALID product URL
-      if (productUrl && productUrl.startsWith('http')) {
+      // Fallback to web scraping if API fails and we have a product URL
+      if (productUrl) {
         console.log('⚠️ API failed, attempting web scraping fallback');
         fallbackUsed = true;
         
@@ -652,9 +636,8 @@ serve(async (req) => {
           if (extractedProductId && !productId) {
             console.log(`🔄 Trying API with extracted ID: ${extractedProductId}`);
             const apiRetry = await fetchFromLojaIntegradaAPI(
-              lojaApiKey,
-              appKey,
-              `/produtos/${extractedProductId}`
+              lojaIntegradaApiKey,
+              `${endpoint}/${extractedProductId}`
             );
             
             if (apiRetry.success && apiRetry.data) {
