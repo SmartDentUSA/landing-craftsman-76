@@ -195,7 +195,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // Technical Specifications
     technical_specifications: []
   });
-  const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
   const [targetAudience, setTargetAudience] = useState<string[]>([]);
@@ -338,7 +337,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setTiktokVideos(product.tiktok_videos || []);
       setTutorials(product.tutorial_resources?.tutorials || []);
       setVideoCaptions(product.video_captions || {});
-      setPromoPrice((product as any).promo_price);
       
       // Physical specifications
       setVariations(product.variations || []);
@@ -408,7 +406,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setWidth('');
       setDepth('');
       setStoreCategory('');
-      setPromoPrice(undefined);
       
       // Reset images gallery
       setImagesGallery([]);
@@ -1016,7 +1013,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         description: formData.description,
         sales_pitch: formData.sales_pitch,
         price: formData.price,
-        promo_price: promoPrice,
+        promo_price: formData.promo_price,
         currency: formData.currency || 'BRL',
         category: formData.category,
         subcategory: formData.subcategory,
@@ -1225,7 +1222,6 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               overwriteData={overwriteData}
               currentFormData={{
                 ...formData,
-                promo_price: promoPrice,
                 images_gallery: imagesGallery,
                 variations,
                 weight: weight ? parseFloat(weight) : undefined,
@@ -1257,7 +1253,6 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   }));
 
                   // Estados controlados
-                  if (importedData.promo_price !== undefined) setPromoPrice(importedData.promo_price);
                   if (importedData.images_gallery) setImagesGallery(importedData.images_gallery);
                   if (importedData.variations) setVariations(importedData.variations);
                   if (importedData.weight) setWeight(importedData.weight.toString());
@@ -1539,8 +1534,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               id="promo_price"
               type="text"
               step="0.01"
-              value={promoPrice || ''}
-              onChange={(e) => setPromoPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+              value={formData.promo_price || ''}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^\d.,]/g, '');
+                setFormData(prev => ({ 
+                  ...prev, 
+                  promo_price: value ? parseFloat(value.replace(',', '.')) : undefined 
+                }));
+              }}
               placeholder="0.00 - Deixe vazio se não houver promoção"
             />
             <p className="text-xs text-muted-foreground">
@@ -1549,11 +1550,11 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           </div>
 
           {/* Linha 3: Preview da Promoção (condicional) */}
-          {promoPrice && promoPrice > 0 && formData.price && promoPrice < formData.price && (
+          {formData.promo_price && formData.promo_price > 0 && formData.price && formData.promo_price < formData.price && (
             <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg space-y-2">
               <div className="flex items-center gap-2">
                 <Badge variant="success" className="text-xs">
-                  Promoção Ativa ({Math.round(((formData.price - promoPrice) / formData.price) * 100)}% OFF)
+                  Promoção Ativa ({Math.round(((formData.price - formData.promo_price) / formData.price) * 100)}% OFF)
                 </Badge>
               </div>
               <div className="text-sm flex items-center gap-2">
@@ -1573,7 +1574,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                     {new Intl.NumberFormat('pt-BR', { 
                       style: 'currency', 
                       currency: formData.currency || 'BRL' 
-                    }).format(promoPrice)}
+                    }).format(formData.promo_price)}
                   </span>
                 </div>
               </div>
