@@ -216,7 +216,15 @@ function getTotalFields(data: any): number {
 }
 
 serve(async (req) => {
+  // Log incoming request
+  console.log('📥 Knowledge Base API request received:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight request handled');
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -225,11 +233,18 @@ serve(async (req) => {
     const apiKey = req.headers.get('x-api-key');
     const validApiKey = Deno.env.get('KNOWLEDGE_BASE_API_KEY');
     
-    if (!apiKey || apiKey !== validApiKey) {
+    console.log('🔐 API Key validation:', {
+      received: apiKey ? '***' + apiKey.slice(-4) : 'null',
+      expected: validApiKey ? '***' + validApiKey.slice(-4) : 'null',
+      match: apiKey === validApiKey
+    });
+    
+    if (!apiKey) {
+      console.warn('⚠️ Missing x-api-key header');
       return new Response(
         JSON.stringify({ 
-          error: 'Invalid or missing API key',
-          message: 'Please provide a valid x-api-key header'
+          error: 'Missing authorization header',
+          message: 'Please provide x-api-key header with your API key'
         }),
         { 
           status: 401,
@@ -237,6 +252,22 @@ serve(async (req) => {
         }
       );
     }
+    
+    if (apiKey !== validApiKey) {
+      console.warn('⚠️ Invalid API key provided');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid API key',
+          message: 'The provided API key is not valid'
+        }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    console.log('✅ API Key validated successfully');
     
     // Rate limiting
     const rateLimit = checkRateLimit(apiKey);
