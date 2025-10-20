@@ -53,6 +53,7 @@ interface Product {
   category?: string;
   subcategory?: string;
   image_url?: string;
+  image_alt?: string;
   image_supabase_path?: string;
   product_url?: string;
   target_audience?: string[];
@@ -1648,17 +1649,28 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             <div>
               <Label>Imagem Principal do Produto</Label>
               <ImageUploader
-                value={formData.image_url || ''}
+                value={{
+                  mode: formData.image_supabase_path ? 'supabase' : 'url',
+                  src: formData.image_url || '',
+                  supabase_path: formData.image_supabase_path,
+                  alt: formData.image_alt || '',
+                  scale: 1.0
+                }}
                 onChange={(imageData) => {
                   setFormData(prev => ({ 
                     ...prev, 
                     image_url: imageData.src,
-                    image_supabase_path: imageData.supabase_path 
+                    image_supabase_path: imageData.supabase_path,
+                    image_alt: imageData.alt
                   }));
                 }}
                 placeholder="URL da imagem do produto"
                 proportionInfo="Recomendado: 800x800px (quadrado) ou 1200x1200px para alta qualidade"
               />
+              <p className="text-xs text-muted-foreground mt-2">
+                💡 <strong>Dica SEO:</strong> O nome do arquivo será usado automaticamente como alt text. 
+                Use nomes descritivos como "Scanner_Intraoral_3D_Alta_Precisao.png"
+              </p>
             </div>
 
             {/* Galeria de Imagens */}

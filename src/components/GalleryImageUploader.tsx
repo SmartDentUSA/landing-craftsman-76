@@ -7,6 +7,7 @@ import { Upload, X, GripVertical, Star, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { sanitizeFileNameToAlt } from "@/lib/seo-image-helpers";
 
 interface GalleryImage {
   url: string;
@@ -93,7 +94,7 @@ export const GalleryImageUploader = ({
 
       const newImages: GalleryImage[] = results.map((result, index) => ({
         url: result.url,
-        alt: validFiles[index].name.replace(/\.[^/.]+$/, ""),
+        alt: sanitizeFileNameToAlt(validFiles[index].name),
         order: images.length + index,
         is_main: images.length === 0 && index === 0,
         supabase_path: result.path
@@ -103,7 +104,7 @@ export const GalleryImageUploader = ({
 
       toast({
         title: "Upload concluído",
-        description: `${validFiles.length} imagem(ns) adicionada(s)`,
+        description: `${validFiles.length} imagem(ns) adicionada(s) com alt text automático`,
       });
     } catch (error) {
       console.error('Erro no upload:', error);

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Link, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeFileNameToAlt } from "@/lib/seo-image-helpers";
 
 interface ImageData {
   mode: 'url' | 'supabase';
@@ -67,18 +68,23 @@ export const ImageUploader = ({
         .from('product-images')
         .getPublicUrl(filePath);
 
+      // Extrair alt text do nome do arquivo original
+      const autoAlt = sanitizeFileNameToAlt(file.name);
+      
+      console.log('📸 Auto-alt text gerado:', autoAlt);
+
       updateImageData({
         mode: 'supabase',
         src: publicUrl,
         supabase_path: filePath,
-        alt: normalizedValue.alt,
+        alt: autoAlt,
         scale: normalizedValue.scale,
         href: normalizedValue.href
       });
 
       toast({
         title: "Upload concluído",
-        description: "Imagem enviada para Supabase Storage",
+        description: `Imagem enviada. Alt text: "${autoAlt}"`,
       });
 
       return publicUrl;
