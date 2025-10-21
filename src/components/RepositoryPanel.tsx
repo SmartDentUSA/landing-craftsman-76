@@ -524,6 +524,20 @@ export function RepositoryPanel({
         return;
       }
       
+      // Verificar campanhas associadas (feedback ao usuário)
+      const { data: campaigns } = await supabase
+        .from('google_ads_campaigns')
+        .select('id, config')
+        .eq('product_id', productId);
+
+      // Confirmação informativa
+      const message = campaigns && campaigns.length > 0
+        ? `Este produto tem ${campaigns.length} campanha(s) do Google Ads. Ao deletá-lo, essas campanhas também serão removidas permanentemente. Deseja continuar?`
+        : 'Tem certeza que deseja deletar este produto?';
+      
+      const confirmed = window.confirm(message);
+      if (!confirmed) return;
+      
       console.log('[DEBUG] Permissões OK. Deletando produto:', productId);
       const { error } = await supabase
         .from('products_repository')
@@ -548,6 +562,13 @@ export function RepositoryPanel({
 
       // Atualizar UI apenas se deleção foi bem-sucedida
       setProducts(prev => prev.filter(p => p.id !== productId));
+      
+      toast({
+        title: "Sucesso",
+        description: campaigns && campaigns.length > 0
+          ? `Produto e ${campaigns.length} campanha(s) deletados`
+          : "Produto deletado com sucesso",
+      });
       setSelectedProductIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(productId);
