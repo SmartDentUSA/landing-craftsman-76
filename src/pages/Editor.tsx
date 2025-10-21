@@ -1225,7 +1225,7 @@ const EditorContent = () => {
     landingPages?.filter(lp => lp.status === 'approved') || [],
     [landingPages]
   );
-  const { consolidatedHTMLs, isGenerating: isGeneratingConsolidated } = useConsolidatedBlogAutoGenerator(approvedLandingPages);
+  const { consolidatedHTMLs, isGenerating: isGeneratingConsolidated, generateConsolidatedForLandingPage } = useConsolidatedBlogAutoGenerator(approvedLandingPages);
   
   // Debounced auto-save for desktop info
   const debouncedDesktopSave = useDebounce((updatedData: any) => {
@@ -7632,6 +7632,10 @@ dataLayer = [{
                     refreshKey={strategicBlogRefreshKey}
                     landingPageId={id || ''}
                     consolidatedHTMLs={consolidatedHTMLs}
+                    onForceGenerate={(lpId) => {
+                      console.log('🔧 Forçando geração consolidada para LP:', lpId);
+                      generateConsolidatedForLandingPage(lpId);
+                    }}
                   />
                 </div>
               </div>

@@ -74,9 +74,10 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
 
     try {
       setIsGenerating(true);
-      console.log(`🚀 Iniciando geração consolidada para LP: ${landingPageId}`);
+      console.log(`🎯 [INÍCIO] Gerando HTML consolidado para LP: ${landingPageId}`);
 
       // Buscar blog estratégico da landing page
+      console.log('📚 [PASSO 1] Buscando blogs estratégicos para LP:', landingPageId);
       const { data: blogPosts, error: blogError } = await supabase
         .from('blog_posts')
         .select('*')
@@ -86,12 +87,22 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
         .limit(2); // Dentala e Eodonto
 
       if (blogError) {
-        console.error('❌ Erro ao buscar blogs estratégicos:', blogError);
+        console.error('❌ [ERRO] Falha ao buscar blogs estratégicos:', blogError);
         return;
       }
 
+      console.log('✅ [PASSO 1] Blogs estratégicos encontrados:', {
+        total: blogPosts?.length || 0,
+        blogs: blogPosts?.map(b => ({ 
+          id: b.id,
+          title: b.title, 
+          status: b.status,
+          published_domains: b.published_domains 
+        }))
+      });
+
       if (!blogPosts || blogPosts.length === 0) {
-        console.log('⚠️ Nenhum blog estratégico publicado encontrado para LP:', landingPageId);
+        console.error('❌ [ERRO] Nenhum blog estratégico publicado encontrado para LP:', landingPageId);
         return;
       }
 
@@ -103,27 +114,45 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
         bp.published_domains?.includes('eodonto.com.br')
       );
 
+      console.log('🔍 [PASSO 2] Verificando blogs por domínio:', {
+        dentalaPost: dentalaPost ? dentalaPost.title : 'NÃO ENCONTRADO',
+        eodontoPost: eodontoPost ? eodontoPost.title : 'NÃO ENCONTRADO'
+      });
+
       if (!dentalaPost || !eodontoPost) {
-        console.log('⚠️ Blogs estratégicos incompletos (falta Dentala ou Eodonto)');
+        console.error('❌ [ERRO] Blogs estratégicos incompletos:', { 
+          dentalaBlog: !!dentalaPost, 
+          eodontoBlog: !!eodontoPost,
+          message: 'Ambos os domínios (dentala + eodonto) devem ter blogs publicados'
+        });
         return;
       }
 
+      console.log('✅ [PASSO 2] Blogs estratégicos completos');
+
       // Buscar produtos da landing page
+      console.log('🔍 [PASSO 3] Buscando produtos selecionados da LP');
       const landingPage = approvedLandingPages.find(lp => lp.id === landingPageId);
       const selectedProductIds = landingPage?.selected_product_ids || [];
       
+      console.log('✅ [PASSO 3] Produtos vinculados à LP:', { 
+        count: selectedProductIds.length, 
+        productIds: selectedProductIds 
+      });
+
       if (selectedProductIds.length === 0) {
-        console.log('⚠️ Nenhum produto selecionado na LP:', landingPageId);
+        console.warn('⚠️ Nenhum produto selecionado na LP:', landingPageId);
         return;
       }
 
       const selectedProductsData = await loadProductsByIds(selectedProductIds);
 
       // Buscar blogs de produtos filtrados por domínio e landing page
+      console.log('📦 [PASSO 4] Buscando blogs de produtos por domínio');
       const dentalaBlogsProducts = productBlogsForHTMLByDomain('dentala', landingPageId);
       const eodontoBlogsProducts = productBlogsForHTMLByDomain('eodonto', landingPageId);
 
-      console.log('📊 Blogs encontrados:', {
+      console.log('✅ [PASSO 4] Blogs de produtos encontrados:', {
         landingPageId,
         dentalaProducts: dentalaBlogsProducts.length,
         eodontoProducts: eodontoBlogsProducts.length,
@@ -144,6 +173,7 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
       ];
 
       // Gerar HTML para Dentala (Blog Estratégico + Blogs Técnicos)
+      console.log('🎨 [PASSO 5] Gerando HTML consolidado para Dentala');
       const dentalaHTML = await generateBlogHTML({
         blogs: [
           {
@@ -169,7 +199,10 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
         excludeFooter: true,
       });
 
+      console.log('✅ [PASSO 5] HTML Dentala gerado com sucesso');
+
       // Gerar HTML para Eodonto (Blog Estratégico + Blogs Comerciais)
+      console.log('🎨 [PASSO 6] Gerando HTML consolidado para Eodonto');
       const eodontoHTML = await generateBlogHTML({
         blogs: [
           {
@@ -195,7 +228,10 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
         excludeFooter: true,
       });
 
+      console.log('✅ [PASSO 6] HTML Eodonto gerado com sucesso');
+
       // Armazenar no estado
+      console.log('💾 [PASSO 7] Armazenando HTMLs consolidados no estado');
       setConsolidatedHTMLs(prev => ({
         ...prev,
         [landingPageId]: {
@@ -213,9 +249,13 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
         }
       }));
 
-      console.log('✅ HTML consolidado gerado com sucesso para LP:', landingPageId);
+      console.log('✅ [SUCESSO] HTML consolidado gerado e armazenado para LP:', landingPageId);
     } catch (error) {
-      console.error('❌ Erro ao gerar HTML consolidado:', error);
+      console.error('❌ [ERRO FATAL] Falha ao gerar HTML consolidado:', {
+        landingPageId,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -240,13 +280,29 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
       lp => lp.status === 'approved' && lp.blog_generated
     );
 
+    console.log('🔍 Landing pages aprovadas com blogs:', {
+      total: approvedLandingPages.length,
+      approved: approvedLandingPages.filter(lp => lp.status === 'approved').length,
+      withBlogs: approvedWithBlogs.length,
+      landingPages: approvedWithBlogs.map(lp => ({
+        id: lp.id,
+        name: lp.name,
+        status: lp.status,
+        blog_generated: lp.blog_generated
+      }))
+    });
+
     if (approvedWithBlogs.length > 0) {
+      console.log('⏰ Agendando geração consolidada em 1 segundo...');
       // Debounce para evitar múltiplas gerações
       const timer = setTimeout(() => {
+        console.log('🚀 Iniciando geração consolidada para todas as LPs aprovadas');
         generateAllConsolidated();
       }, 1000);
 
       return () => clearTimeout(timer);
+    } else {
+      console.log('⚠️ Nenhuma landing page aprovada com blog gerado encontrada');
     }
   }, [approvedLandingPages]);
 

@@ -151,11 +151,25 @@ ${combinedBody}
           <div className="text-center p-8 bg-muted/50 rounded-lg">
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="font-medium text-muted-foreground mb-2">
-              Nenhum HTML consolidado disponível
+              HTML não disponível
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Aprove landing pages e gere blogs estratégicos para ver os HTMLs consolidados aqui
+            <p className="text-sm text-muted-foreground mb-4">
+              {approvedLandingPages.length === 0 
+                ? 'Nenhuma landing page aprovada encontrada. Aprove uma landing page primeiro.'
+                : `${approvedLandingPages.length} landing page${approvedLandingPages.length !== 1 ? 's' : ''} aprovada${approvedLandingPages.length !== 1 ? 's' : ''}, mas sem blogs consolidados gerados.`
+              }
             </p>
+            {approvedLandingPages.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="font-semibold mb-2">🔍 Verifique se:</p>
+                <ul className="list-disc list-inside mt-2 text-left space-y-1">
+                  <li>Blogs estratégicos foram gerados para <strong>ambos os domínios</strong> (Dentala + Eodonto)</li>
+                  <li>Blogs estão com status <code className="px-1 py-0.5 bg-muted rounded font-mono">published</code></li>
+                  <li>Campo <code className="px-1 py-0.5 bg-muted rounded font-mono">blog_generated</code> está marcado como <code className="px-1 py-0.5 bg-muted rounded font-mono">true</code></li>
+                  <li>Abra o Console do navegador (F12) para ver logs detalhados</li>
+                </ul>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">

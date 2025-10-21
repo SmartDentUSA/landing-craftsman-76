@@ -31,6 +31,7 @@ interface StrategicBlogPreviewProps {
   refreshKey?: number;
   landingPageId: string;
   consolidatedHTMLs?: { [landingPageId: string]: ConsolidatedHTML };
+  onForceGenerate?: (landingPageId: string) => void;
 }
 
 export function StrategicBlogPreview({
@@ -41,6 +42,7 @@ export function StrategicBlogPreview({
   refreshKey = 0,
   landingPageId,
   consolidatedHTMLs,
+  onForceGenerate,
 }: StrategicBlogPreviewProps) {
   const [previewDentalaHTML, setPreviewDentalaHTML] = useState("");
   const [previewEodontoHTML, setPreviewEodontoHTML] = useState("");
@@ -64,6 +66,7 @@ export function StrategicBlogPreview({
 
   // Usar HTML pré-gerado se disponível
   const cachedHTML = consolidatedHTMLs?.[landingPageId];
+  const hasConsolidatedHTML = landingPageId && cachedHTML;
 
   // Debounce para regeneração automática
   const [debounceTick, setDebounceTick] = useState(0);
@@ -238,6 +241,35 @@ export function StrategicBlogPreview({
 
   return (
     <div className="w-full flex flex-col gap-4 h-full">
+      {/* Botão de Geração Manual se não houver HTML consolidado */}
+      {!hasConsolidatedHTML && onForceGenerate && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Loader2 className="h-5 w-5 text-yellow-600 mt-0.5 animate-spin" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-yellow-800 mb-1">
+                ⚠️ HTML consolidado não foi gerado automaticamente
+              </p>
+              <p className="text-xs text-yellow-700 mb-3">
+                Isso pode ocorrer se a landing page foi aprovada mas os blogs estratégicos ainda não foram publicados em ambos os domínios.
+              </p>
+              <Button
+                onClick={() => {
+                  console.log('🔧 Forçando geração manual para LP:', landingPageId);
+                  onForceGenerate(landingPageId);
+                }}
+                size="sm"
+                variant="outline"
+                className="bg-white"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Forçar Geração Manual
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
