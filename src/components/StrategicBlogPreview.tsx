@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Copy, ExternalLink, Monitor, Tablet, Smartphone } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -14,6 +15,14 @@ interface BlogData {
   [key: string]: any;
 }
 
+interface ConsolidatedHTML {
+  dentala: string;
+  eodonto: string;
+  generatedAt: string;
+  productBlogsCount: { dentala: number; eodonto: number };
+  strategicBlogTitle: { dentala: string; eodonto: string };
+}
+
 interface StrategicBlogPreviewProps {
   dentalaData: BlogData | null;
   eodontoData: BlogData | null;
@@ -21,6 +30,7 @@ interface StrategicBlogPreviewProps {
   selectedProductIds?: string[];
   refreshKey?: number;
   landingPageId: string;
+  consolidatedHTMLs?: { [landingPageId: string]: ConsolidatedHTML };
 }
 
 export function StrategicBlogPreview({
@@ -30,6 +40,7 @@ export function StrategicBlogPreview({
   selectedProductIds = [],
   refreshKey = 0,
   landingPageId,
+  consolidatedHTMLs,
 }: StrategicBlogPreviewProps) {
   const [previewDentalaHTML, setPreviewDentalaHTML] = useState("");
   const [previewEodontoHTML, setPreviewEodontoHTML] = useState("");
@@ -51,16 +62,11 @@ export function StrategicBlogPreview({
 
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
 
+  // Usar HTML pré-gerado se disponível
+  const cachedHTML = consolidatedHTMLs?.[landingPageId];
+
   // Debounce para regeneração automática
   const [debounceTick, setDebounceTick] = useState(0);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounceTick((prev) => prev + 1);
-    }, 500); // 500ms debounce
-    
-    return () => clearTimeout(timer);
-  }, [refreshKey, dentalaData, eodontoData, approvedLandingPages]);
 
   const generateHTML = useCallback(async (domain: 'dentala' | 'eodonto') => {
     try {
@@ -190,11 +196,28 @@ export function StrategicBlogPreview({
     }
   }, [generateHTML, showSuccessToast]);
 
-  // Gera ao montar e quando debounceTick muda
+  // Usar HTML pré-gerado ou gerar on-demand
   useEffect(() => {
-    doGenerateAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debounceTick]);
+    if (cachedHTML) {
+      console.log('✅ Usando HTML pré-gerado do cache para LP:', landingPageId);
+      setPreviewDentalaHTML(cachedHTML.dentala);
+      setPreviewEodontoHTML(cachedHTML.eodonto);
+      setIsGenerating(false);
+    } else {
+      // Fallback: gerar manualmente se não houver cache
+      const timer = setTimeout(() => {
+        setDebounceTick(prev => prev + 1);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [cachedHTML, refreshKey, dentalaData, eodontoData, landingPageId]);
+
+  // Trigger inicial (apenas se não houver cache)
+  useEffect(() => {
+    if (debounceTick > 0 && !cachedHTML) {
+      doGenerateAll();
+    }
+  }, [debounceTick, cachedHTML, doGenerateAll]);
 
   const copyHTML = async (html: string, domain: string) => {
     if (!html) return;
@@ -217,10 +240,28 @@ export function StrategicBlogPreview({
     <div className="w-full flex flex-col gap-4 h-full">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">
-            📰 Preview Consolidado (Blog Estratégico + Produtos)
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-lg">
+              📰 Preview Consolidado (Blog Estratégico + Produtos)
+            </h3>
+            {cachedHTML && (
+              <Badge variant="outline" className="ml-2">
+                Auto-atualizado
+              </Badge>
+            )}
+          </div>
           <div className="flex gap-2 items-center">
+            {cachedHTML && (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground mr-4">
+                <Badge variant="secondary">
+                  📘 Dentala: 1 estratégico + {cachedHTML.productBlogsCount.dentala} técnicos
+                </Badge>
+                <Badge variant="secondary">
+                  📗 Eodonto: 1 estratégico + {cachedHTML.productBlogsCount.eodonto} comerciais
+                </Badge>
+              </div>
+            )}
+
             <ToggleGroup type="single" value={deviceMode} onValueChange={(v) => v && setDeviceMode(v as any)}>
               <ToggleGroupItem value="desktop" aria-label="Desktop">
                 <Monitor className="h-4 w-4" />

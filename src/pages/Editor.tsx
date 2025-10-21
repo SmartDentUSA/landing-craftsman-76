@@ -29,6 +29,8 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
 import { StrategicBlogPreview } from "@/components/StrategicBlogPreview";
+import { ConsolidatedBlogCopyPaste } from "@/components/ConsolidatedBlogCopyPaste";
+import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -1217,6 +1219,13 @@ const EditorContent = () => {
   const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
   const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner } = useAnimatedBannerAutoSave(updateLandingPage, id);
   const [productsWithTechnicalVideos, setProductsWithTechnicalVideos] = useState<any[]>([]);
+  
+  // Hook para geração automática de blogs consolidados
+  const approvedLandingPages = useMemo(() => 
+    landingPages?.filter(lp => lp.status === 'approved') || [],
+    [landingPages]
+  );
+  const { consolidatedHTMLs, isGenerating: isGeneratingConsolidated } = useConsolidatedBlogAutoGenerator(approvedLandingPages);
   
   // Debounced auto-save for desktop info
   const debouncedDesktopSave = useDebounce((updatedData: any) => {
@@ -7618,12 +7627,21 @@ dataLayer = [{
                   <StrategicBlogPreview
                     dentalaData={dentalaBlogPost}
                     eodontoData={eodontoBlogPost}
-                    approvedLandingPages={landingPages?.filter(lp => lp.status === 'approved') || []}
+                    approvedLandingPages={approvedLandingPages}
                     selectedProductIds={selectedProductIds}
                     refreshKey={strategicBlogRefreshKey}
                     landingPageId={id || ''}
+                    consolidatedHTMLs={consolidatedHTMLs}
                   />
                 </div>
+              </div>
+
+              {/* Painel de Copy & Paste Consolidado */}
+              <div className="mt-6">
+                <ConsolidatedBlogCopyPaste
+                  approvedLandingPages={approvedLandingPages}
+                  consolidatedHTMLs={consolidatedHTMLs}
+                />
               </div>
             </TabsContent>
 
