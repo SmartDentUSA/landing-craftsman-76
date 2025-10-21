@@ -58,7 +58,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
   const [previewContent, setPreviewContent] = useState("");
   const [previewLinksCount, setPreviewLinksCount] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [versionToDelete, setVersionToDelete] = useState<{ domain: 'dentala' | 'eodonto', index: number } | null>(null);
+  const [versionToDelete, setVersionToDelete] = useState<{ domain: 'dentala' | 'eodonto', index: number, versionId: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [imageSelectorOpen, setImageSelectorOpen] = useState(false);
   const [activeEditor, setActiveEditor] = useState<'dentala' | 'eodonto' | null>(null);
   const [dentalaEditorInstance, setDentalaEditorInstance] = useState<any>(null);
@@ -465,24 +466,26 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     });
   };
 
-  const deleteVersion = async (domain: 'dentala' | 'eodonto', versionIndex: number) => {
+  const deleteVersion = async (domain: 'dentala' | 'eodonto', versionId: string, fallbackIndex: number) => {
+    setIsDeleting(true);
+    
     try {
-      console.log('🗑️ Tentando excluir versão:', { domain, versionIndex });
+      console.log('🗑️ Excluindo versão:', { domain, versionId, fallbackIndex, landingPageId });
       
       const targetDomain = domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br';
       const history = domain === 'dentala' ? dentalaHistory : eodontoHistory;
       
       console.log('📚 Histórico atual:', history.length, 'versões');
-      console.log('📍 Versão a ser excluída:', history[versionIndex]);
       
-      // Validações
-      if (versionIndex === 0) {
-        console.warn('⚠️ Tentativa de excluir versão atual (índice 0)');
+      // Validações: impedir excluir versão atual (índice 0) por ID
+      if (history[0]?.id === versionId) {
+        console.warn('⚠️ Tentativa de excluir versão atual (ID:', versionId, ')');
         toast({
           title: "Ação não permitida",
           description: "Não é possível excluir a versão atual.",
           variant: "destructive"
         });
+        setIsDeleting(false);
         return;
       }
       
@@ -492,24 +495,42 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
           description: "É necessário manter pelo menos uma versão.",
           variant: "destructive"
         });
+        setIsDeleting(false);
         return;
       }
       
-      // Buscar o blog atual
+      // Buscar o registro mais recente do blog para o domínio
       const { data: existing } = await supabase
         .from('blog_posts')
         .select('id, version_history')
         .eq('landing_page_id', landingPageId)
         .contains('published_domains', [targetDomain])
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
         
       if (!existing) {
-        throw new Error('Blog não encontrado');
+        throw new Error('Blog não encontrado no banco de dados');
       }
       
-      // Remover a versão do array
+      // Remover a versão por ID (preferencial) ou fallback por índice
       const currentHistory = (existing.version_history as any)?.versions || [];
-      const updatedVersions = currentHistory.filter((_: any, i: number) => i !== versionIndex);
+      const beforeCount = currentHistory.length;
+      
+      let updatedVersions = currentHistory.filter((v: any) => v.id !== versionId);
+      
+      // Se não encontrou por ID, usar fallback
+      if (updatedVersions.length === beforeCount && fallbackIndex >= 0 && fallbackIndex < beforeCount) {
+        console.warn('⚠️ Versão não encontrada por ID, usando fallback index:', fallbackIndex);
+        updatedVersions = currentHistory.filter((_: any, i: number) => i !== fallbackIndex);
+      }
+      
+      // Se ainda não removeu nada, erro
+      if (updatedVersions.length === beforeCount) {
+        throw new Error('Versão não encontrada (ID: ' + versionId + ')');
+      }
+      
+      console.log(`📊 Tamanho anterior: ${beforeCount}, novo: ${updatedVersions.length}`);
       
       // Atualizar no Supabase
       const { error: updateError } = await supabase
@@ -521,34 +542,45 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         
       if (updateError) throw updateError;
       
-      // Atualizar estado local
+      // Recarregar do banco para garantir sincronia
+      const { data: reloaded } = await supabase
+        .from('blog_posts')
+        .select('version_history')
+        .eq('id', existing.id)
+        .single();
+      
+      const syncedVersions = (reloaded?.version_history as any)?.versions || updatedVersions;
+      
+      // Atualizar estado local com dados do banco
       if (domain === 'dentala') {
-        setDentalaHistory(updatedVersions);
+        setDentalaHistory(syncedVersions);
       } else {
-        setEodontoHistory(updatedVersions);
+        setEodontoHistory(syncedVersions);
       }
       
-      console.log('✅ Versão excluída com sucesso. Novo tamanho:', updatedVersions.length);
+      console.log('✅ Versão excluída com sucesso. Novo tamanho:', syncedVersions.length);
       
       toast({
         title: "Versão excluída",
-        description: `Versão ${versionIndex + 1} foi removida do histórico.`,
+        description: `Versão removida do histórico. Total: ${syncedVersions.length}`,
       });
       
       setDeleteDialogOpen(false);
       setVersionToDelete(null);
     } catch (error: any) {
-      console.error('❌ Erro detalhado ao deletar versão:', error);
+      console.error('❌ Erro ao deletar versão:', error);
       toast({
         title: "Erro ao excluir",
         description: error.message || "Não foi possível excluir a versão.",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const openDeleteDialog = (domain: 'dentala' | 'eodonto', index: number) => {
-    setVersionToDelete({ domain, index });
+  const openDeleteDialog = (domain: 'dentala' | 'eodonto', index: number, versionId: string) => {
+    setVersionToDelete({ domain, index, versionId });
     setDeleteDialogOpen(true);
   };
 
@@ -829,7 +861,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                                     <Button
                                       size="sm"
                                       variant="destructive"
-                                      onClick={() => openDeleteDialog('dentala', index)}
+                                      onClick={() => openDeleteDialog('dentala', index, version.id)}
+                                      disabled={isDeleting}
                                     >
                                       <Trash2 className="h-3 w-3 mr-1" />
                                       Excluir
@@ -932,7 +965,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                                     <Button
                                       size="sm"
                                       variant="destructive"
-                                      onClick={() => openDeleteDialog('eodonto', index)}
+                                      onClick={() => openDeleteDialog('eodonto', index, version.id)}
+                                      disabled={isDeleting}
                                     >
                                       <Trash2 className="h-3 w-3 mr-1" />
                                       Excluir
@@ -1000,12 +1034,13 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
             <AlertDialogAction
               onClick={() => {
                 if (versionToDelete) {
-                  deleteVersion(versionToDelete.domain, versionToDelete.index);
+                  deleteVersion(versionToDelete.domain, versionToDelete.versionId, versionToDelete.index);
                 }
               }}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
