@@ -388,6 +388,7 @@ function generateAIPlaybookJSON(product: ProductData & {
   related_landing_pages?: any[];
   product_blogs?: any;
   intelligent_links_repository?: any[];
+  company_profile?: any;
 }): any {
   return {
     product_id: product.id,
@@ -662,6 +663,87 @@ function generateAIPlaybookJSON(product: ProductData & {
       })
     },
     landing_page_context: product.landing_page_context || null,
+    
+    // Video Testimonials Detailed (NOVO)
+    video_testimonials_detailed: product.landing_page_context?.video_testimonials?.map((t: any) => ({
+      id: t.id,
+      client_info: {
+        name: t.client_name,
+        profession: t.profession,
+        location: t.location,
+        state: t.state,
+        specialty: t.specialty
+      },
+      content: {
+        testimonial_text: t.testimonial_text,
+        youtube_url: t.youtube_url,
+        instagram_url: t.instagram_url
+      },
+      ai_analysis: {
+        keywords: t.ai_keywords || [],
+        extracted_benefits: t.ai_extracted_benefits || [],
+        sentiment_score: t.sentiment_score
+      },
+      transcription: t.caption_data || {},
+      metadata: {
+        approved: t.approved,
+        display_order: t.display_order,
+        created_at: t.created_at,
+        updated_at: t.updated_at
+      }
+    })) || [],
+    
+    // Company Context (NOVO)
+    company_context: product.company_profile ? {
+      basic_info: {
+        company_name: product.company_profile.company_name,
+        company_description: product.company_profile.company_description,
+        business_sector: product.company_profile.business_sector,
+        founded_year: product.company_profile.founded_year,
+        team_size: product.company_profile.team_size,
+        location: product.company_profile.location
+      },
+      positioning: {
+        mission_statement: product.company_profile.mission_statement,
+        vision_statement: product.company_profile.vision_statement,
+        brand_values: product.company_profile.brand_values,
+        target_audience: product.company_profile.target_audience,
+        main_products_services: product.company_profile.main_products_services,
+        differentiators: product.company_profile.differentiators,
+        working_methodology: product.company_profile.working_methodology,
+        delivery_approach: product.company_profile.delivery_approach,
+        company_culture: product.company_profile.company_culture
+      },
+      contact: {
+        website_url: product.company_profile.website_url,
+        contact_email: product.company_profile.contact_email,
+        contact_phone: product.company_profile.contact_phone,
+        company_logo_url: product.company_profile.company_logo_url
+      },
+      social_media: product.company_profile.social_media_links || [],
+      seo: {
+        market_positioning: product.company_profile.seo_market_positioning,
+        competitive_advantages: product.company_profile.seo_competitive_advantages,
+        technical_expertise: product.company_profile.seo_technical_expertise,
+        service_areas: product.company_profile.seo_service_areas,
+        context_keywords: product.company_profile.seo_context_keywords || [],
+        domains: product.company_profile.seo_domains || [],
+        youtube_footer: product.company_profile.youtube_company_footer
+      },
+      institutional_links: product.company_profile.institutional_links || [],
+      tracking: product.company_profile.tracking_pixels || {},
+      reviews: {
+        manual_reviews: product.company_profile.company_reviews?.manual_reviews || [],
+        google_place_id: product.company_profile.company_reviews?.google_place_id,
+        google_reviews_imported: product.company_profile.company_reviews?.google_reviews_imported
+      },
+      social_channels: {
+        youtube_channel: product.company_profile.youtube_channel,
+        instagram_profile: product.company_profile.instagram_profile
+      },
+      company_videos: product.company_profile.company_videos || []
+    } : null,
+    
     product_blogs: {
       commercial_blog: {
         content: product.product_blogs?.commercial || null,
@@ -804,6 +886,7 @@ function generatePlaybookTXT(product: ProductData & {
   landing_page_context?: any;
   related_landing_pages?: any[];
   product_blogs?: any;
+  company_profile?: any;
 }): string {
   const json = generateAIPlaybookJSON(product);
   
@@ -1320,6 +1403,80 @@ ${history.length > 3 ? `\n  ... e mais ${history.length - 3} versões no histór
 
 ` : ''}
 
+## 🏢 CONTEXTO DA EMPRESA
+${product.company_profile ? `
+
+### Informações Básicas:
+- Nome da Empresa: ${product.company_profile.company_name || 'N/A'}
+- Descrição: ${product.company_profile.company_description || 'N/A'}
+- Setor: ${product.company_profile.business_sector || 'N/A'}
+- Fundada em: ${product.company_profile.founded_year || 'N/A'}
+- Tamanho da Equipe: ${product.company_profile.team_size || 'N/A'}
+- Localização: ${product.company_profile.location || 'N/A'}
+
+### Posicionamento de Mercado:
+- Missão: ${product.company_profile.mission_statement || 'N/A'}
+- Visão: ${product.company_profile.vision_statement || 'N/A'}
+- Valores: ${product.company_profile.brand_values || 'N/A'}
+- Público-Alvo: ${product.company_profile.target_audience || 'N/A'}
+- Produtos/Serviços: ${product.company_profile.main_products_services || 'N/A'}
+- Diferenciais: ${product.company_profile.differentiators || 'N/A'}
+
+### Metodologia & Cultura:
+- Metodologia de Trabalho: ${product.company_profile.working_methodology || 'N/A'}
+- Abordagem de Entrega: ${product.company_profile.delivery_approach || 'N/A'}
+- Cultura Empresarial: ${product.company_profile.company_culture || 'N/A'}
+
+### Contato:
+- Website: ${product.company_profile.website_url || 'N/A'}
+- E-mail: ${product.company_profile.contact_email || 'N/A'}
+- Telefone: ${product.company_profile.contact_phone || 'N/A'}
+- Logo: ${product.company_profile.company_logo_url || 'N/A'}
+
+### Redes Sociais:
+${(product.company_profile.social_media_links || []).map((link: any) => 
+  `- ${link.platform || 'Rede'}: ${link.url || 'N/A'}`
+).join('\n') || '- Nenhuma rede social cadastrada'}
+
+### Canais de Conteúdo:
+- YouTube: ${product.company_profile.youtube_channel || 'N/A'}
+- Instagram: ${product.company_profile.instagram_profile || 'N/A'}
+
+### SEO & Posicionamento Digital:
+- Posicionamento de Mercado: ${product.company_profile.seo_market_positioning || 'N/A'}
+- Vantagens Competitivas: ${product.company_profile.seo_competitive_advantages || 'N/A'}
+- Expertise Técnica: ${product.company_profile.seo_technical_expertise || 'N/A'}
+- Áreas de Atuação: ${product.company_profile.seo_service_areas || 'N/A'}
+- Keywords de Contexto: ${(product.company_profile.seo_context_keywords || []).join(', ') || 'N/A'}
+- Domínios SEO: ${(product.company_profile.seo_domains || []).map((d: any) => d.domain).join(', ') || 'N/A'}
+
+### Links Institucionais:
+${(product.company_profile.institutional_links || []).map((link: any) => 
+  `- ${link.label || 'Link'}: ${link.url || 'N/A'}`
+).join('\n') || '- Nenhum link institucional cadastrado'}
+
+### Tracking & Analytics:
+- Google Tag Manager: ${product.company_profile.tracking_pixels?.google_tag_manager?.enabled ? `✅ ${product.company_profile.tracking_pixels.google_tag_manager.container_id}` : '❌ Não configurado'}
+- Google Analytics: ${product.company_profile.tracking_pixels?.google_analytics?.enabled ? `✅ ${product.company_profile.tracking_pixels.google_analytics.measurement_id}` : '❌ Não configurado'}
+- Meta Pixel: ${product.company_profile.tracking_pixels?.meta_pixel?.enabled ? `✅ ${product.company_profile.tracking_pixels.meta_pixel.pixel_id}` : '❌ Não configurado'}
+- TikTok Pixel: ${product.company_profile.tracking_pixels?.tiktok_pixel?.enabled ? `✅ ${product.company_profile.tracking_pixels.tiktok_pixel.pixel_id}` : '❌ Não configurado'}
+
+### Reviews da Empresa:
+- Google Place ID: ${product.company_profile.company_reviews?.google_place_id || 'N/A'}
+- Reviews Importados: ${product.company_profile.company_reviews?.google_reviews_imported ? '✅ Sim' : '❌ Não'}
+- Reviews Manuais: ${(product.company_profile.company_reviews?.manual_reviews || []).length || 0}
+
+### Rodapé YouTube Corporativo:
+${product.company_profile.youtube_company_footer || 'N/A'}
+
+### Vídeos da Empresa:
+${product.company_profile.company_videos ? `
+- YouTube: ${product.company_profile.company_videos.youtube_videos?.length || 0} vídeos
+- Instagram: ${product.company_profile.company_videos.instagram_videos?.length || 0} vídeos
+` : '❌ Nenhum vídeo cadastrado'}
+
+` : '❌ Perfil da empresa não disponível'}
+
 ## 🌐 CONTEXTO DA LANDING PAGE
 ${product.landing_page_context ? `
 Landing Page: ${product.landing_page_context.landing_page_name || product.landing_page_context.landing_page_id}
@@ -1347,8 +1504,54 @@ ${product.landing_page_context.approved_reviews?.slice(0, 3).map((review: any, i
   `${idx + 1}. ${review.contextual_seo_info || 'Sem contexto SEO'}`
 ).join('\n') || ''}
 
-### Depoimentos em Vídeo:
+### Depoimentos em Vídeo (DETALHADO):
 Total: ${product.landing_page_context.video_testimonials?.length || 0} depoimentos aprovados
+
+${product.landing_page_context.video_testimonials?.map((testimonial: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DEPOIMENTO ${idx + 1}: ${testimonial.client_name}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 DADOS DO CLIENTE:
+  • Nome: ${testimonial.client_name}
+  • Profissão: ${testimonial.profession || 'N/A'}
+  • Localização: ${testimonial.location || 'N/A'}${testimonial.state ? `, ${testimonial.state}` : ''}
+  • Especialidade: ${testimonial.specialty || 'N/A'}
+
+📱 LINKS:
+  • YouTube: ${testimonial.youtube_url || '❌ Não disponível'}
+  • Instagram: ${testimonial.instagram_url || '❌ Não disponível'}
+
+💬 DEPOIMENTO:
+${testimonial.testimonial_text}
+
+${testimonial.caption_data && Object.keys(testimonial.caption_data).length > 0 ? `
+📝 TRANSCRIÇÃO (Caption Data):
+${JSON.stringify(testimonial.caption_data, null, 2)}
+` : ''}
+
+${testimonial.ai_keywords?.length > 0 ? `
+🏷️ AI KEYWORDS (${testimonial.ai_keywords.length}):
+${testimonial.ai_keywords.join(', ')}
+` : ''}
+
+${testimonial.ai_extracted_benefits?.length > 0 ? `
+✨ BENEFÍCIOS EXTRAÍDOS (${testimonial.ai_extracted_benefits.length}):
+${testimonial.ai_extracted_benefits.map((b: string) => `  • ${b}`).join('\n')}
+` : ''}
+
+${testimonial.sentiment_score ? `
+😊 SENTIMENT SCORE: ${testimonial.sentiment_score} (${testimonial.sentiment_score >= 0.7 ? 'Positivo' : testimonial.sentiment_score >= 0.4 ? 'Neutro' : 'Negativo'})
+` : ''}
+
+📊 METADADOS:
+  • ID: ${testimonial.id}
+  • Display Order: ${testimonial.display_order || 'N/A'}
+  • Aprovado: ${testimonial.approved ? '✅ Sim' : '❌ Não'}
+  • Criado em: ${new Date(testimonial.created_at).toLocaleString('pt-BR')}
+  • Atualizado em: ${new Date(testimonial.updated_at).toLocaleString('pt-BR')}
+
+`).join('\n') || '📭 Nenhum depoimento disponível'}
 ` : '❌ Produto não vinculado a uma Landing Page'}
 
 ## 🌐 LANDING PAGES APROVADAS RELACIONADAS
@@ -1571,7 +1774,13 @@ serve(async (req) => {
           .eq('approved', true);
 
         landingPageVideos = videoTestimonials || [];
-        console.log(`📹 Vídeos da landing page: ${landingPageVideos.length}`);
+        console.log(`📹 Video Testimonials carregados:`, {
+          total: videoTestimonials?.length || 0,
+          with_youtube: videoTestimonials?.filter((v: any) => v.youtube_url).length || 0,
+          with_instagram: videoTestimonials?.filter((v: any) => v.instagram_url).length || 0,
+          with_captions: videoTestimonials?.filter((v: any) => Object.keys(v.caption_data || {}).length > 0).length || 0,
+          with_ai_keywords: videoTestimonials?.filter((v: any) => v.ai_keywords?.length > 0).length || 0
+        });
 
         landingPageContext = {
           landing_page_id: landingPage.id,
@@ -1584,15 +1793,22 @@ serve(async (req) => {
       }
     }
 
-    // Buscar vídeos da empresa
+    // Buscar TODOS os campos do company_profile
     const { data: companyProfile } = await supabase
       .from('company_profile')
-      .select('company_videos')
+      .select('*')
       .limit(1)
       .single();
 
     const companyVideos = companyProfile?.company_videos || null;
-    console.log(`📹 Vídeos da empresa disponíveis: ${companyVideos ? 'SIM' : 'NÃO'}`);
+    console.log(`🏢 Company Profile carregado:`, {
+      found: !!companyProfile,
+      company_name: companyProfile?.company_name || 'N/A',
+      total_fields: companyProfile ? Object.keys(companyProfile).length : 0,
+      has_videos: !!companyProfile?.company_videos,
+      has_seo: !!companyProfile?.seo_market_positioning,
+      has_social: !!companyProfile?.social_media_links?.length
+    });
 
     // Consolidar vídeos
     const consolidatedVideos = normalizeAndConsolidateVideos(
@@ -1637,7 +1853,8 @@ serve(async (req) => {
       related_landing_pages: relatedLandingPages || [],
       product_blogs: productBlogs,
       consolidatedVideos,
-      intelligent_links_repository: intelligentLinksRepo || []
+      intelligent_links_repository: intelligentLinksRepo || [],
+      company_profile: companyProfile || null
     };
 
     // Generate content based on format
