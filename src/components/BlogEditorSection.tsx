@@ -318,6 +318,17 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         
         setBlogGenerated(true);
 
+        // Atualizar flag blog_generated na landing page para evitar regeneração automática
+        try {
+          await supabase
+            .from('landing_pages')
+            .update({ blog_generated: true, blog_generated_at: new Date().toISOString() })
+            .eq('id', landingPageId);
+          console.log('✅ Landing page atualizada: blog_generated=true');
+        } catch (lpErr) {
+          console.warn('⚠️ Não foi possível atualizar blog_generated na landing page:', lpErr);
+        }
+
         console.log("✅ Blogs estratégicos duais gerados com sucesso");
         console.log(`   - Dentala: ${data.dentala.contentLength} chars (${data.dentala.selectedAPI})`);
         console.log(`   - Eodonto: ${data.eodonto.contentLength} chars (${data.eodonto.selectedAPI})`);

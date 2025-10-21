@@ -199,29 +199,18 @@ export function StrategicBlogPreview({
     }
   }, [generateHTML, showSuccessToast]);
 
-  // Usar HTML pré-gerado ou gerar on-demand (apenas quando refreshKey ou landingPageId mudam)
+  // Usar HTML pré-gerado; não gerar automaticamente quando não há cache
   useEffect(() => {
     if (cachedHTML) {
       console.log('✅ [PREVIEW] Usando HTML pré-gerado do cache para LP:', landingPageId);
       setPreviewDentalaHTML(cachedHTML.dentala);
       setPreviewEodontoHTML(cachedHTML.eodonto);
-      setIsGenerating(false);
-    } else {
-      // Fallback: gerar manualmente se não houver cache
-      console.log('⚠️ [PREVIEW] Sem cache, agendando geração on-demand');
-      const timer = setTimeout(() => {
-        setDebounceTick(prev => prev + 1);
-      }, 800);
-      return () => clearTimeout(timer);
     }
-  }, [cachedHTML, refreshKey, landingPageId]); // ✅ Removido dentalaData/eodontoData para evitar triggers em autosave
+    // Quando não há cache, exibimos o banner e aguardamos ação manual
+    setIsGenerating(false);
+  }, [cachedHTML, refreshKey, landingPageId]);
 
-  // Trigger inicial (apenas se não houver cache)
-  useEffect(() => {
-    if (debounceTick > 0 && !cachedHTML) {
-      doGenerateAll();
-    }
-  }, [debounceTick, cachedHTML, doGenerateAll]);
+  // Auto-trigger removido para evitar geração automática ao abrir o editor
 
   const copyHTML = async (html: string, domain: string) => {
     if (!html) return;
