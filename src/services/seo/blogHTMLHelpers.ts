@@ -7,7 +7,8 @@
  * ✅ ATUALIZADO: Retorna apenas <li>s, não <nav> completo
  */
 export function generateTableOfContents(content: string, domain: string): string {
-  const headings = content.match(/<h2[^>]*>(.*?)<\/h2>/gi) || [];
+  // ✅ Ignorar H2/H3 com class="card-title"
+  const headings = content.match(/<h2(?![^>]*class=["']?[^"']*card-title[^"']*["'])[^>]*>(.*?)<\/h2>/gi) || [];
   
   if (headings.length === 0) {
     return ''; // Sem H2s, sem TOC

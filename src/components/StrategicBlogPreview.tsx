@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Copy, ExternalLink, Monitor, Tablet, Smartphone } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useProductBlogsIntegration } from "@/hooks/useProductBlogsIntegration";
-import { useSEOHTMLGenerator } from "@/hooks/useSEOHTMLGenerator";
+import { generateBlogHTML } from "@/services/seo/blogHTMLGenerator";
 
 interface BlogData {
   title?: string;
@@ -50,7 +50,6 @@ export function StrategicBlogPreview({
   });
 
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
-  const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
 
   // Debounce para regeneração automática
   const [debounceTick, setDebounceTick] = useState(0);
@@ -119,38 +118,30 @@ export function StrategicBlogPreview({
         includedProducts: filteredBlogs.map(b => b.productName)
       });
 
-      // Usar generateConsolidatedBlogHTML do hook robusto
-      const html = await generateConsolidatedBlogHTML({
-        title: strategicBlog.title || `Blog Consolidado ${domain}`,
-        description: strategicBlog.meta_description || '',
-        domain: domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br',
+      // ✅ Usar o novo pipeline blogHTMLGenerator
+      const html = await generateBlogHTML({
         blogs: [
-          // ✅ INCLUIR BLOG ESTRATÉGICO PRIMEIRO (Dentala ou Eodonto)
           {
             title: strategicBlog.title || `Blog Estratégico ${domain}`,
             content: strategicBlog.content || '',
+            meta_description: strategicBlog.meta_description,
             keywords: strategicKeywords,
           },
-          // ✅ DEPOIS OS BLOGS DE PRODUTOS
-          ...filteredBlogs.map(pb => {
-            const product = selectedProductsData?.find(p => p.id === pb.productId);
-            return {
-              title: pb.title,
-              content: pb.content,
-              productName: pb.productName,
-              productId: pb.productId,
-              productImageUrl: product?.image_url,
-              productUrl: product?.product_url,
-              keywords: pb.keywords || [],
-            };
-          })
+          ...filteredBlogs.map(pb => ({
+            title: pb.title,
+            content: pb.content,
+            keywords: pb.keywords || [],
+          }))
         ],
-        aggregatedKeywords: uniqueKeywords,
-        landingPageIdForSEOContext: landingPageId,
+        domain: domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br',
+        canonicalUrl: '',
+        finalTitle: strategicBlog.title || `Blog Consolidado ${domain}`,
+        finalDescription: strategicBlog.meta_description || '',
+        selectedProducts: selectedProductsData || [],
+        keywords: uniqueKeywords,
         preview: true,
-        excludeMetaInfo: true,
+        validateSchema: false,
         excludeFooter: true,
-        excludeSubtitle: true
       });
 
       return html;
@@ -165,7 +156,7 @@ export function StrategicBlogPreview({
         </body>
         </html>`;
     }
-  }, [dentalaData, eodontoData, productBlogsForHTMLByDomain, landingPageId, generateConsolidatedBlogHTML, selectedProductIds]);
+  }, [dentalaData, eodontoData, productBlogsForHTMLByDomain, landingPageId, selectedProductIds]);
 
   const doGenerateAll = useCallback(async () => {
     try {
