@@ -14,6 +14,9 @@ interface KnowledgeBaseParams {
   include_categories?: boolean;
   include_links?: boolean;
   include_products?: boolean;
+  include_video_testimonials?: boolean;
+  include_google_reviews?: boolean;
+  include_kols?: boolean;
   approved_only?: boolean;
   category?: string;
   limit?: number;
@@ -154,6 +157,50 @@ function formatForAITraining(data: any): string {
     });
   }
   
+  // Video Testimonials
+  if (data.video_testimonials && Array.isArray(data.video_testimonials)) {
+    text += `## DEPOIMENTOS EM VÍDEO (${data.video_testimonials.length})\n\n`;
+    data.video_testimonials.forEach((testimonial: any) => {
+      text += `### ${testimonial.client_name}\n`;
+      if (testimonial.profession) text += `**Profissão:** ${testimonial.profession}\n`;
+      if (testimonial.location) text += `**Localização:** ${testimonial.location}${testimonial.state ? `, ${testimonial.state}` : ''}\n`;
+      if (testimonial.specialty) text += `**Especialidade:** ${testimonial.specialty}\n`;
+      text += `**Depoimento:**\n${testimonial.testimonial_text}\n`;
+      if (testimonial.youtube_url) text += `**YouTube:** ${testimonial.youtube_url}\n`;
+      if (testimonial.instagram_url) text += `**Instagram:** ${testimonial.instagram_url}\n`;
+      if (testimonial.sentiment_score) text += `**Sentimento:** ${testimonial.sentiment_score}\n`;
+      text += `\n`;
+    });
+  }
+  
+  // Google Reviews
+  if (data.google_reviews && Array.isArray(data.google_reviews)) {
+    text += `## AVALIAÇÕES DO GOOGLE (${data.google_reviews.length})\n\n`;
+    data.google_reviews.forEach((review: any) => {
+      const raw = review.raw_review;
+      text += `### ${raw.author_name} - ${raw.rating}⭐\n`;
+      text += `**Data:** ${raw.review_date}\n`;
+      if (raw.review_text) text += `**Avaliação:** ${raw.review_text}\n`;
+      if (raw.response_from_owner) text += `**Resposta:** ${raw.response_from_owner}\n`;
+      text += `\n`;
+    });
+  }
+  
+  // Key Opinion Leaders
+  if (data.key_opinion_leaders && Array.isArray(data.key_opinion_leaders)) {
+    text += `## ESPECIALISTAS (KOLs) (${data.key_opinion_leaders.length})\n\n`;
+    data.key_opinion_leaders.forEach((kol: any) => {
+      text += `### ${kol.full_name}\n`;
+      if (kol.specialty) text += `**Especialidade:** ${kol.specialty}\n`;
+      if (kol.mini_cv) text += `**Mini CV:** ${kol.mini_cv}\n`;
+      if (kol.lattes_url) text += `**Lattes:** ${kol.lattes_url}\n`;
+      if (kol.website_url) text += `**Website:** ${kol.website_url}\n`;
+      if (kol.instagram_url) text += `**Instagram:** ${kol.instagram_url}\n`;
+      if (kol.youtube_url) text += `**YouTube:** ${kol.youtube_url}\n`;
+      text += `\n`;
+    });
+  }
+  
   return text;
 }
 
@@ -225,6 +272,9 @@ serve(async (req) => {
       include_categories: url.searchParams.get('include_categories') !== 'false',
       include_links: url.searchParams.get('include_links') !== 'false',
       include_products: url.searchParams.get('include_products') !== 'false',
+      include_video_testimonials: url.searchParams.get('include_video_testimonials') !== 'false',
+      include_google_reviews: url.searchParams.get('include_google_reviews') !== 'false',
+      include_kols: url.searchParams.get('include_kols') === 'true',
       approved_only: url.searchParams.get('approved_only') !== 'false',
       category: url.searchParams.get('category') || undefined,
       limit: parseInt(url.searchParams.get('limit') || '50'),
@@ -244,6 +294,9 @@ serve(async (req) => {
       p_include_categories: params.include_categories,
       p_include_links: params.include_links,
       p_include_products: params.include_products,
+      p_include_video_testimonials: params.include_video_testimonials,
+      p_include_google_reviews: params.include_google_reviews,
+      p_include_kols: params.include_kols,
       p_approved_only: params.approved_only,
       p_category: params.category,
       p_limit: params.limit,

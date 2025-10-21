@@ -1629,8 +1629,11 @@ export type Database = {
           p_category?: string
           p_include_categories?: boolean
           p_include_company?: boolean
+          p_include_google_reviews?: boolean
+          p_include_kols?: boolean
           p_include_links?: boolean
           p_include_products?: boolean
+          p_include_video_testimonials?: boolean
           p_limit?: number
           p_offset?: number
         }
