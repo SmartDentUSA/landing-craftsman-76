@@ -4,334 +4,132 @@
  */
 
 export const CRITICAL_CSS = `
-/* Poppins Font - Critical Above-the-Fold */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-/* CSS Variables - Design System */
 :root{
-  --primary:#0f172a;
-  --secondary:#1e293b;
-  --accent:#14b8a6;
-  --accent-2:#3b82f6;
   --bg:#ffffff;
-  --bg-subtle:#f8fafc;
-  --border:rgba(15,23,42,0.08);
-  --text:#334155;
-  --text-muted:#64748b;
-  --radius:12px;
-  --shadow-sm:0 1px 2px rgba(15,23,42,0.05);
-  --shadow-md:0 4px 6px rgba(15,23,42,0.07);
-  --shadow-lg:0 10px 15px rgba(15,23,42,0.1);
+  --muted:#6b7280;
+  --accent:#0f766e;
+  --accent-2:#0369a1;
+  --card:#f8fafc;
+  --radius:14px;
+  --max-width:1100px;
+  --content-padding:22px;
+  font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
-
-/* Reset */
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Poppins',system-ui,-apple-system,sans-serif;line-height:1.6;color:var(--text);background:var(--bg)}
-
-/* Container */
-.container{max-width:900px;margin:0 auto;padding:24px}
-
-/* Hero Section - Above-the-Fold */
-.hero{margin-bottom:48px;padding:32px;background:linear-gradient(135deg,var(--bg-subtle) 0%,#fff 100%);border-radius:var(--radius);border:1px solid var(--border)}
-.eyebrow{font-size:0.875rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px}
-h1{font-size:clamp(1.75rem,5vw,2.5rem);font-weight:700;color:var(--primary);line-height:1.2;margin-bottom:16px}
-.lead{font-size:1.125rem;color:var(--text-muted);line-height:1.6}
-
-/* TOC - Above the fold critical styles */
-.toc{position:sticky;top:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:32px;box-shadow:var(--shadow-sm)}
-.toc h4{font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:12px}
-.toc ul{list-style:none;padding:0;margin:0}
-.toc li{margin:0}
-.toc a{display:block;padding:8px 12px;color:var(--text);text-decoration:none;border-radius:6px;transition:background 0.2s,color 0.2s;font-size:0.875rem}
-.toc a:hover{background:var(--bg-subtle);color:var(--accent)}
-
-/* Mobile First */
-@media (max-width:768px){
-  .container{padding:16px}
-  .hero{padding:24px}
-  h1{font-size:1.75rem}
-  .lead{font-size:1rem}
-  .toc{position:static;margin-bottom:24px}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:linear-gradient(180deg, #fbfcfd 0%, #ffffff 100%);
+  color:#0f172a;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding:32px;
+  display:flex;
+  justify-content:center;
+  font-size:16px;
+}
+.container{
+  width:100%;
+  max-width:var(--max-width);
+  background:var(--bg);
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(15,23,42,0.06);
+  overflow:hidden;
+  border:1px solid rgba(15,23,42,0.04);
+}
+header.hero{
+  padding:40px;
+  background:linear-gradient(90deg, rgba(3,105,161,0.06), rgba(15,118,110,0.04));
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:24px;
+  align-items:center;
+}
+header .eyebrow{
+  display:inline-block;
+  font-weight:600;
+  color:var(--accent);
+  margin-bottom:8px;
+  font-size:13px;
+}
+header h1{
+  margin:0 0 12px 0;
+  font-size:28px;
+  line-height:1.1;
+  letter-spacing:-0.2px;
+}
+header p.lead{
+  margin:0 0 18px 0;
+  color:var(--muted);
+}
+main{
+  display:grid;
+  grid-template-columns: 280px 1fr;
+  gap:28px;
+  padding:28px;
+}
+nav.toc{
+  position:sticky;
+  top:28px;
+  align-self:start;
+  background:var(--card);
+  padding:18px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,0.03);
+}
+nav.toc h4{margin:0 0 12px 0;}
+nav.toc ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+nav.toc a{color:var(--accent-2);text-decoration:none;font-size:14px}
+nav.toc a.small{color:var(--muted);font-weight:500}
+article{background:transparent;}
+section.card{
+  background:linear-gradient(180deg,#ffffff,#fbfeff);
+  border-radius:var(--radius);
+  padding:var(--content-padding);
+  margin-bottom:18px;
+  border:1px solid rgba(3,105,161,0.04);
+}
+h2{font-size:20px;margin-top:8px}
+h3{font-size:17px;margin-top:10px}
+p{margin:0 0 12px 0;color:#0b1220}
+ul{margin:0 0 12px 20px}
+li{margin-bottom:6px}
+blockquote{
+  margin:12px 0;
+  padding:12px 16px;
+  border-left:4px solid rgba(3,105,161,0.12);
+  background:#fbfeff;
+  border-radius:8px;
+  color:#083344;
+}
+.grid-3{
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap:12px;
+  margin-top:8px;
+}
+.benefit{
+  padding:12px;
+  border-radius:10px;
+  background:white;
+  text-align:center;
+  border:1px solid rgba(15,23,42,0.03);
+}
+.benefit h4{margin:8px 0 6px 0;font-size:15px}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#ecfeff;font-weight:600;color:#036e66;font-size:13px}
+@media (max-width:980px){
+  header{grid-template-columns:1fr}
+  main{grid-template-columns:1fr;padding:18px}
+  nav.toc{order:2; position:relative; top:auto; margin-top:12px}
+  .grid-3{grid-template-columns:repeat(1,1fr)}
 }
 `.trim();
 
 /**
- * Non-Critical CSS - Carregado externamente com preload
- * Contém estilos de interação, decorativos e below-the-fold
+ * Full CSS para blogs (carregamento externo ou inline)
+ * ✅ VAZIO: Todo CSS está inline no CRITICAL_CSS
  */
-export const FULL_CSS = `
-/* ============= NOVO CSS MODERNO ============= */
-
-/* Typography */
-h2{
-  font-size:1.5rem;
-  font-weight:600;
-  color:var(--primary);
-  margin:40px 0 16px 0;
-  scroll-margin-top:80px;
-}
-
-h3{
-  font-size:1.25rem;
-  font-weight:600;
-  color:var(--secondary);
-  margin:32px 0 12px 0;
-}
-
-h4{
-  font-size:1rem;
-  font-weight:600;
-  color:var(--primary);
-  margin:24px 0 8px 0;
-}
-
-/* Paragraphs */
-p{
-  margin-bottom:16px;
-  line-height:1.7;
-  color:var(--text);
-}
-
-/* Lists */
-ul,ol{
-  margin:16px 0;
-  padding-left:24px;
-}
-
-li{
-  margin-bottom:8px;
-  line-height:1.6;
-}
-
-/* Links */
-a{
-  color:var(--accent);
-  text-decoration:none;
-  transition:color 0.2s;
-}
-
-a:hover{
-  color:var(--accent-2);
-  text-decoration:underline;
-}
-
-/* Card Sections */
-.card{
-  background:var(--bg);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:32px;
-  margin-bottom:32px;
-  box-shadow:var(--shadow-sm);
-}
-
-/* Benefit Cards Grid */
-.grid-3{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:24px;
-  margin:24px 0;
-}
-
-.benefit{
-  padding:24px;
-  background:linear-gradient(135deg,var(--bg-subtle) 0%,#fff 100%);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  transition:transform 0.2s,box-shadow 0.2s;
-}
-
-.benefit:hover{
-  transform:translateY(-4px);
-  box-shadow:var(--shadow-md);
-}
-
-.badge{
-  display:inline-block;
-  padding:4px 12px;
-  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
-  color:#fff;
-  border-radius:20px;
-  font-size:0.75rem;
-  font-weight:600;
-  text-transform:uppercase;
-  letter-spacing:0.05em;
-  margin-bottom:12px;
-}
-
-/* TOC Full Styles */
-.toc .small{
-  display:block;
-  margin-top:12px;
-  padding:8px 12px;
-  text-align:center;
-  color:var(--text-muted);
-  font-size:0.75rem;
-  text-decoration:none;
-}
-
-/* Blockquote */
-blockquote{
-  border-left:4px solid var(--accent);
-  padding-left:20px;
-  margin:24px 0;
-  color:var(--text-muted);
-  font-style:italic;
-}
-
-/* Images */
-img{
-  max-width:100%;
-  height:auto;
-  border-radius:var(--radius);
-  margin:24px 0;
-}
-
-/* Code */
-code{
-  background:var(--bg-subtle);
-  padding:2px 6px;
-  border-radius:4px;
-  font-family:'Courier New',monospace;
-  font-size:0.875em;
-}
-
-pre{
-  background:var(--bg-subtle);
-  padding:16px;
-  border-radius:var(--radius);
-  overflow-x:auto;
-  margin:24px 0;
-}
-
-pre code{
-  background:none;
-  padding:0;
-}
-
-/* Tables */
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin:24px 0;
-}
-
-th,td{
-  padding:12px;
-  text-align:left;
-  border-bottom:1px solid var(--border);
-}
-
-th{
-  background:var(--bg-subtle);
-  font-weight:600;
-  color:var(--primary);
-}
-
-/* Company Footer */
-.company-footer-info,
-.company-info{
-  margin-top:40px;
-  padding:20px;
-  background:linear-gradient(135deg,var(--bg-subtle) 0%,#fff 100%);
-  border-radius:var(--radius);
-  border-left:4px solid var(--accent);
-}
-
-.company-footer-info h3,
-.company-info h3{
-  color:var(--primary);
-  margin-bottom:12px;
-}
-
-/* Multi-Domain Footer */
-.multi-domain-footer{
-  margin-top:60px;
-  padding:30px 0;
-  border-top:1px solid var(--border);
-  text-align:center;
-}
-
-.multi-domain-footer a{
-  display:inline-block;
-  margin:0 15px;
-  color:var(--accent);
-  text-decoration:none;
-  font-size:0.95rem;
-  transition:color 0.3s ease;
-}
-
-.multi-domain-footer a:hover{
-  color:var(--accent-2);
-  text-decoration:underline;
-}
-
-/* Institutional Links */
-nav.institutional-links{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  padding:10px;
-  background:var(--bg-subtle);
-  border-radius:var(--radius);
-  margin:20px 0;
-}
-
-nav.institutional-links a{
-  color:var(--accent);
-  text-decoration:none;
-  font-size:0.9rem;
-}
-
-/* Accessibility */
-.sr-only{
-  position:absolute;
-  width:1px;
-  height:1px;
-  padding:0;
-  margin:-1px;
-  overflow:hidden;
-  clip:rect(0,0,0,0);
-  white-space:nowrap;
-  border:0;
-}
-
-.skip-link{
-  position:absolute;
-  top:-40px;
-  left:0;
-  background:var(--accent);
-  color:#fff;
-  padding:8px 16px;
-  text-decoration:none;
-  z-index:100;
-}
-
-.skip-link:focus{
-  top:0;
-}
-
-/* Responsive */
-@media (max-width:768px){
-  .card{padding:24px}
-  .grid-3{grid-template-columns:1fr}
-  h2{font-size:1.4rem;margin:20px 0 12px 0}
-  h3{font-size:1.2rem}
-  .multi-domain-footer a{display:block;margin:10px 0}
-  nav.institutional-links{flex-direction:column}
-}
-
-@media (min-width:1200px){
-  .container{max-width:1000px}
-}
-
-/* Print Styles */
-@media print{
-  body{background:#fff;color:#000}
-  a{text-decoration:underline}
-  .toc,.skip-link{display:none}
-}
-`.trim();
+export const FULL_CSS = '';
 
 /**
  * Gera tags <link> para CSS externo com resource hints
@@ -357,22 +155,29 @@ export function inlineCriticalCSS(): string {
 }
 
 /**
- * Gera script de smooth scroll para navegação entre seções
+ * Gera script de smooth scroll para âncoras
+ * ✅ ATUALIZADO: Versão robusta com fallback e history.replaceState
  */
 export function generateSmoothScrollScript(): string {
   return `
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', function(e) {
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
+(function(){
+  function supportsSmoothScroll(){ return 'scrollBehavior' in document.documentElement.style; }
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      var target = document.querySelector(this.getAttribute('href'));
+      if(target){
         e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if(supportsSmoothScroll()){
+          target.scrollIntoView({behavior:'smooth', block:'start'});
+        } else {
+          window.scrollTo(0, target.offsetTop);
+        }
+        history.replaceState && history.replaceState(null, null, this.getAttribute('href'));
       }
     });
   });
-});
+})();
 </script>
 `.trim();
 }

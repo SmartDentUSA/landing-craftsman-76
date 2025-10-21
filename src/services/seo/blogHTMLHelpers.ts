@@ -4,6 +4,7 @@
 
 /**
  * Gera Table of Contents (TOC) baseado nos H2s do conteúdo
+ * ✅ ATUALIZADO: Retorna apenas <li>s, não <nav> completo
  */
 export function generateTableOfContents(content: string, domain: string): string {
   const headings = content.match(/<h2[^>]*>(.*?)<\/h2>/gi) || [];
@@ -24,14 +25,7 @@ export function generateTableOfContents(content: string, domain: string): string
     return `<li><a href="#${id}">${text}</a></li>`;
   }).join('');
   
-  return `
-  <nav class="toc" aria-label="Sumário do artigo">
-    <h4>📋 Sumário</h4>
-    <ul>${tocItems}</ul>
-    <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)" />
-    <a class="small" href="https://${domain}">← Voltar ao site</a>
-  </nav>
-  `;
+  return tocItems; // ✅ Retornar apenas <li>s
 }
 
 /**

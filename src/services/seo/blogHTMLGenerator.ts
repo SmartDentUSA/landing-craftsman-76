@@ -427,11 +427,15 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   const externalCSSLinks = cssUrl ? generateCSSLinks(cssUrl) : '';
 
   // ✅ 15. GERAR HTML FINAL COMPLETO COM OTIMIZAÇÕES SEO
+  // ✅ ATUALIZADO: Layout minimalista com sidebar sticky (arquivo correto)
   const htmlOutput = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  
+  <!-- Google Fonts - Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   
   <!-- Preconnect para recursos externos -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -447,45 +451,38 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   
   <!-- Critical CSS Inline (First Paint) -->
   ${criticalCSS}
-  
-  <!-- External CSS com Preload (Non-blocking) -->
-  ${externalCSSLinks || `<style>${FULL_CSS}</style>`}
 </head>
 <body>
   ${gtmNoScriptHTML}
   
-  <!-- Skip Link para Acessibilidade -->
-  <a href="#main-content" class="skip-link">Pular para conteúdo principal</a>
-  
-  <div class="container" role="main" id="main-content">
+  <div class="container" role="main">
     <!-- ✅ HERO SECTION -->
     <header class="hero" aria-label="Cabeçalho do artigo">
       <div>
-        <div class="eyebrow">${keywords[0] || 'Artigo'} • ${companySEOData?.companyName || 'Smart Dent'}</div>
+        <div class="eyebrow">${keywords[0] || 'Artigo'} • ${companySEOData?.companyName || domain}</div>
         <h1>${finalTitle}</h1>
         <p class="lead">${validatedDescription}</p>
       </div>
     </header>
-    
-    ${institutionalLinksHTML ? `<nav aria-label="Links institucionais" class="institutional-links">${institutionalLinksHTML}</nav>` : ''}
-    
-    ${schemaValidationAlert}
-    
-    <!-- ✅ TABLE OF CONTENTS -->
-    ${tocHTML}
-    
-    <!-- ✅ MAIN CONTENT -->
+
     <main>
-      ${blogContentsWithIds}
+      <!-- ✅ SIDEBAR TOC -->
+      <nav class="toc" aria-label="Sumário do artigo">
+        <h4>Sumário</h4>
+        <ul>
+          ${tocHTML}
+        </ul>
+        <hr style="margin:12px 0;border:none;border-top:1px solid rgba(15,23,42,0.03)" />
+        <a class="small" href="https://${domain}">Voltar ao site</a>
+      </nav>
+
+      <!-- ✅ ARTICLE CONTENT -->
+      <article>
+        ${blogContentsWithIds}
+      </article>
     </main>
-    
-    ${authorSignatureHTML}
-    
-    ${!excludeFooter && companyFooterHTML ? `<section aria-label="Informações da empresa" class="company-info">${companyFooterHTML}</section>` : ''}
   </div>
-  
-  ${multiDomainFooter}
-  
+
   <!-- ✅ SMOOTH SCROLL SCRIPT -->
   ${generateSmoothScrollScript()}
   

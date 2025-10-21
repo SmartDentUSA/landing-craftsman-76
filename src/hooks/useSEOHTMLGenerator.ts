@@ -1847,33 +1847,33 @@ export const useSEOHTMLGenerator = () => {
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>${title}</h1>
-      ${excludeSubtitle ? '' : `<div class="subtitle">${description}</div>`}
-      ${excludeMetaInfo ? '' : `<div class="meta-info">
-        ${blogs.length} artigo${blogs.length > 1 ? 's' : ''} • Publicado em ${new Date().toLocaleDateString('pt-BR')} • ${domain}
-      </div>`}
-    </div>
-    
-    
-    
-        <!-- ✅ TABLE OF CONTENTS -->
-        ${tocHTML}
-        
-        <main class="blog-section">
-          ${blogContentsWithIds}
-        </main>
-    
-    
-    ${uniqueKeywords.length > 0 ? `
-    <section class="keywords-section">
-      <h3>🏷️ Palavras-chave relacionadas</h3>
+  <div class="container" role="main">
+    <!-- ✅ HERO SECTION -->
+    <header class="hero" aria-label="Cabeçalho do artigo">
       <div>
-        ${uniqueKeywords.map(keyword => `<span class="tag">${keyword}</span>`).join('')}
+        <div class="eyebrow">${aggregatedKeywords[0] || 'Artigo'} • ${companySEO?.siteNameMeta || domain}</div>
+        <h1>${title}</h1>
+        <p class="lead">${description}</p>
       </div>
-    </section>
-    ` : ''}
+    </header>
+
+    <main>
+      <!-- ✅ SIDEBAR TOC -->
+      <nav class="toc" aria-label="Sumário do artigo">
+        <h4>Sumário</h4>
+        <ul>
+          ${tocHTML}
+        </ul>
+        <hr style="margin:12px 0;border:none;border-top:1px solid rgba(15,23,42,0.03)" />
+        <a class="small" href="https://${domain}">Voltar ao site</a>
+      </nav>
+
+      <!-- ✅ ARTICLE CONTENT -->
+      <article>
+        ${blogContentsWithIds}
+      </article>
+    </main>
+  </div>
 
     ${authorKol ? `
     <!-- 👤 Author Signature Section (E-E-A-T Enhanced) -->
