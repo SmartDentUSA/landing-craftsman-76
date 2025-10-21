@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
 import { useProductBlogsIntegration } from './useProductBlogsIntegration';
@@ -19,51 +19,21 @@ interface ConsolidatedHTMLMap {
 export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) => {
   const [consolidatedHTMLs, setConsolidatedHTMLs] = useState<ConsolidatedHTMLMap>({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const lastGenerationAtRef = useRef<Map<string, number>>(new Map());
   
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
   const { loadProductsByIds } = useSelectedProducts();
 
-  // Detectar mudanças nos blogs publicados para regenerar
-  useEffect(() => {
-    const channel = supabase
-      .channel('consolidated-blog-auto-generator')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'landing_pages',
-      }, async (payload) => {
-        const updatedPage = payload.new as any;
-        
-        // Regenerar quando landing page for aprovada E tiver blog gerado
-        if (updatedPage.status === 'approved' && updatedPage.blog_generated) {
-          console.log('🎯 Landing page aprovada com blog gerado detectada:', updatedPage.id);
-          await generateConsolidatedForLandingPage(updatedPage.id);
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'blog_posts',
-      }, async () => {
-        // Quando blogs estratégicos forem atualizados, regenerar tudo
-        console.log('📝 Blog estratégico atualizado, regenerando consolidados...');
-        await generateAllConsolidated();
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'products_repository',
-      }, async () => {
-        // Quando blogs de produtos forem atualizados
-        console.log('🔄 Blog de produto atualizado, regenerando consolidados...');
-        await generateAllConsolidated();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [approvedLandingPages]);
+  // Cooldown helper: impede geração repetida da mesma LP
+  const canGenerate = useCallback((lpId: string, cooldownMs = 20000): boolean => {
+    const last = lastGenerationAtRef.current.get(lpId) || 0;
+    if (Date.now() - last < cooldownMs) {
+      console.log(`⏳ [COOLDOWN] Ignorando geração para LP ${lpId} (aguardar ${Math.ceil((cooldownMs - (Date.now() - last)) / 1000)}s)`);
+      return false;
+    }
+    lastGenerationAtRef.current.set(lpId, Date.now());
+    return true;
+  }, []);
 
   // Gerar HTML consolidado para uma landing page específica
   const generateConsolidatedForLandingPage = useCallback(async (landingPageId: string) => {
@@ -274,37 +244,159 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
     }
   }, [approvedLandingPages, generateConsolidatedForLandingPage]);
 
-  // Gerar automaticamente quando landing pages aprovadas mudarem
+  // Detectar mudanças relevantes nos blogs para regenerar (com filtros específicos)
+  useEffect(() => {
+    // Calcular IDs e mapas relevantes
+    const approvedLPIds = approvedLandingPages
+      .filter(lp => lp.status === 'approved' && lp.blog_generated)
+      .map(lp => lp.id);
+    
+    const allSelectedProductIds = Array.from(
+      new Set(approvedLandingPages.flatMap(lp => lp.selected_product_ids || []))
+    );
+
+    // Mapa: productId -> [lpIds que usam esse produto]
+    const productIdToLPs = new Map<string, string[]>();
+    approvedLandingPages.forEach(lp => {
+      (lp.selected_product_ids || []).forEach((productId: string) => {
+        const lpsList = productIdToLPs.get(productId) || [];
+        lpsList.push(lp.id);
+        productIdToLPs.set(productId, lpsList);
+      });
+    });
+
+    if (approvedLPIds.length === 0) {
+      console.log('⚠️ [REALTIME] Nenhuma LP aprovada com blog gerado. Não criando canais.');
+      return;
+    }
+
+    console.log('🔌 [REALTIME] Configurando canais filtrados:', {
+      approvedLPIds: approvedLPIds.length,
+      allProductIds: allSelectedProductIds.length,
+      productIdToLPs: productIdToLPs.size
+    });
+
+    const channel = supabase
+      .channel('consolidated-blog-auto-generator')
+      // 1️⃣ LANDING PAGES: só LPs aprovadas
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'landing_pages',
+        filter: `id=in.(${approvedLPIds.join(',')})`
+      }, async (payload) => {
+        const old = payload.old as any;
+        const updated = payload.new as any;
+        
+        // Gerar APENAS se: status virou approved OU blog_generated virou true
+        const statusChanged = old.status !== 'approved' && updated.status === 'approved';
+        const blogGenerated = old.blog_generated !== true && updated.blog_generated === true;
+
+        if (statusChanged || blogGenerated) {
+          console.log(`📄 [LP UPDATE] LP ${updated.id} disparou geração:`, { statusChanged, blogGenerated });
+          if (canGenerate(updated.id)) {
+            await generateConsolidatedForLandingPage(updated.id);
+          }
+        } else {
+          console.log(`📄 [LP UPDATE] LP ${updated.id} ignorado (mudança irrelevante)`);
+        }
+      })
+      // 2️⃣ BLOG POSTS: só blogs das LPs aprovadas
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'blog_posts',
+        filter: `landing_page_id=in.(${approvedLPIds.join(',')})`
+      }, async (payload) => {
+        const old = payload.old as any;
+        const updated = payload.new as any;
+
+        const statusPublished = old.status !== 'published' && updated.status === 'published';
+        const domainsChanged = JSON.stringify(old.published_domains) !== JSON.stringify(updated.published_domains);
+        const contentChanged = old.content !== updated.content && updated.status === 'published';
+
+        if (statusPublished || domainsChanged || contentChanged) {
+          console.log(`📝 [BLOG UPDATE] Blog ${updated.id} da LP ${updated.landing_page_id}:`, {
+            statusPublished,
+            domainsChanged,
+            contentChanged
+          });
+          if (canGenerate(updated.landing_page_id)) {
+            await generateConsolidatedForLandingPage(updated.landing_page_id);
+          }
+        } else {
+          console.log(`📝 [BLOG UPDATE] Blog ${updated.id} ignorado (mudança irrelevante)`);
+        }
+      })
+      // 3️⃣ PRODUCTS: só produtos selecionados nas LPs
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'products_repository',
+        filter: allSelectedProductIds.length > 0 ? `id=in.(${allSelectedProductIds.join(',')})` : undefined
+      }, async (payload) => {
+        const old = payload.old as any;
+        const updated = payload.new as any;
+
+        const blogContentChanged = 
+          JSON.stringify(old.individual_blog_content) !== JSON.stringify(updated.individual_blog_content);
+
+        if (blogContentChanged) {
+          const affectedLPs = productIdToLPs.get(updated.id) || [];
+          console.log(`📦 [PRODUCT UPDATE] Produto ${updated.id} alterou blog. LPs afetadas:`, affectedLPs);
+          
+          for (const lpId of affectedLPs) {
+            if (canGenerate(lpId)) {
+              await generateConsolidatedForLandingPage(lpId);
+            }
+          }
+        } else {
+          console.log(`📦 [PRODUCT UPDATE] Produto ${updated.id} ignorado (blog inalterado)`);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      console.log('🔌 [REALTIME] Removendo canais');
+      supabase.removeChannel(channel);
+    };
+  }, [approvedLandingPages, canGenerate, generateConsolidatedForLandingPage]);
+
+  // Gerar automaticamente APENAS LPs que ainda não têm HTML consolidado (inicialização)
   useEffect(() => {
     const approvedWithBlogs = approvedLandingPages.filter(
       lp => lp.status === 'approved' && lp.blog_generated
     );
 
-    console.log('🔍 Landing pages aprovadas com blogs:', {
+    console.log('🔍 [INIT] Landing pages aprovadas com blogs:', {
       total: approvedLandingPages.length,
       approved: approvedLandingPages.filter(lp => lp.status === 'approved').length,
-      withBlogs: approvedWithBlogs.length,
-      landingPages: approvedWithBlogs.map(lp => ({
-        id: lp.id,
-        name: lp.name,
-        status: lp.status,
-        blog_generated: lp.blog_generated
-      }))
+      withBlogs: approvedWithBlogs.length
     });
 
     if (approvedWithBlogs.length > 0) {
-      console.log('⏰ Agendando geração consolidada em 1 segundo...');
-      // Debounce para evitar múltiplas gerações
-      const timer = setTimeout(() => {
-        console.log('🚀 Iniciando geração consolidada para todas as LPs aprovadas');
-        generateAllConsolidated();
-      }, 1000);
+      // Apenas gerar LPs que ainda não têm HTML consolidado
+      const lpsToGenerate = approvedWithBlogs.filter(lp => !consolidatedHTMLs[lp.id]);
+      
+      if (lpsToGenerate.length > 0) {
+        console.log(`⏰ [INIT] Agendando geração inicial para ${lpsToGenerate.length} LP(s) sem cache`);
+        const timer = setTimeout(async () => {
+          for (const lp of lpsToGenerate) {
+            if (canGenerate(lp.id)) {
+              console.log(`🚀 [INIT] Gerando HTML para LP: ${lp.id}`);
+              await generateConsolidatedForLandingPage(lp.id);
+            }
+          }
+        }, 1000);
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      } else {
+        console.log('✅ [INIT] Todas as LPs aprovadas já têm HTML consolidado em cache');
+      }
     } else {
-      console.log('⚠️ Nenhuma landing page aprovada com blog gerado encontrada');
+      console.log('⚠️ [INIT] Nenhuma landing page aprovada com blog gerado encontrada');
     }
-  }, [approvedLandingPages]);
+  }, [approvedLandingPages, consolidatedHTMLs, canGenerate, generateConsolidatedForLandingPage]);
 
   return {
     consolidatedHTMLs,

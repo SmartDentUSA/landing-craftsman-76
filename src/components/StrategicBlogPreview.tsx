@@ -199,21 +199,22 @@ export function StrategicBlogPreview({
     }
   }, [generateHTML, showSuccessToast]);
 
-  // Usar HTML pré-gerado ou gerar on-demand
+  // Usar HTML pré-gerado ou gerar on-demand (apenas quando refreshKey ou landingPageId mudam)
   useEffect(() => {
     if (cachedHTML) {
-      console.log('✅ Usando HTML pré-gerado do cache para LP:', landingPageId);
+      console.log('✅ [PREVIEW] Usando HTML pré-gerado do cache para LP:', landingPageId);
       setPreviewDentalaHTML(cachedHTML.dentala);
       setPreviewEodontoHTML(cachedHTML.eodonto);
       setIsGenerating(false);
     } else {
       // Fallback: gerar manualmente se não houver cache
+      console.log('⚠️ [PREVIEW] Sem cache, agendando geração on-demand');
       const timer = setTimeout(() => {
         setDebounceTick(prev => prev + 1);
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [cachedHTML, refreshKey, dentalaData, eodontoData, landingPageId]);
+  }, [cachedHTML, refreshKey, landingPageId]); // ✅ Removido dentalaData/eodontoData para evitar triggers em autosave
 
   // Trigger inicial (apenas se não houver cache)
   useEffect(() => {
