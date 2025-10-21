@@ -599,24 +599,34 @@ export function RepositoryPanel({
     }
   };
 
-  const handleExportCSV = async (type: 'products' | 'reviews' | 'testimonials' | 'kols' | 'all') => {
+  const handleExportKnowledgeBase = async () => {
     setExportingData(true);
     try {
-      console.log(`📊 Iniciando exportação CSV: ${type}`);
+      console.log('📊 Iniciando exportação Knowledge Base completa...');
       
-      const { data, error } = await supabase.functions.invoke('export-repository-csv', {
+      const { data, error } = await supabase.functions.invoke('knowledge-base', {
         body: { 
-          type, 
-          landingPageId: landingPageId === 'repository' ? undefined : landingPageId 
+          format: 'json',
+          include_company: true,
+          include_categories: true,
+          include_links: true,
+          include_products: true,
+          include_video_testimonials: true,
+          include_google_reviews: true,
+          include_kols: true,
+          approved_only: true,
+          limit: 1000
         }
       });
 
       if (error) throw error;
 
-      // Create and download the file
       const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `${type}_repository_${timestamp}.csv`;
-      const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+      const filename = `knowledge_base_complete_${timestamp}.json`;
+      
+      const jsonContent = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+      
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
@@ -626,15 +636,29 @@ export function RepositoryPanel({
       link.click();
       document.body.removeChild(link);
 
+      const stats = {
+        hasCompany: !!data?.company_profile,
+        totalCategories: data?.categories_config?.length || 0,
+        totalLinks: data?.external_links?.length || 0,
+        totalProducts: data?.products?.length || 0,
+        totalTestimonials: data?.video_testimonials?.length || 0,
+        totalReviews: data?.google_reviews?.length || 0,
+        totalKOLs: data?.key_opinion_leaders?.length || 0,
+        totalFields: data?.total_fields || 'N/A'
+      };
+
+      console.log('✅ Exportação completa:', stats);
+
       toast({
-        title: "Sucesso",
-        description: `CSV ${type} exportado com sucesso!`,
+        title: "✅ Knowledge Base Exportada",
+        description: `${stats.totalProducts} produtos, ${stats.totalTestimonials} depoimentos, ${stats.totalReviews} reviews | ${stats.totalFields} campos totais`,
       });
+
     } catch (error) {
-      console.error('❌ Erro na exportação:', error);
+      console.error('❌ Erro na exportação Knowledge Base:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao exportar CSV. Tente novamente.",
+        title: "Erro na Exportação",
+        description: "Erro ao exportar Knowledge Base. Verifique os logs.",
         variant: "destructive"
       });
     } finally {
@@ -763,19 +787,19 @@ export function RepositoryPanel({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleExportCSV('products')}
+                    onClick={handleExportKnowledgeBase}
                     disabled={exportingData}
                     className="gap-2"
                   >
                     {exportingData ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                        Exportando...
+                        Exportando Knowledge Base...
                       </>
                     ) : (
                       <>
                         <FileDown className="h-4 w-4" />
-                        Exportar
+                        Exportar Knowledge Base
                       </>
                     )}
                   </Button>
