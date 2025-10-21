@@ -33,6 +33,7 @@ interface Product {
   testimonial_videos?: any[];
   video_captions?: any;
   original_data?: any;
+  faq?: Array<{ question: string; answer: string }>;
 }
 
 interface CategorySectionProps {

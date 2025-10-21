@@ -23,6 +23,7 @@ interface Product {
   seo_description_override?: string;
   canonical_url?: string;
   slug?: string;
+  faq?: Array<{ question: string; answer: string }>;
 }
 
 export interface ScoreBreakdown {
@@ -34,6 +35,7 @@ export interface ScoreBreakdown {
     multimedia: number;
     seo: number;
     commercial: number;
+    faq: number;
   };
   maxPoints: number;
   missingFields: string[];
@@ -75,30 +77,38 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
     missingFields.push('Preço');
   }
   
-  // Conteúdo Rico (30 pontos)
+  // Conteúdo Rico (25 pontos)
   let content = 0;
   if (product.features && product.features.length > 0) {
-    content += 8;
+    content += 7;
   } else {
     missingFields.push('Características');
   }
   
   if (product.benefits && product.benefits.length > 0) {
-    content += 8;
+    content += 7;
   } else {
     missingFields.push('Benefícios');
   }
   
   if (product.sales_pitch?.trim()) {
-    content += 7;
+    content += 6;
   } else {
     missingFields.push('Pitch de Vendas');
   }
   
   if (product.target_audience && product.target_audience.length > 0) {
-    content += 7;
+    content += 5;
   } else {
     missingFields.push('Público-alvo');
+  }
+  
+  // FAQ (5 pontos)
+  let faqScore = 0;
+  if (product.faq && product.faq.length > 0) {
+    faqScore += 5;
+  } else {
+    missingFields.push('FAQ do Produto');
   }
   
   // Mídia (20 pontos)
@@ -182,8 +192,8 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
     missingFields.push('Tags');
   }
   
-  const total = basicInfo + content + multimedia + seo + commercial;
-  const maxPoints = 110;
+  const total = basicInfo + content + multimedia + seo + commercial + faqScore;
+  const maxPoints = 115;
   const percentage = Math.round((total / maxPoints) * 100);
   
   return {
@@ -194,7 +204,8 @@ export const calculateProductScore = (product: Product): ScoreBreakdown => {
       content,
       multimedia,
       seo,
-      commercial
+      commercial,
+      faq: faqScore
     },
     maxPoints,
     missingFields

@@ -70,6 +70,7 @@ interface Product {
   technical_videos?: any[];
   testimonial_videos?: any[];
   tiktok_videos?: any[];
+  faq?: Array<{ question: string; answer: string }>;
   // Google Merchant fields
   gtin?: string;
   ean?: string;

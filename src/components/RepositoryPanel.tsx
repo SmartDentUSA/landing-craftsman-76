@@ -67,6 +67,7 @@ interface Product {
   original_data?: any;
   images_gallery?: Array<{ url: string; alt: string; order: number; is_main: boolean }>;
   technical_specifications?: Array<{ label: string; value: string }>;
+  faq?: Array<{ question: string; answer: string }>;
   // Google Merchant fields
   gtin?: string;
   ean?: string;
@@ -326,6 +327,9 @@ export function RepositoryPanel({
         images_gallery: Array.isArray(data.images_gallery) ? data.images_gallery as unknown as Array<{ url: string; alt: string; order: number; is_main: boolean }> : [],
         technical_specifications: Array.isArray(data.technical_specifications) 
           ? (data.technical_specifications as Array<{ label: string; value: string }>)
+          : [],
+        faq: Array.isArray(data.faq) 
+          ? (data.faq as Array<{ question: string; answer: string }>) 
           : [],
         // Landing page sections and CTAs
         selected: data.selected ?? false,

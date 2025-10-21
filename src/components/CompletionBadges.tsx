@@ -33,6 +33,7 @@ interface Product {
   seo_description_override?: string;
   canonical_url?: string;
   slug?: string;
+  faq?: Array<{ question: string; answer: string }>;
 }
 
 interface CompletionBadgesProps {
@@ -128,6 +129,12 @@ export function CompletionBadges({ product, score, compact = false }: Completion
       label: 'Canonical',
       count: product.canonical_url ? 1 : 0,
       present: !!product.canonical_url
+    },
+    {
+      icon: FileText,
+      label: 'FAQ',
+      count: product.faq?.length || 0,
+      present: (product.faq?.length || 0) > 0
     }
   ];
 
