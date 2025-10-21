@@ -829,20 +829,23 @@ export const useSEOHTMLGenerator = () => {
     const sanitizeAggregatedKeywords = (input: unknown): string[] => {
       const list = Array.isArray(input) ? input : (typeof input === 'string' ? [input] : []);
       
-      // Explodir strings separadas por vírgula
+      // ✅ Explodir strings separadas por vírgula ou pipe
       const exploded = list.flatMap(k => 
-        (typeof k === 'string' ? k.split(',') : [])
+        (typeof k === 'string' ? k.split(/[,|;]/) : [])
       ).map(s => s.trim()).filter(Boolean);
       
-      // Filtrar keywords inválidas
+      // ✅ Filtrar keywords inválidas (mais restritivo)
       const filtered = exploded.filter(k => {
-        if (k.length > 60) return false; // Muito longa
-        if (/[.?]/.test(k)) return false; // Contém pontuação de frase
-        if (k.split(/\s+/).length > 6) return false; // Muitas palavras (frase)
+        if (k.length < 3) return false; // ✅ Muito curta
+        if (k.length > 40) return false; // ✅ Reduzido de 60 para 40
+        if (/[.?!]/.test(k)) return false; // ✅ Contém pontuação de frase
+        if (k.split(/\s+/).length > 4) return false; // ✅ Reduzido de 6 para 4 palavras
+        if (/entre em contato|saiba mais|clique aqui|leia mais/i.test(k)) return false; // ✅ CTAs
+        if (/\d{10,}/i.test(k)) return false; // ✅ Números longos (telefones, etc)
         return true;
       });
       
-      // Remover duplicatas e limitar a 5
+      // ✅ Remover duplicatas e limitar a 5
       return [...new Set(filtered)].slice(0, 5);
     };
 
@@ -1233,9 +1236,23 @@ export const useSEOHTMLGenerator = () => {
       const textContent = processedContent.replace(/<[^>]*>/g, '');
       
       if (textContent.length > previewLength) {
-        // Find a good break point near the preview length
-        const truncateAt = textContent.substring(0, previewLength).lastIndexOf(' ');
-        const targetLength = truncateAt > 0 ? truncateAt : previewLength;
+        // ✅ Encontrar ponto de corte inteligente
+        let truncateAt = previewLength;
+        const substring = textContent.substring(0, previewLength);
+        
+        // Procurar último espaço, ponto, vírgula ou quebra de linha
+        const breakPoints = [
+          substring.lastIndexOf('. '),
+          substring.lastIndexOf('! '),
+          substring.lastIndexOf('? '),
+          substring.lastIndexOf(', '),
+          substring.lastIndexOf(' ')
+        ];
+        
+        const bestBreakPoint = Math.max(...breakPoints);
+        if (bestBreakPoint > previewLength * 0.7) { // ✅ Pelo menos 70% do preview
+          truncateAt = bestBreakPoint + 1;
+        }
         
         // Smart truncation that preserves HTML structure
         let textCount = 0;
@@ -1251,7 +1268,7 @@ export const useSEOHTMLGenerator = () => {
             insideTag = false;
           } else if (!insideTag) {
             textCount++;
-            if (textCount >= targetLength) {
+            if (textCount >= truncateAt) {
               htmlIndex = i + 1;
               break;
             }
@@ -1285,7 +1302,8 @@ export const useSEOHTMLGenerator = () => {
             truncatedHTML += `</${openTags[i]}>`;
           }
           
-          previewContent = truncatedHTML + '...';
+          // ✅ ADICIONAR "..." se truncado
+          previewContent = truncatedHTML + ' <span style="color: #6b7280;">...</span>';
         }
       }
       

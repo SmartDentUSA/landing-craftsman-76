@@ -51,16 +51,26 @@ header .eyebrow{
   color:var(--accent);
   margin-bottom:8px;
   font-size:13px;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 header h1{
   margin:0 0 12px 0;
   font-size:28px;
   line-height:1.1;
   letter-spacing:-0.2px;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+  hyphens:auto;
+  max-width:100%;
 }
 header p.lead{
   margin:0 0 18px 0;
   color:var(--muted);
+  word-wrap:break-word;
+  overflow-wrap:break-word;
 }
 main{
   display:grid;

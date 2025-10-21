@@ -17,16 +17,26 @@ export function generateTableOfContents(content: string, domain: string): string
   
   const tocItems = headings
     .map(h => {
-      const text = h.replace(/<[^>]*>/g, ''); // Remove tags HTML
+      // ✅ Remover tags HTML e normalizar agressivamente
+      const text = h
+        .replace(/<[^>]*>/g, '')
+        .replace(/&[^;]+;/g, '') // Remover entidades HTML
+        .trim();
+      
       const id = text
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-');
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-') // ✅ Remover hífens duplicados
+        .replace(/^-|-$/g, ''); // ✅ Remover hífens nas pontas
       
-      // ✅ Deduplicar: apenas primeira ocorrência
-      if (seen.has(id)) return null;
+      // ✅ Debug: Log para identificar duplicatas
+      if (seen.has(id)) {
+        console.warn(`⚠️ TOC: H2 duplicado ignorado: "${text}" (id: ${id})`);
+        return null;
+      }
       seen.add(id);
       
       return `<li><a href="#${id}">${text}</a></li>`;
@@ -44,19 +54,26 @@ export function addIdsToHeadings(content: string): string {
   const seenIds = new Map<string, number>();
   
   return content.replace(/<h2([^>]*)>(.*?)<\/h2>/gi, (match, attrs, text) => {
-    const plainText = text.replace(/<[^>]*>/g, '');
+    const plainText = text
+      .replace(/<[^>]*>/g, '')
+      .replace(/&[^;]+;/g, '')
+      .trim();
+    
     let id = plainText
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
     
     // ✅ Garantir ID único com sufixo -2, -3, etc
     if (seenIds.has(id)) {
       const count = seenIds.get(id)! + 1;
       seenIds.set(id, count);
       id = `${id}-${count}`;
+      console.warn(`⚠️ IDs: H2 duplicado renomeado para "${id}"`);
     } else {
       seenIds.set(id, 1);
     }
