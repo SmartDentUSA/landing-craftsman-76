@@ -36,6 +36,37 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
   const { loadProductsByIds } = useSelectedProducts();
 
+  // ✅ CACHE-FIRST: Carregar do localStorage na inicialização
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('consolidatedHTMLs_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setConsolidatedHTMLs(parsed);
+        console.log('✅ [CACHE] HTMLs consolidados carregados do localStorage:', Object.keys(parsed).length, 'LPs');
+      }
+    } catch (error) {
+      console.error('❌ [CACHE] Erro ao carregar cache do localStorage:', error);
+    }
+  }, []);
+
+  // ✅ CACHE-FIRST: Salvar no localStorage quando mudar
+  useEffect(() => {
+    if (Object.keys(consolidatedHTMLs).length > 0) {
+      try {
+        localStorage.setItem('consolidatedHTMLs_v2', JSON.stringify(consolidatedHTMLs));
+        console.log('💾 [CACHE] HTMLs consolidados salvos no localStorage:', Object.keys(consolidatedHTMLs).length, 'LPs');
+      } catch (error) {
+        console.error('❌ [CACHE] Erro ao salvar cache (quota excedida?):', error);
+        // Limpar cache antigo se quota excedida
+        if (error instanceof Error && error.name === 'QuotaExceededError') {
+          localStorage.removeItem('consolidatedHTMLs_v1');
+          localStorage.removeItem('consolidatedHTMLs_v2');
+        }
+      }
+    }
+  }, [consolidatedHTMLs]);
+
   // Cooldown helper: impede geração repetida da mesma LP
   const canGenerate = useCallback((lpId: string, cooldownMs = 20000): boolean => {
     const last = lastGenerationAtRef.current.get(lpId) || 0;
@@ -396,6 +427,12 @@ ${head}
         const old = payload.old as any;
         const updated = payload.new as any;
         
+        // ✅ CACHE-FIRST: Não regenerar se já tem cache
+        if (consolidatedHTMLs[updated.id]) {
+          console.log(`⏭️ [REALTIME] LP ${updated.id} já tem cache. Use botão "Regenerar" para atualizar.`);
+          return;
+        }
+        
         // Gerar APENAS se: status virou approved OU blog_generated virou true
         const statusChanged = old.status !== 'approved' && updated.status === 'approved';
         const blogGenerated = old.blog_generated !== true && updated.blog_generated === true;
@@ -418,6 +455,12 @@ ${head}
       }, async (payload) => {
         const old = payload.old as any;
         const updated = payload.new as any;
+
+        // ✅ CACHE-FIRST: Não regenerar se já tem cache
+        if (consolidatedHTMLs[updated.landing_page_id]) {
+          console.log(`⏭️ [REALTIME] LP ${updated.landing_page_id} já tem cache. Use botão "Regenerar" para atualizar.`);
+          return;
+        }
 
         const statusPublished = old.status !== 'published' && updated.status === 'published';
         const domainsChanged = JSON.stringify(old.published_domains) !== JSON.stringify(updated.published_domains);
@@ -454,6 +497,12 @@ ${head}
           console.log(`📦 [PRODUCT UPDATE] Produto ${updated.id} alterou blog. LPs afetadas:`, affectedLPs);
           
           for (const lpId of affectedLPs) {
+            // ✅ CACHE-FIRST: Não regenerar se já tem cache
+            if (consolidatedHTMLs[lpId]) {
+              console.log(`⏭️ [REALTIME] LP ${lpId} já tem cache. Use botão "Regenerar" para atualizar.`);
+              continue;
+            }
+            
             if (canGenerate(lpId)) {
               await generateConsolidatedForLandingPage(lpId);
             }
@@ -470,41 +519,9 @@ ${head}
     };
   }, [approvedLandingPages, canGenerate, generateConsolidatedForLandingPage]);
 
-  // Gerar automaticamente APENAS LPs que ainda não têm HTML consolidado (inicialização)
-  useEffect(() => {
-    const approvedWithBlogs = approvedLandingPages.filter(
-      lp => lp.status === 'approved' && lp.blog_generated
-    );
-
-    console.log('🔍 [INIT] Landing pages aprovadas com blogs:', {
-      total: approvedLandingPages.length,
-      approved: approvedLandingPages.filter(lp => lp.status === 'approved').length,
-      withBlogs: approvedWithBlogs.length
-    });
-
-    if (approvedWithBlogs.length > 0) {
-      // Apenas gerar LPs que ainda não têm HTML consolidado
-      const lpsToGenerate = approvedWithBlogs.filter(lp => !consolidatedHTMLs[lp.id]);
-      
-      if (lpsToGenerate.length > 0) {
-        console.log(`⏰ [INIT] Agendando geração inicial para ${lpsToGenerate.length} LP(s) sem cache`);
-        const timer = setTimeout(async () => {
-          for (const lp of lpsToGenerate) {
-            if (canGenerate(lp.id)) {
-              console.log(`🚀 [INIT] Gerando HTML para LP: ${lp.id}`);
-              await generateConsolidatedForLandingPage(lp.id);
-            }
-          }
-        }, 1000);
-
-        return () => clearTimeout(timer);
-      } else {
-        console.log('✅ [INIT] Todas as LPs aprovadas já têm HTML consolidado em cache');
-      }
-    } else {
-      console.log('⚠️ [INIT] Nenhuma landing page aprovada com blog gerado encontrada');
-    }
-  }, [approvedLandingPages, consolidatedHTMLs, canGenerate, generateConsolidatedForLandingPage]);
+  // ✅ REMOVIDO: Geração automática na inicialização
+  // Agora o usuário deve clicar manualmente em "Gerar HTML Consolidado" no Editor
+  // Cache persiste no localStorage entre sessões
 
   return {
     consolidatedHTMLs,
