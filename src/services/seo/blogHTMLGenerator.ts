@@ -123,11 +123,92 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     }
   }
 
-  // ✅ 3. BUSCAR COMPANY SEO CONTEXT
+  // ✅ 3. BUSCAR COMPANY SEO CONTEXT + KNOWLEDGE BASE ADICIONAL
   const companyProfile = await getCompanyProfileForSEO();
   let companySEOData: any = {};
   let companyFooterHTML = '';
   let institutionalLinksHTML = '';
+  
+  // ✅ PRIORIDADE 2: Buscar approved_reviews automaticamente
+  let reviewsForSchema: any[] = [];
+  try {
+    const { data: approvedReviewsData } = await supabase
+      .from('approved_reviews')
+      .select(`
+        *,
+        raw_review:raw_reviews(*)
+      `)
+      .order('display_order', { ascending: true })
+      .limit(20);
+    
+    if (approvedReviewsData && approvedReviewsData.length > 0) {
+      reviewsForSchema = approvedReviewsData.map((ar: any) => ({
+        "@type": "Review",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": ar.raw_review?.rating || 5
+        },
+        "author": {
+          "@type": "Person",
+          "name": ar.raw_review?.author_name || "Cliente"
+        },
+        "reviewBody": ar.raw_review?.review_text || ar.contextual_seo_info || ""
+      }));
+      
+      console.log(`✅ ${reviewsForSchema.length} reviews carregadas para schema`);
+    }
+  } catch (error) {
+    console.warn('⚠️ Erro ao buscar reviews:', error);
+  }
+  
+  // ✅ PRIORIDADE 2: Buscar video_testimonials
+  let videoTestimonialsForSchema: any[] = [];
+  try {
+    const { data: videoTestimonials } = await supabase
+      .from('video_testimonials')
+      .select('*')
+      .eq('approved', true)
+      .limit(10);
+    
+    if (videoTestimonials && videoTestimonials.length > 0) {
+      videoTestimonialsForSchema = videoTestimonials
+        .filter(vt => vt.youtube_url)
+        .map((vt: any) => ({
+          "@type": "VideoObject",
+          "name": `Depoimento: ${vt.client_name}`,
+          "description": vt.testimonial_text,
+          "contentUrl": vt.youtube_url,
+          "uploadDate": vt.created_at
+        }));
+      
+      console.log(`✅ ${videoTestimonialsForSchema.length} video testimonials para schema`);
+    }
+  } catch (error) {
+    console.warn('⚠️ Erro ao buscar video testimonials:', error);
+  }
+  
+  // ✅ PRIORIDADE 2: Buscar external_links (Keywords Repository)
+  let keywordsFromRepository: string[] = [];
+  try {
+    const { data: externalLinks } = await supabase
+      .from('external_links')
+      .select('name, related_keywords')
+      .eq('approved', true)
+      .limit(100);
+    
+    if (externalLinks && externalLinks.length > 0) {
+      externalLinks.forEach((link: any) => {
+        if (link.name) keywordsFromRepository.push(link.name);
+        if (link.related_keywords && Array.isArray(link.related_keywords)) {
+          keywordsFromRepository.push(...link.related_keywords);
+        }
+      });
+      
+      console.log(`✅ ${keywordsFromRepository.length} keywords do repositório`);
+    }
+  } catch (error) {
+    console.warn('⚠️ Erro ao buscar external links:', error);
+  }
   
   if (companyProfile) {
     companySEOData = buildSEOMetaFromCompany(companyProfile, keywords);
@@ -139,9 +220,17 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
       keywords.push(...companySEOData.additionalKeywords);
     }
     
+    // Adicionar keywords do repositório
+    if (keywordsFromRepository.length > 0) {
+      keywords.push(...keywordsFromRepository);
+    }
+    
     console.log('✅ Company SEO Context carregado:', {
       additionalKeywords: companySEOData.additionalKeywords?.length || 0,
-      hasFooter: !!companyFooterHTML
+      keywordsFromRepository: keywordsFromRepository.length,
+      hasFooter: !!companyFooterHTML,
+      reviewsCount: reviewsForSchema.length,
+      videoTestimonialsCount: videoTestimonialsForSchema.length
     });
   }
 
@@ -177,34 +266,57 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   const blogContentsOptimized = optimizeContentImages(blogContents);
   const blogContentsWithLCP = markLCPImage(blogContentsOptimized);
   
-  // ✅ 7. GERAR SCHEMAS DE PRODUTOS SELECIONADOS
+  // ✅ 7. GERAR SCHEMAS DE PRODUTOS SELECIONADOS + REVIEWS AGGREGATE
   const allSchemas = [...schemas];
   
   if (selectedProducts && selectedProducts.length > 0) {
-    const productSchemas = selectedProducts.map(product => ({
-      "@context": "https://schema.org",
-      "@type": "Product",
-      "name": product.name,
-      "description": product.seo_description_override || product.description,
-      // ✅ FASE 2: Adicionar campos obrigatórios
-      "image": product.image_url || "https://via.placeholder.com/800x600?text=Produto",
-      "brand": {
-        "@type": "Brand",
-        "name": product.brand || "Smart Dent"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": product.price || 0,
-        "priceCurrency": product.currency || "BRL",
-        "availability": `https://schema.org/${product.availability === 'in stock' ? 'InStock' : 'OutOfStock'}`,
-        "url": product.product_url || product.canonical_url
-      },
-      ...(product.gtin && { "gtin": product.gtin }),
-      ...(product.mpn && { "mpn": product.mpn })
-    }));
+    const productSchemas = selectedProducts.map(product => {
+      const productSchema: any = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.name,
+        "description": product.seo_description_override || product.description,
+        "image": product.image_url || "https://via.placeholder.com/800x600?text=Produto",
+        "brand": {
+          "@type": "Brand",
+          "name": product.brand || "Smart Dent"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": product.price || 0,
+          "priceCurrency": product.currency || "BRL",
+          "availability": `https://schema.org/${product.availability === 'in stock' ? 'InStock' : 'OutOfStock'}`,
+          "url": product.product_url || product.canonical_url
+        }
+      };
+      
+      if (product.gtin) productSchema.gtin = product.gtin;
+      if (product.mpn) productSchema.mpn = product.mpn;
+      
+      // ✅ PRIORIDADE 2: Adicionar reviews aggregate automaticamente
+      if (reviewsForSchema.length > 0) {
+        const avgRating = reviewsForSchema.reduce((sum, r) => sum + (r.reviewRating?.ratingValue || 5), 0) / reviewsForSchema.length;
+        
+        productSchema.aggregateRating = {
+          "@type": "AggregateRating",
+          "ratingValue": avgRating.toFixed(1),
+          "reviewCount": reviewsForSchema.length
+        };
+        
+        productSchema.review = reviewsForSchema.slice(0, 10); // Limitar a 10 reviews por produto
+      }
+      
+      return productSchema;
+    });
     
     allSchemas.push(...productSchemas);
-    console.log(`✅ ${productSchemas.length} product schemas adicionados`);
+    console.log(`✅ ${productSchemas.length} product schemas adicionados com reviews`);
+  }
+  
+  // ✅ PRIORIDADE 2: Adicionar video testimonials como VideoObject schema
+  if (videoTestimonialsForSchema.length > 0) {
+    allSchemas.push(...videoTestimonialsForSchema);
+    console.log(`✅ ${videoTestimonialsForSchema.length} video schemas adicionados`);
   }
 
   // ✅ 8. CONSOLIDAR E VALIDAR SCHEMAS

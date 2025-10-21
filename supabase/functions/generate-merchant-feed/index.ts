@@ -117,7 +117,22 @@ function generateMerchantFeed(products: any[], baseUrl: string, companyName: str
 function generateMerchantItem(product: any, baseUrl: string): string {
   const productId = product.id
   const title = product.name || 'Produto'
-  const description = product.description || product.sales_pitch || 'Produto de qualidade'
+  
+  // ✅ PRIORIDADE 1: Enriquecer description com benefits + features + technical_specifications
+  let enrichedDescription = product.description || product.sales_pitch || 'Produto de qualidade';
+  
+  // Adicionar benefits
+  if (product.benefits && Array.isArray(product.benefits) && product.benefits.length > 0) {
+    enrichedDescription += '\n\nBenefícios:\n' + product.benefits.slice(0, 5).join('; ');
+  }
+  
+  // Adicionar features
+  if (product.features && Array.isArray(product.features) && product.features.length > 0) {
+    enrichedDescription += '\n\nCaracterísticas:\n' + product.features.slice(0, 5).join('; ');
+  }
+  
+  const description = enrichedDescription.substring(0, 5000); // Google limit
+  
   const link = product.product_url || `${baseUrl}/produto/${productId}`
   const imageLink = product.image_url || `${baseUrl}/images/placeholder.jpg`
   const availability = product.availability || 'in stock'
@@ -135,16 +150,66 @@ function generateMerchantItem(product: any, baseUrl: string): string {
   const color = product.color ? escapeXML(product.color) : ''
   const size = product.size ? escapeXML(product.size) : ''
   const material = product.material ? escapeXML(product.material) : ''
+  
+  // ✅ PRIORIDADE 1: Extrair age_group e gender do target_audience
+  let ageGroup = product.age_group || '';
+  let gender = product.gender || '';
+  
+  if (product.target_audience && Array.isArray(product.target_audience) && product.target_audience.length > 0) {
+    const audienceStr = product.target_audience.join(' ').toLowerCase();
+    if (!ageGroup) {
+      if (audienceStr.includes('adulto') || audienceStr.includes('profissional')) ageGroup = 'adult';
+      else if (audienceStr.includes('jovem')) ageGroup = 'teen';
+    }
+    if (!gender) {
+      if (audienceStr.includes('feminino') || audienceStr.includes('mulher')) gender = 'female';
+      else if (audienceStr.includes('masculino') || audienceStr.includes('homem')) gender = 'male';
+    }
+  }
 
   const availabilityStatus = availability.includes('stock') ? 'in_stock' : 'out_of_stock'
+  
+  // ✅ PRIORIDADE 1: Processar images_gallery para additional_image_link (até 10 imagens)
+  let additionalImagesXML = '';
+  if (product.images_gallery && Array.isArray(product.images_gallery) && product.images_gallery.length > 0) {
+    const additionalImages = product.images_gallery
+      .filter((img: any) => img.url && img.url !== imageLink)
+      .slice(0, 10)
+      .map((img: any) => `<g:additional_image_link>${escapeXML(img.url)}</g:additional_image_link>`)
+      .join('\n      ');
+    additionalImagesXML = additionalImages;
+  }
+  
+  // ✅ PRIORIDADE 1: Adicionar keywords + market_keywords como custom_label_3 e custom_label_4
+  const keywordsLabel = product.keywords && Array.isArray(product.keywords) && product.keywords.length > 0
+    ? product.keywords.slice(0, 3).join(', ').substring(0, 100)
+    : '';
+  const marketKeywordsLabel = product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0
+    ? product.market_keywords.slice(0, 3).join(', ').substring(0, 100)
+    : '';
+  
+  // ✅ PRIORIDADE 1: Adicionar technical_specifications como product_detail
+  let technicalSpecsXML = '';
+  if (product.technical_specifications && Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0) {
+    technicalSpecsXML = product.technical_specifications.slice(0, 5).map((spec: any) => {
+      const attrName = spec.name || spec.label || 'Característica';
+      const attrValue = spec.value || '';
+      return `<g:product_detail>
+        <g:section_name>Especificações Técnicas</g:section_name>
+        <g:attribute_name>${escapeXML(attrName)}</g:attribute_name>
+        <g:attribute_value>${escapeXML(attrValue)}</g:attribute_value>
+      </g:product_detail>`;
+    }).join('\n      ');
+  }
 
   return `
     <item>
       <g:id>${escapeXML(productId)}</g:id>
       <g:title>${escapeXML(title.substring(0, 150))}</g:title>
-      <g:description>${escapeXML(description.substring(0, 5000))}</g:description>
+      <g:description>${escapeXML(description)}</g:description>
       <g:link>${escapeXML(link)}</g:link>
       <g:image_link>${escapeXML(imageLink)}</g:image_link>
+      ${additionalImagesXML}
       <g:availability>${availabilityStatus}</g:availability>
       <g:price>${escapeXML(price)}</g:price>
       ${promoPrice && promoPrice < product.price ? `<g:sale_price>${promoPrice} ${product.currency || 'BRL'}</g:sale_price>` : ''}
@@ -156,13 +221,13 @@ function generateMerchantItem(product: any, baseUrl: string): string {
       ${color ? `<g:color>${color}</g:color>` : ''}
       ${size ? `<g:size>${size}</g:size>` : ''}
       ${material ? `<g:material>${material}</g:material>` : ''}
+      ${ageGroup ? `<g:age_group>${ageGroup}</g:age_group>` : ''}
+      ${gender ? `<g:gender>${gender}</g:gender>` : ''}
       <g:google_product_category>${escapeXML(mapToGoogleCategory(category))}</g:google_product_category>
       <g:product_type>${escapeXML(productType)}</g:product_type>
-      ${product.features && product.features.length > 0 ? 
-        product.features.slice(0, 3).map((feature: string, index: number) => 
-          `<g:custom_label_${index}>${escapeXML(feature.substring(0, 100))}</g:custom_label_${index}>`
-        ).join('\n      ') : ''
-      }
+      ${keywordsLabel ? `<g:custom_label_3>${escapeXML(keywordsLabel)}</g:custom_label_3>` : ''}
+      ${marketKeywordsLabel ? `<g:custom_label_4>${escapeXML(marketKeywordsLabel)}</g:custom_label_4>` : ''}
+      ${technicalSpecsXML}
     </item>`
 }
 

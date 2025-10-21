@@ -33,7 +33,7 @@ serve(async (req) => {
     // Collect data from existing tables
     const finalLandingPageData = landingPageData || await collectLandingPageData(supabase, landingPageId);
     const keywords = await collectKeywords(supabase, finalLandingPageData, config, selectedProductIds);
-    const sitelinks = await collectSitelinks(finalLandingPageData, config);
+    const sitelinks = await collectSitelinks(finalLandingPageData, config, supabase);
     const videos = await collectVideos(supabase, landingPageId, config);
 
     // Generate ad copies using AI
@@ -114,6 +114,29 @@ async function collectLandingPageData(supabase: any, landingPageId: string) {
 async function collectKeywords(supabase: any, landingPageData: any, config: any, selectedProductIds: string[] = []): Promise<string[]> {
   let keywords: string[] = [];
 
+  // ✅ PRIORIDADE 3: Buscar keywords do external_links (Keywords Repository) primeiro
+  try {
+    const { data: externalLinks } = await supabase
+      .from('external_links')
+      .select('name, related_keywords, keyword_type, monthly_searches, relevance_score')
+      .eq('approved', true)
+      .order('relevance_score', { ascending: false, nullsFirst: false })
+      .limit(100);
+    
+    if (externalLinks && externalLinks.length > 0) {
+      externalLinks.forEach((link: any) => {
+        if (link.name) keywords.push(link.name);
+        if (link.related_keywords && Array.isArray(link.related_keywords)) {
+          keywords.push(...link.related_keywords);
+        }
+      });
+      
+      console.log(`✅ ${keywords.length} keywords importadas do repositório`);
+    }
+  } catch (error) {
+    console.error('Error collecting keywords from external_links:', error);
+  }
+
   // Collect from AI keywords
   if (config.include_ai_keywords && landingPageData.ai_keywords) {
     keywords.push(...collectFromAI(landingPageData.ai_keywords));
@@ -139,6 +162,31 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
     } catch (error) {
       console.error('Error collecting product keywords:', error);
     }
+  }
+  
+  // ✅ PRIORIDADE 3: Extrair keywords de approved_reviews (long-tail reais)
+  try {
+    const { data: reviews } = await supabase
+      .from('approved_reviews')
+      .select('contextual_seo_info, raw_review:raw_reviews(review_text)')
+      .limit(50);
+    
+    if (reviews && reviews.length > 0) {
+      reviews.forEach((review: any) => {
+        const text = review.contextual_seo_info || review.raw_review?.review_text || '';
+        const extractedKeywords = text
+          .toLowerCase()
+          .split(/[.,\s]+/)
+          .filter((word: string) => word.length > 4 && !word.match(/^(muito|sempre|nunca|todos|sobre|para|com|sem)$/))
+          .slice(0, 10);
+        
+        keywords.push(...extractedKeywords);
+      });
+      
+      console.log(`✅ Keywords extraídas de ${reviews.length} reviews`);
+    }
+  } catch (error) {
+    console.error('Error collecting keywords from reviews:', error);
   }
 
   // Add manual keywords
@@ -220,7 +268,7 @@ function normalizeKeywords(keywords: string[]): string[] {
   )];
 }
 
-async function collectSitelinks(landingPageData: any, config: any) {
+async function collectSitelinks(landingPageData: any, config: any, supabase?: any) {
   const sitelinks = [];
 
   // Add e-commerce links
@@ -230,6 +278,31 @@ async function collectSitelinks(landingPageData: any, config: any) {
     // Fallback to intelligent_links
     for (const [label, url] of Object.entries(landingPageData.intelligent_links)) {
       sitelinks.push({ label, url });
+    }
+  }
+  
+  // ✅ PRIORIDADE 3: Adicionar sitelinks de video_testimonials
+  if (supabase) {
+    try {
+      const { data: videoTestimonials } = await supabase
+        .from('video_testimonials')
+        .select('client_name, youtube_url')
+        .eq('approved', true)
+        .not('youtube_url', 'is', null)
+        .limit(3);
+      
+      if (videoTestimonials && videoTestimonials.length > 0) {
+        videoTestimonials.forEach((vt: any) => {
+          sitelinks.push({
+            label: `Depoimento: ${vt.client_name}`,
+            url: vt.youtube_url
+          });
+        });
+        
+        console.log(`✅ ${videoTestimonials.length} sitelinks de depoimentos adicionados`);
+      }
+    } catch (error) {
+      console.error('Error collecting video testimonial sitelinks:', error);
     }
   }
 
