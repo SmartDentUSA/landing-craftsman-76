@@ -4,12 +4,24 @@ import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
 import { useProductBlogsIntegration } from './useProductBlogsIntegration';
 import { useSelectedProducts } from './useSelectedProducts';
 
+interface ExtractedBlog {
+  id: string;
+  title: string;
+  type: 'strategic' | 'technical' | 'commercial';
+  htmlContent: string;
+  order: number;
+  productName?: string;
+  productId?: string;
+}
+
 interface ConsolidatedHTML {
   dentala: string;
   eodonto: string;
   generatedAt: string;
   productBlogsCount: { dentala: number; eodonto: number };
   strategicBlogTitle: { dentala: string; eodonto: string };
+  dentalaBlogs: ExtractedBlog[];
+  eodontoBlogs: ExtractedBlog[];
 }
 
 interface ConsolidatedHTMLMap {
@@ -33,6 +45,81 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
     }
     lastGenerationAtRef.current.set(lpId, Date.now());
     return true;
+  }, []);
+
+  // Extrair blogs individuais do HTML consolidado usando markers
+  const extractIndividualBlogs = useCallback((
+    consolidatedHTML: string,
+    domain: 'dentala' | 'eodonto',
+    productBlogs: any[]
+  ): ExtractedBlog[] => {
+    const blogs: ExtractedBlog[] = [];
+    
+    // Regex para encontrar markers
+    const markerRegex = /<!-- BLOG_START:([^>]+) -->([\s\S]*?)<!-- BLOG_END:\1 -->/g;
+    let match;
+    let index = 0;
+
+    console.log(`🔍 [EXTRACTION] Extraindo blogs de ${domain}...`);
+
+    while ((match = markerRegex.exec(consolidatedHTML)) !== null) {
+      const blogId = match[1];
+      const blogContent = match[2];
+      
+      // Extrair título do data-attribute
+      const titleMatch = blogContent.match(/data-blog-title="([^"]*)"/);
+      const title = titleMatch 
+        ? titleMatch[1].replace(/&quot;/g, '"')
+        : `Blog ${index + 1}`;
+      
+      // Extrair tipo do data-attribute
+      const typeMatch = blogContent.match(/data-blog-type="([^"]*)"/);
+      const type = (typeMatch ? typeMatch[1] : 'strategic') as 'strategic' | 'technical' | 'commercial';
+      
+      // Associar com produto (se não for estratégico)
+      let productName: string | undefined;
+      let productId: string | undefined;
+
+      if (index > 0 && productBlogs[index - 1]) {
+        const productBlog = productBlogs[index - 1];
+        productName = productBlog.productName;
+        productId = productBlog.productId;
+      }
+
+      // Reconstruir HTML completo individual preservando estilos
+      const headMatch = consolidatedHTML.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+      const head = headMatch ? headMatch[0] : '';
+      
+      const individualHTML = `<!DOCTYPE html>
+<html lang="pt-BR">
+${head}
+<body>
+  <div class="container" role="main">
+    <main>
+      ${blogContent}
+    </main>
+  </div>
+</body>
+</html>`;
+
+      blogs.push({
+        id: blogId,
+        title,
+        type,
+        htmlContent: individualHTML,
+        order: index,
+        productName,
+        productId
+      });
+
+      index++;
+    }
+
+    console.log(`✅ [EXTRACTION] ${blogs.length} blogs extraídos de ${domain}:`, 
+      blogs.map(b => ({ title: b.title, type: b.type }))
+    );
+
+    return blogs;
   }, []);
 
   // Gerar HTML consolidado para uma landing page específica
@@ -200,8 +287,27 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
 
       console.log('✅ [PASSO 6] HTML Eodonto gerado com sucesso');
 
+      // ✅ EXTRAIR BLOGS INDIVIDUAIS
+      console.log('🔍 [PASSO 7] Extraindo blogs individuais...');
+      const dentalaBlogs = extractIndividualBlogs(
+        dentalaHTML,
+        'dentala',
+        dentalaBlogsProducts
+      );
+
+      const eodontoBlogs = extractIndividualBlogs(
+        eodontoHTML,
+        'eodonto',
+        eodontoBlogsProducts
+      );
+
+      console.log(`📦 [PASSO 7] Blogs extraídos:`, {
+        dentala: dentalaBlogs.length,
+        eodonto: eodontoBlogs.length
+      });
+
       // Armazenar no estado
-      console.log('💾 [PASSO 7] Armazenando HTMLs consolidados no estado');
+      console.log('💾 [PASSO 8] Armazenando HTMLs consolidados no estado');
       setConsolidatedHTMLs(prev => ({
         ...prev,
         [landingPageId]: {
@@ -215,7 +321,9 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
           strategicBlogTitle: {
             dentala: dentalaPost.title,
             eodonto: eodontoPost.title,
-          }
+          },
+          dentalaBlogs,
+          eodontoBlogs
         }
       }));
 

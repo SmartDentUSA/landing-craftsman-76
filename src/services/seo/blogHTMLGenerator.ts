@@ -254,13 +254,27 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     // ✅ Sanitizar HTML final
     const sanitizedContent = sanitizeBlogContent(contentWithLinks);
     
+    // ✅ NOVO: Gerar markers únicos para cada blog
+    const blogId = `blog-${index}-${Date.now()}`;
+    const blogType = index === 0 ? 'strategic' : (domain === 'dentala.com.br' ? 'technical' : 'commercial');
+    
     return `
-      <article class="blog-post" data-index="${index}" itemscope itemtype="https://schema.org/Article">
+      <!-- BLOG_START:${blogId} -->
+      <article 
+        id="${blogId}" 
+        class="blog-post" 
+        data-index="${index}" 
+        data-blog-type="${blogType}"
+        data-blog-title="${blog.title.replace(/"/g, '&quot;')}"
+        itemscope 
+        itemtype="https://schema.org/Article"
+      >
         <h2 itemprop="headline">${blog.title}</h2>
         <div class="blog-content" itemprop="articleBody">
           ${sanitizedContent}
         </div>
       </article>
+      <!-- BLOG_END:${blogId} -->
     `;
   }).join('\n');
 

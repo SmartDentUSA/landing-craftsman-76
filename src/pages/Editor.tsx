@@ -30,6 +30,7 @@ import { ProductLinkModal } from "@/components/ProductLinkModal";
 import { BlogEditorSection } from "@/components/BlogEditorSection";
 import { StrategicBlogPreview } from "@/components/StrategicBlogPreview";
 import { ConsolidatedBlogCopyPaste } from "@/components/ConsolidatedBlogCopyPaste";
+import { ConsolidatedBlogViewer } from "@/components/ConsolidatedBlogViewer";
 import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
@@ -7647,6 +7648,22 @@ dataLayer = [{
                   consolidatedHTMLs={consolidatedHTMLs}
                 />
               </div>
+
+              {/* Visualizador Individual por Domínio */}
+              {approvedLandingPages.length > 0 && approvedLandingPages[0] && consolidatedHTMLs[approvedLandingPages[0].id] && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                  <ConsolidatedBlogViewer
+                    domain="dentala"
+                    blogs={consolidatedHTMLs[approvedLandingPages[0].id].dentalaBlogs || []}
+                    landingPageName={approvedLandingPages[0].name}
+                  />
+                  <ConsolidatedBlogViewer
+                    domain="eodonto"
+                    blogs={consolidatedHTMLs[approvedLandingPages[0].id].eodontoBlogs || []}
+                    landingPageName={approvedLandingPages[0].name}
+                  />
+                </div>
+              )}
             </TabsContent>
 
             {/* Repository Tab - Fixed positioning */}
