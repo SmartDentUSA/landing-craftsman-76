@@ -22,6 +22,8 @@ import { useProductBlogsIntegration } from '@/hooks/useProductBlogsIntegration';
 import { sanitizeBlogContent } from "@/utils/sanitize-html";
 import { ProductMigrationModal } from "@/components/ProductMigrationModal";
 import { useBlogReadMore } from "@/hooks/useBlogReadMore";
+import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
+import { Wand2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 // Interface for blog posts
 interface BlogPost {
@@ -57,6 +59,13 @@ const DashboardContent = () => {
   } = useProductBlogsIntegration(approvedLandingPagesWithBlogs);
   
   const { generateConsolidatedBlogHTML } = useSEOHTMLGenerator();
+  
+  // ✅ Hook centralizado para geração de HTML consolidado
+  const { 
+    consolidatedHTMLs, 
+    isGenerating: isGeneratingConsolidated, 
+    generateAllConsolidated 
+  } = useConsolidatedBlogAutoGenerator(approvedLandingPagesWithBlogs);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [promotingToAdmin, setPromotingToAdmin] = useState(false);
@@ -1205,6 +1214,51 @@ const DashboardContent = () => {
           <div className="flex items-center gap-2 mb-6">
             <FileText className="h-6 w-6 text-primary" />
             <h2 className="text-2xl font-bold">HTML Blogs Copy & Paste</h2>
+          </div>
+
+          {/* ✅ Controle centralizado de geração de HTML consolidado */}
+          <div className="flex items-center justify-between mb-6 p-4 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-center gap-3">
+              {Object.keys(consolidatedHTMLs).length > 0 ? (
+                <>
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    {Object.keys(consolidatedHTMLs).length} LP{Object.keys(consolidatedHTMLs).length > 1 ? 's' : ''} em cache
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    HTMLs Consolidados gerados e prontos para copiar
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Cache vazio
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Gere os HTMLs consolidados para todas as LPs aprovadas
+                  </span>
+                </>
+              )}
+            </div>
+            <Button
+              onClick={generateAllConsolidated}
+              disabled={isGeneratingConsolidated || approvedLandingPagesWithBlogs.length === 0}
+              variant="default"
+              size="sm"
+            >
+              {isGeneratingConsolidated ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando HTMLs...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Gerar/Atualizar HTMLs Consolidados
+                </>
+              )}
+            </Button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">

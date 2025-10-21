@@ -23,9 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, CheckCircle, Search, AlertCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, Search, CheckCircle } from "lucide-react";
 import { InfinitePartnersCarousel } from "@/components/InfinitePartnersCarousel";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
@@ -33,7 +31,6 @@ import { BlogEditorSection } from "@/components/BlogEditorSection";
 import { StrategicBlogPreview } from "@/components/StrategicBlogPreview";
 import { ConsolidatedBlogCopyPaste } from "@/components/ConsolidatedBlogCopyPaste";
 import { ConsolidatedBlogViewer } from "@/components/ConsolidatedBlogViewer";
-import { useConsolidatedBlogAutoGenerator } from "@/hooks/useConsolidatedBlogAutoGenerator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewModerationModal } from "@/components/ReviewModerationModal";
 import VideoTestimonialsSection from "@/components/VideoTestimonialsSection";
@@ -1222,13 +1219,6 @@ const EditorContent = () => {
   const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
   const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner } = useAnimatedBannerAutoSave(updateLandingPage, id);
   const [productsWithTechnicalVideos, setProductsWithTechnicalVideos] = useState<any[]>([]);
-  
-  // Hook para geração automática de blogs consolidados
-  const approvedLandingPages = useMemo(() => 
-    landingPages?.filter(lp => lp.status === 'approved') || [],
-    [landingPages]
-  );
-  const { consolidatedHTMLs, isGenerating: isGeneratingConsolidated, generateConsolidatedForLandingPage } = useConsolidatedBlogAutoGenerator(approvedLandingPages);
   
   // Debounced auto-save for desktop info
   const debouncedDesktopSave = useDebounce((updatedData: any) => {
@@ -7617,47 +7607,6 @@ dataLayer = [{
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
                 {/* Coluna esquerda: Editor Estratégico */}
                 <div className="min-h-[60vh] max-h-[calc(100vh-220px)] overflow-y-auto">
-                  {/* ✅ CACHE-FIRST: Controle manual de geração de HTML consolidado */}
-                  <div className="flex items-center justify-between mb-4 p-4 bg-muted/50 rounded-lg border border-border">
-                    <div className="flex items-center gap-2">
-                      {consolidatedHTMLs[id || ''] ? (
-                        <>
-                          <Badge variant="default" className="flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3" />
-                            HTML Consolidado em Cache
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Última atualização: {formatDistanceToNow(new Date(consolidatedHTMLs[id || ''].generatedAt), { addSuffix: true, locale: ptBR })}
-                          </span>
-                        </>
-                      ) : (
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          HTML não gerado
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <Button
-                      size="sm"
-                      variant={consolidatedHTMLs[id || ''] ? "outline" : "default"}
-                      onClick={() => id && generateConsolidatedForLandingPage(id)}
-                      disabled={isGeneratingConsolidated}
-                    >
-                      {isGeneratingConsolidated ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Gerando...
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="h-4 w-4 mr-2" />
-                          {consolidatedHTMLs[id || ''] ? 'Regenerar HTML Consolidado' : 'Gerar HTML Consolidado'}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
                   <BlogEditorSection
                     landingPageId={id || ""}
                     landingPageData={data}
@@ -7671,15 +7620,10 @@ dataLayer = [{
                   <StrategicBlogPreview
                     dentalaData={dentalaBlogPost}
                     eodontoData={eodontoBlogPost}
-                    approvedLandingPages={approvedLandingPages}
+                    approvedLandingPages={[]}
                     selectedProductIds={selectedProductIds}
                     refreshKey={strategicBlogRefreshKey}
                     landingPageId={id || ''}
-                    consolidatedHTMLs={consolidatedHTMLs}
-                    onForceGenerate={(lpId) => {
-                      console.log('🔧 Forçando geração consolidada para LP:', lpId);
-                      generateConsolidatedForLandingPage(lpId);
-                    }}
                   />
                 </div>
               </div>
@@ -7687,26 +7631,9 @@ dataLayer = [{
               {/* Painel de Copy & Paste Consolidado */}
               <div className="mt-6">
                 <ConsolidatedBlogCopyPaste
-                  approvedLandingPages={approvedLandingPages}
-                  consolidatedHTMLs={consolidatedHTMLs}
+                  approvedLandingPages={[]}
                 />
               </div>
-
-              {/* Visualizador Individual por Domínio */}
-              {approvedLandingPages.length > 0 && approvedLandingPages[0] && consolidatedHTMLs[approvedLandingPages[0].id] && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                  <ConsolidatedBlogViewer
-                    domain="dentala"
-                    blogs={consolidatedHTMLs[approvedLandingPages[0].id].dentalaBlogs || []}
-                    landingPageName={approvedLandingPages[0].name}
-                  />
-                  <ConsolidatedBlogViewer
-                    domain="eodonto"
-                    blogs={consolidatedHTMLs[approvedLandingPages[0].id].eodontoBlogs || []}
-                    landingPageName={approvedLandingPages[0].name}
-                  />
-                </div>
-              )}
             </TabsContent>
 
             {/* Repository Tab - Fixed positioning */}
