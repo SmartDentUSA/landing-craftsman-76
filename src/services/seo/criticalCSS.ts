@@ -4,27 +4,54 @@
  */
 
 export const CRITICAL_CSS = `
-/* Reset & Base - Apenas o essencial */
+/* Poppins Font - Critical Above-the-Fold */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* CSS Variables - Design System */
+:root{
+  --primary:#0f172a;
+  --secondary:#1e293b;
+  --accent:#14b8a6;
+  --accent-2:#3b82f6;
+  --bg:#ffffff;
+  --bg-subtle:#f8fafc;
+  --border:rgba(15,23,42,0.08);
+  --text:#334155;
+  --text-muted:#64748b;
+  --radius:12px;
+  --shadow-sm:0 1px 2px rgba(15,23,42,0.05);
+  --shadow-md:0 4px 6px rgba(15,23,42,0.07);
+  --shadow-lg:0 10px 15px rgba(15,23,42,0.1);
+}
+
+/* Reset */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.6;color:#333;background:#fff}
+body{font-family:'Poppins',system-ui,-apple-system,sans-serif;line-height:1.6;color:var(--text);background:var(--bg)}
 
-/* Layout Above-the-Fold */
-.container{max-width:1200px;margin:0 auto;padding:20px}
-header{margin-bottom:30px}
-h1{font-size:clamp(1.75rem,5vw,2.5rem);font-weight:700;color:#1a1a1a;line-height:1.2;margin-bottom:15px}
+/* Container */
+.container{max-width:900px;margin:0 auto;padding:24px}
 
-/* Critical Navigation */
-nav.institutional-links{display:flex;flex-wrap:wrap;gap:10px;padding:10px;background:#f8f9fa;border-radius:5px;margin:20px 0}
-nav.institutional-links a{color:#007bff;text-decoration:none;font-size:0.9rem}
+/* Hero Section - Above-the-Fold */
+.hero{margin-bottom:48px;padding:32px;background:linear-gradient(135deg,var(--bg-subtle) 0%,#fff 100%);border-radius:var(--radius);border:1px solid var(--border)}
+.eyebrow{font-size:0.875rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px}
+h1{font-size:clamp(1.75rem,5vw,2.5rem);font-weight:700;color:var(--primary);line-height:1.2;margin-bottom:16px}
+.lead{font-size:1.125rem;color:var(--text-muted);line-height:1.6}
 
-/* Loading State - Evita CLS */
-img{max-width:100%;height:auto;display:block}
-article{margin-bottom:40px}
+/* TOC - Above the fold critical styles */
+.toc{position:sticky;top:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:32px;box-shadow:var(--shadow-sm)}
+.toc h4{font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:12px}
+.toc ul{list-style:none;padding:0;margin:0}
+.toc li{margin:0}
+.toc a{display:block;padding:8px 12px;color:var(--text);text-decoration:none;border-radius:6px;transition:background 0.2s,color 0.2s;font-size:0.875rem}
+.toc a:hover{background:var(--bg-subtle);color:var(--accent)}
 
 /* Mobile First */
 @media (max-width:768px){
-  .container{padding:15px}
+  .container{padding:16px}
+  .hero{padding:24px}
   h1{font-size:1.75rem}
+  .lead{font-size:1rem}
+  .toc{position:static;margin-bottom:24px}
 }
 `.trim();
 
@@ -33,260 +60,276 @@ article{margin-bottom:40px}
  * Contém estilos de interação, decorativos e below-the-fold
  */
 export const FULL_CSS = `
-/* Typography & Content */
-h2 {
-  color: #2c3e50;
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
-  margin: 30px 0 15px 0;
-  border-left: 4px solid #007bff;
-  padding-left: 15px;
-  font-weight: 600;
+/* ============= NOVO CSS MODERNO ============= */
+
+/* Typography */
+h2{
+  font-size:1.5rem;
+  font-weight:600;
+  color:var(--primary);
+  margin:40px 0 16px 0;
+  scroll-margin-top:80px;
 }
 
-h3 {
-  color: #34495e;
-  font-size: 1.4rem;
-  margin: 25px 0 12px 0;
-  font-weight: 600;
+h3{
+  font-size:1.25rem;
+  font-weight:600;
+  color:var(--secondary);
+  margin:32px 0 12px 0;
 }
 
-/* Paragraphs & Lists */
-.blog-content p {
-  margin-bottom: 18px;
-  text-align: justify;
-  hyphens: auto;
+h4{
+  font-size:1rem;
+  font-weight:600;
+  color:var(--primary);
+  margin:24px 0 8px 0;
 }
 
-.blog-content ul,
-.blog-content ol {
-  margin: 15px 0 15px 25px;
-  padding-left: 15px;
+/* Paragraphs */
+p{
+  margin-bottom:16px;
+  line-height:1.7;
+  color:var(--text);
 }
 
-.blog-content li {
-  margin-bottom: 8px;
+/* Lists */
+ul,ol{
+  margin:16px 0;
+  padding-left:24px;
 }
 
-.blog-content blockquote {
-  border-left: 4px solid #e0e0e0;
-  padding-left: 20px;
-  margin: 20px 0;
-  color: #666;
-  font-style: italic;
+li{
+  margin-bottom:8px;
+  line-height:1.6;
 }
 
-/* Links & Interactive Elements */
-.blog-content a {
-  color: #007bff;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-bottom-color 0.3s ease, color 0.3s ease;
+/* Links */
+a{
+  color:var(--accent);
+  text-decoration:none;
+  transition:color 0.2s;
 }
 
-.blog-content a:hover {
-  border-bottom-color: #007bff;
-  color: #0056b3;
+a:hover{
+  color:var(--accent-2);
+  text-decoration:underline;
 }
 
-.blog-content a:focus {
-  outline: 2px solid #007bff;
-  outline-offset: 2px;
+/* Card Sections */
+.card{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:32px;
+  margin-bottom:32px;
+  box-shadow:var(--shadow-sm);
 }
 
-/* Images & Media */
-.blog-content img {
-  border-radius: 8px;
-  margin: 20px 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* Benefit Cards Grid */
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:24px;
+  margin:24px 0;
 }
 
-.blog-content figure {
-  margin: 25px 0;
+.benefit{
+  padding:24px;
+  background:linear-gradient(135deg,var(--bg-subtle) 0%,#fff 100%);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  transition:transform 0.2s,box-shadow 0.2s;
 }
 
-.blog-content figcaption {
-  text-align: center;
-  font-size: 0.9rem;
-  color: #666;
-  margin-top: 8px;
+.benefit:hover{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-md);
 }
 
-/* Code Blocks */
-.blog-content code {
-  background: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9em;
+.badge{
+  display:inline-block;
+  padding:4px 12px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+  color:#fff;
+  border-radius:20px;
+  font-size:0.75rem;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-bottom:12px;
 }
 
-.blog-content pre {
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 5px;
-  overflow-x: auto;
-  margin: 20px 0;
+/* TOC Full Styles */
+.toc .small{
+  display:block;
+  margin-top:12px;
+  padding:8px 12px;
+  text-align:center;
+  color:var(--text-muted);
+  font-size:0.75rem;
+  text-decoration:none;
 }
 
-.blog-content pre code {
-  background: none;
-  padding: 0;
+/* Blockquote */
+blockquote{
+  border-left:4px solid var(--accent);
+  padding-left:20px;
+  margin:24px 0;
+  color:var(--text-muted);
+  font-style:italic;
+}
+
+/* Images */
+img{
+  max-width:100%;
+  height:auto;
+  border-radius:var(--radius);
+  margin:24px 0;
+}
+
+/* Code */
+code{
+  background:var(--bg-subtle);
+  padding:2px 6px;
+  border-radius:4px;
+  font-family:'Courier New',monospace;
+  font-size:0.875em;
+}
+
+pre{
+  background:var(--bg-subtle);
+  padding:16px;
+  border-radius:var(--radius);
+  overflow-x:auto;
+  margin:24px 0;
+}
+
+pre code{
+  background:none;
+  padding:0;
 }
 
 /* Tables */
-.blog-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:24px 0;
 }
 
-.blog-content th,
-.blog-content td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+th,td{
+  padding:12px;
+  text-align:left;
+  border-bottom:1px solid var(--border);
 }
 
-.blog-content th {
-  background: #f8f9fa;
-  font-weight: 600;
+th{
+  background:var(--bg-subtle);
+  font-weight:600;
+  color:var(--primary);
 }
 
-/* Company Footer & Info Sections */
+/* Company Footer */
 .company-footer-info,
-.company-info {
-  margin-top: 40px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
-  border-left: 4px solid #007bff;
+.company-info{
+  margin-top:40px;
+  padding:20px;
+  background:linear-gradient(135deg,var(--bg-subtle) 0%,#fff 100%);
+  border-radius:var(--radius);
+  border-left:4px solid var(--accent);
 }
 
 .company-footer-info h3,
-.company-info h3 {
-  color: #2c3e50;
-  margin-bottom: 12px;
+.company-info h3{
+  color:var(--primary);
+  margin-bottom:12px;
 }
 
 /* Multi-Domain Footer */
-.multi-domain-footer {
-  margin-top: 60px;
-  padding: 30px 0;
-  border-top: 1px solid #e0e0e0;
-  text-align: center;
+.multi-domain-footer{
+  margin-top:60px;
+  padding:30px 0;
+  border-top:1px solid var(--border);
+  text-align:center;
 }
 
-.multi-domain-footer a {
-  display: inline-block;
-  margin: 0 15px;
-  color: #007bff;
-  text-decoration: none;
-  font-size: 0.95rem;
-  transition: color 0.3s ease;
+.multi-domain-footer a{
+  display:inline-block;
+  margin:0 15px;
+  color:var(--accent);
+  text-decoration:none;
+  font-size:0.95rem;
+  transition:color 0.3s ease;
 }
 
-.multi-domain-footer a:hover {
-  color: #0056b3;
-  text-decoration: underline;
+.multi-domain-footer a:hover{
+  color:var(--accent-2);
+  text-decoration:underline;
 }
 
-/* Article Schema Microdata */
-article[itemscope] {
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 30px;
+/* Institutional Links */
+nav.institutional-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  padding:10px;
+  background:var(--bg-subtle);
+  border-radius:var(--radius);
+  margin:20px 0;
 }
 
-article[itemscope]:last-of-type {
-  border-bottom: none;
+nav.institutional-links a{
+  color:var(--accent);
+  text-decoration:none;
+  font-size:0.9rem;
 }
 
 /* Accessibility */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0,0,0,0);
-  white-space: nowrap;
-  border: 0;
+.sr-only{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
 }
 
-/* Skip Link */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: #007bff;
-  color: white;
-  padding: 8px 16px;
-  text-decoration: none;
-  z-index: 100;
+.skip-link{
+  position:absolute;
+  top:-40px;
+  left:0;
+  background:var(--accent);
+  color:#fff;
+  padding:8px 16px;
+  text-decoration:none;
+  z-index:100;
 }
 
-.skip-link:focus {
-  top: 0;
+.skip-link:focus{
+  top:0;
 }
 
-/* Performance: Will-Change Hints */
-.blog-content a,
-nav.institutional-links a,
-.multi-domain-footer a {
-  will-change: border-bottom-color, color;
+/* Responsive */
+@media (max-width:768px){
+  .card{padding:24px}
+  .grid-3{grid-template-columns:1fr}
+  h2{font-size:1.4rem;margin:20px 0 12px 0}
+  h3{font-size:1.2rem}
+  .multi-domain-footer a{display:block;margin:10px 0}
+  nav.institutional-links{flex-direction:column}
+}
+
+@media (min-width:1200px){
+  .container{max-width:1000px}
 }
 
 /* Print Styles */
-@media print {
-  body {
-    background: white;
-    color: black;
-  }
-  
-  a {
-    text-decoration: underline;
-  }
-  
-  .institutional-links,
-  .multi-domain-footer {
-    display: none;
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  h2 {
-    font-size: 1.4rem;
-    margin: 20px 0 12px 0;
-  }
-  
-  h3 {
-    font-size: 1.2rem;
-  }
-  
-  .blog-content p {
-    text-align: left;
-  }
-  
-  nav.institutional-links {
-    flex-direction: column;
-  }
-  
-  .multi-domain-footer a {
-    display: block;
-    margin: 10px 0;
-  }
-  
-  .company-footer-info,
-  .company-info {
-    padding: 15px;
-  }
-}
-
-@media (min-width: 1400px) {
-  .container {
-    max-width: 1400px;
-  }
+@media print{
+  body{background:#fff;color:#000}
+  a{text-decoration:underline}
+  .toc,.skip-link{display:none}
 }
 `.trim();
 
@@ -311,4 +354,25 @@ export function generateCSSLinks(cssUrl: string): string {
  */
 export function inlineCriticalCSS(): string {
   return `<style>${CRITICAL_CSS}</style>`;
+}
+
+/**
+ * Gera script de smooth scroll para navegação entre seções
+ */
+export function generateSmoothScrollScript(): string {
+  return `
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+});
+</script>
+`.trim();
 }

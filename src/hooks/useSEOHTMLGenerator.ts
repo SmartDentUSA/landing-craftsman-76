@@ -15,6 +15,8 @@ import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
 import { buildIntelligentLinksMap, applyIntelligentLinks } from '@/services/seo/intelligentLinksProcessor';
 import { generateSchema } from '@/services/seo/schemaGenerator';
 import { buildMetaTags } from '@/services/seo/metaTagsBuilder';
+import { generateSmoothScrollScript } from '@/services/seo/criticalCSS';
+import { generateTableOfContents, addIdsToHeadings } from '@/services/seo/blogHTMLHelpers';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -1264,6 +1266,12 @@ export const useSEOHTMLGenerator = () => {
       `;
     }).join('\n');
     
+    // ✅ ADICIONAR IDs AOS H2s PARA TOC
+    const blogContentsWithIds = addIdsToHeadings(blogContents);
+    
+    // ✅ GERAR TOC
+    const tocHTML = generateTableOfContents(blogContentsWithIds, domain);
+    
     // Add SEO summary from landing pages if available
     let seoSummary = '';
     if (landingPagesSEO && landingPagesSEO.length > 0) {
@@ -1850,8 +1858,11 @@ export const useSEOHTMLGenerator = () => {
     
     
     
+        <!-- ✅ TABLE OF CONTENTS -->
+        ${tocHTML}
+        
         <main class="blog-section">
-          ${blogContents}
+          ${blogContentsWithIds}
         </main>
     
     
@@ -2131,6 +2142,9 @@ export const useSEOHTMLGenerator = () => {
       }
     }
   </script>
+  
+  <!-- ✅ SMOOTH SCROLL SCRIPT -->
+  ${generateSmoothScrollScript()}
 </body>
 </html>`;
 

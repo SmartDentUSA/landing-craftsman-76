@@ -29,7 +29,8 @@ import {
 import { 
   inlineCriticalCSS, 
   generateCSSLinks, 
-  FULL_CSS 
+  FULL_CSS,
+  generateSmoothScrollScript
 } from './criticalCSS';
 import { 
   optimizeContentImages, 
@@ -43,6 +44,7 @@ import {
 import { marked } from 'marked';
 import { sanitizeBlogContent } from '@/utils/sanitize-html';
 import { supabase } from '@/integrations/supabase/client';
+import { generateTableOfContents, addIdsToHeadings } from './blogHTMLHelpers';
 
 export interface BlogHTMLOptions {
   // Dados dos blogs
@@ -266,6 +268,12 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   const blogContentsOptimized = optimizeContentImages(blogContents);
   const blogContentsWithLCP = markLCPImage(blogContentsOptimized);
   
+  // ✅ 6.5. ADICIONAR IDs AOS H2s PARA TOC
+  const blogContentsWithIds = addIdsToHeadings(blogContentsWithLCP);
+  
+  // ✅ 6.6. GERAR TABLE OF CONTENTS
+  const tocHTML = generateTableOfContents(blogContentsWithIds, domain);
+  
   // ✅ 7. GERAR SCHEMAS DE PRODUTOS SELECIONADOS + REVIEWS AGGREGATE
   const allSchemas = [...schemas];
   
@@ -449,22 +457,37 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   <!-- Skip Link para Acessibilidade -->
   <a href="#main-content" class="skip-link">Pular para conteúdo principal</a>
   
-  <main role="main" id="main-content" class="container">
-    <header>
-      <h1>${finalTitle}</h1>
-      ${institutionalLinksHTML ? `<nav aria-label="Links institucionais" class="institutional-links">${institutionalLinksHTML}</nav>` : ''}
+  <div class="container" role="main" id="main-content">
+    <!-- ✅ HERO SECTION -->
+    <header class="hero" aria-label="Cabeçalho do artigo">
+      <div>
+        <div class="eyebrow">${keywords[0] || 'Artigo'} • ${companySEOData?.companyName || 'Smart Dent'}</div>
+        <h1>${finalTitle}</h1>
+        <p class="lead">${validatedDescription}</p>
+      </div>
     </header>
+    
+    ${institutionalLinksHTML ? `<nav aria-label="Links institucionais" class="institutional-links">${institutionalLinksHTML}</nav>` : ''}
     
     ${schemaValidationAlert}
     
-    ${blogContentsWithLCP}
+    <!-- ✅ TABLE OF CONTENTS -->
+    ${tocHTML}
+    
+    <!-- ✅ MAIN CONTENT -->
+    <main>
+      ${blogContentsWithIds}
+    </main>
     
     ${authorSignatureHTML}
     
     ${!excludeFooter && companyFooterHTML ? `<section aria-label="Informações da empresa" class="company-info">${companyFooterHTML}</section>` : ''}
-  </main>
+  </div>
   
   ${multiDomainFooter}
+  
+  <!-- ✅ SMOOTH SCROLL SCRIPT -->
+  ${generateSmoothScrollScript()}
   
   ${preview ? '<!-- PREVIEW MODE: noindex, sem tracking, sem validação de schema -->' : ''}
 </body>

@@ -534,12 +534,49 @@ PÚBLICO-ALVO: ${targetAudience}
 
 ${buildDynamicSEOContext(context)}
 
+## ESTRUTURA HTML OBRIGATÓRIA:
+
+1. Usar <section class="card"> para cada tópico principal
+2. Incluir <h2> com texto descritivo (usado para TOC automático)
+3. Usar <div class="grid-3"> para listas de benefícios (sempre 3 itens)
+4. Cada benefício deve ter:
+   - <div class="badge">Etiqueta Curta</div>
+   - <h4>Título do Benefício</h4>
+   - <p>Descrição de 2-3 linhas</p>
+5. Usar <blockquote> para citações importantes
+
+EXEMPLO DE SEÇÃO:
+
+<section class="card">
+  <h2>Como Funciona o Processo de Implante Dentário</h2>
+  <p>O implante dentário é um procedimento avançado que restaura a função e estética...</p>
+  
+  <div class="grid-3">
+    <div class="benefit">
+      <div class="badge">Etapa 1</div>
+      <h4>Avaliação Inicial</h4>
+      <p>Análise completa da saúde bucal com tecnologia 3D.</p>
+    </div>
+    <div class="benefit">
+      <div class="badge">Etapa 2</div>
+      <h4>Cirurgia de Implante</h4>
+      <p>Procedimento minimamente invasivo com recuperação rápida.</p>
+    </div>
+    <div class="benefit">
+      <div class="badge">Etapa 3</div>
+      <h4>Prótese Final</h4>
+      <p>Instalação da coroa com aspecto natural.</p>
+    </div>
+  </div>
+</section>
+
 ⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO OBRIGATÓRIAS:**
 - Use APENAS dados fornecidos no contexto acima
 - NÃO invente especificações técnicas, benefícios ou características
 - Se um dado não estiver disponível, seja genérico mas NÃO crie informações falsas
-- PROIBIDO usar termos como "biocompatível", "precisão milimétrica", "tecnologia de ponta" se não estiverem nos dados
+- PROIBIDO usar termos como "biocompatível", "precisão milimétrica" se não estiverem nos dados
 - Base TUDO em evidências explícitas do contexto fornecido
+- SEMPRE use a estrutura de cards e benefit grid acima
 
 GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que demonstre autoridade técnica e seja útil para profissionais da odontologia.
 `;
@@ -568,12 +605,49 @@ PÚBLICO-ALVO: ${targetAudience}
 
 ${buildDynamicSEOContext(context)}
 
+## ESTRUTURA HTML OBRIGATÓRIA:
+
+1. Usar <section class="card"> para cada tópico principal
+2. Incluir <h2> com texto descritivo (usado para TOC automático)
+3. Usar <div class="grid-3"> para listas de benefícios (sempre 3 itens)
+4. Cada benefício deve ter:
+   - <div class="badge">Vantagem</div>
+   - <h4>Título do Benefício</h4>
+   - <p>Descrição persuasiva de 2-3 linhas</p>
+5. Usar <blockquote> para depoimentos e citações
+
+EXEMPLO DE SEÇÃO:
+
+<section class="card">
+  <h2>Transforme Seu Consultório com Tecnologia Moderna</h2>
+  <p>Descubra como a tecnologia pode revolucionar seu atendimento...</p>
+  
+  <div class="grid-3">
+    <div class="benefit">
+      <div class="badge">Economia</div>
+      <h4>Reduza Custos</h4>
+      <p>Economize até 40% com processos digitais eficientes.</p>
+    </div>
+    <div class="benefit">
+      <div class="badge">Velocidade</div>
+      <h4>Atenda Mais Rápido</h4>
+      <p>Reduza o tempo de procedimentos em até 60%.</p>
+    </div>
+    <div class="benefit">
+      <div class="badge">Qualidade</div>
+      <h4>Melhore Resultados</h4>
+      <p>Aumente a satisfação dos pacientes com precisão.</p>
+    </div>
+  </div>
+</section>
+
 ⚠️ **INSTRUÇÕES ANTI-ALUCINAÇÃO OBRIGATÓRIAS:**
 - Use APENAS dados fornecidos no contexto acima
 - NÃO invente especificações, preços ou características de produtos
 - Se um dado não estiver disponível, seja genérico mas NÃO crie informações falsas
 - Foque em benefícios e soluções REAIS baseadas nos dados fornecidos
 - PROIBIDO inventar diferenciais competitivos não mencionados
+- SEMPRE use a estrutura de cards e benefit grid acima
 
 GERE UM ARTIGO EM PORTUGUÊS BRASILEIRO que seja persuasivo e ajude o consumidor a tomar uma decisão de compra informada.
 `;
