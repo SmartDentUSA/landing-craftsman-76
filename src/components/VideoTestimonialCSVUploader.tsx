@@ -62,9 +62,11 @@ export const VideoTestimonialCSVUploader: React.FC<VideoTestimonialCSVUploaderPr
     try {
       const parseResult = Papa.parse(csvText, {
         header: false,
-        delimiter: ';',
-        skipEmptyLines: true,
+        delimiter: ',',
+        skipEmptyLines: 'greedy',
         transformHeader: (header: string) => header.toLowerCase(),
+        newline: '\n',
+        quoteChar: '"',
       });
       
       if (parseResult.errors.length > 0) {
