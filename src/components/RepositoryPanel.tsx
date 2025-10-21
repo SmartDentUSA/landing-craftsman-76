@@ -457,8 +457,23 @@ export function RepositoryPanel({
     }).format(price);
   };
 
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
+  const handleEditProduct = async (product: Product) => {
+    const { data: freshProduct, error } = await supabase
+      .from('products_repository')
+      .select('*')
+      .eq('id', product.id)
+      .single();
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o produto",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setEditingProduct(freshProduct as unknown as Product);
     setIsEditModalOpen(true);
   };
 

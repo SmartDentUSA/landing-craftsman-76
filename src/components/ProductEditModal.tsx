@@ -327,8 +327,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         // FAQ
         faq: product.faq || [],
         // Technical Specifications
-        technical_specifications: product.technical_specifications || []
-      });
+      technical_specifications: product.technical_specifications || [],
+      tutorial_resources: product.tutorial_resources || { tutorials: [] }
+    });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
       setTargetAudience(product.target_audience || []);
@@ -1065,7 +1066,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         testimonial_videos: testimonialVideos as any,
         technical_videos: technicalVideos as any,
         tiktok_videos: tiktokVideos as any,
-        tutorial_resources: { tutorials } as any,
+        tutorial_resources: (tutorials.length > 0 ? { tutorials } : { tutorials: [] }) as any,
         video_captions: videoCaptions, // ✅ FASE 1: Salvar video_captions editadas
         use_in_ai_generation: formData.use_in_ai_generation,
         approved: formData.approved,
