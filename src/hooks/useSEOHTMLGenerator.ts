@@ -17,6 +17,7 @@ import { generateSchema } from '@/services/seo/schemaGenerator';
 import { buildMetaTags } from '@/services/seo/metaTagsBuilder';
 import { generateSmoothScrollScript } from '@/services/seo/criticalCSS';
 import { generateTableOfContents, addIdsToHeadings } from '@/services/seo/blogHTMLHelpers';
+import { applyAutoLinksOncePerTerm } from '@/lib/auto-link';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -824,6 +825,29 @@ export const useSEOHTMLGenerator = () => {
     const attrEscape = (s = '') => collapse(stripTags(s)).replace(/"/g, '&quot;'); // para atributos HTML
     const jsonText = (s = '') => collapse(stripTags(s)); // para JSON.stringify
 
+    // ✅ Sanitizar keywords agregadas
+    const sanitizeAggregatedKeywords = (input: unknown): string[] => {
+      const list = Array.isArray(input) ? input : (typeof input === 'string' ? [input] : []);
+      
+      // Explodir strings separadas por vírgula
+      const exploded = list.flatMap(k => 
+        (typeof k === 'string' ? k.split(',') : [])
+      ).map(s => s.trim()).filter(Boolean);
+      
+      // Filtrar keywords inválidas
+      const filtered = exploded.filter(k => {
+        if (k.length > 60) return false; // Muito longa
+        if (/[.?]/.test(k)) return false; // Contém pontuação de frase
+        if (k.split(/\s+/).length > 6) return false; // Muitas palavras (frase)
+        return true;
+      });
+      
+      // Remover duplicatas e limitar a 5
+      return [...new Set(filtered)].slice(0, 5);
+    };
+
+    const safeKeywords = sanitizeAggregatedKeywords(aggregatedKeywords);
+
     // ============= SEO CRÍTICO 1: Buscar Company Profile para SEO =============
     const companyProfile = await getCompanyProfileForSEO();
     const companySEO = companyProfile ? buildSEOMetaFromCompany(companyProfile) : null;
@@ -1104,7 +1128,65 @@ export const useSEOHTMLGenerator = () => {
     ${JSON.stringify(completeSchema, null, 2)}
     </script>`;
 
-    // Create intelligent links mapping from selected products
+    // ✅ CARREGAR KEYWORDS PARA AUTO-LINKING
+    const autoLinkItems: { term: string; url: string }[] = [];
+    
+    try {
+      // Prioridade 1: Links externos
+      const { data: externalLinks } = await supabase
+        .from('external_links')
+        .select('name, url')
+        .eq('approved', true);
+      
+      externalLinks?.forEach(link => {
+        autoLinkItems.push({ term: link.name, url: link.url });
+      });
+      
+      // Prioridade 2: Landing pages
+      const { data: internalPages } = await supabase
+        .from('landing_pages')
+        .select('id, name, data')
+        .eq('status', 'published');
+      
+      internalPages?.forEach(page => {
+        const pageData = page.data as any;
+        const url = pageData?.seo?.canonical_url || `/${page.id}`;
+        autoLinkItems.push({ term: page.name, url });
+      });
+      
+      // Prioridade 3-6: Produtos e keywords
+      const { data: products } = await supabase
+        .from('products_repository')
+        .select('name, product_url, keywords, search_intent_keywords, market_keywords')
+        .eq('approved', true)
+        .eq('use_in_ai_generation', true);
+      
+      products?.forEach(product => {
+        const productUrl = product.product_url || '#';
+        
+        // Nome do produto
+        if (product.name) {
+          autoLinkItems.push({ term: product.name, url: productUrl });
+        }
+        
+        // Keywords (processar arrays)
+        const allProductKeywords = [
+          ...(Array.isArray(product.keywords) ? product.keywords : []),
+          ...(Array.isArray(product.search_intent_keywords) ? product.search_intent_keywords : []),
+          ...(Array.isArray(product.market_keywords) ? product.market_keywords : [])
+        ];
+        
+        allProductKeywords.forEach(kw => {
+          if (kw && typeof kw === 'string' && kw.length >= 3) {
+            autoLinkItems.push({ term: kw.trim(), url: productUrl });
+          }
+        });
+      });
+    } catch (error) {
+      console.warn('⚠️ Erro ao carregar keywords para auto-linking:', error);
+    }
+
+    // Create intelligent links mapping from selected products (mantido para compatibilidade)
     const intelligentLinks: Record<string, string> = {};
     if (selectedProducts) {
       selectedProducts.forEach(product => {
@@ -1125,8 +1207,20 @@ export const useSEOHTMLGenerator = () => {
       const blogCanonicalUrl = `${blogURL}/${domain}-${index + 1}`;
       
       // Converter markdown para HTML primeiro
-      const htmlContent = convertMarkdownToHTML(blog.content);
-      // Depois aplicar links inteligentes e remover links aninhados
+      let htmlContent = convertMarkdownToHTML(blog.content);
+      
+      // ✅ APLICAR AUTO-LINKS (antes de adicionar IDs aos H2s)
+      if (autoLinkItems.length > 0) {
+        htmlContent = applyAutoLinksOncePerTerm(htmlContent, autoLinkItems, {
+          maxLinks: 12,
+          caseSensitive: false
+        });
+      }
+      
+      // ✅ Adicionar IDs aos H2s (para navegação via TOC)
+      htmlContent = addIdsToHeadings(htmlContent);
+      
+      // Depois aplicar links inteligentes (mantido para compatibilidade) e remover links aninhados
       const processedContent = removeNestedLinks(
         processContentWithAdvancedIntelligentLinks(htmlContent, intelligentLinks)
       );
@@ -1851,7 +1945,7 @@ export const useSEOHTMLGenerator = () => {
     <!-- ✅ HERO SECTION -->
     <header class="hero" aria-label="Cabeçalho do artigo">
       <div>
-        <div class="eyebrow">${(aggregatedKeywords && aggregatedKeywords.length > 0 ? aggregatedKeywords[0] : 'Artigo')} • ${companySEO?.siteNameMeta || domain}</div>
+        <div class="eyebrow">${(safeKeywords && safeKeywords.length > 0 ? safeKeywords[0] : 'Artigo')} • ${companySEO?.siteNameMeta || domain}</div>
         <h1>${title}</h1>
         <p class="lead">${description}</p>
       </div>

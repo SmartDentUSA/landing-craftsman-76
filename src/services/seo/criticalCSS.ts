@@ -117,6 +117,15 @@ blockquote{
 }
 .benefit h4{margin:8px 0 6px 0;font-size:15px}
 .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#ecfeff;font-weight:600;color:#036e66;font-size:13px}
+.hero-cta{display:flex;gap:10px;align-items:center}
+.btn{display:inline-block;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:600}
+.btn-primary{background:var(--accent-2);color:white;box-shadow:0 6px 18px rgba(3,105,161,0.12)}
+.btn-outline{background:transparent;color:var(--accent-2);border:1px solid rgba(3,105,161,0.12)}
+.hero-image{display:flex;justify-content:center;align-items:center}
+.hero-image img{width:100%;max-width:300px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.06);border:1px solid rgba(2,6,23,0.03)}
+.cta-panel{display:flex;gap:18px;align-items:center;justify-content:space-between;padding:18px;border-radius:12px;background:linear-gradient(90deg, rgba(15,118,110,0.06), rgba(3,105,161,0.04));border:1px solid rgba(3,105,161,0.06);margin-top:8px}
+.cta-panel .ctatext{flex:1}
+.refs small{color:var(--muted)}
 @media (max-width:980px){
   header{grid-template-columns:1fr}
   main{grid-template-columns:1fr;padding:18px}

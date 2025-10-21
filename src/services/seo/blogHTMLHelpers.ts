@@ -13,33 +13,53 @@ export function generateTableOfContents(content: string, domain: string): string
     return ''; // Sem H2s, sem TOC
   }
   
-  const tocItems = headings.map(h => {
-    const text = h.replace(/<[^>]*>/g, ''); // Remove tags HTML
-    const id = text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
-    
-    return `<li><a href="#${id}">${text}</a></li>`;
-  }).join('');
+  const seen = new Set<string>();
   
-  return tocItems; // ✅ Retornar apenas <li>s
+  const tocItems = headings
+    .map(h => {
+      const text = h.replace(/<[^>]*>/g, ''); // Remove tags HTML
+      const id = text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-');
+      
+      // ✅ Deduplicar: apenas primeira ocorrência
+      if (seen.has(id)) return null;
+      seen.add(id);
+      
+      return `<li><a href="#${id}">${text}</a></li>`;
+    })
+    .filter(Boolean)
+    .join('');
+  
+  return tocItems; // ✅ Retornar apenas <li>s sem duplicatas
 }
 
 /**
  * Adiciona IDs aos H2s para navegação via TOC
  */
 export function addIdsToHeadings(content: string): string {
+  const seenIds = new Map<string, number>();
+  
   return content.replace(/<h2([^>]*)>(.*?)<\/h2>/gi, (match, attrs, text) => {
     const plainText = text.replace(/<[^>]*>/g, '');
-    const id = plainText
+    let id = plainText
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\w\s-]/g, '')
       .replace(/\s+/g, '-');
+    
+    // ✅ Garantir ID único com sufixo -2, -3, etc
+    if (seenIds.has(id)) {
+      const count = seenIds.get(id)! + 1;
+      seenIds.set(id, count);
+      id = `${id}-${count}`;
+    } else {
+      seenIds.set(id, 1);
+    }
     
     return `<h2${attrs} id="${id}">${text}</h2>`;
   });
