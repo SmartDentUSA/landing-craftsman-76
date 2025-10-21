@@ -81,6 +81,18 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
     loadDualBlogs();
   }, [landingPageId]);
 
+  // Validate meta description when it changes
+  useEffect(() => {
+    const currentMeta = selectedDomain === 'dentala' 
+      ? dentalaBlogPost?.meta_description 
+      : eodontoBlogPost?.meta_description;
+    
+    if (currentMeta) {
+      const validation = validateMetaDescription(currentMeta);
+      setMetaValidation(validation);
+    }
+  }, [dentalaBlogPost?.meta_description, eodontoBlogPost?.meta_description, selectedDomain]);
+
   const createVersionEntries = async (data: any) => {
     try {
       const now = new Date().toISOString();
@@ -223,6 +235,24 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
             ((eodontoBlog.version_history as any)?.versions || []).length
           } versões | Normalizado: ${normalizedContent.substring(0, 50)}...`
         );
+      }
+
+      // Verificar se já existem blogs salvos e marcar como gerado
+      if (dentalaBlog && eodontoBlog) {
+        setBlogGenerated(true);
+        console.log('✅ Blogs existentes detectados - marcando como gerado');
+      }
+
+      // Verificar flag blog_generated na landing page
+      const { data: lpData } = await supabase
+        .from('landing_pages')
+        .select('blog_generated, blog_generated_at')
+        .eq('id', landingPageId)
+        .single();
+
+      if (lpData?.blog_generated) {
+        setBlogGenerated(true);
+        console.log('✅ Landing page já tem blogs gerados em:', lpData.blog_generated_at);
       }
     } catch (error: any) {
       console.error('❌ Erro fatal ao carregar blogs duais:', error);
@@ -426,11 +456,17 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
 
   const deleteVersion = async (domain: 'dentala' | 'eodonto', versionIndex: number) => {
     try {
+      console.log('🗑️ Tentando excluir versão:', { domain, versionIndex });
+      
       const targetDomain = domain === 'dentala' ? 'dentala.com.br' : 'eodonto.com.br';
       const history = domain === 'dentala' ? dentalaHistory : eodontoHistory;
       
+      console.log('📚 Histórico atual:', history.length, 'versões');
+      console.log('📍 Versão a ser excluída:', history[versionIndex]);
+      
       // Validações
       if (versionIndex === 0) {
+        console.warn('⚠️ Tentativa de excluir versão atual (índice 0)');
         toast({
           title: "Ação não permitida",
           description: "Não é possível excluir a versão atual.",
@@ -481,6 +517,8 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         setEodontoHistory(updatedVersions);
       }
       
+      console.log('✅ Versão excluída com sucesso. Novo tamanho:', updatedVersions.length);
+      
       toast({
         title: "Versão excluída",
         description: `Versão ${versionIndex + 1} foi removida do histórico.`,
@@ -489,7 +527,7 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       setDeleteDialogOpen(false);
       setVersionToDelete(null);
     } catch (error: any) {
-      console.error('Erro ao deletar versão:', error);
+      console.error('❌ Erro detalhado ao deletar versão:', error);
       toast({
         title: "Erro ao excluir",
         description: error.message || "Não foi possível excluir a versão.",
@@ -621,6 +659,11 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
             <div className="flex items-center gap-2 mr-4">
               {generating && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
+              {blogGenerated && (
+                <Badge variant="default" className="bg-green-600">
+                  ✓ Blogs Gerados
+                </Badge>
+              )}
               <Badge variant={(dentalaBlogPost || eodontoBlogPost) ? "default" : "secondary"}>
                 {dentalaBlogPost && eodontoBlogPost ? "Ambos gerados" : (dentalaBlogPost || eodontoBlogPost) ? "Parcial" : "Vazio"}
               </Badge>
@@ -639,7 +682,11 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
                   disabled={generating || !selectedProductIds?.length}
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
-                  {generating ? "Gerando Dentala + Eodonto..." : "Gerar Blogs (Dentala + Eodonto)"}
+                  {generating 
+                    ? "Gerando Dentala + Eodonto..." 
+                    : blogGenerated 
+                      ? "Regenerar Blogs" 
+                      : "Gerar Blogs Estratégicos"}
                 </Button>
                 <Button
                   variant="default"

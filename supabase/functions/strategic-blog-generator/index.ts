@@ -820,6 +820,22 @@ async function generateStrategicBlog(supabase: any, landingPageId: string, conte
   console.log(`   📦 Database ID: ${eodontoSaved.id}`);
   console.log(`   📚 Version history: ${updatedEodontoHistory.versions.length} versions`);
 
+  // === ATUALIZAR FLAG blog_generated NA LANDING PAGE ===
+  console.log(`🔄 Atualizando flag blog_generated para LP ${landingPageId}...`);
+  const { error: updateLPError } = await supabase
+    .from('landing_pages')
+    .update({ 
+      blog_generated: true,
+      blog_generated_at: new Date().toISOString()
+    })
+    .eq('id', landingPageId);
+
+  if (updateLPError) {
+    console.warn('⚠️ Não foi possível atualizar blog_generated:', updateLPError);
+  } else {
+    console.log('✅ Flag blog_generated atualizada com sucesso!');
+  }
+
   // === RETORNAR ESTRUTURA COMPLETA ===
   return {
     dentala: {
