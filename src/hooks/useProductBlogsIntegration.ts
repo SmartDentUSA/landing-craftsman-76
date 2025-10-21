@@ -19,6 +19,7 @@ interface ProductBlog {
   productName: string;
   created_at: string;
   sourceLandingPageId?: string;
+  keywords?: string[];
 }
 
 // Função para sanitizar conteúdo do blog removendo CTAs genéricos

@@ -86,6 +86,21 @@ export function StrategicBlogPreview({
         ? productBlogs.filter(blog => selectedProductIds.includes(blog.productId))
         : productBlogs;
       
+      // Agregar keywords do blog estratégico
+      const strategicKeywords = Array.isArray(strategicBlog.keywords) 
+        ? strategicBlog.keywords 
+        : (typeof strategicBlog.keywords === 'string' 
+          ? [strategicBlog.keywords] 
+          : []);
+
+      // Agregar keywords dos produtos
+      const allKeywords = [
+        ...strategicKeywords,
+        ...filteredBlogs.flatMap(b => b.keywords || [])
+      ];
+
+      // Remove duplicatas
+      const uniqueKeywords = [...new Set(allKeywords)];
       
       // Buscar dados dos produtos selecionados para incluir image_url
       const supabase = (await import('@/integrations/supabase/client')).supabase;
@@ -114,11 +129,7 @@ export function StrategicBlogPreview({
           {
             title: strategicBlog.title || `Blog Estratégico ${domain}`,
             content: strategicBlog.content || '',
-            keywords: Array.isArray(strategicBlog.keywords) 
-              ? strategicBlog.keywords 
-              : (typeof strategicBlog.keywords === 'string' 
-                ? [strategicBlog.keywords] 
-                : []),
+            keywords: strategicKeywords,
           },
           // ✅ DEPOIS OS BLOGS DE PRODUTOS
           ...filteredBlogs.map(pb => {
@@ -130,10 +141,11 @@ export function StrategicBlogPreview({
               productId: pb.productId,
               productImageUrl: product?.image_url,
               productUrl: product?.product_url,
-              keywords: [],
+              keywords: pb.keywords || [],
             };
           })
         ],
+        aggregatedKeywords: uniqueKeywords,
         landingPageIdForSEOContext: landingPageId,
         preview: true,
         excludeMetaInfo: true,

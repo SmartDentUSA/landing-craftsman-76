@@ -805,7 +805,7 @@ export const useSEOHTMLGenerator = () => {
       blogs, 
       landingPagesSEO, 
       selectedProducts, 
-      aggregatedKeywords, 
+      aggregatedKeywords = [], 
       landingPageData, 
       includeOffers = false, 
       ogImage, 
@@ -1851,7 +1851,7 @@ export const useSEOHTMLGenerator = () => {
     <!-- ✅ HERO SECTION -->
     <header class="hero" aria-label="Cabeçalho do artigo">
       <div>
-        <div class="eyebrow">${aggregatedKeywords[0] || 'Artigo'} • ${companySEO?.siteNameMeta || domain}</div>
+        <div class="eyebrow">${(aggregatedKeywords && aggregatedKeywords.length > 0 ? aggregatedKeywords[0] : 'Artigo')} • ${companySEO?.siteNameMeta || domain}</div>
         <h1>${title}</h1>
         <p class="lead">${description}</p>
       </div>
