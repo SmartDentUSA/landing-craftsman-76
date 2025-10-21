@@ -160,14 +160,20 @@ ${combinedBody}
               }
             </p>
             {approvedLandingPages.length > 0 && (
-              <div className="text-xs text-muted-foreground mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">🔍 Verifique se:</p>
-                <ul className="list-disc list-inside mt-2 text-left space-y-1">
-                  <li>Blogs estratégicos foram gerados para <strong>ambos os domínios</strong> (Dentala + Eodonto)</li>
-                  <li>Blogs estão com status <code className="px-1 py-0.5 bg-muted rounded font-mono">published</code></li>
-                  <li>Campo <code className="px-1 py-0.5 bg-muted rounded font-mono">blog_generated</code> está marcado como <code className="px-1 py-0.5 bg-muted rounded font-mono">true</code></li>
-                  <li>Abra o Console do navegador (F12) para ver logs detalhados</li>
-                </ul>
+              <div className="text-xs text-muted-foreground mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="font-semibold mb-2 text-blue-800">💡 Como gerar os HTMLs consolidados:</p>
+                <ol className="list-decimal list-inside mt-2 text-left space-y-1 text-blue-700">
+                  <li>Vá ao <strong>Editor da Landing Page</strong> (abaixo da lista de LPs aprovadas)</li>
+                  <li>Localize a seção <strong>"📰 Preview Consolidado"</strong></li>
+                  <li>Clique no botão <strong>"Gerar HTML Consolidado"</strong></li>
+                  <li>Aguarde a geração (pode levar alguns segundos)</li>
+                  <li>Volte para esta página — os HTMLs estarão disponíveis para copiar</li>
+                </ol>
+                <div className="mt-3 p-2 bg-white rounded border border-blue-300">
+                  <p className="text-xs font-medium text-blue-900">
+                    ⚠️ <strong>Cache-First:</strong> HTMLs não são gerados automaticamente para economizar créditos. Geração manual garante controle total.
+                  </p>
+                </div>
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, Copy, ExternalLink, Monitor, Tablet, Smartphone } from "lucide-react";
+import { Loader2, RefreshCw, Copy, ExternalLink, Monitor, Tablet, Smartphone, AlertCircle } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useProductBlogsIntegration } from "@/hooks/useProductBlogsIntegration";
 import { generateBlogHTML } from "@/services/seo/blogHTMLGenerator";
@@ -231,30 +231,32 @@ export function StrategicBlogPreview({
 
   return (
     <div className="w-full flex flex-col gap-4 h-full">
-      {/* Botão de Geração Manual se não houver HTML consolidado */}
-      {!hasConsolidatedHTML && onForceGenerate && (
-        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+      {/* Mensagem quando não há cache */}
+      {!hasConsolidatedHTML && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start gap-3">
-            <Loader2 className="h-5 w-5 text-yellow-600 mt-0.5 animate-spin" />
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800 mb-1">
-                ⚠️ HTML consolidado não foi gerado automaticamente
+              <p className="text-sm font-medium text-blue-800 mb-1">
+                📋 Aguardando geração manual
               </p>
-              <p className="text-xs text-yellow-700 mb-3">
-                Isso pode ocorrer se a landing page foi aprovada mas os blogs estratégicos ainda não foram publicados em ambos os domínios.
+              <p className="text-xs text-blue-700 mb-3">
+                O HTML consolidado não foi gerado ainda. Clique no botão abaixo para gerar manualmente.
               </p>
-              <Button
-                onClick={() => {
-                  console.log('🔧 Forçando geração manual para LP:', landingPageId);
-                  onForceGenerate(landingPageId);
-                }}
-                size="sm"
-                variant="outline"
-                className="bg-white"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Forçar Geração Manual
-              </Button>
+              {onForceGenerate && (
+                <Button
+                  onClick={() => {
+                    console.log('🔧 Forçando geração manual para LP:', landingPageId);
+                    onForceGenerate(landingPageId);
+                  }}
+                  size="sm"
+                  variant="outline"
+                  className="bg-white"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Gerar HTML Consolidado
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -267,8 +269,8 @@ export function StrategicBlogPreview({
               📰 Preview Consolidado (Blog Estratégico + Produtos)
             </h3>
             {cachedHTML && (
-              <Badge variant="outline" className="ml-2">
-                Auto-atualizado
+              <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
+                ✅ Em cache
               </Badge>
             )}
           </div>
@@ -369,7 +371,14 @@ export function StrategicBlogPreview({
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                Gerando preview...
+                {isGenerating ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Gerando preview...</span>
+                  </div>
+                ) : (
+                  <span>Aguardando geração manual</span>
+                )}
               </div>
             )}
           </div>
@@ -417,7 +426,14 @@ export function StrategicBlogPreview({
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                Gerando preview...
+                {isGenerating ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Gerando preview...</span>
+                  </div>
+                ) : (
+                  <span>Aguardando geração manual</span>
+                )}
               </div>
             )}
           </div>

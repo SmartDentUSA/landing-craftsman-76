@@ -805,6 +805,8 @@ export type Database = {
         Row: {
           blog_generated: boolean | null
           blog_generated_at: string | null
+          consolidated_generated_at: string | null
+          consolidated_html_cache: Json | null
           created_at: string
           data: Json | null
           embed: string | null
@@ -821,6 +823,8 @@ export type Database = {
         Insert: {
           blog_generated?: boolean | null
           blog_generated_at?: string | null
+          consolidated_generated_at?: string | null
+          consolidated_html_cache?: Json | null
           created_at?: string
           data?: Json | null
           embed?: string | null
@@ -837,6 +841,8 @@ export type Database = {
         Update: {
           blog_generated?: boolean | null
           blog_generated_at?: string | null
+          consolidated_generated_at?: string | null
+          consolidated_html_cache?: Json | null
           created_at?: string
           data?: Json | null
           embed?: string | null

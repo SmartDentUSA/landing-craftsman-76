@@ -36,19 +36,52 @@ export const useConsolidatedBlogAutoGenerator = (approvedLandingPages: any[]) =>
   const { productBlogsForHTMLByDomain } = useProductBlogsIntegration(approvedLandingPages);
   const { loadProductsByIds } = useSelectedProducts();
 
-  // ✅ CACHE-FIRST: Carregar do localStorage na inicialização
+  // ✅ CACHE-FIRST: Carregar do banco (universal) e localStorage (fallback) na inicialização
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem('consolidatedHTMLs_v2');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setConsolidatedHTMLs(parsed);
-        console.log('✅ [CACHE] HTMLs consolidados carregados do localStorage:', Object.keys(parsed).length, 'LPs');
+    const loadCache = async () => {
+      try {
+        // 1️⃣ Tentar carregar do banco primeiro (cache universal)
+        const approvedLPIds = approvedLandingPages
+          .filter(lp => lp.status === 'approved' && lp.blog_generated)
+          .map(lp => lp.id);
+
+        if (approvedLPIds.length > 0) {
+          const { data: lpsWithCache } = await supabase
+            .from('landing_pages')
+            .select('id, consolidated_html_cache, consolidated_generated_at')
+            .in('id', approvedLPIds)
+            .not('consolidated_html_cache', 'is', null);
+
+          if (lpsWithCache && lpsWithCache.length > 0) {
+            const dbCache: ConsolidatedHTMLMap = {};
+            lpsWithCache.forEach(lp => {
+              if (lp.consolidated_html_cache) {
+                dbCache[lp.id] = lp.consolidated_html_cache as any as ConsolidatedHTML;
+              }
+            });
+            
+            if (Object.keys(dbCache).length > 0) {
+              setConsolidatedHTMLs(dbCache);
+              console.log('✅ [CACHE DB] HTMLs consolidados carregados do Supabase:', Object.keys(dbCache).length, 'LPs');
+              return; // Retornar aqui evita fallback para localStorage
+            }
+          }
+        }
+
+        // 2️⃣ Fallback: localStorage (se não houver nada no banco)
+        const localCached = localStorage.getItem('consolidatedHTMLs_v2');
+        if (localCached) {
+          const parsed = JSON.parse(localCached);
+          setConsolidatedHTMLs(parsed);
+          console.log('✅ [CACHE LOCAL] HTMLs consolidados carregados do localStorage (fallback):', Object.keys(parsed).length, 'LPs');
+        }
+      } catch (error) {
+        console.error('❌ [CACHE] Erro ao carregar cache:', error);
       }
-    } catch (error) {
-      console.error('❌ [CACHE] Erro ao carregar cache do localStorage:', error);
-    }
-  }, []);
+    };
+
+    loadCache();
+  }, [approvedLandingPages]);
 
   // ✅ CACHE-FIRST: Salvar no localStorage quando mudar
   useEffect(() => {
@@ -339,24 +372,42 @@ ${head}
 
       // Armazenar no estado
       console.log('💾 [PASSO 8] Armazenando HTMLs consolidados no estado');
+      const consolidatedData: ConsolidatedHTML = {
+        dentala: dentalaHTML,
+        eodonto: eodontoHTML,
+        generatedAt: new Date().toISOString(),
+        productBlogsCount: {
+          dentala: dentalaBlogsProducts.length,
+          eodonto: eodontoBlogsProducts.length,
+        },
+        strategicBlogTitle: {
+          dentala: dentalaPost.title,
+          eodonto: eodontoPost.title,
+        },
+        dentalaBlogs,
+        eodontoBlogs
+      };
+
       setConsolidatedHTMLs(prev => ({
         ...prev,
-        [landingPageId]: {
-          dentala: dentalaHTML,
-          eodonto: eodontoHTML,
-          generatedAt: new Date().toISOString(),
-          productBlogsCount: {
-            dentala: dentalaBlogsProducts.length,
-            eodonto: eodontoBlogsProducts.length,
-          },
-          strategicBlogTitle: {
-            dentala: dentalaPost.title,
-            eodonto: eodontoPost.title,
-          },
-          dentalaBlogs,
-          eodontoBlogs
-        }
+        [landingPageId]: consolidatedData
       }));
+
+      // ✅ PERSISTIR NO BANCO (cache universal)
+      console.log('💾 [PASSO 9] Salvando no banco (Supabase)...');
+      const { error: updateError } = await supabase
+        .from('landing_pages')
+        .update({
+          consolidated_html_cache: consolidatedData as any,
+          consolidated_generated_at: new Date().toISOString()
+        })
+        .eq('id', landingPageId);
+
+      if (updateError) {
+        console.error('❌ [ERRO] Falha ao salvar cache no banco:', updateError);
+      } else {
+        console.log('✅ [SUCESSO] Cache salvo no banco (Supabase)');
+      }
 
       console.log('✅ [SUCESSO] HTML consolidado gerado e armazenado para LP:', landingPageId);
     } catch (error) {
@@ -383,141 +434,40 @@ ${head}
     }
   }, [approvedLandingPages, generateConsolidatedForLandingPage]);
 
-  // Detectar mudanças relevantes nos blogs para regenerar (com filtros específicos)
+  // ⚠️ REALTIME DESATIVADO: Cache-First significa ZERO geração automática
+  // Regeneração ocorre APENAS por ação manual do usuário (botão "Gerar HTML Consolidado")
+  // Se quiser reativar Realtime condicionalmente, use uma feature flag
   useEffect(() => {
-    // Calcular IDs e mapas relevantes
+    console.log('⚠️ [REALTIME] Subscrições Realtime desativadas (Cache-First ativo)');
+    console.log('💡 [INFO] Para regenerar HTMLs, use o botão manual no Editor');
+    // Código Realtime comentado para evitar gerações automáticas:
+    /*
     const approvedLPIds = approvedLandingPages
       .filter(lp => lp.status === 'approved' && lp.blog_generated)
       .map(lp => lp.id);
     
-    const allSelectedProductIds = Array.from(
-      new Set(approvedLandingPages.flatMap(lp => lp.selected_product_ids || []))
-    );
-
-    // Mapa: productId -> [lpIds que usam esse produto]
-    const productIdToLPs = new Map<string, string[]>();
-    approvedLandingPages.forEach(lp => {
-      (lp.selected_product_ids || []).forEach((productId: string) => {
-        const lpsList = productIdToLPs.get(productId) || [];
-        lpsList.push(lp.id);
-        productIdToLPs.set(productId, lpsList);
-      });
-    });
-
-    if (approvedLPIds.length === 0) {
-      console.log('⚠️ [REALTIME] Nenhuma LP aprovada com blog gerado. Não criando canais.');
-      return;
-    }
-
-    console.log('🔌 [REALTIME] Configurando canais filtrados:', {
-      approvedLPIds: approvedLPIds.length,
-      allProductIds: allSelectedProductIds.length,
-      productIdToLPs: productIdToLPs.size
-    });
+    if (approvedLPIds.length === 0) return;
 
     const channel = supabase
       .channel('consolidated-blog-auto-generator')
-      // 1️⃣ LANDING PAGES: só LPs aprovadas
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'landing_pages',
         filter: `id=in.(${approvedLPIds.join(',')})`
       }, async (payload) => {
-        const old = payload.old as any;
         const updated = payload.new as any;
-        
-        // ✅ CACHE-FIRST: Não regenerar se já tem cache
-        if (consolidatedHTMLs[updated.id]) {
-          console.log(`⏭️ [REALTIME] LP ${updated.id} já tem cache. Use botão "Regenerar" para atualizar.`);
-          return;
-        }
-        
-        // Gerar APENAS se: status virou approved OU blog_generated virou true
-        const statusChanged = old.status !== 'approved' && updated.status === 'approved';
-        const blogGenerated = old.blog_generated !== true && updated.blog_generated === true;
-
-        if (statusChanged || blogGenerated) {
-          console.log(`📄 [LP UPDATE] LP ${updated.id} disparou geração:`, { statusChanged, blogGenerated });
-          if (canGenerate(updated.id)) {
-            await generateConsolidatedForLandingPage(updated.id);
-          }
-        } else {
-          console.log(`📄 [LP UPDATE] LP ${updated.id} ignorado (mudança irrelevante)`);
-        }
-      })
-      // 2️⃣ BLOG POSTS: só blogs das LPs aprovadas
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'blog_posts',
-        filter: `landing_page_id=in.(${approvedLPIds.join(',')})`
-      }, async (payload) => {
-        const old = payload.old as any;
-        const updated = payload.new as any;
-
-        // ✅ CACHE-FIRST: Não regenerar se já tem cache
-        if (consolidatedHTMLs[updated.landing_page_id]) {
-          console.log(`⏭️ [REALTIME] LP ${updated.landing_page_id} já tem cache. Use botão "Regenerar" para atualizar.`);
-          return;
-        }
-
-        const statusPublished = old.status !== 'published' && updated.status === 'published';
-        const domainsChanged = JSON.stringify(old.published_domains) !== JSON.stringify(updated.published_domains);
-        const contentChanged = old.content !== updated.content && updated.status === 'published';
-
-        if (statusPublished || domainsChanged || contentChanged) {
-          console.log(`📝 [BLOG UPDATE] Blog ${updated.id} da LP ${updated.landing_page_id}:`, {
-            statusPublished,
-            domainsChanged,
-            contentChanged
-          });
-          if (canGenerate(updated.landing_page_id)) {
-            await generateConsolidatedForLandingPage(updated.landing_page_id);
-          }
-        } else {
-          console.log(`📝 [BLOG UPDATE] Blog ${updated.id} ignorado (mudança irrelevante)`);
-        }
-      })
-      // 3️⃣ PRODUCTS: só produtos selecionados nas LPs
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'products_repository',
-        filter: allSelectedProductIds.length > 0 ? `id=in.(${allSelectedProductIds.join(',')})` : undefined
-      }, async (payload) => {
-        const old = payload.old as any;
-        const updated = payload.new as any;
-
-        const blogContentChanged = 
-          JSON.stringify(old.individual_blog_content) !== JSON.stringify(updated.individual_blog_content);
-
-        if (blogContentChanged) {
-          const affectedLPs = productIdToLPs.get(updated.id) || [];
-          console.log(`📦 [PRODUCT UPDATE] Produto ${updated.id} alterou blog. LPs afetadas:`, affectedLPs);
-          
-          for (const lpId of affectedLPs) {
-            // ✅ CACHE-FIRST: Não regenerar se já tem cache
-            if (consolidatedHTMLs[lpId]) {
-              console.log(`⏭️ [REALTIME] LP ${lpId} já tem cache. Use botão "Regenerar" para atualizar.`);
-              continue;
-            }
-            
-            if (canGenerate(lpId)) {
-              await generateConsolidatedForLandingPage(lpId);
-            }
-          }
-        } else {
-          console.log(`📦 [PRODUCT UPDATE] Produto ${updated.id} ignorado (blog inalterado)`);
+        if (!consolidatedHTMLs[updated.id] && canGenerate(updated.id)) {
+          await generateConsolidatedForLandingPage(updated.id);
         }
       })
       .subscribe();
 
     return () => {
-      console.log('🔌 [REALTIME] Removendo canais');
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
-  }, [approvedLandingPages, canGenerate, generateConsolidatedForLandingPage]);
+    */
+  }, []);
 
   // ✅ REMOVIDO: Geração automática na inicialização
   // Agora o usuário deve clicar manualmente em "Gerar HTML Consolidado" no Editor
