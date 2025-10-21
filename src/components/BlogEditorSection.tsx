@@ -266,11 +266,18 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
         selectedProductIds: selectedProductIds
       };
 
+      console.log('📤 Chamando strategic-blog-generator com:', { landingPageId, repositoryConfig });
+      
       const { data, error } = await supabase.functions.invoke('strategic-blog-generator', {
         body: { landingPageId, repositoryConfig }
       });
 
-      if (error) throw error;
+      console.log('📥 Resposta da edge function:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro detalhado da edge function:', error);
+        throw new Error(error.message || JSON.stringify(error));
+      }
 
       if (data?.dentala && data?.eodonto) {
         // Carregar dados salvos do banco
@@ -294,11 +301,15 @@ export function BlogEditorSection({ landingPageId, landingPageData, selectedProd
       }
     } catch (err: any) {
       console.error("❌ Erro ao gerar blogs estratégicos:", err);
-      setError(err.message || "Erro ao gerar blogs estratégicos");
+      console.error("❌ Stack trace:", err.stack);
+      console.error("❌ Detalhes completos:", JSON.stringify(err, null, 2));
+      
+      const errorMessage = err.message || err.error || err.msg || "Erro ao gerar blogs estratégicos";
+      setError(errorMessage);
       
       toast({
-        title: "Erro na geração",
-        description: err.message || "Erro ao gerar conteúdo dos blogs",
+        title: "❌ Erro na geração",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
