@@ -48,7 +48,21 @@ function formatForAITraining(data: any): string {
     text += `**Público-alvo:** ${cp.target_audience || 'N/A'}\n`;
     text += `**Diferenciais:** ${cp.differentiators || 'N/A'}\n`;
     text += `**Website:** ${cp.website_url || 'N/A'}\n`;
-    text += `**Localização:** ${cp.location || 'N/A'}\n\n`;
+    
+    // ✨ ENDEREÇO ESTRUTURADO (prioridade) ou location (fallback)
+    if (cp.street_address || cp.city || cp.state) {
+      text += `**Endereço Completo:**\n`;
+      if (cp.street_address || cp.address_number) {
+        text += `- Logradouro: ${cp.street_address || ''} ${cp.address_number || ''}\n`;
+      }
+      if (cp.city) text += `- Cidade: ${cp.city}\n`;
+      if (cp.state) text += `- Estado: ${cp.state}\n`;
+      if (cp.postal_code) text += `- CEP: ${cp.postal_code}\n`;
+      if (cp.country && cp.country !== 'Brasil') text += `- País: ${cp.country}\n`;
+      text += '\n';
+    } else if (cp.location) {
+      text += `**Localização:** ${cp.location}\n\n`;
+    }
     
     if (cp.social_media_links && Array.isArray(cp.social_media_links)) {
       text += `**Redes Sociais:**\n`;

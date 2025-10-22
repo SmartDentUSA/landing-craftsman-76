@@ -214,8 +214,10 @@ export type Database = {
       }
       company_profile: {
         Row: {
+          address_number: string | null
           brand_values: string | null
           business_sector: string | null
+          city: string | null
           company_culture: string | null
           company_description: string | null
           company_logo_url: string | null
@@ -224,6 +226,7 @@ export type Database = {
           company_videos: Json | null
           contact_email: string | null
           contact_phone: string | null
+          country: string | null
           created_at: string
           delivery_approach: string | null
           differentiators: string | null
@@ -234,6 +237,7 @@ export type Database = {
           location: string | null
           main_products_services: string | null
           mission_statement: string | null
+          postal_code: string | null
           seo_competitive_advantages: string | null
           seo_context_keywords: Json | null
           seo_domains: Json | null
@@ -241,6 +245,8 @@ export type Database = {
           seo_service_areas: string | null
           seo_technical_expertise: string | null
           social_media_links: Json | null
+          state: string | null
+          street_address: string | null
           target_audience: string | null
           team_size: string | null
           tracking_pixels: Json | null
@@ -253,8 +259,10 @@ export type Database = {
           youtube_company_footer: string | null
         }
         Insert: {
+          address_number?: string | null
           brand_values?: string | null
           business_sector?: string | null
+          city?: string | null
           company_culture?: string | null
           company_description?: string | null
           company_logo_url?: string | null
@@ -263,6 +271,7 @@ export type Database = {
           company_videos?: Json | null
           contact_email?: string | null
           contact_phone?: string | null
+          country?: string | null
           created_at?: string
           delivery_approach?: string | null
           differentiators?: string | null
@@ -273,6 +282,7 @@ export type Database = {
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
+          postal_code?: string | null
           seo_competitive_advantages?: string | null
           seo_context_keywords?: Json | null
           seo_domains?: Json | null
@@ -280,6 +290,8 @@ export type Database = {
           seo_service_areas?: string | null
           seo_technical_expertise?: string | null
           social_media_links?: Json | null
+          state?: string | null
+          street_address?: string | null
           target_audience?: string | null
           team_size?: string | null
           tracking_pixels?: Json | null
@@ -292,8 +304,10 @@ export type Database = {
           youtube_company_footer?: string | null
         }
         Update: {
+          address_number?: string | null
           brand_values?: string | null
           business_sector?: string | null
+          city?: string | null
           company_culture?: string | null
           company_description?: string | null
           company_logo_url?: string | null
@@ -302,6 +316,7 @@ export type Database = {
           company_videos?: Json | null
           contact_email?: string | null
           contact_phone?: string | null
+          country?: string | null
           created_at?: string
           delivery_approach?: string | null
           differentiators?: string | null
@@ -312,6 +327,7 @@ export type Database = {
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
+          postal_code?: string | null
           seo_competitive_advantages?: string | null
           seo_context_keywords?: Json | null
           seo_domains?: Json | null
@@ -319,6 +335,8 @@ export type Database = {
           seo_service_areas?: string | null
           seo_technical_expertise?: string | null
           social_media_links?: Json | null
+          state?: string | null
+          street_address?: string | null
           target_audience?: string | null
           team_size?: string | null
           tracking_pixels?: Json | null
@@ -1621,14 +1639,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calculate_landing_page_score: {
-        Args: { lp_id: string }
-        Returns: Json
-      }
-      calculate_product_score: {
-        Args: { product_id: string }
-        Returns: Json
-      }
+      calculate_landing_page_score: { Args: { lp_id: string }; Returns: Json }
+      calculate_product_score: { Args: { product_id: string }; Returns: Json }
       get_complete_knowledge_base: {
         Args: {
           p_approved_only?: boolean
@@ -1646,7 +1658,7 @@ export type Database = {
         Returns: Json
       }
       get_current_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
       has_role: {
@@ -1656,10 +1668,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      promote_user_to_admin: {
-        Args: { _email: string }
-        Returns: boolean
-      }
+      promote_user_to_admin: { Args: { _email: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

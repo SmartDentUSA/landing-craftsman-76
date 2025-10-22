@@ -3,7 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 export interface CompanyProfileData {
   company_name: string;
   company_description: string;
-  location: string;
+  location: string; // ⚠️ DEPRECATED - auto-gerado
+  
+  // ✨ NOVOS CAMPOS ESTRUTURADOS
+  country?: string;
+  state?: string;
+  city?: string;
+  street_address?: string;
+  address_number?: string;
+  postal_code?: string;
+  
   contact_phone: string;
   contact_email: string;
   website_url: string;
@@ -47,6 +56,12 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         company_name,
         company_description,
         location,
+        country,
+        state,
+        city,
+        street_address,
+        address_number,
+        postal_code,
         contact_phone,
         contact_email,
         website_url,
@@ -126,5 +141,42 @@ export function buildSEOMetaFromCompany(companyData: CompanyProfileData, existin
     geoContext,
     companyFooter,
     institutionalLinksHtml
+  };
+}
+
+/**
+ * Retorna endereço completo formatado
+ */
+export function getFullAddress(companyData: CompanyProfileData): string {
+  const parts = [
+    companyData.street_address,
+    companyData.address_number,
+    companyData.city,
+    companyData.state,
+    companyData.postal_code,
+    companyData.country
+  ].filter(part => part && part.trim() !== '');
+  
+  return parts.length > 0 ? parts.join(', ') : companyData.location || '';
+}
+
+/**
+ * Retorna objeto PostalAddress para Schema.org
+ */
+export function getPostalAddress(companyData: CompanyProfileData): {
+  streetAddress: string;
+  addressLocality: string;
+  addressRegion: string;
+  postalCode: string;
+  addressCountry: string;
+} {
+  return {
+    streetAddress: [companyData.street_address, companyData.address_number]
+      .filter(Boolean)
+      .join(', '),
+    addressLocality: companyData.city || '',
+    addressRegion: companyData.state || '',
+    postalCode: companyData.postal_code || '',
+    addressCountry: companyData.country || 'BR'
   };
 }

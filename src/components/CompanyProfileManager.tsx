@@ -34,6 +34,15 @@ interface CompanyProfile {
   contact_phone?: string;
   youtube_channel?: string;
   instagram_profile?: string;
+  
+  // ✨ NOVOS CAMPOS DE ENDEREÇO ESTRUTURADO
+  country?: string;
+  state?: string;
+  city?: string;
+  street_address?: string;
+  address_number?: string;
+  postal_code?: string;
+  
   // SEO Hidden Fields
   seo_context_keywords?: string[];
   seo_market_positioning?: string;
@@ -84,6 +93,15 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     contact_phone: "",
     youtube_channel: "",
     instagram_profile: "",
+    
+    // ✨ NOVOS CAMPOS DE ENDEREÇO
+    country: 'Brasil',
+    state: '',
+    city: '',
+    street_address: '',
+    address_number: '',
+    postal_code: '',
+    
     // SEO Hidden Fields
     seo_context_keywords: [],
     seo_market_positioning: "",
@@ -155,6 +173,15 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           contact_phone: data.contact_phone || "",
           youtube_channel: data.youtube_channel || "",
           instagram_profile: data.instagram_profile || "",
+          
+          // ✨ NOVOS CAMPOS DE ENDEREÇO
+          country: (data as any).country || 'Brasil',
+          state: (data as any).state || '',
+          city: (data as any).city || '',
+          street_address: (data as any).street_address || '',
+          address_number: (data as any).address_number || '',
+          postal_code: (data as any).postal_code || '',
+          
           // SEO Hidden Fields
           seo_context_keywords: Array.isArray((data as any).seo_context_keywords) ? (data as any).seo_context_keywords : [],
           seo_market_positioning: (data as any).seo_market_positioning || "",
@@ -216,6 +243,15 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
         contact_phone: profile.contact_phone,
         youtube_channel: profile.youtube_channel,
         instagram_profile: profile.instagram_profile,
+        
+        // ✨ NOVOS CAMPOS DE ENDEREÇO (location será auto-gerado pelo trigger)
+        country: profile.country,
+        state: profile.state,
+        city: profile.city,
+        street_address: profile.street_address,
+        address_number: profile.address_number,
+        postal_code: profile.postal_code,
+        
         // SEO Hidden Fields
         seo_context_keywords: profile.seo_context_keywords || [],
         seo_market_positioning: profile.seo_market_positioning,
@@ -427,6 +463,102 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   onChange={(e) => setProfile({...profile, website_url: e.target.value})}
                   placeholder="https://www.suaempresa.com"
                 />
+              </div>
+            </div>
+
+            {/* ✨ NOVA SEÇÃO: Endereço Completo */}
+            <div className="space-y-4 border-t pt-6 mt-6">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground">Endereço Completo</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Usado para gerar Schema.org LocalBusiness e melhorar SEO local
+                  </p>
+                </div>
+              </div>
+              
+              {/* Linha 1: País, Estado, Cidade */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-1">
+                  <Label htmlFor="country">País</Label>
+                  <Input
+                    id="country"
+                    value={profile.country || 'Brasil'}
+                    onChange={(e) => setProfile({...profile, country: e.target.value})}
+                    placeholder="Brasil"
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <Label htmlFor="state">
+                    Estado (UF) <span className="text-muted-foreground text-xs">ex: SP, RJ</span>
+                  </Label>
+                  <Input
+                    id="state"
+                    value={profile.state || ''}
+                    onChange={(e) => setProfile({...profile, state: e.target.value.toUpperCase().slice(0, 2)})}
+                    placeholder="SP"
+                    maxLength={2}
+                    className="uppercase"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="city">Cidade</Label>
+                  <Input
+                    id="city"
+                    value={profile.city || ''}
+                    onChange={(e) => setProfile({...profile, city: e.target.value})}
+                    placeholder="São Paulo"
+                  />
+                </div>
+              </div>
+
+              {/* Linha 2: Endereço e Número */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-3">
+                  <Label htmlFor="street_address">Endereço (Rua/Avenida)</Label>
+                  <Input
+                    id="street_address"
+                    value={profile.street_address || ''}
+                    onChange={(e) => setProfile({...profile, street_address: e.target.value})}
+                    placeholder="Rua Exemplo, Bairro Centro"
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <Label htmlFor="address_number">Número</Label>
+                  <Input
+                    id="address_number"
+                    value={profile.address_number || ''}
+                    onChange={(e) => setProfile({...profile, address_number: e.target.value})}
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+
+              {/* Linha 3: CEP */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-1">
+                  <Label htmlFor="postal_code">CEP</Label>
+                  <Input
+                    id="postal_code"
+                    value={profile.postal_code || ''}
+                    onChange={(e) => {
+                      // Aplicar máscara de CEP: 00000-000
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      const formatted = value.length > 5 
+                        ? `${value.slice(0, 5)}-${value.slice(5)}`
+                        : value;
+                      setProfile({...profile, postal_code: formatted});
+                    }}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-md">
+                <span className="text-xs text-muted-foreground">
+                  ℹ️ O campo "Localização" será gerado automaticamente combinando estes dados para uso interno do sistema.
+                </span>
               </div>
             </div>
 

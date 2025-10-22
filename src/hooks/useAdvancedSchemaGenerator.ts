@@ -56,6 +56,15 @@ interface CompanyData {
   company_name?: string;
   company_description?: string;
   location?: string;
+  
+  // ✨ NOVOS CAMPOS ESTRUTURADOS
+  country?: string;
+  state?: string;
+  city?: string;
+  street_address?: string;
+  address_number?: string;
+  postal_code?: string;
+  
   contact_phone?: string;
   contact_email?: string;
   website_url?: string;
@@ -412,10 +421,28 @@ export const useAdvancedSchemaGenerator = () => {
       }
     }
 
-    if (companyData.location) {
+    // ✨ ENDEREÇO ESTRUTURADO (prioridade) ou location (fallback)
+    const hasStructuredAddress = 
+      companyData.street_address || 
+      companyData.city || 
+      companyData.state;
+    
+    if (hasStructuredAddress) {
       schema.address = {
         "@type": "PostalAddress",
-        "addressLocality": companyData.location
+        "streetAddress": [companyData.street_address, companyData.address_number]
+          .filter(Boolean)
+          .join(', '),
+        "addressLocality": companyData.city || '',
+        "addressRegion": companyData.state || '',
+        "postalCode": companyData.postal_code || '',
+        "addressCountry": companyData.country || 'BR'
+      };
+    } else if (companyData.location) {
+      // Fallback para location legado
+      schema.address = {
+        "@type": "PostalAddress",
+        "streetAddress": companyData.location
       };
     }
 
