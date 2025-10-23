@@ -747,14 +747,14 @@ function generateAIPlaybookJSON(product: ProductData & {
     product_blogs: {
       commercial_blog: {
         content: product.product_blogs?.commercial || null,
-        preview: product.product_blogs?.commercial?.substring(0, 200) || null,
+        preview: product.product_blogs?.commercial ? (product.product_blogs.commercial.substring(0, 200) + '...') : 'N/A',
         has_content: !!product.product_blogs?.commercial,
         intelligent_links: extractIntelligentLinks(product.product_blogs?.commercial || ''),
         ctas: extractCTAs(product.product_blogs?.commercial || '')
       },
       technical_blog: {
         content: product.product_blogs?.technical || null,
-        preview: product.product_blogs?.technical?.substring(0, 200) || null,
+        preview: product.product_blogs?.technical ? (product.product_blogs.technical.substring(0, 200) + '...') : 'N/A',
         has_content: !!product.product_blogs?.technical,
         intelligent_links: extractIntelligentLinks(product.product_blogs?.technical || ''),
         ctas: extractCTAs(product.product_blogs?.technical || '')
@@ -1049,14 +1049,14 @@ Descrição ${idx + 1} (${desc.video_type || 'promotional'}):
 📌 Título Sugerido: ${desc.suggested_title || desc.title || 'N/A'}
 
 📝 Descrição:
-${desc.description.substring(0, 300)}...
+${desc.description ? (desc.description.substring(0, 300) + '...') : 'N/A'}
 
 🏷️ Tags Sugeridas:
 ${(desc.suggested_tags || desc.tags || []).slice(0, 10).join(', ')}${(desc.suggested_tags || desc.tags || []).length > 10 ? ` e mais ${(desc.suggested_tags || desc.tags).length - 10}` : ''}
 
 ${desc.company_footer_template || desc.footer ? `
 📍 Rodapé da Empresa:
-${(desc.company_footer_template || desc.footer).substring(0, 200)}...
+${desc.company_footer_template || desc.footer ? ((desc.company_footer_template || desc.footer).substring(0, 200) + '...') : 'N/A'}
 ` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `).join('\n')}
@@ -1071,7 +1071,7 @@ ${product.instagram_copies.copies.slice(0, 2).map((copy: any, idx: number) => `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Copy ${idx + 1} (${copy.type || 'carousel'}):
 
-${copy.copy.substring(0, 200)}...
+${copy.copy ? (copy.copy.substring(0, 200) + '...') : 'N/A'}
 
 🏷️ Hashtags (${(copy.hashtags || []).length}):
 ${(copy.hashtags || []).slice(0, 10).join(' ')}${(copy.hashtags || []).length > 10 ? ` +${(copy.hashtags || []).length - 10}` : ''}
@@ -1095,11 +1095,11 @@ ${copy.hook_3_seconds || copy.hook ? `🎣 Hook (3 seg): "${copy.hook_3_seconds 
 
 ${copy.video_script || copy.script ? `
 🎬 Script do Vídeo:
-${(copy.video_script || copy.script).substring(0, 200)}...
+${copy.video_script || copy.script ? ((copy.video_script || copy.script).substring(0, 200) + '...') : 'N/A'}
 ` : ''}
 
 📝 Copy:
-${copy.copy.substring(0, 200)}...
+${copy.copy ? (copy.copy.substring(0, 200) + '...') : 'N/A'}
 
 ${copy.call_to_action || copy.cta ? `📢 CTA: ${copy.call_to_action || copy.cta}` : ''}
 
@@ -1123,7 +1123,7 @@ ${product.product_blogs?.commercial ? `
 ✅ Disponível
 
 Conteúdo (Preview):
-${product.product_blogs.commercial.substring(0, 500)}...
+${product.product_blogs.commercial ? (product.product_blogs.commercial.substring(0, 500) + '...') : 'N/A'}
 
 ${(product as any).product_blogs?.commercial_intelligent_links?.length > 0 ? `
 🔗 Links Inteligentes (${(product as any).product_blogs.commercial_intelligent_links.length}):
@@ -1148,7 +1148,7 @@ ${product.product_blogs?.technical ? `
 ✅ Disponível
 
 Conteúdo (Preview):
-${product.product_blogs.technical.substring(0, 500)}...
+${product.product_blogs.technical ? (product.product_blogs.technical.substring(0, 500) + '...') : 'N/A'}
 
 ${(product as any).product_blogs?.technical_intelligent_links?.length > 0 ? `
 🔗 Links Inteligentes (${(product as any).product_blogs.technical_intelligent_links.length}):
@@ -1215,7 +1215,7 @@ ${(product as any).consolidatedVideos.by_category.testimonials.map((v: any, i: n
 ${(product as any).consolidatedVideos?.by_category?.promotional?.length > 0 ? `
 📢 VÍDEOS PROMOCIONAIS (${(product as any).consolidatedVideos.by_category.promotional.length}):
 ${(product as any).consolidatedVideos.by_category.promotional.map((v: any, i: number) => `
-  ${i+1}. ${v.description.substring(0, 80)}...
+  ${i+1}. ${v.description ? (v.description.substring(0, 80) + '...') : 'N/A'}
      URL: ${v.url}
      Plataforma: ${v.platform} | Fonte: ${v.source}
 `).join('')}
@@ -1232,7 +1232,7 @@ ${(product as any).consolidatedVideos?.sources_summary ? `
 ${Object.keys(product.video_captions || {}).length > 0 ? `
 #### 📝 LEGENDAS EXTRAÍDAS (${Object.keys(product.video_captions).length} vídeos):
 ${Object.entries(product.video_captions || {}).map(([videoId, captions]: [string, any]) => `
-  - ${videoId}: ${captions?.text?.substring(0, 100) || 'Sem texto'}...
+  - ${videoId}: ${captions?.text ? (captions.text.substring(0, 100) + '...') : 'Sem texto'}
 `).join('\n')}
 ` : ''}
 
@@ -1487,7 +1487,7 @@ ${product.landing_page_context.seo_intelligent ? `
 - Gerado em: ${product.landing_page_context.seo_intelligent.generated_at || 'N/A'}
 - AI Keywords: ${product.landing_page_context.seo_intelligent.ai_keywords?.length || 0} termos
 - Resolved Keywords: ${product.landing_page_context.seo_intelligent.resolved_keywords?.length || 0} termos
-- Base Text: ${product.landing_page_context.seo_intelligent.base_text_markdown?.substring(0, 150) || 'N/A'}...
+- Base Text: ${product.landing_page_context.seo_intelligent.base_text_markdown ? (product.landing_page_context.seo_intelligent.base_text_markdown.substring(0, 150) + '...') : 'N/A'}
 ` : '❌ SEO Inteligente não configurado'}
 
 ### Bloco SEO:
