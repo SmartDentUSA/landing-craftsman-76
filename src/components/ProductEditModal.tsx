@@ -212,6 +212,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
   const [overwriteData, setOverwriteData] = useState(false);
   const [generatingSEO, setGeneratingSEO] = useState(false);
+  const [generatingFAQs, setGeneratingFAQs] = useState(false);
   
   // Images gallery state
   const [imagesGallery, setImagesGallery] = useState<Array<{ url: string; alt: string; order: number; is_main: boolean }>>([]);
@@ -1212,6 +1213,62 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     }
   };
 
+  const handleGenerateFAQs = async () => {
+    // Validação de campos obrigatórios
+    if (!formData.name || !formData.description) {
+      toast({
+        title: "⚠️ Campos obrigatórios",
+        description: "Preencha o nome e descrição do produto antes de gerar FAQs.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingFAQs(true);
+    try {
+      console.log('[ProductEditModal] Gerando FAQs para:', formData.name);
+      
+      const { data, error } = await supabase.functions.invoke('generate-product-faqs', {
+        body: { 
+          product: {
+            name: formData.name,
+            description: formData.description,
+            sales_pitch: formData.sales_pitch,
+            keywords: formData.keywords,
+            benefits: formData.benefits,
+            features: formData.features,
+          }
+        }
+      });
+
+      if (error) {
+        console.error('[ProductEditModal] Erro ao gerar FAQs:', error);
+        throw error;
+      }
+
+      console.log('[ProductEditModal] FAQs gerados:', data.faqs.length);
+
+      // Adicionar FAQs gerados ao final dos existentes
+      const newFaqs = [...(formData.faq || []), ...data.faqs];
+      setFormData(prev => ({ ...prev, faq: newFaqs }));
+
+      toast({
+        title: "✅ FAQs Gerados com Sucesso!",
+        description: `${data.faqs.length} FAQs foram adicionados ao produto. Total: ${newFaqs.length} FAQs`,
+      });
+
+    } catch (error) {
+      console.error('[ProductEditModal] Erro ao gerar FAQs:', error);
+      toast({
+        title: "❌ Erro ao gerar FAQs",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingFAQs(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!product || !onDelete) return;
 
@@ -2132,13 +2189,37 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
           {/* FAQ Section */}
           <div className="space-y-4 border-t pt-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              FAQ do Produto
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Perguntas frequentes específicas deste produto que aparecerão com schema estruturado nos buscadores.
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  FAQ do Produto
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Perguntas frequentes específicas deste produto que aparecerão com schema estruturado nos buscadores.
+                </p>
+              </div>
+              
+              <Button
+                onClick={handleGenerateFAQs}
+                disabled={generatingFAQs || !formData.name || !formData.description}
+                variant="outline"
+                className="gap-2"
+                type="button"
+              >
+                {generatingFAQs ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Gerando FAQs...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Gerar 10 FAQs com IA
+                  </>
+                )}
+              </Button>
+            </div>
             
             <FAQEditor
               ref={faqEditorRef}
