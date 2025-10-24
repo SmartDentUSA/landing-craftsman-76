@@ -1228,18 +1228,19 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     try {
       console.log('[ProductEditModal] Gerando FAQs para:', formData.name);
       
-      const { data, error } = await supabase.functions.invoke('generate-product-faqs', {
-        body: { 
-          product: {
-            name: formData.name,
-            description: formData.description,
-            sales_pitch: formData.sales_pitch,
-            keywords: formData.keywords,
-            benefits: formData.benefits,
-            features: formData.features,
-          }
+    const { data, error } = await supabase.functions.invoke('generate-product-faqs', {
+      body: { 
+        product: {
+          name: formData.name,
+          description: formData.description,
+          sales_pitch: formData.sales_pitch,
+          keywords: formData.keywords,
+          benefits: formData.benefits,
+          features: formData.features,
+          product_url: formData.slug,
         }
-      });
+      }
+    });
 
       if (error) {
         console.error('[ProductEditModal] Erro ao gerar FAQs:', error);

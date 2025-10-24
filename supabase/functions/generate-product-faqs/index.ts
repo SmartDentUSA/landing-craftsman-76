@@ -22,31 +22,44 @@ serve(async (req) => {
       throw new Error('Nome e descrição são obrigatórios para gerar FAQs');
     }
 
-    // 🤖 Prompt para IA
+    // 🤖 Prompt para IA com anti-alucinação e hyperlinks
     const prompt = `Você é um especialista em produtos e FAQ. Gere EXATAMENTE 10 perguntas frequentes (FAQs) sobre o produto abaixo.
 
 **PRODUTO:**
 - Nome: ${product.name}
+- URL da Loja: ${product.product_url || 'N/A'}
 - Descrição: ${product.description}
 - Pitch de Vendas: ${product.sales_pitch || 'N/A'}
 - Keywords: ${product.keywords?.join(', ') || 'N/A'}
 - Benefícios: ${product.benefits?.join(', ') || 'N/A'}
 - Recursos: ${product.features?.join(', ') || 'N/A'}
 
-**INSTRUÇÕES CRÍTICAS:**
+**INSTRUÇÕES CRÍTICAS - ANTI-ALUCINAÇÃO:**
+1. Use APENAS as informações fornecidas acima - NÃO invente dados externos
+2. NÃO mencione características ou especificações que não estejam nos campos acima
+3. Se uma informação não estiver disponível (N/A), NÃO a mencione na resposta
+4. Base suas respostas EXCLUSIVAMENTE nos dados fornecidos
+
+**INSTRUÇÕES DE FORMATAÇÃO:**
 1. Gere EXATAMENTE 10 FAQs práticos e relevantes
 2. Perguntas devem começar com: "Como", "Qual", "Quais", "O que", "Por que", "Quando"
 3. Respostas devem ter entre 40-80 palavras
 4. Incorpore keywords naturalmente nas respostas para SEO
-5. Foque em dúvidas reais de clientes potenciais
-6. Use HTML básico nas respostas: <strong>, <em>, <ul>, <li>, <p>
-7. Respostas devem ser informativas e persuasivas
-8. Evite repetir informações entre FAQs
+5. Use HTML básico nas respostas: <strong>, <em>, <ul>, <li>, <p>
+6. Respostas devem ser informativas e persuasivas
+7. Evite repetir informações entre FAQs
+
+**REGRA OBRIGATÓRIA - HYPERLINKS:**
+${product.product_url !== 'N/A' ? `SEMPRE que mencionar o nome do produto "${product.name}" nas respostas, use este formato exato:
+<a href="${product.product_url}" target="_blank">${product.name}</a>
+
+Exemplo correto:
+"O <a href="${product.product_url}" target="_blank">${product.name}</a> oferece diversos benefícios..."` : 'Mencione o produto pelo nome sem hyperlinks.'}
 
 **FORMATO DE SAÍDA (JSON VÁLIDO):**
 [
   {
-    "question": "Como funciona o produto X?",
+    "question": "Como funciona o produto?",
     "answer": "<p>Resposta com <strong>destaque</strong> e lista: <ul><li>Item 1</li><li>Item 2</li></ul></p>"
   }
 ]
@@ -64,7 +77,7 @@ IMPORTANTE: Retorne APENAS o JSON válido, sem texto adicional antes ou depois.`
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'Você é um especialista em criar FAQs otimizados para SEO. Sempre retorne JSON válido sem texto adicional.' },
+          { role: 'system', content: 'Você é um especialista em criar FAQs otimizados para SEO. Use APENAS os dados fornecidos, não invente informações. Sempre inclua hyperlinks ao mencionar o produto quando a URL for fornecida. Sempre retorne JSON válido sem texto adicional.' },
           { role: 'user', content: prompt }
         ],
       }),
