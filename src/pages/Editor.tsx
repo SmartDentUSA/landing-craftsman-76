@@ -4594,55 +4594,26 @@ const EditorContent = () => {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="grid grid-cols-2 gap-4 py-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-4 w-4 text-muted-foreground" />
-                          <Label className="text-xs">Desktop</Label>
-                        </div>
-                        <Switch
-                          checked={data.knowledge_feed_section?.visible_desktop ?? true}
-                          onCheckedChange={(checked) => {
-                            setData(prev => ({
-                              ...prev,
-                              knowledge_feed_section: {
-                                visible_desktop: checked,
-                                visible_mobile: prev.knowledge_feed_section?.visible_mobile ?? true,
-                                title: prev.knowledge_feed_section?.title ?? 'Últimas Publicações',
-                                subtitle: prev.knowledge_feed_section?.subtitle ?? '',
-                                feed_url: prev.knowledge_feed_section?.feed_url ?? 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-                                limit: prev.knowledge_feed_section?.limit ?? 12
-                              }
-                            }));
-                            dirtyRef.current = true;
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-muted-foreground" />
-                          <Label className="text-xs">Mobile</Label>
-                        </div>
-                        <Switch
-                          checked={data.knowledge_feed_section?.visible_mobile ?? true}
-                          onCheckedChange={(checked) => {
-                            setData(prev => ({
-                              ...prev,
-                              knowledge_feed_section: {
-                                visible_desktop: prev.knowledge_feed_section?.visible_desktop ?? true,
-                                visible_mobile: checked,
-                                title: prev.knowledge_feed_section?.title ?? 'Últimas Publicações',
-                                subtitle: prev.knowledge_feed_section?.subtitle ?? '',
-                                feed_url: prev.knowledge_feed_section?.feed_url ?? 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-                                limit: prev.knowledge_feed_section?.limit ?? 12
-                              }
-                            }));
-                            dirtyRef.current = true;
-                          }}
-                        />
-                      </div>
-                    </div>
+                    <KnowledgeFeedSection
+                      data={data.knowledge_feed_section || {
+                        visible_desktop: true,
+                        visible_mobile: true,
+                        title: 'Últimas Publicações',
+                        subtitle: '',
+                        feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                        limit: 12
+                      }}
+                      onChange={(updates) => {
+                        setData(prev => ({
+                          ...prev,
+                          knowledge_feed_section: {
+                            ...prev.knowledge_feed_section,
+                            ...updates
+                          }
+                        }));
+                        dirtyRef.current = true;
+                      }}
+                    />
                   </AccordionContent>
                 </AccordionItem>
 
