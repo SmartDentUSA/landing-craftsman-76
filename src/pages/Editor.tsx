@@ -1980,6 +1980,15 @@ const EditorContent = () => {
             supabase_path: p.logo?.supabase_path
           }
         }))
+      } : undefined,
+      knowledge_feed_section: processedData.knowledge_feed_section ? {
+        ...processedData.knowledge_feed_section,
+        visible_any: processedData.knowledge_feed_section.visible_desktop || processedData.knowledge_feed_section.visible_mobile,
+        visibility_class: processedData.knowledge_feed_section.visible_desktop && processedData.knowledge_feed_section.visible_mobile 
+          ? '' 
+          : processedData.knowledge_feed_section.visible_desktop 
+            ? 'desktop-only' 
+            : 'mobile-only'
       } : undefined
     };
     
@@ -1987,7 +1996,7 @@ const EditorContent = () => {
     const html = generatePreviewHTML(previewData);
     console.timeEnd('preview-generation');
     return html;
-  }, [data, data.explanatory_video_section, data.animated_banner_section]);
+  }, [data, data.explanatory_video_section, data.animated_banner_section, data.knowledge_feed_section]);
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {

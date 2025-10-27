@@ -1360,6 +1360,36 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .faq-answer { display: none; padding: 0 1rem 1rem; color: #555; }
         .faq-item.active .faq-answer { display: block; }
         .faq-icon { font-size: 1.25rem; transform: rotate(180deg); transition: .2s; }
+        
+        /* Knowledge Feed Section */
+        .knowledge-feed-section {
+            padding: 4rem 0;
+            background: linear-gradient(to bottom, var(--background-color), rgba(108, 117, 125, 0.05));
+        }
+        .knowledge-feed-section h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: var(--text-color);
+        }
+        .knowledge-feed-section .section-subtitle {
+            text-align: center;
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+        .knowledge-feed-preview {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        @media (max-width: 768px) {
+            .knowledge-feed-section {
+                padding: 2rem 0;
+            }
+            .knowledge-feed-section h2 {
+                font-size: 1.5rem;
+            }
+        }
         .faq-item.active .faq-icon { transform: rotate(0deg); }
 
         /* CTA final */
@@ -1647,6 +1677,45 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
     {{/solutions_section.visible_any}}
 
+    <!-- Animated Banner Section (Independent) -->
+    {{#animated_banner_section}}
+    {{#visible_any}}
+    <section class="animated-banner-section {{visibility_class}}">
+        <div class="container">
+            <h2 class="sr-only">{{title}}</h2>
+            <div style="overflow: hidden; position: relative; padding: 2rem 0;">
+                <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
+                    {{#partners}}
+                    <img 
+                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
+                        alt="{{name}} - {{seo_description}}"
+                        title="{{seo_description}}"
+                        loading="lazy"
+                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+                        onmouseover="this.style.filter='grayscale(0%)'"
+                        onmouseout="this.style.filter='grayscale(100%)'"
+                    />
+                    {{/partners}}
+                    <!-- Duplicar para loop infinito -->
+                    {{#partners}}
+                    <img 
+                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
+                        alt="{{name}} - {{seo_description}}"
+                        title="{{seo_description}}"
+                        loading="lazy"
+                        aria-hidden="true"
+                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+                        onmouseover="this.style.filter='grayscale(0%)'"
+                        onmouseout="this.style.filter='grayscale(100%)'"
+                    />
+                    {{/partners}}
+                </div>
+            </div>
+        </div>
+    </section>
+    {{/visible_any}}
+    {{/animated_banner_section}}
+
     <!-- Desktop Info Section -->
     {{#desktop_info.visible_any}}
     <section class="desktop-info {{desktop_info.visibility_class}}">
@@ -1654,40 +1723,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div class="desktop-info-content">
                 <h2>{{desktop_info.title}}</h2>
                 <p>{{desktop_info.text}}</p>
-                
-                {{#animated_banner_section}}
-                {{#visible_any}}
-                <div class="animated-banner-inline {{visibility_class}}">
-                  <h2 class="sr-only">Empresas Parceiras</h2>
-                  <div style="overflow: hidden; position: relative;">
-                    <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
-                      {{#partners}}
-                      <img 
-                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
-                        alt="{{name}} - {{seo_description}}"
-                        title="{{seo_description}}"
-                        loading="lazy"
-                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
-                        onmouseover="this.style.filter='grayscale(0%)'"
-                        onmouseout="this.style.filter='grayscale(100%)'"
-                      />
-                      {{/partners}}
-                      {{#partners}}
-                      <img 
-                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
-                        alt="{{name}} - {{seo_description}}"
-                        title="{{seo_description}}"
-                        loading="lazy"
-                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
-                        onmouseover="this.style.filter='grayscale(0%)'"
-                        onmouseout="this.style.filter='grayscale(100%)'"
-                      />
-                      {{/partners}}
-                    </div>
-                  </div>
-                </div>
-                {{/visible_any}}
-                {{/animated_banner_section}}
                 
                 {{#desktop_info.show_table}}
                 <h3 class="desktop-table-title">{{desktop_info.table_title}}</h3>
@@ -1823,6 +1858,28 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </section>
     {{/advisory.visible_any}}
+
+    <!-- Knowledge Feed Section -->
+    {{#knowledge_feed_section}}
+    {{#visible_any}}
+    <section class="knowledge-feed-section {{visibility_class}}" aria-labelledby="knowledge-feed-title">
+        <div class="container">
+            <h2 id="knowledge-feed-title">{{title}}</h2>
+            {{#subtitle}}
+            <p class="section-subtitle">{{subtitle}}</p>
+            {{/subtitle}}
+            
+            <div class="knowledge-feed-preview">
+                <p style="text-align: center; color: #666; padding: 2rem; background: #f9f9f9; border-radius: 8px; margin: 2rem 0; border: 2px dashed #ddd;">
+                    📰 <strong>Feed de Conhecimento</strong><br>
+                    {{limit}} artigos serão carregados dinamicamente da Base de Conhecimento.<br>
+                    <small style="color: #999;">Preview estático - artigos reais aparecerão na publicação final.</small>
+                </p>
+            </div>
+        </div>
+    </section>
+    {{/visible_any}}
+    {{/knowledge_feed_section}}
 
     <!-- FAQ -->
     {{#faq_section.visible_any}}
@@ -2519,6 +2576,12 @@ export const generatePreviewHTML = (data: any): string => {
       ...calculateSectionVisibility(data.animated_banner_section)
     } : null,
     
+    // Knowledge Feed Section
+    knowledge_feed_section: data.knowledge_feed_section ? {
+      ...data.knowledge_feed_section,
+      ...calculateSectionVisibility(data.knowledge_feed_section)
+    } : null,
+    
     // Map schema offers to template-level offers and resources_products
     offers: (data.schema?.offers || []).map((offer: any) => ({
       ...offer,
@@ -2563,6 +2626,24 @@ export const generatePreviewHTML = (data: any): string => {
     hreflang_tags: '',
     columnWidths: [25, 25, 25, 25]
   };
+  
+  // Debug logs for visibility
+  console.log('[PREVIEW] knowledge_feed_section:', {
+    exists: !!data.knowledge_feed_section,
+    visible_desktop: data.knowledge_feed_section?.visible_desktop,
+    visible_mobile: data.knowledge_feed_section?.visible_mobile,
+    visible_any: previewData.knowledge_feed_section?.visible_any,
+    visibility_class: previewData.knowledge_feed_section?.visibility_class
+  });
+  
+  console.log('[PREVIEW] animated_banner_section:', {
+    exists: !!data.animated_banner_section,
+    visible_desktop: data.animated_banner_section?.visible_desktop,
+    visible_mobile: data.animated_banner_section?.visible_mobile,
+    visible_any: previewData.animated_banner_section?.visible_any,
+    visibility_class: previewData.animated_banner_section?.visibility_class,
+    partners_count: data.animated_banner_section?.partners?.length || 0
+  });
   
   return Mustache.render(TEMPLATE_HTML, previewData);
 };
@@ -2962,6 +3043,47 @@ export const generateHTML = async (data: any): Promise<string> => {
       visible_any: true,
       visibility_class: visibility_class
     };
+  }
+  
+  // Process Animated Banner section
+  if (data.animated_banner_section && (data.animated_banner_section.visible_desktop || data.animated_banner_section.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.animated_banner_section.visible_desktop && !data.animated_banner_section.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.animated_banner_section.visible_desktop && data.animated_banner_section.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.animated_banner_section = {
+      ...data.animated_banner_section,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
+  }
+  
+  // Process Knowledge Feed section
+  if (data.knowledge_feed_section && (data.knowledge_feed_section.visible_desktop || data.knowledge_feed_section.visible_mobile)) {
+    // Determine visibility class
+    let visibility_class = '';
+    if (data.knowledge_feed_section.visible_desktop && !data.knowledge_feed_section.visible_mobile) {
+      visibility_class = 'desktop-only';
+    } else if (!data.knowledge_feed_section.visible_desktop && data.knowledge_feed_section.visible_mobile) {
+      visibility_class = 'mobile-only';
+    }
+    
+    processedData.knowledge_feed_section = {
+      ...data.knowledge_feed_section,
+      visible_any: true,
+      visibility_class: visibility_class
+    };
+    
+    console.log('🔧 [TEMPLATE-ENGINE] Processando knowledge_feed_section:', {
+      visible_desktop: data.knowledge_feed_section.visible_desktop,
+      visible_mobile: data.knowledge_feed_section.visible_mobile,
+      visibility_class: visibility_class,
+      title: data.knowledge_feed_section.title
+    });
   }
   
   // Calcular e adicionar variáveis CSS para larguras das colunas
