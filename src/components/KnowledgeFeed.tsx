@@ -6,7 +6,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useRef, memo } from 'react';
+import { useRef, memo, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ interface KnowledgeFeedProps {
   subtitle?: string;
   visibleDesktop?: boolean;
   visibleMobile?: boolean;
+  onRefetchReady?: (refetch: () => void) => void;
 }
 
 const getCategoryColor = (letter: string) => {
@@ -26,14 +27,20 @@ const getCategoryColor = (letter: string) => {
   return colors[letter.toUpperCase()] || 'bg-gray-500';
 };
 
-const KnowledgeFeedComponent = ({ feedUrl, limit = 12, title, subtitle, visibleDesktop = true, visibleMobile = true }: KnowledgeFeedProps) => {
-  const { articles, feedMeta, loading, error } = useKnowledgeFeed(feedUrl, limit);
+const KnowledgeFeedComponent = ({ feedUrl, limit = 12, title, subtitle, visibleDesktop = true, visibleMobile = true, onRefetchReady }: KnowledgeFeedProps) => {
+  const { articles, feedMeta, loading, error, refetch } = useKnowledgeFeed(feedUrl, limit);
   
   const plugin = useRef(Autoplay({ 
     delay: 5000, 
     stopOnInteraction: true, 
     stopOnMouseEnter: true 
   }));
+
+  useEffect(() => {
+    if (onRefetchReady && refetch) {
+      onRefetchReady(refetch);
+    }
+  }, [refetch, onRefetchReady]);
 
   if (loading) {
     return (

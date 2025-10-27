@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BookOpen, Monitor, Smartphone, Eye } from 'lucide-react';
+import { BookOpen, Monitor, Smartphone, Eye, RefreshCw } from 'lucide-react';
 import { KnowledgeFeed } from '@/components/KnowledgeFeed';
 
 interface KnowledgeFeedSectionProps {
@@ -19,7 +21,24 @@ interface KnowledgeFeedSectionProps {
 }
 
 export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionProps) {
+  const [refetchFn, setRefetchFn] = useState<(() => void) | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
   console.log('[KnowledgeFeedSection] Renderizando com dados:', data);
+  
+  const handleRefresh = async () => {
+    if (!refetchFn) return;
+    
+    setIsRefreshing(true);
+    try {
+      await refetchFn();
+      console.log('✅ [Feed] Atualizado com sucesso');
+    } catch (error) {
+      console.error('❌ [Feed] Erro ao atualizar:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   if (!data) {
     return (
@@ -94,12 +113,24 @@ export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionPro
         {/* URL do Feed */}
         <div className="space-y-2">
           <Label>URL da Edge Function</Label>
-          <Input
-            value={data.feed_url}
-            onChange={(e) => onChange({ feed_url: e.target.value })}
-            placeholder="https://..."
-            type="url"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={data.feed_url}
+              onChange={(e) => onChange({ feed_url: e.target.value })}
+              placeholder="https://..."
+              type="url"
+              className="flex-1"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={!refetchFn || isRefreshing || !data.feed_url}
+              title="Atualizar dados do feed"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
             URL pública da Edge Function do sistema de Base de Conhecimento
           </p>
@@ -139,6 +170,7 @@ export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionPro
             subtitle={data.subtitle}
             visibleDesktop={data.visible_desktop}
             visibleMobile={data.visible_mobile}
+            onRefetchReady={setRefetchFn}
           />
         </CardContent>
       </Card>
