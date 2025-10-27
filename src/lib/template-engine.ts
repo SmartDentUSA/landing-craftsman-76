@@ -6,6 +6,14 @@ import { validateJsonLdSize, estimateJsonSizeKB } from './validate-jsonld';
 import { generateKnowledgeFeedSchema, extractTopKeywords, type KnowledgeArticle } from '@/services/seo/knowledgeFeedSchemaGenerator';
 import { enrichMetaWithFeedKeywords } from '@/services/seo/metaTagsBuilder';
 
+// Interface para links SEO de artigos
+interface SEOArticleLink {
+  url: string;
+  title: string;
+  excerpt?: string;
+  category?: string;
+}
+
 // Mapeamento de ícones SVG para redes sociais
 const SOCIAL_ICONS: Record<string, string> = {
   instagram: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.06 8H12a4 4 0 1 1 4 4z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
@@ -769,6 +777,48 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 
         .desktop-table tbody tr:last-child td {
             border-bottom: none;
+        }
+
+        /* SEO Crawler Links - Hidden from users, accessible to bots */
+        .seo-crawler-links {
+            position: absolute;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .seo-crawler-links nav {
+            display: block;
+        }
+
+        .seo-crawler-links h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .seo-crawler-links ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .seo-crawler-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .seo-crawler-links a {
+            color: #333;
+            text-decoration: none;
+        }
+
+        .seo-crawler-links .seo-category {
+            color: #666;
+            font-size: 0.875rem;
+            font-style: italic;
         }
 
         /* Desktop-only visibility */
@@ -2193,9 +2243,35 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
       </div>
   </section>
   {{/visible_any}}
-  {{/knowledge_feed_section}}
+    {{/knowledge_feed_section}}
 
-  <!-- Footer -->
+    {{#knowledge_feed_section}}
+    {{#visible_any}}
+    <!-- SEO Crawler Links: Hidden section for search engine indexation -->
+    <div class="seo-crawler-links" aria-hidden="true">
+      <nav aria-label="Artigos do Blog para Indexação">
+        <h2>Artigos Relacionados</h2>
+        <ul>
+          {{#feed_articles_seo}}
+          <li>
+            <a href="{{url}}" rel="nofollow" title="{{title}}">
+              <strong>{{title}}</strong>
+              {{#excerpt}}
+              <span> - {{excerpt}}</span>
+              {{/excerpt}}
+              {{#category}}
+              <span class="seo-category">[{{category}}]</span>
+              {{/category}}
+            </a>
+          </li>
+          {{/feed_articles_seo}}
+        </ul>
+      </nav>
+    </div>
+    {{/visible_any}}
+    {{/knowledge_feed_section}}
+
+    <!-- Footer -->
   <footer class="footer" role="contentinfo">
         <div class="container footer-grid">
             <div class="footer-info">
@@ -3364,6 +3440,18 @@ export const generateHTML = async (data: any): Promise<string> => {
               console.log(`✅ [FASE-2] ${addedCount} keywords do feed adicionadas (top 5: ${topKeywords.slice(0, 5).join(', ')})`);
             }
           }
+
+          // ========================================
+          // FASE 3: Preparar links estáticos para crawlers
+          // ========================================
+          processedData.feed_articles_seo = articles.map(article => ({
+            url: article.url,
+            title: article.title,
+            excerpt: article.excerpt || '',
+            category: article.category?.name || ''
+          }));
+
+          console.log(`🔗 [FASE-3] ${articles.length} links estáticos preparados para crawlers`);
         } else {
           console.log('⚠️ [SEO] Nenhum artigo encontrado no feed');
         }
