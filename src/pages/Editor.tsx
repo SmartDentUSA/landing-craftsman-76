@@ -2080,21 +2080,27 @@ const EditorContent = () => {
             : 'mobile-only',
         // ✅ CORREÇÃO: Garantir feed_url e limit sempre existem
         feed_url: processedData.knowledge_feed_section.feed_url || 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-        limit: processedData.knowledge_feed_section.limit || 12
+        limit: processedData.knowledge_feed_section.limit || 12,
+        items: [] // Will be populated by generatePreviewHTML
       } : undefined
     };
     
     // ✅ LOG DEBUG: Verificar dados antes de gerar preview
-    console.log('🔍 [EDITOR] knowledge_feed_section antes do preview:', {
+    console.info('🔍 [EDITOR] knowledge_feed_section antes do preview:', {
       exists: !!previewData.knowledge_feed_section,
       feed_url: previewData.knowledge_feed_section?.feed_url,
       limit: previewData.knowledge_feed_section?.limit,
       title: previewData.knowledge_feed_section?.title
     });
     
-    console.time('preview-generation');
     const html = await generatePreviewHTML(previewData);
-    console.timeEnd('preview-generation');
+    
+    console.info('✅ [EDITOR] Preview HTML gerado:', {
+      htmlLength: html.length,
+      containsKnowledgeFeed: html.includes('knowledge-feed-section'),
+      containsFeedCard: html.includes('feed-card')
+    });
+    
     setGeneratedHTML(html);
     };
     

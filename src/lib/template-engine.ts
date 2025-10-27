@@ -2963,26 +2963,41 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
       const feedUrl = data.knowledge_feed_section.feed_url;
       const limit = data.knowledge_feed_section.limit || 12;
       
-      console.log('🔍 [PREVIEW] Fetching knowledge feed:', { feedUrl, limit });
+      console.info('🔍 [PREVIEW FEED] Iniciando fetch:', { feedUrl, limit });
       
       const response = await fetch(`${feedUrl}?format=json&limit=${limit}`);
       
+      console.info('🔍 [PREVIEW FEED] Response recebido:', { 
+        ok: response.ok, 
+        status: response.status 
+      });
+      
       if (response.ok) {
         const feedData = await response.json();
+        
+        console.info('🔍 [PREVIEW FEED] Dados parseados:', { 
+          hasItems: !!feedData.items,
+          itemsLength: feedData.items?.length || 0,
+          firstItemTitle: feedData.items?.[0]?.title
+        });
+        
         // Injetar items diretamente no data.knowledge_feed_section
         if (!data.knowledge_feed_section.items) {
           data.knowledge_feed_section.items = [];
         }
         data.knowledge_feed_section.items = feedData.items || [];
-        console.log(`✅ [PREVIEW] Knowledge feed loaded: ${feedData.items?.length || 0} articles`);
+        
+        console.info(`✅ [PREVIEW FEED] ${feedData.items?.length || 0} artigos carregados no preview`);
       } else {
-        console.warn('⚠️ [PREVIEW] Knowledge feed fetch failed');
+        console.warn('⚠️ [PREVIEW FEED] Fetch failed:', response.status, response.statusText);
         data.knowledge_feed_section.items = [];
       }
     } catch (error) {
-      console.error('❌ [PREVIEW] Error fetching knowledge feed:', error);
+      console.error('❌ [PREVIEW FEED] Error:', error);
       data.knowledge_feed_section.items = [];
     }
+  } else {
+    console.warn('⚠️ [PREVIEW FEED] Nenhum feed_url configurado:', data.knowledge_feed_section);
   }
 
   // Minimal processing for template compatibility
