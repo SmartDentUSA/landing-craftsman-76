@@ -2357,7 +2357,7 @@ const EditorContent = () => {
                 visible_mobile: true,
                 title: 'Últimas Publicações',
                 subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
-                feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                feed_url: 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-feed',
                 limit: 12
               };
               dirtyRef.current = true; // Marcar para salvar automaticamente
@@ -4674,7 +4674,7 @@ const EditorContent = () => {
                         visible_mobile: true,
                         title: 'Últimas Publicações',
                         subtitle: '',
-                        feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                        feed_url: 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-feed',
                         limit: 12
                       }}
                       onChange={(updates) => {
