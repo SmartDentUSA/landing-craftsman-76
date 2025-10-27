@@ -2074,9 +2074,20 @@ const EditorContent = () => {
           ? '' 
           : processedData.knowledge_feed_section.visible_desktop 
             ? 'desktop-only' 
-            : 'mobile-only'
+            : 'mobile-only',
+        // ✅ CORREÇÃO: Garantir feed_url e limit sempre existem
+        feed_url: processedData.knowledge_feed_section.feed_url || 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+        limit: processedData.knowledge_feed_section.limit || 12
       } : undefined
     };
+    
+    // ✅ LOG DEBUG: Verificar dados antes de gerar preview
+    console.log('🔍 [EDITOR] knowledge_feed_section antes do preview:', {
+      exists: !!previewData.knowledge_feed_section,
+      feed_url: previewData.knowledge_feed_section?.feed_url,
+      limit: previewData.knowledge_feed_section?.limit,
+      title: previewData.knowledge_feed_section?.title
+    });
     
     console.time('preview-generation');
     const html = generatePreviewHTML(previewData);

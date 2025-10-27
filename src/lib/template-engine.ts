@@ -3257,17 +3257,23 @@ export const generateHTML = async (data: any): Promise<string> => {
       visibility_class = 'mobile-only';
     }
     
+    // ✅ CORREÇÃO: Garantir que feed_url e limit sempre existam
     processedData.knowledge_feed_section = {
       ...data.knowledge_feed_section,
       visible_any: true,
-      visibility_class: visibility_class
+      visibility_class: visibility_class,
+      feed_url: data.knowledge_feed_section.feed_url || 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+      limit: data.knowledge_feed_section.limit || 12
     };
     
     console.log('🔧 [TEMPLATE-ENGINE] Processando knowledge_feed_section:', {
       visible_desktop: data.knowledge_feed_section.visible_desktop,
       visible_mobile: data.knowledge_feed_section.visible_mobile,
       visibility_class: visibility_class,
-      title: data.knowledge_feed_section.title
+      title: data.knowledge_feed_section.title,
+      subtitle: data.knowledge_feed_section.subtitle,
+      feed_url: processedData.knowledge_feed_section.feed_url,
+      limit: processedData.knowledge_feed_section.limit
     });
   }
   
