@@ -68,7 +68,6 @@ Deno.serve(async (req) => {
     let query = supabase
       .from('landing_pages')
       .select('id, name, data, last_modified, status, created_at')
-      .in('status', ['approved', 'published'])
       .order('last_modified', { ascending: false })
       .range(offset, offset + limit - 1);
 
