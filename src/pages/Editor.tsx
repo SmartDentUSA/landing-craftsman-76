@@ -5,6 +5,7 @@ import { BannerSection } from "@/components/editor/BannerSection";
 import { SolutionsSection } from "@/components/editor/SolutionsSection";
 import { SEOSection } from "@/components/editor/SEOSection";
 import { KOLSection } from "@/components/editor/KOLSection";
+import { KnowledgeFeedSection } from "@/components/editor/KnowledgeFeedSection";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -23,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { TagInput } from "@/components/ui/tag-input";
-import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, Search, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Copy, Settings, Plus, Trash2, Edit, Download, Globe, Mail, Instagram, Facebook, Youtube, Twitter, Linkedin, Users, Laptop, Tag, Folder, Star, DollarSign, Monitor, Loader2, Wand2, Lightbulb, FileText, Link, Sparkles, VideoIcon, Zap, ExternalLink, Search, CheckCircle, BookOpen, Smartphone } from "lucide-react";
 import { InfinitePartnersCarousel } from "@/components/InfinitePartnersCarousel";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ProductLinkModal } from "@/components/ProductLinkModal";
@@ -362,6 +363,14 @@ interface LandingPageData {
       logo: ImageData;
     }>;
   };
+  knowledge_feed_section?: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+    title: string;
+    subtitle?: string;
+    feed_url: string;
+    limit: number;
+  };
 }
 
 // Função para criar ImageData padrão
@@ -539,6 +548,14 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
       visible_mobile: true,
       title: 'Empresas Parceiras',
       partners: []
+    },
+    knowledge_feed_section: data.knowledge_feed_section || {
+      visible_desktop: true,
+      visible_mobile: true,
+      title: 'Últimas Publicações',
+      subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
+      feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+      limit: 12
     },
     seo: {
       domain: data.seo?.domain || '',
@@ -4544,6 +4561,67 @@ const EditorContent = () => {
                  </AccordionItem>
 
 
+                {/* Knowledge Feed */}
+                <AccordionItem value="knowledge-feed">
+                  <AccordionTrigger className="text-sm">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Feed de Conhecimento
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-2 gap-4 py-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-4 w-4 text-muted-foreground" />
+                          <Label className="text-xs">Desktop</Label>
+                        </div>
+                        <Switch
+                          checked={data.knowledge_feed_section?.visible_desktop ?? true}
+                          onCheckedChange={(checked) => {
+                            setData(prev => ({
+                              ...prev,
+                              knowledge_feed_section: {
+                                visible_desktop: checked,
+                                visible_mobile: prev.knowledge_feed_section?.visible_mobile ?? true,
+                                title: prev.knowledge_feed_section?.title ?? 'Últimas Publicações',
+                                subtitle: prev.knowledge_feed_section?.subtitle ?? '',
+                                feed_url: prev.knowledge_feed_section?.feed_url ?? 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                                limit: prev.knowledge_feed_section?.limit ?? 12
+                              }
+                            }));
+                            dirtyRef.current = true;
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="h-4 w-4 text-muted-foreground" />
+                          <Label className="text-xs">Mobile</Label>
+                        </div>
+                        <Switch
+                          checked={data.knowledge_feed_section?.visible_mobile ?? true}
+                          onCheckedChange={(checked) => {
+                            setData(prev => ({
+                              ...prev,
+                              knowledge_feed_section: {
+                                visible_desktop: prev.knowledge_feed_section?.visible_desktop ?? true,
+                                visible_mobile: checked,
+                                title: prev.knowledge_feed_section?.title ?? 'Últimas Publicações',
+                                subtitle: prev.knowledge_feed_section?.subtitle ?? '',
+                                feed_url: prev.knowledge_feed_section?.feed_url ?? 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                                limit: prev.knowledge_feed_section?.limit ?? 12
+                              }
+                            }));
+                            dirtyRef.current = true;
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
                 {/* FAQ */}
                 <AccordionItem value="faq">
                   <AccordionTrigger>FAQ</AccordionTrigger>
@@ -7574,10 +7652,11 @@ dataLayer = [{
             {/* Preview Area */}
             <div className="flex-1 flex flex-col">
               <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
-            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-4">
+            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-5">
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
               <TabsTrigger value="blog-preview">Blog Post</TabsTrigger>
+              <TabsTrigger value="knowledge-feed">Feed Conhecimento</TabsTrigger>
               <TabsTrigger value="repository">Repositório</TabsTrigger>
             </TabsList>
             
@@ -7634,6 +7713,30 @@ dataLayer = [{
                   approvedLandingPages={[]}
                 />
               </div>
+            </TabsContent>
+
+            {/* Knowledge Feed Tab - Nova seção */}
+            <TabsContent value="knowledge-feed" className="flex-1 overflow-auto p-4">
+              <KnowledgeFeedSection
+                data={data.knowledge_feed_section || {
+                  visible_desktop: true,
+                  visible_mobile: true,
+                  title: 'Últimas Publicações',
+                  subtitle: '',
+                  feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                  limit: 12
+                }}
+                onChange={(updates) => {
+                  setData(prev => ({
+                    ...prev,
+                    knowledge_feed_section: {
+                      ...(prev.knowledge_feed_section || {}),
+                      ...updates
+                    }
+                  }));
+                  dirtyRef.current = true;
+                }}
+              />
             </TabsContent>
 
             {/* Repository Tab - Fixed positioning */}

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, FileText, Code2, Zap, Target, Palette } from "lucide-react";
 import { TopNavigation } from "@/components/TopNavigation";
+import { KnowledgeFeed } from "@/components/KnowledgeFeed";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -44,6 +45,14 @@ const Index = () => {
         </div>
       </section>
       </div>
+      
+      {/* 🆕 Feed de Conhecimento */}
+      <KnowledgeFeed
+        feedUrl="https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed"
+        limit={12}
+        title="Últimas Publicações"
+        subtitle="Confira os artigos mais recentes da nossa Base de Conhecimento"
+      />
     </div>
   );
 };

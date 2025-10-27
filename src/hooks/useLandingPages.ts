@@ -19,6 +19,15 @@ export interface LandingPage {
   // Campo para status do blog
   blogGenerated?: boolean;
   blogGeneratedAt?: Date;
+  // Campo para seção de feed de conhecimento
+  knowledge_feed_section?: {
+    visible_desktop: boolean;
+    visible_mobile: boolean;
+    title: string;
+    subtitle?: string;
+    feed_url: string;
+    limit: number;
+  };
 }
 
 interface LandingPagesStore {
