@@ -2193,7 +2193,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             async function loadFeed(retries = 1) {
                 try {
                     console.log('🔄 Carregando feed de artigos...');
-                    const res = await fetch('{{feed_url}}?format=json&limit={{limit}}');
+                    const res = await fetch('{{{feed_url}}}?format=json&limit={{limit}}');
                     
                     if (!res.ok) {
                         throw new Error('HTTP ' + res.status + ': ' + res.statusText);
@@ -2209,16 +2209,27 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     loadingEl.remove();
                     gridEl.style.display = 'grid';
                     
+                    // Função para escapar HTML e prevenir XSS
+                    function escapeHtml(unsafe) {
+                        if (!unsafe) return '';
+                        return String(unsafe)
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;");
+                    }
+                    
                     data.items.forEach(function(art) {
                         const card = document.createElement('a');
                         card.href = art.url;
                         card.className = 'feed-card';
                         card.target = '_blank';
                         card.rel = 'noopener noreferrer';
-                        card.innerHTML = '<img src="' + art.image_url + '" alt="' + art.title + '" loading="lazy" onerror="this.src=\'/placeholder.svg\'">' +
-                            '<span class="badge">' + art.category.name + '</span>' +
-                            '<h3>' + art.title + '</h3>' +
-                            '<p>' + art.excerpt + '</p>';
+                        card.innerHTML = '<img src="' + escapeHtml(art.image_url) + '" alt="' + escapeHtml(art.title) + '" loading="lazy" onerror="this.src=\'/placeholder.svg\'">' +
+                            '<span class="badge">' + escapeHtml(art.category.name) + '</span>' +
+                            '<h3>' + escapeHtml(art.title) + '</h3>' +
+                            '<p>' + escapeHtml(art.excerpt) + '</p>';
                         gridEl.appendChild(card);
                     });
                 } catch (error) {
