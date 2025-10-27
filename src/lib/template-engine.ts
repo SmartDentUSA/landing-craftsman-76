@@ -2133,35 +2133,61 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           </div>
           <div id="feed-grid" class="feed-grid" style="display:none;"></div>
           
-          <script>
-          (async function() {
-              try {
-                  const res = await fetch('{{feed_url}}?format=json&limit={{limit}}');
-                  const data = await res.json();
-                  
-                  document.getElementById('feed-loading').remove();
-                  const grid = document.getElementById('feed-grid');
-                  grid.style.display = 'grid';
-                  
-                  data.items.forEach(art => {
-                      const card = document.createElement('a');
-                      card.href = art.url;
-                      card.className = 'feed-card';
-                      card.target = '_blank';
-                      card.rel = 'noopener noreferrer';
-                      card.innerHTML = \`
-                          <img src="\${art.image_url}" alt="\${art.title}" loading="lazy">
-                          <span class="badge">\${art.category.name}</span>
-                          <h3>\${art.title}</h3>
-                          <p>\${art.excerpt}</p>
-                      \`;
-                      grid.appendChild(card);
-                  });
-              } catch(e) {
-                  document.getElementById('feed-loading').remove();
-              }
-          })();
-          </script>
+        <script>
+        (async function() {
+            const loadingEl = document.getElementById('feed-loading');
+            const gridEl = document.getElementById('feed-grid');
+            
+            async function loadFeed(retries = 1) {
+                try {
+                    console.log('🔄 Carregando feed de artigos...');
+                    const res = await fetch('{{feed_url}}?format=json&limit={{limit}}');
+                    
+                    if (!res.ok) {
+                        throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+                    }
+                    
+                    const data = await res.json();
+                    console.log('✅ Feed carregado:', data.items?.length, 'artigos');
+                    
+                    if (!data.items || data.items.length === 0) {
+                        throw new Error('Nenhum artigo encontrado');
+                    }
+                    
+                    loadingEl.remove();
+                    gridEl.style.display = 'grid';
+                    
+                    data.items.forEach(function(art) {
+                        const card = document.createElement('a');
+                        card.href = art.url;
+                        card.className = 'feed-card';
+                        card.target = '_blank';
+                        card.rel = 'noopener noreferrer';
+                        card.innerHTML = '<img src="' + art.image_url + '" alt="' + art.title + '" loading="lazy" onerror="this.src=\'/placeholder.svg\'">' +
+                            '<span class="badge">' + art.category.name + '</span>' +
+                            '<h3>' + art.title + '</h3>' +
+                            '<p>' + art.excerpt + '</p>';
+                        gridEl.appendChild(card);
+                    });
+                } catch (error) {
+                    console.error('❌ Erro ao carregar feed:', error);
+                    
+                    if (retries > 0) {
+                        console.log('🔄 Tentando novamente...');
+                        setTimeout(function() { loadFeed(retries - 1); }, 1000);
+                        return;
+                    }
+                    
+                    loadingEl.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">' +
+                        '<p>⚠️ Não foi possível carregar os artigos no momento.</p>' +
+                        '<p style="font-size: 0.875rem; margin-top: 0.5rem;">Por favor, tente novamente mais tarde.</p>' +
+                        '</div>';
+                }
+            }
+            
+            loadFeed();
+        })();
+        </script>
       </div>
   </section>
   {{/visible_any}}

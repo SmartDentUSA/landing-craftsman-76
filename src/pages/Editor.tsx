@@ -550,14 +550,14 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
       title: 'Empresas Parceiras',
       partners: []
     },
-    knowledge_feed_section: data.knowledge_feed_section || {
-      visible_desktop: true,
-      visible_mobile: true,
-      title: 'Últimas Publicações',
-      subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
-      feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-      limit: 12
-    },
+      knowledge_feed_section: data.knowledge_feed_section || {
+        visible_desktop: true,
+        visible_mobile: true,
+        title: 'Últimas Publicações',
+        subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
+        feed_url: 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-feed',
+        limit: 12
+      },
     seo: {
       domain: data.seo?.domain || '',
       seo_title: data.seo?.seo_title || data.seo_title || '',
