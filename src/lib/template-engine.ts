@@ -2540,6 +2540,19 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           let currentPage = 0;
           let autoplayInterval;
           
+          // ✅ Calculate card dimensions dynamically
+          const firstCard = cards[0];
+          const cardWidth = firstCard.offsetWidth;
+          const gap = parseFloat(getComputedStyle(track).gap) || 16;
+          
+          console.log('📊 [Feed Carousel] Inicializado:', {
+            total_cards: cards.length,
+            visible_cards: visibleCards,
+            total_pages: totalPages,
+            card_width: cardWidth,
+            gap: gap
+          });
+          
           // Create dots
           for (let i = 0; i < totalPages; i++) {
             const dot = document.createElement('button');
