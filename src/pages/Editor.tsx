@@ -4829,39 +4829,6 @@ const EditorContent = () => {
                   </AccordionContent>
                  </AccordionItem>
 
-
-                {/* Knowledge Feed */}
-                <AccordionItem value="knowledge-feed">
-                  <AccordionTrigger className="text-sm">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Feed de Conhecimento
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <KnowledgeFeedSection
-                      data={data.knowledge_feed_section || {
-                        visible_desktop: true,
-                        visible_mobile: true,
-                        title: 'Últimas Publicações',
-                        subtitle: '',
-                        feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-                        limit: 12
-                      }}
-                      onChange={(updates) => {
-                        setData(prev => ({
-                          ...prev,
-                          knowledge_feed_section: {
-                            ...prev.knowledge_feed_section,
-                            ...updates
-                          }
-                        }));
-                        dirtyRef.current = true;
-                      }}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-
                 {/* FAQ */}
                 <AccordionItem value="faq">
                   <AccordionTrigger>FAQ</AccordionTrigger>
