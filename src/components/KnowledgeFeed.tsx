@@ -6,7 +6,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useRef, memo, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -152,15 +152,4 @@ const KnowledgeFeedComponent = ({ feedUrl, limit = 12, title, subtitle, visibleD
   );
 };
 
-export const KnowledgeFeed = memo(KnowledgeFeedComponent, (prevProps, nextProps) => {
-  return (
-    prevProps.feedUrl === nextProps.feedUrl &&
-    prevProps.limit === nextProps.limit &&
-    prevProps.title === nextProps.title &&
-    prevProps.subtitle === nextProps.subtitle &&
-    prevProps.visibleDesktop === nextProps.visibleDesktop &&
-    prevProps.visibleMobile === nextProps.visibleMobile
-  );
-});
-
-KnowledgeFeed.displayName = 'KnowledgeFeed';
+export const KnowledgeFeed = KnowledgeFeedComponent;
