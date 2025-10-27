@@ -3576,6 +3576,13 @@ export const generateHTML = async (data: any): Promise<string> => {
         const feedData = await feedResponse.json();
         const articles: KnowledgeArticle[] = feedData.items || [];
         
+        // Injetar items no processedData para uso no template Mustache
+        if (!processedData.knowledge_feed_section.items) {
+          processedData.knowledge_feed_section.items = [];
+        }
+        processedData.knowledge_feed_section.items = articles;
+        console.log(`📚 [TEMPLATE] ${articles.length} artigos injetados em knowledge_feed_section.items`);
+        
         if (articles.length > 0) {
           console.log(`✅ [SEO] ${articles.length} artigos carregados do feed`);
 
