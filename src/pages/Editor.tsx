@@ -2274,6 +2274,20 @@ const EditorContent = () => {
               template: landingPage.template 
             } as LandingPageData;
             
+            // 🔄 Migração automática: Adicionar knowledge_feed_section se não existir
+            if (!loadedData.knowledge_feed_section) {
+              console.log('🔄 [Editor] Migrando landing page antiga - adicionando knowledge_feed_section');
+              loadedData.knowledge_feed_section = {
+                visible_desktop: true,
+                visible_mobile: true,
+                title: 'Últimas Publicações',
+                subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
+                feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+                limit: 12
+              };
+              dirtyRef.current = true; // Marcar para salvar automaticamente
+            }
+            
             console.info('🔍 Debug loading page data:', {
               hasName: !!loadedData.name,
               pageName: loadedData.name,
@@ -7747,6 +7761,26 @@ dataLayer = [{
                   dirtyRef.current = true;
                 }}
               />
+              
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+                <p className="text-sm text-muted-foreground mb-3">
+                  💡 <strong>Dica:</strong> O preview atualiza automaticamente ao editar. Os artigos reais serão carregados dinamicamente na publicação final.
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    console.log('[Feed] Salvamento manual:', data.knowledge_feed_section);
+                    handleSave();
+                    toast({
+                      title: "Configuração salva",
+                      description: "Feed de conhecimento salvo com sucesso"
+                    });
+                  }}
+                >
+                  💾 Salvar Configuração
+                </Button>
+              </div>
             </TabsContent>
 
             {/* Repository Tab - Fixed positioning */}

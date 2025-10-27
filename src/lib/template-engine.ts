@@ -2640,7 +2640,11 @@ export const generatePreviewHTML = (data: any): string => {
     visible_desktop: data.knowledge_feed_section?.visible_desktop,
     visible_mobile: data.knowledge_feed_section?.visible_mobile,
     visible_any: previewData.knowledge_feed_section?.visible_any,
-    visibility_class: previewData.knowledge_feed_section?.visibility_class
+    visibility_class: previewData.knowledge_feed_section?.visibility_class,
+    title: data.knowledge_feed_section?.title,
+    feed_url: data.knowledge_feed_section?.feed_url,
+    limit: data.knowledge_feed_section?.limit,
+    will_render: !!(data.knowledge_feed_section && previewData.knowledge_feed_section?.visible_any)
   });
   
   console.log('[PREVIEW] animated_banner_section:', {
