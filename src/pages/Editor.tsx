@@ -1999,6 +1999,80 @@ const EditorContent = () => {
     return html;
   }, [data, data.explanatory_video_section, data.animated_banner_section, data.knowledge_feed_section]);
 
+  // 🆕 Estado para HTML final completo (com todos os processamentos SEO)
+  const [finalHTML, setFinalHTML] = useState<string>('');
+  const [isGeneratingFinal, setIsGeneratingFinal] = useState<boolean>(false);
+
+  // 🆕 Gerar HTML final completo quando dados mudarem
+  useEffect(() => {
+    const generateFinalHTML = async () => {
+      setIsGeneratingFinal(true);
+      console.time('final-html-generation');
+      
+      try {
+        const processedData = beforePreview(data);
+        
+        const finalData = {
+          ...processedData,
+          logo_url: processedData.logo_url.src,
+          banner: {
+            ...processedData.banner,
+            images: processedData.banner.images.map(img => ({
+              src: img.src,
+              alt: img.alt,
+              scale: img.scale,
+              href: img.href
+            }))
+          },
+          solutions: processedData.solutions.map((s, index) => {
+            let size = "control-item-medium";
+            let sizeType = "medium";
+            
+            if (index === 0) {
+              size = "control-item-large";
+              sizeType = "large";
+            } else if (index < 6) {
+              size = "control-item-medium";
+              sizeType = "medium";
+            } else {
+              size = "control-item-small";
+              sizeType = "small";
+            }
+            
+            return {
+              ...s,
+              image: {
+                src: s.image?.src || '',
+                alt: s.image?.alt || '',
+                scale: s.image?.scale || 1
+              },
+              size,
+              sizeType
+            };
+          }),
+          advisory: {
+            ...processedData.advisory,
+            image: {
+              src: processedData.advisory?.image?.src || '',
+              alt: processedData.advisory?.image?.alt || '',
+              scale: processedData.advisory?.image?.scale || 1
+            }
+          }
+        };
+        
+        const html = await generateHTML(finalData);
+        console.timeEnd('final-html-generation');
+        setFinalHTML(html);
+      } catch (error) {
+        console.error('❌ Erro ao gerar HTML final:', error);
+      } finally {
+        setIsGeneratingFinal(false);
+      }
+    };
+    
+    generateFinalHTML();
+  }, [data, data.explanatory_video_section, data.animated_banner_section, data.knowledge_feed_section]);
+
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {
     setGeneratingBlog(true);
@@ -2992,7 +3066,7 @@ const EditorContent = () => {
 
   const handleViewCode = () => {
     const isEmailTab = previewTab === 'email-preview';
-    const htmlToPass = isEmailTab ? generatedEmailHTML : generatedHTML;
+    const htmlToPass = isEmailTab ? generatedEmailHTML : finalHTML; // ✅ Usa HTML final completo
     const nameToPass = isEmailTab ? `${data.name} - Email Marketing` : data.name;
     
     navigate('/code-view', { 
@@ -3005,7 +3079,7 @@ const EditorContent = () => {
   };
 
   const handleCopyCode = async () => {
-    const htmlToUse = previewTab === 'landing-preview' ? generatedHTML : generatedEmailHTML;
+    const htmlToUse = previewTab === 'landing-preview' ? finalHTML : generatedEmailHTML; // ✅ Usa HTML final completo
     console.log('📋 Copying HTML, length:', htmlToUse?.length);
     console.log('📋 HTML preview:', htmlToUse?.substring(0, 500));
     
@@ -7628,13 +7702,41 @@ dataLayer = [{
                   <Eye className="h-4 w-4 mr-2" />
                   Nova Aba
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleViewCode}>
-                  <Code className="h-4 w-4 mr-2" />
-                  Ver Código
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleViewCode}
+                  disabled={!finalHTML || isGeneratingFinal}
+                >
+                  {isGeneratingFinal ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Code className="h-4 w-4 mr-2" />
+                      Ver Código
+                    </>
+                  )}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleCopyCode}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCopyCode}
+                  disabled={!finalHTML || isGeneratingFinal}
+                >
+                  {isGeneratingFinal ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar
+                    </>
+                  )}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleTestHTML} className="bg-orange-100 hover:bg-orange-200">
                   🧪 Test HTML
