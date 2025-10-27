@@ -7656,7 +7656,7 @@ dataLayer = [{
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
               <TabsTrigger value="blog-preview">Blog Post</TabsTrigger>
-              <TabsTrigger value="knowledge-feed">Feed Conhecimento</TabsTrigger>
+              <TabsTrigger value="knowledge-feed">📰 Feed</TabsTrigger>
               <TabsTrigger value="repository">Repositório</TabsTrigger>
             </TabsList>
             
@@ -7716,9 +7716,9 @@ dataLayer = [{
             </TabsContent>
 
             {/* Knowledge Feed Tab - Nova seção */}
-            <TabsContent value="knowledge-feed" className="flex-1 overflow-auto p-4">
+            <TabsContent value="knowledge-feed" className="flex-1 overflow-auto p-4 min-h-[600px]">
               <KnowledgeFeedSection
-                data={data.knowledge_feed_section || {
+                data={data.knowledge_feed_section ?? {
                   visible_desktop: true,
                   visible_mobile: true,
                   title: 'Últimas Publicações',
@@ -7727,10 +7727,11 @@ dataLayer = [{
                   limit: 12
                 }}
                 onChange={(updates) => {
+                  console.log('[Editor] onChange Feed Conhecimento:', updates);
                   setData(prev => ({
                     ...prev,
                     knowledge_feed_section: {
-                      ...(prev.knowledge_feed_section || {}),
+                      ...(prev.knowledge_feed_section ?? {}),
                       ...updates
                     }
                   }));

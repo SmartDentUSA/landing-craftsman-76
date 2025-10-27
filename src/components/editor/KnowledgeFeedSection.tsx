@@ -18,19 +18,32 @@ interface KnowledgeFeedSectionProps {
 }
 
 export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionProps) {
+  console.log('[KnowledgeFeedSection] Renderizando com dados:', data);
+  
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="p-8">
+          <p className="text-center text-muted-foreground">Carregando configurações...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5" />
-          Feed de Conhecimento
-        </CardTitle>
-        <CardDescription>
-          Exibe artigos da Base de Conhecimento em um carrossel automático
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
+    <div className="h-full overflow-y-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Feed de Conhecimento
+          </CardTitle>
+          <CardDescription>
+            Exibe artigos da Base de Conhecimento em um carrossel automático
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
         {/* Visibilidade */}
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center justify-between">
@@ -107,5 +120,6 @@ export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionPro
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }
