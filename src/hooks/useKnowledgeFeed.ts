@@ -37,10 +37,32 @@ export const useKnowledgeFeed = (feedUrl: string, limit: number = 12) => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${debouncedFeedUrl}?format=json&limit=${debouncedLimit}`);
+      // Cache-busting e headers no-cache
+      const timestamp = Date.now();
+      const url = `${debouncedFeedUrl}?format=json&limit=${debouncedLimit}&_t=${timestamp}`;
+      
+      console.log('🔄 [useKnowledgeFeed] Fetching:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
+      
+      // Log dos dados recebidos para debug
+      console.log('📦 [useKnowledgeFeed] Dados recebidos:', {
+        total: data.items?.length || 0,
+        firstTitle: data.items?.[0]?.title || 'N/A',
+        feedUpdated: data.feed?.updated_at || 'N/A'
+      });
+      
       setFeedMeta(data.feed);
       setArticles(data.items || []);
       
