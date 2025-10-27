@@ -6,7 +6,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useRef } from 'react';
+import { useRef, memo } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +26,7 @@ const getCategoryColor = (letter: string) => {
   return colors[letter.toUpperCase()] || 'bg-gray-500';
 };
 
-export const KnowledgeFeed = ({ feedUrl, limit = 12, title, subtitle, visibleDesktop = true, visibleMobile = true }: KnowledgeFeedProps) => {
+const KnowledgeFeedComponent = ({ feedUrl, limit = 12, title, subtitle, visibleDesktop = true, visibleMobile = true }: KnowledgeFeedProps) => {
   const { articles, feedMeta, loading, error } = useKnowledgeFeed(feedUrl, limit);
   
   const plugin = useRef(Autoplay({ 
@@ -143,3 +143,16 @@ export const KnowledgeFeed = ({ feedUrl, limit = 12, title, subtitle, visibleDes
     </section>
   );
 };
+
+export const KnowledgeFeed = memo(KnowledgeFeedComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.feedUrl === nextProps.feedUrl &&
+    prevProps.limit === nextProps.limit &&
+    prevProps.title === nextProps.title &&
+    prevProps.subtitle === nextProps.subtitle &&
+    prevProps.visibleDesktop === nextProps.visibleDesktop &&
+    prevProps.visibleMobile === nextProps.visibleMobile
+  );
+});
+
+KnowledgeFeed.displayName = 'KnowledgeFeed';

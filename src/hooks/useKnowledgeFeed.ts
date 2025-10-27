@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDebounceValue } from './useDebounceValue';
 
 interface KnowledgeArticle {
   id: string;
@@ -25,12 +26,16 @@ export const useKnowledgeFeed = (feedUrl: string, limit: number = 12) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Debounce feedUrl and limit to prevent rapid fetches
+  const debouncedFeedUrl = useDebounceValue(feedUrl, 500);
+  const debouncedLimit = useDebounceValue(limit, 500);
+
   const fetchFeed = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${feedUrl}?format=json&limit=${limit}`);
+      const response = await fetch(`${debouncedFeedUrl}?format=json&limit=${debouncedLimit}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
@@ -45,8 +50,8 @@ export const useKnowledgeFeed = (feedUrl: string, limit: number = 12) => {
   };
 
   useEffect(() => {
-    if (feedUrl) fetchFeed();
-  }, [feedUrl, limit]);
+    if (debouncedFeedUrl) fetchFeed();
+  }, [debouncedFeedUrl, debouncedLimit]);
 
   return { articles, feedMeta, loading, error, refetch: fetchFeed };
 };
