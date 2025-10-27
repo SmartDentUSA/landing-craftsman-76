@@ -91,7 +91,10 @@ Deno.serve(async (req) => {
       const primaryCategory = extractPrimaryCategory(offers);
       const keywords = extractKeywords(offers);
       const canonicalUrl = seo.canonical_url || `https://example.com/${page.id}`;
-      const imageUrl = banner.images?.[0]?.src || pageData.logo_url || '/placeholder.svg';
+      const bannerImage = banner.images?.[0];
+      const imageUrl = typeof bannerImage === 'string' 
+        ? bannerImage 
+        : (bannerImage?.src || pageData.logo_url || 'https://placehold.co/600x400?text=Sem+Imagem');
 
       return {
         id: page.id,
