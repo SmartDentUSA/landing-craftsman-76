@@ -1568,8 +1568,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         
         .feed-carousel-track .feed-card {
-          flex: 0 0 280px;
-          min-width: 280px;
+          flex: 0 0 calc(25% - 0.75rem);
+          min-width: 260px;
+          max-width: 350px;
+        }
+        
+        @media (min-width: 1600px) {
+          .feed-carousel-track .feed-card {
+            flex: 0 0 calc(16.666% - 0.85rem);
+            min-width: 260px;
+          }
+        }
+        
+        @media (max-width: 1024px) and (min-width: 768px) {
+          .feed-carousel-track .feed-card {
+            flex: 0 0 calc(33.333% - 0.66rem);
+            min-width: 240px;
+          }
         }
         
         .carousel-nav {
@@ -1635,7 +1650,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           .carousel-nav { width: 36px; height: 36px; font-size: 24px; }
           .carousel-prev { left: -10px; }
           .carousel-next { right: -10px; }
-          .feed-carousel-track .feed-card { flex: 0 0 240px; min-width: 240px; }
+          .feed-carousel-track .feed-card { 
+            flex: 0 0 100%;
+            min-width: 100%;
+            max-width: 100%;
+          }
         }
         
         .feed-skeleton {
@@ -2269,27 +2288,27 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           <p class="section-subtitle">{{subtitle}}</p>
           {{/subtitle}}
           
-          {{#items}}
-          <div class="feed-carousel-container">
-              <button class="carousel-nav carousel-prev" aria-label="Anterior">‹</button>
-              
-              <div class="feed-carousel-wrapper">
-                  <div class="feed-carousel-track">
-                      {{#.}}
-                      <a href="{{url}}" class="feed-card" target="_blank" rel="noopener noreferrer">
-                          <img src="{{image_url}}" alt="{{title}}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2218%22%3ESem Imagem%3C/text%3E%3C/svg%3E'">
-                          <span class="badge">{{category.name}}</span>
-                          <h3>{{title}}</h3>
-                          <p>{{excerpt}}</p>
-                      </a>
-                      {{/.}}
-                  </div>
-              </div>
-              
-              <button class="carousel-nav carousel-next" aria-label="Próximo">›</button>
-              <div class="carousel-dots"></div>
-          </div>
-          {{/items}}
+        {{#has_items}}
+        <div class="feed-carousel-container">
+            <button class="carousel-nav carousel-prev" aria-label="Anterior">‹</button>
+            
+            <div class="feed-carousel-wrapper">
+                <div class="feed-carousel-track">
+                    {{#items}}
+                    <a href="{{url}}" class="feed-card" target="_blank" rel="noopener noreferrer">
+                        <img src="{{image_url}}" alt="{{title}}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2218%22%3ESem Imagem%3C/text%3E%3C/svg%3E'">
+                        <span class="badge">{{category.name}}</span>
+                        <h3>{{title}}</h3>
+                        <p>{{excerpt}}</p>
+                    </a>
+                    {{/items}}
+                </div>
+            </div>
+            
+            <button class="carousel-nav carousel-next" aria-label="Próximo">›</button>
+            <div class="carousel-dots"></div>
+        </div>
+        {{/has_items}}
           
           {{^items}}
           <div style="text-align: center; padding: 2rem; color: #666;">
@@ -2502,10 +2521,21 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           
           if (cards.length === 0) return;
           
-          const cardWidth = cards[0].offsetWidth;
-          const gap = 16;
-          const containerWidth = container.querySelector('.feed-carousel-wrapper').offsetWidth;
-          const visibleCards = Math.max(1, Math.floor(containerWidth / (cardWidth + gap)));
+          const isMobile = window.innerWidth < 768;
+          const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+          const isLargeDesktop = window.innerWidth >= 1600;
+          
+          let visibleCards;
+          if (isMobile) {
+            visibleCards = 1;
+          } else if (isTablet) {
+            visibleCards = 3;
+          } else if (isLargeDesktop) {
+            visibleCards = 6;
+          } else {
+            visibleCards = 4;
+          }
+          
           const totalPages = Math.ceil(cards.length / visibleCards);
           let currentPage = 0;
           let autoplayInterval;
@@ -3581,6 +3611,7 @@ export const generateHTML = async (data: any): Promise<string> => {
           processedData.knowledge_feed_section.items = [];
         }
         processedData.knowledge_feed_section.items = articles;
+        processedData.knowledge_feed_section.has_items = articles.length > 0;
         console.log(`📚 [TEMPLATE] ${articles.length} artigos injetados em knowledge_feed_section.items`);
         
         if (articles.length > 0) {
