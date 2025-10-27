@@ -1547,6 +1547,97 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           overflow: hidden;
         }
         
+        /* Knowledge Feed Carousel */
+        .feed-carousel-container {
+          position: relative;
+          max-width: 100%;
+          overflow: hidden;
+          padding: 0 50px;
+        }
+        
+        .feed-carousel-wrapper {
+          overflow: hidden;
+          width: 100%;
+        }
+        
+        .feed-carousel-track {
+          display: flex;
+          gap: 1rem;
+          transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          will-change: transform;
+        }
+        
+        .feed-carousel-track .feed-card {
+          flex: 0 0 280px;
+          min-width: 280px;
+        }
+        
+        .carousel-nav {
+          position: absolute;
+          top: 40%;
+          transform: translateY(-50%);
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid #e5e7eb;
+          border-radius: 50%;
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 10;
+          font-size: 28px;
+          color: #374151;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .carousel-nav:hover:not(:disabled) {
+          background: white;
+          transform: translateY(-50%) scale(1.1);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .carousel-nav:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+        
+        .carousel-prev { left: 0; }
+        .carousel-next { right: 0; }
+        
+        .carousel-dots {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 1.5rem;
+        }
+        
+        .carousel-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #d1d5db;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s;
+          padding: 0;
+        }
+        
+        .carousel-dot.active {
+          background: #3b82f6;
+          width: 24px;
+          border-radius: 4px;
+        }
+        
+        @media (max-width: 768px) {
+          .feed-carousel-container { padding: 0 20px; }
+          .carousel-nav { width: 36px; height: 36px; font-size: 24px; }
+          .carousel-prev { left: -10px; }
+          .carousel-next { right: -10px; }
+          .feed-carousel-track .feed-card { flex: 0 0 240px; min-width: 240px; }
+        }
+        
         .feed-skeleton {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -2178,24 +2269,33 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           <p class="section-subtitle">{{subtitle}}</p>
           {{/subtitle}}
           
-          {{#items.length}}
-          <div class="feed-grid">
-              {{#items}}
-              <a href="{{url}}" class="feed-card" target="_blank" rel="noopener noreferrer">
-                  <img src="{{image_url}}" alt="{{title}}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2218%22%3ESem Imagem%3C/text%3E%3C/svg%3E'">
-                  <span class="badge">{{category.name}}</span>
-                  <h3>{{title}}</h3>
-                  <p>{{excerpt}}</p>
-              </a>
-              {{/items}}
+          {{#items}}
+          <div class="feed-carousel-container">
+              <button class="carousel-nav carousel-prev" aria-label="Anterior">‹</button>
+              
+              <div class="feed-carousel-wrapper">
+                  <div class="feed-carousel-track">
+                      {{#items}}
+                      <a href="{{url}}" class="feed-card" target="_blank" rel="noopener noreferrer">
+                          <img src="{{image_url}}" alt="{{title}}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2218%22%3ESem Imagem%3C/text%3E%3C/svg%3E'">
+                          <span class="badge">{{category.name}}</span>
+                          <h3>{{title}}</h3>
+                          <p>{{excerpt}}</p>
+                      </a>
+                      {{/items}}
+                  </div>
+              </div>
+              
+              <button class="carousel-nav carousel-next" aria-label="Próximo">›</button>
+              <div class="carousel-dots"></div>
           </div>
-          {{/items.length}}
+          {{/items}}
           
-          {{^items.length}}
+          {{^items}}
           <div style="text-align: center; padding: 2rem; color: #666;">
               <p>📚 Nenhum artigo disponível no momento.</p>
           </div>
-          {{/items.length}}
+          {{/items}}
       </div>
   </section>
   {{/visible_any}}
@@ -2387,6 +2487,108 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                     }
                 });
             }
+        });
+        
+        // Knowledge Feed Carousel
+        document.addEventListener('DOMContentLoaded', function() {
+          const container = document.querySelector('.feed-carousel-container');
+          if (!container) return;
+          
+          const track = container.querySelector('.feed-carousel-track');
+          const cards = track.querySelectorAll('.feed-card');
+          const prevBtn = container.querySelector('.carousel-prev');
+          const nextBtn = container.querySelector('.carousel-next');
+          const dotsContainer = container.querySelector('.carousel-dots');
+          
+          if (cards.length === 0) return;
+          
+          const cardWidth = cards[0].offsetWidth;
+          const gap = 16;
+          const containerWidth = container.querySelector('.feed-carousel-wrapper').offsetWidth;
+          const visibleCards = Math.max(1, Math.floor(containerWidth / (cardWidth + gap)));
+          const totalPages = Math.ceil(cards.length / visibleCards);
+          let currentPage = 0;
+          let autoplayInterval;
+          
+          // Create dots
+          for (let i = 0; i < totalPages; i++) {
+            const dot = document.createElement('button');
+            dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Ir para página ' + (i + 1));
+            dot.addEventListener('click', function() { goToPage(i); });
+            dotsContainer.appendChild(dot);
+          }
+          
+          function updateCarousel() {
+            const offset = currentPage * visibleCards * (cardWidth + gap);
+            track.style.transform = 'translateX(-' + offset + 'px)';
+            
+            const dots = dotsContainer.querySelectorAll('.carousel-dot');
+            dots.forEach(function(dot, i) {
+              dot.classList.toggle('active', i === currentPage);
+            });
+            
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage === totalPages - 1;
+          }
+          
+          function goToPage(page) {
+            currentPage = Math.max(0, Math.min(page, totalPages - 1));
+            updateCarousel();
+            resetAutoplay();
+          }
+          
+          function next() {
+            if (currentPage < totalPages - 1) {
+              goToPage(currentPage + 1);
+            } else {
+              goToPage(0);
+            }
+          }
+          
+          function prev() {
+            goToPage(currentPage - 1);
+          }
+          
+          function resetAutoplay() {
+            clearInterval(autoplayInterval);
+            autoplayInterval = setInterval(next, 5000);
+          }
+          
+          prevBtn.addEventListener('click', prev);
+          nextBtn.addEventListener('click', next);
+          
+          // Touch swipe
+          let startX = 0;
+          let isDragging = false;
+          
+          track.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+          });
+          
+          track.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            const currentX = e.touches[0].clientX;
+            const diff = startX - currentX;
+            if (Math.abs(diff) > 50) {
+              diff > 0 ? next() : prev();
+              isDragging = false;
+            }
+          });
+          
+          track.addEventListener('touchend', function() {
+            isDragging = false;
+          });
+          
+          container.addEventListener('mouseenter', function() {
+            clearInterval(autoplayInterval);
+          });
+          
+          container.addEventListener('mouseleave', resetAutoplay);
+          
+          updateCarousel();
+          resetAutoplay();
         });
     </script>
 </body>
