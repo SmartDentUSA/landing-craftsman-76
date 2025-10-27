@@ -1910,14 +1910,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <p class="section-subtitle">{{subtitle}}</p>
             {{/subtitle}}
             
-            <div class="knowledge-feed-simple-preview">
-              <div class="carousel-placeholder">
-                <div class="carousel-icon">🎠</div>
-                <p class="carousel-text">
-                  Carrossel de artigos será carregado dinamicamente da Base de Conhecimento
-                </p>
-              </div>
-            </div>
+        <div class="knowledge-feed-simple-preview">
+          <div class="carousel-placeholder">
+            <div class="carousel-icon">🎠</div>
+            <p class="carousel-text">
+              Carrossel de Artigos
+            </p>
+          </div>
+        </div>
         </div>
     </section>
     {{/visible_any}}

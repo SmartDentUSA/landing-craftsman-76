@@ -7675,11 +7675,10 @@ dataLayer = [{
             {/* Preview Area */}
             <div className="flex-1 flex flex-col">
               <Tabs defaultValue="landing-preview" className="flex-1 flex flex-col" value={previewTab} onValueChange={setPreviewTab}>
-            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-5">
+            <TabsList className="mx-4 mt-4 grid w-auto grid-cols-4">
               <TabsTrigger value="landing-preview">Landing Page</TabsTrigger>
               <TabsTrigger value="email-preview">Email Marketing</TabsTrigger>
               <TabsTrigger value="blog-preview">Blog Post</TabsTrigger>
-              <TabsTrigger value="knowledge-feed">📰 Feed</TabsTrigger>
               <TabsTrigger value="repository">Repositório</TabsTrigger>
             </TabsList>
             
@@ -7735,51 +7734,6 @@ dataLayer = [{
                 <ConsolidatedBlogCopyPaste
                   approvedLandingPages={[]}
                 />
-              </div>
-            </TabsContent>
-
-            {/* Knowledge Feed Tab - Nova seção */}
-            <TabsContent value="knowledge-feed" className="flex-1 overflow-auto p-4 min-h-[600px]">
-              <KnowledgeFeedSection
-                data={data.knowledge_feed_section ?? {
-                  visible_desktop: true,
-                  visible_mobile: true,
-                  title: 'Últimas Publicações',
-                  subtitle: '',
-                  feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-                  limit: 12
-                }}
-                onChange={(updates) => {
-                  console.log('[Editor] onChange Feed Conhecimento:', updates);
-                  setData(prev => ({
-                    ...prev,
-                    knowledge_feed_section: {
-                      ...(prev.knowledge_feed_section ?? {}),
-                      ...updates
-                    }
-                  }));
-                  dirtyRef.current = true;
-                }}
-              />
-              
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
-                <p className="text-sm text-muted-foreground mb-3">
-                  💡 <strong>Dica:</strong> O preview atualiza automaticamente ao editar. Os artigos reais serão carregados dinamicamente na publicação final.
-                </p>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => {
-                    console.log('[Feed] Salvamento manual:', data.knowledge_feed_section);
-                    handleSave();
-                    toast({
-                      title: "Configuração salva",
-                      description: "Feed de conhecimento salvo com sucesso"
-                    });
-                  }}
-                >
-                  💾 Salvar Configuração
-                </Button>
               </div>
             </TabsContent>
 
