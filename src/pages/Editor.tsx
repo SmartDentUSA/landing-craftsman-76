@@ -555,7 +555,7 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
         visible_mobile: true,
         title: 'Últimas Publicações',
         subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
-        feed_url: 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-feed',
+        feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
         limit: 12
       },
     seo: {
@@ -1225,6 +1225,89 @@ const onApprove = (data: LandingPageData): LandingPageData => {
   return processedData;
 };
 
+/**
+ * Gera fingerprint apenas com campos que afetam o HTML visual
+ * Evita re-renders desnecessários do iframe
+ */
+function generatePreviewFingerprint(data: LandingPageData): string {
+  const visualFields = {
+    // Banner
+    banner_title: data.banner?.title,
+    banner_subtitle: data.banner?.subtitle,
+    banner_images: data.banner?.images?.map(img => img.src),
+    banner_cta: data.banner?.cta_primary?.label,
+    
+    // Solutions
+    solutions: data.solutions?.map(s => ({ 
+      title: s.text,
+      image: s.image?.src 
+    })),
+    solutions_section_visibility: {
+      desktop: data.solutions_section?.visible_desktop,
+      mobile: data.solutions_section?.visible_mobile
+    },
+    
+    // Advisory
+    advisory_title: data.advisory?.title,
+    advisory_paragraph: data.advisory?.paragraph,
+    advisory_visibility: {
+      desktop: data.advisory?.visible_desktop,
+      mobile: data.advisory?.visible_mobile
+    },
+    
+    // Desktop Info
+    desktop_title: data.desktop_info?.title,
+    desktop_text: data.desktop_info?.text,
+    desktop_visibility: {
+      desktop: data.desktop_info?.visible_desktop,
+      mobile: data.desktop_info?.visible_mobile
+    },
+    
+    // FAQ
+    faq_section_visibility: {
+      desktop: data.faq_section?.visible_desktop,
+      mobile: data.faq_section?.visible_mobile
+    },
+    faq: data.faq?.map(f => ({ 
+      q: f.question, 
+      a: f.answer 
+    })),
+    
+    // Knowledge Feed Section (CRÍTICO!)
+    feed_visible_desktop: data.knowledge_feed_section?.visible_desktop,
+    feed_visible_mobile: data.knowledge_feed_section?.visible_mobile,
+    feed_title: data.knowledge_feed_section?.title,
+    feed_subtitle: data.knowledge_feed_section?.subtitle,
+    feed_url: data.knowledge_feed_section?.feed_url,
+    feed_limit: data.knowledge_feed_section?.limit,
+    
+    // Explanatory Video
+    video_visibility: {
+      desktop: data.explanatory_video_section?.visible_desktop,
+      mobile: data.explanatory_video_section?.visible_mobile
+    },
+    video_url: data.explanatory_video_section?.selected_video?.url,
+    
+    // Animated Banner (Partners)
+    partners_visibility: {
+      desktop: data.animated_banner_section?.visible_desktop,
+      mobile: data.animated_banner_section?.visible_mobile
+    },
+    partners_title: data.animated_banner_section?.title,
+    partners_logos: data.animated_banner_section?.partners?.map(p => p.logo?.src),
+    
+    // SEO que aparece no HTML
+    seo_title: data.seo?.seo_title,
+    og_image: data.seo?.og_image?.src,
+    
+    // CTA Final
+    cta_title: data.cta_final?.title,
+    cta_paragraph: data.cta_final?.paragraph,
+  };
+  
+  return JSON.stringify(visualFields);
+}
+
 const EditorContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -1255,6 +1338,8 @@ const EditorContent = () => {
   // Estados para preview em tempo real
   const [previewVersion, setPreviewVersion] = useState(0);
   const prevHTMLRef = useRef('');
+  const lastPreviewUpdateAt = useRef<number>(0);
+  const previousFingerprint = useRef<string>('');
   const autoFooterAppliedRef = useRef(!!sessionStorage.getItem('autoFooterApplied'));
   const dirtyRef = useRef(false);
 
@@ -2295,12 +2380,40 @@ const EditorContent = () => {
   ]);
 
   // Update preview version when generatedHTML changes to force iframe repaint
+  // Com throttle e fingerprint para evitar loop infinito
   useEffect(() => {
-    if (generatedHTML !== prevHTMLRef.current) {
-      prevHTMLRef.current = generatedHTML;
-      setPreviewVersion(v => v + 1);
+    const currentFingerprint = generatePreviewFingerprint(data);
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastPreviewUpdateAt.current;
+    const THROTTLE_MS = 1500; // 1.5 segundos entre updates
+    
+    // Se nada mudou visualmente, não atualizar
+    if (currentFingerprint === previousFingerprint.current) {
+      return;
     }
-  }, [generatedHTML]);
+    
+    // Se mudou, mas foi muito recente, aguardar
+    if (timeSinceLastUpdate < THROTTLE_MS) {
+      console.log('⏳ Throttle ativo - aguardando', THROTTLE_MS - timeSinceLastUpdate, 'ms');
+      
+      // Agendar update após o throttle
+      const timeoutId = setTimeout(() => {
+        console.log('🔄 Atualizando preview após throttle');
+        previousFingerprint.current = currentFingerprint;
+        lastPreviewUpdateAt.current = Date.now();
+        setPreviewVersion(prev => prev + 1);
+      }, THROTTLE_MS - timeSinceLastUpdate);
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    // Update imediato (primeira vez ou após throttle)
+    console.log('✅ Atualizando preview (mudança visual detectada)');
+    previousFingerprint.current = currentFingerprint;
+    lastPreviewUpdateAt.current = now;
+    setPreviewVersion(prev => prev + 1);
+    
+  }, [data]);
 
   // ✅ Atalhos de teclado para Undo/Redo
   useEffect(() => {
@@ -2357,7 +2470,7 @@ const EditorContent = () => {
                 visible_mobile: true,
                 title: 'Últimas Publicações',
                 subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
-                feed_url: 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-feed',
+                feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
                 limit: 12
               };
               dirtyRef.current = true; // Marcar para salvar automaticamente
@@ -4674,7 +4787,7 @@ const EditorContent = () => {
                         visible_mobile: true,
                         title: 'Últimas Publicações',
                         subtitle: '',
-                        feed_url: 'https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/knowledge-feed',
+                        feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
                         limit: 12
                       }}
                       onChange={(updates) => {
