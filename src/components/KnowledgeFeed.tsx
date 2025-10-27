@@ -40,8 +40,7 @@ const KnowledgeFeedComponent = ({ feedUrl, limit = 12, title, subtitle, visibleD
     if (onRefetchReady) {
       onRefetchReady(refetch);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onRefetchReady, refetch]);
 
   if (loading) {
     return (
