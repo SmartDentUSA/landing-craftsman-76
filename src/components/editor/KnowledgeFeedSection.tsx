@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BookOpen, Monitor, Smartphone } from 'lucide-react';
+import { BookOpen, Monitor, Smartphone, Eye } from 'lucide-react';
+import { KnowledgeFeed } from '@/components/KnowledgeFeed';
 
 interface KnowledgeFeedSectionProps {
   data: {
@@ -120,6 +121,28 @@ export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionPro
         </div>
       </CardContent>
     </Card>
+
+    {/* PREVIEW DO FEED */}
+    {(data.visible_desktop || data.visible_mobile) && data.feed_url && (
+      <Card className="mt-4 border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Eye className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            Preview do Feed
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="max-h-[400px] overflow-y-auto">
+          <KnowledgeFeed
+            feedUrl={data.feed_url}
+            limit={data.limit || 12}
+            title={data.title}
+            subtitle={data.subtitle}
+            visibleDesktop={data.visible_desktop}
+            visibleMobile={data.visible_mobile}
+          />
+        </CardContent>
+      </Card>
+    )}
     </div>
   );
 }

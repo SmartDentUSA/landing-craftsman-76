@@ -8,12 +8,15 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface KnowledgeFeedProps {
   feedUrl: string;
   limit?: number;
   title?: string;
   subtitle?: string;
+  visibleDesktop?: boolean;
+  visibleMobile?: boolean;
 }
 
 const getCategoryColor = (letter: string) => {
@@ -23,7 +26,7 @@ const getCategoryColor = (letter: string) => {
   return colors[letter.toUpperCase()] || 'bg-gray-500';
 };
 
-export const KnowledgeFeed = ({ feedUrl, limit = 12, title, subtitle }: KnowledgeFeedProps) => {
+export const KnowledgeFeed = ({ feedUrl, limit = 12, title, subtitle, visibleDesktop = true, visibleMobile = true }: KnowledgeFeedProps) => {
   const { articles, feedMeta, loading, error } = useKnowledgeFeed(feedUrl, limit);
   
   const plugin = useRef(Autoplay({ 
@@ -34,7 +37,11 @@ export const KnowledgeFeed = ({ feedUrl, limit = 12, title, subtitle }: Knowledg
 
   if (loading) {
     return (
-      <section className="w-full bg-muted/30 py-12">
+      <section className={cn(
+        "w-full bg-muted/30 py-12",
+        !visibleDesktop && "md:hidden",
+        !visibleMobile && "hidden md:block"
+      )}>
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-2xl font-bold mb-6">{title || 'Carregando...'}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -55,7 +62,11 @@ export const KnowledgeFeed = ({ feedUrl, limit = 12, title, subtitle }: Knowledg
   if (error || articles.length < 3) return null;
 
   return (
-    <section className="w-full bg-gradient-to-b from-background to-muted/20 py-12">
+    <section className={cn(
+      "w-full bg-gradient-to-b from-background to-muted/20 py-12",
+      !visibleDesktop && "md:hidden",
+      !visibleMobile && "hidden md:block"
+    )}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-6">
           <h2 className="text-2xl font-bold">{title || feedMeta?.title || 'Últimas Publicações'}</h2>
