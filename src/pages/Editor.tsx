@@ -7766,18 +7766,6 @@ dataLayer = [{
                     title="Landing Page Preview"
                   />
                 </div>
-                
-                {/* Feed Real - Preview em Tempo Real */}
-                {(data.knowledge_feed_section?.visible_desktop || data.knowledge_feed_section?.visible_mobile) && (
-                  <div className="border rounded-lg p-6 bg-background">
-                    <KnowledgeFeed
-                      feedUrl={data.knowledge_feed_section.feed_url}
-                      limit={data.knowledge_feed_section.limit}
-                      title={data.knowledge_feed_section.title}
-                      subtitle={data.knowledge_feed_section.subtitle}
-                    />
-                  </div>
-                )}
               </div>
             </TabsContent>
             

@@ -1990,57 +1990,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     </section>
     {{/advisory.visible_any}}
 
-    <!-- Knowledge Feed Section -->
-    {{#knowledge_feed_section}}
-    {{#visible_any}}
-    <section class="knowledge-feed-section {{visibility_class}}" aria-labelledby="knowledge-feed-title">
-        <div class="container">
-            <h2 id="knowledge-feed-title">{{title}}</h2>
-            {{#subtitle}}
-            <p class="section-subtitle">{{subtitle}}</p>
-            {{/subtitle}}
-            
-            <div id="feed-loading" class="feed-skeleton">
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-            </div>
-            <div id="feed-grid" class="feed-grid" style="display:none;"></div>
-            
-            <script>
-            (async function() {
-                try {
-                    const res = await fetch('{{feed_url}}?format=json&limit={{limit}}');
-                    const data = await res.json();
-                    
-                    document.getElementById('feed-loading').remove();
-                    const grid = document.getElementById('feed-grid');
-                    grid.style.display = 'grid';
-                    
-                    data.items.forEach(art => {
-                        const card = document.createElement('a');
-                        card.href = art.url;
-                        card.className = 'feed-card';
-                        card.target = '_blank';
-                        card.rel = 'noopener noreferrer';
-                        card.innerHTML = \`
-                            <img src="\${art.image_url}" alt="\${art.title}" loading="lazy">
-                            <span class="badge">\${art.category.name}</span>
-                            <h3>\${art.title}</h3>
-                            <p>\${art.excerpt}</p>
-                        \`;
-                        grid.appendChild(card);
-                    });
-                } catch(e) {
-                    document.getElementById('feed-loading').remove();
-                }
-            })();
-            </script>
-        </div>
-    </section>
-    {{/visible_any}}
-    {{/knowledge_feed_section}}
-
     <!-- FAQ -->
     {{#faq_section.visible_any}}
     <section class="faq-section {{faq_section.visibility_class}}">
@@ -2166,6 +2115,57 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/technical_specs_section}}
     
   </main>
+
+  <!-- Knowledge Feed Section - BEFORE Footer -->
+  {{#knowledge_feed_section}}
+  {{#visible_any}}
+  <section class="knowledge-feed-section {{visibility_class}}" aria-labelledby="knowledge-feed-title">
+      <div class="container">
+          <h2 id="knowledge-feed-title">{{title}}</h2>
+          {{#subtitle}}
+          <p class="section-subtitle">{{subtitle}}</p>
+          {{/subtitle}}
+          
+          <div id="feed-loading" class="feed-skeleton">
+              <div class="skeleton-card"></div>
+              <div class="skeleton-card"></div>
+              <div class="skeleton-card"></div>
+          </div>
+          <div id="feed-grid" class="feed-grid" style="display:none;"></div>
+          
+          <script>
+          (async function() {
+              try {
+                  const res = await fetch('{{feed_url}}?format=json&limit={{limit}}');
+                  const data = await res.json();
+                  
+                  document.getElementById('feed-loading').remove();
+                  const grid = document.getElementById('feed-grid');
+                  grid.style.display = 'grid';
+                  
+                  data.items.forEach(art => {
+                      const card = document.createElement('a');
+                      card.href = art.url;
+                      card.className = 'feed-card';
+                      card.target = '_blank';
+                      card.rel = 'noopener noreferrer';
+                      card.innerHTML = \`
+                          <img src="\${art.image_url}" alt="\${art.title}" loading="lazy">
+                          <span class="badge">\${art.category.name}</span>
+                          <h3>\${art.title}</h3>
+                          <p>\${art.excerpt}</p>
+                      \`;
+                      grid.appendChild(card);
+                  });
+              } catch(e) {
+                  document.getElementById('feed-loading').remove();
+              }
+          })();
+          </script>
+      </div>
+  </section>
+  {{/visible_any}}
+  {{/knowledge_feed_section}}
 
   <!-- Footer -->
   <footer class="footer" role="contentinfo">
@@ -3244,6 +3244,21 @@ export const generateHTML = async (data: any): Promise<string> => {
       title: data.knowledge_feed_section.title
     });
   }
+  
+  // 📊 Log de debug: Seções incluídas no HTML final
+  console.log('📊 [FINAL-HTML] Seções incluídas:', {
+    banner: !!processedData.banner,
+    explanatory_video: !!processedData.explanatory_video_section,
+    solutions: !!processedData.solutions_section?.visible_any,
+    animated_banner: !!processedData.animated_banner_section?.visible_any,
+    desktop_info: !!processedData.desktop_info?.visible_any,
+    resources: !!processedData.resources_section?.visible_any,
+    advisory: !!processedData.advisory?.visible_any,
+    knowledge_feed: !!processedData.knowledge_feed_section?.visible_any,
+    faq: !!processedData.faq_section?.visible_any,
+    offers: !!processedData.offers_section?.visible_any,
+    cta_final: !!processedData.cta_final
+  });
   
   // Calcular e adicionar variáveis CSS para larguras das colunas
   if (processedData.solutions) {
