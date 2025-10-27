@@ -138,6 +138,20 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 
+        /* Títulos de seção padronizados */
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        /* Títulos menores em mobile */
+        @media (max-width: 768px) {
+            h2 {
+                font-size: 1.25rem;
+            }
+        }
+
         /* Header */
         .header-menu {
             background: var(--white);
@@ -294,7 +308,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     .explanatory-video-section h2 {
       text-align: center;
       margin-bottom: 0.5rem;
-      font-size: 1.125rem;
       font-weight: 500;
       color: var(--text-color);
     }
@@ -773,7 +786,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             text-align: center; 
             margin-bottom: 0.5rem; 
             color: var(--text-color);
-            font-size: 2rem;
             font-weight: 700;
         }
         .offers-section .subtitle {
@@ -904,7 +916,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         .technical-specs-section h2 {
             text-align: center;
             margin-bottom: 2rem;
-            font-size: 1.75rem;
             color: var(--text-color);
             font-weight: 600;
         }
@@ -1367,7 +1378,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             background: linear-gradient(to bottom, var(--background-color), rgba(108, 117, 125, 0.05));
         }
         .knowledge-feed-section h2 {
-            font-size: 2rem;
             margin-bottom: 1rem;
             text-align: center;
             color: var(--text-color);
@@ -1385,9 +1395,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         @media (max-width: 768px) {
             .knowledge-feed-section {
                 padding: 2rem 0;
-            }
-            .knowledge-feed-section h2 {
-                font-size: 1.5rem;
             }
         }
         .faq-item.active .faq-icon { transform: rotate(0deg); }
