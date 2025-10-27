@@ -1374,126 +1374,62 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         
         /* Knowledge Feed Section */
         .knowledge-feed-section {
-            padding: 4rem 0;
-            background: linear-gradient(to bottom, var(--background-color), rgba(108, 117, 125, 0.05));
+          padding: 4rem 0;
+          background: linear-gradient(to bottom, var(--background-color), rgba(108, 117, 125, 0.05));
         }
+
         .knowledge-feed-section h2 {
-            margin-bottom: 1rem;
-            text-align: center;
-            color: var(--text-color);
+          margin-bottom: 1rem;
+          text-align: center;
+          color: var(--text-color);
         }
+
         .knowledge-feed-section .section-subtitle {
-            text-align: center;
-            color: var(--secondary-color);
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
+          text-align: center;
+          color: var(--secondary-color);
+          margin-bottom: 2rem;
+          font-size: 1rem;
         }
-        .knowledge-feed-dynamic-preview {
-            max-width: 1200px;
-            margin: 0 auto;
+
+        .knowledge-feed-section .knowledge-feed-simple-preview {
+          max-width: 600px;
+          margin: 0 auto;
         }
-        .knowledge-feed-section .preview-info-badges {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
+
+        .knowledge-feed-section .carousel-placeholder {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+          border: 2px dashed rgba(102, 126, 234, 0.3);
+          border-radius: 16px;
+          padding: 3rem 2rem;
+          text-align: center;
         }
-        .knowledge-feed-section .info-badge {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            backdrop-filter: blur(10px);
-            padding: 0.75rem 1.25rem;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 0.875rem;
-            border: 1px solid rgba(102, 126, 234, 0.2);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+        .knowledge-feed-section .carousel-icon {
+          font-size: 3rem;
+          margin-bottom: 1rem;
+          opacity: 0.7;
         }
-        .knowledge-feed-section .badge-icon {
-            font-size: 1.25rem;
+
+        .knowledge-feed-section .carousel-text {
+          color: var(--text-color);
+          font-size: 1rem;
+          opacity: 0.8;
+          line-height: 1.6;
         }
-        .knowledge-feed-section .badge-text {
-            color: var(--text-color);
-            font-weight: 500;
-        }
-        .knowledge-feed-section .mock-articles-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .knowledge-feed-section .mock-article-card {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 1rem;
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .knowledge-feed-section .mock-article-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-        }
-        .knowledge-feed-section .mock-article-image {
-            aspect-ratio: 16/9;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            opacity: 0.3;
-        }
-        .knowledge-feed-section .mock-article-category {
-            font-size: 0.75rem;
-            color: #667eea;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
-        }
-        .knowledge-feed-section .mock-article-title {
-            font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-color);
-            line-height: 1.4;
-        }
-        .knowledge-feed-section .mock-article-excerpt {
-            font-size: 0.875rem;
-            color: #666;
-            line-height: 1.5;
-            margin-bottom: 0.75rem;
-        }
-        .knowledge-feed-section .mock-article-date {
-            font-size: 0.75rem;
-            color: #999;
-        }
-        .knowledge-feed-section .preview-note {
-            text-align: center;
-            font-size: 0.875rem;
-            color: #666;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1.5rem;
-            border: 1px solid rgba(102, 126, 234, 0.1);
-        }
+
         @media (max-width: 768px) {
-            .knowledge-feed-section {
-                padding: 2rem 0;
-            }
-            .knowledge-feed-section .mock-articles-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-            .knowledge-feed-section .mock-article-card {
-                padding: 0.75rem;
-            }
-        }
-        @media (max-width: 480px) {
-            .knowledge-feed-section .mock-articles-grid {
-                grid-template-columns: 1fr;
-            }
+          .knowledge-feed-section {
+            padding: 2rem 0;
+          }
+          .knowledge-feed-section .carousel-placeholder {
+            padding: 2rem 1.5rem;
+          }
+          .knowledge-feed-section .carousel-icon {
+            font-size: 2.5rem;
+          }
+          .knowledge-feed-section .carousel-text {
+            font-size: 0.875rem;
+          }
         }
         .faq-item.active .faq-icon { transform: rotate(0deg); }
 
@@ -1974,33 +1910,13 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <p class="section-subtitle">{{subtitle}}</p>
             {{/subtitle}}
             
-            <div class="knowledge-feed-dynamic-preview">
-                <div class="preview-info-badges">
-                    <div class="info-badge">
-                        <span class="badge-icon">📰</span>
-                        <span class="badge-text">{{limit}} artigos serão carregados</span>
-                    </div>
-                    <div class="info-badge">
-                        <span class="badge-icon">🔗</span>
-                        <span class="badge-text">URL: {{feed_url}}</span>
-                    </div>
-                </div>
-                
-                <div class="mock-articles-grid">
-                    {{#mock_articles}}
-                    <div class="mock-article-card">
-                        <div class="mock-article-image"></div>
-                        <div class="mock-article-category">Categoria {{index}}</div>
-                        <div class="mock-article-title">Artigo de Exemplo {{index}}</div>
-                        <div class="mock-article-excerpt">Prévia do conteúdo do artigo que será carregado dinamicamente...</div>
-                        <div class="mock-article-date">📅 Publicado recentemente</div>
-                    </div>
-                    {{/mock_articles}}
-                </div>
-                
-                <p class="preview-note">
-                    ℹ️ <strong>Preview de Configuração</strong> - Os artigos reais serão carregados dinamicamente na publicação final via edge function.
+            <div class="knowledge-feed-simple-preview">
+              <div class="carousel-placeholder">
+                <div class="carousel-icon">🎠</div>
+                <p class="carousel-text">
+                  Carrossel de artigos será carregado dinamicamente da Base de Conhecimento
                 </p>
+              </div>
             </div>
         </div>
     </section>
@@ -2705,13 +2621,7 @@ export const generatePreviewHTML = (data: any): string => {
     // Knowledge Feed Section
     knowledge_feed_section: data.knowledge_feed_section ? {
       ...data.knowledge_feed_section,
-      ...calculateSectionVisibility(data.knowledge_feed_section),
-      // 🆕 Gerar artigos mock para preview baseado no limite configurado
-      mock_articles: Array.from({ 
-        length: Math.min(data.knowledge_feed_section.limit || 12, 12) 
-      }, (_, i) => ({
-        index: i + 1
-      }))
+      ...calculateSectionVisibility(data.knowledge_feed_section)
     } : null,
     
     // Map schema offers to template-level offers and resources_products
@@ -2762,15 +2672,8 @@ export const generatePreviewHTML = (data: any): string => {
   // Debug logs for visibility
   console.log('[PREVIEW] knowledge_feed_section:', {
     exists: !!data.knowledge_feed_section,
-    visible_desktop: data.knowledge_feed_section?.visible_desktop,
-    visible_mobile: data.knowledge_feed_section?.visible_mobile,
     visible_any: previewData.knowledge_feed_section?.visible_any,
-    visibility_class: previewData.knowledge_feed_section?.visibility_class,
     title: data.knowledge_feed_section?.title,
-    subtitle: data.knowledge_feed_section?.subtitle,
-    feed_url: data.knowledge_feed_section?.feed_url,
-    limit: data.knowledge_feed_section?.limit,
-    mock_articles_count: previewData.knowledge_feed_section?.mock_articles?.length || 0,
     will_render: !!(data.knowledge_feed_section && previewData.knowledge_feed_section?.visible_any)
   });
   
