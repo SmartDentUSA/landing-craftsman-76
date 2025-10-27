@@ -75,3 +75,37 @@ export function truncateSEOTitle(title: string, maxLength = 60): string {
     ? truncated.substring(0, lastSpace) + '...'
     : truncated + '...';
 }
+
+/**
+ * Enriquece meta description com keywords de artigos do Knowledge Feed
+ */
+export function enrichMetaWithFeedKeywords(
+  existingMeta: string,
+  articleKeywords: string[]
+): string {
+  if (!articleKeywords || articleKeywords.length === 0) {
+    return existingMeta;
+  }
+
+  // Pegar top 5 keywords para adicionar à meta
+  const topKeywords = articleKeywords.slice(0, 5);
+  
+  // Adicionar keywords de forma natural ao final da meta description
+  const enrichedDescription = `${existingMeta} Saiba mais sobre: ${topKeywords.join(', ')}.`;
+  
+  // Garantir que não ultrapasse 160 caracteres
+  if (enrichedDescription.length > 160) {
+    // Truncar mantendo as keywords mais importantes
+    const baseLength = existingMeta.length;
+    const remainingSpace = 160 - baseLength - 15; // 15 para " Saiba mais sobre: "
+    
+    if (remainingSpace > 20) {
+      const shortenedKeywords = topKeywords.slice(0, 3).join(', ');
+      return `${existingMeta} Saiba mais sobre: ${shortenedKeywords}.`.substring(0, 160);
+    }
+    
+    return existingMeta.substring(0, 160);
+  }
+  
+  return enrichedDescription;
+}

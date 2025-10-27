@@ -3,6 +3,8 @@ import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from './company-prof
 import { fetchAllReviewsForSchema } from './reviews';
 import { generateSchemaFromCompanyProfile } from './schema-reviews';
 import { validateJsonLdSize, estimateJsonSizeKB } from './validate-jsonld';
+import { generateKnowledgeFeedSchema, extractTopKeywords, type KnowledgeArticle } from '@/services/seo/knowledgeFeedSchemaGenerator';
+import { enrichMetaWithFeedKeywords } from '@/services/seo/metaTagsBuilder';
 
 // Mapeamento de ícones SVG para redes sociais
 const SOCIAL_ICONS: Record<string, string> = {
@@ -3247,7 +3249,15 @@ export const generateHTML = async (data: any): Promise<string> => {
     };
   }
   
-  // Process Knowledge Feed section
+  // 🔧 Obter dados da empresa para uso em integrações SEO
+  let companyProfile = null;
+  if (data.company_profile) {
+    companyProfile = data.company_profile;
+  }
+  
+  // ========================================
+  // 🚀 KNOWLEDGE FEED SECTION + SEO INTEGRATION (FASE 1 & 2)
+  // ========================================
   if (data.knowledge_feed_section && (data.knowledge_feed_section.visible_desktop || data.knowledge_feed_section.visible_mobile)) {
     // Determine visibility class
     let visibility_class = '';
@@ -3266,15 +3276,103 @@ export const generateHTML = async (data: any): Promise<string> => {
       limit: data.knowledge_feed_section.limit || 12
     };
     
-    console.log('🔧 [TEMPLATE-ENGINE] Processando knowledge_feed_section:', {
+    console.log('📚 [KNOWLEDGE-FEED] Processando seção de artigos:', {
       visible_desktop: data.knowledge_feed_section.visible_desktop,
       visible_mobile: data.knowledge_feed_section.visible_mobile,
       visibility_class: visibility_class,
       title: data.knowledge_feed_section.title,
-      subtitle: data.knowledge_feed_section.subtitle,
       feed_url: processedData.knowledge_feed_section.feed_url,
       limit: processedData.knowledge_feed_section.limit
     });
+
+    // 🔥 FASE 1 & 2: INTEGRAÇÃO SEO (Schema.org + Meta Tags)
+    try {
+      console.log('🔍 [SEO] Buscando artigos do Knowledge Feed para integração SEO...');
+      
+      const feedUrl = processedData.knowledge_feed_section.feed_url;
+      const limit = processedData.knowledge_feed_section.limit;
+      
+      const feedResponse = await fetch(`${feedUrl}?format=json&limit=${limit}`);
+      
+      if (feedResponse.ok) {
+        const feedData = await feedResponse.json();
+        const articles: KnowledgeArticle[] = feedData.items || [];
+        
+        if (articles.length > 0) {
+          console.log(`✅ [SEO] ${articles.length} artigos carregados do feed`);
+
+          // ========================================
+          // FASE 1: Gerar Schema.org (ItemList + BlogPosting)
+          // ========================================
+          const feedSchema = generateKnowledgeFeedSchema(
+            articles,
+            feedUrl,
+            companyProfile?.company_name || 'Nossa Empresa'
+          );
+          
+          // Adicionar ao @graph existente
+          try {
+            const existingSchema = processedData.schema_json_ld 
+              ? JSON.parse(processedData.schema_json_ld)
+              : { '@context': 'https://schema.org', '@graph': [] };
+            
+            const feedSchemaObj = JSON.parse(feedSchema);
+            
+            if (!existingSchema['@graph']) {
+              existingSchema['@graph'] = [];
+            }
+            
+            existingSchema['@graph'].push(...feedSchemaObj['@graph']);
+            processedData.schema_json_ld = JSON.stringify(existingSchema, null, 2);
+            
+            console.log(`✅ [FASE-1] Schema.org de ${articles.length} artigos adicionado ao @graph`);
+          } catch (schemaError) {
+            console.error('❌ [FASE-1] Erro ao consolidar schema:', schemaError);
+          }
+
+          // ========================================
+          // FASE 2: Enriquecer Meta Tags com Keywords dos artigos
+          // ========================================
+          const topKeywords = extractTopKeywords(articles, 10);
+          
+          if (topKeywords.length > 0) {
+            // Enriquecer meta description
+            if (processedData.seo_description) {
+              const originalMeta = processedData.seo_description;
+              processedData.seo_description = enrichMetaWithFeedKeywords(
+                processedData.seo_description,
+                topKeywords
+              );
+              
+              if (processedData.seo_description !== originalMeta) {
+                console.log(`✅ [FASE-2] Meta description enriquecida com keywords do feed`);
+              }
+            }
+            
+            // Adicionar keywords ao ai_keywords.primary (sem duplicatas)
+            if (!processedData.ai_keywords) {
+              processedData.ai_keywords = { primary: [], secondary: [], tertiary: [] };
+            }
+            
+            const existingKeywords = new Set(processedData.ai_keywords.primary || []);
+            const initialCount = existingKeywords.size;
+            topKeywords.forEach(keyword => existingKeywords.add(keyword));
+            processedData.ai_keywords.primary = Array.from(existingKeywords);
+            
+            const addedCount = existingKeywords.size - initialCount;
+            if (addedCount > 0) {
+              console.log(`✅ [FASE-2] ${addedCount} keywords do feed adicionadas (top 5: ${topKeywords.slice(0, 5).join(', ')})`);
+            }
+          }
+        } else {
+          console.log('⚠️ [SEO] Nenhum artigo encontrado no feed');
+        }
+      } else {
+        console.warn(`⚠️ [SEO] Erro ao buscar feed: HTTP ${feedResponse.status}`);
+      }
+    } catch (error) {
+      console.error('❌ [SEO] Erro ao integrar Knowledge Feed ao SEO:', error);
+    }
   }
   
   // 📊 Log de debug: Seções incluídas no HTML final
@@ -3728,14 +3826,6 @@ export const generateHTML = async (data: any): Promise<string> => {
       "@context": "https://schema.org",
       "@graph": schemaGraph
     });
-  }
-
-  // 🔧 INTEGRAÇÃO: Dados da empresa para SEO (integração via hook no componente)
-  let companyProfile = null;
-  
-  // Tentar obter dados da empresa se disponíveis no data
-  if (data.company_profile) {
-    companyProfile = data.company_profile;
   }
 
   // 🔧 INTEGRAÇÃO: Aplicar dados da empresa nos meta tags e footer
