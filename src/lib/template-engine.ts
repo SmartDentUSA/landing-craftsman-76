@@ -2750,7 +2750,7 @@ const generateAutoHreflang = (pageName: string, domain: string = 'smartdent.com.
 };
 
 // Lightweight preview function for real-time updates
-export const generatePreviewHTML = (data: any): string => {
+export const generatePreviewHTML = async (data: any): Promise<string> => {
   // Helper function to calculate section visibility - using template's expected format
   const calculateSectionVisibility = (section: any) => {
     if (!section) return { visible_any: false, visibility_class: '' };
@@ -2807,6 +2807,34 @@ export const generatePreviewHTML = (data: any): string => {
         video_title: data.explanatory_video_section.selected_video.title,
         product_name: data.explanatory_video_section.selected_video.product_name
       };
+    }
+  }
+
+  // 🔥 FETCH REAL KNOWLEDGE FEED DATA FOR PREVIEW
+  if (data.knowledge_feed_section?.feed_url) {
+    try {
+      const feedUrl = data.knowledge_feed_section.feed_url;
+      const limit = data.knowledge_feed_section.limit || 12;
+      
+      console.log('🔍 [PREVIEW] Fetching knowledge feed:', { feedUrl, limit });
+      
+      const response = await fetch(`${feedUrl}?format=json&limit=${limit}`);
+      
+      if (response.ok) {
+        const feedData = await response.json();
+        // Injetar items diretamente no data.knowledge_feed_section
+        if (!data.knowledge_feed_section.items) {
+          data.knowledge_feed_section.items = [];
+        }
+        data.knowledge_feed_section.items = feedData.items || [];
+        console.log(`✅ [PREVIEW] Knowledge feed loaded: ${feedData.items?.length || 0} articles`);
+      } else {
+        console.warn('⚠️ [PREVIEW] Knowledge feed fetch failed');
+        data.knowledge_feed_section.items = [];
+      }
+    } catch (error) {
+      console.error('❌ [PREVIEW] Error fetching knowledge feed:', error);
+      data.knowledge_feed_section.items = [];
     }
   }
 

@@ -1992,9 +1992,12 @@ const EditorContent = () => {
   }, [hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
 
   // Generate optimized preview HTML for real-time updates
-  const generatedHTML = useMemo(() => {
-    console.time('preview-generation');
-    const processedData = beforePreview(data);
+  const [generatedHTML, setGeneratedHTML] = useState<string>('');
+  
+  useEffect(() => {
+    const generatePreview = async () => {
+      console.time('preview-generation');
+      const processedData = beforePreview(data);
     
     const previewData = {
       ...processedData,
@@ -2090,9 +2093,12 @@ const EditorContent = () => {
     });
     
     console.time('preview-generation');
-    const html = generatePreviewHTML(previewData);
+    const html = await generatePreviewHTML(previewData);
     console.timeEnd('preview-generation');
-    return html;
+    setGeneratedHTML(html);
+    };
+    
+    generatePreview();
   }, [data, data.explanatory_video_section, data.animated_banner_section, data.knowledge_feed_section]);
 
   // 🆕 Estado para HTML final completo (com todos os processamentos SEO)
