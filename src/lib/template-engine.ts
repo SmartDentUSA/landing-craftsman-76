@@ -2275,14 +2275,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
               
               <div class="feed-carousel-wrapper">
                   <div class="feed-carousel-track">
-                      {{#items}}
+                      {{#.}}
                       <a href="{{url}}" class="feed-card" target="_blank" rel="noopener noreferrer">
                           <img src="{{image_url}}" alt="{{title}}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2218%22%3ESem Imagem%3C/text%3E%3C/svg%3E'">
                           <span class="badge">{{category.name}}</span>
                           <h3>{{title}}</h3>
                           <p>{{excerpt}}</p>
                       </a>
-                      {{/items}}
+                      {{/.}}
                   </div>
               </div>
               
