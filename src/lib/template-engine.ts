@@ -2178,79 +2178,24 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           <p class="section-subtitle">{{subtitle}}</p>
           {{/subtitle}}
           
-          <div id="feed-loading" class="feed-skeleton">
-              <div class="skeleton-card"></div>
-              <div class="skeleton-card"></div>
-              <div class="skeleton-card"></div>
+          {{#items.length}}
+          <div class="feed-grid">
+              {{#items}}
+              <a href="{{url}}" class="feed-card" target="_blank" rel="noopener noreferrer">
+                  <img src="{{image_url}}" alt="{{title}}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2218%22%3ESem Imagem%3C/text%3E%3C/svg%3E'">
+                  <span class="badge">{{category.name}}</span>
+                  <h3>{{title}}</h3>
+                  <p>{{excerpt}}</p>
+              </a>
+              {{/items}}
           </div>
-          <div id="feed-grid" class="feed-grid" style="display:none;"></div>
+          {{/items.length}}
           
-        <script>
-        (async function() {
-            const loadingEl = document.getElementById('feed-loading');
-            const gridEl = document.getElementById('feed-grid');
-            
-            async function loadFeed(retries = 1) {
-                try {
-                    console.log('🔄 Carregando feed de artigos...');
-                    const res = await fetch('{{{feed_url}}}?format=json&limit={{limit}}');
-                    
-                    if (!res.ok) {
-                        throw new Error('HTTP ' + res.status + ': ' + res.statusText);
-                    }
-                    
-                    const data = await res.json();
-                    console.log('✅ Feed carregado:', data.items?.length, 'artigos');
-                    
-                    if (!data.items || data.items.length === 0) {
-                        throw new Error('Nenhum artigo encontrado');
-                    }
-                    
-                    loadingEl.remove();
-                    gridEl.style.display = 'grid';
-                    
-                    // Função para escapar HTML e prevenir XSS
-                    function escapeHtml(unsafe) {
-                        if (!unsafe) return '';
-                        return String(unsafe)
-                            .replace(/&/g, "&amp;")
-                            .replace(/</g, "&lt;")
-                            .replace(/>/g, "&gt;")
-                            .replace(/"/g, "&quot;")
-                            .replace(/'/g, "&#039;");
-                    }
-                    
-                    data.items.forEach(function(art) {
-                        const card = document.createElement('a');
-                        card.href = art.url;
-                        card.className = 'feed-card';
-                        card.target = '_blank';
-                        card.rel = 'noopener noreferrer';
-                        card.innerHTML = '<img src="' + escapeHtml(art.image_url) + '" alt="' + escapeHtml(art.title) + '" loading="lazy" onerror="this.src=\'/placeholder.svg\'">' +
-                            '<span class="badge">' + escapeHtml(art.category.name) + '</span>' +
-                            '<h3>' + escapeHtml(art.title) + '</h3>' +
-                            '<p>' + escapeHtml(art.excerpt) + '</p>';
-                        gridEl.appendChild(card);
-                    });
-                } catch (error) {
-                    console.error('❌ Erro ao carregar feed:', error);
-                    
-                    if (retries > 0) {
-                        console.log('🔄 Tentando novamente...');
-                        setTimeout(function() { loadFeed(retries - 1); }, 1000);
-                        return;
-                    }
-                    
-                    loadingEl.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">' +
-                        '<p>⚠️ Não foi possível carregar os artigos no momento.</p>' +
-                        '<p style="font-size: 0.875rem; margin-top: 0.5rem;">Por favor, tente novamente mais tarde.</p>' +
-                        '</div>';
-                }
-            }
-            
-            loadFeed();
-        })();
-        </script>
+          {{^items.length}}
+          <div style="text-align: center; padding: 2rem; color: #666;">
+              <p>📚 Nenhum artigo disponível no momento.</p>
+          </div>
+          {{/items.length}}
       </div>
   </section>
   {{/visible_any}}
@@ -2882,6 +2827,7 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
     // Knowledge Feed Section
     knowledge_feed_section: data.knowledge_feed_section ? {
       ...data.knowledge_feed_section,
+      items: data.knowledge_feed_section.items || [],
       ...calculateSectionVisibility(data.knowledge_feed_section)
     } : null,
     
