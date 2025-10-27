@@ -4042,6 +4042,30 @@ export const generateHTML = async (data: any): Promise<string> => {
     console.error('❌ Erro ao gerar reviews schema:', error);
   }
 
+  // 🔥 FETCH REAL KNOWLEDGE FEED DATA BEFORE RENDERING
+  if (processedData.knowledge_feed?.visible && processedData.knowledge_feed?.feed_url) {
+    try {
+      const feedUrl = processedData.knowledge_feed.feed_url;
+      const limit = processedData.knowledge_feed.limit || 12;
+      
+      console.log('🔍 Fetching knowledge feed for HTML export:', { feedUrl, limit });
+      
+      const response = await fetch(`${feedUrl}?format=json&limit=${limit}`);
+      
+      if (response.ok) {
+        const feedData = await response.json();
+        processedData.knowledge_feed.items = feedData.items || [];
+        console.log(`✅ Knowledge feed loaded: ${feedData.items?.length || 0} articles`);
+      } else {
+        console.warn('⚠️ Knowledge feed fetch failed, using empty array');
+        processedData.knowledge_feed.items = [];
+      }
+    } catch (error) {
+      console.error('❌ Error fetching knowledge feed:', error);
+      processedData.knowledge_feed.items = [];
+    }
+  }
+
   return Mustache.render(TEMPLATE_HTML, processedData);
 };
 
