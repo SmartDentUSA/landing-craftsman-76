@@ -1431,6 +1431,96 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             font-size: 0.875rem;
           }
         }
+        
+        /* Feed Grid - Funcional com JavaScript */
+        .feed-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1.5rem;
+          margin: 2rem 0;
+        }
+        
+        .feed-card {
+          display: block;
+          background: #fff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          transition: all 0.3s ease;
+          text-decoration: none;
+          color: inherit;
+        }
+        
+        .feed-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+        
+        .feed-card img {
+          width: 100%;
+          aspect-ratio: 16/9;
+          object-fit: cover;
+        }
+        
+        .feed-card .badge {
+          display: inline-block;
+          margin: 1rem 1rem 0.5rem 1rem;
+          padding: 0.25rem 0.75rem;
+          background: #3b82f6;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border-radius: 999px;
+        }
+        
+        .feed-card h3 {
+          margin: 0 1rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
+        .feed-card p {
+          margin: 0.5rem 1rem 1rem;
+          font-size: 0.85rem;
+          color: #6b7280;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
+        .feed-skeleton {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1.5rem;
+          margin: 2rem 0;
+        }
+        
+        .skeleton-card {
+          height: 320px;
+          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+          background-size: 200% 100%;
+          animation: loading 1.5s infinite ease-in-out;
+          border-radius: 12px;
+        }
+        
+        @keyframes loading {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        
+        @media (max-width: 768px) {
+          .feed-grid, .feed-skeleton {
+            grid-template-columns: 1fr;
+          }
+        }
+        
         .faq-item.active .faq-icon { transform: rotate(0deg); }
 
         /* CTA final */
@@ -1910,14 +2000,42 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <p class="section-subtitle">{{subtitle}}</p>
             {{/subtitle}}
             
-        <div class="knowledge-feed-simple-preview">
-          <div class="carousel-placeholder">
-            <div class="carousel-icon">🎠</div>
-            <p class="carousel-text">
-              Carrossel de Artigos
-            </p>
-          </div>
-        </div>
+            <div id="feed-loading" class="feed-skeleton">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
+            <div id="feed-grid" class="feed-grid" style="display:none;"></div>
+            
+            <script>
+            (async function() {
+                try {
+                    const res = await fetch('{{feed_url}}?format=json&limit={{limit}}');
+                    const data = await res.json();
+                    
+                    document.getElementById('feed-loading').remove();
+                    const grid = document.getElementById('feed-grid');
+                    grid.style.display = 'grid';
+                    
+                    data.items.forEach(art => {
+                        const card = document.createElement('a');
+                        card.href = art.url;
+                        card.className = 'feed-card';
+                        card.target = '_blank';
+                        card.rel = 'noopener noreferrer';
+                        card.innerHTML = \`
+                            <img src="\${art.image_url}" alt="\${art.title}" loading="lazy">
+                            <span class="badge">\${art.category.name}</span>
+                            <h3>\${art.title}</h3>
+                            <p>\${art.excerpt}</p>
+                        \`;
+                        grid.appendChild(card);
+                    });
+                } catch(e) {
+                    document.getElementById('feed-loading').remove();
+                }
+            })();
+            </script>
         </div>
     </section>
     {{/visible_any}}

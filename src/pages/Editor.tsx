@@ -6,6 +6,7 @@ import { SolutionsSection } from "@/components/editor/SolutionsSection";
 import { SEOSection } from "@/components/editor/SEOSection";
 import { KOLSection } from "@/components/editor/KOLSection";
 import { KnowledgeFeedSection } from "@/components/editor/KnowledgeFeedSection";
+import { KnowledgeFeed } from "@/components/KnowledgeFeed";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -7683,13 +7684,27 @@ dataLayer = [{
             </TabsList>
             
             <TabsContent value="landing-preview" className="flex-1 p-4">
-              <div className="h-full border rounded-lg overflow-hidden">
-                <iframe
-                  key={`landing-${previewVersion}`}
-                  srcDoc={generatedHTML}
-                  className="w-full h-full"
-                  title="Landing Page Preview"
-                />
+              <div className="h-full flex flex-col gap-4 overflow-auto">
+                <div className="flex-1 border rounded-lg overflow-hidden">
+                  <iframe
+                    key={`landing-${previewVersion}`}
+                    srcDoc={generatedHTML}
+                    className="w-full h-full"
+                    title="Landing Page Preview"
+                  />
+                </div>
+                
+                {/* Feed Real - Preview em Tempo Real */}
+                {(data.knowledge_feed_section?.visible_desktop || data.knowledge_feed_section?.visible_mobile) && (
+                  <div className="border rounded-lg p-6 bg-background">
+                    <KnowledgeFeed
+                      feedUrl={data.knowledge_feed_section.feed_url}
+                      limit={data.knowledge_feed_section.limit}
+                      title={data.knowledge_feed_section.title}
+                      subtitle={data.knowledge_feed_section.subtitle}
+                    />
+                  </div>
+                )}
               </div>
             </TabsContent>
             
