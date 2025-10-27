@@ -1388,13 +1388,111 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             margin-bottom: 2rem;
             font-size: 1.1rem;
         }
-        .knowledge-feed-preview {
-            max-width: 800px;
+        .knowledge-feed-dynamic-preview {
+            max-width: 1200px;
             margin: 0 auto;
+        }
+        .knowledge-feed-section .preview-info-badges {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .knowledge-feed-section .info-badge {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            backdrop-filter: blur(10px);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .knowledge-feed-section .badge-icon {
+            font-size: 1.25rem;
+        }
+        .knowledge-feed-section .badge-text {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        .knowledge-feed-section .mock-articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .knowledge-feed-section .mock-article-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .knowledge-feed-section .mock-article-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+        .knowledge-feed-section .mock-article-image {
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            opacity: 0.3;
+        }
+        .knowledge-feed-section .mock-article-category {
+            font-size: 0.75rem;
+            color: #667eea;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        .knowledge-feed-section .mock-article-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            line-height: 1.4;
+        }
+        .knowledge-feed-section .mock-article-excerpt {
+            font-size: 0.875rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+        }
+        .knowledge-feed-section .mock-article-date {
+            font-size: 0.75rem;
+            color: #999;
+        }
+        .knowledge-feed-section .preview-note {
+            text-align: center;
+            font-size: 0.875rem;
+            color: #666;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(102, 126, 234, 0.1);
         }
         @media (max-width: 768px) {
             .knowledge-feed-section {
                 padding: 2rem 0;
+            }
+            .knowledge-feed-section .mock-articles-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+            .knowledge-feed-section .mock-article-card {
+                padding: 0.75rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .knowledge-feed-section .mock-articles-grid {
+                grid-template-columns: 1fr;
             }
         }
         .faq-item.active .faq-icon { transform: rotate(0deg); }
@@ -1876,11 +1974,32 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <p class="section-subtitle">{{subtitle}}</p>
             {{/subtitle}}
             
-            <div class="knowledge-feed-preview">
-                <p style="text-align: center; color: #666; padding: 2rem; background: #f9f9f9; border-radius: 8px; margin: 2rem 0; border: 2px dashed #ddd;">
-                    📰 <strong>Feed de Conhecimento</strong><br>
-                    {{limit}} artigos serão carregados dinamicamente da Base de Conhecimento.<br>
-                    <small style="color: #999;">Preview estático - artigos reais aparecerão na publicação final.</small>
+            <div class="knowledge-feed-dynamic-preview">
+                <div class="preview-info-badges">
+                    <div class="info-badge">
+                        <span class="badge-icon">📰</span>
+                        <span class="badge-text">{{limit}} artigos serão carregados</span>
+                    </div>
+                    <div class="info-badge">
+                        <span class="badge-icon">🔗</span>
+                        <span class="badge-text">URL: {{feed_url}}</span>
+                    </div>
+                </div>
+                
+                <div class="mock-articles-grid">
+                    {{#mock_articles}}
+                    <div class="mock-article-card">
+                        <div class="mock-article-image"></div>
+                        <div class="mock-article-category">Categoria {{index}}</div>
+                        <div class="mock-article-title">Artigo de Exemplo {{index}}</div>
+                        <div class="mock-article-excerpt">Prévia do conteúdo do artigo que será carregado dinamicamente...</div>
+                        <div class="mock-article-date">📅 Publicado recentemente</div>
+                    </div>
+                    {{/mock_articles}}
+                </div>
+                
+                <p class="preview-note">
+                    ℹ️ <strong>Preview de Configuração</strong> - Os artigos reais serão carregados dinamicamente na publicação final via edge function.
                 </p>
             </div>
         </div>
@@ -2586,7 +2705,13 @@ export const generatePreviewHTML = (data: any): string => {
     // Knowledge Feed Section
     knowledge_feed_section: data.knowledge_feed_section ? {
       ...data.knowledge_feed_section,
-      ...calculateSectionVisibility(data.knowledge_feed_section)
+      ...calculateSectionVisibility(data.knowledge_feed_section),
+      // 🆕 Gerar artigos mock para preview baseado no limite configurado
+      mock_articles: Array.from({ 
+        length: Math.min(data.knowledge_feed_section.limit || 12, 12) 
+      }, (_, i) => ({
+        index: i + 1
+      }))
     } : null,
     
     // Map schema offers to template-level offers and resources_products
@@ -2642,8 +2767,10 @@ export const generatePreviewHTML = (data: any): string => {
     visible_any: previewData.knowledge_feed_section?.visible_any,
     visibility_class: previewData.knowledge_feed_section?.visibility_class,
     title: data.knowledge_feed_section?.title,
+    subtitle: data.knowledge_feed_section?.subtitle,
     feed_url: data.knowledge_feed_section?.feed_url,
     limit: data.knowledge_feed_section?.limit,
+    mock_articles_count: previewData.knowledge_feed_section?.mock_articles?.length || 0,
     will_render: !!(data.knowledge_feed_section && previewData.knowledge_feed_section?.visible_any)
   });
   
