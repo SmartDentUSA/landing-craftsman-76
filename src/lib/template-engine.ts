@@ -3075,6 +3075,7 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
     knowledge_feed_section: data.knowledge_feed_section ? {
       ...data.knowledge_feed_section,
       items: data.knowledge_feed_section.items || [],
+      has_items: (data.knowledge_feed_section.items || []).length > 0,
       ...calculateSectionVisibility(data.knowledge_feed_section)
     } : null,
     
@@ -3117,8 +3118,31 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
         first: index === 0 // Flag for carousel dots
       })),
     
-    // Skip heavy processing for preview
-    schema_json_ld: '',
+    // ✅ Generate Schema.org for preview
+    schema_json_ld: await (async () => {
+      if (data.knowledge_feed_section?.items?.length > 0) {
+        try {
+          const { generateKnowledgeFeedSchema } = await import('@/services/seo/knowledgeFeedSchemaGenerator');
+          
+          const feedUrl = data.knowledge_feed_section.feed_url || `${data.domain}/blog`;
+          const companyName = data.schema?.software_app?.name || data.company?.name || 'Nossa Empresa';
+          
+          const schemaJsonLd = generateKnowledgeFeedSchema(
+            data.knowledge_feed_section.items,
+            feedUrl,
+            companyName
+          );
+          
+          console.log(`✅ [PREVIEW SCHEMA] Schema.org gerado para ${data.knowledge_feed_section.items.length} artigos`);
+          return schemaJsonLd;
+        } catch (error) {
+          console.error('❌ [PREVIEW SCHEMA] Erro ao gerar schema:', error);
+        }
+      }
+      return '';
+    })(),
+    
+    // Skip heavy processing for preview (hreflang apenas)
     hreflang_tags: '',
     columnWidths: [25, 25, 25, 25]
   };
