@@ -37,10 +37,11 @@ const KnowledgeFeedComponent = ({ feedUrl, limit = 12, title, subtitle, visibleD
   }));
 
   useEffect(() => {
-    if (onRefetchReady && refetch) {
+    if (onRefetchReady) {
       onRefetchReady(refetch);
     }
-  }, [refetch, onRefetchReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

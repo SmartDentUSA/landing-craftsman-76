@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,7 +26,7 @@ export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionPro
   
   console.log('[KnowledgeFeedSection] Renderizando com dados:', data);
   
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     if (!refetchFn) return;
     
     setIsRefreshing(true);
@@ -38,7 +38,7 @@ export function KnowledgeFeedSection({ data, onChange }: KnowledgeFeedSectionPro
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [refetchFn]);
   
   if (!data) {
     return (

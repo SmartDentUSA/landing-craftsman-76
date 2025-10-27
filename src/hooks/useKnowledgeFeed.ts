@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useDebounceValue } from './useDebounceValue';
 
 interface KnowledgeArticle {
@@ -30,7 +30,9 @@ export const useKnowledgeFeed = (feedUrl: string, limit: number = 12) => {
   const debouncedFeedUrl = useDebounceValue(feedUrl, 500);
   const debouncedLimit = useDebounceValue(limit, 500);
 
-  const fetchFeed = async () => {
+  const fetchFeed = useCallback(async () => {
+    if (!debouncedFeedUrl) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -41,17 +43,19 @@ export const useKnowledgeFeed = (feedUrl: string, limit: number = 12) => {
       const data = await response.json();
       setFeedMeta(data.feed);
       setArticles(data.items || []);
+      
+      console.log(`✅ [useKnowledgeFeed] ${data.items?.length || 0} artigos carregados`);
     } catch (err) {
       setError('Erro ao carregar artigos');
-      console.error('useKnowledgeFeed error:', err);
+      console.error('❌ [useKnowledgeFeed] Erro:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedFeedUrl, debouncedLimit]);
 
   useEffect(() => {
-    if (debouncedFeedUrl) fetchFeed();
-  }, [debouncedFeedUrl, debouncedLimit]);
+    fetchFeed();
+  }, [fetchFeed]);
 
   return { articles, feedMeta, loading, error, refetch: fetchFeed };
 };
