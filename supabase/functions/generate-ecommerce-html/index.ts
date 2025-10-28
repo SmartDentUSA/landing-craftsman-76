@@ -359,7 +359,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <details>
     <summary>Vídeos YouTube<span class="badge">${videoCollections.youtube.length}</span></summary>
     <div class="video-list">
-      ${videoCollections.youtube.map(v => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">${v.description}</a></div>`).join('\n      ')}
+      ${videoCollections.youtube.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Vídeo ${i + 1}</a></div>`).join('\n      ')}
     </div>
   </details>`;
     }
@@ -369,7 +369,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <details>
     <summary>Vídeos Instagram<span class="badge">${videoCollections.instagram.length}</span></summary>
     <div class="video-list">
-      ${videoCollections.instagram.map(v => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">${v.description}</a></div>`).join('\n      ')}
+      ${videoCollections.instagram.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Vídeo ${i + 1}</a></div>`).join('\n      ')}
     </div>
   </details>`;
     }
@@ -379,7 +379,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <details>
     <summary>Depoimentos em Vídeo<span class="badge">${videoCollections.testimonials.length}</span></summary>
     <div class="video-list">
-      ${videoCollections.testimonials.map(v => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">${v.description}</a></div>`).join('\n      ')}
+      ${videoCollections.testimonials.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Depoimento ${i + 1}</a></div>`).join('\n      ')}
     </div>
   </details>`;
     }
@@ -389,7 +389,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <details>
     <summary>Explicações Técnicas<span class="badge">${videoCollections.technical.length}</span></summary>
     <div class="video-list">
-      ${videoCollections.technical.map(v => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">${v.description}</a></div>`).join('\n      ')}
+      ${videoCollections.technical.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Explicação ${i + 1}</a></div>`).join('\n      ')}
     </div>
   </details>`;
     }
@@ -399,7 +399,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <details>
     <summary>Vídeos TikTok<span class="badge">${videoCollections.tiktok.length}</span></summary>
     <div class="video-list">
-      ${videoCollections.tiktok.map(v => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">${v.description}</a></div>`).join('\n      ')}
+      ${videoCollections.tiktok.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Vídeo ${i + 1}</a></div>`).join('\n      ')}
     </div>
   </details>`;
     }
@@ -409,7 +409,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <details>
     <summary>Tutoriais do Produto<span class="badge">${videoCollections.tutorials.length}</span></summary>
     <div class="video-list">
-      ${videoCollections.tutorials.map(t => `<div class="video-item">• <a href="${t.course_url}" target="_blank" rel="noopener">${t.course_name}</a></div>`).join('\n      ')}
+      ${videoCollections.tutorials.map((t, i) => `<div class="video-item">• <a href="${t.course_url}" target="_blank" rel="noopener">Tutorial ${i + 1}</a></div>`).join('\n      ')}
     </div>
   </details>`;
     }
