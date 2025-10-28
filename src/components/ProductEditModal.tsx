@@ -1303,7 +1303,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
