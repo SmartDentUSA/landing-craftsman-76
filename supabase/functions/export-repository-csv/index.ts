@@ -93,7 +93,9 @@ async function exportProducts(supabase: any): Promise<string> {
     'YouTube Videos', 'Instagram Videos', 'Technical Videos', 'Testimonial Videos',
     'Video Captions', 'Dados Originais', 'IA Categoria Gerada', 'IA Keywords Geradas', 
     'IA Benefits Gerados', 'Aprovado', 'Usar na IA', 'Ordem Exibição', 'Tipo Fonte', 
-    'Landing Page Origem', 'Data Criação', 'Data Atualização'
+    'Landing Page Origem', 'Data Criação', 'Data Atualização',
+    'E-commerce HTML Gerado', 'E-commerce Benefits IA', 'E-commerce Data Geração',
+    'E-commerce Última Edição', 'E-commerce Opções Geração', 'E-commerce Modelo IA', 'E-commerce Versão'
   ]
 
   const rows = products.map((product: any) => [
@@ -129,7 +131,15 @@ async function exportProducts(supabase: any): Promise<string> {
     escapeCSV(product.source_type),
     escapeCSV(product.source_landing_page_id),
     formatDate(product.created_at),
-    formatDate(product.updated_at)
+    formatDate(product.updated_at),
+    // E-commerce fields
+    product.ecommerce_html?.html_content ? 'Sim' : 'Não',
+    formatArray(product.ecommerce_html?.generated_benefits),
+    formatDate(product.ecommerce_html?.generated_at),
+    formatDate(product.ecommerce_html?.last_edited_at),
+    formatObject(product.ecommerce_html?.generation_options),
+    escapeCSV(product.ecommerce_html?.ai_model_used),
+    product.ecommerce_html?.version || ''
   ])
 
   return buildCSV(headers, rows)

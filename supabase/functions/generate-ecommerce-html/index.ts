@@ -23,8 +23,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('🛒 [E-commerce Generator] Iniciando geração de HTML...');
+
   try {
     const { productId, options } = await req.json() as GenerateEcommerceRequest;
+    console.log(`📦 Product ID: ${productId}`);
+    console.log(`⚙️ Options:`, JSON.stringify(options, null, 2));
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -32,26 +36,37 @@ serve(async (req) => {
     );
     
     // 1. Buscar produto
+    console.log('🔍 Buscando produto no banco...');
     const { data: product, error: fetchError } = await supabase
       .from('products_repository')
       .select('*')
       .eq('id', productId)
       .single();
     
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error('❌ Erro ao buscar produto:', fetchError);
+      throw fetchError;
+    }
+    console.log(`✅ Produto encontrado: ${product.name}`);
     
     // 2. Gerar benefícios via IA (se necessário)
     let generatedBenefits: string[] = [];
     if (options.regenerateBenefits || !product.ecommerce_html?.generated_benefits) {
+      console.log('🤖 Gerando benefícios com IA...');
       generatedBenefits = await generateBenefitsWithAI(product);
+      console.log(`✅ Benefícios gerados: ${generatedBenefits.length} itens`);
     } else {
+      console.log('♻️ Usando benefícios existentes');
       generatedBenefits = product.ecommerce_html.generated_benefits;
     }
     
     // 3. Montar HTML
+    console.log('🏗️ Construindo HTML...');
     const htmlContent = buildEcommerceHTML(product, generatedBenefits, options);
+    console.log(`✅ HTML gerado: ${htmlContent.length} caracteres`);
     
     // 4. Salvar no banco
+    console.log('💾 Salvando no banco de dados...');
     const ecommerceData = {
       html_content: htmlContent,
       generated_at: new Date().toISOString(),
@@ -66,7 +81,13 @@ serve(async (req) => {
       .update({ ecommerce_html: ecommerceData })
       .eq('id', productId);
     
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('❌ Erro ao salvar no banco:', updateError);
+      throw updateError;
+    }
+    
+    console.log('✅ HTML salvo com sucesso!');
+    console.log(`📊 Versão: ${ecommerceData.version}`);
     
     // 5. Retornar resultado
     return new Response(
@@ -79,9 +100,14 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.error('Error generating e-commerce HTML:', error);
+    console.error('❌ [ERRO CRÍTICO] Falha ao gerar e-commerce HTML:', error);
+    console.error('Stack trace:', error.stack);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -90,6 +116,7 @@ serve(async (req) => {
 async function generateBenefitsWithAI(product: any): Promise<string[]> {
   const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
   if (!deepSeekApiKey) {
+    console.warn('⚠️ DEEPSEEK_API_KEY não configurada, usando benefits existentes');
     return product.benefits || [];
   }
 
@@ -102,30 +129,58 @@ Categoria: ${product.category || 'N/A'}
 Retorne APENAS o array JSON puro sem markdown:
 ["benefício 1", "benefício 2", "benefício 3", "benefício 4", "benefício 5"]`;
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${deepSeekApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: 'Você extrai dados e retorna APENAS JSON puro.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-    }),
-  });
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '[]';
+  console.log('🔑 API Key presente, chamando Deepseek...');
   
   try {
+    // Timeout de 30 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${deepSeekApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: 'Você extrai dados e retorna APENAS JSON puro.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Deepseek API erro ${response.status}:`, errorText);
+      throw new Error(`Deepseek API retornou status ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📥 Resposta da API recebida');
+    
+    const content = data.choices?.[0]?.message?.content || '[]';
+    console.log('📝 Conteúdo bruto:', content.substring(0, 200));
+    
     const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const parsed = JSON.parse(cleaned);
-    return Array.isArray(parsed) ? parsed.slice(0, 5) : [];
-  } catch {
+    
+    if (!Array.isArray(parsed)) {
+      console.warn('⚠️ Resposta não é um array, usando fallback');
+      return product.benefits || [];
+    }
+    
+    console.log(`✅ ${parsed.length} benefícios parseados com sucesso`);
+    return parsed.slice(0, 5);
+    
+  } catch (error) {
+    console.error('❌ Erro ao chamar Deepseek API:', error);
+    console.log('♻️ Usando benefits existentes como fallback');
     return product.benefits || [];
   }
 }
