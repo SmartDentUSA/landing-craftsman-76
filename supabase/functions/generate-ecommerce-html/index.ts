@@ -273,18 +273,8 @@ function buildPackagingInfo(product: any): string {
 }
 
 function buildEcommerceHTML(product: any, benefits: string[], options: any): string {
-  // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS, TARGET AUDIENCE E APPLICATIONS
+  // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
   let enrichedDescription = product.description || '';
-  
-  // Adicionar contexto de aplicações se existir
-  if (product.applications) {
-    enrichedDescription += `\n\n<strong>Aplicações:</strong> ${product.applications}`;
-  }
-  
-  // Adicionar pitch de vendas se existir
-  if (product.sales_pitch) {
-    enrichedDescription += `\n\n${product.sales_pitch}`;
-  }
   
   // Adicionar keywords de mercado contextualmente (primeiras 5)
   if (product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0) {
