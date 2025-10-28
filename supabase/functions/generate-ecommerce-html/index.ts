@@ -418,8 +418,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   // CTA Final
   html += `
   <div class="final-cta">
-    <h2>Pronto para Configurar?</h2>
-    <p>Entre em contato para parametrizar sua impressora e otimizar sua produção</p>
+    <h2>Parametrize a sua impressora</h2>
+    <p>Utilize nosso seletor de parâmetros, parâmetros e indicações para que sua impressão seja perfeita</p>
     ${product.product_url ? `<a href="${product.product_url}" target="_blank" rel="noopener">Parametrize sua Impressora</a>` : '<p>Link de produto não configurado</p>'}
   </div>
 
