@@ -282,11 +282,14 @@ INSTRUÇÕES CRÍTICAS:
   const productData = {
     name: product.name,
     description: product.description || '',
+    applications: product.applications || '',
     category: product.category || '',
     subcategory: product.subcategory || '',
     price: product.price ? `${product.currency || 'BRL'} ${product.price}` : '',
     imageUrl: product.image_url || '',
     keywords: Array.isArray(product.keywords) ? product.keywords.join(', ') : '',
+    marketKeywords: Array.isArray(product.market_keywords) ? product.market_keywords.join(', ') : '',
+    targetAudience: Array.isArray(product.target_audience) ? product.target_audience.join(', ') : '',
     benefits: Array.isArray(product.benefits) ? product.benefits.join(', ') : '',
     features: Array.isArray(product.features) ? product.features.join(', ') : '',
     salesPitch: product.sales_pitch || ''

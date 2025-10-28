@@ -63,8 +63,10 @@ serve(async (req) => {
       
       const mockProduct = { 
         name: seoTitle, 
-        description: seoDescription, 
+        description: seoDescription,
+        applications: '',
         keywords: [primaryKeyword],
+        market_keywords: [],
         target_audience: [targetAudience]
       };
       

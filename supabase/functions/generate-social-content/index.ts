@@ -587,6 +587,7 @@ function processPromptVariables(prompt: string, product: any, company: any, exte
   processedPrompt = processedPrompt.replace(/{product\.description}/g, product.description || 'Não informada');
   processedPrompt = processedPrompt.replace(/{product\.category}/g, product.category || 'Não informada');
   processedPrompt = processedPrompt.replace(/{product\.sales_pitch}/g, product.sales_pitch || 'Não informado');
+  processedPrompt = processedPrompt.replace(/{product\.applications}/g, product.applications || 'Não informado');
   processedPrompt = processedPrompt.replace(/{product\.product_url}/g, product.product_url || '#');
   
   // Processar benefícios

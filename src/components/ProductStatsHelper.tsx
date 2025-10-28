@@ -4,6 +4,7 @@ interface Product {
   id: string;
   name: string;
   description?: string;
+  applications?: string;
   price?: number;
   currency?: string;
   category?: string;

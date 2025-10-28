@@ -161,11 +161,21 @@ async function generateBenefitsWithAI(product: any): Promise<string[]> {
     return product.benefits || [];
   }
 
+  // ✅ USAR 100% DOS BENEFÍCIOS EXISTENTES SE JÁ CADASTRADOS
+  if (product.benefits && Array.isArray(product.benefits) && product.benefits.length > 0) {
+    console.log(`✅ Usando ${product.benefits.length} benefícios cadastrados (100%)`);
+    return product.benefits;
+  }
+
+  // ❌ Se não houver benefícios, gerar com IA
   const prompt = `Analise o seguinte produto e gere EXATAMENTE 5 benefícios objetivos para descrição de e-commerce:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'N/A'}
 Categoria: ${product.category || 'N/A'}
+${product.applications ? `Aplicações: ${product.applications}` : ''}
+${product.sales_pitch ? `Pitch de Vendas: ${product.sales_pitch}` : ''}
+${product.target_audience && product.target_audience.length > 0 ? `Público-Alvo: ${product.target_audience.join(', ')}` : ''}
 
 Retorne APENAS o array JSON puro sem markdown:
 ["benefício 1", "benefício 2", "benefício 3", "benefício 4", "benefício 5"]`;
@@ -263,6 +273,31 @@ function buildPackagingInfo(product: any): string {
 }
 
 function buildEcommerceHTML(product: any, benefits: string[], options: any): string {
+  // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS, TARGET AUDIENCE E APPLICATIONS
+  let enrichedDescription = product.description || '';
+  
+  // Adicionar contexto de aplicações se existir
+  if (product.applications) {
+    enrichedDescription += `\n\n<strong>Aplicações:</strong> ${product.applications}`;
+  }
+  
+  // Adicionar pitch de vendas se existir
+  if (product.sales_pitch) {
+    enrichedDescription += `\n\n${product.sales_pitch}`;
+  }
+  
+  // Adicionar keywords de mercado contextualmente (primeiras 5)
+  if (product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0) {
+    const keywordsText = product.market_keywords.slice(0, 5).join(', ');
+    enrichedDescription += `\n\nPalavras-chave: ${keywordsText}`;
+  }
+  
+  // Adicionar público-alvo contextualmente
+  if (product.target_audience && Array.isArray(product.target_audience) && product.target_audience.length > 0) {
+    const audienceText = product.target_audience.join(', ');
+    enrichedDescription += `\n\nIdeal para: ${audienceText}`;
+  }
+
   const faq = options.includeFAQ && product.faq ? product.faq.slice(0, options.faqLimit) : [];
   const technicalSpecs = product.technical_specifications || [];
   
@@ -281,7 +316,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   // ✅ Iniciar com <section> (SEM DOCTYPE/HTML/HEAD/BODY)
   let html = `<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6;">
 <h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>
-<p style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555;">${product.description || ''}</p>`;
+<div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555; white-space: pre-wrap;">${enrichedDescription}</div>`;
 
   // ✅ Benefícios IA (inline styles)
   if (options.includeBenefits && benefits.length > 0) {
@@ -327,7 +362,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
 <div style="margin: 20px 0;">
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
     <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📋 Aplicações</h3>
-    <p style="margin: 0; line-height: 1.5;">Este produto é ideal para ${product.category || 'diversas aplicações'}.</p>
+    <p style="margin: 0; line-height: 1.5; white-space: pre-wrap;">${product.applications || `Este produto é ideal para ${product.category || 'diversas aplicações'}.`}</p>
   </div>
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
     <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📦 Embalagem</h3>

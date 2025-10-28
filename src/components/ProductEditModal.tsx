@@ -48,6 +48,7 @@ interface Product {
   name: string;
   description?: string;
   sales_pitch?: string;
+  applications?: string;
   price?: number;
   promo_price?: number;
   currency?: string;
@@ -1496,6 +1497,35 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             />
             <p className="text-sm text-muted-foreground">
               Este texto será usado pela IA para gerar conteúdo mais comercial e persuasivo em blogs, SEO e anúncios.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="applications">Aplicações do Produto</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Descreva para que serve o produto, quais problemas resolve</p>
+                    <p>e em quais situações deve ser utilizado. A IA usará essas</p>
+                    <p>informações para gerar conteúdos mais assertivos.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Textarea
+              id="applications"
+              value={formData.applications || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, applications: e.target.value }))}
+              placeholder="Ex: Ideal para procedimentos de restauração dental, indicado para preparos de coroas e bridges, oferece precisão em acabamentos..."
+              rows={4}
+              className="w-full"
+            />
+            <p className="text-sm text-muted-foreground">
+              Este campo será usado pela IA para gerar conteúdo mais contextualizado
             </p>
           </div>
 

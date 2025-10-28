@@ -11,6 +11,7 @@ interface ImportPreviewProduct {
   id?: string;
   name: string;
   description?: string;
+  applications?: string;
   price?: number;
   currency?: string;
   category?: string;
@@ -73,7 +74,7 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
   const expectedHeaders = [
     'id', 'name', 'description', 'price', 'currency', 'category', 'subcategory',
     'image_url', 'product_url', 'tags', 'keywords', 'features', 'benefits',
-    'search_intent_keywords', 'market_keywords', 'target_audience', 'sales_pitch',
+    'search_intent_keywords', 'market_keywords', 'target_audience', 'sales_pitch', 'applications',
     'youtube_videos', 'instagram_videos', 'technical_videos', 'testimonial_videos',
     'video_captions', 'ai_generated_category', 'ai_generated_keywords', 
     'ai_generated_benefits', 'use_in_ai_generation', 'approved', 'display_order',
@@ -225,6 +226,7 @@ const ProductRepositoryCSVImporter: React.FC<ProductRepositoryCSVImporterProps> 
         market_keywords: parseJsonField(row.market_keywords) || [],
         target_audience: parseJsonField(row.target_audience) || [],
         sales_pitch: row.sales_pitch,
+        applications: row.applications,
         youtube_videos: parseJsonField(row.youtube_videos) || [],
         instagram_videos: parseJsonField(row.instagram_videos) || [],
         technical_videos: parseJsonField(row.technical_videos) || [],

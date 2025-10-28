@@ -46,6 +46,7 @@ const FIELD_FRIENDLY_NAMES = {
   "keywords": "Palavras-chave",
   "target_audience": "Público-alvo",
   "sales_pitch": "Pitch de Vendas",
+  "applications": "Aplicações do Produto",
   "faq": "Perguntas Frequentes (FAQ)",
   
   // === URLs E IMAGENS ===

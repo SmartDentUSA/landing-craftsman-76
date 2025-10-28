@@ -1018,6 +1018,7 @@ export type Database = {
           ai_generated_category: boolean | null
           ai_generated_keywords: boolean | null
           all_categories: Json | null
+          applications: string | null
           approved: boolean | null
           availability: string | null
           benefits: Json | null
@@ -1118,6 +1119,7 @@ export type Database = {
           ai_generated_category?: boolean | null
           ai_generated_keywords?: boolean | null
           all_categories?: Json | null
+          applications?: string | null
           approved?: boolean | null
           availability?: string | null
           benefits?: Json | null
@@ -1218,6 +1220,7 @@ export type Database = {
           ai_generated_category?: boolean | null
           ai_generated_keywords?: boolean | null
           all_categories?: Json | null
+          applications?: string | null
           approved?: boolean | null
           availability?: string | null
           benefits?: Json | null
