@@ -242,189 +242,169 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   
   const hasVideos = options.includeVideoCollections && Object.values(videoCollections).some((v: any) => v.length > 0);
   
-  // Construir HTML
-  let html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${product.name}</title>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-    h1 { font-size: 2em; color: #2c3e50; margin-bottom: 0.5em; }
-    .short-description { font-size: 1.1em; color: #555; margin-bottom: 1.5em; }
-    .benefits { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-    .benefits h2 { color: #2c3e50; margin-top: 0; }
-    .benefits ul { list-style: none; padding: 0; }
-    .benefits li { padding: 8px 0; padding-left: 24px; position: relative; }
-    .benefits li:before { content: "✓"; color: #27ae60; font-weight: bold; position: absolute; left: 0; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-    th { background: #34495e; color: white; }
-    .cards-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0; }
-    .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; }
-    .card h3 { margin-top: 0; color: #2c3e50; }
-    .card a { color: #3498db; text-decoration: none; }
-    .card a:hover { text-decoration: underline; }
-    details { margin: 10px 0; }
-    summary { cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold; }
-    summary:hover { background: #d5dbdb; }
-    .video-list { margin: 10px 0 10px 20px; }
-    .video-item { margin: 8px 0; }
-    .badge { background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px; }
-    .final-cta { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0; }
-    .final-cta h2 { color: white; margin-top: 0; }
-    .final-cta a { background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h1>${product.name}</h1>
-  <p class="short-description">${product.description || ''}</p>`;
+  // ✅ Iniciar com <section> (SEM DOCTYPE/HTML/HEAD/BODY)
+  let html = `<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6;">
+<h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>
+<p style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555;">${product.description || ''}</p>`;
 
-  // Benefícios IA
+  // ✅ Benefícios IA (inline styles)
   if (options.includeBenefits && benefits.length > 0) {
     html += `
-  <div class="benefits">
-    <h2>Principais Benefícios</h2>
-    <ul>
-      ${benefits.map(b => `<li>${b}</li>`).join('\n      ')}
-    </ul>
-  </div>`;
+<div style="background-color: #f8f9fb; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+  <h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px; margin-top: 0;">💡 Principais Benefícios</h2>
+  <ul style="list-style: none; padding: 0; margin: 0;">
+    ${benefits.map(b => `<li style="padding: 8px 0 8px 24px; position: relative;"><span style="color: #27ae60; font-weight: bold; position: absolute; left: 0;">✓</span>${b}</li>`).join('\n    ')}
+  </ul>
+</div>`;
   }
 
-  // Especificações Técnicas
+  // ✅ Especificações Técnicas (tabela 100% width inline)
   if (technicalSpecs.length > 0) {
     html += `
-  <h2>Especificações Técnicas</h2>
-  <table>
-    <thead>
-      <tr><th>Especificação</th><th>Valor</th></tr>
-    </thead>
-    <tbody>
-      ${technicalSpecs.map(spec => `<tr><td>${spec.label}</td><td>${spec.value}</td></tr>`).join('\n      ')}
-    </tbody>
-  </table>`;
+<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 0.95em; margin-bottom: 25px;">
+  <thead>
+    <tr style="background-color: #34495e; color: white;">
+      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Especificação</th>
+      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Valor</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${technicalSpecs.map(spec => `<tr><td style="padding: 8px; border: 1px solid #ddd;">${spec.label}</td><td style="padding: 8px; border: 1px solid #ddd;">${spec.value}</td></tr>`).join('\n    ')}
+  </tbody>
+</table>`;
   }
 
-  // Cards: Aplicações + Embalagem + Documentos
+  // ✅ Cards Empilhados (sem CSS Grid, inline styles)
   html += `
-  <h2>Recursos e Informações</h2>
-  <div class="cards-container">
-    <div class="card">
-      <h3>📋 Aplicações</h3>
-      <p>Este produto é ideal para ${product.category || 'diversas aplicações'}.</p>
-    </div>
-    <div class="card">
-      <h3>📦 Embalagem</h3>
-      <p>${product.package_size || 'Embalagem padrão'}</p>
-    </div>`;
+<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">📦 Recursos e Informações</h2>
+<div style="margin: 20px 0;">
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
+    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📋 Aplicações</h3>
+    <p style="margin: 0; line-height: 1.5;">Este produto é ideal para ${product.category || 'diversas aplicações'}.</p>
+  </div>
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
+    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📦 Embalagem</h3>
+    <p style="margin: 0; line-height: 1.5;">${product.package_size || 'Embalagem padrão'}</p>
+  </div>`;
   
   if (product.resource_cta2?.visible || product.resource_cta3?.visible) {
     html += `
-    <div class="card">
-      <h3>📄 Documentos</h3>`;
+  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
+    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📄 Documentos</h3>`;
     if (product.resource_cta2?.visible) {
-      html += `<p><a href="${product.resource_cta2.url}" target="_blank" rel="noopener">${product.resource_cta2.label}</a></p>`;
+      html += `<p style="margin: 5px 0;"><a href="${product.resource_cta2.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">${product.resource_cta2.label}</a></p>`;
     }
     if (product.resource_cta3?.visible) {
-      html += `<p><a href="${product.resource_cta3.url}" target="_blank" rel="noopener">${product.resource_cta3.label}</a></p>`;
+      html += `<p style="margin: 5px 0;"><a href="${product.resource_cta3.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">${product.resource_cta3.label}</a></p>`;
     }
     html += `
-    </div>`;
+  </div>`;
   }
   
   html += `
-  </div>`;
+</div>`;
 
-  // FAQ
+  // ✅ FAQ (details/summary inline)
   if (faq.length > 0) {
     html += `
-  <h2>Perguntas Frequentes</h2>`;
+<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
     faq.forEach(item => {
       html += `
-  <details>
-    <summary>${item.question}</summary>
-    <p>${item.answer}</p>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">${item.question}</summary>
+  <p style="padding: 10px 12px; margin: 0; line-height: 1.6;">${item.answer}</p>
+</details>`;
     });
   }
 
-  // Coleções de Vídeos
+  // ✅ Coleções de Vídeos (details/summary inline)
   if (hasVideos) {
     html += `
-  <h2>Recursos de Vídeo</h2>`;
+<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">🎥 Recursos de Vídeo</h2>`;
     
     if (videoCollections.youtube.length > 0) {
       html += `
-  <details>
-    <summary>Vídeos YouTube<span class="badge">${videoCollections.youtube.length}</span></summary>
-    <div class="video-list">
-      ${videoCollections.youtube.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Vídeo ${i + 1}</a></div>`).join('\n      ')}
-    </div>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
+    Vídeos YouTube<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
+  </summary>
+  <div style="margin: 10px 0 10px 20px;">
+    ${videoCollections.youtube.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Vídeo ${i + 1}</a></div>`).join('\n    ')}
+  </div>
+</details>`;
     }
     
     if (videoCollections.instagram.length > 0) {
       html += `
-  <details>
-    <summary>Vídeos Instagram<span class="badge">${videoCollections.instagram.length}</span></summary>
-    <div class="video-list">
-      ${videoCollections.instagram.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Vídeo ${i + 1}</a></div>`).join('\n      ')}
-    </div>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
+    Vídeos Instagram<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.instagram.length}</span>
+  </summary>
+  <div style="margin: 10px 0 10px 20px;">
+    ${videoCollections.instagram.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Vídeo ${i + 1}</a></div>`).join('\n    ')}
+  </div>
+</details>`;
     }
     
     if (videoCollections.testimonials.length > 0) {
       html += `
-  <details>
-    <summary>Depoimentos em Vídeo<span class="badge">${videoCollections.testimonials.length}</span></summary>
-    <div class="video-list">
-      ${videoCollections.testimonials.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Depoimento ${i + 1}</a></div>`).join('\n      ')}
-    </div>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
+    Depoimentos em Vídeo<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.testimonials.length}</span>
+  </summary>
+  <div style="margin: 10px 0 10px 20px;">
+    ${videoCollections.testimonials.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Depoimento ${i + 1}</a></div>`).join('\n    ')}
+  </div>
+</details>`;
     }
     
     if (videoCollections.technical.length > 0) {
       html += `
-  <details>
-    <summary>Explicações Técnicas<span class="badge">${videoCollections.technical.length}</span></summary>
-    <div class="video-list">
-      ${videoCollections.technical.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Explicação ${i + 1}</a></div>`).join('\n      ')}
-    </div>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
+    Explicações Técnicas<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.technical.length}</span>
+  </summary>
+  <div style="margin: 10px 0 10px 20px;">
+    ${videoCollections.technical.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Explicação ${i + 1}</a></div>`).join('\n    ')}
+  </div>
+</details>`;
     }
     
     if (videoCollections.tiktok.length > 0) {
       html += `
-  <details>
-    <summary>Vídeos TikTok<span class="badge">${videoCollections.tiktok.length}</span></summary>
-    <div class="video-list">
-      ${videoCollections.tiktok.map((v, i) => `<div class="video-item">• <a href="${v.url}" target="_blank" rel="noopener">Vídeo ${i + 1}</a></div>`).join('\n      ')}
-    </div>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
+    Vídeos TikTok<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tiktok.length}</span>
+  </summary>
+  <div style="margin: 10px 0 10px 20px;">
+    ${videoCollections.tiktok.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Vídeo ${i + 1}</a></div>`).join('\n    ')}
+  </div>
+</details>`;
     }
     
     if (videoCollections.tutorials.length > 0) {
       html += `
-  <details>
-    <summary>Tutoriais do Produto<span class="badge">${videoCollections.tutorials.length}</span></summary>
-    <div class="video-list">
-      ${videoCollections.tutorials.map((t, i) => `<div class="video-item">• <a href="${t.course_url}" target="_blank" rel="noopener">Tutorial ${i + 1}</a></div>`).join('\n      ')}
-    </div>
-  </details>`;
+<details style="margin: 10px 0;">
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
+    Tutoriais do Produto<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tutorials.length}</span>
+  </summary>
+  <div style="margin: 10px 0 10px 20px;">
+    ${videoCollections.tutorials.map((t, i) => `<div style="margin: 8px 0;">• <a href="${t.course_url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Tutorial ${i + 1}</a></div>`).join('\n    ')}
+  </div>
+</details>`;
     }
   }
 
-  // CTA Final
+  // ✅ CTA Final (gradiente inline)
   html += `
-  <div class="final-cta">
-    <h2>Parametrize a sua impressora</h2>
-    <p>Utilize nosso seletor de parâmetros, parâmetros e indicações para que sua impressão seja perfeita</p>
-    ${product.product_url ? `<a href="${product.product_url}" target="_blank" rel="noopener">Parametrize sua Impressora</a>` : '<p>Link de produto não configurado</p>'}
-  </div>
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
+  <h2 style="color: white; margin-top: 0; font-size: 1.5em;">Parametrize a sua impressora</h2>
+  <p style="margin: 15px 0; line-height: 1.6;">Utilize nosso seletor de parâmetros, parâmetros e indicações para que sua impressão seja perfeita</p>
+  ${product.product_url ? `<a href="${product.product_url}" target="_blank" rel="noopener" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px;">Parametrize sua Impressora</a>` : '<p style="color: #fff; opacity: 0.8;">Link de produto não configurado</p>'}
+</div>
 
-</body>
-</html>`;
+</section>`;
 
   return html;
 }
