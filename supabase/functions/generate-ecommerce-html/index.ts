@@ -226,6 +226,33 @@ Retorne APENAS o array JSON puro sem markdown:
   }
 }
 
+function buildPackagingInfo(product: any): string {
+  const dimensions = [];
+  
+  // Coletar dimensões existentes
+  if (product.height) dimensions.push(`<strong>Altura:</strong> ${product.height} cm`);
+  if (product.width) dimensions.push(`<strong>Largura:</strong> ${product.width} cm`);
+  if (product.depth) dimensions.push(`<strong>Profundidade:</strong> ${product.depth} cm`);
+  
+  // Montar HTML com dimensões e package_size
+  let html = '<p style="margin: 0 0 10px 0; line-height: 1.5;">';
+  
+  if (dimensions.length > 0) {
+    html += `<span style="display: block; margin-bottom: 8px;">${dimensions.join(' × ')}</span>`;
+  }
+  
+  // Adicionar package_size (se existir) abaixo das dimensões
+  if (product.package_size) {
+    html += `<span style="display: block; color: #666;">${product.package_size}</span>`;
+  } else if (dimensions.length === 0) {
+    // Fallback apenas se não houver nem dimensões nem package_size
+    html += '<span style="color: #999;">Informações de embalagem não disponíveis</span>';
+  }
+  
+  html += '</p>';
+  return html;
+}
+
 function buildEcommerceHTML(product: any, benefits: string[], options: any): string {
   const faq = options.includeFAQ && product.faq ? product.faq.slice(0, options.faqLimit) : [];
   const technicalSpecs = product.technical_specifications || [];
@@ -285,7 +312,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   </div>
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
     <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📦 Embalagem</h3>
-    <p style="margin: 0; line-height: 1.5;">${product.package_size || 'Embalagem padrão'}</p>
+    ${buildPackagingInfo(product)}
   </div>`;
   
   if (product.resource_cta2?.visible || product.resource_cta3?.visible) {
