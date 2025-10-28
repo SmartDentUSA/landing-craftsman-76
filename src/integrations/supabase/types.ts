@@ -1033,6 +1033,7 @@ export type Database = {
           description: string | null
           display_order: number | null
           ean: string | null
+          ecommerce_html: Json | null
           faq: Json | null
           featured: boolean | null
           features: Json | null
@@ -1132,6 +1133,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           ean?: string | null
+          ecommerce_html?: Json | null
           faq?: Json | null
           featured?: boolean | null
           features?: Json | null
@@ -1231,6 +1233,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           ean?: string | null
+          ecommerce_html?: Json | null
           faq?: Json | null
           featured?: boolean | null
           features?: Json | null

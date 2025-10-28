@@ -568,6 +568,55 @@ function generateAIPlaybookJSON(product: ProductData & {
         last_generated: product.tiktok_content?.last_generated
       }
     },
+    ecommerce_content: {
+      // Status de geração
+      html_generated: !!(product.ecommerce_html?.html_content),
+      last_generated_at: product.ecommerce_html?.generated_at || null,
+      last_edited_at: product.ecommerce_html?.last_edited_at || null,
+      version: product.ecommerce_html?.version || 1,
+      
+      // Benefícios específicos de e-commerce (gerados por IA)
+      ai_generated_benefits: product.ecommerce_html?.generated_benefits || [],
+      
+      // Configuração usada na geração
+      generation_options: product.ecommerce_html?.generation_options || {
+        includeBenefits: true,
+        includeFAQ: true,
+        includeVideoCollections: true,
+        faqLimit: 8
+      },
+      
+      // Preview do HTML (primeiros 500 caracteres limpos)
+      html_preview: product.ecommerce_html?.html_content 
+        ? stripHTML(product.ecommerce_html.html_content).substring(0, 500) + '...'
+        : null,
+      
+      // Metadata de IA
+      ai_model_used: product.ecommerce_html?.ai_model_used || 'deepseek-chat',
+      
+      // Análise de conteúdo incluído
+      sections_included: {
+        has_benefits: (product.ecommerce_html?.generated_benefits?.length || 0) > 0,
+        has_technical_specs: (product.technical_specifications?.length || 0) > 0,
+        has_faq: (product.faq?.length || 0) > 0,
+        has_videos: (
+          (product.youtube_videos?.length || 0) +
+          (product.instagram_videos?.length || 0) +
+          (product.tiktok_videos?.length || 0)
+        ) > 0,
+        has_documents: !!(product.resource_cta2?.url || product.resource_cta3?.url),
+        has_parameters_button: true
+      },
+      
+      // Estatísticas do HTML
+      html_stats: product.ecommerce_html?.html_content ? {
+        total_length: product.ecommerce_html.html_content.length,
+        plain_text_length: stripHTML(product.ecommerce_html.html_content).length,
+        estimated_reading_time_seconds: Math.ceil(
+          stripHTML(product.ecommerce_html.html_content).split(' ').length / 200 * 60
+        )
+      } : null
+    },
     ai_automation: {
       bot_trigger_words: product.bot_trigger_words || [],
       use_in_ai_generation: product.use_in_ai_generation

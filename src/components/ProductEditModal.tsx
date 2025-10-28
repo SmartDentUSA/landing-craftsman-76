@@ -29,6 +29,7 @@ import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
+import { ProductEcommerceGenerator } from './ProductEcommerceGenerator';
 
 interface Video {
   url: string;
@@ -2232,6 +2233,20 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               }}
             />
           </div>
+
+          {/* E-commerce HTML Generator */}
+          {formData.id && (
+            <div className="space-y-4 border-t pt-6">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-lg font-semibold">Descrição E-commerce</h3>
+                <Badge variant="secondary">IA</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Gere uma descrição HTML completa para e-commerce com benefícios IA, especificações técnicas, FAQ, vídeos e CTAs.
+              </p>
+              <ProductEcommerceGenerator productId={formData.id} />
+            </div>
+          )}
 
           {/* Physical Specifications */}
           <div className="space-y-4 border-t pt-6">

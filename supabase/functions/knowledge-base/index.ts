@@ -167,6 +167,36 @@ function formatForAITraining(data: any): string {
         });
       }
       
+      // E-commerce HTML gerado
+      if (p.ecommerce_html && p.ecommerce_html.html_content) {
+        text += `**Descrição E-commerce (Gerada por IA):**\n`;
+        
+        // Preview do HTML (sem tags) - limitado a 500 caracteres
+        const htmlPreview = p.ecommerce_html.html_content
+          .replace(/<[^>]*>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/\s+/g, ' ')
+          .trim();
+        text += `${htmlPreview.substring(0, 500)}...\n\n`;
+        
+        // Benefícios E-commerce específicos
+        if (p.ecommerce_html.generated_benefits && p.ecommerce_html.generated_benefits.length > 0) {
+          text += `**Benefícios E-commerce (IA-Generated):**\n`;
+          p.ecommerce_html.generated_benefits.forEach((benefit: string) => {
+            text += `- ${benefit}\n`;
+          });
+          text += `\n`;
+        }
+        
+        // Metadata
+        text += `Última geração: ${p.ecommerce_html.generated_at || 'Nunca gerado'}\n`;
+        if (p.ecommerce_html.last_edited_at) {
+          text += `Última edição: ${p.ecommerce_html.last_edited_at}\n`;
+        }
+        text += `\n`;
+      }
+      
       text += `\n---\n\n`;
     });
   }

@@ -110,3 +110,6 @@ verify_jwt = true
 
 [functions.refresh-google-token]
 verify_jwt = true
+
+[functions.generate-ecommerce-html]
+verify_jwt = false
