@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info, ShoppingCart } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -214,7 +214,6 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [overwriteData, setOverwriteData] = useState(false);
   const [generatingSEO, setGeneratingSEO] = useState(false);
   const [generatingFAQs, setGeneratingFAQs] = useState(false);
-  const [showEcommerceModal, setShowEcommerceModal] = useState(false);
   
   // Images gallery state
   const [imagesGallery, setImagesGallery] = useState<Array<{ url: string; alt: string; order: number; is_main: boolean }>>([]);
@@ -2243,26 +2242,9 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 <Badge variant="secondary">IA</Badge>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Gere uma descrição HTML completa para e-commerce com benefícios IA, especificações técnicas, FAQ, vídeos e CTAs.
+                Use o botão de carrinho no card do produto para gerar descrição HTML completa para e-commerce.
               </p>
-              <Button 
-                onClick={() => setShowEcommerceModal(true)}
-                variant="outline"
-                className="w-full"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Abrir Gerador E-commerce
-              </Button>
             </div>
-          )}
-          
-          {/* Modal E-commerce */}
-          {showEcommerceModal && (
-            <ProductEcommerceGenerator 
-              productId={formData.id}
-              isOpen={true}
-              onClose={() => setShowEcommerceModal(false)}
-            />
           )}
 
           {/* Physical Specifications */}
