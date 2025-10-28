@@ -1054,6 +1054,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         name: formData.name!,
         description: formData.description,
         sales_pitch: formData.sales_pitch,
+        applications: formData.applications,
         price: formData.price,
         promo_price: promoPrice,
         currency: formData.currency || 'BRL',
