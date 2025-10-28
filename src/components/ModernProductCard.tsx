@@ -773,12 +773,14 @@ export function ModernProductCard({
       )}
 
       {/* Modal de Descrição E-commerce */}
-      <ProductEcommerceGenerator
-        productId={product.id}
-        isOpen={showEcommerceModal}
-        onClose={() => setShowEcommerceModal(false)}
-        onUpdate={onProductUpdate}
-      />
+      {showEcommerceModal && (
+        <ProductEcommerceGenerator
+          productId={product.id}
+          isOpen={true}
+          onClose={() => setShowEcommerceModal(false)}
+          onUpdate={onProductUpdate}
+        />
+      )}
     </>
   );
 }

@@ -38,8 +38,9 @@ export function ProductEcommerceGenerator({
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!isOpen) return;
     loadExistingHTML();
-  }, [productId]);
+  }, [productId, isOpen]);
 
   const loadExistingHTML = async () => {
     try {
