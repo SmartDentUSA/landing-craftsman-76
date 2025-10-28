@@ -226,6 +226,15 @@ Retorne APENAS o array JSON puro sem markdown:
   }
 }
 
+function isURL(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function buildPackagingInfo(product: any): string {
   const dimensions = [];
   
@@ -297,7 +306,17 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     </tr>
   </thead>
   <tbody>
-    ${technicalSpecs.map(spec => `<tr><td style="padding: 8px; border: 1px solid #ddd;">${spec.label}</td><td style="padding: 8px; border: 1px solid #ddd;">${spec.value}</td></tr>`).join('\n    ')}
+    ${technicalSpecs.map(spec => {
+      const valueCell = isURL(spec.value)
+        ? `<a href="${spec.value}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none;">
+             <span style="background:#ffffff; color:#3498db; border:1px solid #3498db; padding:6px 10px; border-radius:6px; font-weight:600;">📥 Download</span>
+           </a>`
+        : spec.value;
+      return `<tr>
+        <td style="padding: 8px; border: 1px solid #ddd;">${spec.label}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${valueCell}</td>
+      </tr>`;
+    }).join('\n    ')}
   </tbody>
 </table>`;
   }

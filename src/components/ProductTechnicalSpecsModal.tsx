@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TechnicalSpec {
@@ -33,6 +33,15 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
   const [newSpec, setNewSpec] = useState<TechnicalSpec>({ label: '', value: '' });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const isValidURL = (text: string): boolean => {
+    try {
+      const url = new URL(text);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     setSpecs(initialSpecs);
@@ -100,10 +109,21 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
                   </thead>
                   <tbody>
                     {specs.map((spec, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="p-3 font-medium">{spec.label}</td>
-                        <td className="p-3">{spec.value}</td>
-                      </tr>
+                    <tr key={index} className="border-t">
+                      <td className="p-3 font-medium">{spec.label}</td>
+                      <td className="p-3">
+                        {isValidURL(spec.value) ? (
+                          <a href={spec.value} target="_blank" rel="noopener noreferrer" className="inline-block">
+                            <Button variant="outline" size="sm" className="h-7 gap-1">
+                              <Download className="h-4 w-4" />
+                              Download
+                            </Button>
+                          </a>
+                        ) : (
+                          spec.value
+                        )}
+                      </td>
+                    </tr>
                     ))}
                   </tbody>
                 </table>
