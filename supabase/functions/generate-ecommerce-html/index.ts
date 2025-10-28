@@ -315,20 +315,6 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     ${buildPackagingInfo(product)}
   </div>`;
   
-  if (product.resource_cta2?.visible || product.resource_cta3?.visible) {
-    html += `
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
-    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📄 Documentos</h3>`;
-    if (product.resource_cta2?.visible) {
-      html += `<p style="margin: 5px 0;"><a href="${product.resource_cta2.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">${product.resource_cta2.label}</a></p>`;
-    }
-    if (product.resource_cta3?.visible) {
-      html += `<p style="margin: 5px 0;"><a href="${product.resource_cta3.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">${product.resource_cta3.label}</a></p>`;
-    }
-    html += `
-  </div>`;
-  }
-  
   html += `
 </div>`;
 
