@@ -272,6 +272,16 @@ function buildPackagingInfo(product: any): string {
   return html;
 }
 
+// Truncate text to a maximum number of words
+function truncateToWords(text: string, maxWords: number): string {
+  if (!text || text.trim() === '') return '';
+  
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text;
+  
+  return words.slice(0, maxWords).join(' ') + '...';
+}
+
 function buildEcommerceHTML(product: any, benefits: string[], options: any): string {
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
   let enrichedDescription = product.description || '';
@@ -387,7 +397,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     Vídeos YouTube<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
-    ${videoCollections.youtube.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Vídeo ${i + 1}</a></div>`).join('\n    ')}
+    ${videoCollections.youtube.map((v, i) => {
+      const description = truncateToWords(v.description || '', 50);
+      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+    </div>`;
+    }).join('\n    ')}
   </div>
 </details>`;
     }
@@ -399,7 +415,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     Vídeos Instagram<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.instagram.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
-    ${videoCollections.instagram.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Vídeo ${i + 1}</a></div>`).join('\n    ')}
+    ${videoCollections.instagram.map((v, i) => {
+      const description = truncateToWords(v.description || '', 50);
+      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+    </div>`;
+    }).join('\n    ')}
   </div>
 </details>`;
     }
@@ -411,7 +433,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     Depoimentos em Vídeo<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.testimonials.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
-    ${videoCollections.testimonials.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Depoimento ${i + 1}</a></div>`).join('\n    ')}
+    ${videoCollections.testimonials.map((v, i) => {
+      const description = truncateToWords(v.description || '', 50);
+      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Depoimento ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+    </div>`;
+    }).join('\n    ')}
   </div>
 </details>`;
     }
@@ -423,7 +451,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     Explicações Técnicas<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.technical.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
-    ${videoCollections.technical.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Explicação ${i + 1}</a></div>`).join('\n    ')}
+    ${videoCollections.technical.map((v, i) => {
+      const description = truncateToWords(v.description || '', 50);
+      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Explicação ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+    </div>`;
+    }).join('\n    ')}
   </div>
 </details>`;
     }
@@ -435,7 +469,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     Vídeos TikTok<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tiktok.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
-    ${videoCollections.tiktok.map((v, i) => `<div style="margin: 8px 0;">• <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Vídeo ${i + 1}</a></div>`).join('\n    ')}
+    ${videoCollections.tiktok.map((v, i) => {
+      const description = truncateToWords(v.description || '', 50);
+      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+    </div>`;
+    }).join('\n    ')}
   </div>
 </details>`;
     }
@@ -447,7 +487,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     Tutoriais do Produto<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tutorials.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
-    ${videoCollections.tutorials.map((t, i) => `<div style="margin: 8px 0;">• <a href="${t.course_url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none;">Tutorial ${i + 1}</a></div>`).join('\n    ')}
+    ${videoCollections.tutorials.map((t, i) => {
+      const description = truncateToWords(t.description || '', 50);
+      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <a href="${t.course_url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Tutorial ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+    </div>`;
+    }).join('\n    ')}
   </div>
 </details>`;
     }
