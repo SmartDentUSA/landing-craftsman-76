@@ -6,15 +6,24 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Edit, Trash2, Loader2, Sparkles, Save, X, FileCode, Eye } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Copy, Edit, Trash2, Loader2, Sparkles, Save, X, FileCode, Eye, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProductEcommerceGeneratorProps {
   productId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate?: () => void;
 }
 
-export function ProductEcommerceGenerator({ productId }: ProductEcommerceGeneratorProps) {
+export function ProductEcommerceGenerator({ 
+  productId, 
+  isOpen, 
+  onClose, 
+  onUpdate 
+}: ProductEcommerceGeneratorProps) {
   const [state, setState] = useState<'empty' | 'generating' | 'generated' | 'editing'>('empty');
   const [htmlContent, setHtmlContent] = useState('');
   const [editedHtml, setEditedHtml] = useState('');
@@ -112,6 +121,7 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
         title: 'Alterações Salvas!',
         description: 'HTML atualizado com sucesso'
       });
+      onUpdate?.();
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast({
@@ -149,6 +159,7 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
         title: 'HTML Excluído',
         description: 'Conteúdo removido com sucesso'
       });
+      onUpdate?.();
     } catch (error) {
       console.error('Erro ao excluir:', error);
       toast({
@@ -159,10 +170,11 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
     }
   };
 
-  // Estado: EMPTY
-  if (state === 'empty') {
-    return (
-      <Card>
+  const renderContent = () => {
+    // Estado: EMPTY
+    if (state === 'empty') {
+      return (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
@@ -211,13 +223,13 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
           </Button>
         </CardContent>
       </Card>
-    );
-  }
+      );
+    }
 
-  // Estado: GENERATING
-  if (state === 'generating') {
-    return (
-      <Card>
+    // Estado: GENERATING
+    if (state === 'generating') {
+      return (
+        <Card>
         <CardContent className="py-12">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -225,13 +237,13 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
           </div>
         </CardContent>
       </Card>
-    );
-  }
+      );
+    }
 
-  // Estado: GENERATED
-  if (state === 'generated') {
-    return (
-      <Card>
+    // Estado: GENERATED
+    if (state === 'generated') {
+      return (
+        <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -293,13 +305,13 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
           </Tabs>
         </CardContent>
       </Card>
-    );
-  }
+      );
+    }
 
-  // Estado: EDITING
-  if (state === 'editing') {
-    return (
-      <Card>
+    // Estado: EDITING
+    if (state === 'editing') {
+      return (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Edit className="h-5 w-5" />
@@ -347,8 +359,25 @@ export function ProductEcommerceGenerator({ productId }: ProductEcommerceGenerat
           </div>
         </CardContent>
       </Card>
-    );
-  }
+      );
+    }
 
-  return null;
+    return null;
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-indigo-600" />
+            Descrição E-commerce
+          </DialogTitle>
+        </DialogHeader>
+        {renderContent()}
+      </DialogContent>
+    </Dialog>
+  );
 }

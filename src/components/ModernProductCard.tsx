@@ -41,6 +41,7 @@ import { ProductGoogleAdsModal } from "./google-ads/ProductGoogleAdsModal";
 import { TikTokIcon } from "./icons/TikTokIcon";
 import { WhatsAppPromoGenerator } from "./WhatsAppPromoGenerator";
 import { WhatsAppPromoVariationGenerator } from "./WhatsAppPromoVariationGenerator";
+import { ProductEcommerceGenerator } from "./ProductEcommerceGenerator";
 import { useCoupons } from "@/hooks/useCoupons";
 
 
@@ -91,6 +92,20 @@ interface Product {
     generated_at?: string;
   };
   technical_specifications?: TechnicalSpec[];
+  ecommerce_html?: {
+    html_content: string;
+    generated_at: string;
+    last_edited_at?: string;
+    generated_benefits: string[];
+    generation_options: {
+      includeBenefits: boolean;
+      includeFAQ: boolean;
+      includeVideoCollections: boolean;
+      faqLimit: number;
+    };
+    ai_model_used: string;
+    version: number;
+  } | null;
 }
 
 interface TechnicalSpec {
@@ -125,6 +140,7 @@ export function ModernProductCard({
   const [showTechnicalSpecs, setShowTechnicalSpecs] = useState(false);
   const [showWhatsAppPromoModal, setShowWhatsAppPromoModal] = useState(false);
   const [showWhatsAppPromoVariationModal, setShowWhatsAppPromoVariationModal] = useState(false);
+  const [showEcommerceModal, setShowEcommerceModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const { getCouponByProductId } = useCoupons();
@@ -390,6 +406,14 @@ export function ModernProductCard({
                   Especificações
                 </Badge>
               )}
+              
+              {/* E-commerce HTML - Roxo */}
+              {product.ecommerce_html?.html_content && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-indigo-100 text-indigo-700 border-indigo-200">
+                  <ShoppingCart className="h-3 w-3 mr-1" />
+                  E-commerce
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -627,6 +651,19 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => setShowEcommerceModal(true)}
+                className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
+              >
+                <ShoppingCart className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Descrição E-commerce</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onDelete(product.id)}
                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
               >
@@ -733,6 +770,14 @@ export function ModernProductCard({
           couponCode={productCoupon.coupon_code}
         />
       )}
+
+      {/* Modal de Descrição E-commerce */}
+      <ProductEcommerceGenerator
+        productId={product.id}
+        isOpen={showEcommerceModal}
+        onClose={() => setShowEcommerceModal(false)}
+        onUpdate={onProductUpdate}
+      />
     </>
   );
 }

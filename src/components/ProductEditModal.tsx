@@ -2244,7 +2244,13 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               <p className="text-sm text-muted-foreground mb-4">
                 Gere uma descrição HTML completa para e-commerce com benefícios IA, especificações técnicas, FAQ, vídeos e CTAs.
               </p>
-              <ProductEcommerceGenerator productId={formData.id} />
+              <div className="border rounded-lg p-6">
+                <ProductEcommerceGenerator 
+                  productId={formData.id}
+                  isOpen={true}
+                  onClose={() => {}}
+                />
+              </div>
             </div>
           )}
 
