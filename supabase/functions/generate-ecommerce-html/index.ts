@@ -1,4 +1,4 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
@@ -27,6 +27,18 @@ serve(async (req) => {
 
   try {
     const { productId, options } = await req.json() as GenerateEcommerceRequest;
+    
+    // VALIDAÇÃO DE ENTRADA
+    if (!productId || typeof productId !== 'string') {
+      console.error('❌ productId inválido ou ausente');
+      throw new Error('productId é obrigatório e deve ser uma string');
+    }
+    
+    if (!options || typeof options !== 'object') {
+      console.error('❌ options inválido');
+      throw new Error('options deve ser um objeto');
+    }
+    
     console.log(`📦 Product ID: ${productId}`);
     console.log(`⚙️ Options:`, JSON.stringify(options, null, 2));
     
@@ -47,21 +59,50 @@ serve(async (req) => {
       console.error('❌ Erro ao buscar produto:', fetchError);
       throw fetchError;
     }
+    
+    if (!product) {
+      console.error('❌ Produto não encontrado');
+      throw new Error(`Produto com ID ${productId} não existe`);
+    }
+    
     console.log(`✅ Produto encontrado: ${product.name}`);
+    console.log(`📊 Dados do produto:`, {
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      hasTechnicalSpecs: !!product.technical_specifications,
+      specsCount: Array.isArray(product.technical_specifications) ? product.technical_specifications.length : 0,
+      hasFAQ: !!product.faq,
+      faqCount: Array.isArray(product.faq) ? product.faq.length : 0,
+      hasYouTubeVideos: !!product.youtube_videos?.length,
+      hasInstagramVideos: !!product.instagram_videos?.length
+    });
     
     // 2. Gerar benefícios via IA (se necessário)
     let generatedBenefits: string[] = [];
-    if (options.regenerateBenefits || !product.ecommerce_html?.generated_benefits) {
-      console.log('🤖 Gerando benefícios com IA...');
-      generatedBenefits = await generateBenefitsWithAI(product);
-      console.log(`✅ Benefícios gerados: ${generatedBenefits.length} itens`);
-    } else {
-      console.log('♻️ Usando benefícios existentes');
-      generatedBenefits = product.ecommerce_html.generated_benefits;
+    try {
+      if (options.regenerateBenefits || !product.ecommerce_html?.generated_benefits) {
+        console.log('🤖 Gerando benefícios com IA...');
+        generatedBenefits = await generateBenefitsWithAI(product);
+        console.log(`✅ Benefícios gerados: ${generatedBenefits.length} itens`, generatedBenefits);
+      } else {
+        console.log('♻️ Usando benefícios existentes');
+        generatedBenefits = product.ecommerce_html.generated_benefits;
+      }
+    } catch (aiError) {
+      console.error('⚠️ Erro ao gerar benefícios com IA:', aiError);
+      console.log('📝 Usando benefícios existentes como fallback');
+      generatedBenefits = product.ecommerce_html?.generated_benefits || product.benefits || [];
     }
     
     // 3. Montar HTML
-    console.log('🏗️ Construindo HTML...');
+    console.log('🏗️ Construindo HTML com:', {
+      productName: product.name,
+      benefitsCount: generatedBenefits.length,
+      technicalSpecsCount: Array.isArray(product.technical_specifications) ? product.technical_specifications.length : 0,
+      faqCount: Array.isArray(product.faq) ? product.faq.length : 0,
+      options
+    });
     const htmlContent = buildEcommerceHTML(product, generatedBenefits, options);
     console.log(`✅ HTML gerado: ${htmlContent.length} caracteres`);
     
