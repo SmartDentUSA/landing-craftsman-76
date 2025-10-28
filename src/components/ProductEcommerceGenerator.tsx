@@ -122,6 +122,7 @@ export function ProductEcommerceGenerator({
         description: 'HTML atualizado com sucesso'
       });
       onUpdate?.();
+      onClose();
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast({
@@ -160,6 +161,7 @@ export function ProductEcommerceGenerator({
         description: 'Conteúdo removido com sucesso'
       });
       onUpdate?.();
+      onClose();
     } catch (error) {
       console.error('Erro ao excluir:', error);
       toast({
@@ -366,7 +368,7 @@ export function ProductEcommerceGenerator({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
