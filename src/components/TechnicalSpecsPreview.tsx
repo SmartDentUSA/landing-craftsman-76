@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Plus, ExternalLink } from 'lucide-react';
+import { Edit, Trash2, Plus, ExternalLink, Download } from 'lucide-react';
 
 interface TechnicalSpec {
   label: string;
@@ -26,7 +26,7 @@ const isValidURL = (text: string): boolean => {
   }
 };
 
-// Componente para renderizar valor (texto ou link)
+// Componente para renderizar valor (texto ou botão de download)
 const ValueCell: React.FC<{ value: string }> = ({ value }) => {
   if (isValidURL(value)) {
     return (
@@ -34,12 +34,17 @@ const ValueCell: React.FC<{ value: string }> = ({ value }) => {
         href={value} 
         target="_blank" 
         rel="noopener noreferrer"
-        className="text-xs text-primary hover:underline truncate flex-1 cursor-pointer inline-flex items-center gap-1"
-        title={value}
         onClick={(e) => e.stopPropagation()}
+        className="inline-block"
       >
-        <span className="truncate">{value}</span>
-        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="h-6 text-xs px-2 py-0 gap-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          <Download className="h-3 w-3" />
+          Download
+        </Button>
       </a>
     );
   }
