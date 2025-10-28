@@ -43,6 +43,7 @@ import { WhatsAppPromoGenerator } from "./WhatsAppPromoGenerator";
 import { WhatsAppPromoVariationGenerator } from "./WhatsAppPromoVariationGenerator";
 import { ProductEcommerceGenerator } from "./ProductEcommerceGenerator";
 import { useCoupons } from "@/hooks/useCoupons";
+import { useProductSEOExtractor } from "@/hooks/useProductSEOExtractor";
 
 
 interface Product {
@@ -142,8 +143,10 @@ export function ModernProductCard({
   const [showWhatsAppPromoVariationModal, setShowWhatsAppPromoVariationModal] = useState(false);
   const [showEcommerceModal, setShowEcommerceModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExtractingMerchant, setIsExtractingMerchant] = useState(false);
   const { toast } = useToast();
   const { getCouponByProductId } = useCoupons();
+  const { extractAndSaveProductSEO } = useProductSEOExtractor();
   const score = calculateProductScore(product);
   const productCoupon = getCouponByProductId(product.id);
 
@@ -244,6 +247,38 @@ export function ModernProductCard({
       });
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExtractGoogleMerchant = async () => {
+    if (!product.product_url) {
+      toast({
+        variant: "destructive",
+        title: "URL não configurada",
+        description: "Configure a URL do produto antes de extrair dados Google Merchant",
+      });
+      return;
+    }
+
+    setIsExtractingMerchant(true);
+    try {
+      const result = await extractAndSaveProductSEO(product.id, product.product_url);
+      
+      if (result.success && result.extractedCount && result.extractedCount > 0) {
+        toast({
+          title: "✅ Dados extraídos com sucesso",
+          description: `${result.extractedCount} campos Google Merchant foram atualizados`,
+        });
+        
+        // Refresh product data
+        if (onProductUpdate) {
+          onProductUpdate();
+        }
+      }
+    } catch (error) {
+      console.error('Error extracting Google Merchant data:', error);
+    } finally {
+      setIsExtractingMerchant(false);
     }
   };
 
@@ -468,19 +503,35 @@ export function ModernProductCard({
         <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity flex-shrink-0">
           <TooltipProvider>
           {product.product_url && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(product)}
-                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Importar/Atualizar</TooltipContent>
-            </Tooltip>
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(product)}
+                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Importar/Atualizar</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExtractGoogleMerchant}
+                    disabled={isExtractingMerchant}
+                    className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Extrair Dados Google Merchant</TooltipContent>
+              </Tooltip>
+            </>
           )}
           <Tooltip>
             <TooltipTrigger asChild>
