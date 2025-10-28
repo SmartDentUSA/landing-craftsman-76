@@ -274,7 +274,7 @@ export const WhatsAppSequenceGenerator: React.FC<WhatsAppSequenceGeneratorProps>
   const isOverLimit = (text: string) => getCharacterCount(text) > 5000;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

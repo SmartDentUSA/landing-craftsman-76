@@ -29,6 +29,7 @@ import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
+import { ProductEcommerceGenerator } from './ProductEcommerceGenerator';
 
 interface Video {
   url: string;
@@ -1302,7 +1303,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
@@ -2241,8 +2242,15 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 <Badge variant="secondary">IA</Badge>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Use o botão de carrinho no card do produto para gerar descrição HTML completa para e-commerce.
+                Gere uma descrição HTML completa para e-commerce com benefícios IA, especificações técnicas, FAQ, vídeos e CTAs.
               </p>
+              <div className="border rounded-lg p-6">
+                <ProductEcommerceGenerator 
+                  productId={formData.id}
+                  isOpen={true}
+                  onClose={() => {}}
+                />
+              </div>
             </div>
           )}
 

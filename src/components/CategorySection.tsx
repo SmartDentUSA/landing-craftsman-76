@@ -6,7 +6,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, Package, Star } from 'lucide-react';
 import { ModernProductCard } from './ModernProductCard';
 import { calculateProductScore } from './ProductScoreCalculator';
-import { ProductCoupon } from '@/hooks/useCoupons';
 
 interface Product {
   id: string;
@@ -48,7 +47,6 @@ interface CategorySectionProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   onProductUpdate?: () => void;
-  coupons?: ProductCoupon[];
 }
 
 export function CategorySection({
@@ -61,8 +59,7 @@ export function CategorySection({
   onToggleCategorySelection,
   onEditProduct,
   onDeleteProduct,
-  onProductUpdate,
-  coupons
+  onProductUpdate
 }: CategorySectionProps) {
   const categoryIcon = category === 'Sem categoria' ? Package : Star;
   const selectedCount = products.filter(p => selectedProductIds.has(p.id)).length;
@@ -145,7 +142,6 @@ export function CategorySection({
                 onEdit={() => onEditProduct(product)}
                 onDelete={() => onDeleteProduct(product.id)}
                 onProductUpdate={onProductUpdate}
-                coupons={coupons}
               />
             ))}
           </div>

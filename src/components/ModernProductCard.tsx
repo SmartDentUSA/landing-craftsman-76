@@ -42,7 +42,7 @@ import { TikTokIcon } from "./icons/TikTokIcon";
 import { WhatsAppPromoGenerator } from "./WhatsAppPromoGenerator";
 import { WhatsAppPromoVariationGenerator } from "./WhatsAppPromoVariationGenerator";
 import { ProductEcommerceGenerator } from "./ProductEcommerceGenerator";
-import { ProductCoupon } from "@/hooks/useCoupons";
+import { useCoupons } from "@/hooks/useCoupons";
 
 
 interface Product {
@@ -120,7 +120,6 @@ interface ModernProductCardProps {
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onProductUpdate?: () => void;
-  coupons?: ProductCoupon[];
 }
 
 export function ModernProductCard({
@@ -129,8 +128,7 @@ export function ModernProductCard({
   onToggleSelection,
   onEdit,
   onDelete,
-  onProductUpdate,
-  coupons
+  onProductUpdate
 }: ModernProductCardProps) {
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -145,23 +143,9 @@ export function ModernProductCard({
   const [showEcommerceModal, setShowEcommerceModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
+  const { getCouponByProductId } = useCoupons();
   const score = calculateProductScore(product);
-  const productCoupon = coupons?.find(c => c.product_id === product.id);
-
-  // Helper para fechar todos os modais e garantir "um por vez"
-  const closeAllModals = () => {
-    setShowBlogModal(false);
-    setShowWhatsAppModal(false);
-    setShowWhatsAppSequenceModal(false);
-    setShowYouTubeModal(false);
-    setShowInstagramModal(false);
-    setShowTikTokModal(false);
-    setShowGoogleAdsModal(false);
-    setShowTechnicalSpecs(false);
-    setShowWhatsAppPromoModal(false);
-    setShowWhatsAppPromoVariationModal(false);
-    setShowEcommerceModal(false);
-  };
+  const productCoupon = getCouponByProductId(product.id);
 
   const handleSaveTechnicalSpecs = async (specs: any[]) => {
     try {
@@ -517,7 +501,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowGoogleAdsModal(true); }}
+                onClick={() => setShowGoogleAdsModal(true)}
                 className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
               >
                 <Target className="h-4 w-4" />
@@ -530,7 +514,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowBlogModal(true); }}
+                onClick={() => setShowBlogModal(true)}
                 className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
               >
                 <FileText className="h-4 w-4" />
@@ -543,7 +527,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowWhatsAppModal(true); }}
+                onClick={() => setShowWhatsAppModal(true)}
                 className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
               >
                 <MessageCircle className="h-4 w-4" />
@@ -557,7 +541,7 @@ export function ModernProductCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { closeAllModals(); setShowWhatsAppPromoModal(true); }}
+                  onClick={() => setShowWhatsAppPromoModal(true)}
                   className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 relative"
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -573,7 +557,7 @@ export function ModernProductCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { closeAllModals(); setShowWhatsAppPromoVariationModal(true); }}
+                  onClick={() => setShowWhatsAppPromoVariationModal(true)}
                   className="h-8 w-8 p-0 text-orange-700 hover:text-orange-800 relative"
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -588,7 +572,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowWhatsAppSequenceModal(true); }}
+                onClick={() => setShowWhatsAppSequenceModal(true)}
                 className="h-8 w-8 p-0 text-green-700 hover:text-green-800 relative"
               >
                 <MessageCircle className="h-4 w-4" />
@@ -602,7 +586,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowYouTubeModal(true); }}
+                onClick={() => setShowYouTubeModal(true)}
                 className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
               >
                 <PlayCircle className="h-4 w-4" />
@@ -615,7 +599,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowInstagramModal(true); }}
+                onClick={() => setShowInstagramModal(true)}
                 className="h-8 w-8 p-0 text-pink-600 hover:text-pink-700"
               >
                 <Instagram className="h-4 w-4" />
@@ -628,7 +612,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowTikTokModal(true); }}
+                onClick={() => setShowTikTokModal(true)}
                 className="h-8 w-8 p-0 text-gray-900 hover:text-black"
               >
                 <TikTokIcon className="h-4 w-4" />
@@ -641,7 +625,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); onEdit(product); }}
+                onClick={() => onEdit(product)}
                 className="h-8 w-8 p-0"
               >
                 <Edit className="h-4 w-4" />
@@ -654,7 +638,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowTechnicalSpecs(true); }}
+                onClick={() => setShowTechnicalSpecs(true)}
                 className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
               >
                 <Settings className="h-4 w-4" />
@@ -667,7 +651,7 @@ export function ModernProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { closeAllModals(); setShowEcommerceModal(true); }}
+                onClick={() => setShowEcommerceModal(true)}
                 className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
               >
                 <ShoppingCart className="h-4 w-4" />
@@ -694,107 +678,90 @@ export function ModernProductCard({
 
     </Card>
 
-      {/* Modal de Geração de Blog - Lazy Mount */}
-      {showBlogModal && (
-        <ProductBlogGeneratorModal
-          open={true}
-          onOpenChange={setShowBlogModal}
-          product={product}
-          onBlogGenerated={() => {
-            onProductUpdate?.();
-          }}
-        />
-      )}
+      {/* Modal de Geração de Blog */}
+      <ProductBlogGeneratorModal
+        open={showBlogModal}
+        onOpenChange={setShowBlogModal}
+        product={product}
+        onBlogGenerated={() => {
+          onProductUpdate?.();
+          // Modal não fecha automaticamente para mostrar resultado
+        }}
+      />
 
-      {/* Modal de Geração WhatsApp - Lazy Mount */}
-      {showWhatsAppModal && (
-        <WhatsAppMessageGenerator
-          isOpen={true}
-          onClose={() => setShowWhatsAppModal(false)}
-          productId={product.id}
-          productName={product.name}
-        />
-      )}
+      {/* Modal de Geração WhatsApp */}
+      <WhatsAppMessageGenerator
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        productId={product.id}
+        productName={product.name}
+      />
 
-      {/* Modal de Sequência WhatsApp - Lazy Mount */}
-      {showWhatsAppSequenceModal && (
-        <WhatsAppSequenceGenerator
-          productId={product.id}
-          productName={product.name}
-          isOpen={true}
-          onClose={() => setShowWhatsAppSequenceModal(false)}
-        />
-      )}
+      {/* Modal de Sequência WhatsApp */}
+      <WhatsAppSequenceGenerator
+        productId={product.id}
+        productName={product.name}
+        isOpen={showWhatsAppSequenceModal}
+        onClose={() => setShowWhatsAppSequenceModal(false)}
+      />
 
-      {/* Modal de Geração YouTube - Lazy Mount */}
-      {showYouTubeModal && (
-        <YouTubeDescriptionGenerator
-          isOpen={true}
-          onClose={() => setShowYouTubeModal(false)}
-          productId={product.id}
-          productName={product.name}
-        />
-      )}
+      {/* Modal de Geração YouTube */}
+      <YouTubeDescriptionGenerator
+        isOpen={showYouTubeModal}
+        onClose={() => setShowYouTubeModal(false)}
+        productId={product.id}
+        productName={product.name}
+      />
 
-      {/* Modal de Geração Instagram - Lazy Mount */}
-      {showInstagramModal && (
-        <InstagramCopyGenerator
-          isOpen={true}
-          onClose={() => setShowInstagramModal(false)}
-          productId={product.id}
-          productName={product.name}
-        />
-      )}
+      {/* Modal de Geração Instagram */}
+      <InstagramCopyGenerator
+        isOpen={showInstagramModal}
+        onClose={() => setShowInstagramModal(false)}
+        productId={product.id}
+        productName={product.name}
+      />
 
-      {/* Modal de Geração TikTok - Lazy Mount */}
-      {showTikTokModal && (
-        <TikTokContentGenerator
-          productId={product.id}
-          productName={product.name}
-          isOpen={true}
-          onClose={() => setShowTikTokModal(false)}
-          onProductUpdate={onProductUpdate}
-        />
-      )}
+      {/* Modal de Geração TikTok */}
+      <TikTokContentGenerator
+        productId={product.id}
+        productName={product.name}
+        isOpen={showTikTokModal}
+        onClose={() => setShowTikTokModal(false)}
+        onProductUpdate={onProductUpdate}
+      />
 
-      {/* Modal de Google Ads - Lazy Mount */}
-      {showGoogleAdsModal && (
-        <ProductGoogleAdsModal
-          open={true}
-          onOpenChange={setShowGoogleAdsModal}
-          product={product}
-        />
-      )}
+      {/* Modal de Google Ads */}
+      <ProductGoogleAdsModal
+        open={showGoogleAdsModal}
+        onOpenChange={setShowGoogleAdsModal}
+        product={product}
+      />
 
-      {/* Modal de Especificações Técnicas - Lazy Mount */}
-      {showTechnicalSpecs && (
-        <ProductTechnicalSpecsModal
-          isOpen={true}
-          onClose={() => setShowTechnicalSpecs(false)}
-          productId={product.id}
-          productName={product.name}
-          initialSpecs={product.technical_specifications || []}
-          onSave={handleSaveTechnicalSpecs}
-        />
-      )}
+      {/* Modal de Especificações Técnicas */}
+      <ProductTechnicalSpecsModal
+        isOpen={showTechnicalSpecs}
+        onClose={() => setShowTechnicalSpecs(false)}
+        productId={product.id}
+        productName={product.name}
+        initialSpecs={product.technical_specifications || []}
+        onSave={handleSaveTechnicalSpecs}
+      />
 
-      {/* Modal WhatsApp Promo Variação (De/Por) - Lazy Mount */}
-      {showWhatsAppPromoVariationModal && (
-        <WhatsAppPromoVariationGenerator
-          isOpen={true}
-          onClose={() => setShowWhatsAppPromoVariationModal(false)}
-          productId={product.id}
-          productName={product.name}
-          productPrice={product.price}
-          productPromoPrice={product.promo_price}
-          productCurrency={product.currency}
-        />
-      )}
+      {/* Modal WhatsApp Promo Variação (De/Por) */}
+      <WhatsAppPromoVariationGenerator
+        isOpen={showWhatsAppPromoVariationModal}
+        onClose={() => setShowWhatsAppPromoVariationModal(false)}
+        productId={product.id}
+        productName={product.name}
+        productPrice={product.price}
+        productPromoPrice={product.promo_price}
+        productCurrency={product.currency}
+      />
 
-      {/* Modal de Mensagem Promocional WhatsApp - Lazy Mount */}
-      {showWhatsAppPromoModal && productCoupon && productCoupon.allow_promotions && product.price && (
+      {/* Modal de Mensagem Promocional WhatsApp */}
+      {productCoupon && productCoupon.allow_promotions && product.price && (
         <WhatsAppPromoGenerator
-          isOpen={true}
+          isOpen={showWhatsAppPromoModal}
           onClose={() => setShowWhatsAppPromoModal(false)}
           productId={product.id}
           productName={product.name}
@@ -805,14 +772,12 @@ export function ModernProductCard({
       )}
 
       {/* Modal de Descrição E-commerce */}
-      {showEcommerceModal && (
-        <ProductEcommerceGenerator
-          productId={product.id}
-          isOpen={true}
-          onClose={() => setShowEcommerceModal(false)}
-          onUpdate={onProductUpdate}
-        />
-      )}
+      <ProductEcommerceGenerator
+        productId={product.id}
+        isOpen={showEcommerceModal}
+        onClose={() => setShowEcommerceModal(false)}
+        onUpdate={onProductUpdate}
+      />
     </>
   );
 }

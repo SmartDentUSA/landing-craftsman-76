@@ -38,9 +38,8 @@ export function ProductEcommerceGenerator({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isOpen) return;
     loadExistingHTML();
-  }, [productId, isOpen]);
+  }, [productId]);
 
   const loadExistingHTML = async () => {
     try {
@@ -294,8 +293,6 @@ export function ProductEcommerceGenerator({
                 srcDoc={htmlContent}
                 title="Preview HTML"
                 className="w-full h-[600px] border-0"
-                loading="lazy"
-                sandbox=""
               />
             </TabsContent>
             <TabsContent value="code">
@@ -346,8 +343,6 @@ export function ProductEcommerceGenerator({
                 srcDoc={editedHtml}
                 title="Preview Editado"
                 className="w-full h-[600px] border rounded-md"
-                loading="lazy"
-                sandbox=""
               />
             </TabsContent>
           </Tabs>
@@ -371,7 +366,7 @@ export function ProductEcommerceGenerator({
   };
 
   return (
-    <Dialog open={isOpen} modal={false} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
