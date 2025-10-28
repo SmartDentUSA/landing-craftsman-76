@@ -282,6 +282,100 @@ function truncateToWords(text: string, maxWords: number): string {
   return words.slice(0, maxWords).join(' ') + '...';
 }
 
+// Generate Product Schema.org JSON-LD
+function generateProductSchema(product: any): string {
+  const schema: any = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description || '',
+    "sku": product.id,
+    "image": product.image_url || (product.images_gallery?.[0] || ''),
+    "brand": {
+      "@type": "Brand",
+      "name": product.brand || "Smartdent"
+    }
+  };
+
+  // Add GTIN if available
+  if (product.gtin) {
+    schema.gtin = product.gtin;
+  }
+
+  // Add MPN if available
+  if (product.mpn) {
+    schema.mpn = product.mpn;
+  }
+
+  // Add category if available
+  if (product.category) {
+    schema.category = product.category;
+  }
+
+  // Add offers with price
+  if (product.price || product.promo_price) {
+    schema.offers = {
+      "@type": "Offer",
+      "priceCurrency": product.currency || "BRL",
+      "price": (product.promo_price || product.price || 0).toString(),
+      "availability": "https://schema.org/InStock",
+      "url": product.product_url || ''
+    };
+  }
+
+  return JSON.stringify(schema, null, 2);
+}
+
+// Build SEO Head section with meta tags
+function buildSEOHead(product: any): string {
+  const title = product.seo_title_override || `${product.name} | Smartdent`;
+  const description = product.seo_description_override || (product.description?.substring(0, 155) + '...' || '');
+  const canonicalUrl = product.canonical_url || product.product_url || '';
+  const imageUrl = product.image_url || (product.images_gallery?.[0] || '');
+  
+  // Extract keywords from multiple sources
+  const keywords = [
+    ...(product.keywords || []),
+    ...(product.market_keywords || [])
+  ].slice(0, 10).join(', ');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- SEO Meta Tags -->
+  <title>${title}</title>
+  <meta name="description" content="${description}">
+  ${keywords ? `<meta name="keywords" content="${keywords}">` : ''}
+  <meta name="robots" content="index, follow">
+  ${canonicalUrl ? `<link rel="canonical" href="${canonicalUrl}">` : ''}
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  ${imageUrl ? `<meta property="og:image" content="${imageUrl}">` : ''}
+  ${canonicalUrl ? `<meta property="og:url" content="${canonicalUrl}">` : ''}
+  <meta property="og:type" content="product">
+  <meta property="og:site_name" content="Smartdent">
+  ${product.price || product.promo_price ? `<meta property="product:price:amount" content="${product.promo_price || product.price}">` : ''}
+  ${product.currency ? `<meta property="product:price:currency" content="${product.currency}">` : '<meta property="product:price:currency" content="BRL">'}
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  ${imageUrl ? `<meta name="twitter:image" content="${imageUrl}">` : ''}
+  
+  <!-- Product Schema JSON-LD -->
+  <script type="application/ld+json">
+  ${generateProductSchema(product)}
+  </script>
+</head>
+<body>`;
+}
+
 function buildEcommerceHTML(product: any, benefits: string[], options: any): string {
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
   let enrichedDescription = product.description || '';
@@ -313,8 +407,12 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   
   const hasVideos = options.includeVideoCollections && Object.values(videoCollections).some((v: any) => v.length > 0);
   
-  // ✅ Iniciar com <section> (SEM DOCTYPE/HTML/HEAD/BODY)
-  let html = `<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6;">
+  // ✅ Iniciar HTML completo com SEO Head
+  let html = buildSEOHead(product);
+  
+  // ✅ Conteúdo principal em <section>
+  html += `
+<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">
 <h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>
 <div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555; white-space: pre-wrap;">${enrichedDescription}</div>`;
 
@@ -507,7 +605,9 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   <a href="https://parametros.smartdent.com.br/" target="_blank" rel="noopener noreferrer" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px;">Parametrize sua Impressora</a>
 </div>
 
-</section>`;
+</section>
+</body>
+</html>`;
 
   return html;
 }
