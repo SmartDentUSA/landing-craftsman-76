@@ -2,7 +2,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus, ExternalLink } from 'lucide-react';
+
+// Helper para detectar URLs válidas
+const isValidUrl = (text: string): boolean => {
+  if (!text) return false;
+  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  return urlPattern.test(text) || text.startsWith('http://') || text.startsWith('https://');
+};
 
 interface TechnicalSpec {
   label: string;
@@ -71,7 +78,20 @@ export const TechnicalSpecsPreview: React.FC<TechnicalSpecsPreviewProps> = ({
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground truncate flex-1" title={spec.value}>
-                  {spec.value}
+                  {isValidUrl(spec.value) ? (
+                    <a 
+                      href={spec.value.startsWith('http') ? spec.value : `https://${spec.value}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline inline-flex items-center gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {spec.value}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  ) : (
+                    spec.value
+                  )}
                 </div>
                 {onDelete && (
                   <Button

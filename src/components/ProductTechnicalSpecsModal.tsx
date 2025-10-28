@@ -4,8 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// Helper para detectar URLs válidas
+const isValidUrl = (text: string): boolean => {
+  if (!text) return false;
+  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  return urlPattern.test(text) || text.startsWith('http://') || text.startsWith('https://');
+};
 
 interface TechnicalSpec {
   label: string;
@@ -102,7 +109,21 @@ export const ProductTechnicalSpecsModal: React.FC<ProductTechnicalSpecsModalProp
                     {specs.map((spec, index) => (
                       <tr key={index} className="border-t">
                         <td className="p-3 font-medium">{spec.label}</td>
-                        <td className="p-3">{spec.value}</td>
+                        <td className="p-3">
+                          {isValidUrl(spec.value) ? (
+                            <a 
+                              href={spec.value.startsWith('http') ? spec.value : `https://${spec.value}`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              {spec.value}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            spec.value
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
