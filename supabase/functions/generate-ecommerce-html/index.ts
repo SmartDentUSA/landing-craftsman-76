@@ -458,7 +458,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
   <h2 style="color: white; margin-top: 0; font-size: 1.5em;">Parametrize a sua impressora</h2>
   <p style="margin: 15px 0; line-height: 1.6;">Utilize nosso seletor de parâmetros, parâmetros e indicações para que sua impressão seja perfeita</p>
-  ${product.product_url ? `<a href="${product.product_url}" target="_blank" rel="noopener" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px;">Parametrize sua Impressora</a>` : '<p style="color: #fff; opacity: 0.8;">Link de produto não configurado</p>'}
+  <a href="https://parametros.smartdent.com.br/" target="_blank" rel="noopener noreferrer" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px;">Parametrize sua Impressora</a>
 </div>
 
 </section>`;
