@@ -308,7 +308,7 @@ function generateImageAlt(imageUrl: string, productName: string, index: number =
 }
 
 /**
- * Constrói galeria de imagens com alt text semântico e lazy loading
+ * Constrói galeria de imagens com miniaturas 80x80px no final do HTML
  */
 function buildImageGallery(product: any): string {
   const images: string[] = [];
@@ -332,24 +332,22 @@ function buildImageGallery(product: any): string {
     return '';
   }
   
+  // ✅ MINIATURAS COMPACTAS (80x80px)
   let galleryHTML = `
-<div style="margin: 25px 0;">
-  <h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 15px;">📸 Galeria de Imagens</h2>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px;">`;
+<div style="margin: 20px 0; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+  <h3 style="color: #666; font-size: 0.95em; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">📎 Imagens Adicionais</h3>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">`;
   
   images.forEach((imageUrl, index) => {
     const alt = generateImageAlt(imageUrl, product.name, index);
-    const loading = index === 0 ? 'eager' : 'lazy'; // Primeira imagem carrega imediatamente (LCP)
-    const fetchpriority = index === 0 ? 'fetchpriority="high"' : '';
     
     galleryHTML += `
-    <div style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #f9f9f9;">
+    <div style="border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; background: #f9f9f9; width: 80px; height: 80px;">
       <img 
         src="${imageUrl}" 
         alt="${alt}"
-        loading="${loading}"
-        ${fetchpriority}
-        style="width: 100%; height: auto; display: block; object-fit: cover; aspect-ratio: 1/1;"
+        loading="lazy"
+        style="width: 100%; height: 100%; display: block; object-fit: cover;"
       />
     </div>`;
   });
@@ -516,9 +514,6 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
 <section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">
 <h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
 
-  // ✅ Galeria de Imagens com Alt Text Semântico
-  html += buildImageGallery(product);
-  
   html += `
 <div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555; white-space: pre-wrap;">${enrichedDescription}</div>`;
 
@@ -713,10 +708,22 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     }
   }
 
-  // ✅ CTA Natural Semântico com Keywords
+  // ✅ Galeria de Miniaturas 80x80px no Final (após vídeos)
+  html += buildImageGallery(product);
+
+  // ✅ CTA Natural Semântico com Keywords e URL de Desconto
   const primaryKeyword = (product.keywords?.[0] || product.market_keywords?.[0] || product.name);
   const secondaryKeyword = (product.keywords?.[1] || product.market_keywords?.[1] || '');
   const firstBenefit = product.benefits?.[0] || 'Qualidade garantida';
+  
+  // ✅ PRIORIZAR URL DE DESCONTO SE CONFIGURADA
+  const ctaUrl = (product.offer_discount_cta?.visible && product.offer_discount_cta?.url) 
+    ? product.offer_discount_cta.url 
+    : (product.product_url || '#');
+
+  const ctaLabel = (product.offer_discount_cta?.visible && product.offer_discount_cta?.label)
+    ? product.offer_discount_cta.label
+    : 'Ver Detalhes e Preços';
   
   html += `
 <div style="margin: 30px 0; padding: 25px; background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #667eea; border-radius: 8px;">
@@ -724,13 +731,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
     🔍 Procurando <strong style="color: #667eea;">${primaryKeyword}</strong>?
   </h3>
   <p style="color: #555; line-height: 1.7; margin: 15px 0;">
-    ${secondaryKeyword ? `Explore nossas opções de <strong>${secondaryKeyword}</strong> e ` : ''}Descubra por que <a href="${product.product_url || '#'}" style="color: #667eea; text-decoration: underline; font-weight: 600;">${product.name}</a> é a escolha ideal para seu consultório. 
+    ${secondaryKeyword ? `Explore nossas opções de <strong>${secondaryKeyword}</strong> e ` : ''}Descubra por que <a href="${ctaUrl}" style="color: #667eea; text-decoration: underline; font-weight: 600;">${product.name}</a> é a escolha ideal para seu consultório. 
     <strong>${firstBenefit}</strong> com entrega rápida em todo Brasil.
   </p>
   <div style="margin-top: 20px;">
-    <a href="${product.product_url || '#'}" 
+    <a href="${ctaUrl}" 
        style="display: inline-block; padding: 12px 30px; background: #667eea; color: white; font-weight: bold; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s;">
-      Ver Detalhes e Preços →
+      ${ctaLabel} →
     </a>
   </div>
 </div>
