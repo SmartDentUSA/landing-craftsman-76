@@ -418,7 +418,19 @@ function generateProductSchema(product: any): string {
 // Build SEO Head section with meta tags
 function buildSEOHead(product: any): string {
   const title = product.seo_title_override || `${product.name} | Smartdent`;
-  const description = product.seo_description_override || (product.description?.substring(0, 155) + '...' || '');
+  
+  // ✅ Meta Description Otimizada: Keywords nos primeiros 160 caracteres
+  let description = '';
+  if (product.seo_description_override) {
+    description = product.seo_description_override;
+  } else {
+    const primaryKeyword = (product.keywords?.[0] || product.market_keywords?.[0] || product.name);
+    const secondaryKeyword = (product.keywords?.[1] || product.market_keywords?.[1] || '');
+    const keywordsPrefix = `${primaryKeyword}${secondaryKeyword ? ' | ' + secondaryKeyword : ''}`;
+    const maxDescLength = 155 - keywordsPrefix.length - 2;
+    const truncatedDesc = (product.description || product.short_description || '').substring(0, maxDescLength);
+    description = `${keywordsPrefix}: ${truncatedDesc}...`;
+  }
   const canonicalUrl = product.canonical_url || product.product_url || '';
   const imageUrl = product.image_url || (product.images_gallery?.[0] || '');
   
@@ -564,21 +576,31 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   html += `
 </div>`;
 
-  // ✅ FAQ (details/summary inline)
+  // ✅ FAQ (details/summary inline) com Keywords
   if (faq.length > 0) {
+    const topKeywords = [
+      ...(product.keywords || []),
+      ...(product.market_keywords || [])
+    ].slice(0, 3).join(' | ');
+    
     html += `
 <h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
     faq.forEach(item => {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">${item.question}</summary>
+  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">${item.question}${topKeywords ? ` | ${topKeywords}` : ''}</summary>
   <p style="padding: 10px 12px; margin: 0; line-height: 1.6;">${item.answer}</p>
 </details>`;
     });
   }
 
-  // ✅ Coleções de Vídeos (details/summary inline)
+  // ✅ Coleções de Vídeos (details/summary inline) com Keywords
   if (hasVideos) {
+    const topKeywords = [
+      ...(product.keywords || []),
+      ...(product.market_keywords || [])
+    ].slice(0, 3).join(' | ');
+    
     html += `
 <h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">🎥 Recursos de Vídeo</h2>`;
     
@@ -586,7 +608,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
       html += `
 <details style="margin: 10px 0;">
   <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Vídeos YouTube<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
+    Vídeos YouTube${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.youtube.map((v, i) => {
@@ -640,7 +662,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
       html += `
 <details style="margin: 10px 0;">
   <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Explicações Técnicas<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.technical.length}</span>
+    Explicações Técnicas${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.technical.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.technical.map((v, i) => {
@@ -658,7 +680,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
       html += `
 <details style="margin: 10px 0;">
   <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Vídeos TikTok<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tiktok.length}</span>
+    Vídeos TikTok${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tiktok.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.tiktok.map((v, i) => {
@@ -676,7 +698,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
       html += `
 <details style="margin: 10px 0;">
   <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Tutoriais do Produto<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tutorials.length}</span>
+    Tutoriais${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tutorials.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.tutorials.map((t, i) => {
@@ -690,6 +712,29 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
 </details>`;
     }
   }
+
+  // ✅ CTA Natural Semântico com Keywords
+  const primaryKeyword = (product.keywords?.[0] || product.market_keywords?.[0] || product.name);
+  const secondaryKeyword = (product.keywords?.[1] || product.market_keywords?.[1] || '');
+  const firstBenefit = product.benefits?.[0] || 'Qualidade garantida';
+  
+  html += `
+<div style="margin: 30px 0; padding: 25px; background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #667eea; border-radius: 8px;">
+  <h3 style="color: #2c3e50; margin-top: 0; font-size: 1.3em;">
+    🔍 Procurando <strong style="color: #667eea;">${primaryKeyword}</strong>?
+  </h3>
+  <p style="color: #555; line-height: 1.7; margin: 15px 0;">
+    ${secondaryKeyword ? `Explore nossas opções de <strong>${secondaryKeyword}</strong> e ` : ''}Descubra por que <a href="${product.product_url || '#'}" style="color: #667eea; text-decoration: underline; font-weight: 600;">${product.name}</a> é a escolha ideal para seu consultório. 
+    <strong>${firstBenefit}</strong> com entrega rápida em todo Brasil.
+  </p>
+  <div style="margin-top: 20px;">
+    <a href="${product.product_url || '#'}" 
+       style="display: inline-block; padding: 12px 30px; background: #667eea; color: white; font-weight: bold; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s;">
+      Ver Detalhes e Preços →
+    </a>
+  </div>
+</div>
+`;
 
   // ✅ CTA Final (gradiente inline)
   html += `
