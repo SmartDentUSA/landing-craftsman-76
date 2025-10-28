@@ -272,6 +272,95 @@ function buildPackagingInfo(product: any): string {
   return html;
 }
 
+/**
+ * Gera alt text semântico a partir do nome do arquivo ou URL
+ * Utiliza sanitização para criar descrições SEO-friendly
+ */
+function generateImageAlt(imageUrl: string, productName: string, index: number = 0): string {
+  if (!imageUrl) return productName;
+  
+  // Extrai nome do arquivo da URL
+  const fileName = imageUrl.split('/').pop() || '';
+  const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+  
+  // Sanitiza o nome do arquivo (remove _-, caracteres especiais, capitaliza)
+  let alt = nameWithoutExt
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/[^a-zA-Z0-9\sÀ-ÿ]/g, '')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Se o alt gerado estiver vazio ou muito curto, usa o nome do produto
+  if (!alt || alt.length < 3) {
+    alt = index === 0 ? productName : `${productName} - Imagem ${index + 1}`;
+  }
+  
+  // Valida comprimento (máximo 125 chars para Google)
+  if (alt.length > 125) {
+    alt = alt.substring(0, 122) + '...';
+  }
+  
+  return alt;
+}
+
+/**
+ * Constrói galeria de imagens com alt text semântico e lazy loading
+ */
+function buildImageGallery(product: any): string {
+  const images: string[] = [];
+  
+  // Adiciona imagem principal se existir
+  if (product.image_url) {
+    images.push(product.image_url);
+  }
+  
+  // Adiciona imagens da galeria
+  if (product.images_gallery && Array.isArray(product.images_gallery)) {
+    product.images_gallery.forEach((img: any) => {
+      const url = typeof img === 'string' ? img : img.url;
+      if (url && !images.includes(url)) {
+        images.push(url);
+      }
+    });
+  }
+  
+  if (images.length === 0) {
+    return '';
+  }
+  
+  let galleryHTML = `
+<div style="margin: 25px 0;">
+  <h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 15px;">📸 Galeria de Imagens</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px;">`;
+  
+  images.forEach((imageUrl, index) => {
+    const alt = generateImageAlt(imageUrl, product.name, index);
+    const loading = index === 0 ? 'eager' : 'lazy'; // Primeira imagem carrega imediatamente (LCP)
+    const fetchpriority = index === 0 ? 'fetchpriority="high"' : '';
+    
+    galleryHTML += `
+    <div style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #f9f9f9;">
+      <img 
+        src="${imageUrl}" 
+        alt="${alt}"
+        loading="${loading}"
+        ${fetchpriority}
+        style="width: 100%; height: auto; display: block; object-fit: cover; aspect-ratio: 1/1;"
+      />
+    </div>`;
+  });
+  
+  galleryHTML += `
+  </div>
+</div>`;
+  
+  return galleryHTML;
+}
+
 // Truncate text to a maximum number of words
 function truncateToWords(text: string, maxWords: number): string {
   if (!text || text.trim() === '') return '';
@@ -413,7 +502,12 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   // ✅ Conteúdo principal em <section>
   html += `
 <section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">
-<h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>
+<h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
+
+  // ✅ Galeria de Imagens com Alt Text Semântico
+  html += buildImageGallery(product);
+  
+  html += `
 <div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555; white-space: pre-wrap;">${enrichedDescription}</div>`;
 
   // ✅ Benefícios IA (inline styles)
