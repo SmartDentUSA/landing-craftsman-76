@@ -29,7 +29,6 @@ import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
-import { ProductEcommerceGenerator } from './ProductEcommerceGenerator';
 
 interface Video {
   url: string;
