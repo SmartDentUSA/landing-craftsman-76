@@ -42,7 +42,7 @@ import { TikTokIcon } from "./icons/TikTokIcon";
 import { WhatsAppPromoGenerator } from "./WhatsAppPromoGenerator";
 import { WhatsAppPromoVariationGenerator } from "./WhatsAppPromoVariationGenerator";
 import { ProductEcommerceGenerator } from "./ProductEcommerceGenerator";
-import { useCoupons } from "@/hooks/useCoupons";
+import { ProductCoupon } from "@/hooks/useCoupons";
 
 
 interface Product {
@@ -120,6 +120,7 @@ interface ModernProductCardProps {
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onProductUpdate?: () => void;
+  coupons?: ProductCoupon[];
 }
 
 export function ModernProductCard({
@@ -128,7 +129,8 @@ export function ModernProductCard({
   onToggleSelection,
   onEdit,
   onDelete,
-  onProductUpdate
+  onProductUpdate,
+  coupons
 }: ModernProductCardProps) {
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -143,9 +145,8 @@ export function ModernProductCard({
   const [showEcommerceModal, setShowEcommerceModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
-  const { getCouponByProductId } = useCoupons();
   const score = calculateProductScore(product);
-  const productCoupon = getCouponByProductId(product.id);
+  const productCoupon = coupons?.find(c => c.product_id === product.id);
 
   const handleSaveTechnicalSpecs = async (specs: any[]) => {
     try {

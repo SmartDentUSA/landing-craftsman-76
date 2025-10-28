@@ -26,6 +26,7 @@ import { ScoreFilters } from './ScoreFilters';
 import { calculateProductScore } from './ProductScoreCalculator';
 import { calculateProductStats } from './ProductStatsHelper';
 import { CategorySection } from './CategorySection';
+import { useCoupons } from '@/hooks/useCoupons';
 
 interface Video {
   url: string;
@@ -135,6 +136,7 @@ export function RepositoryPanel({
   const { migrateExistingOffers, syncOffersToRepository } = useProductSync();
   const { getLandingPage } = useLandingPages();
   const { refreshAllCategories } = useCategoryContext();
+  const { coupons, loading: couponsLoading } = useCoupons();
 
 
   // Function to load company profile data
@@ -894,6 +896,7 @@ export function RepositoryPanel({
                     onEditProduct={handleEditProduct}
                     onDeleteProduct={handleDeleteProduct}
                     onProductUpdate={loadProducts}
+                    coupons={coupons}
                   />
                 ))}
                 
