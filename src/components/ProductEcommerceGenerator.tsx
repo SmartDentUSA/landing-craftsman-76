@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Copy, Edit, Trash2, Loader2, Sparkles, Save, X, FileCode, Eye, ShoppingCart } from 'lucide-react';
+import { Copy, Edit, Trash2, Loader2, Sparkles, Save, X, FileCode, Eye, ShoppingCart, PenTool } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface ProductEcommerceGeneratorProps {
   productId: string;
@@ -321,18 +322,34 @@ export function ProductEcommerceGenerator({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Tabs defaultValue="editor">
-            <TabsList className="w-full">
-              <TabsTrigger value="editor" className="flex-1">
-                <FileCode className="h-4 w-4 mr-2" />
-                Editor
+          <Tabs defaultValue="visual">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="visual">
+                <PenTool className="h-4 w-4 mr-2" />
+                Preview Editável
               </TabsTrigger>
-              <TabsTrigger value="preview" className="flex-1">
+              <TabsTrigger value="code">
+                <FileCode className="h-4 w-4 mr-2" />
+                Editor Código
+              </TabsTrigger>
+              <TabsTrigger value="preview">
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="editor">
+            
+            <TabsContent value="visual" className="mt-4">
+              <div className="border rounded-md">
+                <RichTextEditor
+                  content={editedHtml}
+                  onChange={(html) => setEditedHtml(html)}
+                  placeholder="Edite visualmente o conteúdo..."
+                  className="min-h-[600px]"
+                />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="code">
               <Textarea
                 value={editedHtml}
                 onChange={(e) => setEditedHtml(e.target.value)}
@@ -340,6 +357,7 @@ export function ProductEcommerceGenerator({
                 placeholder="Edite o HTML aqui..."
               />
             </TabsContent>
+            
             <TabsContent value="preview">
               <iframe
                 srcDoc={editedHtml}

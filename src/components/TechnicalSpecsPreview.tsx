@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus, ExternalLink } from 'lucide-react';
 
 interface TechnicalSpec {
   label: string;
@@ -15,6 +15,41 @@ interface TechnicalSpecsPreviewProps {
   onDelete?: (index: number) => void;
   productName: string;
 }
+
+// Helper para detectar URLs válidas
+const isValidURL = (text: string): boolean => {
+  try {
+    const url = new URL(text);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+// Componente para renderizar valor (texto ou link)
+const ValueCell: React.FC<{ value: string }> = ({ value }) => {
+  if (isValidURL(value)) {
+    return (
+      <a 
+        href={value} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-xs text-primary hover:underline truncate flex-1 cursor-pointer inline-flex items-center gap-1"
+        title={value}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="truncate">{value}</span>
+        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+      </a>
+    );
+  }
+  
+  return (
+    <div className="text-xs text-muted-foreground truncate flex-1" title={value}>
+      {value}
+    </div>
+  );
+};
 
 export const TechnicalSpecsPreview: React.FC<TechnicalSpecsPreviewProps> = ({
   specs,
@@ -70,9 +105,7 @@ export const TechnicalSpecsPreview: React.FC<TechnicalSpecsPreviewProps> = ({
                 {spec.label}
               </div>
               <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground truncate flex-1" title={spec.value}>
-                  {spec.value}
-                </div>
+                <ValueCell value={spec.value} />
                 {onDelete && (
                   <Button
                     variant="ghost"
