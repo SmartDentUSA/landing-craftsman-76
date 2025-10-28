@@ -22,6 +22,26 @@ serve(async (req) => {
       throw new Error('Nome e descrição são obrigatórios para gerar FAQs');
     }
 
+    // Validar quantidade mínima de dados
+    const hasMinimumData = (
+      product.description?.length > 20 ||
+      (product.benefits && product.benefits.length > 0) ||
+      (product.features && product.features.length > 0) ||
+      (product.keywords && product.keywords.length > 0)
+    );
+
+    if (!hasMinimumData) {
+      throw new Error('Dados insuficientes para gerar FAQs. Adicione mais informações ao produto (descrição, benefícios, recursos ou keywords).');
+    }
+
+    console.log('[generate-product-faqs] Dados disponíveis:', {
+      description: product.description ? 'SIM' : 'NÃO',
+      benefits: product.benefits?.length || 0,
+      features: product.features?.length || 0,
+      keywords: product.keywords?.length || 0,
+      sales_pitch: product.sales_pitch ? 'SIM' : 'NÃO'
+    });
+
     // 🤖 Prompt para IA com anti-alucinação e hyperlinks
     const prompt = `Você é um especialista em produtos e FAQ. Gere EXATAMENTE 10 perguntas frequentes (FAQs) sobre o produto abaixo.
 
@@ -34,11 +54,32 @@ serve(async (req) => {
 - Benefícios: ${product.benefits?.join(', ') || 'N/A'}
 - Recursos: ${product.features?.join(', ') || 'N/A'}
 
+**ATENÇÃO - RESTRIÇÃO DE DADOS:**
+Os dados acima são TUDO que você tem. Se algum campo mostra "N/A", significa que essa informação NÃO EXISTE.
+- Se Benefits está vazio → NÃO crie perguntas sobre benefícios
+- Se Features está vazio → NÃO crie perguntas sobre recursos
+- Se Technical Specs não foi fornecido → NÃO mencione especificações
+- Gere APENAS FAQs baseados nos campos preenchidos acima
+
+Se houver poucos dados, é MELHOR gerar menos FAQs (5-7) com informações reais do que 10 FAQs com dados inventados.
+
 **INSTRUÇÕES CRÍTICAS - ANTI-ALUCINAÇÃO:**
 1. Use APENAS as informações fornecidas acima - NÃO invente dados externos
 2. NÃO mencione características ou especificações que não estejam nos campos acima
 3. Se uma informação não estiver disponível (N/A), NÃO a mencione na resposta
 4. Base suas respostas EXCLUSIVAMENTE nos dados fornecidos
+
+**EXEMPLOS DE VIOLAÇÕES (NÃO FAÇA ISSO):**
+❌ "O produto possui garantia de 2 anos" → Se garantia não está nos dados
+❌ "Feito com materiais de alta qualidade" → Se materiais não estão listados
+❌ "Compatível com todos os dispositivos" → Se compatibilidade não foi informada
+❌ "Recomendado por dentistas" → Se não há essa informação nos dados
+❌ "Produto certificado pela ANVISA" → Se certificação não consta nos dados
+
+**EXEMPLOS CORRETOS (BASEADOS NOS DADOS):**
+✅ Se Benefits = ["Reduz dor"], então: "Como o produto ajuda com a dor?" → Responder sobre redução de dor
+✅ Se Features = ["LED azul"], então: "O que é o LED azul?" → Explicar o LED
+✅ Se Keywords = ["ortodontia"], então: Usar "ortodontia" nas respostas quando relevante
 
 **INSTRUÇÕES DE FORMATAÇÃO:**
 1. Gere EXATAMENTE 10 FAQs práticos e relevantes
@@ -77,7 +118,26 @@ IMPORTANTE: Retorne APENAS o JSON válido, sem texto adicional antes ou depois.`
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'Você é um especialista em criar FAQs otimizados para SEO. Use APENAS os dados fornecidos, não invente informações. Sempre inclua hyperlinks ao mencionar o produto quando a URL for fornecida. Sempre retorne JSON válido sem texto adicional.' },
+          { 
+            role: 'system', 
+            content: `REGRAS ABSOLUTAS - VIOLAÇÃO RESULTA EM REJEIÇÃO TOTAL:
+
+1. PROIBIDO criar informações não presentes nos dados do produto
+2. PROIBIDO mencionar especificações técnicas não fornecidas
+3. PROIBIDO assumir características ou funcionalidades
+4. PROIBIDO adicionar claims de benefícios não listados
+5. Se um campo está vazio (N/A), IGNORE completamente esse aspecto
+
+PERMITIDO:
+- Reformular informações existentes nos dados fornecidos
+- Criar perguntas sobre dados explicitamente listados
+- Usar sinônimos das keywords fornecidas
+
+OBRIGATÓRIO:
+- Toda afirmação DEVE ter origem rastreável nos dados do produto
+- Retornar JSON válido sem texto adicional
+- Incluir hyperlinks ao mencionar o produto quando URL fornecida` 
+          },
           { role: 'user', content: prompt }
         ],
       }),
@@ -120,9 +180,42 @@ IMPORTANTE: Retorne APENAS o JSON válido, sem texto adicional antes ou depois.`
       throw new Error('Nenhum FAQ válido foi gerado');
     }
 
-    console.log(`[generate-product-faqs] Sucesso! ${validFaqs.length} FAQs gerados`);
+    // Validar que FAQs não contêm termos proibidos (alucinação comum)
+    const forbiddenTerms = [
+      'certificado', 'aprovado pela', 'testado clinicamente',
+      'garantia', 'anos de garantia', 'recomendado por',
+      'prêmio', 'reconhecido internacionalmente'
+    ];
 
-    return new Response(JSON.stringify({ faqs: validFaqs }), {
+    const checkForHallucinations = (text: string): boolean => {
+      const lowerText = text.toLowerCase();
+      return forbiddenTerms.some(term => 
+        lowerText.includes(term) && 
+        !product.description?.toLowerCase().includes(term) &&
+        !product.sales_pitch?.toLowerCase().includes(term)
+      );
+    };
+
+    // Filtrar FAQs suspeitos
+    const cleanedFaqs = validFaqs.filter(faq => {
+      const hasHallucination = 
+        checkForHallucinations(faq.question) || 
+        checkForHallucinations(faq.answer);
+      
+      if (hasHallucination) {
+        console.warn('[generate-product-faqs] FAQ suspeito removido:', faq.question);
+      }
+      
+      return !hasHallucination;
+    });
+
+    if (cleanedFaqs.length === 0) {
+      throw new Error('Todos os FAQs gerados continham informações não verificáveis. Adicione mais dados ao produto.');
+    }
+
+    console.log(`[generate-product-faqs] FAQs validados: ${cleanedFaqs.length}/${validFaqs.length}`);
+
+    return new Response(JSON.stringify({ faqs: cleanedFaqs }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

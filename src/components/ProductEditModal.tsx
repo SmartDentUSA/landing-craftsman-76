@@ -1237,7 +1237,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           keywords: formData.keywords,
           benefits: formData.benefits,
           features: formData.features,
-          product_url: formData.slug,
+          product_url: formData.product_url || formData.slug || null,
         }
       }
     });
