@@ -1435,7 +1435,7 @@ const EditorContent = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastServerSave, setLastServerSave] = useState<string | null>(null);
-  const [diagnosticMode, setDiagnosticMode] = useState(false);
+  const [lastSaveAt, setLastSaveAt] = useState<number | null>(null);
   const productsLoadedRef = useRef(false);
   
   // Debounced name update
@@ -2935,6 +2935,17 @@ const EditorContent = () => {
       
       if (success) {
         await loadLandingPages();
+        // Reidratar imediatamente com estado do banco
+        const lp = getLandingPage(id);
+        if (lp) {
+          const safe = ensureLandingPageDefaults({
+            ...(lp.data || {}),
+            name: lp.name,
+            status: lp.status as any,
+            template: lp.template
+          });
+          setReplace(safe);
+        }
         dirtyRef.current = false;
         // Buscar updated_at real do servidor para exibir prova de persistência
         const { data: savedRow } = await supabase
@@ -2945,6 +2956,7 @@ const EditorContent = () => {
         if (savedRow?.updated_at) {
           const ts = new Date(savedRow.updated_at);
           setLastServerSave(ts.toLocaleTimeString('pt-BR'));
+          setLastSaveAt(Date.now());
         }
         toast({
           title: "Alterações salvas",
@@ -3012,52 +3024,6 @@ const EditorContent = () => {
     }
   };
 
-  const handleDiagnosticSave = async () => {
-    if (!id) return;
-    setIsSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: 'Não autenticado', description: 'Faça login para testar salvamento.', variant: 'destructive' });
-        setIsSaving(false);
-        return;
-      }
-      const { data: ok, error } = await supabase.rpc('admin_update_landing_page', {
-        _id: id,
-        _user_id: user.id,
-        _data: { __diagnostic_save: new Date().toISOString() }
-      });
-      if (error) {
-        console.error('❌ Diagnóstico RPC erro:', error);
-        toast({
-          title: 'Erro diagnóstico (RPC)',
-          description: `${error.message}${error.code ? ' | Código: ' + error.code : ''}${error.hint ? ' | Hint: ' + error.hint : ''}`,
-          variant: 'destructive'
-        });
-        setIsSaving(false);
-        return;
-      }
-      if (ok === true) {
-        const { data: savedRow } = await supabase
-          .from('landing_pages')
-          .select('updated_at')
-          .eq('id', id)
-          .maybeSingle();
-        if (savedRow?.updated_at) {
-          const ts = new Date(savedRow.updated_at);
-          setLastServerSave(ts.toLocaleTimeString('pt-BR'));
-        }
-        toast({ title: 'Diagnóstico salvo', description: 'Ping de escrita realizado com sucesso.' });
-      } else {
-        toast({ title: 'Diagnóstico falhou', description: 'RPC retornou falso (permissão/ID).' , variant: 'destructive' });
-      }
-    } catch (e: any) {
-      console.error('❌ Diagnóstico exceção:', e);
-      toast({ title: 'Erro diagnóstico', description: e?.message || 'Falha ao executar diagnóstico.', variant: 'destructive' });
-    } finally {
-      setIsSaving(false);
-    }
-  };
   const extractProductData = async (index: number) => {
     const offer = data.schema.offers[index];
     if (!offer.productUrl) {
@@ -3580,15 +3546,11 @@ const EditorContent = () => {
                 )}
                 {isSaving ? 'Salvando...' : 'Salvar'}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDiagnosticSave} disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Wand2 className="h-4 w-4 mr-2" />
-                )}
-                {isSaving ? 'Testando...' : 'Salvar (Diag)'}
-              </Button>
-              <Badge variant="secondary" className="ml-2">Último salvamento: {lastServerSave ?? '-'}</Badge>
+              <Badge variant="secondary" className="ml-2">
+                {lastSaveAt && (Date.now() - lastSaveAt < 5000)
+                  ? `Salvo às ${lastServerSave ?? '-'}`
+                  : `Último salvamento: ${lastServerSave ?? '-'}`}
+              </Badge>
               <Button variant="outline" size="sm" onClick={handlePreview}>
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
