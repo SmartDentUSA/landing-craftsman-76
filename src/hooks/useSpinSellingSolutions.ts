@@ -30,6 +30,8 @@ export interface CustomURL {
   url: string;
   enabled: boolean;
   label: string;
+  type?: 'manual' | 'landing_page';
+  landing_page_id?: string;
 }
 
 export interface GoogleAdsCampaign {

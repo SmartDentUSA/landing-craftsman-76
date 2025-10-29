@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
   Plus, 
   Trash2, 
@@ -31,7 +32,8 @@ import {
   Sparkles,
   Link as LinkIcon,
   Search,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { 
   useSpinSellingSolutions, 
@@ -42,6 +44,7 @@ import {
 import { SpinProductSelector } from './SpinProductSelector';
 import { useToast } from '@/hooks/use-toast';
 import { useViaCep } from '@/hooks/useViaCep';
+import useLandingPages from '@/hooks/useLandingPages';
 
 interface SpinSolutionEditModalProps {
   solutionId?: string;
@@ -100,9 +103,13 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const { createSolution, updateSolution } = useSpinSellingSolutions();
   const { toast } = useToast();
   const { fetchAddress, loading: viaCepLoading } = useViaCep();
+  const { landingPages } = useLandingPages();
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newMetric, setNewMetric] = useState({ key: '', value: '' });
+  
+  // Filtrar apenas landing pages aprovadas
+  const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
 
   // Form state
   const [formData, setFormData] = useState<Partial<SpinSellingSolution>>({
@@ -269,6 +276,11 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         return { ...prev, success_cases: updatedCases };
       });
     }
+  };
+
+  const getLandingPageUrl = (landingPageId: string) => {
+    const baseUrl = 'https://seo.smartdent.com.br';
+    return `${baseUrl}/${landingPageId}`;
   };
 
   // SPIN Journey Handlers
@@ -911,9 +923,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       setFormData(prev => ({
                         ...prev,
                         custom_url: { 
-                          ...prev.custom_url!, 
                           url: prev.custom_url?.url || '', 
                           label: prev.custom_url?.label || 'Saiba Mais',
+                          type: prev.custom_url?.type || 'manual',
+                          landing_page_id: prev.custom_url?.landing_page_id,
                           enabled: checked 
                         }
                       }))
@@ -924,44 +937,134 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   </span>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="URL (ex: https://smartdent.com.br/promo)"
-                  value={formData.custom_url?.url || ''}
-                  onChange={(e) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      custom_url: { 
-                        ...prev.custom_url!, 
-                        url: e.target.value 
+
+              {formData.custom_url?.enabled && (
+                <div className="space-y-4">
+                  {/* Radio Group para escolher tipo */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Tipo de URL</Label>
+                    <RadioGroup
+                      value={formData.custom_url?.type || 'manual'}
+                      onValueChange={(value: 'manual' | 'landing_page') =>
+                        setFormData(prev => ({
+                          ...prev,
+                          custom_url: {
+                            ...prev.custom_url!,
+                            type: value,
+                            url: value === 'landing_page' ? '' : prev.custom_url?.url || ''
+                          }
+                        }))
                       }
-                    }))
-                  }
-                  type="url"
-                  disabled={!formData.custom_url?.enabled}
-                />
-                <Input
-                  placeholder='Texto do Link (ex: "Comprar Agora")'
-                  value={formData.custom_url?.label || 'Saiba Mais'}
-                  onChange={(e) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      custom_url: { 
-                        ...prev.custom_url!, 
-                        label: e.target.value 
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="manual" id="url-manual" />
+                        <Label htmlFor="url-manual" className="font-normal cursor-pointer">
+                          URL Manual
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="landing_page" id="url-landing" />
+                        <Label htmlFor="url-landing" className="font-normal cursor-pointer">
+                          Landing Page do Sistema
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Campo de URL (manual ou select de landing page) */}
+                    {formData.custom_url?.type === 'manual' ? (
+                      <Input
+                        placeholder="URL (ex: https://smartdent.com.br/promo)"
+                        value={formData.custom_url?.url || ''}
+                        onChange={(e) =>
+                          setFormData(prev => ({
+                            ...prev,
+                            custom_url: { 
+                              ...prev.custom_url!, 
+                              url: e.target.value 
+                            }
+                          }))
+                        }
+                        type="url"
+                      />
+                    ) : (
+                      <Select
+                        value={formData.custom_url?.landing_page_id || ''}
+                        onValueChange={(value) => {
+                          const selectedLp = approvedLandingPages.find(lp => lp.id === value);
+                          setFormData(prev => ({
+                            ...prev,
+                            custom_url: {
+                              ...prev.custom_url!,
+                              landing_page_id: value,
+                              url: getLandingPageUrl(value),
+                              label: selectedLp?.name || prev.custom_url?.label || 'Saiba Mais'
+                            }
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma Landing Page aprovada" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[250px]">
+                          {approvedLandingPages.length > 0 ? (
+                            approvedLandingPages.map(lp => (
+                              <SelectItem key={lp.id} value={lp.id}>
+                                <div className="flex items-center gap-2">
+                                  <span>{lp.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    (v{lp.version})
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="none" disabled>
+                              Nenhuma landing page aprovada
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+
+                    {/* Campo de Label (sempre visível) */}
+                    <Input
+                      placeholder='Texto do Link (ex: "Comprar Agora")'
+                      value={formData.custom_url?.label || 'Saiba Mais'}
+                      onChange={(e) =>
+                        setFormData(prev => ({
+                          ...prev,
+                          custom_url: { 
+                            ...prev.custom_url!, 
+                            label: e.target.value 
+                          }
+                        }))
                       }
-                    }))
-                  }
-                  disabled={!formData.custom_url?.enabled}
-                />
-              </div>
-              
-              {formData.custom_url?.enabled && formData.custom_url?.url && (
-                <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Esta URL será usada em: Google Ads CSV, Mensagens WhatsApp e Landing Pages
-                </p>
+                    />
+                  </div>
+
+                  {/* Preview da URL gerada */}
+                  {formData.custom_url?.url && (
+                    <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border">
+                      <ExternalLink className="w-4 h-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground font-medium mb-0.5">
+                          URL Gerada:
+                        </p>
+                        <a 
+                          href={formData.custom_url.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline truncate block"
+                        >
+                          {formData.custom_url.url}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </Card>
 
