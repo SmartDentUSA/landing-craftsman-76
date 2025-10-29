@@ -215,39 +215,25 @@ export const useLandingPagesSupabase = () => {
         }
       }
 
-      console.log('📤 [Update LP] RPC payload keys:', Object.keys(supabaseUpdates));
+      console.log('📤 [Update LP] Function payload keys:', Object.keys(supabaseUpdates));
 
-      const { data: ok, error: rpcError } = await supabase.rpc('admin_update_landing_page', {
-        _id: id,
-        _user_id: user.id,
-        _name: supabaseUpdates.name ?? null,
-        _status: supabaseUpdates.status ?? null,
-        _template: supabaseUpdates.template ?? null,
-        _data: supabaseUpdates.data ?? null,
-        _selected_product_ids: supabaseUpdates.selected_product_ids ?? null,
-        _embed: supabaseUpdates.embed ?? null,
-        _blog_generated: typeof supabaseUpdates.blog_generated === 'boolean' ? supabaseUpdates.blog_generated : null,
-        _blog_generated_at: supabaseUpdates.blog_generated_at ?? null
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('save-landing-page', {
+        body: { id, updates: supabaseUpdates }
       });
 
-      if (rpcError) {
-        console.error('❌ [Update LP] RPC erro:', rpcError);
+      if (fnError) {
+        console.error('❌ [Update LP] Edge Function erro:', fnError);
         toast({
-          title: 'Erro ao salvar (RPC)',
-          description: `${rpcError.message}${rpcError.code ? ' | Código: ' + rpcError.code : ''}${rpcError.hint ? ' | Hint: ' + rpcError.hint : ''}`,
+          title: 'Erro ao salvar',
+          description: `${fnError.message}${(fnError as any).code ? ' | Código: ' + (fnError as any).code : ''}`,
           variant: 'destructive'
         });
-      } else if (ok === true) {
-        console.log('✅ [Update LP] RPC ok');
+      } else if (fnData?.ok) {
+        console.log('✅ [Update LP] Edge Function ok', fnData);
         await loadLandingPages();
         return true;
       } else {
-        console.warn('⚠️ [Update LP] RPC retornou falso (sem permissão ou ID inválido)');
-        toast({
-          title: 'Sem permissão para salvar',
-          description: 'Você não possui permissão ou o ID é inválido.',
-          variant: 'destructive'
-        });
+        console.warn('⚠️ [Update LP] Edge Function retornou payload inesperado', fnData);
       }
 
       // Fallback: tentar update direto respeitando RLS (caso RPC indisponível)
