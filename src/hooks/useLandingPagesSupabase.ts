@@ -158,43 +158,47 @@ export const useLandingPagesSupabase = () => {
   const updateLandingPage = useCallback(async (id: string, updates: Partial<LandingPage>): Promise<boolean> => {
     try {
       console.log('🔄 [Update LP] Iniciando update para LP:', id);
-      
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ [Update LP] Usuário não autenticado');
+        return false;
+      }
+
       // Whitelist de colunas permitidas no banco
       const allowedTopLevel = new Set([
-        'name', 'status', 'template', 'data', 'embed', 
+        'name', 'status', 'template', 'data', 'embed',
         'selected_product_ids', 'blog_generated', 'blog_generated_at'
       ]);
-      
+
       // Buscar dados atuais da landing page
       const { data: currentLP, error: fetchError } = await supabase
         .from('landing_pages')
         .select('data')
         .eq('id', id)
         .maybeSingle();
-      
+
       if (fetchError) {
         console.error('❌ [Update LP] Erro ao buscar LP atual:', fetchError);
         return false;
       }
 
       // Preparar updates apenas com colunas permitidas
-      const supabaseUpdates: any = {
-        last_modified: new Date().toISOString(),
-      };
+      const supabaseUpdates: any = {};
 
       // Se updates.data existe, fazer deep merge com dados existentes
       if (updates.data) {
-        const existingData = typeof currentLP?.data === 'object' && currentLP.data !== null 
+        const existingData = typeof currentLP?.data === 'object' && currentLP.data !== null
           ? currentLP.data as any
           : {};
-        
+
         console.log('🔀 [Update LP] Fazendo deep merge:', {
           existingKeys: Object.keys(existingData),
           updateKeys: Object.keys(updates.data)
         });
-        
+
         supabaseUpdates.data = deepMerge(existingData, updates.data);
-        
+
         console.log('✅ [Update LP] Merge concluído:', {
           resultKeys: Object.keys(supabaseUpdates.data)
         });
@@ -211,26 +215,55 @@ export const useLandingPagesSupabase = () => {
         }
       }
 
-      console.log('📤 [Update LP] Enviando para Supabase:', Object.keys(supabaseUpdates));
+      console.log('📤 [Update LP] RPC payload keys:', Object.keys(supabaseUpdates));
 
+      const { data: ok, error: rpcError } = await supabase.rpc('admin_update_landing_page', {
+        _id: id,
+        _user_id: user.id,
+        _name: supabaseUpdates.name ?? null,
+        _status: supabaseUpdates.status ?? null,
+        _template: supabaseUpdates.template ?? null,
+        _data: supabaseUpdates.data ?? null,
+        _selected_product_ids: supabaseUpdates.selected_product_ids ?? null,
+        _embed: supabaseUpdates.embed ?? null,
+        _blog_generated: typeof supabaseUpdates.blog_generated === 'boolean' ? supabaseUpdates.blog_generated : null,
+        _blog_generated_at: supabaseUpdates.blog_generated_at ?? null
+      });
+
+      if (rpcError) {
+        console.error('❌ [Update LP] RPC erro:', rpcError);
+      } else if (ok === true) {
+        console.log('✅ [Update LP] RPC ok');
+        await loadLandingPages();
+        return true;
+      } else {
+        console.warn('⚠️ [Update LP] RPC retornou falso (sem permissão ou ID inválido)');
+      }
+
+      // Fallback: tentar update direto respeitando RLS (caso RPC indisponível)
       const { data: updatedRow, error } = await supabase
         .from('landing_pages')
-        .update(supabaseUpdates)
+        .update({
+          ...('name' in supabaseUpdates ? { name: supabaseUpdates.name } : {}),
+          ...('status' in supabaseUpdates ? { status: supabaseUpdates.status } : {}),
+          ...('template' in supabaseUpdates ? { template: supabaseUpdates.template } : {}),
+          ...('data' in supabaseUpdates ? { data: supabaseUpdates.data } : {}),
+          ...('selected_product_ids' in supabaseUpdates ? { selected_product_ids: supabaseUpdates.selected_product_ids } : {}),
+          ...('embed' in supabaseUpdates ? { embed: supabaseUpdates.embed } : {}),
+          ...('blog_generated' in supabaseUpdates ? { blog_generated: supabaseUpdates.blog_generated } : {}),
+          ...('blog_generated_at' in supabaseUpdates ? { blog_generated_at: supabaseUpdates.blog_generated_at } : {}),
+          last_modified: new Date().toISOString()
+        })
         .eq('id', id)
         .select('id')
         .maybeSingle();
 
-      if (error) {
-        console.error('❌ [Update LP] Erro do Supabase:', error);
+      if (error || !updatedRow) {
+        console.error('❌ [Update LP] Fallback update falhou:', error);
         return false;
       }
 
-      if (!updatedRow) {
-        console.error('❌ [Update LP] Nenhuma linha atualizada. Possíveis causas: RLS (usuário não é dono e não é admin) ou ID inexistente');
-        return false;
-      }
-
-      console.log('✅ [Update LP] Update concluído com sucesso');
+      console.log('✅ [Update LP] Fallback update bem-sucedido');
       await loadLandingPages();
       return true;
     } catch (error) {

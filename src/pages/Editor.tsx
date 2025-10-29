@@ -1433,6 +1433,7 @@ const EditorContent = () => {
   // State for debounced name input
   const [localName, setLocalName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Debounced name update
   const debouncedNameUpdate = useDebounce((name: string) => {
@@ -2874,6 +2875,7 @@ const EditorContent = () => {
 
   const handleSave = async () => {
     console.log('[DEBUG] Salvando landing page...');
+    setIsSaving(true);
     
     // ✅ 1. BUSCAR DADOS MAIS RECENTES DO BANCO
     if (id) {
@@ -2890,6 +2892,7 @@ const EditorContent = () => {
           description: "Não foi possível buscar os dados mais recentes",
           variant: "destructive"
         });
+        setIsSaving(false);
         return;
       }
       
@@ -2955,12 +2958,14 @@ const EditorContent = () => {
           title: "Alterações salvas",
           description: "Landing page atualizada com sucesso!",
         });
+        setIsSaving(false);
       } else {
         toast({
           title: "Erro ao salvar",
           description: "Não foi possível salvar as alterações. Verifique suas permissões.",
           variant: "destructive"
         });
+        setIsSaving(false);
       }
     } else {
       // Criar nova LP (não precisa de merge)
@@ -3011,6 +3016,7 @@ const EditorContent = () => {
         description: "Nova landing page salva com sucesso!",
       });
       dirtyRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -3528,9 +3534,13 @@ const EditorContent = () => {
                 <Search className="h-4 w-4 mr-2" />
                 Validar SEO
               </Button>
-              <Button variant="outline" size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Salvar
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {isSaving ? 'Salvando...' : 'Salvar'}
               </Button>
               <Button variant="outline" size="sm" onClick={handlePreview}>
                 <Eye className="h-4 w-4 mr-2" />

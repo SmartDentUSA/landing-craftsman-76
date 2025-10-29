@@ -1717,6 +1717,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_update_landing_page: {
+        Args: {
+          _blog_generated?: boolean
+          _blog_generated_at?: string
+          _data?: Json
+          _embed?: string
+          _id: string
+          _name?: string
+          _selected_product_ids?: string[]
+          _status?: string
+          _template?: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       calculate_landing_page_score: { Args: { lp_id: string }; Returns: Json }
       calculate_product_score: { Args: { product_id: string }; Returns: Json }
       get_complete_knowledge_base: {
