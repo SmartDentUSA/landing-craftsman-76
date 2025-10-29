@@ -122,14 +122,14 @@ IMPORTANTE: Retorne APENAS o array JSON, sem markdown, sem explicações adicion
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
-    const aiResponse = await fetch('https://api.lovable.app/v1/ai/chat', {
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'user',
@@ -137,18 +137,32 @@ IMPORTANTE: Retorne APENAS o array JSON, sem markdown, sem explicações adicion
           }
         ],
         temperature: 0.7,
-        max_tokens: 2000,
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('❌ Erro na API Lovable:', errorText);
-      throw new Error(`Erro ao chamar Lovable AI: ${aiResponse.status}`);
+      console.error('❌ Erro na API Lovable:', {
+        status: aiResponse.status,
+        statusText: aiResponse.statusText,
+        body: errorText.substring(0, 500)
+      });
+      throw new Error(`Erro ao chamar Lovable AI: ${aiResponse.status} - ${aiResponse.statusText}`);
     }
 
     const aiData = await aiResponse.json();
-    let aiContent = aiData.choices?.[0]?.message?.content || '';
+    console.log('📥 Resposta completa da API:', JSON.stringify(aiData, null, 2).substring(0, 500));
+
+    if (!aiData.choices || !Array.isArray(aiData.choices) || aiData.choices.length === 0) {
+      console.error('❌ Resposta da API sem choices:', aiData);
+      throw new Error('Resposta da API inválida: sem choices disponíveis');
+    }
+
+    let aiContent = aiData.choices[0]?.message?.content || '';
+    if (!aiContent) {
+      console.error('❌ Resposta da API sem content:', aiData.choices[0]);
+      throw new Error('Resposta da API inválida: sem conteúdo gerado');
+    }
 
     console.log('🤖 Resposta da IA:', aiContent.substring(0, 300));
 
