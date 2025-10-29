@@ -106,19 +106,28 @@ function generateLandingPageHTML(solution: any, products: any[], company: any): 
   let heroImageAlt = mainProduct.name || 'Banner';
   let heroImageBadge = '';
   
+  console.log('🔍 Verificando configuração do banner hero...');
+  
   if (solution.ai_generated_images?.hero_banner) {
     const banner = solution.ai_generated_images.hero_banner;
+    console.log('📸 Banner config:', JSON.stringify(banner, null, 2));
     
     if (banner.mode === 'manual_upload' && banner.manual_upload?.src) {
       heroImageSrc = banner.manual_upload.src;
-      heroImageAlt = banner.manual_upload.alt || 'Banner hero';
+      heroImageAlt = banner.manual_upload.alt || 'Banner hero personalizado';
       heroImageBadge = '📸 Imagem Personalizada';
+      console.log('✅ Usando banner manual upload');
     } 
     else if (banner.mode === 'ai_generated' && banner.ai_generated?.src) {
       heroImageSrc = banner.ai_generated.src;
       heroImageAlt = `Banner hero - ${solution.title}`;
       heroImageBadge = '✨ Gerado por IA';
+      console.log('✅ Usando banner gerado por IA');
+    } else {
+      console.warn('⚠️ Banner config existe mas sem imagem válida');
     }
+  } else {
+    console.log('ℹ️ Sem banner personalizado, usando imagem do produto');
   }
   
   // Construir keywords para SEO

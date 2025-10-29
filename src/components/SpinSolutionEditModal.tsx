@@ -35,7 +35,8 @@ import {
   Loader2,
   ExternalLink,
   Upload,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { 
   useSpinSellingSolutions, 
@@ -394,11 +395,44 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   };
 
   // Landing Page Generation Handlers
+  const canGenerateLandingPage = () => {
+    if (!solutionId) return false;
+    
+    const bannerMode = formData.ai_generated_images?.hero_banner?.mode;
+    
+    // Se escolheu IA, precisa ter gerado a imagem
+    if (bannerMode === 'ai_generated') {
+      const aiImage = formData.ai_generated_images?.hero_banner?.ai_generated?.src;
+      if (!aiImage) {
+        return false;
+      }
+    }
+    
+    // Se escolheu upload, precisa ter enviado
+    if (bannerMode === 'manual_upload') {
+      const uploadedImage = formData.ai_generated_images?.hero_banner?.manual_upload?.src;
+      if (!uploadedImage) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleGenerateLandingPage = async () => {
     if (!solutionId) {
       toast({
         title: "Salve primeiro!",
         description: "Salve a solução antes de gerar a landing page",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!canGenerateLandingPage()) {
+      toast({
+        title: "Banner não configurado",
+        description: "Gere ou faça upload do banner hero primeiro",
         variant: "destructive"
       });
       return;
@@ -1261,9 +1295,21 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                     productIds={formData.product_ids || []}
                     existingImage={existingSolution?.ai_generated_images?.hero_banner?.ai_generated}
                     onGenerationComplete={(data) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        ai_generated_images: {
+                          ...prev.ai_generated_images,
+                          hero_banner: {
+                            mode: 'ai_generated',
+                            ai_generated: data
+                          },
+                          last_updated: new Date().toISOString()
+                        }
+                      }));
+                      
                       toast({
                         title: "✅ Banner gerado!",
-                        description: "Salve a solução para persistir",
+                        description: "Agora você pode gerar a landing page",
                       });
                     }}
                   />
@@ -1299,7 +1345,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   <Button
                     type="button"
                     onClick={handleGenerateLandingPage}
-                    disabled={isGeneratingLP || !formData.success_cases || formData.success_cases.length === 0}
+                    disabled={isGeneratingLP || !canGenerateLandingPage() || !formData.success_cases || formData.success_cases.length === 0}
                     className="bg-purple-600 hover:bg-purple-700 flex-1"
                   >
                     {isGeneratingLP ? (
@@ -1319,6 +1365,22 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       </>
                     )}
                   </Button>
+                  
+                  {!canGenerateLandingPage() && solutionId && (
+                    <div className="mt-3 p-3 bg-warning/10 border border-warning/30 rounded-lg">
+                      <AlertCircle className="h-4 w-4 inline mr-2 text-warning" />
+                      {formData.ai_generated_images?.hero_banner?.mode === 'ai_generated' && (
+                        <span className="text-sm text-warning">
+                          Clique em "Gerar Banner com IA" primeiro
+                        </span>
+                      )}
+                      {formData.ai_generated_images?.hero_banner?.mode === 'manual_upload' && (
+                        <span className="text-sm text-warning">
+                          Faça upload do banner 16:9 primeiro
+                        </span>
+                      )}
+                    </div>
+                  )}
                   
                   {formData.landing_page_html && (
                     <>
