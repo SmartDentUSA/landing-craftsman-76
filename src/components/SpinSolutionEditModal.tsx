@@ -156,6 +156,19 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       label: 'Saiba Mais'
     },
     
+    // ✅ Personalização WhatsApp
+    whatsapp_section_titles: {
+      journey_title: "💬 Jornada do Cliente:",
+      journey_subtitle: null,
+      metrics_title: "📊 Métricas de Impacto:",
+      metrics_subtitle: null
+    },
+    spin_journey_labels: {
+      desire_label: "🎯 *Desejo:*",
+      pain_label: "⚠️ *Dor:*",
+      result_label: "✅ *Resultado Esperado:*"
+    },
+    
     // ⚡ Campos gerados pela IA (inicialmente null)
     google_ads_campaign: undefined,
     whatsapp_complete_message: undefined,
@@ -411,6 +424,35 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       title: "✅ Métrica adicionada!",
       description: `${trimmedKey}: ${trimmedValue}`,
     });
+  };
+
+  // Handlers para personalização WhatsApp
+  const updateSectionTitle = (
+    section: 'journey' | 'metrics', 
+    field: 'title' | 'subtitle', 
+    value: string
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      whatsapp_section_titles: {
+        ...(prev.whatsapp_section_titles || {}),
+        [`${section}_${field}`]: value || null
+      }
+    }));
+  };
+
+  const updateJourneyLabel = (field: 'desire_label' | 'pain_label' | 'result_label', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      spin_journey_labels: {
+        ...(prev.spin_journey_labels || {
+          desire_label: "🎯 *Desejo:*",
+          pain_label: "⚠️ *Dor:*",
+          result_label: "✅ *Resultado Esperado:*"
+        }),
+        [field]: value
+      }
+    }));
   };
 
   // Landing Page Generation Handlers
@@ -911,6 +953,55 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               )}
             </Card>
 
+            {/* ===== PERSONALIZAÇÃO WHATSAPP ===== */}
+            <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50">
+              <Label className="text-lg font-semibold mb-3 block">📱 Personalizar Textos WhatsApp</Label>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs mb-1">Título da Jornada</Label>
+                  <Input
+                    placeholder="Ex: Mais que equipamentos..."
+                    value={formData.whatsapp_section_titles?.journey_title || ''}
+                    onChange={(e) => updateSectionTitle('journey', 'title', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1">Título das Métricas</Label>
+                  <Input
+                    placeholder="Ex: Garantimos isso!"
+                    value={formData.whatsapp_section_titles?.metrics_title || ''}
+                    onChange={(e) => updateSectionTitle('metrics', 'title', e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-xs mb-1">Label Desejo</Label>
+                    <Input
+                      placeholder="🎯 *Desejo:*"
+                      value={formData.spin_journey_labels?.desire_label || ''}
+                      onChange={(e) => updateJourneyLabel('desire_label', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1">Label Dor</Label>
+                    <Input
+                      placeholder="⚠️ *Dor:*"
+                      value={formData.spin_journey_labels?.pain_label || ''}
+                      onChange={(e) => updateJourneyLabel('pain_label', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1">Label Resultado</Label>
+                    <Input
+                      placeholder="✅ *Resultado:*"
+                      value={formData.spin_journey_labels?.result_label || ''}
+                      onChange={(e) => updateJourneyLabel('result_label', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             {/* ===== SEÇÃO: JORNADA SPIN DOS CLIENTES ===== */}
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -944,7 +1035,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   
                   <div className="mb-3">
                     <Label className="text-xs text-muted-foreground mb-1">
-                      🎯 Campo 1: O que o cliente QUERIA?
+                      {formData.spin_journey_labels?.desire_label || '🎯 Desejo'}
                     </Label>
                     <Textarea
                       placeholder='Ex: "Queria aumentar a produtividade em 50%"'
@@ -956,7 +1047,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   
                   <div className="mb-3">
                     <Label className="text-xs text-muted-foreground mb-1">
-                      ⚠️ Campo 2: Qual DOR ele enfrentava?
+                      {formData.spin_journey_labels?.pain_label || '⚠️ Dor'}
                     </Label>
                     <Textarea
                       placeholder='Ex: "Perdia 3h/dia em processos manuais"'
@@ -968,7 +1059,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   
                   <div>
                     <Label className="text-xs text-muted-foreground mb-1">
-                      ✅ Campo 3: Qual RESULTADO esperava?
+                      {formData.spin_journey_labels?.result_label || '✅ Resultado'}
                     </Label>
                     <Textarea
                       placeholder='Ex: "Reduzir tempo de entrega de 7 dias para 24h"'

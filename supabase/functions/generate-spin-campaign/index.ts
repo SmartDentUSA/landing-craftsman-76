@@ -6,6 +6,74 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ==================== HELPERS PARA WHATSAPP ====================
+
+// Formatar métricas com ordem correta e humanização
+function formatPainMetrics(metrics: Record<string, string>): string[] {
+  const standardOrder = [
+    'roi', 'lab_time', 'digital_time', 'patient_loss', 'revenue_loss',
+    'workflow_improvement', 'quality_gain', 'training_time', 'maintenance_cost'
+  ];
+  
+  const labels: Record<string, string> = {
+    'roi': 'Retorno do Investimento',
+    'lab_time': 'Tempo no Laboratório Tradicional',
+    'digital_time': 'Tempo com Fluxo Digital',
+    'patient_loss': 'Perda de Pacientes Atual',
+    'revenue_loss': 'Perda de Receita Mensal',
+    'workflow_improvement': 'Melhoria no Fluxo de Trabalho',
+    'quality_gain': 'Ganho de Qualidade',
+    'training_time': 'Tempo de Treinamento',
+    'maintenance_cost': 'Custo de Manutenção'
+  };
+  
+  const lines: string[] = [];
+  const processedKeys = new Set<string>();
+  
+  // Primeiro: métricas padrão na ordem definida
+  standardOrder.forEach(key => {
+    const normalizedKey = key.toLowerCase();
+    const matchKey = Object.keys(metrics).find(k => 
+      k.toLowerCase() === normalizedKey
+    );
+    
+    if (matchKey && metrics[matchKey]) {
+      lines.push(`• ${labels[key]}: ${metrics[matchKey]}`);
+      processedKeys.add(matchKey);
+    }
+  });
+  
+  // Depois: métricas personalizadas (ordem de inserção)
+  Object.entries(metrics).forEach(([key, value]) => {
+    if (!processedKeys.has(key) && value) {
+      lines.push(`• ${key}: ${value}`);
+    }
+  });
+  
+  return lines;
+}
+
+// Validar se dados são de teste (prevenir envio)
+function validateSuccessCase(successCase: any): void {
+  const testPatterns = ['dede', 'teste', 'test', 'xxx', '...'];
+  
+  const fieldsToCheck = [
+    successCase.results_achieved,
+    successCase.client_name,
+    successCase.city
+  ];
+  
+  for (const field of fieldsToCheck) {
+    if (!field) continue;
+    const lower = field.toLowerCase();
+    for (const pattern of testPatterns) {
+      if (lower.includes(pattern)) {
+        throw new Error(`❌ Complete os dados reais antes de gerar. Detectado conteúdo de teste: "${field}"`);
+      }
+    }
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -161,24 +229,82 @@ serve(async (req) => {
       const realQuotes = solution.real_quotes || [];
       
       if (successCases.length === 0) {
-        throw new Error('Adicione pelo menos 1 caso de sucesso antes de gerar a mensagem');
+        throw new Error('Adicione pelo menos 1 caso de sucesso antes de gerar');
       }
 
       const firstCase = successCases[0];
+      validateSuccessCase(firstCase); // 🔍 Validação anti-teste
+
       const firstQuote = realQuotes[0];
 
-      // Gerar storytelling automático usando sales_pitch dos produtos
-      const salesPitches = products
-        .map(p => p.sales_pitch)
-        .filter(sp => sp)
-        .join(' ');
+      // ✅ GERAR STORYTELLING COM IA REAL (Lovable AI Gateway)
+      let storytelling = '';
 
-      const storytelling = `${solution.title}: ${salesPitches.substring(0, 200)}...`;
+      try {
+        const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+        if (!lovableApiKey) {
+          throw new Error('LOVABLE_API_KEY não configurada');
+        }
 
-      // Construir mensagem WhatsApp
+        const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling persuasivo (máx 200 caracteres) para WhatsApp sobre:
+
+SOLUÇÃO: ${solution.title}
+PRODUTOS: ${products.map(p => p.name).join(', ')}
+DESCRIÇÕES: ${products.map(p => p.description).join(' | ')}
+BENEFÍCIOS: ${products.flatMap(p => p.benefits || []).join(', ')}
+
+O storytelling deve:
+- Começar com um gancho emocional
+- Conectar problemas reais à solução
+- Usar linguagem conversacional
+- Ter no máximo 200 caracteres`;
+
+        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 150,
+            temperature: 0.7
+          })
+        });
+
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          throw new Error(`AI API error: ${errorText}`);
+        }
+
+        const aiData = await aiResponse.json();
+        storytelling = aiData.choices[0].message.content.trim();
+        
+        console.log('✅ Storytelling gerado com IA:', storytelling);
+      } catch (error) {
+        console.error('⚠️ Falha na IA, usando fallback:', error);
+        // Fallback se IA falhar
+        storytelling = `${solution.title}: ${products.map(p => p.description).join('. ').substring(0, 150)}...`;
+      }
+
+      // Construir mensagem WhatsApp com personalização total
+      const journeyLabels = solution.spin_journey_labels || {
+        desire_label: "🎯 *Desejo:*",
+        pain_label: "⚠️ *Dor:*",
+        result_label: "✅ *Resultado Esperado:*"
+      };
+
+      const sectionTitles = solution.whatsapp_section_titles || {
+        journey_title: "💬 Jornada do Cliente:",
+        journey_subtitle: null,
+        metrics_title: "📊 Métricas de Impacto:",
+        metrics_subtitle: null
+      };
+
       let message = `*🎯 ${solution.title.toUpperCase()}*\n\n`;
 
-      // Storytelling
+      // Storytelling IA
       message += `*📖 História de Transformação:*\n${storytelling}\n\n`;
 
       // Caso Real
@@ -186,29 +312,33 @@ serve(async (req) => {
       message += `📍 ${firstCase.city}/${firstCase.state}\n`;
       message += `🎯 ${firstCase.specialty} - ${firstCase.area}\n`;
       if (firstCase.instagram) {
-        message += `📱 Instagram: ${firstCase.instagram}\n`;
+        message += `📱 Instagram: @${firstCase.instagram}\n`;
       }
       message += `\n*Resultados Alcançados:*\n${firstCase.results_achieved}\n\n`;
 
-      // Jornada SPIN (se existir)
+      // Jornada SPIN (personalizada)
       if (firstQuote) {
-        message += `*💬 Jornada do Cliente:*\n`;
-        message += `🎯 *Desejo:* ${firstQuote.desire}\n`;
-        message += `⚠️ *Dor:* ${firstQuote.pain}\n`;
-        message += `✅ *Resultado Esperado:* ${firstQuote.expected_result}\n\n`;
+        message += `*${sectionTitles.journey_title}*\n`;
+        if (sectionTitles.journey_subtitle) {
+          message += `${sectionTitles.journey_subtitle}\n`;
+        }
+        message += `${journeyLabels.desire_label} ${firstQuote.desire}\n`;
+        message += `${journeyLabels.pain_label} ${firstQuote.pain}\n`;
+        message += `${journeyLabels.result_label} ${firstQuote.expected_result}\n\n`;
       }
 
-      // Métricas
+      // Métricas (humanizadas e ordenadas)
       if (solution.pain_metrics && Object.keys(solution.pain_metrics).length > 0) {
-        message += `*📊 Métricas de Impacto:*\n`;
-        Object.entries(solution.pain_metrics).forEach(([key, value]) => {
-          message += `• ${key}: ${value}\n`;
-        });
-        message += `\n`;
+        message += `*${sectionTitles.metrics_title}*\n`;
+        if (sectionTitles.metrics_subtitle) {
+          message += `${sectionTitles.metrics_subtitle}\n`;
+        }
+        const metricLines = formatPainMetrics(solution.pain_metrics);
+        message += metricLines.join('\n') + '\n\n';
       }
 
       // CTA
-      message += `*🚀 ${ctaLabel.toUpperCase()}:*\n${finalUrl}\n\n`;
+      message += `*🚀 SAIBA MAIS:*\n${finalUrl}\n\n`;
       message += `*💬 Quer saber como implementar essa solução?*\nResponda esta mensagem!`;
 
       // Salvar no banco

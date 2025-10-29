@@ -1530,11 +1530,13 @@ export type Database = {
           priority: number | null
           product_ids: string[] | null
           real_quotes: Json | null
+          spin_journey_labels: Json | null
           storytelling_auto_generated: string | null
           success_cases: Json | null
           title: string
           updated_at: string | null
           whatsapp_complete_message: string | null
+          whatsapp_section_titles: Json | null
         }
         Insert: {
           active?: boolean | null
@@ -1551,11 +1553,13 @@ export type Database = {
           priority?: number | null
           product_ids?: string[] | null
           real_quotes?: Json | null
+          spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
           title: string
           updated_at?: string | null
           whatsapp_complete_message?: string | null
+          whatsapp_section_titles?: Json | null
         }
         Update: {
           active?: boolean | null
@@ -1572,11 +1576,13 @@ export type Database = {
           priority?: number | null
           product_ids?: string[] | null
           real_quotes?: Json | null
+          spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
           title?: string
           updated_at?: string | null
           whatsapp_complete_message?: string | null
+          whatsapp_section_titles?: Json | null
         }
         Relationships: []
       }

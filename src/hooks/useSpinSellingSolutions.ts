@@ -42,6 +42,19 @@ export interface GoogleAdsCampaign {
   generated_at: string;
 }
 
+export interface WhatsAppSectionTitles {
+  journey_title: string;
+  journey_subtitle?: string | null;
+  metrics_title: string;
+  metrics_subtitle?: string | null;
+}
+
+export interface SpinJourneyLabels {
+  desire_label: string;
+  pain_label: string;
+  result_label: string;
+}
+
 export interface SpinSellingSolution {
   id: string;
   title: string;
@@ -57,6 +70,10 @@ export interface SpinSellingSolution {
   real_quotes: SpinJourneyQuote[];
   pain_metrics: { [key: string]: string };
   custom_url?: CustomURL;
+  
+  // ✅ PERSONALIZAÇÃO DE TEXTOS WHATSAPP
+  whatsapp_section_titles?: WhatsAppSectionTitles;
+  spin_journey_labels?: SpinJourneyLabels;
   
   // ⚡ CAMPOS GERADOS PELA IA (apenas quando o usuário clica)
   google_ads_campaign?: GoogleAdsCampaign;
