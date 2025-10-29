@@ -155,9 +155,15 @@ export const useLandingPagesSupabase = () => {
   }, [loadLandingPages, toast]);
 
   // Atualizar landing page
-  const updateLandingPage = useCallback(async (id: string, updates: Partial<LandingPage>) => {
+  const updateLandingPage = useCallback(async (id: string, updates: Partial<LandingPage>): Promise<boolean> => {
     try {
       console.log('🔄 [Update LP] Iniciando update para LP:', id);
+      
+      // Whitelist de colunas permitidas no banco
+      const allowedTopLevel = new Set([
+        'name', 'status', 'template', 'data', 'embed', 
+        'selected_product_ids', 'blog_generated', 'blog_generated_at'
+      ]);
       
       // Buscar dados atuais da landing page
       const { data: currentLP, error: fetchError } = await supabase
@@ -168,23 +174,17 @@ export const useLandingPagesSupabase = () => {
       
       if (fetchError) {
         console.error('❌ [Update LP] Erro ao buscar LP atual:', fetchError);
-        throw fetchError;
+        return false;
       }
 
-      // Preparar updates com conversões necessárias
+      // Preparar updates apenas com colunas permitidas
       const supabaseUpdates: any = {
-        ...updates,
         last_modified: new Date().toISOString(),
       };
 
-      // Converter datas para string se existirem
-      if (updates.blog_generated_at) {
-        supabaseUpdates.blog_generated_at = updates.blog_generated_at.toISOString();
-      }
-
       // Se updates.data existe, fazer deep merge com dados existentes
-      if (updates.data && currentLP?.data) {
-        const existingData = typeof currentLP.data === 'object' && currentLP.data !== null 
+      if (updates.data) {
+        const existingData = typeof currentLP?.data === 'object' && currentLP.data !== null 
           ? currentLP.data as any
           : {};
         
@@ -200,24 +200,37 @@ export const useLandingPagesSupabase = () => {
         });
       }
 
+      // Copiar apenas campos permitidos do topo
+      for (const key of Object.keys(updates)) {
+        if (allowedTopLevel.has(key) && key !== 'data') {
+          if (key === 'blog_generated_at' && updates.blog_generated_at instanceof Date) {
+            supabaseUpdates[key] = updates.blog_generated_at.toISOString();
+          } else {
+            supabaseUpdates[key] = (updates as any)[key];
+          }
+        }
+      }
+
+      console.log('📤 [Update LP] Enviando para Supabase:', Object.keys(supabaseUpdates));
+
       const { error } = await supabase
         .from('landing_pages')
         .update(supabaseUpdates)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [Update LP] Erro do Supabase:', error);
+        return false;
+      }
 
       console.log('✅ [Update LP] Update concluído com sucesso');
       await loadLandingPages();
+      return true;
     } catch (error) {
-      console.error('Erro ao atualizar landing page:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar landing page",
-        variant: "destructive"
-      });
+      console.error('❌ [Update LP] Exceção capturada:', error);
+      return false;
     }
-  }, [loadLandingPages, toast]);
+  }, [loadLandingPages]);
 
   // Deletar landing page
   const deleteLandingPage = useCallback(async (id: string) => {

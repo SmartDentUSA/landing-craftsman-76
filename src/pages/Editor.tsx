@@ -50,6 +50,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { useProductSync } from "@/hooks/useProductSync";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounceValue } from "@/hooks/useDebounceValue";
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
 import { useExplanatoryVideoAutoSave } from "@/hooks/useExplanatoryVideoAutoSave";
 import { useAnimatedBannerAutoSave } from "@/hooks/useAnimatedBannerAutoSave";
@@ -1994,10 +1995,13 @@ const EditorContent = () => {
   // Generate optimized preview HTML for real-time updates
   const [generatedHTML, setGeneratedHTML] = useState<string>('');
   
+  // Debounce data to reduce preview flickering
+  const debouncedData = useDebounceValue(data, 300);
+
   useEffect(() => {
     const generatePreview = async () => {
       console.time('preview-generation');
-      const processedData = beforePreview(data);
+      const processedData = beforePreview(debouncedData);
     
     const previewData = {
       ...processedData,
@@ -2436,7 +2440,7 @@ const EditorContent = () => {
     lastPreviewUpdateAt.current = now;
     setPreviewVersion(prev => prev + 1);
     
-  }, [data]);
+  }, [debouncedData]);
 
   // ✅ Atalhos de teclado para Undo/Redo
   useEffect(() => {
@@ -2879,14 +2883,15 @@ const EditorContent = () => {
       name: processedData.name,
       status: processedData.status,
       template: processedData.template,
-      // Campos de primeiro nível
-      seo_title: processedData.seo_title,
-      seo_description: processedData.seo_description,
-      logo_url: processedData.logo_url,
-      logo_alt: processedData.logo_alt,
-      menu: processedData.menu,
-      // Campos que devem ir para 'data'
+      // Todos os campos editáveis vão para 'data' (JSONB)
       data: {
+        // Campos SEO e header
+        seo_title: processedData.seo_title,
+        seo_description: processedData.seo_description,
+        logo_url: processedData.logo_url,
+        logo_alt: processedData.logo_alt,
+        menu: processedData.menu,
+        // Seções da landing page
         banner: processedData.banner,
         explanatory_video_section: processedData.explanatory_video_section,
         solutions_title: processedData.solutions_title,
@@ -2916,13 +2921,22 @@ const EditorContent = () => {
     console.log('[DEBUG] Dados da store:', storeData);
     
     if (id) {
-      await updateLandingPage(id, storeData);
-      console.log('[DEBUG] Landing page atualizada com ID:', id);
-      toast({
-        title: "Alterações salvas",
-        description: "Landing page atualizada com sucesso!",
-      });
-      dirtyRef.current = false; // Reset dirty flag after save
+      const success = await updateLandingPage(id, storeData);
+      console.log('[DEBUG] Landing page update result:', success);
+      
+      if (success) {
+        toast({
+          title: "Alterações salvas",
+          description: "Landing page atualizada com sucesso!",
+        });
+        dirtyRef.current = false; // Reset dirty flag after save
+      } else {
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar as alterações. Tente novamente.",
+          variant: "destructive"
+        });
+      }
     } else {
       const newId = await addLandingPage(storeData);
       console.log('[DEBUG] Nova landing page criada com ID:', newId);

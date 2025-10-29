@@ -16,7 +16,7 @@ interface LandingPageData {
 }
 
 export const useExplanatoryVideoAutoSave = (
-  saveLandingPage: (id: string, data: Partial<LandingPageData>) => Promise<void>,
+  saveLandingPage: (id: string, data: Partial<LandingPageData>) => Promise<boolean | void>,
   pageId?: string
 ) => {
   const lastSaveRef = useRef<Date>();
