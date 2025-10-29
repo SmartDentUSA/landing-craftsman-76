@@ -62,6 +62,9 @@ export interface SpinSellingSolution {
   google_ads_campaign?: GoogleAdsCampaign;
   whatsapp_complete_message?: string;
   storytelling_auto_generated?: string;
+  landing_page_html?: string;
+  landing_page_generated_at?: string;
+  ai_generated_images?: any;
   
   active: boolean;
   created_at: string;

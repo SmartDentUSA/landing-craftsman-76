@@ -113,3 +113,9 @@ verify_jwt = true
 
 [functions.generate-ecommerce-html]
 verify_jwt = false
+
+[functions.generate-spin-campaign]
+verify_jwt = false
+
+[functions.generate-spin-landing-page]
+verify_jwt = false

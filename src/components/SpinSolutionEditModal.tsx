@@ -106,6 +106,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const { landingPages } = useLandingPages();
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingLP, setIsGeneratingLP] = useState(false);
   const [newMetric, setNewMetric] = useState({ key: '', value: '' });
   
   // Filtrar apenas landing pages aprovadas
@@ -358,6 +359,81 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     toast({
       title: "✅ Métrica adicionada!",
       description: `${trimmedKey}: ${trimmedValue}`,
+    });
+  };
+
+  // Landing Page Generation Handlers
+  const handleGenerateLandingPage = async () => {
+    if (!solutionId) {
+      toast({
+        title: "Salve primeiro!",
+        description: "Salve a solução antes de gerar a landing page",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingLP(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-spin-landing-page', {
+        body: { solutionId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Landing Page Gerada!",
+        description: "HTML completo criado com sucesso",
+      });
+
+      // Recarregar dados da solução para pegar o HTML gerado
+      const { data: updatedSolution } = await supabase
+        .from('spin_selling_solutions')
+        .select('landing_page_html, landing_page_generated_at')
+        .eq('id', solutionId)
+        .single();
+
+      if (updatedSolution) {
+        setFormData(prev => ({
+          ...prev,
+          landing_page_html: updatedSolution.landing_page_html,
+          landing_page_generated_at: updatedSolution.landing_page_generated_at
+        }));
+      }
+
+    } catch (error: any) {
+      toast({
+        title: "Erro ao gerar landing page",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingLP(false);
+    }
+  };
+
+  const handlePreviewLandingPage = () => {
+    if (!formData.landing_page_html) return;
+    
+    const blob = new Blob([formData.landing_page_html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  };
+
+  const handleDownloadLandingPage = () => {
+    if (!formData.landing_page_html) return;
+    
+    const blob = new Blob([formData.landing_page_html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `landing-page-${formData.title?.toLowerCase().replace(/\s+/g, '-') || 'spin-solution'}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "✅ Download iniciado!",
+      description: "Arquivo HTML salvo com sucesso",
     });
   };
 
@@ -1067,6 +1143,92 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 </div>
               )}
             </Card>
+
+            {/* ===== SEÇÃO: GERADOR DE LANDING PAGE DE CONVERSÃO ===== */}
+            {solutionId && (
+              <Card className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <Label className="text-lg font-bold flex items-center gap-2 text-purple-900">
+                      <Sparkles className="w-6 h-6" />
+                      Gerador de Landing Page de Conversão
+                    </Label>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Crie uma landing page HTML completa com design moderno, SEO avançado e carrossel de depoimentos
+                    </p>
+                  </div>
+                </div>
+                
+                {formData.landing_page_html && formData.landing_page_generated_at && (
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-200 mb-3">
+                    <Check className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-700 font-medium">
+                      Landing page gerada em {new Date(formData.landing_page_generated_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-3 gap-3">
+                  <Button
+                    type="button"
+                    onClick={handleGenerateLandingPage}
+                    disabled={isGeneratingLP || !formData.success_cases || formData.success_cases.length === 0}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isGeneratingLP ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Gerar Landing Page
+                      </>
+                    )}
+                  </Button>
+                  
+                  {formData.landing_page_html && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePreviewLandingPage}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Visualizar
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleDownloadLandingPage}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar HTML
+                      </Button>
+                    </>
+                  )}
+                </div>
+                
+                {(!formData.success_cases || formData.success_cases.length === 0) && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ Adicione pelo menos 1 caso de sucesso antes de gerar a landing page
+                  </p>
+                )}
+                
+                {formData.landing_page_html && (
+                  <div className="mt-3 p-3 bg-white rounded-lg border">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      <strong>Tamanho do HTML:</strong> {Math.round(formData.landing_page_html.length / 1024)} KB
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Dica:</strong> Clique em "Visualizar" para ver o resultado ou "Baixar HTML" para copiar e colar no seu sistema de publicação
+                    </p>
+                  </div>
+                )}
+              </Card>
+            )}
 
             {/* ===== GERAÇÃO DE CONTEÚDO POR IA (APENAS SE JÁ SALVO) ===== */}
             {solutionId && formData.product_ids && formData.product_ids.length > 0 && (

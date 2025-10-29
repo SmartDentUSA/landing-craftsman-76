@@ -1517,11 +1517,14 @@ export type Database = {
       spin_selling_solutions: {
         Row: {
           active: boolean | null
+          ai_generated_images: Json | null
           created_at: string | null
           custom_url: Json | null
           frequency: string | null
           google_ads_campaign: Json | null
           id: string
+          landing_page_generated_at: string | null
+          landing_page_html: string | null
           pain_metrics: Json | null
           pain_type: string
           priority: number | null
@@ -1535,11 +1538,14 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          ai_generated_images?: Json | null
           created_at?: string | null
           custom_url?: Json | null
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
+          landing_page_generated_at?: string | null
+          landing_page_html?: string | null
           pain_metrics?: Json | null
           pain_type: string
           priority?: number | null
@@ -1553,11 +1559,14 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          ai_generated_images?: Json | null
           created_at?: string | null
           custom_url?: Json | null
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
+          landing_page_generated_at?: string | null
+          landing_page_html?: string | null
           pain_metrics?: Json | null
           pain_type?: string
           priority?: number | null
