@@ -1996,7 +1996,7 @@ const EditorContent = () => {
   const [generatedHTML, setGeneratedHTML] = useState<string>('');
   
   // Debounce data to reduce preview flickering
-  const debouncedData = useDebounceValue(data, 300);
+  const debouncedData = useDebounceValue(data, 800);
 
   useEffect(() => {
     const generatePreview = async () => {
@@ -2109,20 +2109,22 @@ const EditorContent = () => {
     };
     
     generatePreview();
-  }, [data, data.explanatory_video_section, data.animated_banner_section, data.knowledge_feed_section]);
+  }, [debouncedData]);
 
   // 🆕 Estado para HTML final completo (com todos os processamentos SEO)
   const [finalHTML, setFinalHTML] = useState<string>('');
   const [isGeneratingFinal, setIsGeneratingFinal] = useState<boolean>(false);
 
-  // 🆕 Gerar HTML final completo quando dados mudarem
+  // 🆕 Gerar HTML final completo quando dados mudarem (com debounce longo para evitar flickering)
+  const debouncedDataForFinal = useDebounceValue(data, 2000);
+  
   useEffect(() => {
     const generateFinalHTML = async () => {
       setIsGeneratingFinal(true);
       console.time('final-html-generation');
       
       try {
-        const processedData = beforePreview(data);
+        const processedData = beforePreview(debouncedDataForFinal);
         
         const finalData = {
           ...processedData,
@@ -2183,7 +2185,7 @@ const EditorContent = () => {
     };
     
     generateFinalHTML();
-  }, [data, data.explanatory_video_section, data.animated_banner_section, data.knowledge_feed_section]);
+  }, [debouncedDataForFinal]);
 
   // Função para gerar blog post usando IA
   const generateBlogPost = async (fastMode = false) => {
