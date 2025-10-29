@@ -1517,54 +1517,57 @@ export type Database = {
       spin_selling_solutions: {
         Row: {
           active: boolean | null
-          case_study_name: string | null
           created_at: string | null
+          custom_url: Json | null
           frequency: string | null
-          google_ads_headline: string | null
+          google_ads_campaign: Json | null
           id: string
           pain_metrics: Json | null
           pain_type: string
           priority: number | null
           product_ids: string[] | null
           real_quotes: Json | null
-          storytelling_hook: string | null
+          storytelling_auto_generated: string | null
+          success_cases: Json | null
           title: string
           updated_at: string | null
-          whatsapp_hook: string | null
+          whatsapp_complete_message: string | null
         }
         Insert: {
           active?: boolean | null
-          case_study_name?: string | null
           created_at?: string | null
+          custom_url?: Json | null
           frequency?: string | null
-          google_ads_headline?: string | null
+          google_ads_campaign?: Json | null
           id?: string
           pain_metrics?: Json | null
           pain_type: string
           priority?: number | null
           product_ids?: string[] | null
           real_quotes?: Json | null
-          storytelling_hook?: string | null
+          storytelling_auto_generated?: string | null
+          success_cases?: Json | null
           title: string
           updated_at?: string | null
-          whatsapp_hook?: string | null
+          whatsapp_complete_message?: string | null
         }
         Update: {
           active?: boolean | null
-          case_study_name?: string | null
           created_at?: string | null
+          custom_url?: Json | null
           frequency?: string | null
-          google_ads_headline?: string | null
+          google_ads_campaign?: Json | null
           id?: string
           pain_metrics?: Json | null
           pain_type?: string
           priority?: number | null
           product_ids?: string[] | null
           real_quotes?: Json | null
-          storytelling_hook?: string | null
+          storytelling_auto_generated?: string | null
+          success_cases?: Json | null
           title?: string
           updated_at?: string | null
-          whatsapp_hook?: string | null
+          whatsapp_complete_message?: string | null
         }
         Relationships: []
       }

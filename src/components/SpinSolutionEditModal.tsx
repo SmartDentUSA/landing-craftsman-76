@@ -19,9 +19,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, Package } from 'lucide-react';
-import { useSpinSellingSolutions, SpinSellingSolution } from '@/hooks/useSpinSellingSolutions';
+import { Switch } from '@/components/ui/switch';
+import { 
+  Plus, 
+  Trash2, 
+  Package,
+  Download,
+  MessageCircle,
+  Copy,
+  Check,
+  Sparkles,
+  Link as LinkIcon
+} from 'lucide-react';
+import { 
+  useSpinSellingSolutions, 
+  SpinSellingSolution,
+  SuccessCase,
+  SpinJourneyQuote
+} from '@/hooks/useSpinSellingSolutions';
 import { SpinProductSelector } from './SpinProductSelector';
+import { useToast } from '@/hooks/use-toast';
 
 interface SpinSolutionEditModalProps {
   solutionId?: string;
@@ -41,7 +58,10 @@ const PAIN_TYPES = [
 
 export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditModalProps) {
   const { createSolution, updateSolution } = useSpinSellingSolutions();
+  const { toast } = useToast();
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [newMetric, setNewMetric] = useState({ key: '', value: '' });
 
   // Form state
   const [formData, setFormData] = useState<Partial<SpinSellingSolution>>({
@@ -50,12 +70,24 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     priority: 1,
     frequency: '',
     product_ids: [],
+    
+    // ✅ Arrays vazios por padrão
+    success_cases: [],
     real_quotes: [],
     pain_metrics: {},
-    google_ads_headline: '',
-    whatsapp_hook: '',
-    storytelling_hook: '',
-    case_study_name: '',
+    
+    // ✅ URL personalizada
+    custom_url: {
+      url: '',
+      enabled: false,
+      label: 'Saiba Mais'
+    },
+    
+    // ⚡ Campos gerados pela IA (inicialmente null)
+    google_ads_campaign: undefined,
+    whatsapp_complete_message: undefined,
+    storytelling_auto_generated: undefined,
+    
     active: true,
   });
 
@@ -71,14 +103,20 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         .single();
       
       if (error) throw error;
-      return data as SpinSellingSolution;
+      return data as any;
     },
     enabled: !!solutionId
   });
 
   useEffect(() => {
     if (existingSolution) {
-      setFormData(existingSolution);
+      setFormData({
+        ...existingSolution,
+        success_cases: existingSolution.success_cases || [],
+        real_quotes: existingSolution.real_quotes || [],
+        pain_metrics: existingSolution.pain_metrics || {},
+        custom_url: existingSolution.custom_url || { url: '', enabled: false, label: 'Saiba Mais' }
+      });
     }
   }, [existingSolution]);
 
@@ -86,6 +124,11 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     e.preventDefault();
     
     if (!formData.title || !formData.pain_type) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha o título e o tipo de dor",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -95,63 +138,105 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       priority: formData.priority || 1,
       frequency: formData.frequency,
       product_ids: formData.product_ids || [],
+      
+      // ✅ ARRAYS de casos e jornadas
+      success_cases: formData.success_cases || [],
       real_quotes: formData.real_quotes || [],
       pain_metrics: formData.pain_metrics || {},
-      google_ads_headline: formData.google_ads_headline,
-      whatsapp_hook: formData.whatsapp_hook,
-      storytelling_hook: formData.storytelling_hook,
-      case_study_name: formData.case_study_name,
+      
+      // ✅ URL Personalizada
+      custom_url: formData.custom_url || { url: '', enabled: false, label: 'Saiba Mais' },
+      
+      // ⚡ Campos gerados pela IA (só salvos se existirem)
+      google_ads_campaign: formData.google_ads_campaign,
+      whatsapp_complete_message: formData.whatsapp_complete_message,
+      storytelling_auto_generated: formData.storytelling_auto_generated,
+      
       active: formData.active ?? true,
     };
 
-    if (solutionId) {
-      await updateSolution.mutateAsync({ id: solutionId, updates: dataToSubmit });
-    } else {
-      await createSolution.mutateAsync(dataToSubmit);
+    try {
+      if (solutionId) {
+        await updateSolution.mutateAsync({ id: solutionId, updates: dataToSubmit });
+      } else {
+        await createSolution.mutateAsync(dataToSubmit as any);
+      }
+      
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive"
+      });
     }
-    
-    onClose();
   };
 
-  const addQuote = () => {
+  // Success Cases Handlers
+  const addSuccessCase = () => {
     setFormData(prev => ({
       ...prev,
-      real_quotes: [
-        ...(prev.real_quotes || []),
-        { quote: '', timestamp: '', speaker: '' }
+      success_cases: [
+        ...(prev.success_cases || []),
+        {
+          client_name: '',
+          specialty: '',
+          area: '',
+          city: '',
+          state: '',
+          instagram: '',
+          clinic_name: '',
+          usage_time: '',
+          results_achieved: ''
+        }
       ]
     }));
   };
 
-  const removeQuote = (index: number) => {
+  const removeSuccessCase = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      success_cases: prev.success_cases?.filter((_, i) => i !== index) || []
+    }));
+  };
+
+  const updateSuccessCase = (index: number, field: keyof SuccessCase, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      success_cases: prev.success_cases?.map((sc, i) =>
+        i === index ? { ...sc, [field]: value } : sc
+      ) || []
+    }));
+  };
+
+  // SPIN Journey Handlers
+  const addSpinQuote = () => {
+    setFormData(prev => ({
+      ...prev,
+      real_quotes: [
+        ...(prev.real_quotes || []),
+        { client_name: '', desire: '', pain: '', expected_result: '' }
+      ]
+    }));
+  };
+
+  const removeSpinQuote = (index: number) => {
     setFormData(prev => ({
       ...prev,
       real_quotes: prev.real_quotes?.filter((_, i) => i !== index) || []
     }));
   };
 
-  const updateQuote = (index: number, field: string, value: string) => {
+  const updateSpinQuote = (index: number, field: keyof SpinJourneyQuote, value: string) => {
     setFormData(prev => ({
       ...prev,
-      real_quotes: prev.real_quotes?.map((quote, i) => 
+      real_quotes: prev.real_quotes?.map((quote, i) =>
         i === index ? { ...quote, [field]: value } : quote
       ) || []
     }));
   };
 
-  const addMetric = () => {
-    const key = prompt('Nome da métrica (ex: lab_time, digital_time):');
-    if (key) {
-      setFormData(prev => ({
-        ...prev,
-        pain_metrics: {
-          ...prev.pain_metrics,
-          [key]: ''
-        }
-      }));
-    }
-  };
-
+  // Metrics Handlers
   const removeMetric = (key: string) => {
     setFormData(prev => {
       const newMetrics = { ...prev.pain_metrics };
@@ -170,10 +255,105 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     }));
   };
 
+  // AI Generation Handlers
+  const handleGenerateGoogleAds = async () => {
+    if (!solutionId) {
+      toast({
+        title: "Salve primeiro!",
+        description: "Salve a solução antes de gerar campanhas",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-spin-campaign', {
+        body: {
+          solutionId: solutionId,
+          contentType: 'google_ads'
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Download CSV
+      const blob = new Blob([data.csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spin-google-ads-${formData.title?.replace(/\s+/g, '-') || 'solution'}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      // ✅ SOBRESCREVER google_ads_campaign no formData
+      setFormData(prev => ({
+        ...prev,
+        google_ads_campaign: data.campaign
+      }));
+      
+      toast({ 
+        title: "✅ Sucesso!", 
+        description: "CSV baixado. Salve novamente para persistir no banco." 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Erro", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateWhatsApp = async () => {
+    if (!solutionId) {
+      toast({
+        title: "Salve primeiro!",
+        description: "Salve a solução antes de gerar mensagens",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-spin-campaign', {
+        body: {
+          solutionId: solutionId,
+          contentType: 'whatsapp'
+        }
+      });
+      
+      if (error) throw error;
+      
+      // ✅ SOBRESCREVER whatsapp_complete_message e storytelling no formData
+      setFormData(prev => ({
+        ...prev,
+        whatsapp_complete_message: data.message,
+        storytelling_auto_generated: data.storytelling
+      }));
+      
+      toast({ 
+        title: "✅ Sucesso!", 
+        description: "Mensagem gerada. Salve novamente para persistir no banco." 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Erro", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {solutionId ? 'Editar Solução SPIN' : 'Nova Solução SPIN'}
@@ -256,67 +436,213 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               </p>
             </Card>
 
-            {/* Quotes */}
+            {/* ===== SEÇÃO: CASOS DE SUCESSO (MÚLTIPLOS) ===== */}
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <Label>Quotes Reais de Clientes</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addQuote}>
+                <Label className="text-lg font-semibold">✅ Casos de Sucesso</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addSuccessCase}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Quote
+                  Adicionar Caso
                 </Button>
               </div>
-              <div className="space-y-3">
-                {formData.real_quotes?.map((quote, index) => (
-                  <div key={index} className="flex gap-2 items-start">
-                    <div className="flex-1 space-y-2">
-                      <Input
-                        placeholder="Quote do cliente"
-                        value={quote.quote}
-                        onChange={(e) => updateQuote(index, 'quote', e.target.value)}
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          placeholder="Timestamp (ex: 02:20)"
-                          value={quote.timestamp}
-                          onChange={(e) => updateQuote(index, 'timestamp', e.target.value)}
-                        />
-                        <Input
-                          placeholder="Nome do cliente"
-                          value={quote.speaker || ''}
-                          onChange={(e) => updateQuote(index, 'speaker', e.target.value)}
-                        />
-                      </div>
-                    </div>
+              
+              {formData.success_cases?.map((successCase, index) => (
+                <Card key={index} className="p-4 mb-3 bg-muted/30">
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="font-medium">Caso #{index + 1}</h4>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => removeQuote(index)}
+                      onClick={() => removeSuccessCase(index)}
                     >
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
-                ))}
-              </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Nome Completo *"
+                      value={successCase.client_name}
+                      onChange={(e) => updateSuccessCase(index, 'client_name', e.target.value)}
+                      required
+                    />
+                    <Input
+                      placeholder="Instagram (@usuario)"
+                      value={successCase.instagram}
+                      onChange={(e) => updateSuccessCase(index, 'instagram', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Especialidade *"
+                      value={successCase.specialty}
+                      onChange={(e) => updateSuccessCase(index, 'specialty', e.target.value)}
+                      required
+                    />
+                    <Input
+                      placeholder="Área de Atuação *"
+                      value={successCase.area}
+                      onChange={(e) => updateSuccessCase(index, 'area', e.target.value)}
+                      required
+                    />
+                    <Input
+                      placeholder="Cidade *"
+                      value={successCase.city}
+                      onChange={(e) => updateSuccessCase(index, 'city', e.target.value)}
+                      required
+                    />
+                    <Input
+                      placeholder="Estado (UF) *"
+                      maxLength={2}
+                      value={successCase.state}
+                      onChange={(e) => updateSuccessCase(index, 'state', e.target.value.toUpperCase())}
+                      required
+                    />
+                    <Input
+                      placeholder="Nome da Clínica (opcional)"
+                      value={successCase.clinic_name || ''}
+                      onChange={(e) => updateSuccessCase(index, 'clinic_name', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Tempo de Uso (opcional)"
+                      value={successCase.usage_time || ''}
+                      onChange={(e) => updateSuccessCase(index, 'usage_time', e.target.value)}
+                    />
+                  </div>
+                  
+                  <Textarea
+                    className="mt-3"
+                    placeholder="Resultados Alcançados *"
+                    value={successCase.results_achieved}
+                    onChange={(e) => updateSuccessCase(index, 'results_achieved', e.target.value)}
+                    rows={3}
+                    required
+                  />
+                </Card>
+              ))}
+              
+              {formData.success_cases?.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum caso adicionado ainda. Clique em "Adicionar Caso" para começar.
+                </p>
+              )}
             </Card>
 
-            {/* Metrics */}
+            {/* ===== SEÇÃO: JORNADA SPIN DOS CLIENTES ===== */}
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <Label>Métricas de Impacto</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addMetric}>
+                <Label className="text-lg font-semibold">💬 Jornada SPIN (Desejo → Dor → Resultado)</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addSpinQuote}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Métrica
+                  Adicionar Jornada
                 </Button>
               </div>
+              
+              {formData.real_quotes?.map((quote, index) => (
+                <Card key={index} className="p-4 mb-3 bg-blue-50/50">
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="font-medium text-blue-900">Cliente #{index + 1}</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeSpinQuote(index)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                  
+                  <Input
+                    placeholder="Nome do Cliente"
+                    value={quote.client_name}
+                    onChange={(e) => updateSpinQuote(index, 'client_name', e.target.value)}
+                    className="mb-3"
+                  />
+                  
+                  <div className="mb-3">
+                    <Label className="text-xs text-muted-foreground mb-1">
+                      🎯 Campo 1: O que o cliente QUERIA?
+                    </Label>
+                    <Textarea
+                      placeholder='Ex: "Queria aumentar a produtividade em 50%"'
+                      value={quote.desire}
+                      onChange={(e) => updateSpinQuote(index, 'desire', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <div className="mb-3">
+                    <Label className="text-xs text-muted-foreground mb-1">
+                      ⚠️ Campo 2: Qual DOR ele enfrentava?
+                    </Label>
+                    <Textarea
+                      placeholder='Ex: "Perdia 3h/dia em processos manuais"'
+                      value={quote.pain}
+                      onChange={(e) => updateSpinQuote(index, 'pain', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1">
+                      ✅ Campo 3: Qual RESULTADO esperava?
+                    </Label>
+                    <Textarea
+                      placeholder='Ex: "Reduzir tempo de entrega de 7 dias para 24h"'
+                      value={quote.expected_result}
+                      onChange={(e) => updateSpinQuote(index, 'expected_result', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </Card>
+              ))}
+              
+              {formData.real_quotes?.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma jornada adicionada ainda.
+                </p>
+              )}
+            </Card>
+
+            {/* ===== SEÇÃO: MÉTRICAS DE IMPACTO (INLINE) ===== */}
+            <Card className="p-4">
+              <Label className="text-lg font-semibold mb-3 block">📊 Métricas de Impacto</Label>
+              
+              {/* Nova métrica inline */}
+              <div className="flex gap-2 mb-3">
+                <Input
+                  placeholder="Nome da métrica (ex: lab_time)"
+                  value={newMetric.key}
+                  onChange={(e) => setNewMetric(prev => ({ ...prev, key: e.target.value }))}
+                  className="w-1/3"
+                />
+                <Input
+                  placeholder="Valor (ex: 7 dias → 24h)"
+                  value={newMetric.value}
+                  onChange={(e) => setNewMetric(prev => ({ ...prev, value: e.target.value }))}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (newMetric.key && newMetric.value) {
+                      setFormData(prev => ({
+                        ...prev,
+                        pain_metrics: { ...prev.pain_metrics, [newMetric.key]: newMetric.value }
+                      }));
+                      setNewMetric({ key: '', value: '' });
+                    }
+                  }}
+                  disabled={!newMetric.key || !newMetric.value}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* Métricas existentes */}
               <div className="space-y-2">
                 {Object.entries(formData.pain_metrics || {}).map(([key, value]) => (
-                  <div key={key} className="flex gap-2">
-                    <Input
-                      value={key}
-                      disabled
-                      className="w-1/3"
-                    />
+                  <div key={key} className="flex gap-2 items-center">
+                    <Input value={key} disabled className="w-1/3 bg-muted" />
                     <Input
                       placeholder="Valor da métrica"
                       value={value}
@@ -329,57 +655,179 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       size="icon"
                       onClick={() => removeMetric(key)}
                     >
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 ))}
               </div>
+              
+              {Object.keys(formData.pain_metrics || {}).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma métrica adicionada ainda.
+                </p>
+              )}
             </Card>
 
-            {/* Campaign Content */}
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="google_ads">Google Ads Headline</Label>
+            {/* ===== SEÇÃO: URL PERSONALIZADA ===== */}
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-lg font-semibold flex items-center gap-2">
+                  <LinkIcon className="w-5 h-5" />
+                  URL Personalizada para Campanhas
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.custom_url?.enabled || false}
+                    onCheckedChange={(checked) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        custom_url: { 
+                          ...prev.custom_url!, 
+                          url: prev.custom_url?.url || '', 
+                          label: prev.custom_url?.label || 'Saiba Mais',
+                          enabled: checked 
+                        }
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {formData.custom_url?.enabled ? '✅ Ativado' : '⚪ Desativado'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
                 <Input
-                  id="google_ads"
-                  value={formData.google_ads_headline || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, google_ads_headline: e.target.value }))}
-                  placeholder="Headline para Google Ads"
+                  placeholder="URL (ex: https://smartdent.com.br/promo)"
+                  value={formData.custom_url?.url || ''}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      custom_url: { 
+                        ...prev.custom_url!, 
+                        url: e.target.value 
+                      }
+                    }))
+                  }
+                  type="url"
+                  disabled={!formData.custom_url?.enabled}
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="whatsapp">WhatsApp Hook</Label>
-                <Textarea
-                  id="whatsapp"
-                  value={formData.whatsapp_hook || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_hook: e.target.value }))}
-                  placeholder="Gancho inicial para WhatsApp"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="storytelling">Storytelling Hook</Label>
-                <Textarea
-                  id="storytelling"
-                  value={formData.storytelling_hook || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, storytelling_hook: e.target.value }))}
-                  placeholder="História de transformação"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="case_study">Nome do Case</Label>
                 <Input
-                  id="case_study"
-                  value={formData.case_study_name || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, case_study_name: e.target.value }))}
-                  placeholder="Ex: Dr. João - Transformação Digital"
+                  placeholder='Texto do Link (ex: "Comprar Agora")'
+                  value={formData.custom_url?.label || 'Saiba Mais'}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      custom_url: { 
+                        ...prev.custom_url!, 
+                        label: e.target.value 
+                      }
+                    }))
+                  }
+                  disabled={!formData.custom_url?.enabled}
                 />
               </div>
-            </div>
+              
+              {formData.custom_url?.enabled && formData.custom_url?.url && (
+                <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Esta URL será usada em: Google Ads CSV, Mensagens WhatsApp e Landing Pages
+                </p>
+              )}
+            </Card>
+
+            {/* ===== GERAÇÃO DE CONTEÚDO POR IA (APENAS SE JÁ SALVO) ===== */}
+            {solutionId && formData.product_ids && formData.product_ids.length > 0 && (
+              <Card className="p-4 bg-gradient-to-r from-primary/5 to-blue-500/5 border-primary/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Gerar Conteúdos por IA</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  ⚠️ Os conteúdos gerados <strong>sobrescreverão</strong> os campos correspondentes. 
+                  Salve novamente após gerar.
+                </p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Google Ads CSV */}
+                  <Button
+                    type="button"
+                    onClick={handleGenerateGoogleAds}
+                    disabled={isGenerating}
+                    className="h-auto py-4 flex flex-col items-start gap-2"
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <Download className="w-5 h-5" />
+                      <span className="font-semibold">Google Ads CSV</span>
+                    </div>
+                    <span className="text-xs opacity-80 text-left">
+                      Gera campanha completa com keywords dos produtos
+                    </span>
+                  </Button>
+                  
+                  {/* WhatsApp Completo */}
+                  <Button
+                    type="button"
+                    onClick={handleGenerateWhatsApp}
+                    disabled={isGenerating || !formData.success_cases || formData.success_cases.length === 0}
+                    className="h-auto py-4 flex flex-col items-start gap-2"
+                    variant="secondary"
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <MessageCircle className="w-5 h-5" />
+                      <span className="font-semibold">WhatsApp Completo</span>
+                    </div>
+                    <span className="text-xs opacity-80 text-left">
+                      Gera mensagem copy-paste com storytelling + case
+                    </span>
+                  </Button>
+                </div>
+                
+                {/* Preview WhatsApp Message */}
+                {formData.whatsapp_complete_message && (
+                  <Card className="mt-4 p-4 bg-background">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-semibold text-green-700 flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        Mensagem WhatsApp Gerada
+                      </h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(formData.whatsapp_complete_message!);
+                          toast({ title: "Copiado!", description: "Mensagem copiada" });
+                        }}
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-3 rounded-lg border max-h-60 overflow-y-auto">
+                      {formData.whatsapp_complete_message}
+                    </pre>
+                  </Card>
+                )}
+                
+                {/* Storytelling Gerado */}
+                {formData.storytelling_auto_generated && (
+                  <Card className="mt-4 p-4 bg-background">
+                    <h4 className="font-semibold text-blue-700 mb-2">📖 Storytelling Gerado</h4>
+                    <p className="text-sm">{formData.storytelling_auto_generated}</p>
+                  </Card>
+                )}
+              </Card>
+            )}
+
+            {/* Aviso caso não tenha salvado ainda */}
+            {!solutionId && (
+              <Card className="p-4 bg-yellow-50 border-yellow-200">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ <strong>Salve a solução primeiro</strong> para poder gerar conteúdos por IA
+                </p>
+              </Card>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4 border-t">

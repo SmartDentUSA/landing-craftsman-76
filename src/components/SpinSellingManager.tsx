@@ -118,10 +118,10 @@ export function SpinSellingManager() {
                   </div>
 
                   {/* Campaign Content Preview */}
-                  {solution.google_ads_headline && (
+                  {solution.whatsapp_complete_message && (
                     <div className="bg-muted/50 p-3 rounded-md">
                       <p className="text-sm font-medium text-primary">
-                        {solution.google_ads_headline}
+                        ✅ WhatsApp gerado
                       </p>
                     </div>
                   )}

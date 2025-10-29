@@ -2,25 +2,60 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+export interface SuccessCase {
+  client_name: string;
+  specialty: string;
+  area: string;
+  city: string;
+  state: string;
+  instagram: string;
+  clinic_name?: string;
+  usage_time?: string;
+  results_achieved: string;
+}
+
+export interface SpinJourneyQuote {
+  client_name: string;
+  desire: string;
+  pain: string;
+  expected_result: string;
+}
+
+export interface CustomURL {
+  url: string;
+  enabled: boolean;
+  label: string;
+}
+
+export interface GoogleAdsCampaign {
+  csv: string;
+  config: any;
+  keywords: string[];
+  warnings: string[];
+  generated_at: string;
+}
+
 export interface SpinSellingSolution {
   id: string;
   title: string;
-  pain_type: 'delivery_speed' | 'competitive_edge' | 'patient_loss' | 'training_fear' | 'high_lab_costs' | 'lab_dependency' | 'financial_roi' | 'quality_durability';
+  pain_type: 'delivery_speed' | 'competitive_edge' | 'patient_loss' | 
+             'training_fear' | 'high_lab_costs' | 'lab_dependency' | 
+             'financial_roi' | 'quality_durability';
   priority: number;
   frequency?: string;
   product_ids: string[];
-  real_quotes: Array<{
-    quote: string;
-    timestamp: string;
-    speaker?: string;
-  }>;
-  pain_metrics: {
-    [key: string]: string;
-  };
-  google_ads_headline?: string;
-  whatsapp_hook?: string;
-  storytelling_hook?: string;
-  case_study_name?: string;
+  
+  // ✅ CAMPOS PREENCHIDOS MANUALMENTE PELO USUÁRIO
+  success_cases: SuccessCase[];
+  real_quotes: SpinJourneyQuote[];
+  pain_metrics: { [key: string]: string };
+  custom_url?: CustomURL;
+  
+  // ⚡ CAMPOS GERADOS PELA IA (apenas quando o usuário clica)
+  google_ads_campaign?: GoogleAdsCampaign;
+  whatsapp_complete_message?: string;
+  storytelling_auto_generated?: string;
+  
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -39,7 +74,7 @@ export function useSpinSellingSolutions() {
         .order('priority', { ascending: true });
       
       if (error) throw error;
-      return data as SpinSellingSolution[];
+      return data as unknown as SpinSellingSolution[];
     }
   });
 
@@ -76,7 +111,7 @@ export function useSpinSellingSolutions() {
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<SpinSellingSolution> }) => {
       const { data, error } = await supabase
         .from('spin_selling_solutions')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();
