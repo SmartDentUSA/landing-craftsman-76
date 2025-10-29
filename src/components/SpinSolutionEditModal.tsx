@@ -56,6 +56,14 @@ const PAIN_TYPES = [
   { value: 'quality_durability', label: 'Qualidade e Durabilidade' },
 ];
 
+const METRIC_LABELS: Record<string, string> = {
+  ROI: 'Tempo retorno de investimento',
+  lab_time: 'Tempo de entrega atual',
+  digital_time: 'Tempo com a solução',
+  patient_loss: 'Perde % de pacientes',
+  revenue_loss: 'Perde R$ por mês',
+};
+
 export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditModalProps) {
   const { createSolution, updateSolution } = useSpinSellingSolutions();
   const { toast } = useToast();
@@ -239,7 +247,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   // Metrics Handlers
   const removeMetric = (key: string) => {
     setFormData(prev => {
-      const newMetrics = { ...prev.pain_metrics };
+      const newMetrics = { ...(prev.pain_metrics || {}) };
       delete newMetrics[key];
       return { ...prev, pain_metrics: newMetrics };
     });
@@ -249,10 +257,42 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     setFormData(prev => ({
       ...prev,
       pain_metrics: {
-        ...prev.pain_metrics,
+        ...(prev.pain_metrics || {}),
         [key]: value
       }
     }));
+  };
+
+  const addCustomMetric = () => {
+    const trimmedKey = newMetric.key.trim();
+    const trimmedValue = newMetric.value.trim();
+    
+    if (!trimmedKey || !trimmedValue) return;
+    
+    // Verificar se já existe
+    if (formData.pain_metrics && trimmedKey in formData.pain_metrics) {
+      toast({
+        title: "Métrica já existe",
+        description: `A métrica "${trimmedKey}" já foi adicionada`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      pain_metrics: { 
+        ...(prev.pain_metrics || {}), 
+        [trimmedKey]: trimmedValue 
+      }
+    }));
+    
+    setNewMetric({ key: '', value: '' });
+    
+    toast({
+      title: "✅ Métrica adicionada!",
+      description: `${trimmedKey}: ${trimmedValue}`,
+    });
   };
 
   // AI Generation Handlers
@@ -603,69 +643,113 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               )}
             </Card>
 
-            {/* ===== SEÇÃO: MÉTRICAS DE IMPACTO (INLINE) ===== */}
+            {/* ===== SEÇÃO: MÉTRICAS DE IMPACTO ===== */}
             <Card className="p-4">
-              <Label className="text-lg font-semibold mb-3 block">📊 Métricas de Impacto</Label>
+              <Label className="text-lg font-semibold mb-4 block">📊 Métricas de Impacto</Label>
               
-              {/* Nova métrica inline */}
-              <div className="flex gap-2 mb-3">
-                <Input
-                  placeholder="Nome da métrica (ex: lab_time)"
-                  value={newMetric.key}
-                  onChange={(e) => setNewMetric(prev => ({ ...prev, key: e.target.value }))}
-                  className="w-1/3"
-                />
-                <Input
-                  placeholder="Valor (ex: 7 dias → 24h)"
-                  value={newMetric.value}
-                  onChange={(e) => setNewMetric(prev => ({ ...prev, value: e.target.value }))}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (newMetric.key && newMetric.value) {
-                      setFormData(prev => ({
-                        ...prev,
-                        pain_metrics: { ...prev.pain_metrics, [newMetric.key]: newMetric.value }
-                      }));
-                      setNewMetric({ key: '', value: '' });
-                    }
-                  }}
-                  disabled={!newMetric.key || !newMetric.value}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
+              {/* Métricas Recomendadas */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-primary rounded" />
+                  Métricas Recomendadas
+                </h4>
+                <div className="space-y-3">
+                  {Object.entries(METRIC_LABELS).map(([key, label]) => (
+                    <div key={key} className="flex gap-3 items-center">
+                      <div className="flex-1">
+                        <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                          {label}
+                          <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-mono rounded">
+                            {key}
+                          </span>
+                        </Label>
+                        <Input
+                          placeholder={`Ex: ${key === 'ROI' ? '6 meses' : key === 'patient_loss' ? '15%' : key === 'revenue_loss' ? 'R$ 5.000' : '7 dias → 24h'}`}
+                          value={formData.pain_metrics?.[key] || ''}
+                          onChange={(e) => updateMetric(key, e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
               
-              {/* Métricas existentes */}
-              <div className="space-y-2">
-                {Object.entries(formData.pain_metrics || {}).map(([key, value]) => (
-                  <div key={key} className="flex gap-2 items-center">
-                    <Input value={key} disabled className="w-1/3 bg-muted" />
-                    <Input
-                      placeholder="Valor da métrica"
-                      value={value}
-                      onChange={(e) => updateMetric(key, e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeMetric(key)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+              {/* Divisor */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Métricas Personalizadas
+                  </span>
+                </div>
+              </div>
+              
+              {/* Adicionar Métrica Personalizada */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                  Adicionar Métrica Personalizada
+                </h4>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex.: lead_time, capex, opex"
+                    value={newMetric.key}
+                    onChange={(e) => setNewMetric(prev => ({ ...prev, key: e.target.value }))}
+                    className="w-1/3"
+                  />
+                  <Input
+                    placeholder="Valor da métrica"
+                    value={newMetric.value}
+                    onChange={(e) => setNewMetric(prev => ({ ...prev, value: e.target.value }))}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={addCustomMetric}
+                    disabled={!newMetric.key.trim() || !newMetric.value.trim()}
+                    className="shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Métricas Personalizadas Existentes */}
+              {(() => {
+                const customMetrics = Object.entries(formData.pain_metrics || {})
+                  .filter(([key]) => !(key in METRIC_LABELS));
+                
+                return customMetrics.length > 0 ? (
+                  <div className="space-y-2">
+                    {customMetrics.map(([key, value]) => (
+                      <div key={key} className="flex gap-2 items-center">
+                        <Input value={key} disabled className="w-1/3 bg-muted" />
+                        <Input
+                          placeholder="Valor da métrica"
+                          value={value}
+                          onChange={(e) => updateMetric(key, e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeMetric(key)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              
-              {Object.keys(formData.pain_metrics || {}).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma métrica adicionada ainda.
-                </p>
-              )}
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-6 bg-muted/20 rounded-lg border-2 border-dashed">
+                    <p className="font-medium mb-1">Nenhuma métrica personalizada</p>
+                    <p className="text-xs">Preencha os campos acima e clique em "+" para adicionar</p>
+                  </div>
+                );
+              })()}
             </Card>
 
             {/* ===== SEÇÃO: URL PERSONALIZADA ===== */}
