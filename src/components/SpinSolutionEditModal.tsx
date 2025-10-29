@@ -42,7 +42,9 @@ import {
   useSpinSellingSolutions, 
   SpinSellingSolution,
   SuccessCase,
-  SpinJourneyQuote
+  SpinJourneyQuote,
+  WhatsAppSectionTitles,
+  SpinJourneyLabels
 } from '@/hooks/useSpinSellingSolutions';
 import { SpinProductSelector } from './SpinProductSelector';
 import { ManualBannerUploader } from './ManualBannerUploader';
@@ -435,9 +437,12 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     setFormData(prev => ({
       ...prev,
       whatsapp_section_titles: {
-        ...(prev.whatsapp_section_titles || {}),
+        journey_title: prev.whatsapp_section_titles?.journey_title || "💬 Jornada do Cliente:",
+        journey_subtitle: prev.whatsapp_section_titles?.journey_subtitle || null,
+        metrics_title: prev.whatsapp_section_titles?.metrics_title || "📊 Métricas de Impacto:",
+        metrics_subtitle: prev.whatsapp_section_titles?.metrics_subtitle || null,
         [`${section}_${field}`]: value || null
-      }
+      } as WhatsAppSectionTitles
     }));
   };
 
@@ -445,13 +450,11 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     setFormData(prev => ({
       ...prev,
       spin_journey_labels: {
-        ...(prev.spin_journey_labels || {
-          desire_label: "🎯 *Desejo:*",
-          pain_label: "⚠️ *Dor:*",
-          result_label: "✅ *Resultado Esperado:*"
-        }),
+        desire_label: prev.spin_journey_labels?.desire_label || "🎯 *Desejo:*",
+        pain_label: prev.spin_journey_labels?.pain_label || "⚠️ *Dor:*",
+        result_label: prev.spin_journey_labels?.result_label || "✅ *Resultado Esperado:*",
         [field]: value
-      }
+      } as SpinJourneyLabels
     }));
   };
 
