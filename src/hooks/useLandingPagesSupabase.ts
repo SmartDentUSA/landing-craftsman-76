@@ -213,13 +213,20 @@ export const useLandingPagesSupabase = () => {
 
       console.log('📤 [Update LP] Enviando para Supabase:', Object.keys(supabaseUpdates));
 
-      const { error } = await supabase
+      const { data: updatedRow, error } = await supabase
         .from('landing_pages')
         .update(supabaseUpdates)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id')
+        .maybeSingle();
 
       if (error) {
         console.error('❌ [Update LP] Erro do Supabase:', error);
+        return false;
+      }
+
+      if (!updatedRow) {
+        console.error('❌ [Update LP] Nenhuma linha atualizada. Possíveis causas: RLS (usuário não é dono e não é admin) ou ID inexistente');
         return false;
       }
 

@@ -35,8 +35,7 @@ export const useExplanatoryVideoAutoSave = (
     try {
       await saveLandingPage(pageId, { 
         data: {
-          ...updatedData, 
-          last_modified: new Date().toISOString() 
+          explanatory_video_section: updatedData.explanatory_video_section
         }
       });
       lastSaveRef.current = new Date();

@@ -35,8 +35,7 @@ export const useDesktopInfoAutoSave = (
     try {
       await saveLandingPage(pageId, { 
         data: {
-          ...updatedData, 
-          last_modified: new Date().toISOString() 
+          desktop_info: updatedData.desktop_info
         }
       });
       lastSaveRef.current = new Date();

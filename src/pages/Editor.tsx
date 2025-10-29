@@ -1313,7 +1313,7 @@ const EditorContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { id } = useParams();
-  const { getLandingPage, updateLandingPage, addLandingPage, landingPages } = useLandingPagesSupabase();
+  const { getLandingPage, updateLandingPage, addLandingPage, landingPages, loadLandingPages } = useLandingPagesSupabase();
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
@@ -2927,15 +2927,16 @@ const EditorContent = () => {
       console.log('[DEBUG] Landing page update result:', success);
       
       if (success) {
+        await loadLandingPages();
+        dirtyRef.current = false;
         toast({
           title: "Alterações salvas",
           description: "Landing page atualizada com sucesso!",
         });
-        dirtyRef.current = false; // Reset dirty flag after save
       } else {
         toast({
           title: "Erro ao salvar",
-          description: "Não foi possível salvar as alterações. Tente novamente.",
+          description: "Não foi possível salvar as alterações. Verifique suas permissões.",
           variant: "destructive"
         });
       }

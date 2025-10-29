@@ -33,7 +33,9 @@ export const useAnimatedBannerAutoSave = (
     
     try {
       await saveLandingPage(pageId, { 
-        data: updatedData
+        data: {
+          animated_banner_section: updatedData.animated_banner_section
+        }
       });
       lastSaveRef.current = new Date();
       console.log('✅ [AUTO-SAVE] Faixa Animada salva com sucesso');
