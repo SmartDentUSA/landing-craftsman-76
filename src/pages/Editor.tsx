@@ -1434,11 +1434,12 @@ const EditorContent = () => {
   const [localName, setLocalName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isHydratingFromServer, setIsHydratingFromServer] = useState(true);
   const [lastServerSave, setLastServerSave] = useState<string | null>(null);
   const [lastSaveAt, setLastSaveAt] = useState<number | null>(null);
   const productsLoadedRef = useRef(false);
   const latestServerUpdatedAtRef = useRef<number | null>(null);
-  const hasHydratedFromServerRef = useRef(false);
+  const isSavingRef = useRef(false);
   
   // Debounced name update
   const debouncedNameUpdate = useDebounce((name: string) => {
@@ -1541,21 +1542,7 @@ const EditorContent = () => {
     syncSelectedProductsToOffers();
   }, [selectedProductIds]);
 
-  // Carregar produtos selecionados da landing page quando carregar
-  useEffect(() => {
-    if (!hasHydratedFromServerRef.current) {
-      console.log('⏳ [Editor] Aguardando hidratação do servidor antes de aplicar selected_product_ids do cache');
-      return;
-    }
-    if (id) {
-      const landingPage = getLandingPage(id);
-      if (landingPage?.selected_product_ids) {
-        setSelectedProductIds(landingPage.selected_product_ids);
-        productsLoadedRef.current = true;
-        console.log('🔄 Produtos selecionados carregados da landing page:', landingPage.selected_product_ids);
-      }
-    }
-  }, [id, landingPages, getLandingPage]);
+  // ✅ REMOVIDO: Hidratação via cache (agora sempre do servidor)
 
   // ✅ PATCH 0.2: Carregar Blogs Estratégicos do Banco
   useEffect(() => {
@@ -2473,419 +2460,7 @@ const EditorContent = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  useEffect(() => {
-    if (!hasHydratedFromServerRef.current) {
-      console.log('⏳ [Editor] Pulando hidratação via cache até finalizar hidratação do servidor');
-      return;
-    }
-    if (id) {
-      const landingPage = getLandingPage(id);
-      if (landingPage) {
-        // Ignore stale state if we already fetched a fresher version from server
-        const lpTs = new Date(landingPage.last_modified || 0).getTime();
-        if (latestServerUpdatedAtRef.current && lpTs < latestServerUpdatedAtRef.current) {
-          console.log('⏭️ [Editor] Ignorando estado desatualizado (aguardando sincronização com servidor)');
-          return;
-        }
-        console.log('🔄 [Editor] Landing page carregada:', {
-          id: landingPage.id,
-          name: landingPage.name,
-          has_animated_banner: !!landingPage.data?.animated_banner_section,
-          partners_count: landingPage.data?.animated_banner_section?.partners?.length || 0
-        });
-        
-        // Check if backend data is newer than current state to prevent overwriting local edits
-        const backendLastModified = new Date(landingPage.last_modified || 0).getTime();
-        const currentLastModified = new Date(data.seo?.lastmod || 0).getTime();
-        
-        // Only update if backend is newer or if this is the initial load
-        if (!dirtyRef.current || backendLastModified > currentLastModified) {
-          // Carregar produtos selecionados da landing page
-          const selectedIds = landingPage.selected_product_ids || [];
-          setSelectedProductIds(selectedIds);
-          productsLoadedRef.current = true;
-          // Se há dados estruturados, usar direto mas garantir campos obrigatórios
-          if (landingPage.data && typeof landingPage.data === 'object') {
-            // 🔧 CORREÇÃO CRÍTICA: Incluir name, status e template no loadedData
-            const loadedData = { 
-              ...landingPage.data, 
-              name: isEditingName ? data.name : landingPage.name, // Preservar nome local durante edição
-              status: landingPage.status,
-              template: landingPage.template 
-            } as LandingPageData;
-            
-            // 🔄 Migração automática: Adicionar knowledge_feed_section se não existir
-            if (!loadedData.knowledge_feed_section) {
-              console.log('🔄 [Editor] Migrando landing page antiga - adicionando knowledge_feed_section');
-              loadedData.knowledge_feed_section = {
-                visible_desktop: true,
-                visible_mobile: true,
-                title: 'Últimas Publicações',
-                subtitle: 'Confira os artigos mais recentes da nossa Base de Conhecimento',
-                feed_url: 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-                limit: 12
-              };
-              dirtyRef.current = true; // Marcar para salvar automaticamente
-            }
-            
-            console.info('🔍 Debug loading page data:', {
-              hasName: !!loadedData.name,
-              pageName: loadedData.name,
-              pageStatus: loadedData.status,
-              pageTemplate: loadedData.template,
-              isEditingName,
-              preservingLocalName: isEditingName
-            });
-          
-          // Garantir que todos os campos obrigatórios existam (defaults seguros)
-          if (!loadedData.desktop_info) {
-            loadedData.desktop_info = { 
-              title: '', 
-              text: '', 
-              visible_desktop: false,
-              visible_mobile: false, 
-              show_table: false, 
-              table_title: 'Especificações Técnicas',
-              table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
-              table_data: [
-                { 'Propriedade': 'Performance', 'Requisito': 'Alta', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 9001' },
-                { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
-                { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
-              ]
-            };
-          }
-          if (!loadedData.offers_section) {
-            loadedData.offers_section = {
-              visible_desktop: true,
-              visible_mobile: true,
-              title: 'Ofertas Especiais',
-              subtitle: 'Produtos em destaque com preços promocionais'
-            };
-          }
-          if (!loadedData.resources_section) {
-            loadedData.resources_section = {
-              visible_desktop: true,
-              visible_mobile: true,
-              title: 'Recursos e Downloads',
-              subtitle: 'Materiais técnicos e informações dos produtos'
-            };
-          }
-          if (!loadedData.explanatory_video_section) {
-            loadedData.explanatory_video_section = {
-              visible_desktop: true,
-              visible_mobile: true,
-              selected_video: null
-            };
-          }
-          
-          // Garantir que todos os campos ImageData existem
-          if (!loadedData.logo_url || typeof (loadedData.logo_url as any) === 'string') {
-            loadedData.logo_url = createImageData(typeof (loadedData.logo_url as any) === 'string' ? (loadedData.logo_url as any) : '', loadedData.logo_alt || '');
-          }
-          if (!loadedData.seo?.og_image) {
-            loadedData.seo = { ...loadedData.seo, og_image: createImageData() } as any;
-          }
-          if (!loadedData.seo?.twitter_image) {
-            loadedData.seo = { ...loadedData.seo, twitter_image: createImageData() } as any;
-          }
-          if (!loadedData.email?.logo_src) {
-            loadedData.email = { ...loadedData.email, logo_src: createImageData() } as any;
-          }
-          if (!loadedData.email?.imagem_src) {
-            loadedData.email = { ...loadedData.email, imagem_src: createImageData() } as any;
-          }
-          
-          // Garantir campos SEO específicos
-          if (!loadedData.seo?.intelligent_links) {
-            loadedData.seo = { ...loadedData.seo, intelligent_links: {} } as any;
-          }
-          if (!loadedData.seo?.ai_keywords) {
-            loadedData.seo = { ...loadedData.seo, ai_keywords: '' } as any;
-          }
-          
-          // Garantir bloco google_reviews para compatibilidade retroativa
-          if (!loadedData.schema) {
-            loadedData.schema = {
-              software_app: {
-                name: 'Smart Dent',
-                category: 'HealthApplication',
-                rating_value: '4.8',
-                rating_count: '150',
-                price: '0',
-                price_currency: 'BRL',
-                operating_system: 'Web',
-                application_category: 'HealthApplication'
-              },
-              offers: [],
-              breadcrumb: [],
-              google_reviews: { url: '', auto_extract: false, last_extracted: '', status: 'idle' }
-            } as any;
-          } else if (!(loadedData as any).schema.google_reviews) {
-            loadedData.schema = {
-              ...(loadedData.schema as any),
-              google_reviews: { url: '', auto_extract: false, last_extracted: '', status: 'idle' }
-            } as any;
-          }
-          
-          // Garantir bloco banner para evitar undefined.title
-          if (!loadedData.banner) {
-            loadedData.banner = {
-              badge_text: '',
-              title: '',
-              subtitle: '',
-              cta_primary: { label: '', href: '' },
-              cta_secondary: { label: '', href: '' },
-              images: [createImageData()]
-            } as any;
-          } else {
-            loadedData.banner = {
-              ...loadedData.banner,
-              badge_text: loadedData.banner.badge_text || '',
-              title: loadedData.banner.title || '',
-              subtitle: loadedData.banner.subtitle || '',
-              cta_primary: loadedData.banner.cta_primary || { label: '', href: '' },
-              cta_secondary: loadedData.banner.cta_secondary || { label: '', href: '' },
-              images: Array.isArray(loadedData.banner.images) && loadedData.banner.images.length ? loadedData.banner.images : [createImageData()]
-            } as any;
-          }
-
-          // Garantir CTA Final existente
-          if (!(loadedData as any).cta_final) {
-            (loadedData as any).cta_final = {
-              title: '',
-              paragraph: '',
-              primary: { label: '', href: '', visible: true },
-              secondary: { label: '', href: '', visible: false }
-            };
-          } else {
-            (loadedData as any).cta_final = {
-              ...((loadedData as any).cta_final),
-              title: (loadedData as any).cta_final.title || '',
-              paragraph: (loadedData as any).cta_final.paragraph || '',
-              primary: {
-                label: (loadedData as any).cta_final?.primary?.label || '',
-                href: (loadedData as any).cta_final?.primary?.href || '',
-                visible: (loadedData as any).cta_final?.primary?.visible !== false
-              },
-              secondary: {
-                label: (loadedData as any).cta_final?.secondary?.label || '',
-                href: (loadedData as any).cta_final?.secondary?.href || '',
-                visible: (loadedData as any).cta_final?.secondary?.visible === true
-              }
-            };
-          }
-
-          // Garantir bloco advisory existente
-          if (!(loadedData as any).advisory) {
-            (loadedData as any).advisory = {
-              title: '',
-              paragraph: '',
-              visible_desktop: true,
-              visible_mobile: true,
-              cta: { label: '', href: '' },
-              image: createImageData()
-            };
-          } else {
-            (loadedData as any).advisory = {
-              ...((loadedData as any).advisory),
-              title: (loadedData as any).advisory.title || '',
-              paragraph: (loadedData as any).advisory.paragraph || '',
-              visible_desktop: (loadedData as any).advisory.visible_desktop !== false,
-              visible_mobile: (loadedData as any).advisory.visible_mobile !== false,
-              cta: (loadedData as any).advisory.cta || { label: '', href: '' },
-              image: (loadedData as any).advisory.image || createImageData()
-            };
-          }
-          
-          // Usar setReplace para não adicionar ao histórico do undo
-          const safeData = ensureLandingPageDefaults(loadedData);
-          setReplace(safeData);
-          console.log('✅ Dados carregados do banco e normalizados:', safeData.name);
-        } else {
-          // Migrar dados antigos para novo formato se necessário
-          const migratedData: any = { ...landingPage.data || {} };
-          if (typeof migratedData.logo_url === 'string') {
-            migratedData.logo_url = createImageData(migratedData.logo_url, migratedData.logo_alt || '');
-          }
-          if (!migratedData.desktop_info) {
-            migratedData.desktop_info = { 
-              title: '', 
-              text: '', 
-              visible_desktop: false,
-              visible_mobile: false, 
-              show_table: false, 
-              table_title: 'Especificações Técnicas',
-              table_headers: ['Propriedade', 'Requisito', 'Resultado', 'Padrão ISO'],
-              table_data: [
-                { 'Propriedade': 'Performance', 'Requisito': 'Alta', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 9001' },
-                { 'Propriedade': 'Segurança', 'Requisito': 'Máxima', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 27001' },
-                { 'Propriedade': 'Qualidade', 'Requisito': 'Premium', 'Resultado': 'Aprovado', 'Padrão ISO': 'ISO 14001' }
-              ]
-            };
-          }
-          // Garantir bloco explanatory_video_section
-          if (!migratedData.explanatory_video_section) {
-            migratedData.explanatory_video_section = {
-              visible_desktop: false,
-              visible_mobile: false,
-              selected_video: null
-            };
-          }
-          if (!migratedData.offers_section) {
-            migratedData.offers_section = {
-              visible_desktop: true,
-              visible_mobile: true,
-              title: 'Ofertas Especiais',
-              subtitle: 'Produtos em destaque com preços promocionais'
-            };
-          }
-          if (!migratedData.resources_section) {
-            migratedData.resources_section = {
-              visible_desktop: false,
-              visible_mobile: false,
-              title: 'Recursos e Downloads',
-              subtitle: 'Materiais técnicos e informações dos produtos'
-            };
-          }
-          // Garantir bloco schema/google_reviews ao migrar
-          if (!migratedData.schema) {
-            migratedData.schema = {
-              software_app: {
-                name: 'Smart Dent',
-                category: 'HealthApplication',
-                rating_value: '4.8',
-                rating_count: '150',
-                price: '0',
-                price_currency: 'BRL',
-                operating_system: 'Web',
-                application_category: 'HealthApplication'
-              },
-              offers: [],
-              breadcrumb: [],
-              google_reviews: { url: '', auto_extract: false, last_extracted: '', status: 'idle' }
-            } as any;
-          } else if (!migratedData.schema.google_reviews) {
-            migratedData.schema.google_reviews = { url: '', auto_extract: false, last_extracted: '', status: 'idle' };
-          }
-          
-          // Garantir bloco banner
-          if (!migratedData.banner) {
-            migratedData.banner = {
-              badge_text: '',
-              title: '',
-              subtitle: '',
-              cta_primary: { label: '', href: '' },
-              cta_secondary: { label: '', href: '' },
-              images: [createImageData()]
-            } as any;
-          } else {
-            migratedData.banner = {
-              ...migratedData.banner,
-              badge_text: migratedData.banner.badge_text || '',
-              title: migratedData.banner.title || '',
-              subtitle: migratedData.banner.subtitle || '',
-              cta_primary: migratedData.banner.cta_primary || { label: '', href: '' },
-              cta_secondary: migratedData.banner.cta_secondary || { label: '', href: '' },
-              images: Array.isArray(migratedData.banner.images) && migratedData.banner.images.length ? migratedData.banner.images : [createImageData()]
-            } as any;
-          }
-          
-          // Garantir array de soluções
-          if (!migratedData.solutions) {
-            migratedData.solutions = [];
-          }
-          
-          // Garantir bloco advisory
-          if (!migratedData.advisory) {
-            migratedData.advisory = {
-              title: '',
-              paragraph: '',
-              visible_desktop: true,
-              visible_mobile: true,
-              cta: { label: '', href: '' },
-              image: createImageData('', '')
-            };
-          }
-          
-          // Garantir bloco email
-          if (!migratedData.email) {
-            migratedData.email = {
-              sections: {
-                header: { enabled: true },
-                content: { enabled: true },
-                ctas: { enabled: true },
-                highlights: { enabled: true },
-                benefits: { enabled: true },
-                main_image: { enabled: true },
-                solutions: { enabled: false },
-                footer: { enabled: true }
-              },
-              assunto_email: '',
-              preheader_texto: '',
-              url_site: '',
-              logo_src: createImageData('', ''),
-              selo: '',
-              titulo_principal: '',
-              subtitulo: '',
-              cta_label: '',
-              cta_href: '',
-              cta_subcopy: '',
-              cta2_label: '',
-              cta2_href: '',
-              bloco1_titulo: '',
-              bloco1_texto: '',
-              bloco2_titulo: '',
-              bloco2_texto: '',
-              beneficio_1: '',
-              beneficio_2: '',
-              beneficio_3: '',
-              imagem_href: '',
-              imagem_src: createImageData('', ''),
-              show_solutions_in_email: false,
-              solutions_title: '',
-              brand_name: '',
-              endereco_completo: '',
-              link_suporte: '',
-              link_descadastro: '',
-              link_preferencias: ''
-            } as any;
-          }
-          
-          // Garantir bloco footer
-          if (!migratedData.footer) {
-            migratedData.footer = {
-              locations: [],
-              links: [],
-              social: []
-            };
-          }
-          
-          // Only update name if not currently editing
-          if (!isEditingName) {
-            setLocalName(landingPage.name);
-          }
-          
-          // Normalizar dados migrados e usar setReplace
-          const safeMigratedData = ensureLandingPageDefaults({
-            ...migratedData,
-            name: isEditingName ? data.name : landingPage.name,
-            status: landingPage.status,
-            template: landingPage.template
-          });
-          setReplace(safeMigratedData);
-          console.log('✅ Dados migrados e normalizados:', safeMigratedData.name);
-          dirtyRef.current = false; // Reset dirty flag after loading
-          }
-        }
-      } else {
-        dirtyRef.current = true; // Mark as dirty if we have local changes but no backend match
-      }
-    } else {
-      // Caso seja nova landing page (sem ID), usar dados padrão do estado inicial
-      console.log('Nova landing page - usando dados padrão do estado inicial');
-      dirtyRef.current = true;
-    }
-  }, [id, getLandingPage]);
+  // ✅ REMOVIDO: Hidratação via cache (agora sempre do servidor direto)
 
   // Initialize localName when data.name changes (but not when editing)
   useEffect(() => {
@@ -2896,6 +2471,9 @@ const EditorContent = () => {
 
   const rehydrateFromServer = async (pageId: string): Promise<boolean> => {
     try {
+      setIsHydratingFromServer(true);
+      console.log('🔄 [Rehydrate] Buscando dados atualizados do servidor para:', pageId);
+      
       const { data: freshLP, error } = await supabase
         .from('landing_pages')
         .select('id, name, status, template, data, selected_product_ids, updated_at')
@@ -2904,6 +2482,7 @@ const EditorContent = () => {
 
       if (error) {
         console.error('❌ [Rehydrate] Erro ao buscar LP:', error);
+        setIsHydratingFromServer(false);
         return false;
       }
 
@@ -2915,6 +2494,14 @@ const EditorContent = () => {
           status: freshLP.status as any,
           template: freshLP.template
         });
+        
+        console.log('✅ [Rehydrate OK]', {
+          updated_at: (freshLP as any).updated_at,
+          bannerTitle: safe.banner?.title,
+          desktopInfoTitle: safe.desktop_info?.title,
+          productsCount: ((freshLP as any).selected_product_ids || []).length
+        });
+        
         setReplace(safe);
         setSelectedProductIds((freshLP as any).selected_product_ids || []);
         productsLoadedRef.current = true;
@@ -2925,14 +2512,18 @@ const EditorContent = () => {
           latestServerUpdatedAtRef.current = ts.getTime();
           setLastServerSave(ts.toLocaleTimeString('pt-BR'));
           setLastSaveAt(Date.now());
-          console.info('[SAVE] persistido', ts.toISOString());
-          hasHydratedFromServerRef.current = true;
+          console.info('💾 [Rehydrate] Persistido no servidor:', ts.toISOString());
         }
+        
+        setIsHydratingFromServer(false);
         return true;
       }
+      
+      setIsHydratingFromServer(false);
       return false;
     } catch (e) {
       console.error('❌ [Rehydrate] Exceção:', e);
+      setIsHydratingFromServer(false);
       return false;
     }
   };
@@ -2946,6 +2537,7 @@ const EditorContent = () => {
   const handleSave = async () => {
     console.log('💾 [SAVE] Salvando landing page com OVERWRITE completo...');
     setIsSaving(true);
+    isSavingRef.current = true; // Cooldown para autosave
     
     if (id) {
       // ✅ Processar dados locais
@@ -3005,6 +2597,11 @@ const EditorContent = () => {
           description: "Landing page atualizada com sucesso!",
         });
         setIsSaving(false);
+        
+        // Liberar autosave após 2s
+        setTimeout(() => {
+          isSavingRef.current = false;
+        }, 2000);
       } else {
         toast({
           title: "Erro ao salvar",
@@ -3012,6 +2609,7 @@ const EditorContent = () => {
           variant: "destructive"
         });
         setIsSaving(false);
+        isSavingRef.current = false;
       }
     } else {
       // Criar nova LP (não precisa de merge)
@@ -3519,6 +3117,16 @@ const EditorContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Loading Overlay */}
+      {isHydratingFromServer && (
+        <div className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-gray-600">Carregando dados do servidor...</p>
+          </div>
+        </div>
+      )}
+      
       {/* Breadcrumb Navigation */}
       <div className="bg-white border-b border-gray-100 px-6 py-3">
         <BreadcrumbNavigation />
@@ -3587,6 +3195,20 @@ const EditorContent = () => {
                   <Save className="h-4 w-4 mr-2" />
                 )}
                 {isSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => id && rehydrateFromServer(id)} 
+                disabled={isHydratingFromServer}
+                title="Recarregar dados do servidor"
+              >
+                {isHydratingFromServer ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                Recarregar
               </Button>
               <Badge variant="secondary" className="ml-2">
                 {lastSaveAt && (Date.now() - lastSaveAt < 5000)
