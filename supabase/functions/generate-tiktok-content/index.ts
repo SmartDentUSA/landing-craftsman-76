@@ -176,6 +176,8 @@ Informações do Produto:
 - Público-alvo: {product.target_audience}
 - Benefícios: {product.benefits}
 - Características: {product.features}
+- Pitch de Vendas: {product.sales_pitch}
+- Aplicações: {product.applications}
 
 Informações da Empresa:
 - Nome: {company.company_name}
@@ -238,6 +240,7 @@ function processPromptVariables(prompt: string, product: any, company: any): str
   processedPrompt = processedPrompt.replace(/{product\.description}/g, product.description || 'Não informada');
   processedPrompt = processedPrompt.replace(/{product\.category}/g, product.category || 'Não informada');
   processedPrompt = processedPrompt.replace(/{product\.applications}/g, product.applications || 'Não informado');
+  processedPrompt = processedPrompt.replace(/{product\.sales_pitch}/g, product.sales_pitch || 'Não informado');
   processedPrompt = processedPrompt.replace(/{product\.price}/g, product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado');
   
   // Processar arrays

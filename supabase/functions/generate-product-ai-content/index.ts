@@ -223,6 +223,8 @@ Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategory || 'Não informada'}
 Preço: ${product.price ? `${product.currency || 'BRL'} ${product.price}` : 'Não informado'}
+Pitch de Vendas: ${product.sales_pitch || 'Não informado'}
+Aplicações: ${product.applications || 'Não informado'}
 
 ${instruction}
 
@@ -333,6 +335,8 @@ Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategoria || 'Não informada'}
 Público-alvo: ${product.target_audience || 'Não informado'}
+Pitch de Vendas: ${product.sales_pitch || 'Não informado'}
+Aplicações: ${product.applications || 'Não informado'}
 
 ${instruction}
 
@@ -428,6 +432,8 @@ Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
 Categoria: ${product.category || 'Não informada'}
 Subcategoria: ${product.subcategory || 'Não informada'}
+Pitch de Vendas: ${product.sales_pitch || 'Não informado'}
+Aplicações: ${product.applications || 'Não informado'}
 
 ${instruction}
 

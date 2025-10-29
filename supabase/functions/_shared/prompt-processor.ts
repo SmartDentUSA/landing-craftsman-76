@@ -73,6 +73,7 @@ export function buildContextFromSelectedData(
 - Características: ${Array.isArray(product.features) ? product.features.join(', ') : 'Não informadas'}
 - Público-alvo: ${Array.isArray(product.target_audience) ? product.target_audience.join(', ') : 'Não informado'}
 - Pitch de Vendas: ${product.sales_pitch || 'Não informado'}
+- Aplicações: ${product.applications || 'Não informado'}
 
 `;
     }
@@ -125,6 +126,7 @@ function getFieldLabel(fieldName: string): string {
     features: 'Características',
     target_audience: 'Público-alvo',
     sales_pitch: 'Pitch de Vendas',
+    applications: 'Aplicações do Produto',
     company_name: 'Nome da Empresa',
     company_description: 'Descrição da Empresa',
     mission_statement: 'Missão',
@@ -179,6 +181,7 @@ export function processPromptWithSelectedData(
     processedPrompt = processedPrompt.replace(/{product\.features}/g, Array.isArray(product.features) ? product.features.join(', ') : 'Não informadas');
     processedPrompt = processedPrompt.replace(/{product\.target_audience}/g, Array.isArray(product.target_audience) ? product.target_audience.join(', ') : 'Não informado');
     processedPrompt = processedPrompt.replace(/{product\.sales_pitch}/g, product.sales_pitch || 'Não informado');
+    processedPrompt = processedPrompt.replace(/{product\.applications}/g, product.applications || 'Não informado');
   }
   
   if (extractedData.company) {
