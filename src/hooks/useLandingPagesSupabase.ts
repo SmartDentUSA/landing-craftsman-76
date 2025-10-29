@@ -155,9 +155,13 @@ export const useLandingPagesSupabase = () => {
   }, [loadLandingPages, toast]);
 
   // Atualizar landing page
-  const updateLandingPage = useCallback(async (id: string, updates: Partial<LandingPage>): Promise<boolean> => {
+  const updateLandingPage = useCallback(async (
+    id: string,
+    updates: Partial<LandingPage>,
+    options?: { overwrite?: boolean }
+  ): Promise<boolean> => {
     try {
-      console.log('🔄 [Update LP] Iniciando update para LP:', id);
+      console.log('🔄 [Update LP] Iniciando update para LP:', id, 'overwrite:', options?.overwrite);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -171,37 +175,44 @@ export const useLandingPagesSupabase = () => {
         'selected_product_ids', 'blog_generated', 'blog_generated_at'
       ]);
 
-      // Buscar dados atuais da landing page
-      const { data: currentLP, error: fetchError } = await supabase
-        .from('landing_pages')
-        .select('data')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('❌ [Update LP] Erro ao buscar LP atual:', fetchError);
-        return false;
-      }
-
       // Preparar updates apenas com colunas permitidas
       const supabaseUpdates: any = {};
 
-      // Se updates.data existe, fazer deep merge com dados existentes
+      // Lógica de data: overwrite ou merge
       if (updates.data) {
-        const existingData = typeof currentLP?.data === 'object' && currentLP.data !== null
-          ? currentLP.data as any
-          : {};
+        if (options?.overwrite) {
+          // Overwrite: substituir diretamente
+          console.log('🔄 [Update LP] Modo OVERWRITE ativado');
+          supabaseUpdates.data = updates.data;
+        } else {
+          // Merge: buscar dados atuais e mesclar
+          console.log('🔄 [Update LP] Modo MERGE ativado');
+          const { data: currentLP, error: fetchError } = await supabase
+            .from('landing_pages')
+            .select('data')
+            .eq('id', id)
+            .maybeSingle();
 
-        console.log('🔀 [Update LP] Fazendo deep merge:', {
-          existingKeys: Object.keys(existingData),
-          updateKeys: Object.keys(updates.data)
-        });
+          if (fetchError) {
+            console.error('❌ [Update LP] Erro ao buscar LP atual:', fetchError);
+            return false;
+          }
 
-        supabaseUpdates.data = deepMerge(existingData, updates.data);
+          const existingData = typeof currentLP?.data === 'object' && currentLP.data !== null
+            ? currentLP.data as any
+            : {};
 
-        console.log('✅ [Update LP] Merge concluído:', {
-          resultKeys: Object.keys(supabaseUpdates.data)
-        });
+          console.log('🔀 [Update LP] Fazendo deep merge:', {
+            existingKeys: Object.keys(existingData),
+            updateKeys: Object.keys(updates.data)
+          });
+
+          supabaseUpdates.data = deepMerge(existingData, updates.data);
+
+          console.log('✅ [Update LP] Merge concluído:', {
+            resultKeys: Object.keys(supabaseUpdates.data)
+          });
+        }
       }
 
       // Copiar apenas campos permitidos do topo
@@ -218,7 +229,11 @@ export const useLandingPagesSupabase = () => {
       console.log('📤 [Update LP] Function payload keys:', Object.keys(supabaseUpdates));
 
       const { data: fnData, error: fnError } = await supabase.functions.invoke('save-landing-page', {
-        body: { id, updates: supabaseUpdates }
+        body: { 
+          id, 
+          updates: supabaseUpdates,
+          overwrite: options?.overwrite || false
+        }
       });
 
       if (fnError) {

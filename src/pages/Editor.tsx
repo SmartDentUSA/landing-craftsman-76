@@ -2879,37 +2879,19 @@ const EditorContent = () => {
   }, [data.name, isEditingName, localName]);
 
   const handleSave = async () => {
-    console.log('[DEBUG] Salvando landing page...');
+    console.log('💾 [SAVE] Salvando landing page com OVERWRITE completo...');
     setIsSaving(true);
     
-    // ✅ 1. BUSCAR DADOS MAIS RECENTES DO BANCO
     if (id) {
-      const { data: latestLP, error: fetchError } = await supabase
-        .from('landing_pages')
-        .select('data, selected_product_ids, updated_at')
-        .eq('id', id)
-        .maybeSingle();
-      
-      if (fetchError) {
-        console.error('❌ Erro ao buscar LP mais recente:', fetchError);
-        toast({
-          title: "Erro ao salvar",
-          description: "Não foi possível buscar os dados mais recentes",
-          variant: "destructive"
-        });
-        setIsSaving(false);
-        return;
-      }
-      
-      console.log('[DEBUG] Dados mais recentes do banco:', latestLP?.data);
-      console.log('[DEBUG] Dados locais antes do processamento:', data);
-      
+      // ✅ Processar dados locais
       const processedData = onSave(data);
       
-      // ✅ 2. FAZER MERGE DOS DADOS LOCAIS COM OS DADOS DO BANCO
-      const mergedData = deepMerge(
-        latestLP?.data || {},
-        {
+      // ✅ Montar payload completo - sem merge, apenas os dados atuais da tela
+      const storeData: any = {
+        name: processedData.name,
+        status: processedData.status,
+        template: processedData.template,
+        data: {
           // Campos SEO e header
           seo_title: processedData.seo_title,
           seo_description: processedData.seo_description,
@@ -2938,25 +2920,18 @@ const EditorContent = () => {
           seo: processedData.seo,
           schema: processedData.schema,
           brand: processedData.brand
-        } as any
-      );
-      
-      console.log('[DEBUG] Dados mesclados:', mergedData);
-      
-      const storeData: any = {
-        name: processedData.name,
-        status: processedData.status,
-        template: processedData.template,
-        data: mergedData // ✅ Usar o merged em vez de processedData direto
+        }
       };
+      
+      // Apenas incluir selected_product_ids se os produtos foram carregados
       if (productsLoadedRef.current) {
         storeData.selected_product_ids = selectedProductIds;
       }
       
-      console.log('[DEBUG] Dados da store (com merge):', storeData);
+      console.log('💾 [SAVE] Salvando com overwrite=true, dados:', storeData);
       
-      const success = await updateLandingPage(id, storeData);
-      console.log('[DEBUG] Landing page update result:', success);
+      // ✅ Salvar com overwrite=true (substituição completa)
+      const success = await updateLandingPage(id, storeData, { overwrite: true });
       
       if (success) {
         await loadLandingPages();

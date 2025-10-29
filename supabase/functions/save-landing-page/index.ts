@@ -29,6 +29,7 @@ function deepMerge<T extends Record<string, any>>(target: T, source: T): T {
 
 interface SavePayload {
   id: string;
+  overwrite?: boolean;
   updates: {
     name?: string;
     status?: string;
@@ -87,11 +88,13 @@ serve(async (req) => {
 
     const id = body.id;
     const updates = body.updates;
+    const overwrite = body.overwrite === true;
 
     console.log("[save-landing-page] Incoming:", {
       id,
       updateKeys: Object.keys(updates),
       userId: user.id,
+      overwrite,
     });
 
     // Fetch current LP to get owner and data for merge
@@ -133,7 +136,8 @@ serve(async (req) => {
     const currentData = (lp.data && typeof lp.data === "object") ? lp.data : {};
     const incomingData = updates.data && typeof updates.data === "object" ? updates.data : undefined;
 
-    const mergedData = incomingData ? deepMerge(currentData, incomingData) : undefined;
+    // Se overwrite = true, substituir integralmente; senão, fazer merge
+    const finalData = overwrite ? incomingData : (incomingData ? deepMerge(currentData, incomingData) : undefined);
 
     const updatePayload: Record<string, any> = {
       last_modified: new Date().toISOString(),
@@ -147,7 +151,7 @@ serve(async (req) => {
     if (typeof updates.blog_generated !== "undefined") updatePayload.blog_generated = updates.blog_generated;
     if (typeof updates.blog_generated_at !== "undefined") updatePayload.blog_generated_at = updates.blog_generated_at;
     if (typeof updates.selected_product_ids !== "undefined") updatePayload.selected_product_ids = updates.selected_product_ids;
-    if (typeof mergedData !== "undefined") updatePayload.data = mergedData;
+    if (typeof finalData !== "undefined") updatePayload.data = finalData;
 
     console.log("[save-landing-page] Update payload keys:", Object.keys(updatePayload));
 
