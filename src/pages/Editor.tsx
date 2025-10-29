@@ -1438,6 +1438,7 @@ const EditorContent = () => {
   const [lastSaveAt, setLastSaveAt] = useState<number | null>(null);
   const productsLoadedRef = useRef(false);
   const latestServerUpdatedAtRef = useRef<number | null>(null);
+  const hasHydratedFromServerRef = useRef(false);
   
   // Debounced name update
   const debouncedNameUpdate = useDebounce((name: string) => {
@@ -1542,6 +1543,10 @@ const EditorContent = () => {
 
   // Carregar produtos selecionados da landing page quando carregar
   useEffect(() => {
+    if (!hasHydratedFromServerRef.current) {
+      console.log('⏳ [Editor] Aguardando hidratação do servidor antes de aplicar selected_product_ids do cache');
+      return;
+    }
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage?.selected_product_ids) {
@@ -2469,6 +2474,10 @@ const EditorContent = () => {
   }, [undo, redo]);
 
   useEffect(() => {
+    if (!hasHydratedFromServerRef.current) {
+      console.log('⏳ [Editor] Pulando hidratação via cache até finalizar hidratação do servidor');
+      return;
+    }
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
@@ -2917,6 +2926,7 @@ const EditorContent = () => {
           setLastServerSave(ts.toLocaleTimeString('pt-BR'));
           setLastSaveAt(Date.now());
           console.info('[SAVE] persistido', ts.toISOString());
+          hasHydratedFromServerRef.current = true;
         }
         return true;
       }
