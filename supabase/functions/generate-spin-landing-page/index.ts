@@ -42,8 +42,8 @@ serve(async (req) => {
     // Buscar produtos associados
     const { data: products, error: productsError } = await supabaseClient
       .from('products_repository')
-      .in('id', solution.product_ids || [])
-      .select('*');
+      .select('*')
+      .in('id', solution.product_ids || []);
 
     if (productsError) {
       throw new Error('Erro ao buscar produtos');

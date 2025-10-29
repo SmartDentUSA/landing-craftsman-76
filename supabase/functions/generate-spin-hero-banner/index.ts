@@ -132,6 +132,18 @@ serve(async (req) => {
       productsCount: productIds?.length || 0
     });
 
+    // ✅ VALIDAÇÃO 1: LOVABLE_API_KEY
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('❌ LOVABLE_API_KEY não configurada');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configure LOVABLE_API_KEY nas Secrets das Functions (Supabase Dashboard > Edge Functions > Secrets)' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -144,6 +156,18 @@ serve(async (req) => {
 
     if (productsError || !products || products.length === 0) {
       throw new Error('Produtos não encontrados');
+    }
+
+    // ✅ VALIDAÇÃO 2: Produtos com imagem
+    const productsWithImage = products.filter(p => p.image_url);
+    if (productsWithImage.length === 0) {
+      console.error('❌ Nenhum produto tem image_url');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Os produtos selecionados não possuem imagens. Configure image_url no repositório de produtos.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`📦 ${products.length} produtos carregados:`);
@@ -165,7 +189,7 @@ serve(async (req) => {
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -181,16 +205,40 @@ serve(async (req) => {
       })
     });
 
+    // ✅ ERRO DETALHADO: Status não OK
     if (!aiResponse.ok) {
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      const errorText = await aiResponse.text();
+      console.error('❌ AI API error:', {
+        status: aiResponse.status,
+        statusText: aiResponse.statusText,
+        body: errorText.substring(0, 500)
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: `AI API retornou erro ${aiResponse.status}: ${errorText.substring(0, 200)}` 
+        }),
+        { status: aiResponse.status === 402 ? 402 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const aiData = await aiResponse.json();
     const generationTime = Date.now() - startTime;
 
     const imageBase64 = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    // ✅ ERRO DETALHADO: Imagem não encontrada no payload
     if (!imageBase64) {
-      throw new Error('Imagem não retornada pela IA');
+      console.error('❌ IA não retornou imagem:', {
+        hasChoices: !!aiData.choices,
+        choicesLength: aiData.choices?.length,
+        firstChoice: JSON.stringify(aiData.choices?.[0] || {}).substring(0, 300)
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'IA não retornou imagem. Verifique o modelo e o payload enviado. Tente novamente.' 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`✅ Imagem gerada em ${generationTime}ms`);

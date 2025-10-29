@@ -104,6 +104,25 @@ const SPECIALTIES = [
   { value: 'TECNICO_PROTESE', label: 'Técnico em Prótese Odontológica' }
 ] as const;
 
+// Helper para extrair mensagens de erro reais das Edge Functions
+function extractEdgeError(error: any, data?: any): string {
+  // Tentar extrair do data.error primeiro
+  if (data?.error) return data.error;
+  
+  // Tentar extrair do context da resposta
+  const ctx = error?.context;
+  if (ctx?.response?.error) return ctx.response.error;
+  if (ctx?.response_text) return ctx.response_text;
+  if (ctx?.response) {
+    try { 
+      return JSON.stringify(ctx.response); 
+    } catch {}
+  }
+  
+  // Fallback para a mensagem genérica
+  return error?.message || 'Erro desconhecido';
+}
+
 export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditModalProps) {
   const { createSolution, updateSolution } = useSpinSellingSolutions();
   const { toast } = useToast();
@@ -444,7 +463,15 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         body: { solutionId }
       });
 
-      if (error) throw error;
+      if (error) {
+        const errorMessage = extractEdgeError(error, data);
+        toast({
+          title: "Erro ao gerar landing page",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: "✅ Landing Page Gerada!",
@@ -467,9 +494,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       }
 
     } catch (error: any) {
+      const errorMessage = extractEdgeError(error);
       toast({
         title: "Erro ao gerar landing page",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -522,7 +550,15 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        const errorMessage = extractEdgeError(error, data);
+        toast({ 
+          title: "Erro ao gerar Google Ads", 
+          description: errorMessage, 
+          variant: "destructive" 
+        });
+        return;
+      }
       
       // Download CSV
       const blob = new Blob([data.csv], { type: 'text/csv' });
@@ -544,9 +580,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         description: "CSV baixado. Salve novamente para persistir no banco." 
       });
     } catch (error: any) {
+      const errorMessage = extractEdgeError(error);
       toast({ 
-        title: "Erro", 
-        description: error.message, 
+        title: "Erro ao gerar Google Ads", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     } finally {
@@ -573,7 +610,15 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        const errorMessage = extractEdgeError(error, data);
+        toast({ 
+          title: "Erro ao gerar WhatsApp", 
+          description: errorMessage, 
+          variant: "destructive" 
+        });
+        return;
+      }
       
       // ✅ SOBRESCREVER whatsapp_complete_message e storytelling no formData
       setFormData(prev => ({
@@ -587,9 +632,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         description: "Mensagem gerada. Salve novamente para persistir no banco." 
       });
     } catch (error: any) {
+      const errorMessage = extractEdgeError(error);
       toast({ 
-        title: "Erro", 
-        description: error.message, 
+        title: "Erro ao gerar WhatsApp", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     } finally {
