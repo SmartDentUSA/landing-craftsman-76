@@ -58,19 +58,32 @@ function validateSuccessCase(successCase: any): void {
   const testPatterns = ['dede', 'teste', 'test', 'xxx', '...'];
   
   const fieldsToCheck = [
-    successCase.results_achieved,
-    successCase.client_name,
-    successCase.city
+    { name: 'Resultados Alcançados', value: successCase.results_achieved },
+    { name: 'Nome do Cliente', value: successCase.client_name },
+    { name: 'Nome da Clínica', value: successCase.clinic_name },
+    { name: 'Cidade', value: successCase.city }
   ];
   
+  const invalidFields: string[] = [];
+  
   for (const field of fieldsToCheck) {
-    if (!field) continue;
-    const lower = field.toLowerCase();
+    if (!field.value) continue;
+    const lower = field.value.toLowerCase();
     for (const pattern of testPatterns) {
       if (lower.includes(pattern)) {
-        throw new Error(`❌ Complete os dados reais antes de gerar. Detectado conteúdo de teste: "${field}"`);
+        invalidFields.push(`${field.name}: "${field.value}"`);
+        break;
       }
     }
+  }
+  
+  if (invalidFields.length > 0) {
+    throw new Error(
+      `❌ Complete os dados reais antes de gerar.\n\n` +
+      `Campos com conteúdo de teste detectado:\n` +
+      invalidFields.map(f => `• ${f}`).join('\n') +
+      `\n\nEdite o Caso de Sucesso e preencha com dados reais.`
+    );
   }
 }
 
