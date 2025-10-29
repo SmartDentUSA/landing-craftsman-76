@@ -2879,9 +2879,38 @@ const EditorContent = () => {
       name: processedData.name,
       status: processedData.status,
       template: processedData.template,
-      data: processedData,
+      // Campos de primeiro nível
+      seo_title: processedData.seo_title,
+      seo_description: processedData.seo_description,
+      logo_url: processedData.logo_url,
+      logo_alt: processedData.logo_alt,
+      menu: processedData.menu,
+      // Campos que devem ir para 'data'
+      data: {
+        banner: processedData.banner,
+        explanatory_video_section: processedData.explanatory_video_section,
+        solutions_title: processedData.solutions_title,
+        solutions: processedData.solutions,
+        desktop_info: processedData.desktop_info,
+        resources_section: processedData.resources_section,
+        offers_section: processedData.offers_section,
+        advisory: processedData.advisory,
+        solutions_section: processedData.solutions_section,
+        faq_section: processedData.faq_section,
+        faq_title: processedData.faq_title,
+        faq: processedData.faq,
+        cta_final: processedData.cta_final,
+        footer_links_title: processedData.footer_links_title,
+        footer: processedData.footer,
+        email: processedData.email,
+        animated_banner_section: processedData.animated_banner_section,
+        knowledge_feed_section: processedData.knowledge_feed_section,
+        seo: processedData.seo,
+        schema: processedData.schema,
+        brand: processedData.brand
+      },
       // Salvar IDs dos produtos selecionados se existirem
-      selectedProductIds: selectedProductIds || []
+      selected_product_ids: selectedProductIds || []
     };
     
     console.log('[DEBUG] Dados da store:', storeData);

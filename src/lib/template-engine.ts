@@ -26,12 +26,13 @@ const SOCIAL_ICONS: Record<string, string> = {
 
 // Template HTML base
 const TEMPLATE_HTML = `<!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{seo_description}}">
     <meta name="robots" content="{{meta_robots}}">
+    <meta name="google" content="notranslate">
     <link rel="robots" href="/robots.txt">
     <title>{{seo_title}}</title>
     
@@ -130,6 +131,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         }
         .skip-link:focus {
             top: 0;
+        }
+        
+        /* Disable Google Translate to prevent flickering */
+        #gtx-trans, .gtx-trans-icon, .goog-te-spinner-pos, .goog-te-banner-frame {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
         }
         
         * { box-sizing: border-box; }

@@ -129,7 +129,7 @@ export async function fetchAllReviewsForSchema(
     const { data: companyProfile, error: companyError } = await supabase
       .from("company_profile")
       .select("company_reviews")
-      .single();
+      .maybeSingle();
 
     if (companyError) {
       console.error("Erro ao buscar company reviews:", companyError);
