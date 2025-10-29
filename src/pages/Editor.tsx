@@ -57,6 +57,7 @@ import { useAnimatedBannerAutoSave } from "@/hooks/useAnimatedBannerAutoSave";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
 import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML } from "@/lib/template-engine";
 import { supabase } from "@/integrations/supabase/client";
+import { deepMerge } from "@/lib/deepMerge";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
 import { validateMetaDescription, validateCanonicalURL } from "@/lib/seo-validators";
 import { generateBlogHTML as generateSEOBlogHTML } from '@/services/seo/blogHTMLGenerator';
@@ -2873,56 +2874,77 @@ const EditorContent = () => {
 
   const handleSave = async () => {
     console.log('[DEBUG] Salvando landing page...');
-    console.log('[DEBUG] Dados originais:', data);
-    console.log('[DEBUG] Desktop info antes do processamento:', data.desktop_info);
     
-    const processedData = onSave(data);
-    
-    console.log('[DEBUG] Dados processados:', processedData);
-    console.log('[DEBUG] Desktop info após processamento:', processedData.desktop_info);
-    
-    const storeData = {
-      name: processedData.name,
-      status: processedData.status,
-      template: processedData.template,
-      // Todos os campos editáveis vão para 'data' (JSONB)
-      data: {
-        // Campos SEO e header
-        seo_title: processedData.seo_title,
-        seo_description: processedData.seo_description,
-        logo_url: processedData.logo_url,
-        logo_alt: processedData.logo_alt,
-        menu: processedData.menu,
-        // Seções da landing page
-        banner: processedData.banner,
-        explanatory_video_section: processedData.explanatory_video_section,
-        solutions_title: processedData.solutions_title,
-        solutions: processedData.solutions,
-        desktop_info: processedData.desktop_info,
-        resources_section: processedData.resources_section,
-        offers_section: processedData.offers_section,
-        advisory: processedData.advisory,
-        solutions_section: processedData.solutions_section,
-        faq_section: processedData.faq_section,
-        faq_title: processedData.faq_title,
-        faq: processedData.faq,
-        cta_final: processedData.cta_final,
-        footer_links_title: processedData.footer_links_title,
-        footer: processedData.footer,
-        email: processedData.email,
-        animated_banner_section: processedData.animated_banner_section,
-        knowledge_feed_section: processedData.knowledge_feed_section,
-        seo: processedData.seo,
-        schema: processedData.schema,
-        brand: processedData.brand
-      },
-      // Salvar IDs dos produtos selecionados se existirem
-      selected_product_ids: selectedProductIds || []
-    };
-    
-    console.log('[DEBUG] Dados da store:', storeData);
-    
+    // ✅ 1. BUSCAR DADOS MAIS RECENTES DO BANCO
     if (id) {
+      const { data: latestLP, error: fetchError } = await supabase
+        .from('landing_pages')
+        .select('data')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error('❌ Erro ao buscar LP mais recente:', fetchError);
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível buscar os dados mais recentes",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('[DEBUG] Dados mais recentes do banco:', latestLP?.data);
+      console.log('[DEBUG] Dados locais antes do processamento:', data);
+      
+      const processedData = onSave(data);
+      
+      // ✅ 2. FAZER MERGE DOS DADOS LOCAIS COM OS DADOS DO BANCO
+      const mergedData = deepMerge(
+        latestLP?.data || {},
+        {
+          // Campos SEO e header
+          seo_title: processedData.seo_title,
+          seo_description: processedData.seo_description,
+          logo_url: processedData.logo_url,
+          logo_alt: processedData.logo_alt,
+          menu: processedData.menu,
+          // Seções da landing page
+          banner: processedData.banner,
+          explanatory_video_section: processedData.explanatory_video_section,
+          solutions_title: processedData.solutions_title,
+          solutions: processedData.solutions,
+          desktop_info: processedData.desktop_info,
+          resources_section: processedData.resources_section,
+          offers_section: processedData.offers_section,
+          advisory: processedData.advisory,
+          solutions_section: processedData.solutions_section,
+          faq_section: processedData.faq_section,
+          faq_title: processedData.faq_title,
+          faq: processedData.faq,
+          cta_final: processedData.cta_final,
+          footer_links_title: processedData.footer_links_title,
+          footer: processedData.footer,
+          email: processedData.email,
+          animated_banner_section: processedData.animated_banner_section,
+          knowledge_feed_section: processedData.knowledge_feed_section,
+          seo: processedData.seo,
+          schema: processedData.schema,
+          brand: processedData.brand
+        } as any
+      );
+      
+      console.log('[DEBUG] Dados mesclados:', mergedData);
+      
+      const storeData = {
+        name: processedData.name,
+        status: processedData.status,
+        template: processedData.template,
+        data: mergedData, // ✅ Usar o merged em vez de processedData direto
+        selected_product_ids: selectedProductIds || []
+      };
+      
+      console.log('[DEBUG] Dados da store (com merge):', storeData);
+      
       const success = await updateLandingPage(id, storeData);
       console.log('[DEBUG] Landing page update result:', success);
       
@@ -2941,6 +2963,46 @@ const EditorContent = () => {
         });
       }
     } else {
+      // Criar nova LP (não precisa de merge)
+      const processedData = onSave(data);
+      
+      const storeData = {
+        name: processedData.name,
+        status: processedData.status,
+        template: processedData.template,
+        data: {
+          // Campos SEO e header
+          seo_title: processedData.seo_title,
+          seo_description: processedData.seo_description,
+          logo_url: processedData.logo_url,
+          logo_alt: processedData.logo_alt,
+          menu: processedData.menu,
+          // Seções da landing page
+          banner: processedData.banner,
+          explanatory_video_section: processedData.explanatory_video_section,
+          solutions_title: processedData.solutions_title,
+          solutions: processedData.solutions,
+          desktop_info: processedData.desktop_info,
+          resources_section: processedData.resources_section,
+          offers_section: processedData.offers_section,
+          advisory: processedData.advisory,
+          solutions_section: processedData.solutions_section,
+          faq_section: processedData.faq_section,
+          faq_title: processedData.faq_title,
+          faq: processedData.faq,
+          cta_final: processedData.cta_final,
+          footer_links_title: processedData.footer_links_title,
+          footer: processedData.footer,
+          email: processedData.email,
+          animated_banner_section: processedData.animated_banner_section,
+          knowledge_feed_section: processedData.knowledge_feed_section,
+          seo: processedData.seo,
+          schema: processedData.schema,
+          brand: processedData.brand
+        },
+        selected_product_ids: selectedProductIds || []
+      };
+      
       const newId = await addLandingPage(storeData);
       console.log('[DEBUG] Nova landing page criada com ID:', newId);
       navigate(`/editor/${newId}`);
@@ -2948,7 +3010,7 @@ const EditorContent = () => {
         title: "Landing page criada",
         description: "Nova landing page salva com sucesso!",
       });
-      dirtyRef.current = false; // Reset dirty flag after save
+      dirtyRef.current = false;
     }
   };
 
