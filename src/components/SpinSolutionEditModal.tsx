@@ -33,7 +33,9 @@ import {
   Link as LinkIcon,
   Search,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  RefreshCw
 } from 'lucide-react';
 import { 
   useSpinSellingSolutions, 
@@ -42,6 +44,8 @@ import {
   SpinJourneyQuote
 } from '@/hooks/useSpinSellingSolutions';
 import { SpinProductSelector } from './SpinProductSelector';
+import { ManualBannerUploader } from './ManualBannerUploader';
+import { AIBannerGenerator } from './AIBannerGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { useViaCep } from '@/hooks/useViaCep';
 import useLandingPages from '@/hooks/useLandingPages';
@@ -136,6 +140,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     google_ads_campaign: undefined,
     whatsapp_complete_message: undefined,
     storytelling_auto_generated: undefined,
+    ai_generated_images: undefined,
     
     active: true,
   });
@@ -181,6 +186,29 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       return;
     }
 
+    // Validação do hero banner se modo manual
+    const heroBannerMode = formData.ai_generated_images?.hero_banner?.mode;
+    if (heroBannerMode === 'manual_upload') {
+      const manualUpload = formData.ai_generated_images?.hero_banner?.manual_upload;
+      if (!manualUpload?.src) {
+        toast({
+          title: "Imagem obrigatória",
+          description: "Faça upload do banner ou escolha gerar com IA",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (!manualUpload?.alt) {
+        toast({
+          title: "Alt text obrigatório",
+          description: "Preencha o texto alternativo da imagem",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const dataToSubmit = {
       title: formData.title,
       pain_type: formData.pain_type,
@@ -195,6 +223,9 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       
       // ✅ URL Personalizada
       custom_url: formData.custom_url || { url: '', enabled: false, label: 'Saiba Mais' },
+      
+      // ✅ AI Generated Images (Hero Banner)
+      ai_generated_images: formData.ai_generated_images,
       
       // ⚡ Campos gerados pela IA (só salvos se existirem)
       google_ads_campaign: formData.google_ads_campaign,
@@ -1144,6 +1175,102 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               )}
             </Card>
 
+            {/* ===== SEÇÃO: HERO BANNER (16:9) ===== */}
+            {solutionId && (
+              <Card className="p-6">
+                <Label className="text-lg font-semibold mb-4 block flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Banner Hero (16:9 Landscape)
+                </Label>
+                
+                <RadioGroup
+                  value={formData.ai_generated_images?.hero_banner?.mode || 'none'}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      ai_generated_images: {
+                        ...prev.ai_generated_images,
+                        hero_banner: {
+                          mode: value === 'none' ? null : value as any,
+                          ...(prev.ai_generated_images?.hero_banner || {})
+                        }
+                      }
+                    }));
+                  }}
+                  className="mb-4 space-y-2"
+                >
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
+                    <RadioGroupItem value="ai_generated" id="mode-ai" />
+                    <Label htmlFor="mode-ai" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        <span className="font-medium">Gerar com IA</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Cria ambiente clínico baseado nas dimensões reais dos produtos
+                      </p>
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
+                    <RadioGroupItem value="manual_upload" id="mode-upload" />
+                    <Label htmlFor="mode-upload" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-primary" />
+                        <span className="font-medium">Upload Manual</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Envie sua própria imagem 16:9 (1920x1080px recomendado)
+                      </p>
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
+                    <RadioGroupItem value="none" id="mode-none" />
+                    <Label htmlFor="mode-none" className="flex-1 cursor-pointer">
+                      <span className="font-medium text-muted-foreground">Sem banner personalizado</span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Usará imagem do primeiro produto
+                      </p>
+                    </Label>
+                  </div>
+                </RadioGroup>
+                
+                {formData.ai_generated_images?.hero_banner?.mode === 'manual_upload' && (
+                  <ManualBannerUploader
+                    value={formData.ai_generated_images?.hero_banner?.manual_upload}
+                    onChange={(data) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        ai_generated_images: {
+                          ...prev.ai_generated_images,
+                          hero_banner: {
+                            mode: 'manual_upload',
+                            manual_upload: data
+                          },
+                          last_updated: new Date().toISOString()
+                        }
+                      }));
+                    }}
+                  />
+                )}
+                
+                {formData.ai_generated_images?.hero_banner?.mode === 'ai_generated' && (
+                  <AIBannerGenerator
+                    solutionId={solutionId}
+                    productIds={formData.product_ids || []}
+                    existingImage={existingSolution?.ai_generated_images?.hero_banner?.ai_generated}
+                    onGenerationComplete={(data) => {
+                      toast({
+                        title: "✅ Banner gerado!",
+                        description: "Salve a solução para persistir",
+                      });
+                    }}
+                  />
+                )}
+              </Card>
+            )}
+
             {/* ===== SEÇÃO: GERADOR DE LANDING PAGE DE CONVERSÃO ===== */}
             {solutionId && (
               <Card className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
@@ -1168,17 +1295,22 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   </div>
                 )}
                 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="flex gap-2">
                   <Button
                     type="button"
                     onClick={handleGenerateLandingPage}
                     disabled={isGeneratingLP || !formData.success_cases || formData.success_cases.length === 0}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-purple-600 hover:bg-purple-700 flex-1"
                   >
                     {isGeneratingLP ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Gerando...
+                      </>
+                    ) : formData.landing_page_html ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerar Landing Page
                       </>
                     ) : (
                       <>
@@ -1206,6 +1338,21 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Baixar HTML
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(formData.landing_page_html!);
+                          toast({
+                            title: "✅ HTML copiado!",
+                            description: "Cole em seu editor de código",
+                          });
+                        }}
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copiar HTML
                       </Button>
                     </>
                   )}

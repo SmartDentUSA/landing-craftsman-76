@@ -101,6 +101,26 @@ function generateLandingPageHTML(solution: any, products: any[], company: any): 
   const realQuotes = solution.real_quotes || [];
   const painMetrics = solution.pain_metrics || {};
   
+  // ✅ BUSCAR IMAGEM HERO (prioridade: manual > IA > produto)
+  let heroImageSrc = mainProduct.image_url || '';
+  let heroImageAlt = mainProduct.name || 'Banner';
+  let heroImageBadge = '';
+  
+  if (solution.ai_generated_images?.hero_banner) {
+    const banner = solution.ai_generated_images.hero_banner;
+    
+    if (banner.mode === 'manual_upload' && banner.manual_upload?.src) {
+      heroImageSrc = banner.manual_upload.src;
+      heroImageAlt = banner.manual_upload.alt || 'Banner hero';
+      heroImageBadge = '📸 Imagem Personalizada';
+    } 
+    else if (banner.mode === 'ai_generated' && banner.ai_generated?.src) {
+      heroImageSrc = banner.ai_generated.src;
+      heroImageAlt = `Banner hero - ${solution.title}`;
+      heroImageBadge = '✨ Gerado por IA';
+    }
+  }
+  
   // Construir keywords para SEO
   const keywords = products
     .flatMap(p => p.keywords || [])
@@ -165,30 +185,53 @@ function generateLandingPageHTML(solution: any, products: any[], company: any): 
       padding: 0 20px;
     }
     
-    /* Hero Section */
+    /* Hero Section with 16:9 Banner */
     .hero {
-      background: var(--gradient);
-      color: white;
-      padding: 80px 0;
+      background: white;
+      padding: 0;
       position: relative;
+    }
+    
+    .hero-image-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
       overflow: hidden;
     }
     
-    .hero::before {
-      content: '';
+    .hero-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+    
+    .hero-image-badge {
       position: absolute;
-      top: 0;
+      top: 20px;
+      right: 20px;
+      background: rgba(139, 92, 246, 0.9);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+    
+    .hero-content-overlay {
+      position: absolute;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
-      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="white" opacity="0.1"/></svg>');
-      opacity: 0.3;
+      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+      padding: 60px 20px 40px;
+      color: white;
     }
     
     .hero-content {
       position: relative;
       z-index: 1;
-      text-align: center;
     }
     
     .hero h1 {
@@ -583,15 +626,36 @@ function generateLandingPageHTML(solution: any, products: any[], company: any): 
 </head>
 <body>
   
-  <!-- Hero Section -->
+  <!-- Hero Section with 16:9 Banner -->
   <section class="hero">
-    <div class="container">
-      <div class="hero-content">
-        <h1>${solution.title}</h1>
-        <p>${solution.pain_type === 'tecnica' ? 'Solução Técnica Avançada' : solution.pain_type === 'financeira' ? 'Otimização Financeira' : 'Solução Estratégica'} • ${products.length} Produto${products.length > 1 ? 's' : ''} Incluído${products.length > 1 ? 's' : ''}</p>
-        <a href="${solution.custom_url?.url || mainProduct.product_url || '#contato'}" class="cta-button">
-          ${solution.custom_url?.label || 'Solicitar Demonstração'} →
-        </a>
+    <div class="hero-image-container">
+      <img 
+        src="${heroImageSrc}" 
+        alt="${heroImageAlt}"
+        class="hero-image"
+        loading="eager"
+      />
+      ${heroImageBadge ? `
+        <div class="hero-image-badge">${heroImageBadge}</div>
+      ` : ''}
+      
+      <div class="hero-content-overlay">
+        <div class="container">
+          <div class="hero-content">
+            <h1 style="font-size: clamp(2rem, 5vw, 3.5rem); margin-bottom: 20px; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+              ${solution.title}
+            </h1>
+            <p style="font-size: clamp(1.1rem, 2vw, 1.4rem); margin-bottom: 30px; opacity: 0.95;">
+              ${products.length} Produto${products.length > 1 ? 's' : ''} Incluído${products.length > 1 ? 's' : ''}
+            </p>
+            <a href="${solution.custom_url?.url || mainProduct.product_url || '#contato'}" 
+               style="display: inline-block; background: white; color: #8b5cf6; padding: 18px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 1.2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: all 0.3s ease;"
+               onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 15px 40px rgba(0,0,0,0.4)'"
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.3)'">
+              ${solution.custom_url?.label || 'Solicitar Demonstração'} →
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   </section>
