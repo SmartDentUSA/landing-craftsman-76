@@ -1514,6 +1514,60 @@ export type Database = {
         }
         Relationships: []
       }
+      spin_selling_solutions: {
+        Row: {
+          active: boolean | null
+          case_study_name: string | null
+          created_at: string | null
+          frequency: string | null
+          google_ads_headline: string | null
+          id: string
+          pain_metrics: Json | null
+          pain_type: string
+          priority: number | null
+          product_ids: string[] | null
+          real_quotes: Json | null
+          storytelling_hook: string | null
+          title: string
+          updated_at: string | null
+          whatsapp_hook: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          case_study_name?: string | null
+          created_at?: string | null
+          frequency?: string | null
+          google_ads_headline?: string | null
+          id?: string
+          pain_metrics?: Json | null
+          pain_type: string
+          priority?: number | null
+          product_ids?: string[] | null
+          real_quotes?: Json | null
+          storytelling_hook?: string | null
+          title: string
+          updated_at?: string | null
+          whatsapp_hook?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          case_study_name?: string | null
+          created_at?: string | null
+          frequency?: string | null
+          google_ads_headline?: string | null
+          id?: string
+          pain_metrics?: Json | null
+          pain_type?: string
+          priority?: number | null
+          product_ids?: string[] | null
+          real_quotes?: Json | null
+          storytelling_hook?: string | null
+          title?: string
+          updated_at?: string | null
+          whatsapp_hook?: string | null
+        }
+        Relationships: []
+      }
       system_monitoring: {
         Row: {
           component_name: string
