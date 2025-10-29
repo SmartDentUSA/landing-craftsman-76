@@ -19,6 +19,12 @@ serve(async (req) => {
 
     const { solutionId, contentType } = await req.json();
 
+    console.log('🚀 generate-spin-campaign invoked:', {
+      timestamp: new Date().toISOString(),
+      solutionId,
+      contentType
+    });
+
     if (!solutionId || !contentType) {
       throw new Error('solutionId e contentType são obrigatórios');
     }
@@ -224,7 +230,11 @@ serve(async (req) => {
     throw new Error('contentType inválido. Use "google_ads" ou "whatsapp"');
 
   } catch (error: any) {
-    console.error('Error:', error);
+    console.error('❌ generate-spin-campaign error:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

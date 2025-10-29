@@ -125,6 +125,13 @@ serve(async (req) => {
   try {
     const { solutionId, productIds } = await req.json();
 
+    console.log('🚀 generate-spin-hero-banner invoked:', {
+      timestamp: new Date().toISOString(),
+      solutionId,
+      productIds,
+      productsCount: productIds?.length || 0
+    });
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -224,7 +231,11 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('❌ Erro:', error);
+    console.error('❌ generate-spin-hero-banner error:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

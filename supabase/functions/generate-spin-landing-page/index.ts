@@ -14,6 +14,11 @@ serve(async (req) => {
   try {
     const { solutionId } = await req.json();
 
+    console.log('🚀 generate-spin-landing-page invoked:', {
+      timestamp: new Date().toISOString(),
+      solutionId
+    });
+
     if (!solutionId) {
       throw new Error('solutionId é obrigatório');
     }
@@ -84,7 +89,11 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Erro ao gerar landing page:', error);
+    console.error('❌ generate-spin-landing-page error:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     return new Response(
       JSON.stringify({ error: error.message }),
       {
