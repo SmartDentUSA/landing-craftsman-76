@@ -55,6 +55,11 @@ export interface SpinJourneyLabels {
   result_label: string;
 }
 
+export interface SpinFAQ {
+  question: string;
+  answer: string;
+}
+
 export interface SpinSellingSolution {
   id: string;
   title: string;
@@ -70,6 +75,8 @@ export interface SpinSellingSolution {
   real_quotes: SpinJourneyQuote[];
   pain_metrics: { [key: string]: string };
   custom_url?: CustomURL;
+  sales_pitch?: string;
+  faq?: SpinFAQ[];
   
   // ✅ PERSONALIZAÇÃO DE TEXTOS WHATSAPP
   whatsapp_section_titles?: WhatsAppSectionTitles;

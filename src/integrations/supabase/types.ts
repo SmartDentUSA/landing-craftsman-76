@@ -1520,6 +1520,7 @@ export type Database = {
           ai_generated_images: Json | null
           created_at: string | null
           custom_url: Json | null
+          faq: Json | null
           frequency: string | null
           google_ads_campaign: Json | null
           id: string
@@ -1530,6 +1531,7 @@ export type Database = {
           priority: number | null
           product_ids: string[] | null
           real_quotes: Json | null
+          sales_pitch: string | null
           spin_journey_labels: Json | null
           storytelling_auto_generated: string | null
           success_cases: Json | null
@@ -1543,6 +1545,7 @@ export type Database = {
           ai_generated_images?: Json | null
           created_at?: string | null
           custom_url?: Json | null
+          faq?: Json | null
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
@@ -1553,6 +1556,7 @@ export type Database = {
           priority?: number | null
           product_ids?: string[] | null
           real_quotes?: Json | null
+          sales_pitch?: string | null
           spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
@@ -1566,6 +1570,7 @@ export type Database = {
           ai_generated_images?: Json | null
           created_at?: string | null
           custom_url?: Json | null
+          faq?: Json | null
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
@@ -1576,6 +1581,7 @@ export type Database = {
           priority?: number | null
           product_ids?: string[] | null
           real_quotes?: Json | null
+          sales_pitch?: string | null
           spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null

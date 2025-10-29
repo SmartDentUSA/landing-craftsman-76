@@ -49,6 +49,7 @@ import {
 import { SpinProductSelector } from './SpinProductSelector';
 import { ManualBannerUploader } from './ManualBannerUploader';
 import { AIBannerGenerator } from './AIBannerGenerator';
+import { FAQEditor } from './FAQEditor';
 import { useToast } from '@/hooks/use-toast';
 import { useViaCep } from '@/hooks/useViaCep';
 import useLandingPages from '@/hooks/useLandingPages';
@@ -204,6 +205,8 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         success_cases: existingSolution.success_cases || [],
         real_quotes: existingSolution.real_quotes || [],
         pain_metrics: existingSolution.pain_metrics || {},
+        sales_pitch: existingSolution.sales_pitch || '',
+        faq: existingSolution.faq || [],
         custom_url: existingSolution.custom_url || { url: '', enabled: false, label: 'Saiba Mais' }
       });
     }
@@ -255,6 +258,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       success_cases: formData.success_cases || [],
       real_quotes: formData.real_quotes || [],
       pain_metrics: formData.pain_metrics || {},
+      
+      // ✅ Novos campos: Sales Pitch e FAQs
+      sales_pitch: formData.sales_pitch,
+      faq: formData.faq || [],
       
       // ✅ URL Personalizada
       custom_url: formData.custom_url || { url: '', enabled: false, label: 'Saiba Mais' },
@@ -774,6 +781,25 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               </p>
             </Card>
 
+            {/* ===== SEÇÃO: PITCH DE VENDAS SPIN ===== */}
+            <Card className="p-4">
+              <Label className="text-lg font-semibold mb-2 block">📝 Pitch de Vendas SPIN</Label>
+              <p className="text-sm text-muted-foreground mb-4">
+                Discurso comercial rico preparado pelo time comercial integrando os produtos desta solução. 
+                Será usado pela IA para gerar conteúdo mais preciso em landing pages, WhatsApp, Google Ads, etc.
+              </p>
+              <Textarea
+                placeholder="Descreva como os produtos desta solução trabalham juntos para resolver o problema do cliente. Inclua detalhes sobre a integração entre os produtos, o processo de implementação, benefícios específicos e diferenciais competitivos..."
+                value={formData.sales_pitch || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, sales_pitch: e.target.value }))}
+                rows={8}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                {formData.sales_pitch?.length || 0} caracteres (mínimo recomendado: 100)
+              </p>
+            </Card>
+
             {/* ===== SEÇÃO: CASOS DE SUCESSO (MÚLTIPLOS) ===== */}
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -1188,6 +1214,102 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   </div>
                 );
               })()}
+            </Card>
+
+            {/* ===== SEÇÃO: PERGUNTAS FREQUENTES (FAQs) ===== */}
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <Label className="text-lg font-semibold">❓ Perguntas Frequentes (FAQs)</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Gere até 5 perguntas e respostas que ajudam a esclarecer dúvidas sobre esta solução SPIN
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!solutionId) {
+                      toast({
+                        title: "Salve primeiro!",
+                        description: "Salve a solução antes de gerar FAQs",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
+                    setIsGenerating(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke('generate-spin-faqs', {
+                        body: { solutionId }
+                      });
+                      
+                      if (error) {
+                        const errorMessage = extractEdgeError(error, data);
+                        toast({
+                          title: "Erro ao gerar FAQs",
+                          description: errorMessage,
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      
+                      setFormData(prev => ({ ...prev, faq: data.faqs }));
+                      toast({
+                        title: "✅ FAQs geradas!",
+                        description: "5 perguntas e respostas criadas pela IA. Salve para persistir."
+                      });
+                    } catch (error: any) {
+                      toast({
+                        title: "Erro ao gerar FAQs",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setIsGenerating(false);
+                    }
+                  }}
+                  disabled={isGenerating || !solutionId}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Gerar FAQs por IA
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <FAQEditor
+                faqs={formData.faq || []}
+                onChange={(faqs) => {
+                  if (faqs.length > 5) {
+                    toast({
+                      title: "Limite atingido",
+                      description: "Máximo de 5 FAQs permitidas",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  setFormData(prev => ({ ...prev, faq: faqs }));
+                }}
+                placeholder={{
+                  question: "Ex: Como funciona a implementação desta solução?",
+                  answer: "Digite uma resposta clara e objetiva (2-3 frases)..."
+                }}
+              />
+
+              {formData.faq && formData.faq.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {formData.faq.length} de 5 FAQs adicionadas
+                </p>
+              )}
             </Card>
 
             {/* ===== SEÇÃO: URL PERSONALIZADA ===== */}

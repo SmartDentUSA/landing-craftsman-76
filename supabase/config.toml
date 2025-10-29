@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.generate-spin-hero-banner]
 verify_jwt = false
+
+[functions.generate-spin-faqs]
+verify_jwt = false

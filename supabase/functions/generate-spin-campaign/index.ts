@@ -249,6 +249,7 @@ serve(async (req) => {
         const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling persuasivo (máx 200 caracteres) para WhatsApp sobre:
 
 SOLUÇÃO: ${solution.title}
+PITCH COMERCIAL: ${solution.sales_pitch || 'Não fornecido'}
 PRODUTOS: ${products.map(p => p.name).join(', ')}
 DESCRIÇÕES: ${products.map(p => p.description).join(' | ')}
 BENEFÍCIOS: ${products.flatMap(p => p.benefits || []).join(', ')}
@@ -257,6 +258,7 @@ O storytelling deve:
 - Começar com um gancho emocional
 - Conectar problemas reais à solução
 - Usar linguagem conversacional
+- Integrar informações do pitch comercial quando relevante
 - Ter no máximo 200 caracteres`;
 
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
