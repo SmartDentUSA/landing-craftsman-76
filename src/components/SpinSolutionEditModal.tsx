@@ -29,7 +29,9 @@ import {
   Copy,
   Check,
   Sparkles,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Search,
+  Loader2
 } from 'lucide-react';
 import { 
   useSpinSellingSolutions, 
@@ -39,6 +41,7 @@ import {
 } from '@/hooks/useSpinSellingSolutions';
 import { SpinProductSelector } from './SpinProductSelector';
 import { useToast } from '@/hooks/use-toast';
+import { useViaCep } from '@/hooks/useViaCep';
 
 interface SpinSolutionEditModalProps {
   solutionId?: string;
@@ -96,6 +99,7 @@ const SPECIALTIES = [
 export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditModalProps) {
   const { createSolution, updateSolution } = useSpinSellingSolutions();
   const { toast } = useToast();
+  const { fetchAddress, loading: viaCepLoading } = useViaCep();
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newMetric, setNewMetric] = useState({ key: '', value: '' });
@@ -244,6 +248,27 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         i === index ? { ...sc, [field]: value } : sc
       ) || []
     }));
+  };
+
+  const handleCepSearch = async (index: number, cep: string) => {
+    const addressData = await fetchAddress(cep);
+    
+    if (addressData) {
+      setFormData(prev => {
+        const updatedCases = [...(prev.success_cases || [])];
+        updatedCases[index] = {
+          ...updatedCases[index],
+          cep: addressData.cep,
+          logradouro: addressData.logradouro,
+          complemento: addressData.complemento,
+          bairro: addressData.bairro,
+          city: addressData.city,
+          state: addressData.state,
+          ddd: addressData.ddd
+        };
+        return { ...prev, success_cases: updatedCases };
+      });
+    }
   };
 
   // SPIN Journey Handlers
@@ -541,6 +566,71 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       value={successCase.instagram}
                       onChange={(e) => updateSuccessCase(index, 'instagram', e.target.value)}
                     />
+                    
+                    {/* Campo CEP com botão de busca */}
+                    <div className="relative">
+                      <Label className="text-xs text-muted-foreground mb-1.5">CEP</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="00000-000"
+                          value={successCase.cep || ''}
+                          onChange={(e) => {
+                            const formatted = e.target.value
+                              .replace(/\D/g, '')
+                              .replace(/(\d{5})(\d)/, '$1-$2')
+                              .slice(0, 9);
+                            updateSuccessCase(index, 'cep', formatted);
+                          }}
+                          maxLength={9}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleCepSearch(index, successCase.cep || '')}
+                          disabled={viaCepLoading || !successCase.cep || successCase.cep.replace(/\D/g, '').length !== 8}
+                          title="Buscar endereço pelo CEP"
+                        >
+                          {viaCepLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Search className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Campo Logradouro */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5">Logradouro</Label>
+                      <Input
+                        placeholder="Rua, Avenida..."
+                        value={successCase.logradouro || ''}
+                        onChange={(e) => updateSuccessCase(index, 'logradouro', e.target.value)}
+                      />
+                    </div>
+
+                    {/* Campo Bairro */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5">Bairro</Label>
+                      <Input
+                        placeholder="Bairro"
+                        value={successCase.bairro || ''}
+                        onChange={(e) => updateSuccessCase(index, 'bairro', e.target.value)}
+                      />
+                    </div>
+
+                    {/* Campo Complemento */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5">Complemento</Label>
+                      <Input
+                        placeholder="Complemento"
+                        value={successCase.complemento || ''}
+                        onChange={(e) => updateSuccessCase(index, 'complemento', e.target.value)}
+                      />
+                    </div>
+                    
                     <div>
                       <Label className="text-xs text-muted-foreground mb-1.5">Especialidade *</Label>
                       <Select

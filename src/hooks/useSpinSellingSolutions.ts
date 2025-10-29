@@ -12,6 +12,11 @@ export interface SuccessCase {
   clinic_name?: string;
   usage_time?: string;
   results_achieved: string;
+  cep?: string;
+  logradouro?: string;
+  complemento?: string;
+  bairro?: string;
+  ddd?: string;
 }
 
 export interface SpinJourneyQuote {
