@@ -1437,6 +1437,7 @@ const EditorContent = () => {
   const [lastServerSave, setLastServerSave] = useState<string | null>(null);
   const [lastSaveAt, setLastSaveAt] = useState<number | null>(null);
   const productsLoadedRef = useRef(false);
+  const latestServerUpdatedAtRef = useRef<number | null>(null);
   
   // Debounced name update
   const debouncedNameUpdate = useDebounce((name: string) => {
@@ -2471,6 +2472,12 @@ const EditorContent = () => {
     if (id) {
       const landingPage = getLandingPage(id);
       if (landingPage) {
+        // Ignore stale state if we already fetched a fresher version from server
+        const lpTs = new Date(landingPage.last_modified || 0).getTime();
+        if (latestServerUpdatedAtRef.current && lpTs < latestServerUpdatedAtRef.current) {
+          console.log('⏭️ [Editor] Ignorando estado desatualizado (aguardando sincronização com servidor)');
+          return;
+        }
         console.log('🔄 [Editor] Landing page carregada:', {
           id: landingPage.id,
           name: landingPage.name,
@@ -2878,6 +2885,54 @@ const EditorContent = () => {
     }
   }, [data.name, isEditingName, localName]);
 
+  const rehydrateFromServer = async (pageId: string): Promise<boolean> => {
+    try {
+      const { data: freshLP, error } = await supabase
+        .from('landing_pages')
+        .select('id, name, status, template, data, selected_product_ids, updated_at')
+        .eq('id', pageId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ [Rehydrate] Erro ao buscar LP:', error);
+        return false;
+      }
+
+      if (freshLP) {
+        const baseData: any = (freshLP as any).data || {};
+        const safe = ensureLandingPageDefaults({
+          ...baseData,
+          name: freshLP.name,
+          status: freshLP.status as any,
+          template: freshLP.template
+        });
+        setReplace(safe);
+        setSelectedProductIds((freshLP as any).selected_product_ids || []);
+        productsLoadedRef.current = true;
+        dirtyRef.current = false;
+
+        if ((freshLP as any).updated_at) {
+          const ts = new Date((freshLP as any).updated_at);
+          latestServerUpdatedAtRef.current = ts.getTime();
+          setLastServerSave(ts.toLocaleTimeString('pt-BR'));
+          setLastSaveAt(Date.now());
+          console.info('[SAVE] persistido', ts.toISOString());
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('❌ [Rehydrate] Exceção:', e);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    rehydrateFromServer(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const handleSave = async () => {
     console.log('💾 [SAVE] Salvando landing page com OVERWRITE completo...');
     setIsSaving(true);
@@ -2934,30 +2989,7 @@ const EditorContent = () => {
       const success = await updateLandingPage(id, storeData, { overwrite: true });
       
       if (success) {
-        await loadLandingPages();
-        // Reidratar imediatamente com estado do banco
-        const lp = getLandingPage(id);
-        if (lp) {
-          const safe = ensureLandingPageDefaults({
-            ...(lp.data || {}),
-            name: lp.name,
-            status: lp.status as any,
-            template: lp.template
-          });
-          setReplace(safe);
-        }
-        dirtyRef.current = false;
-        // Buscar updated_at real do servidor para exibir prova de persistência
-        const { data: savedRow } = await supabase
-          .from('landing_pages')
-          .select('updated_at')
-          .eq('id', id)
-          .maybeSingle();
-        if (savedRow?.updated_at) {
-          const ts = new Date(savedRow.updated_at);
-          setLastServerSave(ts.toLocaleTimeString('pt-BR'));
-          setLastSaveAt(Date.now());
-        }
+        await rehydrateFromServer(id);
         toast({
           title: "Alterações salvas",
           description: "Landing page atualizada com sucesso!",
