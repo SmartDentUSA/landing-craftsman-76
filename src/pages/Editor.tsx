@@ -1434,6 +1434,9 @@ const EditorContent = () => {
   const [localName, setLocalName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastServerSave, setLastServerSave] = useState<string | null>(null);
+  const [diagnosticMode, setDiagnosticMode] = useState(false);
+  const productsLoadedRef = useRef(false);
   
   // Debounced name update
   const debouncedNameUpdate = useDebounce((name: string) => {
@@ -1542,6 +1545,7 @@ const EditorContent = () => {
       const landingPage = getLandingPage(id);
       if (landingPage?.selected_product_ids) {
         setSelectedProductIds(landingPage.selected_product_ids);
+        productsLoadedRef.current = true;
         console.log('🔄 Produtos selecionados carregados da landing page:', landingPage.selected_product_ids);
       }
     }
@@ -2483,6 +2487,7 @@ const EditorContent = () => {
           // Carregar produtos selecionados da landing page
           const selectedIds = landingPage.selected_product_ids || [];
           setSelectedProductIds(selectedIds);
+          productsLoadedRef.current = true;
           // Se há dados estruturados, usar direto mas garantir campos obrigatórios
           if (landingPage.data && typeof landingPage.data === 'object') {
             // 🔧 CORREÇÃO CRÍTICA: Incluir name, status e template no loadedData
@@ -2881,7 +2886,7 @@ const EditorContent = () => {
     if (id) {
       const { data: latestLP, error: fetchError } = await supabase
         .from('landing_pages')
-        .select('data')
+        .select('data, selected_product_ids, updated_at')
         .eq('id', id)
         .maybeSingle();
       
@@ -2938,13 +2943,15 @@ const EditorContent = () => {
       
       console.log('[DEBUG] Dados mesclados:', mergedData);
       
-      const storeData = {
+      const storeData: any = {
         name: processedData.name,
         status: processedData.status,
         template: processedData.template,
-        data: mergedData, // ✅ Usar o merged em vez de processedData direto
-        selected_product_ids: selectedProductIds || []
+        data: mergedData // ✅ Usar o merged em vez de processedData direto
       };
+      if (productsLoadedRef.current) {
+        storeData.selected_product_ids = selectedProductIds;
+      }
       
       console.log('[DEBUG] Dados da store (com merge):', storeData);
       
@@ -2954,6 +2961,16 @@ const EditorContent = () => {
       if (success) {
         await loadLandingPages();
         dirtyRef.current = false;
+        // Buscar updated_at real do servidor para exibir prova de persistência
+        const { data: savedRow } = await supabase
+          .from('landing_pages')
+          .select('updated_at')
+          .eq('id', id)
+          .maybeSingle();
+        if (savedRow?.updated_at) {
+          const ts = new Date(savedRow.updated_at);
+          setLastServerSave(ts.toLocaleTimeString('pt-BR'));
+        }
         toast({
           title: "Alterações salvas",
           description: "Landing page atualizada com sucesso!",
@@ -3020,6 +3037,52 @@ const EditorContent = () => {
     }
   };
 
+  const handleDiagnosticSave = async () => {
+    if (!id) return;
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'Não autenticado', description: 'Faça login para testar salvamento.', variant: 'destructive' });
+        setIsSaving(false);
+        return;
+      }
+      const { data: ok, error } = await supabase.rpc('admin_update_landing_page', {
+        _id: id,
+        _user_id: user.id,
+        _data: { __diagnostic_save: new Date().toISOString() }
+      });
+      if (error) {
+        console.error('❌ Diagnóstico RPC erro:', error);
+        toast({
+          title: 'Erro diagnóstico (RPC)',
+          description: `${error.message}${error.code ? ' | Código: ' + error.code : ''}${error.hint ? ' | Hint: ' + error.hint : ''}`,
+          variant: 'destructive'
+        });
+        setIsSaving(false);
+        return;
+      }
+      if (ok === true) {
+        const { data: savedRow } = await supabase
+          .from('landing_pages')
+          .select('updated_at')
+          .eq('id', id)
+          .maybeSingle();
+        if (savedRow?.updated_at) {
+          const ts = new Date(savedRow.updated_at);
+          setLastServerSave(ts.toLocaleTimeString('pt-BR'));
+        }
+        toast({ title: 'Diagnóstico salvo', description: 'Ping de escrita realizado com sucesso.' });
+      } else {
+        toast({ title: 'Diagnóstico falhou', description: 'RPC retornou falso (permissão/ID).' , variant: 'destructive' });
+      }
+    } catch (e: any) {
+      console.error('❌ Diagnóstico exceção:', e);
+      toast({ title: 'Erro diagnóstico', description: e?.message || 'Falha ao executar diagnóstico.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const extractProductData = async (index: number) => {
     const offer = data.schema.offers[index];
     if (!offer.productUrl) {
@@ -3542,6 +3605,15 @@ const EditorContent = () => {
                 )}
                 {isSaving ? 'Salvando...' : 'Salvar'}
               </Button>
+              <Button variant="outline" size="sm" onClick={handleDiagnosticSave} disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-2" />
+                )}
+                {isSaving ? 'Testando...' : 'Salvar (Diag)'}
+              </Button>
+              <Badge variant="secondary" className="ml-2">Último salvamento: {lastServerSave ?? '-'}</Badge>
               <Button variant="outline" size="sm" onClick={handlePreview}>
                 <Eye className="h-4 w-4 mr-2" />
                 Preview

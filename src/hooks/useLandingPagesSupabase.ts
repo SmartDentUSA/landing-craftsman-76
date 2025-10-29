@@ -232,12 +232,22 @@ export const useLandingPagesSupabase = () => {
 
       if (rpcError) {
         console.error('❌ [Update LP] RPC erro:', rpcError);
+        toast({
+          title: 'Erro ao salvar (RPC)',
+          description: `${rpcError.message}${rpcError.code ? ' | Código: ' + rpcError.code : ''}${rpcError.hint ? ' | Hint: ' + rpcError.hint : ''}`,
+          variant: 'destructive'
+        });
       } else if (ok === true) {
         console.log('✅ [Update LP] RPC ok');
         await loadLandingPages();
         return true;
       } else {
         console.warn('⚠️ [Update LP] RPC retornou falso (sem permissão ou ID inválido)');
+        toast({
+          title: 'Sem permissão para salvar',
+          description: 'Você não possui permissão ou o ID é inválido.',
+          variant: 'destructive'
+        });
       }
 
       // Fallback: tentar update direto respeitando RLS (caso RPC indisponível)
@@ -260,6 +270,11 @@ export const useLandingPagesSupabase = () => {
 
       if (error || !updatedRow) {
         console.error('❌ [Update LP] Fallback update falhou:', error);
+        toast({
+          title: 'Erro ao salvar (fallback)',
+          description: error ? `${error.message}${error.code ? ' | Código: ' + error.code : ''}${error.hint ? ' | Hint: ' + error.hint : ''}` : 'Falha desconhecida ao salvar',
+          variant: 'destructive'
+        });
         return false;
       }
 
