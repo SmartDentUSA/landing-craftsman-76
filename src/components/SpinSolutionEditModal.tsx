@@ -64,6 +64,35 @@ const METRIC_LABELS: Record<string, string> = {
   revenue_loss: 'Perde R$ por mês',
 };
 
+// Áreas de Atuação padronizadas
+const BUSINESS_AREAS = [
+  { value: 'RADIOLOGIA_ODONTOLOGICA', label: 'Radiologia Odontológica' },
+  { value: 'CLINICA_CONSULTORIO', label: 'Clínica ou Consultório' },
+  { value: 'LABORATORIO_PROTESE', label: 'Laboratório de Prótese' },
+  { value: 'PLANNING_CENTER', label: 'Planning Center' },
+  { value: 'EMPRESA_ALINHADORES', label: 'Empresa de Alinhadores' },
+  { value: 'GESTOR_REDE_CLINICAS', label: 'Gestor de Rede de Clínicas' },
+  { value: 'GESTOR_FRANQUIAS', label: 'Gestor de Franquias' },
+  { value: 'CENTRAL_IMPRESSOES', label: 'Central de Impressões' },
+  { value: 'EDUCACAO', label: 'Educação' }
+] as const;
+
+// Especialidades padronizadas
+const SPECIALTIES = [
+  { value: 'CLINICO_GERAL', label: 'Clínico Geral' },
+  { value: 'DENTISTICA', label: 'Dentística' },
+  { value: 'IMPLANTODONTISTA', label: 'Implantodontista' },
+  { value: 'PROTESISTA', label: 'Protesista' },
+  { value: 'ODONTOPEDIATRIA', label: 'Odontopediatria' },
+  { value: 'ORTODONTISTA', label: 'Ortodontista' },
+  { value: 'PERIODONTISTA', label: 'Periodontista' },
+  { value: 'RADIOLOGISTA', label: 'Radiologista' },
+  { value: 'ESTOMATOLOGISTA', label: 'Estomatologista' },
+  { value: 'CIRURGIA_BUCO_MAXILO', label: 'Cirurgia Buco Maxilo Facial' },
+  { value: 'TECNICO_RADIOLOGIA', label: 'Técnico em Radiologia' },
+  { value: 'TECNICO_PROTESE', label: 'Técnico em Prótese Odontológica' }
+] as const;
+
 export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditModalProps) {
   const { createSolution, updateSolution } = useSpinSellingSolutions();
   const { toast } = useToast();
@@ -500,7 +529,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <Input
                       placeholder="Nome Completo *"
                       value={successCase.client_name}
@@ -512,18 +541,44 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       value={successCase.instagram}
                       onChange={(e) => updateSuccessCase(index, 'instagram', e.target.value)}
                     />
-                    <Input
-                      placeholder="Especialidade *"
-                      value={successCase.specialty}
-                      onChange={(e) => updateSuccessCase(index, 'specialty', e.target.value)}
-                      required
-                    />
-                    <Input
-                      placeholder="Área de Atuação *"
-                      value={successCase.area}
-                      onChange={(e) => updateSuccessCase(index, 'area', e.target.value)}
-                      required
-                    />
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5">Especialidade *</Label>
+                      <Select
+                        value={successCase.specialty}
+                        onValueChange={(value) => updateSuccessCase(index, 'specialty', value)}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a especialidade" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {SPECIALTIES.map(spec => (
+                            <SelectItem key={spec.value} value={spec.value}>
+                              {spec.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5">Área de Atuação *</Label>
+                      <Select
+                        value={successCase.area}
+                        onValueChange={(value) => updateSuccessCase(index, 'area', value)}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a área" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {BUSINESS_AREAS.map(area => (
+                            <SelectItem key={area.value} value={area.value}>
+                              {area.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Input
                       placeholder="Cidade *"
                       value={successCase.city}
