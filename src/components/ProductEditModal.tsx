@@ -29,6 +29,8 @@ import { FAQEditor } from './FAQEditor';
 import { ProductLojaIntegradaImporter } from './ProductLojaIntegradaImporter';
 import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
+import { useProductAutoSave } from '@/hooks/useProductAutoSave';
+import { AutoSaveIndicator } from './AutoSaveIndicator';
 
 
 interface Video {
@@ -159,6 +161,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   
   const { getConfigByCategory } = useCategoryConfig();
   const { targetAudience: companyTargetAudience } = useCompanyTargetAudience();
+  const { autoSave, lastSave } = useProductAutoSave(product?.id);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -1308,9 +1311,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Editar Produto' : 'Adicionar Produto'}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>
+              {isEditing ? 'Editar Produto' : 'Adicionar Produto'}
+            </DialogTitle>
+            {lastSave && (
+              <AutoSaveIndicator lastSaved={lastSave} />
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6 pr-2">
@@ -1481,7 +1489,11 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             <Textarea
               id="description"
               value={formData.description || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setFormData(prev => ({ ...prev, description: newValue }));
+                autoSave({ description: newValue });
+              }}
               placeholder="Descrição do produto"
               rows={3}
             />
@@ -1492,7 +1504,11 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             <Textarea
               id="sales_pitch"
               value={formData.sales_pitch || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, sales_pitch: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setFormData(prev => ({ ...prev, sales_pitch: newValue }));
+                autoSave({ sales_pitch: newValue });
+              }}
               placeholder="Descreva os pontos de venda únicos, benefícios principais, abordagem comercial, diferenciais competitivos..."
               rows={4}
             />
@@ -1520,7 +1536,11 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             <Textarea
               id="applications"
               value={formData.applications || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, applications: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setFormData(prev => ({ ...prev, applications: newValue }));
+                autoSave({ applications: newValue });
+              }}
               placeholder="Ex: Ideal para procedimentos de restauração dental, indicado para preparos de coroas e bridges, oferece precisão em acabamentos..."
               rows={4}
               className="w-full"
