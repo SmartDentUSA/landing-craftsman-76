@@ -59,7 +59,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   
   <style>
     /* ===== DESIGN SYSTEM PADRONIZADO ===== */
@@ -81,7 +81,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
     }
 
     body {
-      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--background-color);
       color: var(--text-color);
       line-height: 1.6;
@@ -125,8 +125,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       position: absolute;
       top: 20%;
       left: 5%;
-      color: white;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+      color: #003366;
       max-width: 90%;
     }
 
@@ -141,7 +140,6 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       letter-spacing: 0.4px;
       margin-bottom: 8px;
       display: inline-block;
-      text-shadow: none;
     }
 
     .text-overlay h1 {
@@ -149,14 +147,14 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       line-height: 1.1;
       letter-spacing: -0.2px;
       font-weight: 700;
-      color: white;
+      color: #003366;
       margin: 12px 0;
     }
 
     .text-overlay p {
       font-size: 16px;
       line-height: 1.6;
-      color: rgba(255,255,255,0.95);
+      color: #444;
       margin: 0;
       max-width: 600px;
     }
@@ -189,20 +187,20 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
     }
 
     .metric-card {
-      background: linear-gradient(180deg, #ffffff, #fbfeff);
-      border: 1px solid rgba(15,23,42,0.03);
-      border-radius: 12px;
-      padding: 24px;
+      background: #ccc;
       flex: 1 1 30%;
-      min-width: 200px;
+      min-width: 100px;
       max-width: 256px;
-      aspect-ratio: 1/1;
+      height: 256px;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
       text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      padding: 1rem;
+      flex-direction: column;
     }
 
     .metric-card strong {
@@ -456,6 +454,12 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
           <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
           <p>${escapeHtml(company?.city || '')} - ${escapeHtml(company?.state || '')}, ${escapeHtml(company?.postal_code || '')}</p>
         </div>
+        ${company?.usa_address ? `
+        <div>
+          <strong>${escapeHtml(company?.company_name || 'Empresa')} - USA</strong>
+          <p>${escapeHtml(company.usa_address)}</p>
+        </div>
+        ` : ''}
         ${institutionalLinks.length > 0 ? `
         <div>
           <strong>Links Úteis</strong>
