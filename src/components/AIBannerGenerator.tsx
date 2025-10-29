@@ -12,6 +12,27 @@ interface AIBannerGeneratorProps {
   onGenerationComplete: (data: any) => void;
 }
 
+// Helper to extract detailed error messages from edge function responses
+const extractEdgeError = (error: any, data?: any): string => {
+  // Check if there's a detailed error in the response data
+  if (data?.error) return data.error;
+  
+  // Check error context from Supabase invoke
+  const ctx = error?.context;
+  if (ctx?.response?.error) return ctx.response.error;
+  if (ctx?.response_text) return ctx.response_text;
+  
+  // Try to stringify the response if available
+  if (ctx?.response) {
+    try {
+      return JSON.stringify(ctx.response);
+    } catch {}
+  }
+  
+  // Fallback to error message
+  return error?.message || 'Erro desconhecido';
+};
+
 export function AIBannerGenerator({ 
   solutionId, 
   productIds, 
@@ -73,9 +94,12 @@ export function AIBannerGenerator({
 
     } catch (error: any) {
       console.error('Erro ao gerar banner:', error);
+      
+      const detailedError = extractEdgeError(error, null);
+      
       toast({
         title: "Erro na geração",
-        description: error.message,
+        description: detailedError,
         variant: "destructive"
       });
     } finally {

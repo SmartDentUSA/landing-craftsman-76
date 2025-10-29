@@ -1271,8 +1271,8 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       ai_generated_images: {
                         ...prev.ai_generated_images,
                         hero_banner: {
-                          mode: value === 'none' ? null : value as any,
-                          ...(prev.ai_generated_images?.hero_banner || {})
+                          ...(prev.ai_generated_images?.hero_banner || {}),
+                          mode: value === 'none' ? null : (value as any)
                         }
                       }
                     }));
