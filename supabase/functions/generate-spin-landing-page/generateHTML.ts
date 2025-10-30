@@ -169,6 +169,157 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       max-width: 600px;
     }
 
+    /* ===== SEÇÃO DE CASOS DE SUCESSO ===== */
+    .success-cases {
+      padding: 4rem 0;
+      text-align: center;
+      background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+      border-radius: 12px;
+      margin: 2rem 0;
+    }
+
+    .success-cases h2 {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text-color);
+      margin-bottom: 8px;
+    }
+
+    .success-cases .section-subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 3rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+      text-align: left;
+    }
+
+    .case-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .case-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+      border-color: var(--accent);
+    }
+
+    .case-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      overflow: hidden;
+      border: 4px solid var(--accent);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .case-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .case-avatar.no-photo {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .case-avatar.no-photo span {
+      font-size: 36px;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .case-content {
+      text-align: center;
+    }
+
+    .case-content h3 {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-color);
+      margin-bottom: 8px;
+    }
+
+    .case-meta {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .case-location {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .case-instagram {
+      margin-bottom: 16px;
+    }
+
+    .case-instagram a {
+      font-size: 14px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .case-instagram a:hover {
+      color: var(--accent-2);
+      text-decoration: underline;
+    }
+
+    .case-results {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      text-align: left;
+    }
+
+    .case-results strong {
+      display: block;
+      font-size: 14px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .case-results p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-color);
+      margin: 0;
+    }
+
+    .case-time {
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 12px;
+    }
+
     /* ===== SEÇÃO DE MÉTRICAS ===== */
     .metrics-section {
       text-align: center;
@@ -429,6 +580,26 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       max-width: 700px;
       margin: 0 auto;
     }
+
+    @media (max-width: 768px) {
+      .success-cases h2 {
+        font-size: 28px;
+      }
+      
+      .cases-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      
+      .case-avatar {
+        width: 80px;
+        height: 80px;
+      }
+      
+      .case-avatar.no-photo span {
+        font-size: 32px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -491,6 +662,59 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
           <p>${escapeHtml(faq.answer)}</p>
         </details>
       `).join('')}
+    </section>
+  </div>
+  ` : ''}
+
+  ${successCases.length > 0 ? `
+  <!-- Seção de Casos de Sucesso -->
+  <div class="container">
+    <section class="success-cases">
+      <h2>Histórias de Transformação</h2>
+      <p class="section-subtitle">Veja como outros profissionais transformaram suas clínicas com esta solução</p>
+      <div class="cases-grid">
+        ${successCases.map((successCase: any) => `
+          <div class="case-card">
+            ${successCase.client_photo?.src ? `
+              <div class="case-avatar">
+                <img src="${escapeHtml(successCase.client_photo.src)}" alt="${escapeHtml(successCase.client_photo.alt || successCase.client_name)}">
+              </div>
+            ` : `
+              <div class="case-avatar no-photo">
+                <span>${escapeHtml((successCase.client_name || 'C').charAt(0).toUpperCase())}</span>
+              </div>
+            `}
+            
+            <div class="case-content">
+              <h3>${escapeHtml(successCase.client_name)}</h3>
+              <p class="case-meta">
+                🦷 ${escapeHtml(successCase.specialty)}
+              </p>
+              <p class="case-location">
+                📍 ${escapeHtml(successCase.city)}/${escapeHtml(successCase.state)}
+              </p>
+              ${successCase.instagram ? `
+                <p class="case-instagram">
+                  <a href="https://instagram.com/${escapeHtml(successCase.instagram.replace('@', ''))}" target="_blank" rel="noopener">
+                    📱 @${escapeHtml(successCase.instagram.replace('@', ''))}
+                  </a>
+                </p>
+              ` : ''}
+              
+              <div class="case-results">
+                <strong>Resultados:</strong>
+                <p>${escapeHtml(successCase.results_achieved)}</p>
+              </div>
+              
+              ${successCase.usage_time ? `
+                <p class="case-time">
+                  ⏱️ Cliente há ${escapeHtml(successCase.usage_time)}
+                </p>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
     </section>
   </div>
   ` : ''}

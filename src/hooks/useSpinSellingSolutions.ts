@@ -17,6 +17,12 @@ export interface SuccessCase {
   complemento?: string;
   bairro?: string;
   ddd?: string;
+  client_photo?: {
+    src: string;
+    supabase_path: string;
+    uploaded_at: string;
+    alt: string;
+  } | null;
 }
 
 export interface SpinJourneyQuote {

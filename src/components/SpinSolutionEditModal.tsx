@@ -48,6 +48,7 @@ import {
 } from '@/hooks/useSpinSellingSolutions';
 import { SpinProductSelector } from './SpinProductSelector';
 import { ManualBannerUploader } from './ManualBannerUploader';
+import { ClientPhotoUploader } from './ClientPhotoUploader';
 import { AIBannerGenerator } from './AIBannerGenerator';
 import { FAQEditor } from './FAQEditor';
 import { useToast } from '@/hooks/use-toast';
@@ -822,6 +823,48 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <Label className="text-sm font-medium mb-2 block">Foto do Cliente</Label>
+                    <ClientPhotoUploader
+                      value={successCase.client_photo || null}
+                      clientName={successCase.client_name || 'Cliente'}
+                      onChange={async (photoData) => {
+                        const updatedCases = [...formData.success_cases];
+                        updatedCases[index] = {
+                          ...updatedCases[index],
+                          client_photo: photoData
+                        };
+                        
+                        setFormData(prev => ({
+                          ...prev,
+                          success_cases: updatedCases
+                        }));
+                        
+                        if (solutionId) {
+                          try {
+                            await updateSolution.mutateAsync({
+                              id: solutionId,
+                              updates: {
+                                success_cases: updatedCases
+                              }
+                            });
+                            
+                            toast({
+                              title: "✅ Foto salva automaticamente",
+                              description: "Persistida no banco de dados",
+                            });
+                          } catch (error: any) {
+                            toast({
+                              title: "⚠️ Erro ao salvar automaticamente",
+                              description: "Clique em Salvar para tentar novamente",
+                              variant: "destructive",
+                            });
+                          }
+                        }
+                      }}
+                    />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
