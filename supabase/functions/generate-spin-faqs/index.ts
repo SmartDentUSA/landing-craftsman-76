@@ -70,94 +70,281 @@ serve(async (req) => {
           .join('\n')
       : 'Nenhuma métrica específica';
 
-    const aiPrompt = `Você é um especialista em marketing odontológico e vendas B2B no Brasil.
+    const aiPrompt = `Você é um especialista em Neurociência da Persuasão, SPIN Selling e Marketing Odontológico B2B.
 
-CONTEXTO DA SOLUÇÃO SPIN:
-- Empresa: ${company?.company_name || 'Clínica odontológica'}
-- Título da Solução: ${solution.title}
-- Tipo de Dor SPIN: ${solution.pain_type}
-- Descrição da Dor: ${solution.pain_description || 'Não informada'}
+🎯 MISSÃO CRÍTICA:
+Gerar 10 FAQs estratégicas que conduzam o dentista/gestor através da Jornada SPIN completa (Situação → Problema → Implicação → Necessidade de Solução), maximizando conversão e eliminando objeções.
 
-🔥 PITCH DE VENDAS COMPLETO (USE COMO BASE PRINCIPAL):
+═══════════════════════════════════════════════════════════
+📋 DADOS ESTRUTURADOS DA SOLUÇÃO SPIN
+═══════════════════════════════════════════════════════════
+
+🏢 EMPRESA: ${company?.company_name || 'Empresa odontológica'}
+📊 SEGMENTO: ${company?.business_segment || 'Odontologia'}
+
+🎯 SOLUÇÃO SPIN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Título: ${solution.title}
+Categoria de Dor: ${solution.pain_type}
+Descrição da Dor: ${solution.pain_description || 'Não especificada'}
+
+🔥 PITCH DE VENDAS COMPLETO (BASE PRINCIPAL OBRIGATÓRIA):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 ${solution.sales_pitch || 'Não informado'}
 """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- Produtos Incluídos: ${productsNames || 'Nenhum produto selecionado'}
-- Casos de Sucesso Documentados: ${successCasesCount}
+📦 PRODUTOS INCLUÍDOS: ${productsNames || 'Nenhum'}
+📈 CASOS DE SUCESSO: ${successCasesCount} documentados
+💰 TICKET MÉDIO: ${products[0]?.price ? \`R$ \${products[0].price}\` : 'Sob consulta'}
 
-MÉTRICAS DE IMPACTO DA SOLUÇÃO:
+📊 MÉTRICAS DE IMPACTO REAIS:
 ${metricsFormatted}
 
-PRODUTOS DETALHADOS:
-${products.map((p, i) => `
-${i + 1}. ${p.name}
-   - Categoria: ${p.category || 'N/A'}
-   - Descrição: ${p.description || 'N/A'}
-   - Preço: ${p.price ? `R$ ${p.price}` : 'N/A'}
-   - Benefícios principais: ${p.benefits ? JSON.stringify(p.benefits).substring(0, 200) : 'N/A'}
-`).join('\n')}
+📦 DETALHAMENTO DOS PRODUTOS:
+${products.map((p, i) => \`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRODUTO \${i + 1}: \${p.name}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Categoria: \${p.category || 'N/A'}
+• Descrição: \${p.description || 'N/A'}
+• Preço: \${p.price ? \`R$ \${p.price}\` : 'Sob consulta'}
+• Benefícios-chave: \${p.benefits ? JSON.stringify(p.benefits).substring(0, 250) : 'N/A'}
+• Características: \${p.features ? JSON.stringify(p.features).substring(0, 250) : 'N/A'}
+\`).join('\\n')}
 
-TAREFA:
-Gere exatamente 5 perguntas frequentes (FAQs) altamente relevantes sobre esta solução SPIN para dentistas e gestores de clínicas odontológicas.
+═══════════════════════════════════════════════════════════
+🧠 EXTRAÇÃO OBRIGATÓRIA DO PITCH (FAÇA ANTES DE CRIAR AS FAQs)
+═══════════════════════════════════════════════════════════
 
-CRITÉRIOS OBRIGATÓRIOS:
-1. Perguntas devem abordar dúvidas REAIS que dentistas teriam sobre esta solução específica
-2. Respostas devem ser claras, objetivas (2-3 frases, máximo 150 palavras)
-3. Integrar naturalmente os produtos mencionados quando relevante
-4. Focar em benefícios práticos, ROI e resultados mensuráveis
-5. Tom profissional mas acessível (evitar jargões excessivos)
-6. Usar dados das métricas quando disponíveis de forma NATURAL e CONTEXTUALIZADA
-7. Referenciar os casos de sucesso se aplicável
-8. NUNCA mencionar variáveis técnicas (lab_time, digital_time, patient_loss, etc.)
-9. SEMPRE usar os valores reais das métricas em linguagem natural
-10. EXTRAIR argumentos e benefícios-chave do PITCH DE VENDAS para fundamentar as respostas
-11. Usar a MESMA linguagem e tom do pitch sempre que possível
+ANTES de criar as FAQs, você DEVE identificar e extrair do PITCH acima:
 
-TIPOS DE PERGUNTAS RECOMENDADAS (baseadas no pitch):
-- Como esta solução resolve ESPECIFICAMENTE a dor mencionada no pitch?
-- Quais são os diferenciais destacados no pitch de vendas?
-- Qual o retorno sobre investimento prometido no pitch?
-- Para qual perfil de clínica esta solução é ideal (conforme pitch)?
-- Como funciona o processo de implementação mencionado no pitch?
-- Quais resultados concretos posso esperar (use dados do pitch + métricas)?
+1️⃣ SITUAÇÃO IDEAL (DESEJO):
+   → O que o cliente ideal QUER alcançar?
+   → Qual é a aspiração/objetivo final?
+   
+2️⃣ PROBLEMA CENTRAL (DOR):
+   → Qual obstáculo/desafio específico impede esse objetivo?
+   → Qual é a frustração principal?
+   
+3️⃣ IMPLICAÇÕES (CONSEQUÊNCIAS):
+   → O que acontece se NÃO resolver?
+   → Quais são os custos (tempo/dinheiro/reputação)?
+   
+4️⃣ SOLUÇÃO & RESULTADOS (NECESSIDADE):
+   → Como esta solução resolve especificamente?
+   → Quais resultados concretos e mensuráveis entrega?
 
-EXEMPLOS DE COMO USAR AS MÉTRICAS:
+Use esses 4 elementos como FUNDAMENTO OBRIGATÓRIO para criar todas as FAQs.
+
+═══════════════════════════════════════════════════════════
+📝 TAREFA: GERAR 10 FAQs ESTRATÉGICAS
+═══════════════════════════════════════════════════════════
+
+Você deve gerar exatamente **10 FAQs** seguindo esta distribuição OBRIGATÓRIA:
+
+┌─────────────────────────────────────────────────────────┐
+│ FASE 1: DESEJO & IDENTIFICAÇÃO (3 FAQs)                │
+└─────────────────────────────────────────────────────────┘
+
+FAQ #1 - SEGMENTAÇÃO & ICP
+Pergunta Modelo: "Para qual tipo de clínica/dentista esta solução é ideal?"
+Objetivo: O leitor deve pensar "Isso foi feito para MIM!"
+Elementos Obrigatórios:
+  ✓ Perfil ideal do cliente (ICP)
+  ✓ Situação/estágio da clínica
+  ✓ Aspirações mencionadas no pitch
+
+FAQ #2 - PROPOSTA DE VALOR ÚNICA (UVP)
+Pergunta Modelo: "Quais são os principais diferenciais desta solução?"
+Objetivo: "Por que ESTA solução e não outra qualquer?"
+Elementos Obrigatórios:
+  ✓ Extrair 3-5 diferenciais do pitch
+  ✓ Usar as palavras exatas do pitch quando possível
+  ✓ Mencionar produtos específicos se relevante
+
+FAQ #3 - DIFERENCIAÇÃO COMPETITIVA
+Pergunta Modelo: "Como esta solução se compara a [alternativas tradicionais/concorrentes]?"
+Objetivo: Eliminar dúvidas sobre alternativas
+Elementos Obrigatórios:
+  ✓ Contrastar com métodos tradicionais
+  ✓ Usar argumentos do pitch
+  ✓ Evidências concretas (métricas se disponíveis)
+
+┌─────────────────────────────────────────────────────────┐
+│ FASE 2: DOR & URGÊNCIA (3 FAQs)                        │
+└─────────────────────────────────────────────────────────┘
+
+FAQ #4 - DIAGNÓSTICO DO PROBLEMA
+Pergunta Modelo: "Qual problema específico esta solução resolve?"
+Objetivo: Clareza absoluta sobre a dor
+Elementos Obrigatórios:
+  ✓ Usar a descrição da dor do SPIN
+  ✓ Linguagem emocional mas profissional
+  ✓ Exemplos práticos do dia a dia
+
+FAQ #5 - AMPLIFICAÇÃO DA DOR (IMPLICAÇÃO SPIN)
+Pergunta Modelo: "Quais são as consequências de NÃO resolver este problema?"
+Objetivo: Criar urgência sem alarmar
+Elementos Obrigatórios:
+  ✓ Implicações financeiras (usar métricas)
+  ✓ Implicações operacionais
+  ✓ Implicações competitivas
+  ✓ Tom: preocupado mas não alarmista
+
+FAQ #6 - AUTO-DIAGNÓSTICO & URGÊNCIA
+Pergunta Modelo: "Como sei se minha clínica está sofrendo com este problema?"
+Objetivo: "Sim, EU tenho esse problema agora!"
+Elementos Obrigatórios:
+  ✓ 3-5 sinais claros e observáveis
+  ✓ Checklist mental para o leitor
+  ✓ Gatilho de urgência sutil
+
+┌─────────────────────────────────────────────────────────┐
+│ FASE 3: RESULTADO & IMPLEMENTAÇÃO (4 FAQs)             │
+└─────────────────────────────────────────────────────────┘
+
+FAQ #7 - RESULTADOS CONCRETOS & TIMELINE
+Pergunta Modelo: "Quais resultados concretos posso esperar e em quanto tempo?"
+Objetivo: Expectativas realistas + prova
+Elementos Obrigatórios:
+  ✓ Usar MÉTRICAS REAIS (nunca variáveis técnicas)
+  ✓ Timeline específica (curto/médio/longo prazo)
+  ✓ Mencionar casos de sucesso se houver
+  ✓ Resultados tangíveis e intangíveis
+
+FAQ #8 - PROCESSO DE IMPLEMENTAÇÃO
+Pergunta Modelo: "Como funciona a implementação desta solução na prática?"
+Objetivo: Reduzir fricção e transparência total
+Elementos Obrigatórios:
+  ✓ Passo a passo claro (máx. 5 etapas)
+  ✓ Prazo de cada etapa
+  ✓ Responsabilidades (empresa vs cliente)
+  ✓ Tranquilizar sobre complexidade
+
+FAQ #9 - INVESTIMENTO & ROI
+Pergunta Modelo: "Qual é o investimento necessário e o retorno esperado (ROI)?"
+Objetivo: Justificativa financeira clara
+Elementos Obrigatórios:
+  ✓ Faixa de investimento (se preço disponível)
+  ✓ Comparar com custo de NÃO resolver
+  ✓ ROI estimado com base em métricas
+  ✓ Opções de pagamento se aplicável
+  ✓ Tom: investimento, não gasto
+
+FAQ #10 - REDUÇÃO DE RISCO (SUPORTE & GARANTIAS)
+Pergunta Modelo: "Que tipo de suporte, treinamento e garantias estão incluídos?"
+Objetivo: Eliminar objeção final de risco
+Elementos Obrigatórios:
+  ✓ Suporte técnico disponível
+  ✓ Treinamento da equipe
+  ✓ Garantias/SLA
+  ✓ Acompanhamento pós-venda
+  ✓ Tom: "Estamos com você em cada etapa"
+
+═══════════════════════════════════════════════════════════
+⚙️ REGRAS DE OURO (INEGOCIÁVEIS)
+═══════════════════════════════════════════════════════════
+
+✅ SEMPRE usar a linguagem, argumentos e tom do PITCH DE VENDAS
+✅ SEMPRE integrar métricas em linguagem natural (nunca "lab_time", sempre "tempo de laboratório reduzido de X para Y")
+✅ SEMPRE focar em benefícios PRÁTICOS e mensuráveis
+✅ SEMPRE manter tom profissional mas conversacional
+✅ SEMPRE usar exemplos e cenários reais do dia a dia odontológico
+✅ SEMPRE mencionar produtos específicos quando relevante e natural
+✅ SEMPRE validar cada resposta contra o pitch (coerência)
+
+❌ NUNCA mencionar variáveis técnicas do banco de dados
+❌ NUNCA usar jargões sem explicação
+❌ NUNCA fazer promessas que não estão no pitch ou métricas
+❌ NUNCA ultrapassar 180 palavras por resposta
+❌ NUNCA usar tom agressivo ou alarmista
+
+═══════════════════════════════════════════════════════════
+📐 ESTRUTURA E TOM DE CADA RESPOSTA
+═══════════════════════════════════════════════════════════
+
+Cada resposta DEVE seguir esta fórmula:
+
+1️⃣ **Abertura Direta** (1 frase)
+   → Responda diretamente a pergunta com clareza
+
+2️⃣ **Fundamentação do Pitch** (2-3 frases)
+   → Use argumentos LITERAIS do pitch
+   → Integre métricas se disponíveis
+   → Mencione produtos se relevante
+
+3️⃣ **Prova Social/Resultado** (1 frase, se aplicável)
+   → "Clínicas que implementaram já reportam..."
+   → Usar casos de sucesso se houver
+
+4️⃣ **Fechamento com Benefício** (1 frase)
+   → Reforçar o principal benefício/resultado
+
+═══════════════════════════════════════════════════════════
+📊 EXEMPLOS DE COMO USAR MÉTRICAS CORRETAMENTE
+═══════════════════════════════════════════════════════════
+
 ❌ ERRADO: "reduz lab_time e digital_time"
-✅ CORRETO: "reduz o tempo de produção de 15 dias para apenas 24 horas"
+✅ CORRETO: "reduz o tempo de produção laboratorial de 15 dias para apenas 24 horas, acelerando entregas em 93%"
 
 ❌ ERRADO: "minimiza patient_loss"
-✅ CORRETO: "evita a perda de 50% dos pacientes que desistem durante a espera"
+✅ CORRETO: "evita a perda de até 50% dos pacientes que desistem durante longos períodos de espera por próteses"
 
 ❌ ERRADO: "economiza revenue_loss"
-✅ CORRETO: "recupera até R$ 15.000 por mês em receita que seria perdida"
+✅ CORRETO: "recupera até R$ 18.000 por mês em receita que seria perdida por atrasos e retrabalhos"
 
-EXEMPLOS DE COMO USAR O PITCH NAS RESPOSTAS:
+❌ ERRADO: "melhora competitive_edge"
+✅ CORRETO: "posiciona sua clínica entre as 10% mais avançadas tecnologicamente da região, atraindo pacientes que buscam inovação"
 
-Exemplo de Pitch:
-"Transforme sua clínica com o Scanner Intraoral 3D. Elimine as moldagens tradicionais e ofereça diagnósticos precisos em minutos. Seu paciente sai da cadeira com o plano de tratamento pronto."
+═══════════════════════════════════════════════════════════
+🎯 EXEMPLO COMPLETO DE FAQ PERFEITA (REFERÊNCIA)
+═══════════════════════════════════════════════════════════
 
-✅ FAQ BEM ELABORADA (usa o pitch):
+Exemplo de Pitch Real:
+"Transforme sua clínica com o Scanner Intraoral 3D Pro. Elimine as moldagens tradicionais desconfortáveis e ofereça diagnósticos precisos em minutos. Seu paciente sai da cadeira com o plano de tratamento completo visualizado em 3D, aumentando a taxa de aceitação em até 65%."
+
+✅ FAQ #7 PERFEITA (Resultados Concretos):
 {
-  "question": "Como o Scanner Intraoral 3D agiliza o atendimento?",
-  "answer": "Com o Scanner Intraoral 3D, você elimina as moldagens tradicionais e oferece diagnósticos precisos em minutos. Seu paciente sai da cadeira com o plano de tratamento pronto, aumentando a satisfação e a taxa de aceitação dos procedimentos."
+  "question": "Quais resultados concretos posso esperar ao implementar o Scanner Intraoral 3D Pro e em quanto tempo?",
+  "answer": "Com o Scanner Intraoral 3D Pro, você elimina as moldagens tradicionais desconfortáveis e oferece diagnósticos precisos em minutos, não em dias. No curto prazo (primeiras 2 semanas), sua equipe já estará realizando capturas 5x mais rápidas. No médio prazo (1-3 meses), você verá aumento de até 65% na taxa de aceitação de tratamentos, pois o paciente visualiza tudo em 3D e sai da cadeira com o plano pronto. Clínicas que implementaram já reportam redução de 80% no retrabalho por moldes imprecisos e economia de até R$ 12.000/mês em materiais de moldagem. No longo prazo (6+ meses), você terá uma base de dados digital completa para acompanhamento longitudinal, diferenciando sua clínica como referência tecnológica."
 }
 
-❌ FAQ GENÉRICA (ignora o pitch):
+✅ FAQ #5 PERFEITA (Amplificação da Dor):
 {
-  "question": "Quais são os benefícios do scanner?",
-  "answer": "Scanners intraorais oferecem imagens digitais de alta qualidade para planejamento de tratamentos odontológicos."
+  "question": "Quais são as consequências de continuar usando moldagens tradicionais em vez de digitalizar meu processo?",
+  "answer": "Continuar com moldagens tradicionais tem custos ocultos significativos. Financeiramente, você gasta até R$ 15.000/ano em materiais de moldagem, além de perder cerca de R$ 8.000/mês em receita por pacientes que recusam tratamentos devido ao desconforto do processo. Operacionalmente, cada moldagem consome 25-40 minutos de cadeira, limitando sua capacidade de atendimento. Competitivamente, clínicas que já digitalizaram relatam aumento de 40% na captação de novos pacientes, enquanto as tradicionais enfrentam migração para concorrentes mais modernos. Além disso, moldagens imprecisas geram até 30% de retrabalho, frustrando sua equipe e atrasando entregas. O custo de não agir agora é continuar perdendo pacientes, tempo e receita todos os dias."
 }
 
-FORMATO DE SAÍDA (APENAS JSON, SEM TEXTO ADICIONAL):
+═══════════════════════════════════════════════════════════
+📤 FORMATO DE SAÍDA (JSON PURO)
+═══════════════════════════════════════════════════════════
+
+Retorne APENAS um array JSON com as 10 FAQs, SEM markdown, SEM explicações:
+
 [
   {
-    "question": "Pergunta clara e direta?",
-    "answer": "Resposta objetiva e profissional."
+    "question": "Pergunta da FAQ #1 (Segmentação)?",
+    "answer": "Resposta completa seguindo a fórmula de 4 partes."
+  },
+  {
+    "question": "Pergunta da FAQ #2 (UVP)?",
+    "answer": "Resposta completa seguindo a fórmula de 4 partes."
+  },
+  ...
+  {
+    "question": "Pergunta da FAQ #10 (Redução de Risco)?",
+    "answer": "Resposta completa seguindo a fórmula de 4 partes."
   }
 ]
 
-IMPORTANTE: Retorne APENAS o array JSON, sem markdown, sem explicações adicionais.`;
+IMPORTANTE FINAL: 
+• Retorne APENAS o JSON puro
+• Nenhum markdown (\`\`\`json)
+• Nenhum texto adicional
+• Exatamente 10 FAQs
+• Siga a distribuição: 3 (Desejo) + 3 (Dor) + 4 (Resultado)`;
 
     console.log('🤖 Chamando Lovable AI para gerar FAQs...');
 
@@ -224,8 +411,8 @@ IMPORTANTE: Retorne APENAS o array JSON, sem markdown, sem explicações adicion
     }
 
     // Validar estrutura
-    if (!Array.isArray(generatedFaqs) || generatedFaqs.length !== 5) {
-      throw new Error(`Esperado 5 FAQs, recebido ${generatedFaqs?.length || 0}`);
+    if (!Array.isArray(generatedFaqs) || generatedFaqs.length !== 10) {
+      throw new Error(`Esperado 10 FAQs, recebido ${generatedFaqs?.length || 0}`);
     }
 
     for (const faq of generatedFaqs) {
@@ -259,7 +446,7 @@ IMPORTANTE: Retorne APENAS o array JSON, sem markdown, sem explicações adicion
       JSON.stringify({
         success: true,
         faqs: generatedFaqs,
-        message: '5 FAQs geradas e salvas com sucesso!'
+        message: '10 FAQs estratégicas geradas e salvas com sucesso!'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

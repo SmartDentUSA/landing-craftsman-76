@@ -9,7 +9,8 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   const customText = solution.landing_page_custom_text || {};
   
   const finalMetricsTitle = customText.metrics_title || 'Métricas de Impacto Comprovadas';
-  const finalMetricsSubtitle = customText.metrics_subtitle || 'Resultados reais de clínicas que implementaram esta solução';
+  const finalMetricsSubtitle = customText.metrics_subtitle || 
+    'Resultados reais e mensuráveis de clínicas odontológicas brasileiras que transformaram seu atendimento, produtividade e lucratividade com esta solução integrada';
   const finalFaqTitle = customText.faq_title || 'Perguntas Frequentes';
   const finalCtaText = customText.cta_text || 'Fale agora com nossos especialistas e transforme sua clínica';
   
