@@ -60,9 +60,15 @@ serve(async (req) => {
       .single();
 
     // Montar contexto para IA
-    const successCasesCount = solution.success_stories?.length || 0;
-    const metricsKeys = solution.pain_metrics ? Object.keys(solution.pain_metrics) : [];
+    const successCasesCount = solution.success_cases?.length || 0;
     const productsNames = products.map(p => p.name).join(', ');
+
+    // Formatação correta das métricas (mostrar valores legíveis)
+    const metricsFormatted = solution.pain_metrics 
+      ? Object.entries(solution.pain_metrics)
+          .map(([key, value]) => `  • ${value}`)
+          .join('\n')
+      : 'Nenhuma métrica específica';
 
     const aiPrompt = `Você é um especialista em marketing odontológico e vendas B2B no Brasil.
 
@@ -74,7 +80,9 @@ CONTEXTO DA SOLUÇÃO SPIN:
 - Pitch de Vendas: ${solution.sales_pitch || 'Não informado'}
 - Produtos Incluídos: ${productsNames || 'Nenhum produto selecionado'}
 - Casos de Sucesso Documentados: ${successCasesCount}
-- Métricas Disponíveis: ${metricsKeys.join(', ') || 'Nenhuma métrica'}
+
+MÉTRICAS DE IMPACTO DA SOLUÇÃO:
+${metricsFormatted}
 
 PRODUTOS DETALHADOS:
 ${products.map((p, i) => `
@@ -94,8 +102,10 @@ CRITÉRIOS OBRIGATÓRIOS:
 3. Integrar naturalmente os produtos mencionados quando relevante
 4. Focar em benefícios práticos, ROI e resultados mensuráveis
 5. Tom profissional mas acessível (evitar jargões excessivos)
-6. Usar dados das métricas quando disponíveis
+6. Usar dados das métricas quando disponíveis de forma NATURAL e CONTEXTUALIZADA
 7. Referenciar os casos de sucesso se aplicável
+8. NUNCA mencionar variáveis técnicas (lab_time, digital_time, patient_loss, etc.)
+9. SEMPRE usar os valores reais das métricas em linguagem natural
 
 TIPOS DE PERGUNTAS RECOMENDADAS:
 - Como funciona a implementação desta solução?
@@ -103,6 +113,16 @@ TIPOS DE PERGUNTAS RECOMENDADAS:
 - Quais clínicas/profissionais se beneficiam mais?
 - Quanto tempo leva para ver resultados?
 - Qual suporte/treinamento é oferecido?
+
+EXEMPLOS DE COMO USAR AS MÉTRICAS:
+❌ ERRADO: "reduz lab_time e digital_time"
+✅ CORRETO: "reduz o tempo de produção de 15 dias para apenas 24 horas"
+
+❌ ERRADO: "minimiza patient_loss"
+✅ CORRETO: "evita a perda de 50% dos pacientes que desistem durante a espera"
+
+❌ ERRADO: "economiza revenue_loss"
+✅ CORRETO: "recupera até R$ 15.000 por mês em receita que seria perdida"
 
 FORMATO DE SAÍDA (APENAS JSON, SEM TEXTO ADICIONAL):
 [
