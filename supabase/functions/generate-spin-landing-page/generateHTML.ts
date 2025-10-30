@@ -5,19 +5,38 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   const pain_metrics = solution.pain_metrics || {};
   const faqs = solution.faq || [];
   
-  // HERO IMAGE (prioridade: manual > IA > produto)
-  let heroImageSrc = mainProduct.image_url || '';
-  let heroImageAlt = mainProduct.name || 'Banner';
-  
-  if (solution.ai_generated_images?.hero_banner) {
-    const banner = solution.ai_generated_images.hero_banner;
-    if (banner.mode === 'manual_upload' && banner.manual_upload?.src) {
-      heroImageSrc = banner.manual_upload.src;
-      heroImageAlt = banner.manual_upload.alt || 'Banner hero personalizado';
-    } else if (banner.mode === 'ai_generated' && banner.ai_generated?.src) {
-      heroImageSrc = banner.ai_generated.src;
+  // HERO IMAGE (prioridade CORRETA: manual > IA > produto > placeholder)
+  let heroImageSrc = '';
+  let heroImageAlt = 'Banner hero';
+
+  // 1️⃣ PRIORIDADE MÁXIMA: Upload Manual
+  if (solution.ai_generated_images?.hero_banner?.mode === 'manual_upload') {
+    const manualUpload = solution.ai_generated_images.hero_banner.manual_upload;
+    if (manualUpload?.src) {
+      heroImageSrc = manualUpload.src;
+      heroImageAlt = manualUpload.alt || 'Banner hero personalizado';
+    }
+  }
+
+  // 2️⃣ SEGUNDA PRIORIDADE: Imagem Gerada por IA
+  else if (solution.ai_generated_images?.hero_banner?.mode === 'ai_generated') {
+    const aiGenerated = solution.ai_generated_images.hero_banner.ai_generated;
+    if (aiGenerated?.src) {
+      heroImageSrc = aiGenerated.src;
       heroImageAlt = `Banner hero - ${solution.title}`;
     }
+  }
+
+  // 3️⃣ FALLBACK: Imagem do primeiro produto (apenas se não há banner configurado)
+  else if (mainProduct?.image_url) {
+    heroImageSrc = mainProduct.image_url;
+    heroImageAlt = mainProduct.name || 'Produto';
+  }
+
+  // 4️⃣ ÚLTIMO RECURSO: Placeholder genérico
+  if (!heroImageSrc) {
+    heroImageSrc = 'https://via.placeholder.com/1200x630?text=Banner+Hero';
+    heroImageAlt = 'Banner de solução';
   }
 
   // Gerar subtítulo do hero baseado no sales_pitch (resumido)
