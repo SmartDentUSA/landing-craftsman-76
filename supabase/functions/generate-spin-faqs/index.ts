@@ -97,7 +97,7 @@ ${solution.sales_pitch || 'Não informado'}
 
 📦 PRODUTOS INCLUÍDOS: ${productsNames || 'Nenhum'}
 📈 CASOS DE SUCESSO: ${successCasesCount} documentados
-💰 TICKET MÉDIO: ${products[0]?.price ? \`R$ \${products[0].price}\` : 'Sob consulta'}
+💰 TICKET MÉDIO: ${products[0]?.price ? 'R$ ' + products[0].price : 'Sob consulta'}
 
 📊 MÉTRICAS DE IMPACTO REAIS:
 ${metricsFormatted}
@@ -109,7 +109,7 @@ PRODUTO \${i + 1}: \${p.name}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Categoria: \${p.category || 'N/A'}
 • Descrição: \${p.description || 'N/A'}
-• Preço: \${p.price ? \`R$ \${p.price}\` : 'Sob consulta'}
+• Preço: \${p.price ? 'R$ ' + p.price : 'Sob consulta'}
 • Benefícios-chave: \${p.benefits ? JSON.stringify(p.benefits).substring(0, 250) : 'N/A'}
 • Características: \${p.features ? JSON.stringify(p.features).substring(0, 250) : 'N/A'}
 \`).join('\\n')}
