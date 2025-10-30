@@ -129,11 +129,18 @@ export function SpinSellingManager() {
                   {/* Metrics Preview */}
                   {Object.keys(solution.pain_metrics).length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {Object.entries(solution.pain_metrics).slice(0, 3).map(([key, value]) => (
-                        <Badge key={key} variant="secondary" className="text-xs">
-                          {key}: {value}
-                        </Badge>
-                      ))}
+                      {Object.entries(solution.pain_metrics).slice(0, 3).map(([key, value]) => {
+                        // Converter value para string se for CustomMetric
+                        const displayValue = typeof value === 'object' && value !== null && 'label' in value
+                          ? `${value.label}: ${value.value}${value.unit}`
+                          : String(value);
+                        
+                        return (
+                          <Badge key={key} variant="secondary" className="text-xs">
+                            {displayValue}
+                          </Badge>
+                        );
+                      })}
                       {Object.keys(solution.pain_metrics).length > 3 && (
                         <Badge variant="secondary" className="text-xs">
                           +{Object.keys(solution.pain_metrics).length - 3} mais

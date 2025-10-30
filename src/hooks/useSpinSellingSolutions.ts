@@ -66,6 +66,12 @@ export interface SpinFAQ {
   answer: string;
 }
 
+export interface CustomMetric {
+  label: string;      // "Redução de Tempo"
+  value: number;      // 12
+  unit: string;       // "minutos"
+}
+
 export interface SpinSellingSolution {
   id: string;
   title: string;
@@ -79,7 +85,7 @@ export interface SpinSellingSolution {
   // ✅ CAMPOS PREENCHIDOS MANUALMENTE PELO USUÁRIO
   success_cases: SuccessCase[];
   real_quotes: SpinJourneyQuote[];
-  pain_metrics: { [key: string]: string };
+  pain_metrics: { [key: string]: string | CustomMetric };
   custom_url?: CustomURL;
   sales_pitch?: string;
   faq?: SpinFAQ[];

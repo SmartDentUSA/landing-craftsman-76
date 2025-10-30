@@ -136,7 +136,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingLP, setIsGeneratingLP] = useState(false);
-  const [newMetric, setNewMetric] = useState({ key: '', value: '' });
+  const [newMetric, setNewMetric] = useState({ label: '', value: '', unit: '' });
   const [showEditablePreview, setShowEditablePreview] = useState(false);
   const [generatedHTML, setGeneratedHTML] = useState<string | null>(null);
   
@@ -397,7 +397,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     });
   };
 
-  const updateMetric = (key: string, value: string) => {
+  const updateMetric = (key: string, value: string | any) => {
     setFormData(prev => ({
       ...prev,
       pain_metrics: {
@@ -408,16 +408,25 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   };
 
   const addCustomMetric = () => {
-    const trimmedKey = newMetric.key.trim();
+    const trimmedLabel = newMetric.label.trim();
     const trimmedValue = newMetric.value.trim();
+    const trimmedUnit = newMetric.unit.trim();
     
-    if (!trimmedKey || !trimmedValue) return;
+    if (!trimmedLabel || !trimmedValue || !trimmedUnit) return;
+    
+    // Gerar key automático a partir do label
+    const key = trimmedLabel
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9]+/g, '_') // Substitui espaços por _
+      .replace(/^_|_$/g, ''); // Remove _ no início/fim
     
     // Verificar se já existe
-    if (formData.pain_metrics && trimmedKey in formData.pain_metrics) {
+    if (formData.pain_metrics && key in formData.pain_metrics) {
       toast({
         title: "Métrica já existe",
-        description: `A métrica "${trimmedKey}" já foi adicionada`,
+        description: `A métrica "${trimmedLabel}" já foi adicionada`,
         variant: "destructive"
       });
       return;
@@ -427,15 +436,19 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       ...prev,
       pain_metrics: { 
         ...(prev.pain_metrics || {}), 
-        [trimmedKey]: trimmedValue 
+        [key]: {
+          label: trimmedLabel,
+          value: parseFloat(trimmedValue),
+          unit: trimmedUnit
+        }
       }
     }));
     
-    setNewMetric({ key: '', value: '' });
+    setNewMetric({ label: '', value: '', unit: '' });
     
     toast({
       title: "✅ Métrica adicionada!",
-      description: `${trimmedKey}: ${trimmedValue}`,
+      description: `${trimmedLabel} será exibida no HTML como "${trimmedValue}${trimmedUnit}"`
     });
   };
 
@@ -1228,7 +1241,15 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                         </Label>
                         <Input
                           placeholder={`Ex: ${key === 'ROI' ? '6 meses' : key === 'patient_loss' ? '15%' : key === 'revenue_loss' ? 'R$ 5.000' : '7 dias → 24h'}`}
-                          value={formData.pain_metrics?.[key] || ''}
+                          value={(() => {
+                            const metricValue = formData.pain_metrics?.[key];
+                            if (!metricValue) return '';
+                            // Se for CustomMetric, converter para string legível
+                            if (typeof metricValue === 'object' && 'value' in metricValue) {
+                              return `${metricValue.value}${metricValue.unit}`;
+                            }
+                            return String(metricValue);
+                          })()}
                           onChange={(e) => updateMetric(key, e.target.value)}
                           className="h-9"
                         />
@@ -1255,28 +1276,38 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 <h4 className="text-sm font-semibold text-muted-foreground mb-3">
                   Adicionar Métrica Personalizada
                 </h4>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <Input
-                    placeholder="Ex.: lead_time, capex, opex"
-                    value={newMetric.key}
-                    onChange={(e) => setNewMetric(prev => ({ ...prev, key: e.target.value }))}
-                    className="w-1/3"
+                    placeholder="Nome da Métrica"
+                    value={newMetric.label}
+                    onChange={(e) => setNewMetric(prev => ({ ...prev, label: e.target.value }))}
+                    title="Ex: Redução de Tempo, Economia de Custos"
                   />
                   <Input
-                    placeholder="Valor da métrica"
+                    type="number"
+                    placeholder="Valor (número)"
                     value={newMetric.value}
                     onChange={(e) => setNewMetric(prev => ({ ...prev, value: e.target.value }))}
-                    className="flex-1"
+                    title="Ex: 12, 30, 93"
+                  />
+                  <Input
+                    placeholder="Unidade"
+                    value={newMetric.unit}
+                    onChange={(e) => setNewMetric(prev => ({ ...prev, unit: e.target.value }))}
+                    title="Ex: minutos, %, dias"
                   />
                   <Button
                     type="button"
                     onClick={addCustomMetric}
-                    disabled={!newMetric.key.trim() || !newMetric.value.trim()}
+                    disabled={!newMetric.label.trim() || !newMetric.value.trim() || !newMetric.unit.trim()}
                     className="shrink-0"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  💡 Estas métricas aparecerão nos cards personalizados do HTML
+                </p>
               </div>
               
               {/* Métricas Personalizadas Existentes */}
@@ -1286,25 +1317,60 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 
                 return customMetrics.length > 0 ? (
                   <div className="space-y-2">
-                    {customMetrics.map(([key, value]) => (
-                      <div key={key} className="flex gap-2 items-center">
-                        <Input value={key} disabled className="w-1/3 bg-muted" />
-                        <Input
-                          placeholder="Valor da métrica"
-                          value={value}
-                          onChange={(e) => updateMetric(key, e.target.value)}
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeMetric(key)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
+                    {customMetrics.map(([key, value]) => {
+                      // Detectar se é o novo formato (objeto) ou antigo (string)
+                      const isNewFormat = typeof value === 'object' && value !== null && 'label' in value;
+                      const label = isNewFormat ? value.label : key.replace(/_/g, ' ');
+                      const numValue = isNewFormat ? String(value.value) : String(value);
+                      const unit = isNewFormat ? value.unit : '';
+                      
+                      return (
+                        <div key={key} className="grid grid-cols-4 gap-2 items-center">
+                          <Input 
+                            value={label} 
+                            onChange={(e) => {
+                              if (isNewFormat) {
+                                updateMetric(key, { ...value, label: e.target.value });
+                              }
+                            }}
+                            disabled={!isNewFormat}
+                            className={!isNewFormat ? "bg-muted" : ""}
+                            placeholder="Nome da Métrica"
+                          />
+                          <Input
+                            type={isNewFormat ? "number" : "text"}
+                            placeholder="Valor"
+                            value={numValue}
+                            onChange={(e) => {
+                              if (isNewFormat) {
+                                updateMetric(key, { ...value, value: parseFloat(e.target.value) || 0 });
+                              } else {
+                                updateMetric(key, e.target.value);
+                              }
+                            }}
+                          />
+                          <Input
+                            placeholder="Unidade"
+                            value={unit}
+                            onChange={(e) => {
+                              if (isNewFormat) {
+                                updateMetric(key, { ...value, unit: e.target.value });
+                              }
+                            }}
+                            disabled={!isNewFormat}
+                            className={!isNewFormat ? "bg-muted" : ""}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeMetric(key)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground text-center py-6 bg-muted/20 rounded-lg border-2 border-dashed">
@@ -1321,7 +1387,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 <div>
                   <Label className="text-lg font-semibold">❓ Perguntas Frequentes (FAQs)</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Gere até 5 perguntas e respostas que ajudam a esclarecer dúvidas sobre esta solução SPIN
+                    Gere até 10 perguntas e respostas que ajudam a esclarecer dúvidas sobre esta solução SPIN
                   </p>
                 </div>
                 <Button
@@ -1357,7 +1423,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                       setFormData(prev => ({ ...prev, faq: data.faqs }));
                       toast({
                         title: "✅ FAQs geradas!",
-                        description: "5 perguntas e respostas criadas pela IA. Salve para persistir."
+                        description: `${data.faqs?.length || 10} perguntas e respostas criadas pela IA. Salve para persistir.`
                       });
                     } catch (error: any) {
                       toast({
@@ -1388,10 +1454,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               <FAQEditor
                 faqs={formData.faq || []}
                 onChange={(faqs) => {
-                  if (faqs.length > 5) {
+                  if (faqs.length > 10) {
                     toast({
                       title: "Limite atingido",
-                      description: "Máximo de 5 FAQs permitidas",
+                      description: "Máximo de 10 FAQs permitidas",
                       variant: "destructive"
                     });
                     return;

@@ -139,10 +139,10 @@ ANTES de criar as FAQs, você DEVE identificar e extrair do PITCH acima:
 Use esses 4 elementos como FUNDAMENTO OBRIGATÓRIO para criar todas as FAQs.
 
 ═══════════════════════════════════════════════════════════
-📝 TAREFA: GERAR 10 FAQs ESTRATÉGICAS
+📝 TAREFA: GERAR 10 FAQs ESTRATÉGICAS (NÃO MAIS 5!)
 ═══════════════════════════════════════════════════════════
 
-Você deve gerar exatamente **10 FAQs** seguindo esta distribuição OBRIGATÓRIA:
+Você deve gerar exatamente **10 FAQs** (não 5) seguindo esta distribuição OBRIGATÓRIA:
 
 ┌─────────────────────────────────────────────────────────┐
 │ FASE 1: DESEJO & IDENTIFICAÇÃO (3 FAQs)                │

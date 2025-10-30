@@ -104,13 +104,28 @@ TÍTULO (3-5 palavras):
 • Focar em RESULTADOS, não métricas
 • Exemplos: "Resultados que Comprovam", "Impacto Real Mensurável", "Transformação Documentada"
 
-SUBTÍTULO (20-30 palavras):
-• OBRIGATÓRIO: Transformar métricas brutas em linguagem aspiracional
-• NÃO repetir números literalmente (ex: "40 minutos" → "tempo de laboratório reduzido drasticamente")
-• Focar em TRANSFORMAÇÃO, não em estatísticas secas
-• Usar quantificadores qualitativos: "dezenas", "centenas", "milhares" (não "1 clínica")
-• Exemplo BOM: "Dados concretos de centenas de procedimentos em clínicas brasileiras que multiplicaram sua capacidade de atendimento, reduziram drasticamente o desperdício e alcançaram ROI em menos de 1 ano"
-• Exemplo RUIM (NÃO FAZER): "Veja como transformou 1 clínica em 40 minutos com ROI de 12 meses"
+SUBTÍTULO (35-50 palavras - TEXTO EXPANDIDO E RICO):
+• OBRIGATÓRIO: Usar DIRETAMENTE o PITCH DE VENDAS como base narrativa
+• Integrar os principais argumentos e linguagem do pitch
+• Transformar métricas brutas em linguagem aspiracional (ex: "40 minutos" → "tempo de laboratório reduzido drasticamente")
+• Mencionar PRODUTOS específicos de forma natural (como no pitch)
+• Usar quantificadores qualitativos: "centenas de clínicas", "milhares de procedimentos" (não "1 clínica")
+• Focar em TRANSFORMAÇÃO COMPLETA: produtividade + lucratividade + atendimento
+• Tom: narrativa envolvente e aspiracional, não lista de estatísticas
+
+Exemplo BOM (50 palavras):
+"Descubra como centenas de clínicas parceiras da Smart Dent estão transformando completamente sua operação com o Scanner 3D Pro e Impressora Edge Mini, experimentando retorno sobre investimento acelerado em menos de 1 ano, fluxo digital ultrarrápido que elimina dependência de laboratórios externos, e economia expressiva de tempo e materiais que multiplica a capacidade de atendimento"
+
+Exemplo RUIM (NÃO FAZER):
+"Veja como transformou 1 clínica em 40 minutos com ROI de 12 meses"
+
+⚠️ IMPORTANTE: USE O PITCH DE VENDAS COMPLETO COMO BASE!
+O subtítulo das métricas deve:
+• Integrar os principais benefícios mencionados no pitch
+• Usar a linguagem específica do pitch de vendas
+• Mencionar os produtos de forma natural (como no pitch)
+• Transformar dados técnicos em linguagem aspiracional
+• Exemplo: Se o pitch fala "fluxo digital completo", use isso no subtítulo
 
 ┌─────────────────────────────────────────────────────────┐
 │ 3. CTA (Call-to-Action)                                 │

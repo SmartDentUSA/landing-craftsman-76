@@ -190,7 +190,7 @@ export function generateLandingPageHTML(
   // ✅ MÉTRICAS: IA ou defaults
   const finalMetricsTitle = customText.metrics_title || aiContent?.metrics?.title || 'Métricas de Impacto Comprovadas';
   const finalMetricsSubtitle = customText.metrics_subtitle || aiContent?.metrics?.subtitle ||
-    'Resultados reais e mensuráveis de clínicas odontológicas brasileiras que transformaram seu atendimento, produtividade e lucratividade com esta solução integrada';
+    `Descubra como centenas de clínicas parceiras da ${company?.company_name || 'Smart Dent'} estão transformando completamente sua operação com ${products.slice(0, 2).map(p => p.name).join(' e ')}, experimentando retorno sobre investimento acelerado, fluxo digital ultrarrápido que elimina dependência de laboratórios externos, economia expressiva de tempo e materiais em procedimentos diários, e multiplicação da capacidade de atendimento sem aumento proporcional de custos operacionais`;
   
   // ✅ FAQ: sempre estático (não gerado por IA nesta função)
   const finalFaqTitle = customText.faq_title || 'Perguntas Frequentes';
@@ -241,32 +241,42 @@ export function generateLandingPageHTML(
   };
   const badge = painTypeLabels[solution.pain_type] || 'SOLUÇÃO ODONTOLÓGICA';
 
-  // Selecionar top 3 métricas para exibir e normalizar valores
-  const metricsArray = Object.entries(pain_metrics)
-    .slice(0, 3)
-    .map(([key, value]) => {
-      // 🔥 Normalizar valores para garantir que números sejam renderizados corretamente
-      let displayValue = value;
-      let numericValue = value;
-      
-      // Se o valor tem "%" ou unidades, extrair apenas o número para o contador
-      if (typeof value === 'string') {
-        // Extrair número do valor (ex: "30%" → 30, "40 min" → 40)
-        const match = value.match(/(\d+(?:\.\d+)?)/);
-        if (match) {
-          numericValue = parseFloat(match[1]);
-        }
-        // Manter valor original para exibição (com unidades)
-        displayValue = value;
-      } else if (typeof value === 'number') {
-        numericValue = value;
-        displayValue = value.toString();
+  // 🎯 PRIORIZAR MÉTRICAS PERSONALIZADAS (3 primeiras)
+  const allMetrics = Object.entries(pain_metrics);
+  const customMetrics = allMetrics.filter(([key, value]) => typeof value === 'object' && value !== null && 'label' in value);
+  const standardMetrics = allMetrics.filter(([key, value]) => typeof value !== 'object' || value === null || !('label' in value));
+
+  // Selecionar top 3: prioridade para personalizadas
+  const selectedMetrics = [...customMetrics.slice(0, 3), ...standardMetrics]
+    .slice(0, 3);
+
+  const metricsArray = selectedMetrics.map(([key, value]) => {
+    let displayValue = value;
+    let numericValue = value;
+    let label = key.replace(/_/g, ' ');
+    
+    // 🔥 NOVO FORMATO: objeto { label, value, unit }
+    if (typeof value === 'object' && value !== null && 'label' in value) {
+      label = value.label;
+      numericValue = value.value;
+      displayValue = `${value.value}${value.unit}`;
+    }
+    // Formato antigo: string ou número
+    else if (typeof value === 'string') {
+      const match = value.match(/(\d+(?:\.\d+)?)/);
+      if (match) {
+        numericValue = parseFloat(match[1]);
       }
-      
-      return [key, displayValue, numericValue];
-    });
+      displayValue = value;
+    } else if (typeof value === 'number') {
+      numericValue = value;
+      displayValue = value.toString();
+    }
+    
+    return [key, displayValue, numericValue, label];
+  });
   
-  console.log('📊 [HTML] Métricas processadas:', metricsArray);
+  console.log('📊 [HTML] Métricas processadas (com labels):', metricsArray);
 
   // Links institucionais do rodapé
   const institutionalLinks = company?.institutional_links || [];
@@ -1129,15 +1139,15 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       <h2 data-editable="true" data-field="metrics_title">${escapeHtml(finalMetricsTitle)}</h2>
       <p data-editable="true" data-field="metrics_subtitle">${escapeHtml(finalMetricsSubtitle)}</p>
       <div class="metrics-cards" id="metrics-counter">
-        ${metricsArray.map(([key, displayValue, numericValue]) => {
+        ${metricsArray.map(([key, displayValue, numericValue, label]) => {
           // 🔥 Aplicar edições do customText aos rótulos das métricas
           const labelKey = `metric_label_${key}`;
-          const label = (customText && customText[labelKey]) || key.replace(/_/g, ' ');
+          const finalLabel = (customText && customText[labelKey]) || label;
           
           return `
           <div class="metric-card">
             <span class="count" data-target="${numericValue || 0}">${displayValue}</span>
-            <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(label)}</span>
+            <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(finalLabel)}</span>
           </div>
         `}).join('')}
       </div>
