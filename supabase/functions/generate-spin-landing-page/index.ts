@@ -387,7 +387,8 @@ serve(async (req) => {
       solution, 
       products || [], 
       company, 
-      aiGeneratedContent // ✅ Passar AI puro, deixar template decidir prioridades
+      aiGeneratedContent, // ✅ Passar AI puro, deixar template decidir prioridades
+      false // ✅ preview = false (produção - com tracking)
     );
 
     console.log('✅ Checkpoint 4: HTML gerado:', html.length, 'caracteres');

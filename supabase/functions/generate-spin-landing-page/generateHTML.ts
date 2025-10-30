@@ -1,9 +1,173 @@
+// ═══════════════════════════════════════════════════════════
+// 🎯 GERADOR DE SCHEMAS JSON-LD PARA SGE/AEO
+// ═══════════════════════════════════════════════════════════
+
+function generateSPINSchemas(
+  solution: any,
+  products: any[],
+  company: any,
+  faqs: any[],
+  successCases: any[],
+  canonicalUrl: string
+): any[] {
+  const schemas: any[] = [];
+
+  // 1. Organization Schema
+  if (company) {
+    schemas.push({
+      '@type': 'Organization',
+      name: company.company_name || 'Smart Dent',
+      url: company.website || canonicalUrl,
+      logo: company.logo_url,
+      contactPoint: {
+        '@type': 'ContactPoint',
+        telephone: company.phone_number,
+        contactType: 'customer service',
+        email: company.email,
+        areaServed: 'BR',
+        availableLanguage: 'pt-BR'
+      },
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: `${company.street_address}, ${company.address_number}`,
+        addressLocality: company.city,
+        addressRegion: company.state,
+        postalCode: company.postal_code,
+        addressCountry: 'BR'
+      }
+    });
+  }
+
+  // 2. WebPage Schema
+  schemas.push({
+    '@type': 'WebPage',
+    name: solution.title,
+    description: solution.sales_pitch?.substring(0, 160) || solution.pain_description,
+    url: canonicalUrl,
+    mainEntityOfPage: canonicalUrl
+  });
+
+  // 3. ItemList Schema (produtos selecionados)
+  if (products && products.length > 0) {
+    schemas.push({
+      '@type': 'ItemList',
+      numberOfItems: products.length,
+      itemListElement: products.map((product, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'Product',
+          name: product.name,
+          description: product.description || product.name,
+          image: product.image_url,
+          url: product.product_url || canonicalUrl
+        }
+      }))
+    });
+  }
+
+  // 4. Product Schemas (detalhados)
+  products.forEach(product => {
+    const productSchema: any = {
+      '@type': 'Product',
+      name: product.name,
+      description: product.description || product.name,
+      image: product.image_url
+    };
+
+    if (product.brand) {
+      productSchema.brand = { '@type': 'Brand', name: product.brand };
+    }
+
+    if (product.price) {
+      productSchema.offers = {
+        '@type': 'Offer',
+        price: product.price,
+        priceCurrency: 'BRL',
+        availability: 'https://schema.org/InStock',
+        url: product.product_url
+      };
+    }
+
+    if (product.gtin) productSchema.gtin = product.gtin;
+    if (product.mpn) productSchema.mpn = product.mpn;
+
+    schemas.push(productSchema);
+  });
+
+  // 5. FAQPage Schema
+  if (faqs && faqs.length > 0) {
+    schemas.push({
+      '@type': 'FAQPage',
+      mainEntity: faqs.map(faq => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer
+        }
+      }))
+    });
+  }
+
+  // 6. Review Schemas (success cases)
+  successCases.forEach(testimonial => {
+    if (testimonial.client_name && testimonial.result_achieved) {
+      schemas.push({
+        '@type': 'Review',
+        author: {
+          '@type': 'Person',
+          name: testimonial.client_name
+        },
+        reviewRating: {
+          '@type': 'Rating',
+          ratingValue: 5,
+          bestRating: 5
+        },
+        reviewBody: testimonial.result_achieved
+      });
+    }
+  });
+
+  // 7. BreadcrumbList Schema
+  schemas.push({
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: company?.website || 'https://smartdent.com.br'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: solution.category || 'Soluções',
+        item: `${company?.website || 'https://smartdent.com.br'}/solucoes`
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: solution.title,
+        item: canonicalUrl
+      }
+    ]
+  });
+
+  return schemas;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🎨 GERADOR DE HTML DA LANDING PAGE
+// ═══════════════════════════════════════════════════════════
+
 // Função auxiliar para gerar o HTML da Landing Page com CSS padronizado
 export function generateLandingPageHTML(
   solution: any, 
   products: any[], 
   company: any, 
-  aiContent?: any
+  aiContent?: any,
+  preview: boolean = false
 ): string {
   const mainProduct = products[0] || {};
   const successCases = solution.success_cases || [];
@@ -110,20 +274,112 @@ export function generateLandingPageHTML(
   // SEO
   const seoTitle = `${solution.title} | ${company?.company_name || 'Smart Dent'}`;
   const seoDescription = finalHeroSubtitle.substring(0, 160);
+  const canonicalUrl = solution.custom_url?.url || `${company?.website || 'https://smartdent.com.br'}/solucoes/${solution.id}`;
+  
+  // Extrair keywords de múltiplas fontes
+  const extractedKeywords = [
+    ...Object.keys(pain_metrics),
+    ...(products.flatMap(p => p.keywords || [])),
+    ...(products.flatMap(p => p.market_keywords || [])),
+    ...(products.flatMap(p => p.search_intent_keywords || []))
+  ]
+    .filter((k, i, arr) => arr.indexOf(k) === i) // unique
+    .slice(0, 10)
+    .map(k => typeof k === 'string' ? k : k.keyword || k.name || '')
+    .filter(k => k.length > 0);
+
+  // Gerar schemas consolidados
+  const schemas = generateSPINSchemas(
+    solution,
+    products,
+    company,
+    faqs,
+    successCases,
+    canonicalUrl
+  );
+
+  // Consolidar schemas em @graph (Google recomenda)
+  const consolidatedSchema = {
+    '@context': 'https://schema.org',
+    '@graph': schemas
+  };
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SEO BÁSICO -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <title>${escapeHtml(seoTitle)}</title>
   <meta name="description" content="${escapeHtml(seoDescription)}">
+  <meta name="keywords" content="${escapeHtml(extractedKeywords.join(', '))}">
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
   
-  <!-- Google Fonts -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- OPEN GRAPH (Facebook, LinkedIn) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(seoTitle)}">
+  <meta property="og:description" content="${escapeHtml(seoDescription)}">
+  <meta property="og:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+  <meta property="og:site_name" content="${escapeHtml(company?.company_name || 'Smart Dent')}">
+  <meta property="og:locale" content="pt_BR">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- TWITTER CARDS -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(seoTitle)}">
+  <meta name="twitter:description" content="${escapeHtml(seoDescription)}">
+  <meta name="twitter:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- HREFLANG (Multi-domínio) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <link rel="alternate" hreflang="pt-BR" href="${escapeHtml(canonicalUrl)}">
+  <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">
+  ${company?.usa_address ? `<link rel="alternate" hreflang="en-US" href="${escapeHtml(canonicalUrl.replace('.com.br', '.com'))}">` : ''}
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- RESOURCE HINTS (Performance) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  ${heroImageSrc ? `<link rel="preload" as="image" href="${escapeHtml(heroImageSrc)}" fetchpriority="high">` : ''}
+  ${products[0]?.image_url ? `<link rel="preload" as="image" href="${escapeHtml(products[0].image_url)}">` : ''}
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SCHEMA.ORG JSON-LD (@graph consolidado) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <script type="application/ld+json">
+${JSON.stringify(consolidatedSchema, null, 2)}
+  </script>
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- FONTS & ICONS -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  ${!preview && company?.google_analytics_id ? `
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- GOOGLE ANALYTICS -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${escapeHtml(company.google_analytics_id)}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '${escapeHtml(company.google_analytics_id)}');
+  </script>
+  ` : ''}
   
   <style>
     /* ===== DESIGN SYSTEM GEMINI V4.5 ===== */
@@ -826,10 +1082,15 @@ export function generateLandingPageHTML(
   </style>
 </head>
 <body>
+  ${!preview && company?.google_tag_manager_id ? `
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${escapeHtml(company.google_tag_manager_id)}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  ` : ''}
+  
   <!-- Header com Logo e Menu -->
   <div class="container">
     <div class="header">
-      <img src="${escapeHtml(company?.logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(company?.company_name || 'Empresa')}" class="banner">
+      <img src="${escapeHtml(company?.logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(company?.company_name || 'Empresa')}" class="banner" width="180" height="60" loading="eager">
       <nav class="main-nav">
         <a href="https://loja.smartdent.com.br/">Loja</a>
         <a href="https://parametros.smartdent.com.br/base-conhecimento">Blog</a>
@@ -843,7 +1104,7 @@ export function generateLandingPageHTML(
     ${heroImageSrc ? `
     <!-- Hero com imagem de fundo -->
     <div class="image1-container">
-      <img src="${escapeHtml(heroImageSrc)}" alt="${escapeHtml(heroImageAlt)}">
+      <img src="${escapeHtml(heroImageSrc)}" alt="${escapeHtml(heroImageAlt)}" width="1200" height="675" loading="eager" fetchpriority="high">
       <div class="text-overlay">
         <small><i class="fas fa-microchip"></i> ${escapeHtml(badge)}</small>
         <h1 data-editable="true" data-field="hero_title">${escapeHtml(finalHeroTitle)}</h1>
@@ -927,8 +1188,8 @@ export function generateLandingPageHTML(
               <p>"${escapeHtml(quote)}"</p>
               <div class="profile-info">
                 ${clientPhoto?.src 
-                  ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}">` 
-                  : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}">`
+                  ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">` 
+                  : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">`
                 }
                 <div class="details">
                   <strong>${escapeHtml(clientName)}</strong>
