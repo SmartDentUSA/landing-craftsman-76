@@ -188,8 +188,8 @@ Retorne APENAS JSON puro, sem markdown:
           role: 'user',
           content: prompt
         }
-      ],
-      temperature: 0.7
+      ]
+      // ✅ Gemini 2.5 não suporta temperature
     }),
   });
 
@@ -212,15 +212,40 @@ Retorne APENAS JSON puro, sem markdown:
 
   console.log('🤖 Resposta da IA:', content.substring(0, 500));
 
-  // Extrair JSON da resposta (pode vir com markdown)
-  let jsonText = content;
+  // Extrair JSON da resposta (robusto)
+  let jsonText = content.trim();
+
+  // 1. Tentar markdown code block
   if (content.includes('```json')) {
-    jsonText = content.split('```json')[1].split('```')[0].trim();
+    const parts = content.split('```json');
+    if (parts[1]) {
+      jsonText = parts[1].split('```')[0].trim();
+    }
   } else if (content.includes('```')) {
-    jsonText = content.split('```')[1].split('```')[0].trim();
+    const parts = content.split('```');
+    if (parts[1]) {
+      jsonText = parts[1].split('```')[0].trim();
+    }
   }
 
-  const generatedContent: AIGeneratedContent = JSON.parse(jsonText);
+  // 2. Fallback: procurar primeiro objeto JSON válido
+  if (!jsonText.startsWith('{')) {
+    const match = content.match(/\{[\s\S]*\}/);
+    if (match) {
+      jsonText = match[0];
+    }
+  }
+
+  console.log('🔍 JSON extraído:', jsonText.substring(0, 200));
+
+  let generatedContent: AIGeneratedContent;
+  try {
+    generatedContent = JSON.parse(jsonText);
+  } catch (parseError: any) {
+    console.error('❌ Erro ao fazer parse do JSON:', parseError.message);
+    console.error('📄 Conteúdo completo da IA:', content);
+    throw new Error(`JSON inválido da IA: ${parseError.message}. Conteúdo: ${content.substring(0, 500)}`);
+  }
 
   // Validação básica
   if (!generatedContent.hero || !generatedContent.metrics || !generatedContent.cta) {
@@ -254,15 +279,23 @@ serve(async (req) => {
     );
 
     // Buscar solução SPIN completa
-    const { data: solution, error: solutionError } = await supabaseClient
+    const { data: solutionRecord, error: solutionError } = await supabaseClient
       .from('spin_selling_solutions')
       .select('*')
       .eq('id', solutionId)
       .single();
 
-    if (solutionError || !solution) {
+    if (solutionError || !solutionRecord) {
       throw new Error('Solução SPIN não encontrada');
     }
+
+    let solution = solutionRecord; // ✅ Agora pode reatribuir
+    
+    console.log('✅ Checkpoint 1: Solução carregada', { 
+      title: solution.title, 
+      hasFaq: !!solution.faq?.length,
+      customTextKeys: Object.keys(solution.landing_page_custom_text || {})
+    });
 
     // Buscar produtos associados
     const { data: products, error: productsError } = await supabaseClient
@@ -305,7 +338,7 @@ serve(async (req) => {
           .single();
         
         if (updatedSolution) {
-          solution = updatedSolution;
+          solution = updatedSolution; // ✅ Agora funciona com let!
           console.log('✅ FAQ gerada com sucesso:', solution.faq?.length, 'perguntas');
         }
       }
@@ -327,21 +360,25 @@ serve(async (req) => {
       company
     );
 
-    console.log('✅ Textos gerados com sucesso:', {
+    console.log('✅ Checkpoint 2: Textos gerados com sucesso:', {
       heroSubtitle: aiGeneratedContent.hero.subtitle.substring(0, 50) + '...',
       metricsTitle: aiGeneratedContent.metrics.title,
       ctaText: aiGeneratedContent.cta.text.substring(0, 50) + '...',
       testimonialsCount: aiGeneratedContent.testimonials.length
     });
 
-    // Mesclar com customText existente (customText tem prioridade)
-    const finalContent = {
-      ...aiGeneratedContent,
-      ...solution.landing_page_custom_text // Override manual do usuário
-    };
+    console.log('✅ Checkpoint 3: CustomText do usuário:', solution.landing_page_custom_text);
 
-    // Gerar HTML com conteúdo IA
-    const html = generateLandingPageHTML(solution, products || [], company, finalContent);
+    // ✅ MERGE CORRETO: Passar separadamente IA e customText
+    // O template HTML faz a priorização interna (customText > aiContent > defaults)
+    const html = generateLandingPageHTML(
+      solution, 
+      products || [], 
+      company, 
+      aiGeneratedContent // ✅ Passar AI puro, deixar template decidir prioridades
+    );
+
+    console.log('✅ Checkpoint 4: HTML gerado:', html.length, 'caracteres');
 
     // Salvar no banco
     const { error: updateError } = await supabaseClient

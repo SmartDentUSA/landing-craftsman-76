@@ -73,12 +73,18 @@ export function SpinLandingPageEditablePreview({
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    const handleLoad = () => {
+    const injectListeners = () => {
       const doc = iframe.contentDocument;
-      if (!doc) return;
+      if (!doc || !doc.body) return false;
+
+      // Verificar se já injetou (evitar duplicatas)
+      if (doc.head.querySelector('style[data-editable-injected]')) {
+        return true;
+      }
 
       // Injetar CSS para elementos editáveis
       const style = doc.createElement('style');
+      style.setAttribute('data-editable-injected', 'true');
       style.textContent = `
         [data-editable] {
           outline: 2px dashed transparent;
@@ -119,9 +125,26 @@ export function SpinLandingPageEditablePreview({
       // Adicionar event listeners para edição
       doc.body.addEventListener('click', handleElementClick);
       doc.body.addEventListener('blur', handleElementBlur, true);
+      
+      console.log('✅ Listeners injetados com sucesso no iframe');
+      return true;
+    };
+
+    // ✅ TENTATIVA 1: Injetar imediatamente se iframe já carregou
+    if (iframe.contentDocument?.readyState === 'complete' || 
+        iframe.contentDocument?.readyState === 'interactive') {
+      console.log('🔄 Iframe já carregado, injetando imediatamente');
+      setTimeout(() => injectListeners(), 50);
+    }
+
+    // ✅ TENTATIVA 2: Listener de load como backup
+    const handleLoad = () => {
+      console.log('🔄 Evento load disparado, injetando listeners');
+      setTimeout(() => injectListeners(), 100);
     };
 
     iframe.addEventListener('load', handleLoad);
+    
     return () => {
       iframe.removeEventListener('load', handleLoad);
     };
@@ -219,29 +242,48 @@ export function SpinLandingPageEditablePreview({
 
       if (generateError) throw generateError;
 
-      // ⏳ Mudança 3: Aguardar Edge Function salvar no banco (polling até 4 tentativas, 500ms cada)
+      // ⏳ Mudança 3: Aguardar Edge Function salvar no banco (polling resiliente: 10 tentativas, 800ms cada = até 8s)
       const currentTimestamp = lastGeneratedAt;
       let attempts = 0;
       let newTimestamp = currentTimestamp;
 
-      while (attempts < 4 && newTimestamp === currentTimestamp) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('⏱️ Iniciando polling. Timestamp atual:', currentTimestamp);
+
+      while (attempts < 10 && newTimestamp === currentTimestamp) {
+        await new Promise(resolve => setTimeout(resolve, 800));
         
-        const { data: check } = await supabase
+        const { data: check, error: checkError } = await supabase
           .from('spin_selling_solutions')
           .select('landing_page_generated_at')
           .eq('id', solutionId)
           .single();
         
-        if (check?.landing_page_generated_at !== currentTimestamp) {
+        if (checkError) {
+          console.error('❌ Erro no polling:', checkError);
+          break;
+        }
+        
+        console.log(`⏱️ Polling tentativa ${attempts + 1}/10:`, check?.landing_page_generated_at);
+        
+        if (check?.landing_page_generated_at && check.landing_page_generated_at !== currentTimestamp) {
           newTimestamp = check.landing_page_generated_at;
+          console.log('✅ Detectado novo timestamp:', newTimestamp);
           break;
         }
         
         attempts++;
       }
 
-      console.log(`⏱️ Polling concluído após ${attempts} tentativas`);
+      if (newTimestamp === currentTimestamp) {
+        console.warn('⚠️ Polling expirou sem detectar mudança no timestamp');
+        toast({
+          title: '⚠️ Aviso',
+          description: 'HTML pode estar desatualizado. Clique em "Recarregar" se necessário.',
+          variant: 'default'
+        });
+      }
+
+      console.log(`⏱️ Polling concluído após ${attempts} tentativas (${attempts * 0.8}s)`);
 
       // Buscar HTML regenerado
       await regenerateHTML();

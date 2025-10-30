@@ -13,6 +13,9 @@ export function generateLandingPageHTML(
   // ✅ Usar textos customizados ou gerados por IA
   const customText = solution.landing_page_custom_text || {};
   
+  console.log('🎨 [HTML] CustomText recebido:', Object.keys(customText));
+  console.log('🤖 [HTML] AI Content recebido:', aiContent ? Object.keys(aiContent) : 'nenhum');
+  
   // ✅ TÍTULO HERO: SEMPRE ESTÁTICO (manual ou solution.title)
   const finalHeroTitle = customText.hero_title || solution.title;
   
@@ -31,6 +34,9 @@ export function generateLandingPageHTML(
   // ✅ CTA: IA ou defaults
   const finalCtaText = customText.cta_text || aiContent?.cta?.text || 'Fale agora com nossos especialistas e transforme sua clínica';
   const finalCtaButtonText = customText.cta_button_text || aiContent?.cta?.buttonText || 'SOLICITAR DEMONSTRAÇÃO E PREÇO';
+  
+  console.log('🎨 [HTML] Texto final do hero subtitle:', finalHeroSubtitle.substring(0, 100));
+  console.log('🎨 [HTML] Texto final metrics title:', finalMetricsTitle);
   
   // HERO IMAGE (prioridade CORRETA: manual > IA > NADA)
   let heroImageSrc = '';
