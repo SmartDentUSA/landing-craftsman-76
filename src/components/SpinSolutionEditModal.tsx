@@ -749,14 +749,14 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {solutionId ? 'Editar Solução SPIN' : 'Nova Solução SPIN'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto max-h-[calc(90vh-120px)] pr-2">
             {/* Basic Info */}
             <div className="space-y-4">
               <div>
