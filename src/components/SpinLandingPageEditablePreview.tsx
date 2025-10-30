@@ -58,9 +58,15 @@ export function SpinLandingPageEditablePreview({
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [currentEditingField, setCurrentEditingField] = useState<string | null>(null);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState(generatedAt);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
+
+  // 🔄 Mudança 1: Sincronizar HTML quando initialHTML mudar
+  useEffect(() => {
+    setHtml(initialHTML);
+  }, [initialHTML]);
 
   // Habilitar modo de edição no iframe
   useEffect(() => {
@@ -200,11 +206,24 @@ export function SpinLandingPageEditablePreview({
 
       if (updateError) throw updateError;
 
-      // Regenerar HTML com novos dados
+      toast({
+        title: '💾 Salvando...',
+        description: 'Regenerando HTML com as alterações'
+      });
+
+      // 🔥 Mudança 3: Chamar Edge Function para regenerar HTML
+      const { error: generateError } = await supabase.functions.invoke(
+        'generate-spin-landing-page',
+        { body: { solutionId } }
+      );
+
+      if (generateError) throw generateError;
+
+      // Buscar HTML regenerado
       await regenerateHTML();
 
       toast({
-        title: '✅ Alterações salvas',
+        title: '✅ Alterações salvas e HTML regenerado',
         description: 'Landing page atualizada com sucesso'
       });
       
@@ -229,10 +248,10 @@ export function SpinLandingPageEditablePreview({
         description: 'Buscando versão atualizada do banco de dados',
       });
 
-      // Buscar HTML atualizado do banco
+      // 🔄 Mudança 4: Buscar HTML E timestamp atualizado
       const { data: solution, error } = await supabase
         .from('spin_selling_solutions')
-        .select('landing_page_html')
+        .select('landing_page_html, landing_page_generated_at')
         .eq('id', solutionId)
         .single();
       
@@ -240,6 +259,7 @@ export function SpinLandingPageEditablePreview({
       
       if (solution?.landing_page_html) {
         setHtml(solution.landing_page_html);
+        setLastGeneratedAt(solution.landing_page_generated_at);
         toast({
           title: '✅ HTML recarregado',
           description: 'Preview atualizado com a versão mais recente',
@@ -288,10 +308,10 @@ export function SpinLandingPageEditablePreview({
                   Editando: {currentEditingField}
                 </Badge>
               )}
-              {generatedAt && (
+              {lastGeneratedAt && (
                 <Badge variant="outline" className="ml-2 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {new Date(generatedAt).toLocaleTimeString('pt-BR', { 
+                  {new Date(lastGeneratedAt).toLocaleTimeString('pt-BR', { 
                     hour: '2-digit', 
                     minute: '2-digit', 
                     second: '2-digit' 
