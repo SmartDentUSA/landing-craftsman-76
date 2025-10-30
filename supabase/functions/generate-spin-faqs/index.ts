@@ -77,7 +77,12 @@ CONTEXTO DA SOLUÇÃO SPIN:
 - Título da Solução: ${solution.title}
 - Tipo de Dor SPIN: ${solution.pain_type}
 - Descrição da Dor: ${solution.pain_description || 'Não informada'}
-- Pitch de Vendas: ${solution.sales_pitch || 'Não informado'}
+
+🔥 PITCH DE VENDAS COMPLETO (USE COMO BASE PRINCIPAL):
+"""
+${solution.sales_pitch || 'Não informado'}
+"""
+
 - Produtos Incluídos: ${productsNames || 'Nenhum produto selecionado'}
 - Casos de Sucesso Documentados: ${successCasesCount}
 
@@ -106,13 +111,16 @@ CRITÉRIOS OBRIGATÓRIOS:
 7. Referenciar os casos de sucesso se aplicável
 8. NUNCA mencionar variáveis técnicas (lab_time, digital_time, patient_loss, etc.)
 9. SEMPRE usar os valores reais das métricas em linguagem natural
+10. EXTRAIR argumentos e benefícios-chave do PITCH DE VENDAS para fundamentar as respostas
+11. Usar a MESMA linguagem e tom do pitch sempre que possível
 
-TIPOS DE PERGUNTAS RECOMENDADAS:
-- Como funciona a implementação desta solução?
-- Qual o retorno sobre investimento esperado?
-- Quais clínicas/profissionais se beneficiam mais?
-- Quanto tempo leva para ver resultados?
-- Qual suporte/treinamento é oferecido?
+TIPOS DE PERGUNTAS RECOMENDADAS (baseadas no pitch):
+- Como esta solução resolve ESPECIFICAMENTE a dor mencionada no pitch?
+- Quais são os diferenciais destacados no pitch de vendas?
+- Qual o retorno sobre investimento prometido no pitch?
+- Para qual perfil de clínica esta solução é ideal (conforme pitch)?
+- Como funciona o processo de implementação mencionado no pitch?
+- Quais resultados concretos posso esperar (use dados do pitch + métricas)?
 
 EXEMPLOS DE COMO USAR AS MÉTRICAS:
 ❌ ERRADO: "reduz lab_time e digital_time"
@@ -123,6 +131,23 @@ EXEMPLOS DE COMO USAR AS MÉTRICAS:
 
 ❌ ERRADO: "economiza revenue_loss"
 ✅ CORRETO: "recupera até R$ 15.000 por mês em receita que seria perdida"
+
+EXEMPLOS DE COMO USAR O PITCH NAS RESPOSTAS:
+
+Exemplo de Pitch:
+"Transforme sua clínica com o Scanner Intraoral 3D. Elimine as moldagens tradicionais e ofereça diagnósticos precisos em minutos. Seu paciente sai da cadeira com o plano de tratamento pronto."
+
+✅ FAQ BEM ELABORADA (usa o pitch):
+{
+  "question": "Como o Scanner Intraoral 3D agiliza o atendimento?",
+  "answer": "Com o Scanner Intraoral 3D, você elimina as moldagens tradicionais e oferece diagnósticos precisos em minutos. Seu paciente sai da cadeira com o plano de tratamento pronto, aumentando a satisfação e a taxa de aceitação dos procedimentos."
+}
+
+❌ FAQ GENÉRICA (ignora o pitch):
+{
+  "question": "Quais são os benefícios do scanner?",
+  "answer": "Scanners intraorais oferecem imagens digitais de alta qualidade para planejamento de tratamentos odontológicos."
+}
 
 FORMATO DE SAÍDA (APENAS JSON, SEM TEXTO ADICIONAL):
 [
