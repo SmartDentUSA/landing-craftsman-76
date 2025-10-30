@@ -5,6 +5,14 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   const pain_metrics = solution.pain_metrics || {};
   const faqs = solution.faq || [];
   
+  // Usar textos customizados se existirem
+  const customText = solution.landing_page_custom_text || {};
+  
+  const finalMetricsTitle = customText.metrics_title || 'Métricas de Impacto Comprovadas';
+  const finalMetricsSubtitle = customText.metrics_subtitle || 'Resultados reais de clínicas que implementaram esta solução';
+  const finalFaqTitle = customText.faq_title || 'Perguntas Frequentes';
+  const finalCtaText = customText.cta_text || 'Fale agora com nossos especialistas e transforme sua clínica';
+  
   // HERO IMAGE (prioridade CORRETA: manual > IA > NADA)
   let heroImageSrc = '';
   let heroImageAlt = 'Banner hero';
@@ -31,9 +39,12 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   // Se não configurou banner (mode === null ou 'none'), heroImageSrc fica vazio
 
   // Gerar subtítulo do hero baseado no sales_pitch (resumido)
-  const heroSubtitle = solution.sales_pitch 
+  const defaultHeroSubtitle = solution.sales_pitch 
     ? solution.sales_pitch.substring(0, 120) + (solution.sales_pitch.length > 120 ? '...' : '')
     : `Solução completa com ${products.map(p => p.name).join(', ')}`;
+  
+  const finalHeroTitle = customText.hero_title || solution.title;
+  const finalHeroSubtitle = customText.hero_subtitle || defaultHeroSubtitle;
 
   // Formatação do tipo de dor como badge
   const painTypeLabels: Record<string, string> = {
@@ -169,13 +180,14 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       max-width: 600px;
     }
 
-    /* ===== SEÇÃO DE CASOS DE SUCESSO ===== */
+    /* ===== SEÇÃO DE CASOS DE SUCESSO COM MARQUEE ===== */
     .success-cases {
       padding: 4rem 0;
       text-align: center;
       background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
       border-radius: 12px;
       margin: 2rem 0;
+      overflow: hidden;
     }
 
     .success-cases h2 {
@@ -194,24 +206,51 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       margin-right: auto;
     }
 
-    .cases-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 2rem;
-      margin-top: 2rem;
-      text-align: left;
+    /* Container do Marquee com overflow hidden */
+    .testimonials-marquee-container {
+      overflow: hidden;
+      width: 100%;
+      position: relative;
     }
 
-    .case-card {
+    /* Marquee infinito */
+    .testimonials-marquee {
+      display: flex;
+      gap: 2rem;
+      animation: infinite-scroll 60s linear infinite;
+      width: fit-content;
+    }
+
+    /* Pausar animação ao hover */
+    .testimonials-marquee:hover {
+      animation-play-state: paused;
+    }
+
+    /* Keyframes para scroll infinito */
+    @keyframes infinite-scroll {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+
+    /* Cards de testemunhos */
+    .testimonial-card {
       background: white;
+      min-width: 380px;
+      max-width: 380px;
+      flex-shrink: 0;
       border-radius: 16px;
       padding: 2rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       transition: all 0.3s ease;
       border: 1px solid rgba(0,0,0,0.05);
+      text-align: left;
     }
 
-    .case-card:hover {
+    .testimonial-card:hover {
       transform: translateY(-8px);
       box-shadow: 0 12px 24px rgba(0,0,0,0.15);
       border-color: var(--accent);
@@ -586,9 +625,14 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
         font-size: 28px;
       }
       
-      .cases-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
+      .testimonials-marquee {
+        animation-duration: 30s; /* Mais rápido no mobile */
+      }
+      
+      .testimonial-card {
+        min-width: 320px;
+        max-width: 320px;
+        padding: 1.5rem;
       }
       
       .case-avatar {
@@ -618,16 +662,16 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
       <img src="${escapeHtml(heroImageSrc)}" alt="${escapeHtml(heroImageAlt)}">
       <div class="text-overlay">
         <small>${escapeHtml(badge)}</small>
-        <h1>${escapeHtml(solution.title)}</h1>
-        <p>${escapeHtml(heroSubtitle)}</p>
+        <h1 data-editable="true" data-field="hero_title">${escapeHtml(finalHeroTitle)}</h1>
+        <p data-editable="true" data-field="hero_subtitle">${escapeHtml(finalHeroSubtitle)}</p>
       </div>
     </div>
     ` : `
     <!-- Hero sem imagem (apenas texto em fundo sólido) -->
     <div class="hero-text-only">
       <small>${escapeHtml(badge)}</small>
-      <h1>${escapeHtml(solution.title)}</h1>
-      <p>${escapeHtml(heroSubtitle)}</p>
+      <h1 data-editable="true" data-field="hero_title">${escapeHtml(finalHeroTitle)}</h1>
+      <p data-editable="true" data-field="hero_subtitle">${escapeHtml(finalHeroSubtitle)}</p>
     </div>
     `}
     </div>
@@ -637,13 +681,13 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   <!-- Seção de Métricas -->
   <div class="container">
     <section class="metrics-section">
-      <h2>Métricas de Impacto Comprovadas</h2>
-      <p>Resultados reais de clínicas que implementaram esta solução</p>
+      <h2 data-editable="true" data-field="metrics_title">${escapeHtml(finalMetricsTitle)}</h2>
+      <p data-editable="true" data-field="metrics_subtitle">${escapeHtml(finalMetricsSubtitle)}</p>
       <div class="metrics-cards">
         ${metricsArray.map(([key, value]) => `
           <div class="metric-card">
             <strong>${escapeHtml(String(value))}</strong>
-            <span>${escapeHtml(key)}</span>
+            <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(key)}</span>
           </div>
         `).join('')}
       </div>
@@ -655,11 +699,11 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   <!-- Seção de FAQs (Acordeão) -->
   <div class="container">
     <section class="faq">
-      <h3>Perguntas Frequentes</h3>
-      ${faqs.map((faq: any) => `
+      <h3 data-editable="true" data-field="faq_title">${escapeHtml(finalFaqTitle)}</h3>
+      ${faqs.map((faq: any, index: number) => `
         <details>
-          <summary>${escapeHtml(faq.question)}</summary>
-          <p>${escapeHtml(faq.answer)}</p>
+          <summary data-editable="true" data-field="faq_question_${index}">${escapeHtml(faq.question)}</summary>
+          <p data-editable="true" data-field="faq_answer_${index}">${escapeHtml(faq.answer)}</p>
         </details>
       `).join('')}
     </section>
@@ -667,53 +711,56 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   ` : ''}
 
   ${successCases.length > 0 ? `
-  <!-- Seção de Casos de Sucesso -->
+  <!-- Seção de Casos de Sucesso com Marquee Infinito -->
   <div class="container">
     <section class="success-cases">
       <h2>Histórias de Transformação</h2>
       <p class="section-subtitle">Veja como outros profissionais transformaram suas clínicas com esta solução</p>
-      <div class="cases-grid">
-        ${successCases.map((successCase: any) => `
-          <div class="case-card">
-            ${successCase.client_photo?.src ? `
-              <div class="case-avatar">
-                <img src="${escapeHtml(successCase.client_photo.src)}" alt="${escapeHtml(successCase.client_photo.alt || successCase.client_name)}">
-              </div>
-            ` : `
-              <div class="case-avatar no-photo">
-                <span>${escapeHtml((successCase.client_name || 'C').charAt(0).toUpperCase())}</span>
-              </div>
-            `}
-            
-            <div class="case-content">
-              <h3>${escapeHtml(successCase.client_name)}</h3>
-              <p class="case-meta">
-                🦷 ${escapeHtml(successCase.specialty)}
-              </p>
-              <p class="case-location">
-                📍 ${escapeHtml(successCase.city)}/${escapeHtml(successCase.state)}
-              </p>
-              ${successCase.instagram ? `
-                <p class="case-instagram">
-                  <a href="https://instagram.com/${escapeHtml(successCase.instagram.replace('@', ''))}" target="_blank" rel="noopener">
-                    📱 @${escapeHtml(successCase.instagram.replace('@', ''))}
-                  </a>
-                </p>
-              ` : ''}
+      
+      <div class="testimonials-marquee-container">
+        <div class="testimonials-marquee">
+          ${[...successCases, ...successCases].map((successCase: any) => `
+            <div class="testimonial-card">
+              ${successCase.client_photo?.src ? `
+                <div class="case-avatar">
+                  <img src="${escapeHtml(successCase.client_photo.src)}" alt="${escapeHtml(successCase.client_photo.alt || successCase.client_name)}" loading="lazy">
+                </div>
+              ` : `
+                <div class="case-avatar no-photo">
+                  <span>${escapeHtml((successCase.client_name || 'C').charAt(0).toUpperCase())}</span>
+                </div>
+              `}
               
-              <div class="case-results">
-                <strong>Resultados:</strong>
-                <p>${escapeHtml(successCase.results_achieved)}</p>
-              </div>
-              
-              ${successCase.usage_time ? `
-                <p class="case-time">
-                  ⏱️ Cliente há ${escapeHtml(successCase.usage_time)}
+              <div class="case-content">
+                <h3>${escapeHtml(successCase.client_name)}</h3>
+                <p class="case-meta">
+                  🦷 ${escapeHtml(successCase.specialty)}
                 </p>
-              ` : ''}
+                <p class="case-location">
+                  📍 ${escapeHtml(successCase.city)}/${escapeHtml(successCase.state)}
+                </p>
+                ${successCase.instagram ? `
+                  <p class="case-instagram">
+                    <a href="https://instagram.com/${escapeHtml(successCase.instagram.replace('@', ''))}" target="_blank" rel="noopener" aria-label="Instagram de ${escapeHtml(successCase.client_name)}">
+                      📱 @${escapeHtml(successCase.instagram.replace('@', ''))}
+                    </a>
+                  </p>
+                ` : ''}
+                
+                <div class="case-results">
+                  <strong>Resultados:</strong>
+                  <p>${escapeHtml(successCase.results_achieved)}</p>
+                </div>
+                
+                ${successCase.usage_time ? `
+                  <p class="case-time">
+                    ⏱️ Cliente há ${escapeHtml(successCase.usage_time)}
+                  </p>
+                ` : ''}
+              </div>
             </div>
-          </div>
-        `).join('')}
+          `).join('')}
+        </div>
       </div>
     </section>
   </div>
@@ -722,7 +769,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   <!-- Call to Action -->
   <div class="container">
     <section class="cta">
-      <p>Fale agora com nossos especialistas e transforme sua clínica</p>
+      <p data-editable="true" data-field="cta_text">${escapeHtml(finalCtaText)}</p>
       <button onclick="window.location.href='${escapeHtml(solution.custom_url?.url || mainProduct.product_url || '#')}'">
         ${escapeHtml(solution.custom_url?.label || 'Solicitar Demonstração')}
       </button>

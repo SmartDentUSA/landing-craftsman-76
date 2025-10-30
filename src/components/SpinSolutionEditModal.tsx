@@ -51,6 +51,7 @@ import { ManualBannerUploader } from './ManualBannerUploader';
 import { ClientPhotoUploader } from './ClientPhotoUploader';
 import { AIBannerGenerator } from './AIBannerGenerator';
 import { FAQEditor } from './FAQEditor';
+import { SpinLandingPageEditablePreview } from './SpinLandingPageEditablePreview';
 import { useToast } from '@/hooks/use-toast';
 import { useViaCep } from '@/hooks/useViaCep';
 import useLandingPages from '@/hooks/useLandingPages';
@@ -136,6 +137,8 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingLP, setIsGeneratingLP] = useState(false);
   const [newMetric, setNewMetric] = useState({ key: '', value: '' });
+  const [showEditablePreview, setShowEditablePreview] = useState(false);
+  const [generatedHTML, setGeneratedHTML] = useState<string | null>(null);
   
   // Filtrar apenas landing pages aprovadas
   const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
@@ -693,6 +696,53 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateLandingPageWithPreview = async () => {
+    if (!solutionId) {
+      toast({
+        title: 'Atenção',
+        description: 'Salve a solução primeiro para gerar a landing page',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingLP(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'generate-spin-landing-page',
+        { body: { solutionId } }
+      );
+
+      if (error) throw error;
+
+      // Buscar HTML gerado do banco
+      const { data: solution } = await supabase
+        .from('spin_selling_solutions')
+        .select('landing_page_html')
+        .eq('id', solutionId)
+        .single();
+
+      if (solution?.landing_page_html) {
+        setGeneratedHTML(solution.landing_page_html);
+        setShowEditablePreview(true);
+
+        toast({
+          title: '✅ Landing page gerada',
+          description: 'Clique nos textos para editar diretamente no preview'
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: '❌ Erro',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingLP(false);
     }
   };
 
@@ -1697,6 +1747,26 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                     )}
                   </Button>
                   
+                  <Button
+                    type="button"
+                    onClick={handleGenerateLandingPageWithPreview}
+                    disabled={isGeneratingLP || !canGenerateLandingPage() || !formData.success_cases || formData.success_cases.length === 0}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    {isGeneratingLP ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Landing Page (Preview Editável)
+                      </>
+                    )}
+                  </Button>
+                  
                   {!canGenerateLandingPage() && solutionId && (
                     <div className="mt-3 p-3 bg-warning/10 border border-warning/30 rounded-lg">
                       <AlertCircle className="h-4 w-4 inline mr-2 text-warning" />
@@ -1885,6 +1955,20 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         selectedProductIds={formData.product_ids || []}
         onSelectProducts={(ids) => setFormData(prev => ({ ...prev, product_ids: ids }))}
       />
+      
+      {showEditablePreview && generatedHTML && (
+        <SpinLandingPageEditablePreview
+          solutionId={solutionId!}
+          initialHTML={generatedHTML}
+          onClose={() => setShowEditablePreview(false)}
+          onSaved={() => {
+            toast({
+              title: '✅ Sucesso',
+              description: 'Alterações persistidas no banco de dados'
+            });
+          }}
+        />
+      )}
     </>
   );
 }
