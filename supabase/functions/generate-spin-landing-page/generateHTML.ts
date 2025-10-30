@@ -1,18 +1,36 @@
 // Função auxiliar para gerar o HTML da Landing Page com CSS padronizado
-export function generateLandingPageHTML(solution: any, products: any[], company: any): string {
+export function generateLandingPageHTML(
+  solution: any, 
+  products: any[], 
+  company: any, 
+  aiContent?: any
+): string {
   const mainProduct = products[0] || {};
   const successCases = solution.success_cases || [];
   const pain_metrics = solution.pain_metrics || {};
   const faqs = solution.faq || [];
   
-  // Usar textos customizados se existirem
+  // ✅ Usar textos customizados ou gerados por IA
   const customText = solution.landing_page_custom_text || {};
   
-  const finalMetricsTitle = customText.metrics_title || 'Métricas de Impacto Comprovadas';
-  const finalMetricsSubtitle = customText.metrics_subtitle || 
+  // ✅ TÍTULO HERO: SEMPRE ESTÁTICO (manual ou solution.title)
+  const finalHeroTitle = customText.hero_title || solution.title;
+  
+  // ✅ SUBTÍTULO HERO: PRIORIDADE - customText (manual) > aiContent (IA) > default (sales_pitch)
+  const finalHeroSubtitle = customText.hero_subtitle || aiContent?.hero?.subtitle || 
+    (solution.sales_pitch ? solution.sales_pitch.substring(0, 120) + '...' : `Solução completa com ${products.map(p => p.name).join(', ')}`);
+  
+  // ✅ MÉTRICAS: IA ou defaults
+  const finalMetricsTitle = customText.metrics_title || aiContent?.metrics?.title || 'Métricas de Impacto Comprovadas';
+  const finalMetricsSubtitle = customText.metrics_subtitle || aiContent?.metrics?.subtitle ||
     'Resultados reais e mensuráveis de clínicas odontológicas brasileiras que transformaram seu atendimento, produtividade e lucratividade com esta solução integrada';
+  
+  // ✅ FAQ: sempre estático (não gerado por IA nesta função)
   const finalFaqTitle = customText.faq_title || 'Perguntas Frequentes';
-  const finalCtaText = customText.cta_text || 'Fale agora com nossos especialistas e transforme sua clínica';
+  
+  // ✅ CTA: IA ou defaults
+  const finalCtaText = customText.cta_text || aiContent?.cta?.text || 'Fale agora com nossos especialistas e transforme sua clínica';
+  const finalCtaButtonText = customText.cta_button_text || aiContent?.cta?.buttonText || 'SOLICITAR DEMONSTRAÇÃO E PREÇO';
   
   // HERO IMAGE (prioridade CORRETA: manual > IA > NADA)
   let heroImageSrc = '';
@@ -39,13 +57,6 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   // ❌ REMOVIDO: Fallbacks para produto e placeholder
   // Se não configurou banner (mode === null ou 'none'), heroImageSrc fica vazio
 
-  // Gerar subtítulo do hero baseado no sales_pitch (resumido)
-  const defaultHeroSubtitle = solution.sales_pitch 
-    ? solution.sales_pitch.substring(0, 120) + (solution.sales_pitch.length > 120 ? '...' : '')
-    : `Solução completa com ${products.map(p => p.name).join(', ')}`;
-  
-  const finalHeroTitle = customText.hero_title || solution.title;
-  const finalHeroSubtitle = customText.hero_subtitle || defaultHeroSubtitle;
 
   // Formatação do tipo de dor como badge
   const painTypeLabels: Record<string, string> = {
@@ -859,30 +870,37 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
     <div class="container">
       <h2>O que nossos clientes dizem sobre a Solução</h2>
       <div class="testimonials-carousel">
-        ${successCases.map(sc => `
-          <div class="testimonial-card">
-            <div class="rating">
-              <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-            </div>
-            <p>"${escapeHtml(sc.results_achieved || 'Resultado não especificado')}"</p>
-            <div class="profile-info">
-              ${sc.client_photo?.src 
-                ? `<img src="${escapeHtml(sc.client_photo.src)}" alt="${escapeHtml(sc.client_name)}">` 
-                : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(sc.client_name?.charAt(0) || '?')}" alt="${escapeHtml(sc.client_name)}">`
-              }
-              <div class="details">
-                <strong>${escapeHtml(sc.client_name)}</strong>
-                <small>${escapeHtml(sc.specialty || 'Cliente')}${sc.city ? ' | ' + escapeHtml(sc.city) + '/' + escapeHtml(sc.state) : ''}</small>
+        ${(aiContent?.testimonials || successCases).map((testimonial, idx) => {
+          const originalCase = successCases[idx] || {};
+          const quote = testimonial.quote || originalCase.result_achieved || 'Resultado não especificado';
+          const clientName = testimonial.clientName || originalCase.client_name;
+          const clientPhoto = originalCase.client_photo;
+          
+          return `
+            <div class="testimonial-card">
+              <div class="rating">
+                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
               </div>
-              ${sc.instagram 
-                ? `<a href="https://instagram.com/${escapeHtml(sc.instagram.replace('@', ''))}" target="_blank" class="instagram-link">
-                     <i class="fab fa-instagram"></i>
-                   </a>` 
-                : ''
-              }
+              <p>"${escapeHtml(quote)}"</p>
+              <div class="profile-info">
+                ${clientPhoto?.src 
+                  ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}">` 
+                  : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}">`
+                }
+                <div class="details">
+                  <strong>${escapeHtml(clientName)}</strong>
+                  <small>${escapeHtml(originalCase.specialty || 'Cliente')}${originalCase.city ? ' | ' + escapeHtml(originalCase.city) + '/' + escapeHtml(originalCase.state) : ''}</small>
+                </div>
+                ${originalCase.instagram 
+                  ? `<a href="https://instagram.com/${escapeHtml(originalCase.instagram.replace('@', ''))}" target="_blank" class="instagram-link">
+                       <i class="fab fa-instagram"></i>
+                     </a>` 
+                  : ''
+                }
+              </div>
             </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
   </section>
@@ -900,7 +918,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
     <section class="cta">
       <p data-editable="true" data-field="cta_text">${escapeHtml(finalCtaText)}</p>
       <button onclick="window.location.href='${escapeHtml(solution.custom_url?.url || mainProduct.product_url || '#')}'">
-        <i class="fas fa-comment-alt"></i> ${escapeHtml(solution.custom_url?.label || 'SOLICITAR DEMONSTRAÇÃO E PREÇO')}
+        <i class="fas fa-comment-alt"></i> ${escapeHtml(finalCtaButtonText)}
       </button>
     </section>
   </div>
