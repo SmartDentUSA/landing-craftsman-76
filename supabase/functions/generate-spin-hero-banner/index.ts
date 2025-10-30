@@ -123,16 +123,28 @@ serve(async (req) => {
   }
 
   try {
-    const { solutionId, productIds } = await req.json();
+    const { solutionId, productIds, selectedImageUrls } = await req.json();
 
     console.log('🚀 generate-spin-hero-banner invoked:', {
       timestamp: new Date().toISOString(),
       solutionId,
       productIds,
-      productsCount: productIds?.length || 0
+      productsCount: productIds?.length || 0,
+      selectedImagesCount: selectedImageUrls?.length || 0
     });
 
-    // ✅ VALIDAÇÃO 1: LOVABLE_API_KEY
+    // ✅ VALIDAÇÃO 1: selectedImageUrls
+    if (!selectedImageUrls || selectedImageUrls.length === 0) {
+      console.error('❌ Nenhuma imagem selecionada');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Selecione pelo menos 1 imagem de produto para gerar o banner' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ✅ VALIDAÇÃO 2: LOVABLE_API_KEY
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('❌ LOVABLE_API_KEY não configurada');
@@ -151,23 +163,11 @@ serve(async (req) => {
 
     const { data: products, error: productsError } = await supabase
       .from('products_repository')
-      .select('id, name, image_url, width, height, depth')
+      .select('id, name, width, height, depth')
       .in('id', productIds);
 
     if (productsError || !products || products.length === 0) {
       throw new Error('Produtos não encontrados');
-    }
-
-    // ✅ VALIDAÇÃO 2: Produtos com imagem
-    const productsWithImage = products.filter(p => p.image_url);
-    if (productsWithImage.length === 0) {
-      console.error('❌ Nenhum produto tem image_url');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Os produtos selecionados não possuem imagens. Configure image_url no repositório de produtos.' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     console.log(`📦 ${products.length} produtos carregados:`);
@@ -178,12 +178,12 @@ serve(async (req) => {
     const prompt = buildIntelligentPrompt(products);
     console.log('🎨 Prompt gerado:', prompt.substring(0, 300) + '...');
 
-    const productImages = products
-      .filter(p => p.image_url)
-      .map(p => ({
-        type: "image_url",
-        image_url: { url: p.image_url }
-      }));
+    const productImages = selectedImageUrls.map(url => ({
+      type: "image_url",
+      image_url: { url }
+    }));
+
+    console.log(`📸 Enviando ${productImages.length} imagens selecionadas para a IA`);
 
     const startTime = Date.now();
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -193,7 +193,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
+        model: "google/gemini-2.0-flash-thinking-exp-1219",
         messages: [{
           role: "user",
           content: [
@@ -241,7 +241,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`✅ Imagem gerada em ${generationTime}ms`);
+    console.log(`✅ Imagem gerada em ${generationTime}ms com ${selectedImageUrls.length} imagens`);
 
     const aiGeneratedImages = {
       hero_banner: {
@@ -250,8 +250,9 @@ serve(async (req) => {
           src: imageBase64,
           generated_at: new Date().toISOString(),
           prompt_used: prompt,
-          model: "google/gemini-2.5-flash-image-preview",
+          model: "google/gemini-2.0-flash-thinking-exp-1219",
           products_used: productIds,
+          selected_images_count: selectedImageUrls.length,
           generation_time_ms: generationTime
         }
       },
@@ -268,10 +269,11 @@ serve(async (req) => {
         success: true,
         imageBase64,
         prompt,
-        model: "google/gemini-2.5-flash-image-preview",
+        model: "google/gemini-2.0-flash-thinking-exp-1219",
         details: {
           generation_time: generationTime,
           products_count: products.length,
+          selected_images_count: selectedImageUrls.length,
           prompt_summary: prompt.substring(0, 150) + '...'
         }
       }),

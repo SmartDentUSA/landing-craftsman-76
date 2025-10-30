@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ProductImageSelector } from './ProductImageSelector';
 
 interface AIBannerGeneratorProps {
   solutionId?: string;
@@ -42,6 +43,7 @@ export function AIBannerGenerator({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(existingImage?.src || null);
   const [generationDetails, setGenerationDetails] = useState<any>(existingImage || null);
+  const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -63,12 +65,22 @@ export function AIBannerGenerator({
       return;
     }
 
+    if (selectedImageUrls.length === 0) {
+      toast({
+        title: "Selecione pelo menos 1 imagem",
+        description: "Escolha as imagens dos produtos que a IA deve usar no banner",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-spin-hero-banner', {
         body: {
           solutionId,
           productIds,
+          selectedImageUrls,
           aspectRatio: '16:9',
           quality: 'high'
         }
@@ -110,32 +122,40 @@ export function AIBannerGenerator({
   return (
     <div className="space-y-4">
       {!generatedImage ? (
-        <Card className="border-2 border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Sparkles className="h-10 w-10 text-primary mb-3" />
-            <p className="text-sm font-medium mb-2">Banner não gerado ainda</p>
-            <p className="text-xs text-muted-foreground text-center mb-4 max-w-md">
-              A IA criará um ambiente clínico realista com os produtos selecionados,
-              respeitando suas dimensões físicas reais (altura, largura, profundidade)
-            </p>
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating || !solutionId || productIds.length === 0}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Gerando com IA...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Gerar Banner com IA
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <ProductImageSelector
+            productIds={productIds}
+            selectedImageUrls={selectedImageUrls}
+            onSelectionChange={setSelectedImageUrls}
+          />
+          
+          <Card className="border-2 border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <Sparkles className="h-10 w-10 text-primary mb-3" />
+              <p className="text-sm font-medium mb-2">Gerar Banner com IA</p>
+              <p className="text-xs text-muted-foreground text-center mb-4 max-w-md">
+                A IA criará um ambiente clínico realista com as imagens selecionadas,
+                respeitando suas dimensões físicas reais (altura, largura, profundidade)
+              </p>
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating || !solutionId || productIds.length === 0 || selectedImageUrls.length === 0}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Gerando com IA...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Gerar Banner ({selectedImageUrls.length} {selectedImageUrls.length === 1 ? 'imagem' : 'imagens'})
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="space-y-3">
           <Card>
