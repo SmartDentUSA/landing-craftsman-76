@@ -63,6 +63,16 @@ ${solution.sales_pitch || 'Não informado'}
 📊 MÉTRICAS DE IMPACTO REAIS:
 ${metricsFormatted}
 
+⚠️ IMPORTANTE SOBRE AS MÉTRICAS:
+Estes são VALORES BRUTOS extraídos do sistema. Sua tarefa é transformá-los em linguagem ASPIRACIONAL:
+• lab_time: 40 → "tempo de laboratório reduzido drasticamente"
+• digital_time: 15 → "fluxo digital ultrarrápido"
+• waste_reduction: 30% → "economia expressiva em materiais"
+• print_speed: 13min/20 facetas → "produção acelerada de múltiplas peças"
+• ROI: 12 meses → "retorno sobre investimento em menos de 1 ano"
+
+NÃO MENCIONE OS NÚMEROS BRUTOS NO SUBTÍTULO. Use descrições qualitativas e impactantes.
+
 🎖️ CASOS DE SUCESSO: ${solution.success_cases?.length || 0} documentados
 
 ═══════════════════════════════════════════════════════════
@@ -95,10 +105,12 @@ TÍTULO (3-5 palavras):
 • Exemplos: "Resultados que Comprovam", "Impacto Real Mensurável", "Transformação Documentada"
 
 SUBTÍTULO (20-30 palavras):
-• Contextualizar as métricas
-• Mencionar clínicas brasileiras
-• Focar em benefícios tangíveis (produtividade, lucratividade, atendimento)
-• Exemplo: "Dados concretos de ${solution.success_cases?.length || 'dezenas de'} clínicas brasileiras que implementaram esta solução e revolucionaram sua eficiência operacional e retorno sobre investimento"
+• OBRIGATÓRIO: Transformar métricas brutas em linguagem aspiracional
+• NÃO repetir números literalmente (ex: "40 minutos" → "tempo de laboratório reduzido drasticamente")
+• Focar em TRANSFORMAÇÃO, não em estatísticas secas
+• Usar quantificadores qualitativos: "dezenas", "centenas", "milhares" (não "1 clínica")
+• Exemplo BOM: "Dados concretos de centenas de procedimentos em clínicas brasileiras que multiplicaram sua capacidade de atendimento, reduziram drasticamente o desperdício e alcançaram ROI em menos de 1 ano"
+• Exemplo RUIM (NÃO FAZER): "Veja como transformou 1 clínica em 40 minutos com ROI de 12 meses"
 
 ┌─────────────────────────────────────────────────────────┐
 │ 3. CTA (Call-to-Action)                                 │

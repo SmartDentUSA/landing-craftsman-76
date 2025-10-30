@@ -77,8 +77,32 @@ export function generateLandingPageHTML(
   };
   const badge = painTypeLabels[solution.pain_type] || 'SOLUÇÃO ODONTOLÓGICA';
 
-  // Selecionar top 3 métricas para exibir
-  const metricsArray = Object.entries(pain_metrics).slice(0, 3);
+  // Selecionar top 3 métricas para exibir e normalizar valores
+  const metricsArray = Object.entries(pain_metrics)
+    .slice(0, 3)
+    .map(([key, value]) => {
+      // 🔥 Normalizar valores para garantir que números sejam renderizados corretamente
+      let displayValue = value;
+      let numericValue = value;
+      
+      // Se o valor tem "%" ou unidades, extrair apenas o número para o contador
+      if (typeof value === 'string') {
+        // Extrair número do valor (ex: "30%" → 30, "40 min" → 40)
+        const match = value.match(/(\d+(?:\.\d+)?)/);
+        if (match) {
+          numericValue = parseFloat(match[1]);
+        }
+        // Manter valor original para exibição (com unidades)
+        displayValue = value;
+      } else if (typeof value === 'number') {
+        numericValue = value;
+        displayValue = value.toString();
+      }
+      
+      return [key, displayValue, numericValue];
+    });
+  
+  console.log('📊 [HTML] Métricas processadas:', metricsArray);
 
   // Links institucionais do rodapé
   const institutionalLinks = company?.institutional_links || [];
@@ -844,14 +868,14 @@ export function generateLandingPageHTML(
       <h2 data-editable="true" data-field="metrics_title">${escapeHtml(finalMetricsTitle)}</h2>
       <p data-editable="true" data-field="metrics_subtitle">${escapeHtml(finalMetricsSubtitle)}</p>
       <div class="metrics-cards" id="metrics-counter">
-        ${metricsArray.map(([key, value]) => {
-          // 🔥 Mudança 2A: Aplicar edições do customText aos rótulos das métricas
+        ${metricsArray.map(([key, displayValue, numericValue]) => {
+          // 🔥 Aplicar edições do customText aos rótulos das métricas
           const labelKey = `metric_label_${key}`;
           const label = (customText && customText[labelKey]) || key.replace(/_/g, ' ');
           
           return `
           <div class="metric-card">
-            <span class="count" data-target="${value}">${value}</span>
+            <span class="count" data-target="${numericValue || 0}">${displayValue}</span>
             <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(label)}</span>
           </div>
         `}).join('')}
