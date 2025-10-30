@@ -5,7 +5,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
   const pain_metrics = solution.pain_metrics || {};
   const faqs = solution.faq || [];
   
-  // HERO IMAGE (prioridade CORRETA: manual > IA > produto > placeholder)
+  // HERO IMAGE (prioridade CORRETA: manual > IA > NADA)
   let heroImageSrc = '';
   let heroImageAlt = 'Banner hero';
 
@@ -27,17 +27,8 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
     }
   }
 
-  // 3️⃣ FALLBACK: Imagem do primeiro produto (apenas se não há banner configurado)
-  else if (mainProduct?.image_url) {
-    heroImageSrc = mainProduct.image_url;
-    heroImageAlt = mainProduct.name || 'Produto';
-  }
-
-  // 4️⃣ ÚLTIMO RECURSO: Placeholder genérico
-  if (!heroImageSrc) {
-    heroImageSrc = 'https://via.placeholder.com/1200x630?text=Banner+Hero';
-    heroImageAlt = 'Banner de solução';
-  }
+  // ❌ REMOVIDO: Fallbacks para produto e placeholder
+  // Se não configurou banner (mode === null ou 'none'), heroImageSrc fica vazio
 
   // Gerar subtítulo do hero baseado no sales_pitch (resumido)
   const heroSubtitle = solution.sales_pitch 
@@ -399,6 +390,45 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
         flex-direction: column;
       }
     }
+
+    /* ===== HERO SEM IMAGEM (texto em fundo sólido) ===== */
+    .hero-text-only {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      padding: 4rem 2rem;
+      text-align: center;
+      color: white;
+    }
+
+    .hero-text-only small {
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 8px;
+      display: inline-block;
+    }
+
+    .hero-text-only h1 {
+      font-size: 32px;
+      line-height: 1.2;
+      font-weight: 700;
+      color: white;
+      margin: 16px 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .hero-text-only p {
+      font-size: 18px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.95);
+      margin: 0;
+      max-width: 700px;
+      margin: 0 auto;
+    }
   </style>
 </head>
 <body>
@@ -411,13 +441,24 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
 
   <!-- Hero Image com Texto Sobreposto -->
   <div class="container">
+    ${heroImageSrc ? `
+    <!-- Hero com imagem de fundo -->
     <div class="image1-container">
-      ${heroImageSrc ? `<img src="${escapeHtml(heroImageSrc)}" alt="${escapeHtml(heroImageAlt)}">` : ''}
+      <img src="${escapeHtml(heroImageSrc)}" alt="${escapeHtml(heroImageAlt)}">
       <div class="text-overlay">
         <small>${escapeHtml(badge)}</small>
         <h1>${escapeHtml(solution.title)}</h1>
         <p>${escapeHtml(heroSubtitle)}</p>
       </div>
+    </div>
+    ` : `
+    <!-- Hero sem imagem (apenas texto em fundo sólido) -->
+    <div class="hero-text-only">
+      <small>${escapeHtml(badge)}</small>
+      <h1>${escapeHtml(solution.title)}</h1>
+      <p>${escapeHtml(heroSubtitle)}</p>
+    </div>
+    `}
     </div>
   </div>
 

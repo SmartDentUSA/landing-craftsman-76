@@ -1526,7 +1526,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                     <Label htmlFor="mode-none" className="flex-1 cursor-pointer">
                       <span className="font-medium text-muted-foreground">Sem banner personalizado</span>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Usará imagem do primeiro produto
+                        Hero com gradiente colorido (sem imagem)
                       </p>
                     </Label>
                   </div>
@@ -1535,18 +1535,44 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 {formData.ai_generated_images?.hero_banner?.mode === 'manual_upload' && (
                   <ManualBannerUploader
                     value={formData.ai_generated_images?.hero_banner?.manual_upload}
-                    onChange={(data) => {
-                      setFormData(prev => ({
-                        ...prev,
+                    onChange={async (data) => {
+                      // 1. Atualizar estado local
+                      const newFormData = {
+                        ...formData,
                         ai_generated_images: {
-                          ...prev.ai_generated_images,
+                          ...formData.ai_generated_images,
                           hero_banner: {
                             mode: 'manual_upload',
                             manual_upload: data
                           },
                           last_updated: new Date().toISOString()
                         }
-                      }));
+                      };
+                      
+                      setFormData(newFormData);
+                      
+                      // 2. Auto-save no banco se for edição (solutionId existe)
+                      if (solutionId && data?.src) {
+                        try {
+                          await updateSolution.mutateAsync({
+                            id: solutionId,
+                            updates: {
+                              ai_generated_images: newFormData.ai_generated_images
+                            }
+                          });
+                          
+                          toast({
+                            title: "✅ Banner salvo automaticamente",
+                            description: "Upload persistido no banco de dados",
+                          });
+                        } catch (error: any) {
+                          toast({
+                            title: "⚠️ Erro ao salvar automaticamente",
+                            description: "Clique em Salvar para tentar novamente",
+                            variant: "destructive",
+                          });
+                        }
+                      }
                     }}
                   />
                 )}
