@@ -531,7 +531,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
 
       toast({
         title: "✅ Landing Page Gerada!",
-        description: "HTML completo criado com sucesso",
+        description: "HTML completo criado com sucesso. Abrindo preview...",
       });
 
       // Recarregar dados da solução para pegar o HTML gerado
@@ -547,6 +547,12 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
           landing_page_html: updatedSolution.landing_page_html,
           landing_page_generated_at: updatedSolution.landing_page_generated_at
         }));
+        
+        // Abrir preview automaticamente com o HTML atualizado
+        if (updatedSolution.landing_page_html) {
+          setGeneratedHTML(updatedSolution.landing_page_html);
+          setShowEditablePreview(true);
+        }
       }
 
     } catch (error: any) {
@@ -1717,7 +1723,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-200 mb-3">
                     <Check className="w-4 h-4 text-green-600" />
                     <span className="text-sm text-green-700 font-medium">
-                      Landing page gerada em {new Date(formData.landing_page_generated_at).toLocaleDateString('pt-BR')}
+                      Última geração: {new Date(formData.landing_page_generated_at).toLocaleDateString('pt-BR')} às {new Date(formData.landing_page_generated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   </div>
                 )}
@@ -1960,8 +1966,24 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         <SpinLandingPageEditablePreview
           solutionId={solutionId!}
           initialHTML={generatedHTML}
+          generatedAt={formData.landing_page_generated_at}
           onClose={() => setShowEditablePreview(false)}
-          onSaved={() => {
+          onSaved={async () => {
+            // Recarregar a solução para pegar o HTML atualizado
+            const { data: updatedSolution } = await supabase
+              .from('spin_selling_solutions')
+              .select('landing_page_html, landing_page_generated_at')
+              .eq('id', solutionId!)
+              .single();
+            
+            if (updatedSolution) {
+              setFormData(prev => ({
+                ...prev,
+                landing_page_html: updatedSolution.landing_page_html,
+                landing_page_generated_at: updatedSolution.landing_page_generated_at
+              }));
+            }
+            
             toast({
               title: '✅ Sucesso',
               description: 'Alterações persistidas no banco de dados'

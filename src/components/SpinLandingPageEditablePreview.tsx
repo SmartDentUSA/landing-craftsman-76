@@ -15,7 +15,9 @@ import {
   Copy, 
   AlertCircle, 
   Save,
-  X
+  X,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 
 interface SpinLandingPageEditablePreviewProps {
@@ -23,6 +25,7 @@ interface SpinLandingPageEditablePreviewProps {
   initialHTML: string;
   onClose: () => void;
   onSaved?: () => void;
+  generatedAt?: string;
 }
 
 interface EditedData {
@@ -39,7 +42,8 @@ export function SpinLandingPageEditablePreview({
   solutionId,
   initialHTML,
   onClose,
-  onSaved
+  onSaved,
+  generatedAt
 }: SpinLandingPageEditablePreviewProps) {
   const [html, setHtml] = useState(initialHTML);
   const [editedData, setEditedData] = useState<EditedData>({
@@ -220,25 +224,34 @@ export function SpinLandingPageEditablePreview({
 
   const regenerateHTML = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke(
-        'generate-spin-landing-page',
-        { body: { solutionId } }
-      );
+      toast({
+        title: '🔄 Recarregando HTML...',
+        description: 'Buscando versão atualizada do banco de dados',
+      });
 
-      if (error) throw error;
-      
       // Buscar HTML atualizado do banco
-      const { data: solution } = await supabase
+      const { data: solution, error } = await supabase
         .from('spin_selling_solutions')
         .select('landing_page_html')
         .eq('id', solutionId)
         .single();
       
+      if (error) throw error;
+      
       if (solution?.landing_page_html) {
         setHtml(solution.landing_page_html);
+        toast({
+          title: '✅ HTML recarregado',
+          description: 'Preview atualizado com a versão mais recente',
+        });
       }
     } catch (error: any) {
-      console.error('Erro ao regenerar HTML:', error);
+      console.error('Erro ao recarregar HTML:', error);
+      toast({
+        title: '❌ Erro ao recarregar',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -275,9 +288,29 @@ export function SpinLandingPageEditablePreview({
                   Editando: {currentEditingField}
                 </Badge>
               )}
+              {generatedAt && (
+                <Badge variant="outline" className="ml-2 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {new Date(generatedAt).toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                  })}
+                </Badge>
+              )}
             </span>
             
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={regenerateHTML}
+                title="Recarregar HTML do banco de dados"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Recarregar
+              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
@@ -289,7 +322,7 @@ export function SpinLandingPageEditablePreview({
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Salvar Alterações
+                Salvar
               </Button>
               
               <Button
@@ -298,7 +331,7 @@ export function SpinLandingPageEditablePreview({
                 onClick={copyUpdatedHTML}
               >
                 <Copy className="h-4 w-4 mr-2" />
-                Copiar Código
+                Copiar
               </Button>
               
               <Button
