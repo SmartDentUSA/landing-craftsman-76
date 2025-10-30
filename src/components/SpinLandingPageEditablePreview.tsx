@@ -219,6 +219,30 @@ export function SpinLandingPageEditablePreview({
 
       if (generateError) throw generateError;
 
+      // ⏳ Mudança 3: Aguardar Edge Function salvar no banco (polling até 4 tentativas, 500ms cada)
+      const currentTimestamp = lastGeneratedAt;
+      let attempts = 0;
+      let newTimestamp = currentTimestamp;
+
+      while (attempts < 4 && newTimestamp === currentTimestamp) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { data: check } = await supabase
+          .from('spin_selling_solutions')
+          .select('landing_page_generated_at')
+          .eq('id', solutionId)
+          .single();
+        
+        if (check?.landing_page_generated_at !== currentTimestamp) {
+          newTimestamp = check.landing_page_generated_at;
+          break;
+        }
+        
+        attempts++;
+      }
+
+      console.log(`⏱️ Polling concluído após ${attempts} tentativas`);
+
       // Buscar HTML regenerado
       await regenerateHTML();
 

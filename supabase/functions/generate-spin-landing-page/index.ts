@@ -285,6 +285,32 @@ serve(async (req) => {
       console.warn('Empresa não encontrada, usando valores padrão');
     }
 
+    // 🔥 Mudança 4 (OPCIONAL): Gerar FAQ por IA se estiver vazia
+    if (!solution.faq || solution.faq.length === 0) {
+      console.log('🤖 FAQ vazia, gerando automaticamente...');
+      
+      const { error: faqError } = await supabaseClient.functions.invoke(
+        'generate-spin-faqs',
+        { body: { solutionId } }
+      );
+      
+      if (faqError) {
+        console.warn('⚠️ Erro ao gerar FAQ, continuando sem ela:', faqError);
+      } else {
+        // Recarregar solução com FAQ gerada
+        const { data: updatedSolution } = await supabaseClient
+          .from('spin_selling_solutions')
+          .select('*')
+          .eq('id', solutionId)
+          .single();
+        
+        if (updatedSolution) {
+          solution = updatedSolution;
+          console.log('✅ FAQ gerada com sucesso:', solution.faq?.length, 'perguntas');
+        }
+      }
+    }
+
     // ✅ VALIDAÇÃO: LOVABLE_API_KEY
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

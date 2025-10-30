@@ -1524,6 +1524,7 @@ export type Database = {
           frequency: string | null
           google_ads_campaign: Json | null
           id: string
+          landing_page_custom_text: Json
           landing_page_generated_at: string | null
           landing_page_html: string | null
           pain_metrics: Json | null
@@ -1549,6 +1550,7 @@ export type Database = {
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
+          landing_page_custom_text?: Json
           landing_page_generated_at?: string | null
           landing_page_html?: string | null
           pain_metrics?: Json | null
@@ -1574,6 +1576,7 @@ export type Database = {
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
+          landing_page_custom_text?: Json
           landing_page_generated_at?: string | null
           landing_page_html?: string | null
           pain_metrics?: Json | null

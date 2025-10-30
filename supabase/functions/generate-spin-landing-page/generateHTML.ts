@@ -838,12 +838,17 @@ export function generateLandingPageHTML(
       <h2 data-editable="true" data-field="metrics_title">${escapeHtml(finalMetricsTitle)}</h2>
       <p data-editable="true" data-field="metrics_subtitle">${escapeHtml(finalMetricsSubtitle)}</p>
       <div class="metrics-cards" id="metrics-counter">
-        ${metricsArray.map(([key, value]) => `
+        ${metricsArray.map(([key, value]) => {
+          // 🔥 Mudança 2A: Aplicar edições do customText aos rótulos das métricas
+          const labelKey = `metric_label_${key}`;
+          const label = (customText && customText[labelKey]) || key.replace(/_/g, ' ');
+          
+          return `
           <div class="metric-card">
             <span class="count" data-target="${value}">${value}</span>
-            <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(key.replace(/_/g, ' '))}</span>
+            <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(label)}</span>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
     </section>
   </div>
@@ -854,12 +859,20 @@ export function generateLandingPageHTML(
   <div class="container">
     <section class="faq">
       <h3 data-editable="true" data-field="faq_title">${escapeHtml(finalFaqTitle)}</h3>
-      ${faqs.map((faq: any, index: number) => `
+      ${(() => {
+        // 🔥 Mudança 2B: Aplicar edições do customText à FAQ
+        const effectiveFaqs = faqs.map((faq: any, index: number) => ({
+          question: (customText && customText[`faq_question_${index}`]) || faq.question,
+          answer: (customText && customText[`faq_answer_${index}`]) || faq.answer
+        }));
+        
+        return effectiveFaqs.map((faq: any, index: number) => `
         <details>
           <summary data-editable="true" data-field="faq_question_${index}"><i class="fas fa-chart-line"></i> ${escapeHtml(faq.question)}</summary>
           <p data-editable="true" data-field="faq_answer_${index}">${escapeHtml(faq.answer)}</p>
         </details>
-      `).join('')}
+      `).join('');
+      })()}
     </section>
   </div>
   ` : ''}
