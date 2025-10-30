@@ -53,6 +53,48 @@ function formatPainMetrics(metrics: Record<string, string>): string[] {
   return lines;
 }
 
+// Resumir texto longo para WhatsApp (quebra por frase)
+function summarizeForWhatsApp(text: string, maxLength: number = 150): string {
+  if (!text || text.length <= maxLength) return text;
+  
+  const sentences = text.split(/[.!?]\s+/);
+  let summary = sentences[0];
+  
+  for (let i = 1; i < sentences.length; i++) {
+    const nextSummary = summary + '. ' + sentences[i];
+    if (nextSummary.length > maxLength) break;
+    summary = nextSummary;
+  }
+  
+  if (summary.length > maxLength) {
+    summary = summary.substring(0, maxLength - 3).trim() + '...';
+  }
+  
+  return summary;
+}
+
+// Extrair APENAS métricas personalizadas (não-fixas)
+function formatCustomMetricsOnly(metrics: Record<string, string>): string[] {
+  const fixedMetricsKeys = [
+    'roi', 'lab_time', 'digital_time', 'patient_loss', 'revenue_loss',
+    'workflow_improvement', 'quality_gain', 'training_time', 'maintenance_cost'
+  ];
+  
+  const lines: string[] = [];
+  
+  Object.entries(metrics).forEach(([key, value]) => {
+    const isFixedMetric = fixedMetricsKeys.some(fixedKey => 
+      key.toLowerCase() === fixedKey.toLowerCase()
+    );
+    
+    if (!isFixedMetric && value) {
+      lines.push(`• ${key}: ${value}`);
+    }
+  });
+  
+  return lines;
+}
+
 // Validar se dados são de teste (prevenir envio)
 function validateSuccessCase(successCase: any): void {
   const testPatterns = ['dede', 'teste', 'test', 'xxx', '...'];
@@ -259,20 +301,27 @@ serve(async (req) => {
           throw new Error('LOVABLE_API_KEY não configurada');
         }
 
-        const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling persuasivo (máx 200 caracteres) para WhatsApp sobre:
+        const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling ULTRA persuasivo (máx 150 caracteres) para WhatsApp sobre:
 
 SOLUÇÃO: ${solution.title}
-PITCH COMERCIAL: ${solution.sales_pitch || 'Não fornecido'}
+PITCH: ${solution.sales_pitch || 'Não fornecido'}
 PRODUTOS: ${products.map(p => p.name).join(', ')}
-DESCRIÇÕES: ${products.map(p => p.description).join(' | ')}
 BENEFÍCIOS: ${products.flatMap(p => p.benefits || []).join(', ')}
 
-O storytelling deve:
-- Começar com um gancho emocional
-- Conectar problemas reais à solução
-- Usar linguagem conversacional
-- Integrar informações do pitch comercial quando relevante
-- Ter no máximo 200 caracteres`;
+${solution.pain_metrics ? `
+MÉTRICAS (contexto interno):
+${formatPainMetrics(solution.pain_metrics).join('\n')}
+` : ''}
+
+REGRAS:
+1. Comece com um gancho emocional forte (ex: "Cansado de X?")
+2. Apresente a transformação rápida (ex: "Imagine sua clínica voando...")
+3. Feche com benefício + emojis (ex: "Smart Dent te entrega isso! 🚀✨")
+4. Máximo 150 caracteres
+5. Tom conversacional e urgente
+6. Use emojis estratégicos (máx 2)
+
+Exemplo: "Cansado de retrabalho? Imagine sua clínica voando com impressões perfeitas em minutos. A Smart Dent te entrega isso! 🚀✨"`;
 
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -317,44 +366,61 @@ O storytelling deve:
         metrics_subtitle: null
       };
 
-      let message = `*🎯 ${solution.title.toUpperCase()}*\n\n`;
+      // Construir Mensagem WhatsApp (narrativa fluida)
+      let message = `*${solution.title.toUpperCase()}*\n\n`;
 
-      // Storytelling IA
-      message += `*📖 História de Transformação:*\n${storytelling}\n\n`;
+      // Storytelling IA (sem título de seção)
+      message += `${storytelling}\n\n`;
 
-      // Caso Real
-      message += `*✅ CASO REAL: ${firstCase.client_name}*\n`;
-      message += `📍 ${firstCase.city}/${firstCase.state}\n`;
-      message += `🎯 ${firstCase.specialty} - ${firstCase.area}\n`;
+      // Caso real integrado na narrativa
+      const clienteTitle = firstCase.client_name.includes('Dr.') || firstCase.client_name.includes('Dra.') 
+        ? firstCase.client_name 
+        : `Dr(a). ${firstCase.client_name}`;
+
+      message += `${clienteTitle}, de ${firstCase.city}/${firstCase.state} (${firstCase.specialty})`;
+
+      // Se tem Instagram, adicionar inline
       if (firstCase.instagram) {
-        message += `📱 Instagram: @${firstCase.instagram}\n`;
-      }
-      message += `\n*Resultados Alcançados:*\n${firstCase.results_achieved}\n\n`;
-
-      // Jornada SPIN (personalizada)
-      if (firstQuote) {
-        message += `*${sectionTitles.journey_title}*\n`;
-        if (sectionTitles.journey_subtitle) {
-          message += `${sectionTitles.journey_subtitle}\n`;
-        }
-        message += `${journeyLabels.desire_label} ${firstQuote.desire}\n`;
-        message += `${journeyLabels.pain_label} ${firstQuote.pain}\n`;
-        message += `${journeyLabels.result_label} ${firstQuote.expected_result}\n\n`;
+        message += ` • Instagram: @${firstCase.instagram}`;
       }
 
-      // Métricas (humanizadas e ordenadas)
+      // Conectar com a dor (pain) de forma natural
+      if (firstQuote && firstQuote.pain) {
+        const painSummary = summarizeForWhatsApp(firstQuote.pain, 120);
+        message += `, tinha o mesmo problema que você: ${painSummary}\n\n`;
+      } else {
+        message += `.\n\n`;
+      }
+
+      // Resultado alcançado (sem título "Resultados Alcançados")
+      const resultsSummary = summarizeForWhatsApp(firstCase.results_achieved, 150);
+      message += `Hoje? ${resultsSummary} 💪\n\n`;
+
+      // Benefícios esperados (resultado esperado do SPIN)
+      if (firstQuote && firstQuote.expected_result) {
+        const expectedSummary = summarizeForWhatsApp(firstQuote.expected_result, 150);
+        message += `E você também pode ter:\n`;
+        // Quebrar por linha ou ponto para criar bullets
+        const benefits = expectedSummary.split(/[.]\s+/).filter(b => b.trim().length > 10);
+        benefits.slice(0, 3).forEach(benefit => {
+          message += `• ${benefit.trim()}\n`;
+        });
+        message += `\n`;
+      }
+
+      // Métricas personalizadas (sem título pomposo)
       if (solution.pain_metrics && Object.keys(solution.pain_metrics).length > 0) {
-        message += `*${sectionTitles.metrics_title}*\n`;
-        if (sectionTitles.metrics_subtitle) {
-          message += `${sectionTitles.metrics_subtitle}\n`;
+        const customMetrics = formatCustomMetricsOnly(solution.pain_metrics);
+        
+        if (customMetrics.length > 0) {
+          message += `Impacto real:\n`;
+          message += customMetrics.join('\n') + '\n\n';
         }
-        const metricLines = formatPainMetrics(solution.pain_metrics);
-        message += metricLines.join('\n') + '\n\n';
       }
 
-      // CTA
-      message += `*🚀 SAIBA MAIS:*\n${finalUrl}\n\n`;
-      message += `*💬 Quer saber como implementar essa solução?*\nResponda esta mensagem!`;
+      // CTA mais natural
+      message += `🚀 Saiba mais: ${finalUrl}\n\n`;
+      message += `💬 Quer saber como implementar essa solução?\nResponda esta mensagem!`;
 
       // Salvar no banco
       await supabase
