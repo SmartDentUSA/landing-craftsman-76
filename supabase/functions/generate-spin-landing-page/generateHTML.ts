@@ -67,7 +67,7 @@ export function generateLandingPageHTML(solution: any, products: any[], company:
 
   // SEO
   const seoTitle = `${solution.title} | ${company?.company_name || 'Smart Dent'}`;
-  const seoDescription = heroSubtitle.substring(0, 160);
+  const seoDescription = finalHeroSubtitle.substring(0, 160);
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
