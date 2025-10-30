@@ -103,16 +103,16 @@ ${solution.sales_pitch || 'Não informado'}
 ${metricsFormatted}
 
 📦 DETALHAMENTO DOS PRODUTOS:
-${products.map((p, i) => \`
+${products.map((p, i) => `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PRODUTO \${i + 1}: \${p.name}
+PRODUTO ${i + 1}: ${p.name}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Categoria: \${p.category || 'N/A'}
-• Descrição: \${p.description || 'N/A'}
-• Preço: \${p.price ? 'R$ ' + p.price : 'Sob consulta'}
-• Benefícios-chave: \${p.benefits ? JSON.stringify(p.benefits).substring(0, 250) : 'N/A'}
-• Características: \${p.features ? JSON.stringify(p.features).substring(0, 250) : 'N/A'}
-\`).join('\\n')}
+• Categoria: ${p.category || 'N/A'}
+• Descrição: ${p.description || 'N/A'}
+• Preço: ${p.price ? 'R$ ' + p.price : 'Sob consulta'}
+• Benefícios-chave: ${p.benefits ? JSON.stringify(p.benefits).substring(0, 250) : 'N/A'}
+• Características: ${p.features ? JSON.stringify(p.features).substring(0, 250) : 'N/A'}
+`).join('\n')}
 
 ═══════════════════════════════════════════════════════════
 🧠 EXTRAÇÃO OBRIGATÓRIA DO PITCH (FAÇA ANTES DE CRIAR AS FAQs)
