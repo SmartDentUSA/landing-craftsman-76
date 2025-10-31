@@ -442,7 +442,11 @@ serve(async (req) => {
     // Buscar solução SPIN completa
     const { data: solutionRecord, error: solutionError } = await supabaseClient
       .from('spin_selling_solutions')
-      .select('*')
+      .select(`
+        *,
+        selected_video_url,
+        selected_video_title
+      `)
       .eq('id', solutionId)
       .single();
 

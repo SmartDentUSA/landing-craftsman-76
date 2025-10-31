@@ -36,7 +36,9 @@ import {
   ExternalLink,
   Upload,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Video,
+  Info
 } from 'lucide-react';
 import { 
   useSpinSellingSolutions, 
@@ -52,7 +54,10 @@ import { ClientPhotoUploader } from './ClientPhotoUploader';
 import { AIBannerGenerator } from './AIBannerGenerator';
 import { FAQEditor } from './FAQEditor';
 import { SpinLandingPageEditablePreview } from './SpinLandingPageEditablePreview';
+import { ConsolidatedProductVideosList } from './ConsolidatedProductVideosList';
+import { VideoSelectorForLandingPage } from './VideoSelectorForLandingPage';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useViaCep } from '@/hooks/useViaCep';
 import useLandingPages from '@/hooks/useLandingPages';
 
@@ -1791,6 +1796,37 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
               </Card>
             )}
 
+            {/* ===== SEÇÃO: SELETOR DE VÍDEO PARA LANDING PAGE ===== */}
+            {solutionId && formData.product_ids && formData.product_ids.length > 0 && (
+              <VideoSelectorForLandingPage
+                productIds={formData.product_ids}
+                selectedVideoUrl={formData.selected_video_url}
+                selectedVideoTitle={formData.selected_video_title}
+                onSelectVideo={(url, title) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    selected_video_url: url,
+                    selected_video_title: title
+                  }));
+                  toast({
+                    title: "✅ Vídeo selecionado",
+                    description: "Será exibido na landing page antes das métricas"
+                  });
+                }}
+                onRemoveVideo={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    selected_video_url: undefined,
+                    selected_video_title: undefined
+                  }));
+                  toast({
+                    title: "🗑️ Vídeo removido",
+                    description: "Landing page não exibirá vídeo"
+                  });
+                }}
+              />
+            )}
+
             {/* ===== SEÇÃO: GERADOR DE LANDING PAGE DE CONVERSÃO ===== */}
             {solutionId && (
               <Card className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
@@ -2041,6 +2077,28 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                         ✏️ Você pode editar livremente o texto gerado. Lembre-se de salvar.
                       </p>
                     </div>
+                   </Card>
+                )}
+                
+                {/* ========== LISTA DE VÍDEOS PARA WHATSAPP ========== */}
+                {formData.whatsapp_complete_message && formData.product_ids && formData.product_ids.length > 0 && (
+                  <Card className="mt-4 p-4 bg-muted/30 border-dashed">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Video className="w-5 h-5 text-blue-600" />
+                      <h4 className="font-semibold">🎬 Vídeos dos Produtos Vinculados</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Clique em "Inserir" para adicionar links de vídeos na mensagem WhatsApp acima
+                    </p>
+                    <ConsolidatedProductVideosList
+                      productIds={formData.product_ids}
+                      onInsert={(text) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          whatsapp_complete_message: (prev.whatsapp_complete_message || '') + text
+                        }));
+                      }}
+                    />
                   </Card>
                 )}
                 

@@ -161,6 +161,102 @@ function generateSPINSchemas(
 // 🎨 GERADOR DE HTML DA LANDING PAGE
 // ═══════════════════════════════════════════════════════════
 
+// Função auxiliar para escape HTML
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Função para gerar embed de vídeo
+function generateVideoEmbed(url: string): string {
+  if (!url) return '';
+  
+  // YouTube
+  if (url.includes('youtube.com/watch') || url.includes('youtu.be')) {
+    const videoId = url.includes('youtu.be') 
+      ? url.split('/').pop()?.split('?')[0]
+      : new URL(url).searchParams.get('v');
+    
+    if (!videoId) return '';
+    
+    return `
+      <iframe 
+        class="video-iframe"
+        width="100%"
+        height="100%"
+        src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1" 
+        frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+        loading="lazy"
+        title="Vídeo de Demonstração"
+      ></iframe>
+    `;
+  }
+  
+  // Instagram
+  if (url.includes('instagram.com')) {
+    return `
+      <div class="instagram-wrapper">
+        <blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="margin: 0 auto;">
+          <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Ver no Instagram</a>
+        </blockquote>
+        <script async src="//www.instagram.com/embed.js"></script>
+      </div>
+    `;
+  }
+  
+  // TikTok
+  if (url.includes('tiktok.com')) {
+    const videoId = url.split('/video/')[1]?.split('?')[0] || url.split('/').pop();
+    return `
+      <div class="tiktok-wrapper">
+        <blockquote class="tiktok-embed" cite="${url}" data-video-id="${videoId}" style="margin: 0 auto;">
+          <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Ver no TikTok</a>
+        </blockquote>
+        <script async src="https://www.tiktok.com/embed.js"></script>
+      </div>
+    `;
+  }
+  
+  // Vimeo
+  if (url.includes('vimeo.com')) {
+    const videoId = url.split('/').filter(Boolean).pop();
+    if (!videoId) return '';
+    
+    return `
+      <iframe 
+        class="video-iframe"
+        src="https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479" 
+        width="100%"
+        height="100%"
+        frameborder="0" 
+        allow="autoplay; fullscreen; picture-in-picture; clipboard-write" 
+        title="Vídeo de Demonstração"
+        loading="lazy"
+      ></iframe>
+    `;
+  }
+  
+  // Fallback: link direto
+  return `
+    <div class="video-fallback">
+      <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="video-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Assistir Vídeo</span>
+      </a>
+    </div>
+  `;
+}
+
 // Função auxiliar para gerar o HTML da Landing Page com CSS padronizado
 export function generateLandingPageHTML(
   solution: any, 
@@ -901,6 +997,123 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       margin-top: 1rem;
     }
 
+    /* ===== SEÇÃO DE VÍDEO DE DEMONSTRAÇÃO ===== */
+    .video-demo-section {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 20px;
+      margin-bottom: 3rem;
+    }
+
+    .video-container {
+      position: relative;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .video-container:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3) !important;
+    }
+
+    .video-iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .instagram-wrapper,
+    .tiktok-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 500px;
+    }
+
+    .instagram-media,
+    .tiktok-embed {
+      max-width: 540px !important;
+      width: 100% !important;
+      margin: 0 auto !important;
+    }
+
+    .video-fallback {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 2rem;
+      background: #f8f9fa;
+      border-radius: 16px;
+      border: 3px dashed #dee2e6;
+      min-height: 300px;
+    }
+
+    .video-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      font-size: 24px;
+      color: #EE7A3E;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 1.5rem 3rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+
+    .video-link:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      text-decoration: none;
+      color: #d66a30;
+    }
+
+    .video-link svg {
+      flex-shrink: 0;
+    }
+
+    .video-caption {
+      margin-top: 1.5rem;
+      font-size: 18px;
+      color: #6b7280;
+      font-style: italic;
+      text-align: center;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    /* Responsivo - Vídeo */
+    @media (max-width: 768px) {
+      .video-demo-section {
+        padding: 3rem 1rem;
+      }
+      
+      .video-demo-section .section-title {
+        font-size: 28px !important;
+      }
+      
+      .video-container {
+        aspect-ratio: 16/10 !important;
+        border-radius: 12px !important;
+      }
+      
+      .video-caption {
+        font-size: 16px !important;
+        padding: 0 1rem;
+      }
+      
+      .instagram-wrapper,
+      .tiktok-wrapper {
+        min-height: 400px;
+      }
+    }
+
     .faq details p * {
       all: unset;
       display: inline;
@@ -1261,6 +1474,27 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       <p class="spin-narrative" data-editable="true" data-field="spin_narrative">
         ${escapeHtml(aiContent.spinNarrative)}
       </p>
+    </section>
+  </div>
+  ` : ''}
+
+  ${solution.selected_video_url ? `
+  <!-- ========== SEÇÃO DE VÍDEO DE DEMONSTRAÇÃO ========== -->
+  <div class="container section-padding" style="padding-top: 3rem; padding-bottom: 3rem;">
+    <section class="video-demo-section">
+      <h2 class="section-title" data-editable="true" data-field="video_demo_title" style="font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 2rem; color: var(--primary-dark);">
+        ${escapeHtml(customText.video_demo_title || '🎬 Veja Como Funciona na Prática')}
+      </h2>
+      
+      <div class="video-container" style="max-width: 1000px; margin: 0 auto; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); background: #000;">
+        ${generateVideoEmbed(solution.selected_video_url)}
+      </div>
+      
+      ${solution.selected_video_title ? `
+        <p class="video-caption" data-editable="true" data-field="video_demo_caption" style="margin-top: 1.5rem; font-size: 18px; color: #6b7280; font-style: italic; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+          ${escapeHtml(customText.video_demo_caption || solution.selected_video_title)}
+        </p>
+      ` : ''}
     </section>
   </div>
   ` : ''}

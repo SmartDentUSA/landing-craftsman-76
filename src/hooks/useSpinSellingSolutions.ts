@@ -102,6 +102,10 @@ export interface SpinSellingSolution {
   landing_page_generated_at?: string;
   ai_generated_images?: any;
   
+  // 🎬 CAMPOS DE VÍDEO PARA LANDING PAGE
+  selected_video_url?: string;
+  selected_video_title?: string;
+  
   active: boolean;
   created_at: string;
   updated_at: string;
