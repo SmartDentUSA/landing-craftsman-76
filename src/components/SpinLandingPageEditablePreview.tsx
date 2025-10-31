@@ -64,61 +64,98 @@ export function SpinLandingPageEditablePreview({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
-  // ✅ FASE 1.1: Event Handlers estáveis usando useCallback
-  const handleElementClick = useCallback((event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    const editable = target.closest('[data-editable]') as HTMLElement;
+  // ✅ Event Handlers com tipo genérico Event (compatível com iframe)
+  const handleElementClick = useCallback((event: Event) => {
+    console.log('🎯 [Editor] handleElementClick disparado!', event.type);
+    const target = event.target as HTMLElement | null;
+    console.log('🎯 [Editor] Target:', target?.tagName, target?.getAttribute('data-field'));
     
-    if (editable) {
-      event.preventDefault();
-      const field = editable.getAttribute('data-field');
-      
-      console.log('🖱️ [Editor] Clicou em:', field, '→', editable.textContent?.substring(0, 50));
-      
-      // Desabilitar outros elementos editáveis
-      const doc = iframeRef.current?.contentDocument;
-      if (doc) {
-        doc.querySelectorAll('[contenteditable="true"]').forEach(el => {
-          el.setAttribute('contenteditable', 'false');
-        });
-      }
-      
-      // Habilitar este elemento
-      editable.setAttribute('contenteditable', 'true');
-      editable.focus();
-      setCurrentEditingField(field);
-      setIsEditing(true);
-      
-      console.log('✅ [Editor] Campo ativado para edição:', field);
+    const editable = target?.closest('[data-editable]') as HTMLElement | null;
+    
+    if (!editable) {
+      console.log('⚠️ [Editor] Elemento clicado não é editável');
+      return;
     }
+    
+    event.preventDefault();
+    event.stopPropagation(); // Prevenir propagação
+    
+    const field = editable.getAttribute('data-field');
+    console.log('🖱️ [Editor] Clicou em:', field, '→', editable.textContent?.substring(0, 50));
+    
+    // Caso FAQ: garantir que <details> fique aberto
+    if (editable.tagName.toLowerCase() === 'summary') {
+      const details = editable.closest('details') as HTMLDetailsElement | null;
+      if (details) details.open = true;
+    }
+    
+    // Desabilitar outros elementos editáveis
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) {
+      doc.querySelectorAll('[contenteditable="true"]').forEach(el => {
+        el.setAttribute('contenteditable', 'false');
+      });
+    }
+    
+    // Habilitar edição com fallback plaintext-only
+    editable.setAttribute('contenteditable', 'plaintext-only');
+    if (editable.contentEditable !== 'plaintext-only') {
+      editable.setAttribute('contenteditable', 'true');
+    }
+    
+    // Remover user-select: none durante edição (especialmente em summary)
+    editable.dataset.prevUserSelect = editable.style.userSelect || '';
+    editable.style.userSelect = 'text';
+    (editable.style as any).webkitUserSelect = 'text';
+    
+    // Focar e posicionar caret ao final
+    const sel = iframeRef.current?.contentWindow?.getSelection();
+    const range = doc!.createRange();
+    range.selectNodeContents(editable);
+    range.collapse(false);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    
+    setCurrentEditingField(field);
+    setIsEditing(true);
+    
+    console.log('✅ [Editor] Campo ativado para edição:', field);
   }, []);
 
-  const handleElementBlur = useCallback((event: FocusEvent) => {
-    const target = event.target as HTMLElement;
-    if (target.hasAttribute('contenteditable')) {
-      const field = target.getAttribute('data-field');
-      const newValue = target.textContent || '';
-      
-      console.log('💾 [Editor] Salvou edição:', field, '→', newValue.substring(0, 50));
-      
-      // Atualizar editedData
-      if (field) {
-        setEditedData(prev => {
-          const updated = {
-            ...prev,
-            [field]: newValue
-          };
-          console.log('💾 [Editor] editedData atualizado:', Object.keys(updated).filter(k => updated[k]).length, 'campos');
-          return updated;
-        });
-        
-        setHasChanges(true);
-      }
-      
-      target.setAttribute('contenteditable', 'false');
-      setCurrentEditingField(null);
-      setIsEditing(false);
+  const handleElementBlur = useCallback((event: Event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target?.hasAttribute('contenteditable')) {
+      console.log('⚠️ [Editor] Elemento sem contenteditable');
+      return;
     }
+    
+    const field = target.getAttribute('data-field') || '';
+    const newValue = target.textContent || '';
+    
+    console.log('💾 [Editor] Salvou edição:', field, '→', newValue.substring(0, 50));
+    
+    // Atualizar editedData
+    if (field) {
+      setEditedData(prev => {
+        const updated = {
+          ...prev,
+          [field]: newValue
+        };
+        console.log('💾 [Editor] editedData atualizado:', Object.keys(updated).filter(k => updated[k]).length, 'campos');
+        return updated;
+      });
+      
+      setHasChanges(true);
+    }
+    
+    // Restaurar user-select original e desativar edição
+    target.style.userSelect = target.dataset.prevUserSelect || '';
+    (target.style as any).webkitUserSelect = target.dataset.prevUserSelect || '';
+    target.removeAttribute('data-prev-user-select');
+    target.setAttribute('contenteditable', 'false');
+    
+    setCurrentEditingField(null);
+    setIsEditing(false);
   }, []);
 
   // 🔄 Mudança 1: Sincronizar HTML quando initialHTML mudar
@@ -138,9 +175,10 @@ export function SpinLandingPageEditablePreview({
         return false;
       }
 
-      // ✅ FASE 1.2: Remover listeners antigos ANTES de adicionar novos (previne duplicatas)
-      doc.body.removeEventListener('click', handleElementClick);
-      doc.body.removeEventListener('blur', handleElementBlur, true);
+      // Remover listeners antigos do document (previne duplicatas)
+      doc.removeEventListener('click', handleElementClick as any, true);
+      doc.removeEventListener('pointerdown', handleElementClick as any, true);
+      doc.removeEventListener('blur', handleElementBlur as any, true);
 
       // Verificar se já injetou CSS (evitar duplicatas)
       if (doc.head.querySelector('style[data-editable-injected]')) {
@@ -188,18 +226,29 @@ export function SpinLandingPageEditablePreview({
       }
 
       const editableElements = doc.querySelectorAll('[data-editable]');
-      setEditableElementsCount(editableElements.length); // ✅ FASE 3.2: Atualizar contador
+      setEditableElementsCount(editableElements.length);
       console.log(`🎯 [Editor] Tentativa ${attempt} - Elementos editáveis encontrados:`, editableElements.length);
 
       if (editableElements.length === 0) {
-        console.warn('⚠️ [Editor] Nenhum elemento [data-editable] encontrado no DOM');
+        console.error('❌ [Editor] NENHUM elemento [data-editable] encontrado!');
+        console.log('📄 [Editor] Amostra do HTML (primeiros 500 chars):');
+        console.log(doc.body.innerHTML.substring(0, 500));
+      } else {
+        console.log('✅ [Editor] Primeiro elemento editável:', editableElements[0]);
+        console.log('  - Tag:', editableElements[0].tagName);
+        console.log('  - data-field:', editableElements[0].getAttribute('data-field'));
+        console.log('  - Text content:', editableElements[0].textContent?.substring(0, 50));
       }
 
-      // ✅ Adicionar listeners com as funções estáveis
-      doc.body.addEventListener('click', handleElementClick);
-      doc.body.addEventListener('blur', handleElementBlur, true);
+      // Adicionar listeners ao document com capture
+      doc.addEventListener('click', handleElementClick as any, true);
+      doc.addEventListener('pointerdown', handleElementClick as any, true);
+      doc.addEventListener('blur', handleElementBlur as any, true);
       
       console.log(`✅ [Editor] Listeners injetados com sucesso na tentativa ${attempt}`);
+      console.log('  - click handler:', typeof handleElementClick);
+      console.log('  - blur handler:', typeof handleElementBlur);
+      console.log('  - document element:', !!doc);
       return true;
     };
 
@@ -272,9 +321,10 @@ export function SpinLandingPageEditablePreview({
 
     const doc = iframe.contentDocument;
     
-    // ✅ Remover listeners antigos
-    doc.body.removeEventListener('click', handleElementClick);
-    doc.body.removeEventListener('blur', handleElementBlur, true);
+    // Remover listeners antigos do document
+    doc.removeEventListener('click', handleElementClick as any, true);
+    doc.removeEventListener('pointerdown', handleElementClick as any, true);
+    doc.removeEventListener('blur', handleElementBlur as any, true);
     
     // ✅ Remover estilo CSS anterior
     const existingStyle = doc.head.querySelector('style[data-editable-injected]');
@@ -322,12 +372,13 @@ export function SpinLandingPageEditablePreview({
     `;
     doc.head.appendChild(style);
 
-    // ✅ Readicionar listeners com funções estáveis
-    doc.body.addEventListener('click', handleElementClick);
-    doc.body.addEventListener('blur', handleElementBlur, true);
+    // Readicionar listeners ao document com capture
+    doc.addEventListener('click', handleElementClick as any, true);
+    doc.addEventListener('pointerdown', handleElementClick as any, true);
+    doc.addEventListener('blur', handleElementBlur as any, true);
     
     const editableElements = doc.querySelectorAll('[data-editable]');
-    setEditableElementsCount(editableElements.length); // ✅ FASE 3.4: Atualizar contador
+    setEditableElementsCount(editableElements.length);
     console.log('✅ [Editor] Listeners reinjetados manualmente:', editableElements.length, 'elementos');
     
     toast({
