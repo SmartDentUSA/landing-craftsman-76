@@ -299,6 +299,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       // ✅ AI Generated Images (Hero Banner)
       ai_generated_images: formData.ai_generated_images,
       
+      // 🎬 Campos de vídeo para landing page
+      selected_video_url: formData.selected_video_url,
+      selected_video_title: formData.selected_video_title,
+      
       // ⚡ Campos gerados pela IA (só salvos se existirem)
       google_ads_campaign: formData.google_ads_campaign,
       whatsapp_complete_message: formData.whatsapp_complete_message,
@@ -1802,27 +1806,67 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 productIds={formData.product_ids}
                 selectedVideoUrl={formData.selected_video_url}
                 selectedVideoTitle={formData.selected_video_title}
-                onSelectVideo={(url, title) => {
+                onSelectVideo={async (url, title) => {
                   setFormData(prev => ({
                     ...prev,
                     selected_video_url: url,
                     selected_video_title: title
                   }));
-                  toast({
-                    title: "✅ Vídeo selecionado",
-                    description: "Será exibido na landing page antes das métricas"
-                  });
+                  
+                  // Auto-save imediato
+                  if (solutionId) {
+                    try {
+                      await updateSolution.mutateAsync({
+                        id: solutionId,
+                        updates: {
+                          selected_video_url: url,
+                          selected_video_title: title
+                        }
+                      });
+                      
+                      toast({
+                        title: "✅ Vídeo selecionado e salvo",
+                        description: "Será exibido na landing page antes das métricas"
+                      });
+                    } catch (error: any) {
+                      toast({
+                        title: "⚠️ Erro ao salvar vídeo",
+                        description: "Clique em Salvar para tentar novamente",
+                        variant: "destructive"
+                      });
+                    }
+                  }
                 }}
-                onRemoveVideo={() => {
+                onRemoveVideo={async () => {
                   setFormData(prev => ({
                     ...prev,
                     selected_video_url: undefined,
                     selected_video_title: undefined
                   }));
-                  toast({
-                    title: "🗑️ Vídeo removido",
-                    description: "Landing page não exibirá vídeo"
-                  });
+                  
+                  // Auto-save imediato da remoção
+                  if (solutionId) {
+                    try {
+                      await updateSolution.mutateAsync({
+                        id: solutionId,
+                        updates: {
+                          selected_video_url: null,
+                          selected_video_title: null
+                        }
+                      });
+                      
+                      toast({
+                        title: "🗑️ Vídeo removido e salvo",
+                        description: "Landing page não exibirá vídeo"
+                      });
+                    } catch (error: any) {
+                      toast({
+                        title: "⚠️ Erro ao remover vídeo",
+                        description: "Clique em Salvar para tentar novamente",
+                        variant: "destructive"
+                      });
+                    }
+                  }
                 }}
               />
             )}
