@@ -693,6 +693,29 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       font-size: 18px;
     }
 
+    /* ===== NARRATIVA SPIN CONTEXTUAL ===== */
+    .spin-context {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 3rem 2rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .spin-narrative {
+      font-size: 1.15rem;
+      line-height: 1.9;
+      color: #495057;
+      text-align: justify;
+      max-width: 900px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    .spin-narrative strong {
+      color: #007bff;
+      font-weight: 600;
+    }
+
     /* ===== SEÇÃO DE MÉTRICAS ===== */
     .metrics-section {
       text-align: center;
@@ -1230,6 +1253,17 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     `}
     </div>
   </div>
+
+  ${aiContent?.spinNarrative ? `
+  <!-- Contexto Narrativo SPIN -->
+  <div class="container section-padding">
+    <section class="spin-context">
+      <p class="spin-narrative" data-editable="true" data-field="spin_narrative">
+        ${escapeHtml(aiContent.spinNarrative)}
+      </p>
+    </section>
+  </div>
+  ` : ''}
 
   ${metricsArray.length > 0 ? `
   <!-- Seção de Métricas -->

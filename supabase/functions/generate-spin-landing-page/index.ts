@@ -15,6 +15,7 @@ interface AIGeneratedContent {
   hero: {
     subtitle: string;
   };
+  spinNarrative: string; // Nova narrativa contextual SPIN
   metrics: {
     title: string;
     subtitle: string;
@@ -222,7 +223,48 @@ Os exemplos abaixo são APENAS ilustrativos da **estrutura narrativa**.
 • Evitar: "Métricas de Sucesso", "Números Impressionantes", "Resultados Comprovados"
 
 ┌─────────────────────────────────────────────────────────┐
-│ 3. CTA (Call-to-Action)                                 │
+│ 3. NARRATIVA SPIN CONTEXTUAL (Antes dos Cards)         │
+└─────────────────────────────────────────────────────────┘
+
+📋 OBJETIVO: Criar um parágrafo narrativo de 150-200 palavras que conecta a jornada SPIN aos dados de métricas, posicionando-se ANTES dos cards numéricos.
+
+📊 DADOS DISPONÍVEIS:
+${solution.real_quotes?.length > 0 ? `
+Depoimentos reais de clientes:
+${solution.real_quotes.map((q: any, i: number) => `
+Cliente ${i + 1}:
+- Desejo inicial: "${q.desire}"
+- Dor enfrentada: "${q.pain}"
+- Resultado alcançado: "${q.expected_result}"
+`).join('\n')}
+` : 'Nenhum depoimento real disponível'}
+
+Métricas de impacto disponíveis:
+${metricsFormatted}
+
+🎯 ESTRUTURA OBRIGATÓRIA (em um único parágrafo fluido):
+
+1️⃣ **DESEJO** (2-3 frases): Comece descrevendo o desejo comum dos profissionais, usando insights dos depoimentos reais. Fale sobre a transformação que buscam.
+
+2️⃣ **DOR** (2-3 frases): Transição natural para as dores atuais, citando problemas específicos mencionados nos depoimentos. Use conectivos como "Porém", "Mas a realidade", "Contudo".
+
+3️⃣ **RESULTADO COM DADOS** (3-4 frases): Apresente como os produtos resolvem essas dores, **mencionando as métricas numéricas de forma natural no texto** (ex: "reduzindo em 93% o tempo de produção", "eliminando 12 minutos de trabalho manual"). Conecte cada métrica a um benefício tangível.
+
+⚠️ REGRAS CRÍTICAS:
+- ✅ Incorpore as métricas naturalmente no texto narrativo
+- ✅ Mencione os produtos: ${productsNames}
+- ✅ Mantenha tom consultivo e baseado em evidências
+- ✅ Use dados reais dos depoimentos quando disponíveis
+- ❌ NÃO use bullet points ou listas
+- ❌ NÃO repita o subtítulo do hero
+- ❌ NÃO use chavões ("revolucionário", "inovador", "único no mercado")
+- ❌ NÃO invente métricas que não existem nos dados
+
+📝 EXEMPLO DE ESTRUTURA (NÃO COPIAR LITERALMENTE):
+"Profissionais que buscam [desejo dos depoimentos] frequentemente enfrentam [dor específica dos depoimentos], resultando em [consequência]. Com [Produto A] e [Produto B], clínicas conseguem [resultado], reduzindo em [métrica X] o [processo Y] e eliminando [métrica Z] de [tarefa]. Isso significa [benefício tangível conectado às métricas]."
+
+┌─────────────────────────────────────────────────────────┐
+│ 4. CTA (Call-to-Action)                                 │
 └─────────────────────────────────────────────────────────┘
 
 TEXTO PRINCIPAL (15-25 palavras):
@@ -238,7 +280,7 @@ TEXTO DO BOTÃO (3-6 palavras):
 • Exemplos: "Falar com Especialista Agora", "Agendar Demonstração Gratuita", "Solicitar Orçamento Personalizado"
 
 ┌─────────────────────────────────────────────────────────┐
-│ 4. DEPOIMENTOS (Melhorar Success Cases)                │
+│ 5. DEPOIMENTOS (Melhorar Success Cases)                │
 └─────────────────────────────────────────────────────────┘
 
 Para CADA caso de sucesso existente, REESCREVER em formato narrativo SPIN:
@@ -278,6 +320,7 @@ Retorne APENAS JSON puro, sem markdown:
   "hero": {
     "subtitle": "Subtítulo do hero (20-30 palavras)"
   },
+  "spinNarrative": "Narrativa SPIN contextual de 150-200 palavras integrando depoimentos e métricas",
   "metrics": {
     "title": "Título da seção de métricas (3-5 palavras)",
     "subtitle": "Subtítulo da seção de métricas (20-30 palavras)"
@@ -371,6 +414,12 @@ Retorne APENAS JSON puro, sem markdown:
   // Validação básica
   if (!generatedContent.hero || !generatedContent.metrics || !generatedContent.cta) {
     throw new Error('Conteúdo gerado incompleto');
+  }
+
+  // Validar spinNarrative
+  if (!generatedContent.spinNarrative || generatedContent.spinNarrative.trim().length < 100) {
+    console.warn('⚠️ spinNarrative muito curto ou ausente, gerando fallback');
+    generatedContent.spinNarrative = `Profissionais que adotam ${productsNames} transformam ${solution.pain_type} em vantagem competitiva, alcançando resultados mensuráveis em tempo recorde.`;
   }
 
   console.log('✅ Conteúdo validado com sucesso!');
