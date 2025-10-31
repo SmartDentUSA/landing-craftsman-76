@@ -1694,14 +1694,3 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 </html>`;
 }
 
-function escapeHtml(text: string): string {
-  if (!text) return '';
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return String(text).replace(/[&<>"']/g, m => map[m]);
-}

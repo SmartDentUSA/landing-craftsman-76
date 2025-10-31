@@ -76,7 +76,7 @@ export const ConsolidatedProductVideosList = ({
 
   const handleInsert = (url: string, title: string) => {
     const nextNumber = insertCount + 1;
-    onInsert(`\n\n${nextNumber}) ${title}: ${url}`);
+    onInsert(`\n\n${nextNumber}) ${url}\n`);
     setInsertCount(nextNumber);
     
     toast({
@@ -113,7 +113,7 @@ export const ConsolidatedProductVideosList = ({
             className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
           >
             <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium">
+              <p className="text-sm font-medium line-clamp-3">
                 {video.title || video.description || `Vídeo ${categoryName} ${idx + 1}`}
               </p>
               <a
