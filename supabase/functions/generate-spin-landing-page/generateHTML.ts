@@ -489,38 +489,38 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     }
 
     /* ===== HERO IMAGE - MODERN GLOSSY ===== */
-    .image1-container {
-      position: relative;
-      width: 100%;
-      min-height: 400px;
-      aspect-ratio: 16 / 9;
-      background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
-      overflow: hidden;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      margin-top: -1rem;
-    }
+        .image1-container {
+          position: relative;
+          width: 100%;
+          min-height: 400px;
+          aspect-ratio: 16 / 9;
+          background: #000000;
+          overflow: hidden;
+          border-radius: 16px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+          margin-top: -1rem;
+        }
 
-    .image1-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.3;
-    }
+        .image1-container img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: 1;
+        }
 
-    .text-overlay {
-      position: absolute;
-      top: 50%;
-      left: 7%;
-      transform: translateY(-50%);
-      max-width: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 32px 40px;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
+        .text-overlay {
+          position: absolute;
+          top: 50%;
+          left: 7%;
+          transform: translateY(-50%);
+          max-width: 50%;
+          background: rgba(62, 75, 94, 0.85);
+          padding: 32px 40px;
+          border-radius: 12px;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+        }
 
     .text-overlay small {
       font-size: 15px;
