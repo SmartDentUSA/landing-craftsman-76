@@ -241,48 +241,68 @@ export function generateLandingPageHTML(
   };
   const badge = painTypeLabels[solution.pain_type] || 'SOLUÇÃO ODONTOLÓGICA';
 
+  // Lista de chaves das métricas recomendadas (padrão do sistema)
+  const RECOMMENDED_METRIC_KEYS = [
+    'ROI',
+    'patient_loss',
+    'revenue_loss',
+    'lab_time',
+    'digital_time',
+    'learning_curve',
+    'satisfaction_rate',
+    'production_capacity',
+    'delivery_time'
+  ];
+
   // ═══════════════════════════════════════════════════════════
-  // 🎯 ESTRATÉGIA DE MÉTRICAS:
+  // 🎯 ESTRATÉGIA DE MÉTRICAS (CORRIGIDA):
   // 
-  // 1. MÉTRICAS PERSONALIZADAS (objeto { label, value, unit }):
+  // 1. MÉTRICAS PERSONALIZADAS (NÃO na lista RECOMMENDED):
   //    - Enviadas para a IA no prompt
   //    - Usadas NO SUBTÍTULO da seção de métricas
-  //    - NUNCA aparecem nos cards animados
+  //    - Exibidas NOS CARDS ANIMADOS (top 3) ✅ CORRIGIDO
   //
-  // 2. MÉTRICAS PADRÃO (string/número simples):
-  //    - Exibidas NOS CARDS ANIMADOS (top 3)
-  //    - Secundárias no prompt da IA
+  // 2. MÉTRICAS RECOMENDADAS (na lista RECOMMENDED):
+  //    - Usadas APENAS no subtítulo da IA
+  //    - NÃO aparecem nos cards animados
   //
   // Objetivo: Evitar repetição e maximizar uso de dados personalizados
   // ═══════════════════════════════════════════════════════════
 
   const allMetrics = Object.entries(pain_metrics);
-  const customMetrics = allMetrics.filter(([key, value]) => typeof value === 'object' && value !== null && 'label' in value);
-  const standardMetrics = allMetrics.filter(([key, value]) => typeof value !== 'object' || value === null || !('label' in value));
 
-  // 🎯 REGRA: Cards animados NUNCA usam métricas personalizadas (reservadas para o subtítulo da IA)
-  // Selecionar top 3: APENAS métricas padrão
-  const selectedMetrics = standardMetrics.slice(0, 3);
+  // 🎯 CLASSIFICAÇÃO POR ORIGEM (chave), NÃO POR FORMATO
+  const recommendedMetrics = allMetrics.filter(([key]) => RECOMMENDED_METRIC_KEYS.includes(key));
+  const customMetrics = allMetrics.filter(([key]) => !RECOMMENDED_METRIC_KEYS.includes(key));
+
+  // 🎯 Cards animados: APENAS métricas personalizadas (top 3)
+  const selectedMetrics = customMetrics.slice(0, 3);
 
   const metricsArray = selectedMetrics.map(([key, value]) => {
     let displayValue = value;
-    let numericValue = value;
+    let numericValue = 0;
     let label = key.replace(/_/g, ' ');
     
-    // 🔥 NOVO FORMATO: objeto { label, value, unit }
+    // 🔥 FORMATO 1: Objeto { label, value, unit }
     if (typeof value === 'object' && value !== null && 'label' in value) {
       label = value.label;
-      numericValue = value.value;
-      displayValue = `${value.value}${value.unit}`;
+      numericValue = parseFloat(value.value) || 0;
+      displayValue = `${value.value}${value.unit || ''}`;
     }
-    // Formato antigo: string ou número
+    // 🔥 FORMATO 2: String com número ("12 meses", "R$ 1.800,00", "30%")
     else if (typeof value === 'string') {
-      const match = value.match(/(\d+(?:\.\d+)?)/);
+      // Remover símbolos de moeda e separadores
+      const cleanValue = value.replace(/[R$\s]/g, '').replace(/\./g, '');
+      const match = cleanValue.match(/(\d+(?:,\d+)?)/);
+      
       if (match) {
-        numericValue = parseFloat(match[1]);
+        numericValue = parseFloat(match[1].replace(',', '.'));
       }
+      
       displayValue = value;
-    } else if (typeof value === 'number') {
+    }
+    // 🔥 FORMATO 3: Número puro
+    else if (typeof value === 'number') {
       numericValue = value;
       displayValue = value.toString();
     }
@@ -290,11 +310,11 @@ export function generateLandingPageHTML(
     return [key, displayValue, numericValue, label];
   });
   
-  console.log('📊 [HTML] Métricas selecionadas para cards:', {
-    customMetrics: customMetrics.map(([k, v]) => `${v.label}: ${v.value}${v.unit}`),
-    standardMetrics: standardMetrics.map(([k, v]) => `${k}: ${v}`),
-    selectedForCards: selectedMetrics.map(([k, v]) => k),
-    total: allMetrics.length
+  console.log('📊 [HTML] Métricas classificadas:', {
+    total: allMetrics.length,
+    recommended: recommendedMetrics.length,
+    custom: customMetrics.length,
+    selected_for_cards: selectedMetrics.map(([k]) => k)
   });
   console.log('📊 [HTML] Métricas processadas (com labels):', metricsArray);
 

@@ -38,27 +38,26 @@ async function generateAllLandingPageContent(
   
   const productsNames = products.map(p => p.name).join(', ');
   
-  // Separar métricas personalizadas (objeto) das padrão (string/número)
+  // Lista de métricas recomendadas (mesmo array do generateHTML.ts)
+  const RECOMMENDED_METRIC_KEYS = [
+    'ROI', 'patient_loss', 'revenue_loss', 'lab_time', 'digital_time',
+    'learning_curve', 'satisfaction_rate', 'production_capacity', 'delivery_time'
+  ];
+
   const allMetrics = Object.entries(solution.pain_metrics || {});
-  const customMetrics = allMetrics.filter(([key, value]) => 
-    typeof value === 'object' && value !== null && 'label' in value
-  );
-  const standardMetrics = allMetrics.filter(([key, value]) => 
-    typeof value !== 'object' || value === null || !('label' in value)
-  );
 
-  // Formatar métricas personalizadas com destaque
-  const customMetricsFormatted = customMetrics
-    .map(([key, value]) => `🎯 ${value.label}: ${value.value}${value.unit} (MÉTRICA PERSONALIZADA - PRIORIDADE MÁXIMA)`)
-    .join('\n');
+  // 🎯 Enviar APENAS métricas recomendadas para o prompt do subtítulo
+  const recommendedMetrics = allMetrics.filter(([key]) => RECOMMENDED_METRIC_KEYS.includes(key));
 
-  // Formatar métricas padrão
-  const standardMetricsFormatted = standardMetrics
+  const metricsFormatted = recommendedMetrics
     .map(([key, value]) => `• ${key.replace(/_/g, ' ')}: ${value}`)
-    .join('\n');
+    .join('\n') || '(Nenhuma métrica recomendada configurada)';
 
-  // Combinar com prioridade visual
-  const metricsFormatted = customMetricsFormatted + '\n' + standardMetricsFormatted;
+  console.log('📊 [AI PROMPT] Métricas enviadas para subtítulo:', {
+    total: allMetrics.length,
+    sent_to_ai: recommendedMetrics.length,
+    excluded_custom: allMetrics.length - recommendedMetrics.length
+  });
   
   const prompt = `Você é um copywriter especialista em neuromarketing e SPIN Selling para odontologia B2B.
 
@@ -79,25 +78,28 @@ async function generateAllLandingPageContent(
 ${solution.sales_pitch || 'Não informado'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 MÉTRICAS DE IMPACTO REAIS:
+📊 MÉTRICAS RECOMENDADAS (para uso no subtítulo):
 ${metricsFormatted}
 
-⚠️ REGRA CRÍTICA - MÉTRICAS PERSONALIZADAS:
-• SEMPRE priorize as MÉTRICAS PERSONALIZADAS (marcadas com 🎯) no subtítulo das métricas
-• Use TODAS as métricas personalizadas no texto se possível
-• NÃO use métricas personalizadas nos cards animados (essas são separadas)
-• Métricas padrão (marcadas com •) são secundárias no subtítulo
+⚠️ REGRA CRÍTICA - USO DE MÉTRICAS NO SUBTÍTULO:
+• Use APENAS as métricas recomendadas listadas acima
+• Transforme em linguagem natural e aspiracional
+• NÃO mencione métricas personalizadas (essas aparecem nos cards animados)
+• Se não houver métricas recomendadas, crie subtítulo qualitativo genérico
 
 Transforme métricas em linguagem ASPIRACIONAL:
 • 40 minutos → "tempo de laboratório reduzido drasticamente"
 • 30% → "aumento expressivo de produtividade"
 • 6 meses → "retorno sobre investimento acelerado"
 
-Exemplo CORRETO (com 3 métricas personalizadas):
-"Clínicas parceiras reduziram tempo de laboratório em 40 minutos, aumentaram produção em 30% e alcançaram ROI em apenas 6 meses"
+Exemplo CORRETO (com métricas recomendadas):
+"Clínicas parceiras reduziram tempo de laboratório de 40 para 15 minutos e alcançaram ROI em 12 meses"
+
+Exemplo CORRETO (sem métricas):
+"Transforme seu fluxo de trabalho com tecnologia validada por especialistas"
 
 Exemplo ERRADO:
-"Veja métricas impressionantes" (genérico, não usa as personalizadas)
+"Veja métricas impressionantes" (genérico, não usa as recomendadas)
 
 🎖️ CASOS DE SUCESSO: ${solution.success_cases?.length || 0} documentados
 

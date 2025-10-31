@@ -387,6 +387,74 @@ IMPORTANTE FINAL:
 • Exatamente 10 FAQs
 • Siga a distribuição: 3 (Desejo) + 3 (Dor) + 4 (Resultado)`;
 
+    /**
+     * Extrai URLs de vídeos de um produto, priorizando tipos específicos
+     */
+    function extractVideoUrls(product: any): {
+      youtube: string[];
+      technical: string[];
+      testimonial: string[];
+      instagram: string[];
+    } {
+      const extract = (videos: any[]) => 
+        (videos || [])
+          .filter(v => v && v.url)
+          .map(v => v.url);
+
+      return {
+        youtube: extract(product.youtube_videos),
+        technical: extract(product.technical_videos),
+        testimonial: extract(product.testimonial_videos),
+        instagram: extract(product.instagram_videos)
+      };
+    }
+
+    /**
+     * Adiciona hyperlinks nos nomes de produtos nas FAQs
+     * Rotaciona entre product_url e coleções de vídeos
+     */
+    function addProductHyperlinks(faqs: SpinFAQ[], products: any[]): SpinFAQ[] {
+      // Ordem de rotação de tipos de link
+      const linkRotation = ['product_url', 'youtube', 'technical', 'testimonial', 'instagram'];
+      
+      return faqs.map((faq, faqIndex) => {
+        let answer = faq.answer;
+        
+        products.forEach((product) => {
+          const productName = product.name;
+          
+          // Se o produto não é mencionado na resposta, pular
+          if (!answer.includes(productName)) return;
+          
+          // Determinar tipo de link baseado no índice da FAQ
+          const linkTypeIndex = faqIndex % linkRotation.length;
+          const linkType = linkRotation[linkTypeIndex];
+          
+          let url = product.product_url; // fallback padrão
+          
+          // Selecionar URL baseada no tipo
+          if (linkType === 'product_url') {
+            url = product.product_url;
+          } else {
+            const videoUrls = extractVideoUrls(product);
+            const videoCollection = videoUrls[linkType as keyof typeof videoUrls];
+            
+            // Usar primeiro vídeo disponível da coleção
+            // Se não houver, mantém product_url como fallback
+            if (videoCollection && videoCollection.length > 0) {
+              url = videoCollection[0];
+            }
+          }
+          
+          // Adicionar hyperlink (apenas primeira ocorrência do nome)
+          const regex = new RegExp(`\\b${productName}\\b`, 'i');
+          answer = answer.replace(regex, `<a href="${url}" target="_blank" rel="noopener noreferrer">${productName}</a>`);
+        });
+        
+        return { ...faq, answer };
+      });
+    }
+
     console.log('🤖 Chamando Lovable AI para gerar FAQs...');
 
     // Chamar Lovable AI Gateway
@@ -470,10 +538,19 @@ IMPORTANTE FINAL:
 
     console.log('✅ FAQs validadas:', generatedFaqs.length);
 
+    // Adicionar hyperlinks nos nomes de produtos
+    const faqsWithLinks = addProductHyperlinks(generatedFaqs, products);
+
+    console.log('🔗 [FAQs] Hyperlinks adicionados:', {
+      total_faqs: generatedFaqs.length,
+      products: products.map(p => p.name),
+      faqs_with_links: faqsWithLinks.filter(f => f.answer.includes('<a href')).length
+    });
+
     // Salvar FAQs na solução
     const { error: updateError } = await supabase
       .from('spin_selling_solutions')
-      .update({ faq: generatedFaqs })
+      .update({ faq: faqsWithLinks })
       .eq('id', solutionId);
 
     if (updateError) {
