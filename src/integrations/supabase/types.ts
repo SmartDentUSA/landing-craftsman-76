@@ -1533,6 +1533,8 @@ export type Database = {
           product_ids: string[] | null
           real_quotes: Json | null
           sales_pitch: string | null
+          selected_video_title: string | null
+          selected_video_url: string | null
           spin_journey_labels: Json | null
           storytelling_auto_generated: string | null
           success_cases: Json | null
@@ -1559,6 +1561,8 @@ export type Database = {
           product_ids?: string[] | null
           real_quotes?: Json | null
           sales_pitch?: string | null
+          selected_video_title?: string | null
+          selected_video_url?: string | null
           spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
@@ -1585,6 +1589,8 @@ export type Database = {
           product_ids?: string[] | null
           real_quotes?: Json | null
           sales_pitch?: string | null
+          selected_video_title?: string | null
+          selected_video_url?: string | null
           spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
