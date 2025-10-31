@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Package, Target, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Target, TrendingUp, MessageCircle, Copy } from 'lucide-react';
 import { useSpinSellingSolutions } from '@/hooks/useSpinSellingSolutions';
 import { SpinSolutionEditModal } from './SpinSolutionEditModal';
+import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,7 @@ const PAIN_TYPE_LABELS: Record<string, string> = {
 
 export function SpinSellingManager() {
   const { solutions, isLoading, deleteSolution } = useSpinSellingSolutions();
+  const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -117,11 +119,29 @@ export function SpinSellingManager() {
                     )}
                   </div>
 
-                  {/* Campaign Content Preview */}
+                  {/* WhatsApp Message Preview */}
                   {solution.whatsapp_complete_message && (
-                    <div className="bg-muted/50 p-3 rounded-md">
-                      <p className="text-sm font-medium text-primary">
-                        ✅ WhatsApp gerado
+                    <div className="bg-green-50 p-3 rounded-md border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-green-700 flex items-center gap-2">
+                          <MessageCircle className="w-4 h-4" />
+                          Mensagem WhatsApp pronta
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(solution.whatsapp_complete_message!);
+                            toast({ title: "✅ Copiado!", description: "Mensagem WhatsApp copiada" });
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-green-600 mt-1">
+                        {solution.whatsapp_complete_message.length} caracteres • 
+                        {solution.whatsapp_complete_message.includes('Impacto real:') ? ' Com métricas' : ' Sem métricas'}
                       </p>
                     </div>
                   )}

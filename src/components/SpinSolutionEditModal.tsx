@@ -251,6 +251,27 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       }
     }
 
+    // ✅ Validar mensagem WhatsApp se presente
+    if (formData.whatsapp_complete_message) {
+      const messageLength = formData.whatsapp_complete_message.trim().length;
+      if (messageLength < 50) {
+        toast({
+          title: "⚠️ Atenção",
+          description: "Mensagem WhatsApp muito curta (mínimo 50 caracteres)",
+          variant: "destructive"
+        });
+        return;
+      }
+      if (messageLength > 4000) {
+        toast({
+          title: "⚠️ Atenção",
+          description: "Mensagem WhatsApp muito longa (máximo 4000 caracteres para WhatsApp Business)",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const dataToSubmit = {
       title: formData.title,
       pain_type: formData.pain_type,
@@ -1959,30 +1980,67 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   </Button>
                 </div>
                 
-                {/* Preview WhatsApp Message */}
+                {/* WhatsApp Message Editor */}
                 {formData.whatsapp_complete_message && (
                   <Card className="mt-4 p-4 bg-background">
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex justify-between items-center mb-3">
                       <h4 className="font-semibold text-green-700 flex items-center gap-2">
                         <Check className="w-4 h-4" />
                         Mensagem WhatsApp Gerada
                       </h4>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.whatsapp_complete_message!);
-                          toast({ title: "Copiado!", description: "Mensagem copiada" });
-                        }}
-                      >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copiar
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(formData.whatsapp_complete_message!);
+                            toast({ title: "✅ Copiado!", description: "Mensagem copiada para área de transferência" });
+                          }}
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              whatsapp_complete_message: undefined
+                            }));
+                            toast({ 
+                              title: "✅ Redefinido", 
+                              description: "Clique em 'Gerar WhatsApp' novamente para recriar do zero" 
+                            });
+                          }}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Regenerar do Zero
+                        </Button>
+                      </div>
                     </div>
-                    <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-3 rounded-lg border max-h-60 overflow-y-auto">
-                      {formData.whatsapp_complete_message}
-                    </pre>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp-editor">
+                        Mensagem WhatsApp (editável)
+                      </Label>
+                      <Textarea
+                        id="whatsapp-editor"
+                        value={formData.whatsapp_complete_message || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          whatsapp_complete_message: e.target.value
+                        }))}
+                        className="font-mono text-sm min-h-[300px] resize-y"
+                        placeholder="Gere a mensagem primeiro clicando no botão acima"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        ✏️ Você pode editar livremente o texto gerado. Lembre-se de salvar.
+                      </p>
+                    </div>
                   </Card>
                 )}
                 

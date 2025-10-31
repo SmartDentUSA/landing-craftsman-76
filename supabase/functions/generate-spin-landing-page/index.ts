@@ -39,27 +39,6 @@ async function generateAllLandingPageContent(
   
   const productsNames = products.map(p => p.name).join(', ');
   
-  // Lista de métricas recomendadas (mesmo array do generateHTML.ts)
-  const RECOMMENDED_METRIC_KEYS = [
-    'ROI', 'patient_loss', 'revenue_loss', 'lab_time', 'digital_time',
-    'learning_curve', 'satisfaction_rate', 'production_capacity', 'delivery_time'
-  ];
-
-  const allMetrics = Object.entries(solution.pain_metrics || {});
-
-  // 🎯 Enviar APENAS métricas recomendadas para o prompt do subtítulo
-  const recommendedMetrics = allMetrics.filter(([key]) => RECOMMENDED_METRIC_KEYS.includes(key));
-
-  const metricsFormatted = recommendedMetrics
-    .map(([key, value]) => `• ${key.replace(/_/g, ' ')}: ${value}`)
-    .join('\n') || '(Nenhuma métrica recomendada configurada)';
-
-  console.log('📊 [AI PROMPT] Métricas enviadas para subtítulo:', {
-    total: allMetrics.length,
-    sent_to_ai: recommendedMetrics.length,
-    excluded_custom: allMetrics.length - recommendedMetrics.length
-  });
-  
   const prompt = `Você é um copywriter especialista em neuromarketing e SPIN Selling para odontologia B2B.
 
 🎯 MISSÃO: Gerar TODOS os textos da landing page seguindo a Jornada SPIN (Situação → Problema → Implicação → Necessidade).
@@ -97,10 +76,10 @@ Título fixo: "${solution.title}"
 GERAR APENAS O SUBTÍTULO (20-30 palavras):
 • Expandir o benefício principal do título
 • Mencionar produtos específicos: ${productsNames}
-• Adicionar prova social se houver métricas
 • Tom: aspiracional mas realista
 • Complementar o título fixo de forma natural
-• Exemplo: "Com ${productsNames}, clínicas odontológicas reduzem 93% do tempo de produção e aumentam 65% na taxa de aceitação de tratamentos"
+• Focar em transformação e benefícios práticos, não em números
+• Exemplo: "Com ${productsNames}, clínicas odontológicas transformam seu fluxo de trabalho, conquistam autonomia operacional e se tornam referência em tecnologia na região"
 
 ┌─────────────────────────────────────────────────────────┐
 │ 2. SEÇÃO DE RESULTADOS (Título + Subtítulo Persuasivo) │
@@ -226,7 +205,7 @@ Os exemplos abaixo são APENAS ilustrativos da **estrutura narrativa**.
 │ 3. NARRATIVA SPIN CONTEXTUAL (Antes dos Cards)         │
 └─────────────────────────────────────────────────────────┘
 
-📋 OBJETIVO: Criar um parágrafo narrativo de 150-200 palavras que conecta a jornada SPIN aos dados de métricas, posicionando-se ANTES dos cards numéricos.
+📋 OBJETIVO: Criar um parágrafo narrativo de 150-200 palavras que conecta a jornada SPIN aos benefícios tangíveis da solução, posicionando-se ANTES dos cards numéricos.
 
 📊 DADOS DISPONÍVEIS:
 ${solution.real_quotes?.length > 0 ? `
@@ -239,29 +218,25 @@ Cliente ${i + 1}:
 `).join('\n')}
 ` : 'Nenhum depoimento real disponível'}
 
-Métricas de impacto disponíveis:
-${metricsFormatted}
-
 🎯 ESTRUTURA OBRIGATÓRIA (em um único parágrafo fluido):
 
 1️⃣ **DESEJO** (2-3 frases): Comece descrevendo o desejo comum dos profissionais, usando insights dos depoimentos reais. Fale sobre a transformação que buscam.
 
 2️⃣ **DOR** (2-3 frases): Transição natural para as dores atuais, citando problemas específicos mencionados nos depoimentos. Use conectivos como "Porém", "Mas a realidade", "Contudo".
 
-3️⃣ **RESULTADO COM DADOS** (3-4 frases): Apresente como os produtos resolvem essas dores, **mencionando as métricas numéricas de forma natural no texto** (ex: "reduzindo em 93% o tempo de produção", "eliminando 12 minutos de trabalho manual"). Conecte cada métrica a um benefício tangível.
+3️⃣ **RESULTADO** (3-4 frases): Apresente como os produtos resolvem essas dores, focando em benefícios tangíveis e transformação prática. Conecte a solução aos resultados esperados mencionados nos depoimentos.
 
 ⚠️ REGRAS CRÍTICAS:
-- ✅ Incorpore as métricas naturalmente no texto narrativo
+- ✅ Foque em benefícios práticos e transformação
 - ✅ Mencione os produtos: ${productsNames}
 - ✅ Mantenha tom consultivo e baseado em evidências
 - ✅ Use dados reais dos depoimentos quando disponíveis
 - ❌ NÃO use bullet points ou listas
 - ❌ NÃO repita o subtítulo do hero
 - ❌ NÃO use chavões ("revolucionário", "inovador", "único no mercado")
-- ❌ NÃO invente métricas que não existem nos dados
 
 📝 EXEMPLO DE ESTRUTURA (NÃO COPIAR LITERALMENTE):
-"Profissionais que buscam [desejo dos depoimentos] frequentemente enfrentam [dor específica dos depoimentos], resultando em [consequência]. Com [Produto A] e [Produto B], clínicas conseguem [resultado], reduzindo em [métrica X] o [processo Y] e eliminando [métrica Z] de [tarefa]. Isso significa [benefício tangível conectado às métricas]."
+"Profissionais que buscam [desejo dos depoimentos] frequentemente enfrentam [dor específica dos depoimentos], resultando em [consequência]. Com [Produto A] e [Produto B], clínicas conseguem [resultado tangível], eliminando [problema específico] e conquistando [benefício prático]. Isso significa [transformação alcançada]."
 
 ┌─────────────────────────────────────────────────────────┐
 │ 4. CTA (Call-to-Action)                                 │
@@ -300,8 +275,7 @@ Exemplo:
 ═══════════════════════════════════════════════════════════
 
 ✅ SEMPRE usar a linguagem do PITCH DE VENDAS
-✅ SEMPRE integrar métricas em linguagem natural
-✅ SEMPRE focar em benefícios PRÁTICOS
+✅ SEMPRE focar em benefícios PRÁTICOS e transformação
 ✅ SEMPRE manter tom profissional mas conversacional
 ✅ SEMPRE usar exemplos do dia a dia odontológico
 
