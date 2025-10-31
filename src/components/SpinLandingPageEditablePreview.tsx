@@ -73,13 +73,24 @@ export function SpinLandingPageEditablePreview({
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    const injectListeners = () => {
+    const injectListeners = (attempt = 1) => {
       const doc = iframe.contentDocument;
-      if (!doc || !doc.body) return false;
+      if (!doc || !doc.body) {
+        console.log(`🎯 [Editor] Tentativa ${attempt} - Documento não disponível`);
+        return false;
+      }
 
       // Verificar se já injetou (evitar duplicatas)
       if (doc.head.querySelector('style[data-editable-injected]')) {
+        console.log('✅ [Editor] Listeners já injetados anteriormente');
         return true;
+      }
+
+      const editableElements = doc.querySelectorAll('[data-editable]');
+      console.log(`🎯 [Editor] Tentativa ${attempt} - Elementos editáveis encontrados:`, editableElements.length);
+
+      if (editableElements.length === 0) {
+        console.warn('⚠️ [Editor] Nenhum elemento [data-editable] encontrado no DOM');
       }
 
       // Injetar CSS para elementos editáveis
@@ -126,27 +137,60 @@ export function SpinLandingPageEditablePreview({
       doc.body.addEventListener('click', handleElementClick);
       doc.body.addEventListener('blur', handleElementBlur, true);
       
-      console.log('✅ Listeners injetados com sucesso no iframe');
+      console.log(`✅ [Editor] Listeners injetados com sucesso na tentativa ${attempt}`);
       return true;
     };
 
-    // ✅ TENTATIVA 1: Injetar imediatamente se iframe já carregou
+    // ✅ TENTATIVA 1: Injetar imediatamente se iframe já carregou (200ms de delay)
     if (iframe.contentDocument?.readyState === 'complete' || 
         iframe.contentDocument?.readyState === 'interactive') {
-      console.log('🔄 Iframe já carregado, injetando imediatamente');
-      setTimeout(() => injectListeners(), 50);
+      console.log('🔄 [Editor] Iframe já carregado, injetando imediatamente');
+      setTimeout(() => injectListeners(1), 200);
     }
 
     // ✅ TENTATIVA 2: Listener de load como backup
     const handleLoad = () => {
-      console.log('🔄 Evento load disparado, injetando listeners');
-      setTimeout(() => injectListeners(), 100);
+      console.log('🔄 [Editor] Evento load disparado, injetando listeners');
+      setTimeout(() => injectListeners(2), 100);
     };
 
     iframe.addEventListener('load', handleLoad);
+
+    // ✅ TENTATIVA 3: Polling robusto como último recurso (3 tentativas, 300ms cada)
+    let pollingAttempts = 0;
+    const maxPollingAttempts = 3;
+    const pollingInterval = setInterval(() => {
+      pollingAttempts++;
+      
+      if (pollingAttempts > maxPollingAttempts) {
+        clearInterval(pollingInterval);
+        console.error('❌ [Editor] Falha após 3 tentativas de polling. Elementos editáveis podem não funcionar.');
+        toast({
+          title: '⚠️ Aviso do Editor',
+          description: 'Clique em "Recarregar Editor" se a edição não funcionar',
+          variant: 'default'
+        });
+        return;
+      }
+
+      const doc = iframe.contentDocument;
+      if (doc && doc.body && doc.querySelectorAll('[data-editable]').length > 0) {
+        const alreadyInjected = doc.head.querySelector('style[data-editable-injected]');
+        if (!alreadyInjected) {
+          console.log(`🔄 [Editor] Polling tentativa ${pollingAttempts}/${maxPollingAttempts}`);
+          const success = injectListeners(2 + pollingAttempts);
+          if (success) {
+            clearInterval(pollingInterval);
+          }
+        } else {
+          clearInterval(pollingInterval);
+        }
+      }
+    }, 300);
     
     return () => {
       iframe.removeEventListener('load', handleLoad);
+      clearInterval(pollingInterval);
     };
   }, [html]);
 
@@ -157,6 +201,8 @@ export function SpinLandingPageEditablePreview({
     if (editable) {
       event.preventDefault();
       const field = editable.getAttribute('data-field');
+      
+      console.log('🖱️ [Editor] Clicou em:', field, '→', editable.textContent?.substring(0, 50));
       
       // Desabilitar outros elementos editáveis
       const doc = iframeRef.current?.contentDocument;
@@ -171,6 +217,8 @@ export function SpinLandingPageEditablePreview({
       editable.focus();
       setCurrentEditingField(field);
       setIsEditing(true);
+      
+      console.log('✅ [Editor] Campo ativado para edição:', field);
     }
   };
 
@@ -180,12 +228,18 @@ export function SpinLandingPageEditablePreview({
       const field = target.getAttribute('data-field');
       const newValue = target.textContent || '';
       
+      console.log('💾 [Editor] Salvou edição:', field, '→', newValue.substring(0, 50));
+      
       // Atualizar editedData
       if (field) {
-        setEditedData(prev => ({
-          ...prev,
-          [field]: newValue
-        }));
+        setEditedData(prev => {
+          const updated = {
+            ...prev,
+            [field]: newValue
+          };
+          console.log('💾 [Editor] editedData atualizado:', Object.keys(updated).filter(k => updated[k]).length, 'campos');
+          return updated;
+        });
         
         setHasChanges(true);
       }
@@ -194,6 +248,33 @@ export function SpinLandingPageEditablePreview({
       setCurrentEditingField(null);
       setIsEditing(false);
     }
+  };
+
+  // Função para forçar reinjeção manual dos listeners
+  const forceInjectListeners = () => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument) {
+      toast({
+        title: '❌ Erro',
+        description: 'Iframe não está carregado',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Remover estilo anterior se existir
+    const existingStyle = iframe.contentDocument.head.querySelector('style[data-editable-injected]');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+
+    // Recarregar HTML para forçar novo load
+    setHtml(html + ' '); // Trigger re-render
+    
+    toast({
+      title: '🔄 Editor reiniciado',
+      description: 'Listeners de edição recarregados',
+    });
   };
 
   const saveChanges = async () => {
@@ -374,6 +455,12 @@ export function SpinLandingPageEditablePreview({
                   Editando: {currentEditingField}
                 </Badge>
               )}
+              {/* Badge de Debug - Mostra quantas edições foram capturadas */}
+              {Object.keys(editedData).filter(k => editedData[k]).length > 0 && (
+                <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
+                  ✅ {Object.keys(editedData).filter(k => editedData[k]).length} edições capturadas
+                </Badge>
+              )}
               {lastGeneratedAt && (
                 <Badge variant="outline" className="ml-2 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -387,6 +474,15 @@ export function SpinLandingPageEditablePreview({
             </span>
             
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={forceInjectListeners}
+                title="Recarregar listeners de edição se a edição não funcionar"
+              >
+                🔄 Recarregar Editor
+              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -448,7 +544,7 @@ export function SpinLandingPageEditablePreview({
             ref={iframeRef}
             srcDoc={html}
             className="w-full h-full"
-            sandbox="allow-same-origin allow-scripts"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-modals"
             title="Preview da Landing Page"
           />
         </div>
