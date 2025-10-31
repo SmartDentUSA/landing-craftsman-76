@@ -305,7 +305,7 @@ INSTRUÇÕES CRÍTICAS:
     technicalSpecs: product.technical_specifications ? 
       (typeof product.technical_specifications === 'string' ? product.technical_specifications :
        Array.isArray(product.technical_specifications) ? product.technical_specifications.map((s: any) => 
-         typeof s === 'object' ? `${s.name}: ${s.value}` : s
+         typeof s === 'object' ? \`\${s.name}: \${s.value}\` : s
        ).join(', ') : '') : 'N/A',
     
     // Informações Comerciais
