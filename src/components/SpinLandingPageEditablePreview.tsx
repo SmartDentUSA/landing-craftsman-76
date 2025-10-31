@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -59,9 +59,67 @@ export function SpinLandingPageEditablePreview({
   const [hasChanges, setHasChanges] = useState(false);
   const [currentEditingField, setCurrentEditingField] = useState<string | null>(null);
   const [lastGeneratedAt, setLastGeneratedAt] = useState(generatedAt);
+  const [editableElementsCount, setEditableElementsCount] = useState(0);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
+
+  // ✅ FASE 1.1: Event Handlers estáveis usando useCallback
+  const handleElementClick = useCallback((event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    const editable = target.closest('[data-editable]') as HTMLElement;
+    
+    if (editable) {
+      event.preventDefault();
+      const field = editable.getAttribute('data-field');
+      
+      console.log('🖱️ [Editor] Clicou em:', field, '→', editable.textContent?.substring(0, 50));
+      
+      // Desabilitar outros elementos editáveis
+      const doc = iframeRef.current?.contentDocument;
+      if (doc) {
+        doc.querySelectorAll('[contenteditable="true"]').forEach(el => {
+          el.setAttribute('contenteditable', 'false');
+        });
+      }
+      
+      // Habilitar este elemento
+      editable.setAttribute('contenteditable', 'true');
+      editable.focus();
+      setCurrentEditingField(field);
+      setIsEditing(true);
+      
+      console.log('✅ [Editor] Campo ativado para edição:', field);
+    }
+  }, []);
+
+  const handleElementBlur = useCallback((event: FocusEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.hasAttribute('contenteditable')) {
+      const field = target.getAttribute('data-field');
+      const newValue = target.textContent || '';
+      
+      console.log('💾 [Editor] Salvou edição:', field, '→', newValue.substring(0, 50));
+      
+      // Atualizar editedData
+      if (field) {
+        setEditedData(prev => {
+          const updated = {
+            ...prev,
+            [field]: newValue
+          };
+          console.log('💾 [Editor] editedData atualizado:', Object.keys(updated).filter(k => updated[k]).length, 'campos');
+          return updated;
+        });
+        
+        setHasChanges(true);
+      }
+      
+      target.setAttribute('contenteditable', 'false');
+      setCurrentEditingField(null);
+      setIsEditing(false);
+    }
+  }, []);
 
   // 🔄 Mudança 1: Sincronizar HTML quando initialHTML mudar
   useEffect(() => {
@@ -80,60 +138,64 @@ export function SpinLandingPageEditablePreview({
         return false;
       }
 
-      // Verificar se já injetou (evitar duplicatas)
+      // ✅ FASE 1.2: Remover listeners antigos ANTES de adicionar novos (previne duplicatas)
+      doc.body.removeEventListener('click', handleElementClick);
+      doc.body.removeEventListener('blur', handleElementBlur, true);
+
+      // Verificar se já injetou CSS (evitar duplicatas)
       if (doc.head.querySelector('style[data-editable-injected]')) {
-        console.log('✅ [Editor] Listeners já injetados anteriormente');
-        return true;
+        console.log('✅ [Editor] CSS já injetado, apenas reaplicando listeners');
+      } else {
+        // Injetar CSS para elementos editáveis
+        const style = doc.createElement('style');
+        style.setAttribute('data-editable-injected', 'true');
+        style.textContent = `
+          [data-editable] {
+            outline: 2px dashed transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+          }
+          [data-editable]:hover {
+            outline-color: #EE7A3E;
+            background: rgba(238, 122, 62, 0.05);
+          }
+          [data-editable][contenteditable="true"] {
+            outline-color: #3E4B5E;
+            outline-style: solid;
+            background: rgba(62, 75, 94, 0.08);
+            box-shadow: 0 0 0 4px rgba(62, 75, 94, 0.1);
+          }
+          [data-editable]:hover::after {
+            content: "✏️ Clique para editar";
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3E4B5E;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          }
+        `;
+        doc.head.appendChild(style);
       }
 
       const editableElements = doc.querySelectorAll('[data-editable]');
+      setEditableElementsCount(editableElements.length); // ✅ FASE 3.2: Atualizar contador
       console.log(`🎯 [Editor] Tentativa ${attempt} - Elementos editáveis encontrados:`, editableElements.length);
 
       if (editableElements.length === 0) {
         console.warn('⚠️ [Editor] Nenhum elemento [data-editable] encontrado no DOM');
       }
 
-      // Injetar CSS para elementos editáveis
-      const style = doc.createElement('style');
-      style.setAttribute('data-editable-injected', 'true');
-      style.textContent = `
-        [data-editable] {
-          outline: 2px dashed transparent;
-          cursor: pointer;
-          transition: all 0.2s;
-          position: relative;
-        }
-        [data-editable]:hover {
-          outline-color: #EE7A3E;
-          background: rgba(238, 122, 62, 0.05);
-        }
-        [data-editable][contenteditable="true"] {
-          outline-color: #3E4B5E;
-          outline-style: solid;
-          background: rgba(62, 75, 94, 0.08);
-          box-shadow: 0 0 0 4px rgba(62, 75, 94, 0.1);
-        }
-        [data-editable]:hover::after {
-          content: "✏️ Clique para editar";
-          position: absolute;
-          top: -30px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #3E4B5E;
-          color: white;
-          padding: 4px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          white-space: nowrap;
-          pointer-events: none;
-          z-index: 1000;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-      `;
-      doc.head.appendChild(style);
-
-      // Adicionar event listeners para edição
+      // ✅ Adicionar listeners com as funções estáveis
       doc.body.addEventListener('click', handleElementClick);
       doc.body.addEventListener('blur', handleElementBlur, true);
       
@@ -192,66 +254,12 @@ export function SpinLandingPageEditablePreview({
       iframe.removeEventListener('load', handleLoad);
       clearInterval(pollingInterval);
     };
-  }, [html]);
+  }, [html, handleElementClick, handleElementBlur, toast]); // ✅ FASE 1.3: Adicionar handlers como dependências
 
-  const handleElementClick = (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    const editable = target.closest('[data-editable]') as HTMLElement;
-    
-    if (editable) {
-      event.preventDefault();
-      const field = editable.getAttribute('data-field');
-      
-      console.log('🖱️ [Editor] Clicou em:', field, '→', editable.textContent?.substring(0, 50));
-      
-      // Desabilitar outros elementos editáveis
-      const doc = iframeRef.current?.contentDocument;
-      if (doc) {
-        doc.querySelectorAll('[contenteditable="true"]').forEach(el => {
-          el.setAttribute('contenteditable', 'false');
-        });
-      }
-      
-      // Habilitar este elemento
-      editable.setAttribute('contenteditable', 'true');
-      editable.focus();
-      setCurrentEditingField(field);
-      setIsEditing(true);
-      
-      console.log('✅ [Editor] Campo ativado para edição:', field);
-    }
-  };
+  // ✅ FASE 1.4: Funções antigas removidas (agora são useCallback antes do useEffect)
 
-  const handleElementBlur = (event: FocusEvent) => {
-    const target = event.target as HTMLElement;
-    if (target.hasAttribute('contenteditable')) {
-      const field = target.getAttribute('data-field');
-      const newValue = target.textContent || '';
-      
-      console.log('💾 [Editor] Salvou edição:', field, '→', newValue.substring(0, 50));
-      
-      // Atualizar editedData
-      if (field) {
-        setEditedData(prev => {
-          const updated = {
-            ...prev,
-            [field]: newValue
-          };
-          console.log('💾 [Editor] editedData atualizado:', Object.keys(updated).filter(k => updated[k]).length, 'campos');
-          return updated;
-        });
-        
-        setHasChanges(true);
-      }
-      
-      target.setAttribute('contenteditable', 'false');
-      setCurrentEditingField(null);
-      setIsEditing(false);
-    }
-  };
-
-  // Função para forçar reinjeção manual dos listeners
-  const forceInjectListeners = () => {
+  // ✅ FASE 2: Função para forçar reinjeção manual dos listeners (CORRIGIDA)
+  const forceInjectListeners = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentDocument) {
       toast({
@@ -262,20 +270,71 @@ export function SpinLandingPageEditablePreview({
       return;
     }
 
-    // Remover estilo anterior se existir
-    const existingStyle = iframe.contentDocument.head.querySelector('style[data-editable-injected]');
+    const doc = iframe.contentDocument;
+    
+    // ✅ Remover listeners antigos
+    doc.body.removeEventListener('click', handleElementClick);
+    doc.body.removeEventListener('blur', handleElementBlur, true);
+    
+    // ✅ Remover estilo CSS anterior
+    const existingStyle = doc.head.querySelector('style[data-editable-injected]');
     if (existingStyle) {
       existingStyle.remove();
     }
 
-    // Recarregar HTML para forçar novo load
-    setHtml(html + ' '); // Trigger re-render
+    // ✅ Reinjetar CSS completo
+    const style = doc.createElement('style');
+    style.setAttribute('data-editable-injected', 'true');
+    style.textContent = `
+      [data-editable] {
+        outline: 2px dashed transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+      }
+      [data-editable]:hover {
+        outline-color: #EE7A3E;
+        background: rgba(238, 122, 62, 0.05);
+      }
+      [data-editable][contenteditable="true"] {
+        outline-color: #3E4B5E;
+        outline-style: solid;
+        background: rgba(62, 75, 94, 0.08);
+        box-shadow: 0 0 0 4px rgba(62, 75, 94, 0.1);
+      }
+      [data-editable]:hover::after {
+        content: "✏️ Clique para editar";
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #3E4B5E;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+    `;
+    doc.head.appendChild(style);
+
+    // ✅ Readicionar listeners com funções estáveis
+    doc.body.addEventListener('click', handleElementClick);
+    doc.body.addEventListener('blur', handleElementBlur, true);
+    
+    const editableElements = doc.querySelectorAll('[data-editable]');
+    setEditableElementsCount(editableElements.length); // ✅ FASE 3.4: Atualizar contador
+    console.log('✅ [Editor] Listeners reinjetados manualmente:', editableElements.length, 'elementos');
     
     toast({
-      title: '🔄 Editor reiniciado',
-      description: 'Listeners de edição recarregados',
+      title: '✅ Editor reiniciado',
+      description: `${editableElements.length} elementos editáveis prontos`,
     });
-  };
+  }, [handleElementClick, handleElementBlur, toast]);
 
   const saveChanges = async () => {
     setIsSaving(true);
@@ -459,6 +518,12 @@ export function SpinLandingPageEditablePreview({
               {Object.keys(editedData).filter(k => editedData[k]).length > 0 && (
                 <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
                   ✅ {Object.keys(editedData).filter(k => editedData[k]).length} edições capturadas
+                </Badge>
+              )}
+              {/* ✅ FASE 3.3: Badge de contador de elementos editáveis */}
+              {editableElementsCount > 0 && (
+                <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-300">
+                  🎯 {editableElementsCount} campos editáveis
                 </Badge>
               )}
               {lastGeneratedAt && (
