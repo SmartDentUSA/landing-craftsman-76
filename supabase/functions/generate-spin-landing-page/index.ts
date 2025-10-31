@@ -118,7 +118,7 @@ Gerar um TÍTULO curto (3-5 palavras) e um SUBTÍTULO EXPANDIDO de 80-120 palavr
 → Usar verbos sensoriais (sentir, visualizar, controlar)
 
 Exemplo:
-"Imagine controlar cada etapa da produção, entregar tratamentos complexos no mesmo dia e ver seus pacientes impressionados com a agilidade da sua clínica."
+"Imagine dominar cada etapa do fluxo de trabalho, entregar soluções completas no mesmo dia e ver seus clientes impressionados com a velocidade e qualidade da sua operação."
 
 **FASE 2: DOR EXPANDIDA (40-60 palavras) ⚠️ SEÇÃO CRÍTICA**
 → Dedicar 50-70% do subtítulo para explorar PROFUNDAMENTE as dores
@@ -144,7 +144,7 @@ Estrutura sugerida:
 "Mas a realidade de muitos profissionais ainda é [DOR OPERACIONAL específica relacionada a ${solution.pain_type}]. Isso significa [DOR FINANCEIRA: perda de pacientes/receita]. Pior ainda: [DOR EMOCIONAL: frustração/ansiedade]. Enquanto concorrentes já [CONTRASTE: o que outros já fazem], sua clínica [CONSEQUÊNCIA: fica vulnerável]."
 
 Exemplo expandido:
-"Mas a realidade de muitos dentistas ainda é depender de laboratórios externos, aguardar dias por próteses simples e lidar com retrabalhos constantes. Isso significa perder pacientes que desistem pela demora, aceitar margens apertadas ditadas por terceiros e ver oportunidades urgentes escaparem. Pior ainda: sentir a frustração de não ter controle sobre prazos e qualidade, enquanto concorrentes tecnológicos já oferecem 'entrega imediata' e dominam o mercado premium."
+"Mas a realidade de muitos profissionais ainda é [descrever solution.pain_type aqui], aguardar dias por tarefas que deveriam ser rápidas e lidar com retrabalhos que drenam tempo e recursos. Isso significa perder oportunidades enquanto concorrentes avançam, aceitar margens reduzidas impostas por terceiros e ver demandas urgentes escaparem. Pior ainda: sentir a frustração de não ter controle sobre prazos e qualidade, enquanto a concorrência tecnológica já oferece [vantagem competitiva] e domina o mercado premium."
 
 **FASE 3: RESULTADO TRANSFORMADOR (20-30 palavras)**
 → Começar com "Com [produtos específicos]..."
@@ -154,7 +154,7 @@ Exemplo expandido:
 → Finalizar com status/reconhecimento alcançado
 
 Exemplo:
-"Com a Resina 3D Smart Print Bio Vitality e a Rayshape Edge Mini, clínicas parceiras eliminam a dependência de laboratórios, recuperam o controle total sobre prazos e qualidade, e se tornam referência regional em odontologia digital de alto desempenho."
+"Com [Produto A] e [Produto B], profissionais que adotam essa solução eliminam [dor principal], recuperam controle total sobre [aspecto crítico] e se tornam referência regional em [área de especialização] de alto desempenho."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚙️ REGRAS CRÍTICAS PARA O SUBTÍTULO
@@ -184,12 +184,27 @@ Exemplo:
 • Linguagem aspiracional para resultado ("eliminam", "se tornam referência")
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ ATENÇÃO CRÍTICA - NÃO COPIAR EXEMPLOS LITERALMENTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Os exemplos abaixo são APENAS ilustrativos da **estrutura narrativa**.
+
+❌ NÃO copie trechos literalmente
+❌ NÃO use produtos mencionados nos exemplos se não estiverem em ${productsNames}
+❌ NÃO use termos genéricos como "clínicas parceiras", "profissionais da área"
+
+✅ ADAPTE ao contexto real dos produtos fornecidos
+✅ USE os nomes reais dos produtos de ${productsNames}
+✅ SUBSTITUA placeholders [entre colchetes] por dados reais
+✅ MANTENHA a estrutura SPIN, mas com vocabulário específico da solução
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋 EXEMPLO COMPLETO (MODELO EXATO A SEGUIR)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**Subtítulo gerado (103 palavras):**
+**Subtítulo gerado (105 palavras):**
 
-"Imagine controlar cada etapa da produção de próteses e guias cirúrgicos, entregar trabalhos complexos no mesmo dia e ver seus pacientes impressionados com a rapidez da sua clínica. Mas a realidade de muitos dentistas ainda é depender de laboratórios externos, aguardar dias por trabalhos simples, lidar com retrabalhos constantes e aceitar margens apertadas. Isso significa perder pacientes que desistem pela demora, custos crescentes com intermediários e a frustração de não ter controle sobre prazos nem qualidade. Enquanto concorrentes tecnológicos já dominam o mercado premium com 'entrega imediata', sua clínica fica vulnerável. Com a Resina 3D Smart Print Bio Vitality e a Rayshape Edge Mini, clínicas parceiras eliminam a dependência de laboratórios, recuperam controle total sobre prazos e qualidade, e se tornam referência regional em odontologia digital de alto desempenho."
+"Imagine dominar cada etapa do [processo crítico da solução], entregar [resultados esperados] no mesmo dia e ver seus clientes impressionados com a velocidade e qualidade do seu trabalho. Mas a realidade de muitos profissionais ainda é [descrever solution.pain_type aqui], aguardar dias por tarefas que deveriam ser rápidas e lidar com retrabalhos que drenam tempo e recursos. Isso significa perder oportunidades enquanto concorrentes avançam, aceitar margens reduzidas impostas por terceiros e sentir a frustração de não ter controle sobre prazos nem qualidade. Enquanto a concorrência já domina o mercado com [vantagem competitiva], sua operação fica vulnerável. Com [Produto A] e [Produto B], profissionais que adotam essa solução eliminam [dor principal], recuperam controle total sobre [aspecto crítico] e se tornam referência em [especialização] de alto desempenho."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 TÍTULO DA SEÇÃO (3-5 palavras)
