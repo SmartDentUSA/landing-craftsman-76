@@ -46,7 +46,12 @@ serve(async (req) => {
     if (productIds.length > 0) {
       const { data: productsData } = await supabase
         .from('products_repository')
-        .select('id, name, description, category, price, benefits, features, target_audience')
+        .select(`
+          id, name, description, category, price, 
+          benefits, features, target_audience,
+          gtin, mpn, brand, google_product_category, 
+          condition, availability
+        `)
         .in('id', productIds);
       
       products = productsData || [];
@@ -127,12 +132,32 @@ ${products.map((p, i) => `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PRODUTO ${i + 1}: ${p.name}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Categoria: ${p.category || 'N/A'}
-• Descrição: ${p.description || 'N/A'}
-• Preço: ${p.price ? 'R$ ' + p.price : 'Sob consulta'}
-• Benefícios-chave: ${p.benefits ? JSON.stringify(p.benefits).substring(0, 250) : 'N/A'}
-• Características: ${p.features ? JSON.stringify(p.features).substring(0, 250) : 'N/A'}
+🏷️ DADOS TÉCNICOS & MERCHANT:
+  • GTIN: ${p.gtin || 'Não especificado'}
+  • MPN: ${p.mpn || 'Não especificado'}
+  • Marca: ${p.brand || 'Não especificada'}
+  • Categoria Google: ${p.google_product_category || 'N/A'}
+  • Condição: ${p.condition || 'new'}
+  • Disponibilidade: ${p.availability || 'in stock'}
+
+📊 INFORMAÇÕES COMERCIAIS:
+  • Categoria Interna: ${p.category || 'N/A'}
+  • Preço: ${p.price ? 'R$ ' + p.price : 'Sob consulta'}
+  
+📝 DESCRIÇÃO: ${p.description || 'N/A'}
+
+✅ BENEFÍCIOS-CHAVE: 
+${p.benefits ? JSON.stringify(p.benefits).substring(0, 250) : 'N/A'}
+
+⚙️ CARACTERÍSTICAS:
+${p.features ? JSON.stringify(p.features).substring(0, 250) : 'N/A'}
 `).join('\n')}
+
+⚠️ ATENÇÃO - USO DOS DADOS ESTRUTURADOS:
+Use os dados técnicos (GTIN/MPN/Marca) para:
+  ✓ FAQ #7 (Especificações Técnicas)
+  ✓ FAQ #10 (Garantia & Autenticidade)
+  ✓ Responder com precisão sobre certificações/padrões
 
 ═══════════════════════════════════════════════════════════
 🧠 EXTRAÇÃO OBRIGATÓRIA DO PITCH (FAÇA ANTES DE CRIAR AS FAQs)
