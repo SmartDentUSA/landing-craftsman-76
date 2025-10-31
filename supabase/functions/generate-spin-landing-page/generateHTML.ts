@@ -188,9 +188,9 @@ export function generateLandingPageHTML(
     (solution.sales_pitch ? solution.sales_pitch.substring(0, 120) + '...' : `Solução completa com ${products.map(p => p.name).join(', ')}`);
   
   // ✅ MÉTRICAS: IA ou defaults
-  const finalMetricsTitle = customText.metrics_title || aiContent?.metrics?.title || 'Métricas de Impacto Comprovadas';
+  const finalMetricsTitle = customText.metrics_title || aiContent?.metrics?.title || 'Transformação Real em Clínicas';
   const finalMetricsSubtitle = customText.metrics_subtitle || aiContent?.metrics?.subtitle ||
-    `Descubra como centenas de clínicas parceiras da ${company?.company_name || 'Smart Dent'} estão transformando completamente sua operação com ${products.slice(0, 2).map(p => p.name).join(' e ')}, experimentando retorno sobre investimento acelerado, fluxo digital ultrarrápido que elimina dependência de laboratórios externos, economia expressiva de tempo e materiais em procedimentos diários, e multiplicação da capacidade de atendimento sem aumento proporcional de custos operacionais`;
+    `Imagine sua clínica entregando resultados no mesmo dia, sem retrabalho e sem depender de laboratórios externos. Hoje, muitos perdem pacientes pela demora e complexidade. Com ${products.slice(0, 2).map(p => p.name).join(' e ')}, clínicas parceiras eliminam gargalos críticos e se tornam referência em agilidade e previsibilidade.`;
   
   // ✅ FAQ: sempre estático (não gerado por IA nesta função)
   const finalFaqTitle = customText.faq_title || 'Perguntas Frequentes';
@@ -771,7 +771,30 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       line-height: 1;
     }
 
-    .metric-card span {
+    .metric-card .count {
+      display: inline-flex;
+      align-items: flex-start;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .metric-card .count .number {
+      font-size: 64px;
+      font-weight: 900;
+      color: var(--accent-tech);
+    }
+
+    .metric-card .count .unit {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--accent-tech);
+      margin-left: 4px;
+      opacity: 0.9;
+      line-height: 1.1;
+      vertical-align: super;
+    }
+
+    .metric-card span:not(.count):not(.number):not(.unit) {
       font-size: 16px;
       color: var(--muted);
       font-weight: 600;
@@ -1210,7 +1233,9 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
           
           return `
           <div class="metric-card">
-            <span class="count" data-target="${numericValue || 0}" data-unit="${unit}">${displayValue}</span>
+            <span class="count" data-target="${numericValue || 0}" data-unit="${unit}">
+              <span class="number">0</span><span class="unit">${escapeHtml(unit)}</span>
+            </span>
             <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(finalLabel)}</span>
           </div>
         `}).join('')}
@@ -1347,7 +1372,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
     function startCounter(counter) {
       const target = +counter.getAttribute('data-target');
-      const unit = counter.getAttribute('data-unit') || '';
+      const numberEl = counter.querySelector('.number');
       const duration = 2000;
       let startTimestamp = null;
 
@@ -1356,12 +1381,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         const progress = timestamp - startTimestamp;
         const currentCount = Math.min(Math.floor(progress / duration * target), target);
         
-        counter.textContent = currentCount + (unit ? ' ' + unit : '');
+        if (numberEl) numberEl.textContent = String(currentCount);
 
         if (progress < duration) {
           window.requestAnimationFrame(step);
         } else {
-          counter.textContent = target + (unit ? ' ' + unit : '');
+          if (numberEl) numberEl.textContent = String(target);
         }
       };
 

@@ -78,29 +78,6 @@ async function generateAllLandingPageContent(
 ${solution.sales_pitch || 'Não informado'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 MÉTRICAS RECOMENDADAS (para uso no subtítulo):
-${metricsFormatted}
-
-⚠️ REGRA CRÍTICA - USO DE MÉTRICAS NO SUBTÍTULO:
-• Use APENAS as métricas recomendadas listadas acima
-• Transforme em linguagem natural e aspiracional
-• NÃO mencione métricas personalizadas (essas aparecem nos cards animados)
-• Se não houver métricas recomendadas, crie subtítulo qualitativo genérico
-
-Transforme métricas em linguagem ASPIRACIONAL:
-• 40 minutos → "tempo de laboratório reduzido drasticamente"
-• 30% → "aumento expressivo de produtividade"
-• 6 meses → "retorno sobre investimento acelerado"
-
-Exemplo CORRETO (com métricas recomendadas):
-"Clínicas parceiras reduziram tempo de laboratório de 40 para 15 minutos e alcançaram ROI em 12 meses"
-
-Exemplo CORRETO (sem métricas):
-"Transforme seu fluxo de trabalho com tecnologia validada por especialistas"
-
-Exemplo ERRADO:
-"Veja métricas impressionantes" (genérico, não usa as recomendadas)
-
 🎖️ CASOS DE SUCESSO: ${solution.success_cases?.length || 0} documentados
 
 ═══════════════════════════════════════════════════════════
@@ -125,35 +102,33 @@ GERAR APENAS O SUBTÍTULO (20-30 palavras):
 • Exemplo: "Com ${productsNames}, clínicas odontológicas reduzem 93% do tempo de produção e aumentam 65% na taxa de aceitação de tratamentos"
 
 ┌─────────────────────────────────────────────────────────┐
-│ 2. MÉTRICAS SECTION                                     │
+│ 2. SEÇÃO DE RESULTADOS (Título + Subtítulo Persuasivo) │
 └─────────────────────────────────────────────────────────┘
 
+Objetivo:
+Gerar um TÍTULO curto (3-5 palavras) e um SUBTÍTULO de 40-60 palavras usando Jornada SPIN (Desejo → Dor → Resultado), sem citar números. Foque em transformação qualitativa.
+
 TÍTULO (3-5 palavras):
-• Focar em RESULTADOS, não métricas
-• Exemplos: "Resultados que Comprovam", "Impacto Real Mensurável", "Transformação Documentada"
+• Focar em TRANSFORMAÇÃO emocional, não em "métricas"
+• Exemplos: "Transformação Real em Clínicas", "Excelência que Transforma", "Produtividade sem Complexidade"
 
-SUBTÍTULO (35-50 palavras - TEXTO EXPANDIDO E RICO):
-• ⚠️ OBRIGATÓRIO: Integrar TODAS as MÉTRICAS PERSONALIZADAS (🎯) de forma natural
-• OBRIGATÓRIO: Usar DIRETAMENTE o PITCH DE VENDAS como base narrativa
-• Transformar métricas personalizadas em linguagem aspiracional (ex: "40 minutos" → "tempo de laboratório reduzido drasticamente")
-• Mencionar PRODUTOS específicos de forma natural (como no pitch)
-• Usar quantificadores qualitativos: "centenas de clínicas", "milhares de procedimentos" (não "1 clínica")
-• Focar em TRANSFORMAÇÃO COMPLETA: produtividade + lucratividade + atendimento
-• Tom: narrativa envolvente e aspiracional, não lista de estatísticas
+SUBTÍTULO (40-60 palavras - Jornada SPIN):
+Estrutura obrigatória:
+1. DESEJO (Situação ideal): Comece com "Imagine..." descrevendo o cenário perfeito
+2. DOR (Problema atual): "Muitos profissionais ainda..." + mencionar "${solution.pain_type}"
+3. RESULTADO (Solução transformadora): "Com ${productsNames}, clínicas parceiras..." + transformação qualitativa
 
-Exemplo BOM (usando 3 métricas personalizadas no subtítulo):
-"Centenas de clínicas parceiras reduziram drasticamente o tempo de laboratório em 40 minutos, aumentaram capacidade produtiva em 30% e alcançaram retorno sobre investimento em apenas 6 meses, transformando completamente sua operação com fluxo digital ultrarrápido"
+Regras CRÍTICAS:
+• ❌ PROIBIDO: mencionar números, percentuais, minutos, ROI, valores monetários, tempo específico
+• ❌ PROIBIDO: usar a palavra "métricas"
+• ✅ OBRIGATÓRIO: Mencionar o tipo de dor "${solution.pain_type}"
+• ✅ OBRIGATÓRIO: Citar ao menos um produto: ${productsNames}
+• ✅ OBRIGATÓRIO: Usar linguagem do sales_pitch como base
+• Tom: empático e aspiracional (use "você", "sua clínica")
+• Foco: transformação QUALITATIVA (ex: "eliminam gargalos críticos", "se tornam referência em agilidade")
 
-Exemplo RUIM:
-"Veja resultados impressionantes" (não usa métricas personalizadas)
-
-⚠️ IMPORTANTE: USE O PITCH DE VENDAS COMPLETO COMO BASE!
-O subtítulo das métricas deve:
-• Integrar os principais benefícios mencionados no pitch
-• Usar a linguagem específica do pitch de vendas
-• Mencionar os produtos de forma natural (como no pitch)
-• Transformar dados técnicos em linguagem aspiracional
-• Exemplo: Se o pitch fala "fluxo digital completo", use isso no subtítulo
+Exemplo de subtítulo (modelo):
+"Imagine produzir no mesmo dia, com previsibilidade e confiança, o que antes levava dias e gerava retrabalho. Muitos profissionais ainda perdem pacientes por atrasos e fluxos complexos. Com ${productsNames}, clínicas parceiras eliminam gargalos críticos e se tornam referência em agilidade e qualidade na região."
 
 ┌─────────────────────────────────────────────────────────┐
 │ 3. CTA (Call-to-Action)                                 │
