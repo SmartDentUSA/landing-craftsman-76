@@ -1205,9 +1205,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
           const labelKey = `metric_label_${key}`;
           const finalLabel = (customText && customText[labelKey]) || label;
           
+          // 🔥 Extrair unidade de medida do displayValue
+          const unit = String(displayValue).replace(/[\d\.,\s]+/g, '').trim();
+          
           return `
           <div class="metric-card">
-            <span class="count" data-target="${numericValue || 0}">${displayValue}</span>
+            <span class="count" data-target="${numericValue || 0}" data-unit="${unit}">${displayValue}</span>
             <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(finalLabel)}</span>
           </div>
         `}).join('')}
@@ -1344,6 +1347,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
     function startCounter(counter) {
       const target = +counter.getAttribute('data-target');
+      const unit = counter.getAttribute('data-unit') || '';
       const duration = 2000;
       let startTimestamp = null;
 
@@ -1352,12 +1356,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         const progress = timestamp - startTimestamp;
         const currentCount = Math.min(Math.floor(progress / duration * target), target);
         
-        counter.textContent = currentCount;
+        counter.textContent = currentCount + (unit ? ' ' + unit : '');
 
         if (progress < duration) {
           window.requestAnimationFrame(step);
         } else {
-          counter.textContent = target;
+          counter.textContent = target + (unit ? ' ' + unit : '');
         }
       };
 
