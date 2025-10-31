@@ -105,30 +105,106 @@ GERAR APENAS O SUBTÍTULO (20-30 palavras):
 │ 2. SEÇÃO DE RESULTADOS (Título + Subtítulo Persuasivo) │
 └─────────────────────────────────────────────────────────┘
 
-Objetivo:
-Gerar um TÍTULO curto (3-5 palavras) e um SUBTÍTULO de 40-60 palavras usando Jornada SPIN (Desejo → Dor → Resultado), sem citar números. Foque em transformação qualitativa.
+🎯 OBJETIVO:
+Gerar um TÍTULO curto (3-5 palavras) e um SUBTÍTULO EXPANDIDO de 80-120 palavras usando EXCLUSIVAMENTE a Jornada SPIN (Desejo → Dor → Resultado).
 
-TÍTULO (3-5 palavras):
-• Focar em TRANSFORMAÇÃO emocional, não em "métricas"
-• Exemplos: "Transformação Real em Clínicas", "Excelência que Transforma", "Produtividade sem Complexidade"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 ESTRUTURA NARRATIVA OBRIGATÓRIA (JORNADA SPIN)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-SUBTÍTULO (40-60 palavras - Jornada SPIN):
-Estrutura obrigatória:
-1. DESEJO (Situação ideal): Comece com "Imagine..." descrevendo o cenário perfeito
-2. DOR (Problema atual): "Muitos profissionais ainda..." + mencionar "${solution.pain_type}"
-3. RESULTADO (Solução transformadora): "Com ${productsNames}, clínicas parceiras..." + transformação qualitativa
+**FASE 1: DESEJO (15-20 palavras)**
+→ Iniciar com "Imagine..." pintando o cenário ideal
+→ Focar no estado emocional desejado (controle, previsibilidade, reconhecimento)
+→ Usar verbos sensoriais (sentir, visualizar, controlar)
 
-Regras CRÍTICAS:
-• ❌ PROIBIDO: mencionar números, percentuais, minutos, ROI, valores monetários, tempo específico
-• ❌ PROIBIDO: usar a palavra "métricas"
-• ✅ OBRIGATÓRIO: Mencionar o tipo de dor "${solution.pain_type}"
-• ✅ OBRIGATÓRIO: Citar ao menos um produto: ${productsNames}
-• ✅ OBRIGATÓRIO: Usar linguagem do sales_pitch como base
-• Tom: empático e aspiracional (use "você", "sua clínica")
-• Foco: transformação QUALITATIVA (ex: "eliminam gargalos críticos", "se tornam referência em agilidade")
+Exemplo:
+"Imagine controlar cada etapa da produção, entregar tratamentos complexos no mesmo dia e ver seus pacientes impressionados com a agilidade da sua clínica."
 
-Exemplo de subtítulo (modelo):
-"Imagine produzir no mesmo dia, com previsibilidade e confiança, o que antes levava dias e gerava retrabalho. Muitos profissionais ainda perdem pacientes por atrasos e fluxos complexos. Com ${productsNames}, clínicas parceiras eliminam gargalos críticos e se tornam referência em agilidade e qualidade na região."
+**FASE 2: DOR EXPANDIDA (40-60 palavras) ⚠️ SEÇÃO CRÍTICA**
+→ Dedicar 50-70% do subtítulo para explorar PROFUNDAMENTE as dores
+→ Usar a técnica de "amplificação de dor" em 3 camadas:
+
+**Camada 1 - Dor Operacional (o que acontece no dia a dia):**
+- Mencionar OBRIGATORIAMENTE o "${solution.pain_type}"
+- Descrever situações concretas e frustrantes
+- Usar linguagem visceral ("ainda dependem", "sofrem com", "perdem o controle")
+
+**Camada 2 - Dor Financeira (o que está perdendo):**
+- Mencionar oportunidades desperdiçadas
+- Citar pacientes perdidos ou insatisfeitos
+- Falar de custos ocultos (retrabalho, tempo, estresse)
+
+**Camada 3 - Dor Emocional (como isso faz sentir):**
+- Frustração profissional
+- Sensação de estar "ficando para trás"
+- Ansiedade com concorrência tecnológica
+- Medo de perder relevância no mercado
+
+Estrutura sugerida:
+"Mas a realidade de muitos profissionais ainda é [DOR OPERACIONAL específica relacionada a ${solution.pain_type}]. Isso significa [DOR FINANCEIRA: perda de pacientes/receita]. Pior ainda: [DOR EMOCIONAL: frustração/ansiedade]. Enquanto concorrentes já [CONTRASTE: o que outros já fazem], sua clínica [CONSEQUÊNCIA: fica vulnerável]."
+
+Exemplo expandido:
+"Mas a realidade de muitos dentistas ainda é depender de laboratórios externos, aguardar dias por próteses simples e lidar com retrabalhos constantes. Isso significa perder pacientes que desistem pela demora, aceitar margens apertadas ditadas por terceiros e ver oportunidades urgentes escaparem. Pior ainda: sentir a frustração de não ter controle sobre prazos e qualidade, enquanto concorrentes tecnológicos já oferecem 'entrega imediata' e dominam o mercado premium."
+
+**FASE 3: RESULTADO TRANSFORMADOR (20-30 palavras)**
+→ Começar com "Com [produtos específicos]..."
+→ Citar OBRIGATORIAMENTE: ${productsNames}
+→ Focar em transformação QUALITATIVA (nunca números)
+→ Usar linguagem de "antes vs. depois" implícita
+→ Finalizar com status/reconhecimento alcançado
+
+Exemplo:
+"Com a Resina 3D Smart Print Bio Vitality e a Rayshape Edge Mini, clínicas parceiras eliminam a dependência de laboratórios, recuperam o controle total sobre prazos e qualidade, e se tornam referência regional em odontologia digital de alto desempenho."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️ REGRAS CRÍTICAS PARA O SUBTÍTULO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**TAMANHO**: 80-120 palavras (distribuição: 15-20 Desejo + 40-60 Dor + 20-30 Resultado)
+
+**ELEMENTOS OBRIGATÓRIOS**:
+✅ Mencionar explicitamente o tipo de dor: "${solution.pain_type}"
+✅ Citar TODOS os produtos por nome: ${productsNames}
+✅ Usar linguagem e frases do PITCH DE VENDAS
+✅ Incluir pelo menos 3 camadas de dor (operacional + financeira + emocional)
+✅ Criar contraste com concorrentes que já evoluíram
+✅ Finalizar com status/reconhecimento alcançado
+
+**ELEMENTOS PROIBIDOS**:
+❌ Mencionar números, percentuais, minutos, valores monetários
+❌ Usar a palavra "métricas"
+❌ Ser genérico ("resultados incríveis", "melhorias significativas")
+❌ Dores superficiais ("alguns desafios", "pequenos atrasos")
+❌ Listar benefícios separados (criar narrativa fluida)
+
+**TOM E ESTILO**:
+• Usar "você", "sua clínica", "imagine"
+• Tom empático mas direto (sem dramatizar excessivamente)
+• Linguagem visceral para dores ("ainda dependem", "perdem o controle")
+• Linguagem aspiracional para resultado ("eliminam", "se tornam referência")
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 EXEMPLO COMPLETO (MODELO EXATO A SEGUIR)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Subtítulo gerado (103 palavras):**
+
+"Imagine controlar cada etapa da produção de próteses e guias cirúrgicos, entregar trabalhos complexos no mesmo dia e ver seus pacientes impressionados com a rapidez da sua clínica. Mas a realidade de muitos dentistas ainda é depender de laboratórios externos, aguardar dias por trabalhos simples, lidar com retrabalhos constantes e aceitar margens apertadas. Isso significa perder pacientes que desistem pela demora, custos crescentes com intermediários e a frustração de não ter controle sobre prazos nem qualidade. Enquanto concorrentes tecnológicos já dominam o mercado premium com 'entrega imediata', sua clínica fica vulnerável. Com a Resina 3D Smart Print Bio Vitality e a Rayshape Edge Mini, clínicas parceiras eliminam a dependência de laboratórios, recuperam controle total sobre prazos e qualidade, e se tornam referência regional em odontologia digital de alto desempenho."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TÍTULO DA SEÇÃO (3-5 palavras)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Focar em TRANSFORMAÇÃO EMOCIONAL, não em "métricas" ou "resultados"
+• Usar linguagem de status/reconhecimento alcançado
+• Exemplos aprovados:
+  - "Transformação Real em Clínicas"
+  - "De Dependente a Referência"
+  - "Controle Total, Resultados Reais"
+  - "Excelência sem Dependências"
+  - "Autonomia que Transforma"
+
+• Evitar: "Métricas de Sucesso", "Números Impressionantes", "Resultados Comprovados"
 
 ┌─────────────────────────────────────────────────────────┐
 │ 3. CTA (Call-to-Action)                                 │
