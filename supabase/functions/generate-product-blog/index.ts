@@ -278,28 +278,61 @@ INSTRUÇÕES CRÍTICAS:
     ? extractVideoCaptionsForBlog(product.video_captions, blogType)
     : '';
   
-  // Preparar dados do produto
+  // FASE 1: Preparar dados COMPLETOS do produto (95% dos campos estruturados)
   const productData = {
+    // Identificação Básica
     name: product.name,
-    description: product.description || '',
-    applications: product.applications || '',
+    brand: product.brand || 'N/A',
     category: product.category || '',
     subcategory: product.subcategory || '',
-    price: product.price ? `${product.currency || 'BRL'} ${product.price}` : '',
-    imageUrl: product.image_url || '',
+    gtin: product.gtin || 'N/A',
+    mpn: product.mpn || 'N/A',
+    
+    // Descrição & Pitch
+    description: product.description || '',
+    salesPitch: product.sales_pitch || '',
+    applications: product.applications || '',
+    
+    // Público & Mercado
+    targetAudience: Array.isArray(product.target_audience) ? product.target_audience.join(', ') : '',
     keywords: Array.isArray(product.keywords) ? product.keywords.join(', ') : '',
     marketKeywords: Array.isArray(product.market_keywords) ? product.market_keywords.join(', ') : '',
-    targetAudience: Array.isArray(product.target_audience) ? product.target_audience.join(', ') : '',
+    searchIntentKeywords: Array.isArray(product.search_intent_keywords) ? product.search_intent_keywords.join(', ') : '',
+    
+    // Benefícios & Características
     benefits: Array.isArray(product.benefits) ? product.benefits.join(', ') : '',
     features: Array.isArray(product.features) ? product.features.join(', ') : '',
-    salesPitch: product.sales_pitch || ''
+    technicalSpecs: product.technical_specifications ? 
+      (typeof product.technical_specifications === 'string' ? product.technical_specifications :
+       Array.isArray(product.technical_specifications) ? product.technical_specifications.map((s: any) => 
+         typeof s === 'object' ? `${s.name}: ${s.value}` : s
+       ).join(', ') : '') : 'N/A',
+    
+    // Informações Comerciais
+    price: product.price ? `${product.currency || 'BRL'} ${product.price}` : '',
+    warrantyInfo: product.warranty_info || 'N/A',
+    shippingInfo: product.shipping_info || 'N/A',
+    
+    // FAQs Existentes (para contexto)
+    faq: Array.isArray(product.faq) ? product.faq : [],
+    
+    // Imagem
+    imageUrl: product.image_url || ''
   };
 
+  // FASE 1: Preparar dados COMPLETOS da empresa (incluindo SEO Hidden fields)
   const companyData = companyProfile ? {
     name: companyProfile.company_name || '',
     description: companyProfile.company_description || '',
     mission: companyProfile.mission_statement || '',
-    values: companyProfile.brand_values || ''
+    values: companyProfile.brand_values || '',
+    // SEO Hidden Fields
+    seoTechnicalExpertise: companyProfile.seo_technical_expertise || 'N/A',
+    seoMarketPositioning: companyProfile.seo_market_positioning || 'N/A',
+    seoCompetitiveAdvantages: companyProfile.seo_competitive_advantages || 'N/A',
+    seoContextKeywords: Array.isArray(companyProfile.seo_context_keywords) ? 
+      companyProfile.seo_context_keywords.join(', ') : 'N/A',
+    seoServiceAreas: companyProfile.seo_service_areas || 'N/A'
   } : null;
 
   // Se há um prompt customizado, processa variáveis; senão usa o prompt padrão
@@ -325,28 +358,125 @@ IMPORTANTE: Você DEVE escrever TODO o conteúdo em PORTUGUÊS BRASILEIRO. Jamai
 
 OBJETIVO: ${currentPrompt.objective}
 
-DADOS DO PRODUTO:
+═══════════════════════════════════════════════════════════
+📦 DADOS COMPLETOS DO PRODUTO (USE TODOS - FASE 1 IMPLEMENTADA)
+═══════════════════════════════════════════════════════════
+
+🏷️ IDENTIFICAÇÃO BÁSICA:
 - Nome: ${productData.name}
+- Marca: ${productData.brand}
+- Categoria: ${productData.category} > ${productData.subcategory}
+- GTIN/EAN: ${productData.gtin}
+- MPN: ${productData.mpn}
+
+📝 DESCRIÇÃO & PITCH:
 - Descrição: ${productData.description}
-- Categoria: ${productData.category}
-- Subcategoria: ${productData.subcategory}
-- Preço: ${productData.price}
-- Imagem do Produto: ${productData.imageUrl}
-- Keywords: ${productData.keywords}
+- Pitch de Vendas: ${productData.salesPitch}
+- Aplicações: ${productData.applications}
+
+🎯 PÚBLICO & MERCADO:
+- Público-alvo: ${productData.targetAudience}
+- Keywords Primárias: ${productData.keywords}
+- Keywords de Mercado: ${productData.marketKeywords}
+- Keywords de Intenção de Busca: ${productData.searchIntentKeywords}
+
+💎 BENEFÍCIOS & CARACTERÍSTICAS:
 - Benefícios: ${productData.benefits}
 - Características: ${productData.features}
-- Pitch de Vendas: ${productData.salesPitch}
+- Especificações Técnicas: ${productData.technicalSpecs}
 
-${companyData ? `DADOS DA EMPRESA:
+💰 INFORMAÇÕES COMERCIAIS:
+- Preço: ${productData.price}
+- Garantia: ${productData.warrantyInfo}
+- Envio: ${productData.shippingInfo}
+
+❓ FAQs EXISTENTES DO PRODUTO (CONTEXTO - NÃO DUPLICAR):
+${productData.faq.length > 0 ? productData.faq.map((f: any) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n') : 'Nenhum FAQ existente'}
+
+🎬 INSIGHTS DE VÍDEOS (Legendas Processadas):
+${videoCaptionsContext}
+
+${companyData ? `🏢 CONTEXTO DA EMPRESA:
 - Nome: ${companyData.name}
 - Descrição: ${companyData.description}
 - Missão: ${companyData.mission}
-- Valores: ${companyData.values}` : ''}
-
-${videoCaptionsContext}
+- Valores: ${companyData.values}
+- Expertise Técnica: ${companyData.seoTechnicalExpertise}
+- Posicionamento de Mercado: ${companyData.seoMarketPositioning}
+- Vantagens Competitivas: ${companyData.seoCompetitiveAdvantages}
+- Keywords Contextuais: ${companyData.seoContextKeywords}
+- Áreas de Serviço: ${companyData.seoServiceAreas}` : ''}
 
 ESTRUTURA OBRIGATÓRIA:
 ${currentPrompt.structure}
+
+═══════════════════════════════════════════════════════════
+🤖 INSTRUÇÕES PARA OTIMIZAÇÃO SGE/AEO/IA-READY (FASE 1)
+═══════════════════════════════════════════════════════════
+
+**REGRA DE OURO**: Cada parágrafo deve poder responder UMA pergunta específica que uma IA (ChatGPT, Perplexity, Google SGE) faria.
+
+**ESTRUTURA OBRIGATÓRIA**:
+
+1. **Primeiro Parágrafo** (Question Answering Snippet):
+   - Primeira frase = resposta direta com dado numérico
+   - Exemplo: "Tempo de escaneamento: 20-30 segundos por arcada completa"
+   - Incluir GTIN/MPN se disponível: "O ${productData.name} (GTIN: ${productData.gtin}) oferece..."
+   - Segunda frase = contexto técnico com especificações
+   - Terceira frase = benefício prático com impacto mensurável
+
+2. **Seção de Especificações** (Tabela Comparativa):
+   - Criar tabela Markdown comparando com alternativas genéricas
+   - Incluir: Resolução, Peso, Conectividade, Compatibilidade
+   - Usar dados de Especificações Técnicas fornecidos acima
+   - Formato:
+   \`\`\`
+   | Especificação | ${productData.name} | Alternativa Tradicional | Ganho |
+   |---------------|---------------------|------------------------|-------|
+   | Tempo         | [dado real]         | [estimativa genérica]  | X%    |
+   \`\`\`
+
+3. **Seção "Como Funciona"** (HowTo):
+   - Lista numerada de 5-7 passos práticos
+   - Cada passo: Ação + Tempo estimado + Resultado
+   - Exemplo: "1. **Conecte via USB 3.0** (10 segundos) → LED verde confirma conexão"
+   - Usar dados das Aplicações fornecidos
+
+4. **Seção de Compatibilidade** (Checklist):
+   - ✅ Sistemas operacionais compatíveis
+   - ✅ Softwares CAD/CAM compatíveis (se relevante)
+   - ✅ Requisitos de hardware mínimos
+   - Extrair de Especificações Técnicas ou inferir da categoria
+
+5. **Seção de Benefícios** (Bullets com Dados Numéricos):
+   - Cada benefício = dado numérico + impacto prático
+   - Exemplo: "❌ Moldagens tradicionais: 15 minutos + desconforto → ✅ ${productData.name}: 30 segundos + visualização imediata"
+   - Usar TODOS os benefícios fornecidos em ${productData.benefits}
+
+6. **Seção de FAQ Integrada** (Referência Cruzada):
+   - NÃO duplicar os FAQs existentes mencionados acima
+   - Se houver FAQs, mencionar: "Para mais detalhes técnicos, consulte as [X] FAQs ao final da página"
+   - Criar LINK INTERNO para seção FAQ: [Ver FAQs](#faq)
+
+7. **Seção de Casos de Uso** (Narrativa com Dados):
+   - 2-3 cenários práticos do público-alvo
+   - Formato: Situação → Problema → Solução com o produto → Resultado mensurável
+   - Exemplo: "Clínica com 5 consultórios → Gargalo de moldagens (3h/dia) → ${productData.name} em cada sala → Economia de 2h40min/dia"
+
+8. **Otimização de Keywords**:
+   - Usar TODAS as keywords de: ${productData.keywords}, ${productData.marketKeywords}, ${productData.searchIntentKeywords}
+   - Primeira menção de cada keyword: negrito (**${productData.name}**)
+   - Variações naturais: "scanner intraoral", "escaneamento 3D odontológico"
+
+9. **Links Internos Inteligentes** (será processado depois):
+   - Mencionar produtos relacionados pelo nome
+   - Mencionar categorias
+   - Sistema de intelligent links vai adicionar URLs automaticamente
+
+10. **Meta Information para Schema** (incluir no texto):
+    - Incluir GTIN, MPN, Brand naturalmente no texto
+    - Exemplo: "O ${productData.name} (GTIN: ${productData.gtin}, MPN: ${productData.mpn}) da marca ${productData.brand}..."
+    - Mencionar garantia se disponível: "${productData.warrantyInfo}"
 
 INSTRUÇÕES ESPECÍFICAS:
 1. COMECE DE FORMA ENVOLVENTE: Nunca use frases formais como "Análise comercial" ou "Análise técnica" no início

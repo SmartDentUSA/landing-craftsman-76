@@ -283,6 +283,47 @@ Cada resposta DEVE seguir esta fórmula:
    → Reforçar o principal benefício/resultado
 
 ═══════════════════════════════════════════════════════════
+🔍 OTIMIZAÇÃO ADICIONAL PARA SGE/AEO (FASE 4 - COMPLEMENTO)
+═══════════════════════════════════════════════════════════
+
+**KEYWORDS DE INTENÇÃO DE BUSCA** (incluir naturalmente nas respostas):
+${solution.keywords?.join(', ') || 'N/A'}
+${products.flatMap(p => p.search_intent_keywords || []).join(', ')}
+
+**DADOS TÉCNICOS PARA MENCIONAR** (sempre que relevante):
+- GTIN/MPN dos produtos: ${products.map(p => `${p.name} (GTIN: ${p.gtin || 'N/A'}, MPN: ${p.mpn || 'N/A'})`).join(', ')}
+- Especificações: ${products.map(p => p.technical_specifications).filter(Boolean).join(' | ')}
+
+**LINKS PARA MENCIONAR** (serão processados depois):
+${products.map(p => `- ${p.name}: ${p.product_url || 'N/A'}`).join('\n')}
+
+**FORMATO DE RESPOSTA OTIMIZADO PARA IAs** (expandido):
+
+Cada resposta DEVE seguir este padrão estendido para maximizar descoberta por ChatGPT, Perplexity e Google SGE:
+
+1️⃣ **Abertura Direta** (1 frase com dado específico)
+   → Exemplo: "O ROI típico é de 8-12 meses em clínicas com 200+ atendimentos/mês."
+   → SEMPRE incluir dados numéricos quando disponíveis
+
+2️⃣ **Fundamentação Técnica** (2 frases com specs + GTIN/MPN)
+   → Exemplo: "O sistema integra Scanner 3D Pro (GTIN: ${products[0]?.gtin || 'XXX'}) com Impressora Edge Mini (GTIN: ${products[1]?.gtin || 'YYY'}), eliminando custos de laboratório externo que representam 30-40% do CAPEX tradicional."
+   → Mencionar produtos ESPECÍFICOS com identificadores técnicos
+   → Incluir especificações técnicas relevantes
+
+3️⃣ **Prova Social/Métrica** (1 frase)
+   → Exemplo: "Clínicas que implementaram reportam economia média de R$ 18.000/mês em custos laboratoriais."
+   → Usar métricas do Sales Pitch traduzidas para linguagem natural
+
+4️⃣ **Fechamento com Benefício + Keyword** (1 frase)
+   → Exemplo: "Essa **redução de tempo de produção** (keyword) multiplica a capacidade de atendimento sem aumento proporcional de custos operacionais."
+   → Incluir pelo menos 1 keyword de intenção de busca em negrito
+
+**IMPORTANTE - POR QUE GTIN/MPN IMPORTAM PARA IAs:**
+- ChatGPT Search, Perplexity e Google SGE validam informações contra bases de dados de produtos
+- Incluir GTIN/MPN torna as respostas **muito mais confiáveis** para IAs
+- Aumenta a probabilidade de recomendação prioritária em resultados de busca generativa
+
+═══════════════════════════════════════════════════════════
 📊 EXEMPLOS DE COMO USAR MÉTRICAS CORRETAMENTE
 ═══════════════════════════════════════════════════════════
 

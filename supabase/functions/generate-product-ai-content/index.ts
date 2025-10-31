@@ -294,7 +294,7 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     .limit(1)
     .single();
   
-  // 🎬 NOVO: Extrair keywords de video_captions
+  // FASE 5: Extrair keywords de video_captions + OTIMIZAÇÃO
   const { extractKeywordsFromVideoCaptions, hasCaptions } = await import('../_shared/video-captions-processor.ts');
   const videoCaptionKeywords = hasCaptions(product.video_captions) 
     ? extractKeywordsFromVideoCaptions(product.video_captions)
@@ -320,15 +320,39 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     const existingContext = existingKeywords.length > 0 ? 
       `\n\nPALAVRAS-CHAVE MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingKeywords.join(', ')}` : '';
     
-    // 🎬 NOVO: Adicionar keywords de vídeos ao contexto
-    const videoCaptionsContext = videoCaptionKeywords.length > 0 ?
-      `\n\nPALAVRAS-CHAVE IDENTIFICADAS EM VÍDEOS (usar como referência): ${videoCaptionKeywords.join(', ')}` : '';
+    // FASE 5: ENRIQUECER COM VÍDEOS (PRIORIDADE MÁXIMA)
+    const videoCaptionsContext = videoCaptionKeywords.length > 0 ? `
+
+🎬 OTIMIZAÇÃO BASEADA EM VÍDEOS (PRIORIDADE MÁXIMA - FASE 5)
+═══════════════════════════════════════════════════════════
+
+**Keywords Identificadas em Vídeos** (USE ESTAS PRIMEIRO):
+${videoCaptionKeywords.join(', ')}
+
+**INSTRUÇÕES CRÍTICAS**:
+1. Estas keywords vêm de demonstrações REAIS do produto em vídeos
+2. PRIORIZE estas sobre keywords genéricas (elas têm mais valor de SEO)
+3. Combine com categorias: "${product.category} + ${videoCaptionKeywords[0]}"
+4. Exemplo: Se vídeo menciona "Exocad", gerar: "scanner compatível Exocad", "integração Exocad", "workflow Exocad"
+
+**RACIOCÍNIO** - Por que keywords de vídeos são prioritárias:
+Se alguém falou sobre "${videoCaptionKeywords[0] || 'Exocad'}" no vídeo, significa que:
+- É uma característica IMPORTANTE do produto
+- Usuários reais mencionam isso
+- É um diferencial competitivo
+- Deve virar keyword primária para SEO
+
+Portanto, SEMPRE gere pelo menos 3-4 keywords combinando:
+- Categoria + keyword de vídeo (ex: "scanner intraoral ${videoCaptionKeywords[0]}")
+- Subcategoria + keyword de vídeo (ex: "${product.subcategory} compatível ${videoCaptionKeywords[0]}")
+- Produto + aplicação mencionada no vídeo
+` : '\n\nNenhum dado de vídeo disponível. Focar em categoria + especificações técnicas.';
     
     const instruction = complementOnly && existingKeywords.length > 0 ? 
       'Gere APENAS 3 palavras-chave complementares que NÃO duplicem as existentes:' :
       'Gere APENAS um array JSON com 8-12 palavras-chave relevantes:';
     
-    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}${videoCaptionsContext}
+    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA E VÍDEOS:${existingContext}${videoCaptionsContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -346,13 +370,15 @@ INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 3. **Combine categoria + subcategoria + nome do produto**
 4. **Use termos técnicos mencionados nos vídeos (se disponíveis)**
 
-Inclua NESTA ORDEM DE PRIORIDADE:
-1. Categoria e subcategoria (primárias)
-2. Variações e sinônimos das categorias
-3. Categoria + subcategoria + benefícios
-4. Palavras-chave long-tail com categorias (especialmente as mencionadas em vídeos)
-5. Termos técnicos da categoria (priorizar os dos vídeos)
-6. Categoria + público-alvo
+Inclua NESTA ORDEM DE PRIORIDADE (FASE 5 OTIMIZADA):
+1. **Keywords de vídeos** (se disponíveis) - PRIORIDADE MÁXIMA
+2. **Categoria + keywords de vídeos** (combinar ambos)
+3. Categoria e subcategoria (primárias)
+4. Variações e sinônimos das categorias
+5. Categoria + subcategoria + benefícios
+6. Palavras-chave long-tail com categorias (especialmente as mencionadas em vídeos)
+7. Termos técnicos da categoria (priorizar os dos vídeos)
+8. Categoria + público-alvo
 
 FORMATO DE RESPOSTA OBRIGATÓRIO:
 - Retorne APENAS o array JSON puro

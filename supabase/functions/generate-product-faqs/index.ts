@@ -42,52 +42,105 @@ serve(async (req) => {
       sales_pitch: product.sales_pitch ? 'SIM' : 'NÃO'
     });
 
-    // 🤖 Prompt para IA com anti-alucinação e hyperlinks
+    // FASE 2: Prompt OTIMIZADO para FAQs que IAs realmente fazem
     const prompt = `Você é um especialista em produtos e FAQ. Gere EXATAMENTE 10 perguntas frequentes (FAQs) sobre o produto abaixo.
 
 **PRODUTO:**
 - Nome: ${product.name}
 - URL da Loja: ${product.product_url || 'N/A'}
+- Marca: ${product.brand || 'N/A'}
+- GTIN/EAN: ${product.gtin || 'N/A'}
+- MPN: ${product.mpn || 'N/A'}
 - Descrição: ${product.description}
 - Pitch de Vendas: ${product.sales_pitch || 'N/A'}
 - Keywords: ${product.keywords?.join(', ') || 'N/A'}
 - Benefícios: ${product.benefits?.join(', ') || 'N/A'}
 - Recursos: ${product.features?.join(', ') || 'N/A'}
+- Especificações Técnicas: ${product.technical_specifications ? 
+    (typeof product.technical_specifications === 'string' ? product.technical_specifications :
+     Array.isArray(product.technical_specifications) ? product.technical_specifications.map((s: any) => 
+       typeof s === 'object' ? \`\${s.name}: \${s.value}\` : s
+     ).join(', ') : 'N/A') : 'N/A'}
+- Garantia: ${product.warranty_info || 'N/A'}
+- Categoria: ${product.category || 'N/A'}
+- Subcategoria: ${product.subcategory || 'N/A'}
 
 **ATENÇÃO - RESTRIÇÃO DE DADOS:**
 Os dados acima são TUDO que você tem. Se algum campo mostra "N/A", significa que essa informação NÃO EXISTE.
-- Se Benefits está vazio → NÃO crie perguntas sobre benefícios
-- Se Features está vazio → NÃO crie perguntas sobre recursos
-- Se Technical Specs não foi fornecido → NÃO mencione especificações
-- Gere APENAS FAQs baseados nos campos preenchidos acima
 
-Se houver poucos dados, é MELHOR gerar menos FAQs (5-7) com informações reais do que 10 FAQs com dados inventados.
+═══════════════════════════════════════════════════════════
+🎯 BANCO DE PERGUNTAS QUE IAs REALMENTE FAZEM (PRIORIZE ESTAS)
+═══════════════════════════════════════════════════════════
+
+**CATEGORIA 1: Compatibilidade Técnica** (SEMPRE incluir 2-3 FAQs deste tipo)
+- "Este produto é compatível com [software/sistema X]?"
+- "Quais são os requisitos mínimos de hardware/software?"
+- "Funciona com [marca/modelo específico]?"
+- "Tem integração nativa com [tecnologia Y]?"
+
+**CATEGORIA 2: Comparação com Alternativas** (SEMPRE incluir 1-2 FAQs)
+- "Qual a diferença entre [este produto] e [concorrente/alternativa]?"
+- "Por que escolher [este produto] ao invés de [método tradicional]?"
+- "Como este produto se compara em termos de [custo/tempo/qualidade]?"
+
+**CATEGORIA 3: ROI e Justificativa Financeira** (SEMPRE incluir 1 FAQ)
+- "Qual é o retorno sobre investimento (ROI) esperado?"
+- "Em quanto tempo o investimento se paga?"
+- "Quais custos operacionais este produto elimina?"
+
+**CATEGORIA 4: Certificações e Conformidade** (SE disponível nos dados)
+- "Este produto possui certificação ANVISA/FDA/CE?"
+- "Atende às normas [regulamentação específica do setor]?"
+- "Tem garantia? Qual é a cobertura?"
+
+**CATEGORIA 5: Implementação Prática** (SEMPRE incluir 1-2 FAQs)
+- "Quanto tempo leva para implementar/instalar?"
+- "É necessário treinamento? Qual a duração?"
+- "Que tipo de suporte está incluído?"
+
+**CATEGORIA 6: Casos de Uso Específicos** (SEMPRE incluir 1-2 FAQs)
+- "Este produto funciona para [aplicação específica X]?"
+- "Posso usar em [cenário/ambiente Y]?"
+- "É adequado para [perfil de cliente Z]?"
+
+═══════════════════════════════════════════════════════════
+⚙️ INSTRUÇÕES DE GERAÇÃO (FASE 2)
+═══════════════════════════════════════════════════════════
+
+**PRIORIDADE DE DISTRIBUIÇÃO**:
+- 3 FAQs de Compatibilidade Técnica
+- 2 FAQs de Comparação com Alternativas
+- 1 FAQ de ROI/Financeiro
+- 1 FAQ de Certificações (se disponível nos dados)
+- 2 FAQs de Implementação Prática
+- 1 FAQ de Caso de Uso Específico
+
+**FORMATO DE RESPOSTA OBRIGATÓRIO**:
+1. Primeira frase = resposta direta (Sim/Não + dado específico)
+2. Segunda frase = contexto técnico com specs
+3. Terceira frase = benefício prático
+4. Incluir dados numéricos sempre que possível
+5. Incluir termos técnicos (software, protocolos, padrões)
+6. Mencionar GTIN/MPN quando relevante
+
+**EXEMPLO DE FAQ PERFEITA**:
+Q: "O ${product.name} é compatível com Exocad e 3Shape?"
+A: "Sim, o ${product.name} (GTIN: ${product.gtin || 'N/A'}) possui integração nativa com Exocad 3.0+ e 3Shape Dental System 2021+ via protocolo STL/PLY. A conexão é plug-and-play via USB 3.0, sem necessidade de instalação de drivers adicionais. Isso permite exportar capturas diretamente para o workflow CAD/CAM em menos de 5 segundos após o escaneamento."
 
 **INSTRUÇÕES CRÍTICAS - ANTI-ALUCINAÇÃO:**
 1. Use APENAS as informações fornecidas acima - NÃO invente dados externos
-2. NÃO mencione características ou especificações que não estejam nos campos acima
-3. Se uma informação não estiver disponível (N/A), NÃO a mencione na resposta
-4. Base suas respostas EXCLUSIVAMENTE nos dados fornecidos
-
-**EXEMPLOS DE VIOLAÇÕES (NÃO FAÇA ISSO):**
-❌ "O produto possui garantia de 2 anos" → Se garantia não está nos dados
-❌ "Feito com materiais de alta qualidade" → Se materiais não estão listados
-❌ "Compatível com todos os dispositivos" → Se compatibilidade não foi informada
-❌ "Recomendado por dentistas" → Se não há essa informação nos dados
-❌ "Produto certificado pela ANVISA" → Se certificação não consta nos dados
-
-**EXEMPLOS CORRETOS (BASEADOS NOS DADOS):**
-✅ Se Benefits = ["Reduz dor"], então: "Como o produto ajuda com a dor?" → Responder sobre redução de dor
-✅ Se Features = ["LED azul"], então: "O que é o LED azul?" → Explicar o LED
-✅ Se Keywords = ["ortodontia"], então: Usar "ortodontia" nas respostas quando relevante
+2. SE não houver dados sobre certificações → NÃO mencionar
+3. SE não houver specs técnicas → NÃO inventar números
+4. SE não houver comparativos → usar termos genéricos ("alternativas tradicionais")
+5. SEMPRE validar cada afirmação contra os dados fornecidos
 
 **INSTRUÇÕES DE FORMATAÇÃO:**
 1. Gere EXATAMENTE 10 FAQs práticos e relevantes
 2. Perguntas devem começar com: "Como", "Qual", "Quais", "O que", "Por que", "Quando"
-3. Respostas devem ter entre 40-80 palavras
+3. Respostas devem ter entre 60-100 palavras (mais detalhadas que antes)
 4. Incorpore keywords naturalmente nas respostas para SEO
 5. Use HTML básico nas respostas: <strong>, <em>, <ul>, <li>, <p>
-6. Respostas devem ser informativas e persuasivas
+6. Respostas devem ser informativas, técnicas e persuasivas
 7. Evite repetir informações entre FAQs
 
 **REGRA OBRIGATÓRIA - HYPERLINKS:**

@@ -534,6 +534,72 @@ PÚBLICO-ALVO: ${targetAudience}
 
 ${buildDynamicSEOContext(context)}
 
+═══════════════════════════════════════════════════════════
+🎯 PONTOS DE ANCORAGEM PARA IAs (FASE 3 - OBRIGATÓRIO INCLUIR)
+═══════════════════════════════════════════════════════════
+
+**1. TABELAS COMPARATIVAS** (incluir pelo menos 1 por artigo):
+Formato Markdown:
+| Critério | Nossa Solução | Método Tradicional | Ganho |
+|----------|---------------|-------------------|-------|
+| Tempo    | 30 segundos   | 15 minutos       | 30x   |
+| Custo    | R$ X          | R$ Y             | Z%    |
+
+**2. LISTAS NUMERADAS "COMO FAZER"** (incluir pelo menos 1):
+Formato:
+1. **Passo 1**: Ação (tempo estimado) → Resultado esperado
+2. **Passo 2**: Ação (tempo estimado) → Resultado esperado
+...
+
+**3. CHECKLISTS DE REQUISITOS** (incluir pelo menos 1):
+Formato:
+✅ Requisito atendido 1
+✅ Requisito atendido 2
+❌ Requisito não necessário 1
+
+**4. CITAÇÕES DE DADOS/ESTUDOS** (se disponível no contexto):
+Formato:
+> Segundo [fonte/estudo da empresa], [dado numérico + insight]
+
+**5. BOXES DE DESTAQUE** (2-3 por artigo):
+Formato:
+💡 **DICA PRO**: [Insight técnico com dado numérico]
+
+**6. SEÇÕES "PERGUNTAS FREQUENTES" INLINE** (1-2 por seção principal):
+Formato:
+**🔹 "Posso usar com [tecnologia X]?"**
+Sim, compatível via [protocolo Y]. [Explicação técnica curta com dados]
+
+**7. LINKS PARA FONTES EXTERNAS** (opcional, 2-3 por artigo):
+- Links para estudos/whitepapers (se mencionados no contexto)
+- Links para documentação técnica
+- Links para normas/regulamentações
+→ Isso aumenta **credibilidade** para IAs (validação externa)
+
+═══════════════════════════════════════════════════════════
+📐 ESTRUTURA DE PARÁGRAFO OTIMIZADA PARA IAs
+═══════════════════════════════════════════════════════════
+
+**FORMATO OBRIGATÓRIO** para cada seção principal:
+
+**[Heading com Keyword]**
+
+**Primeira frase**: Resposta direta com dado numérico específico.
+
+Segunda frase: Contexto técnico com especificações detalhadas.
+
+Terceira frase: Benefício prático + impacto mensurável no consultório.
+
+**EXEMPLO CORRETO**:
+**Integração com CAD/CAM: Compatibilidade Nativa**
+
+**Tempo de exportação**: 5 segundos via protocolo STL/PLY.
+
+O Scanner 3D Pro possui integração nativa com Exocad 3.0+, 3Shape Dental System 2021+, e Medit Link, utilizando conectores USB 3.0 (velocidade de 5 Gbps). Isso elimina a necessidade de conversões manuais de arquivo, reduzindo erros e economizando até 40 minutos por dia em clínicas com alto volume.
+
+**EXEMPLO ERRADO** (evitar - muito genérico):
+A integração com sistemas CAD/CAM é fundamental na odontologia moderna. Com o avanço da tecnologia, diversos softwares permitem workflows digitais completos...
+
 ## ESTRUTURA HTML OBRIGATÓRIA:
 
 1. Usar <section class="card"> para cada tópico principal
