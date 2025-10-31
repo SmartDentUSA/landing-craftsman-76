@@ -241,14 +241,28 @@ export function generateLandingPageHTML(
   };
   const badge = painTypeLabels[solution.pain_type] || 'SOLUÇÃO ODONTOLÓGICA';
 
-  // 🎯 PRIORIZAR MÉTRICAS PERSONALIZADAS (3 primeiras)
+  // ═══════════════════════════════════════════════════════════
+  // 🎯 ESTRATÉGIA DE MÉTRICAS:
+  // 
+  // 1. MÉTRICAS PERSONALIZADAS (objeto { label, value, unit }):
+  //    - Enviadas para a IA no prompt
+  //    - Usadas NO SUBTÍTULO da seção de métricas
+  //    - NUNCA aparecem nos cards animados
+  //
+  // 2. MÉTRICAS PADRÃO (string/número simples):
+  //    - Exibidas NOS CARDS ANIMADOS (top 3)
+  //    - Secundárias no prompt da IA
+  //
+  // Objetivo: Evitar repetição e maximizar uso de dados personalizados
+  // ═══════════════════════════════════════════════════════════
+
   const allMetrics = Object.entries(pain_metrics);
   const customMetrics = allMetrics.filter(([key, value]) => typeof value === 'object' && value !== null && 'label' in value);
   const standardMetrics = allMetrics.filter(([key, value]) => typeof value !== 'object' || value === null || !('label' in value));
 
-  // Selecionar top 3: prioridade para personalizadas
-  const selectedMetrics = [...customMetrics.slice(0, 3), ...standardMetrics]
-    .slice(0, 3);
+  // 🎯 REGRA: Cards animados NUNCA usam métricas personalizadas (reservadas para o subtítulo da IA)
+  // Selecionar top 3: APENAS métricas padrão
+  const selectedMetrics = standardMetrics.slice(0, 3);
 
   const metricsArray = selectedMetrics.map(([key, value]) => {
     let displayValue = value;
@@ -276,6 +290,12 @@ export function generateLandingPageHTML(
     return [key, displayValue, numericValue, label];
   });
   
+  console.log('📊 [HTML] Métricas selecionadas para cards:', {
+    customMetrics: customMetrics.map(([k, v]) => `${v.label}: ${v.value}${v.unit}`),
+    standardMetrics: standardMetrics.map(([k, v]) => `${k}: ${v}`),
+    selectedForCards: selectedMetrics.map(([k, v]) => k),
+    total: allMetrics.length
+  });
   console.log('📊 [HTML] Métricas processadas (com labels):', metricsArray);
 
   // Links institucionais do rodapé

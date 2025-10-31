@@ -37,9 +37,28 @@ async function generateAllLandingPageContent(
 ): Promise<AIGeneratedContent> {
   
   const productsNames = products.map(p => p.name).join(', ');
-  const metricsFormatted = Object.entries(solution.pain_metrics || {})
+  
+  // Separar métricas personalizadas (objeto) das padrão (string/número)
+  const allMetrics = Object.entries(solution.pain_metrics || {});
+  const customMetrics = allMetrics.filter(([key, value]) => 
+    typeof value === 'object' && value !== null && 'label' in value
+  );
+  const standardMetrics = allMetrics.filter(([key, value]) => 
+    typeof value !== 'object' || value === null || !('label' in value)
+  );
+
+  // Formatar métricas personalizadas com destaque
+  const customMetricsFormatted = customMetrics
+    .map(([key, value]) => `🎯 ${value.label}: ${value.value}${value.unit} (MÉTRICA PERSONALIZADA - PRIORIDADE MÁXIMA)`)
+    .join('\n');
+
+  // Formatar métricas padrão
+  const standardMetricsFormatted = standardMetrics
     .map(([key, value]) => `• ${key.replace(/_/g, ' ')}: ${value}`)
     .join('\n');
+
+  // Combinar com prioridade visual
+  const metricsFormatted = customMetricsFormatted + '\n' + standardMetricsFormatted;
   
   const prompt = `Você é um copywriter especialista em neuromarketing e SPIN Selling para odontologia B2B.
 
@@ -63,15 +82,22 @@ ${solution.sales_pitch || 'Não informado'}
 📊 MÉTRICAS DE IMPACTO REAIS:
 ${metricsFormatted}
 
-⚠️ IMPORTANTE SOBRE AS MÉTRICAS:
-Estes são VALORES BRUTOS extraídos do sistema. Sua tarefa é transformá-los em linguagem ASPIRACIONAL:
-• lab_time: 40 → "tempo de laboratório reduzido drasticamente"
-• digital_time: 15 → "fluxo digital ultrarrápido"
-• waste_reduction: 30% → "economia expressiva em materiais"
-• print_speed: 13min/20 facetas → "produção acelerada de múltiplas peças"
-• ROI: 12 meses → "retorno sobre investimento em menos de 1 ano"
+⚠️ REGRA CRÍTICA - MÉTRICAS PERSONALIZADAS:
+• SEMPRE priorize as MÉTRICAS PERSONALIZADAS (marcadas com 🎯) no subtítulo das métricas
+• Use TODAS as métricas personalizadas no texto se possível
+• NÃO use métricas personalizadas nos cards animados (essas são separadas)
+• Métricas padrão (marcadas com •) são secundárias no subtítulo
 
-NÃO MENCIONE OS NÚMEROS BRUTOS NO SUBTÍTULO. Use descrições qualitativas e impactantes.
+Transforme métricas em linguagem ASPIRACIONAL:
+• 40 minutos → "tempo de laboratório reduzido drasticamente"
+• 30% → "aumento expressivo de produtividade"
+• 6 meses → "retorno sobre investimento acelerado"
+
+Exemplo CORRETO (com 3 métricas personalizadas):
+"Clínicas parceiras reduziram tempo de laboratório em 40 minutos, aumentaram produção em 30% e alcançaram ROI em apenas 6 meses"
+
+Exemplo ERRADO:
+"Veja métricas impressionantes" (genérico, não usa as personalizadas)
 
 🎖️ CASOS DE SUCESSO: ${solution.success_cases?.length || 0} documentados
 
@@ -105,19 +131,19 @@ TÍTULO (3-5 palavras):
 • Exemplos: "Resultados que Comprovam", "Impacto Real Mensurável", "Transformação Documentada"
 
 SUBTÍTULO (35-50 palavras - TEXTO EXPANDIDO E RICO):
+• ⚠️ OBRIGATÓRIO: Integrar TODAS as MÉTRICAS PERSONALIZADAS (🎯) de forma natural
 • OBRIGATÓRIO: Usar DIRETAMENTE o PITCH DE VENDAS como base narrativa
-• Integrar os principais argumentos e linguagem do pitch
-• Transformar métricas brutas em linguagem aspiracional (ex: "40 minutos" → "tempo de laboratório reduzido drasticamente")
+• Transformar métricas personalizadas em linguagem aspiracional (ex: "40 minutos" → "tempo de laboratório reduzido drasticamente")
 • Mencionar PRODUTOS específicos de forma natural (como no pitch)
 • Usar quantificadores qualitativos: "centenas de clínicas", "milhares de procedimentos" (não "1 clínica")
 • Focar em TRANSFORMAÇÃO COMPLETA: produtividade + lucratividade + atendimento
 • Tom: narrativa envolvente e aspiracional, não lista de estatísticas
 
-Exemplo BOM (50 palavras):
-"Descubra como centenas de clínicas parceiras da Smart Dent estão transformando completamente sua operação com o Scanner 3D Pro e Impressora Edge Mini, experimentando retorno sobre investimento acelerado em menos de 1 ano, fluxo digital ultrarrápido que elimina dependência de laboratórios externos, e economia expressiva de tempo e materiais que multiplica a capacidade de atendimento"
+Exemplo BOM (usando 3 métricas personalizadas no subtítulo):
+"Centenas de clínicas parceiras reduziram drasticamente o tempo de laboratório em 40 minutos, aumentaram capacidade produtiva em 30% e alcançaram retorno sobre investimento em apenas 6 meses, transformando completamente sua operação com fluxo digital ultrarrápido"
 
-Exemplo RUIM (NÃO FAZER):
-"Veja como transformou 1 clínica em 40 minutos com ROI de 12 meses"
+Exemplo RUIM:
+"Veja resultados impressionantes" (não usa métricas personalizadas)
 
 ⚠️ IMPORTANTE: USE O PITCH DE VENDAS COMPLETO COMO BASE!
 O subtítulo das métricas deve:
