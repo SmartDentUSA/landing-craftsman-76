@@ -392,100 +392,74 @@ export function SpinLandingPageEditablePreview({
     setIsSaving(true);
     
     try {
-      // Buscar solução atual
-      const { data: solution, error: fetchError } = await supabase
-        .from('spin_selling_solutions')
-        .select('*')
-        .eq('id', solutionId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Preparar dados para atualização
-      const updates: any = {
-        landing_page_custom_text: {
-          ...editedData
-        }
-      };
-
-      // Atualizar título se foi editado
-      if (editedData.hero_title && editedData.hero_title !== solution.title) {
-        updates.title = editedData.hero_title;
+      // Ler o HTML atual do iframe
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) {
+        throw new Error('Iframe não está disponível');
       }
 
-      // Salvar no banco
+      // Clonar documento para sanitizar
+      const clone = doc.cloneNode(true) as Document;
+      
+      // Remover CSS injetado do editor
+      clone.head.querySelector('style[data-editable-injected]')?.remove();
+      
+      // Remover todos os atributos contenteditable
+      clone.querySelectorAll('[contenteditable]').forEach(el => {
+        el.removeAttribute('contenteditable');
+      });
+      
+      // Remover atributos data-prev-user-select
+      clone.querySelectorAll('[data-prev-user-select]').forEach(el => {
+        el.removeAttribute('data-prev-user-select');
+      });
+      
+      // Remover estilos inline de user-select
+      clone.querySelectorAll('[style]').forEach(el => {
+        const element = el as HTMLElement;
+        const style = element.style;
+        
+        if (style.userSelect || (style as any).webkitUserSelect || 
+            (style as any).mozUserSelect || (style as any).msUserSelect) {
+          style.userSelect = '';
+          (style as any).webkitUserSelect = '';
+          (style as any).mozUserSelect = '';
+          (style as any).msUserSelect = '';
+          
+          // Se não sobrou nenhum estilo, remover o atributo style
+          if (!element.getAttribute('style')?.trim()) {
+            element.removeAttribute('style');
+          }
+        }
+      });
+
+      // Serializar HTML limpo
+      const finalHtml = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML;
+      
+      // Salvar diretamente no banco de dados
+      const newTimestamp = new Date().toISOString();
+      
       const { error: updateError } = await supabase
         .from('spin_selling_solutions')
-        .update(updates)
+        .update({
+          landing_page_html: finalHtml,
+          landing_page_generated_at: newTimestamp
+        })
         .eq('id', solutionId);
 
       if (updateError) throw updateError;
 
-      toast({
-        title: '💾 Salvando...',
-        description: 'Regenerando HTML com as alterações'
-      });
-
-      // 🔥 Mudança 3: Chamar Edge Function para regenerar HTML
-      const { error: generateError } = await supabase.functions.invoke(
-        'generate-spin-landing-page',
-        { body: { solutionId } }
-      );
-
-      if (generateError) throw generateError;
-
-      // ⏳ Mudança 3: Aguardar Edge Function salvar no banco (polling resiliente: 10 tentativas, 800ms cada = até 8s)
-      const currentTimestamp = lastGeneratedAt;
-      let attempts = 0;
-      let newTimestamp = currentTimestamp;
-
-      console.log('⏱️ Iniciando polling. Timestamp atual:', currentTimestamp);
-
-      while (attempts < 10 && newTimestamp === currentTimestamp) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const { data: check, error: checkError } = await supabase
-          .from('spin_selling_solutions')
-          .select('landing_page_generated_at')
-          .eq('id', solutionId)
-          .single();
-        
-        if (checkError) {
-          console.error('❌ Erro no polling:', checkError);
-          break;
-        }
-        
-        console.log(`⏱️ Polling tentativa ${attempts + 1}/10:`, check?.landing_page_generated_at);
-        
-        if (check?.landing_page_generated_at && check.landing_page_generated_at !== currentTimestamp) {
-          newTimestamp = check.landing_page_generated_at;
-          console.log('✅ Detectado novo timestamp:', newTimestamp);
-          break;
-        }
-        
-        attempts++;
-      }
-
-      if (newTimestamp === currentTimestamp) {
-        console.warn('⚠️ Polling expirou sem detectar mudança no timestamp');
-        toast({
-          title: '⚠️ Aviso',
-          description: 'HTML pode estar desatualizado. Clique em "Recarregar" se necessário.',
-          variant: 'default'
-        });
-      }
-
-      console.log(`⏱️ Polling concluído após ${attempts} tentativas (${attempts * 0.8}s)`);
-
-      // Buscar HTML regenerado
-      await regenerateHTML();
+      // Atualizar estado local
+      setHtml(finalHtml);
+      setLastGeneratedAt(newTimestamp);
+      setHasChanges(false);
 
       toast({
-        title: '✅ Alterações salvas e HTML regenerado',
+        title: '✅ HTML sobrescrito',
         description: 'Landing page atualizada com sucesso'
       });
       
-      setHasChanges(false);
+      // Notificar componente pai para recarregar dados
       onSaved?.();
       
     } catch (error: any) {
@@ -535,7 +509,37 @@ export function SpinLandingPageEditablePreview({
 
   const copyUpdatedHTML = async () => {
     try {
-      await navigator.clipboard.writeText(html);
+      // Copiar HTML sanitizado do iframe (igual ao que é salvo)
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) {
+        await navigator.clipboard.writeText(html);
+      } else {
+        const clone = doc.cloneNode(true) as Document;
+        
+        // Sanitizar (mesma lógica do saveChanges)
+        clone.head.querySelector('style[data-editable-injected]')?.remove();
+        clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+        clone.querySelectorAll('[data-prev-user-select]').forEach(el => el.removeAttribute('data-prev-user-select'));
+        
+        clone.querySelectorAll('[style]').forEach(el => {
+          const element = el as HTMLElement;
+          const style = element.style;
+          if (style.userSelect || (style as any).webkitUserSelect || 
+              (style as any).mozUserSelect || (style as any).msUserSelect) {
+            style.userSelect = '';
+            (style as any).webkitUserSelect = '';
+            (style as any).mozUserSelect = '';
+            (style as any).msUserSelect = '';
+            if (!element.getAttribute('style')?.trim()) {
+              element.removeAttribute('style');
+            }
+          }
+        });
+        
+        const finalHtml = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML;
+        await navigator.clipboard.writeText(finalHtml);
+      }
+      
       toast({
         title: '📋 Código copiado',
         description: 'HTML atualizado copiado para área de transferência'
