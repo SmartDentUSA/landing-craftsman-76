@@ -46,11 +46,24 @@ serve(async (req) => {
     if (productIds.length > 0) {
       const { data: productsData } = await supabase
         .from('products_repository')
-        .select('id, name, description, category, price, benefits, features')
+        .select('id, name, description, category, price, benefits, features, target_audience')
         .in('id', productIds);
       
       products = productsData || [];
     }
+
+    // Agregar públicos-alvo únicos dos produtos
+    const targetAudiencesSet = new Set<string>();
+    products.forEach(product => {
+      if (product.target_audience && Array.isArray(product.target_audience)) {
+        product.target_audience.forEach((audience: string) => {
+          if (audience?.trim()) {
+            targetAudiencesSet.add(audience.trim());
+          }
+        });
+      }
+    });
+    const aggregatedTargetAudiences = Array.from(targetAudiencesSet);
 
     // Buscar perfil da empresa
     const { data: company } = await supabase
@@ -87,6 +100,13 @@ Gerar 10 FAQs estratégicas que conduzam o dentista/gestor através da Jornada S
 Título: ${solution.title}
 Categoria de Dor: ${solution.pain_type}
 Descrição da Dor: ${solution.pain_description || 'Não especificada'}
+
+👥 PÚBLICOS-ALVO ESTRUTURADOS (⚠️ PRIORIDADE MÁXIMA PARA FAQ #1):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${aggregatedTargetAudiences.length > 0 
+  ? aggregatedTargetAudiences.map(audience => `  ✓ ${audience}`).join('\n')
+  : '  ⚠️ Não especificado - inferir do Sales Pitch'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🔥 PITCH DE VENDAS COMPLETO (BASE PRINCIPAL OBRIGATÓRIA):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -152,9 +172,12 @@ FAQ #1 - SEGMENTAÇÃO & ICP
 Pergunta Modelo: "Para qual tipo de clínica/dentista esta solução é ideal?"
 Objetivo: O leitor deve pensar "Isso foi feito para MIM!"
 Elementos Obrigatórios:
-  ✓ Perfil ideal do cliente (ICP)
+  ✓ **USAR PRIORITARIAMENTE os "PÚBLICOS-ALVO ESTRUTURADOS" listados acima**
+  ✓ Se não houver públicos estruturados, APENAS então inferir do pitch
+  ✓ Perfil ideal do cliente (ICP) baseado nos dados estruturados
   ✓ Situação/estágio da clínica
   ✓ Aspirações mencionadas no pitch
+⚠️ CRÍTICO: Sua fonte primária DEVE ser a seção "PÚBLICOS-ALVO ESTRUTURADOS", não o sales_pitch!
 
 FAQ #2 - PROPOSTA DE VALOR ÚNICA (UVP)
 Pergunta Modelo: "Quais são os principais diferenciais desta solução?"
