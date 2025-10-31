@@ -549,17 +549,31 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       text-align: center;
     }
 
+    /* ===== ANIMAÇÃO INFINITE SCROLL (MARQUEE CONTÍNUO) ===== */
+    @keyframes infinite-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
     .testimonials-carousel {
       display: flex;
-      overflow-x: scroll;
-      gap: 2rem;
-      padding: 0 2rem 1rem;
-      justify-content: flex-start;
-      flex-wrap: nowrap;
-      scroll-snap-type: x mandatory;
+      overflow: hidden; /* ✅ hidden ao invés de auto */
+      gap: 1.5rem;
+      padding: 0 0 1.5rem;
       width: 100%;
       margin: 0 auto;
-      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+
+    .testimonials-track {
+      display: flex;
+      gap: 1.5rem;
+      animation: infinite-scroll 30s linear infinite; /* ✅ NOVA ANIMAÇÃO */
+      will-change: transform;
+    }
+
+    .testimonials-track:hover {
+      animation-play-state: paused; /* ✅ PAUSAR AO HOVER */
     }
 
     .testimonial-card {
@@ -1024,8 +1038,15 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
 
       /* Carrossel de Depoimentos Mobile */
       .testimonials-carousel {
+        overflow-x: auto; /* ✅ SCROLL MANUAL NO MOBILE */
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
         padding: 0 1.5rem 1rem;
         gap: 1rem;
+      }
+      
+      .testimonials-track {
+        animation: none; /* ✅ DESABILITAR ANIMAÇÃO NO MOBILE */
       }
       
       .testimonial-card {
@@ -1184,37 +1205,46 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     <div class="container">
       <h2>O que nossos clientes dizem sobre a Solução</h2>
       <div class="testimonials-carousel">
-        ${(aiContent?.testimonials || successCases).map((testimonial, idx) => {
-          const originalCase = successCases[idx] || {};
-          const quote = testimonial.quote || originalCase.result_achieved || 'Resultado não especificado';
-          const clientName = testimonial.clientName || originalCase.client_name;
-          const clientPhoto = originalCase.client_photo;
-          
-          return `
-            <div class="testimonial-card">
-              <div class="rating">
-                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-              </div>
-              <p>"${escapeHtml(quote)}"</p>
-              <div class="profile-info">
-                ${clientPhoto?.src 
-                  ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">` 
-                  : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">`
-                }
-                <div class="details">
-                  <strong>${escapeHtml(clientName)}</strong>
-                  <small>${escapeHtml(originalCase.specialty || 'Cliente')}${originalCase.city ? ' | ' + escapeHtml(originalCase.city) + '/' + escapeHtml(originalCase.state) : ''}</small>
+        <div class="testimonials-track">
+          ${(() => {
+            const testimonials = aiContent?.testimonials || successCases;
+            // ✅ DUPLICAR ARRAY para efeito seamless (igual InfinitePartnersCarousel)
+            const duplicatedTestimonials = [...testimonials, ...testimonials];
+            
+            return duplicatedTestimonials.map((testimonial, idx) => {
+              const originalIndex = idx % testimonials.length;
+              const originalCase = successCases[originalIndex] || {};
+              const quote = testimonial.quote || originalCase.result_achieved || 'Resultado não especificado';
+              const clientName = testimonial.clientName || originalCase.client_name;
+              const clientPhoto = originalCase.client_photo;
+              
+              return `
+                <div class="testimonial-card">
+                  <div class="rating">
+                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                  </div>
+                  <p>"${escapeHtml(quote)}"</p>
+                  <div class="profile-info">
+                    ${clientPhoto?.src 
+                      ? `<img src="${escapeHtml(clientPhoto.src)}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">` 
+                      : `<img src="https://via.placeholder.com/80/${escapeHtml(company?.primary_color?.replace('#', '') || '3E4B5E')}/FFFFFF?text=${escapeHtml(clientName?.charAt(0) || '?')}" alt="${escapeHtml(clientName)}" width="60" height="60" loading="lazy">`
+                    }
+                    <div class="details">
+                      <strong>${escapeHtml(clientName)}</strong>
+                      <small>${escapeHtml(originalCase.specialty || 'Cliente')}${originalCase.city ? ' | ' + escapeHtml(originalCase.city) + '/' + escapeHtml(originalCase.state) : ''}</small>
+                    </div>
+                    ${originalCase.instagram 
+                      ? `<a href="https://instagram.com/${escapeHtml(originalCase.instagram.replace('@', ''))}" target="_blank" class="instagram-link">
+                           <i class="fab fa-instagram"></i>
+                         </a>` 
+                      : ''
+                    }
+                  </div>
                 </div>
-                ${originalCase.instagram 
-                  ? `<a href="https://instagram.com/${escapeHtml(originalCase.instagram.replace('@', ''))}" target="_blank" class="instagram-link">
-                       <i class="fab fa-instagram"></i>
-                     </a>` 
-                  : ''
-                }
-              </div>
-            </div>
-          `;
-        }).join('')}
+              `;
+            }).join('');
+          })()}
+        </div>
       </div>
     </div>
   </section>
