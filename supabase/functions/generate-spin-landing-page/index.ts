@@ -34,7 +34,8 @@ async function generateAllLandingPageContent(
   lovableApiKey: string,
   solution: any,
   products: any[],
-  company: any
+  company: any,
+  customText: Record<string, string> = {} // ✅ Novo parâmetro para textos customizados
 ): Promise<AIGeneratedContent> {
   
   const productsNames = products.map(p => p.name).join(', ');
@@ -396,8 +397,24 @@ Retorne APENAS JSON puro, sem markdown:
     generatedContent.spinNarrative = `Profissionais que adotam ${productsNames} transformam ${solution.pain_type} em vantagem competitiva, alcançando resultados mensuráveis em tempo recorde.`;
   }
 
-  console.log('✅ Conteúdo validado com sucesso!');
-  return generatedContent;
+  console.log('🔄 [AI] Merge com customText:', Object.keys(customText));
+
+  // ✅ MERGE INTELIGENTE: Priorizar textos customizados do usuário
+  return {
+    hero: {
+      subtitle: customText.hero_subtitle || generatedContent.hero.subtitle
+    },
+    spinNarrative: customText.spin_narrative || generatedContent.spinNarrative,
+    metrics: {
+      title: customText.metrics_title || generatedContent.metrics.title,
+      subtitle: customText.metrics_subtitle || generatedContent.metrics.subtitle
+    },
+    cta: {
+      text: customText.cta_text || generatedContent.cta.text,
+      buttonText: customText.cta_button_text || generatedContent.cta.buttonText
+    },
+    testimonials: generatedContent.testimonials // ✅ Testimonials sempre vêm da IA
+  };
 }
 
 serve(async (req) => {
@@ -496,12 +513,13 @@ serve(async (req) => {
 
     console.log('🤖 Gerando textos da landing page com IA...');
 
-    // ✅ GERAR TODOS OS TEXTOS COM IA
+    // ✅ GERAR TODOS OS TEXTOS COM IA (com merge de customText)
     const aiGeneratedContent = await generateAllLandingPageContent(
       LOVABLE_API_KEY,
       solution,
       products || [],
-      company
+      company,
+      solution.landing_page_custom_text || {} // ✅ Passar textos customizados
     );
 
     console.log('✅ Checkpoint 2: Textos gerados com sucesso:', {
@@ -511,7 +529,10 @@ serve(async (req) => {
       testimonialsCount: aiGeneratedContent.testimonials.length
     });
 
-    console.log('✅ Checkpoint 3: CustomText do usuário:', solution.landing_page_custom_text);
+    console.log('🔍 [AI] Campos customizados preservados:', 
+      Object.keys(solution.landing_page_custom_text || {})
+        .filter(key => solution.landing_page_custom_text[key])
+    );
 
     // ✅ MERGE CORRETO: Passar separadamente IA e customText
     // O template HTML faz a priorização interna (customText > aiContent > defaults)

@@ -17,7 +17,8 @@ import {
   Save,
   X,
   RefreshCw,
-  Clock
+  Clock,
+  RotateCcw
 } from 'lucide-react';
 
 interface SpinLandingPageEditablePreviewProps {
@@ -621,6 +622,54 @@ export function SpinLandingPageEditablePreview({
                   <Save className="h-4 w-4 mr-2" />
                 )}
                 Salvar
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  if (!confirm('⚠️ Isso vai resetar TODAS as edições manuais e regenerar do zero. Confirmar?')) return;
+                  
+                  setIsSaving(true);
+                  try {
+                    // Limpar landing_page_custom_text do banco
+                    const { error } = await supabase
+                      .from('spin_selling_solutions')
+                      .update({ landing_page_custom_text: null })
+                      .eq('id', solutionId);
+                    
+                    if (error) throw error;
+                    
+                    // Regenerar HTML do zero
+                    const { error: regenerateError } = await supabase.functions.invoke(
+                      'generate-spin-landing-page',
+                      { body: { solutionId } }
+                    );
+                    
+                    if (regenerateError) throw regenerateError;
+                    
+                    toast({
+                      title: "✅ Resetado!",
+                      description: "Textos originais da IA foram restaurados",
+                    });
+                    
+                    // Recarregar preview
+                    setTimeout(() => regenerateHTML(), 2000);
+                  } catch (err) {
+                    console.error(err);
+                    toast({
+                      title: "❌ Erro",
+                      description: "Falha ao resetar landing page",
+                      variant: "destructive"
+                    });
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                title="Resetar todas as edições e regenerar do zero"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Resetar Tudo
               </Button>
               
               <Button
