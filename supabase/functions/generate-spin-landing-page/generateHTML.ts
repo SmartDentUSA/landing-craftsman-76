@@ -1077,26 +1077,41 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       .metrics-cards {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 1rem;
-        padding: 0 1rem;
+        gap: 0.75rem;
+        padding: 0 0.75rem;
       }
       
       .metric-card {
         min-width: unset;
-        height: 180px;
-        padding: 1rem;
+        height: auto;
+        min-height: 180px;
+        padding: 1rem 0.75rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
       }
       
-      .metric-card .count {
+      .metric-card .count .number {
         font-size: 48px;
       }
       
-      .metric-card span {
-        font-size: 14px;
-        line-height: 1.3;
+      .metric-card .count .unit {
+        font-size: 21px;
+        margin-left: 2px;
+      }
+      
+      .metric-card span:not(.count):not(.number):not(.unit) {
+        font-size: 13px;
+        line-height: 1.2;
         min-height: 35px;
         text-align: center;
-        word-break: break-word;
+        word-break: normal;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        display: block;
+        width: 100%;
       }
 
       /* Carrossel de Depoimentos Mobile */
