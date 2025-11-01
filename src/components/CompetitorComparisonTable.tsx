@@ -73,7 +73,11 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
     handleChange({ table_data: newData });
   };
 
-  return (
+  const preventEnterSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') e.preventDefault();
+  };
+
+   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -107,6 +111,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                 id="comparison-title"
                 value={localValue.title}
                 onChange={(e) => handleChange({ title: e.target.value })}
+                onKeyDown={preventEnterSubmit}
                 placeholder="Ex: Por que escolher nossa solução?"
               />
             </div>
@@ -116,6 +121,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                 id="comparison-subtitle"
                 value={localValue.subtitle || ''}
                 onChange={(e) => handleChange({ subtitle: e.target.value })}
+                onKeyDown={preventEnterSubmit}
                 placeholder="Ex: Comparação técnica objetiva"
               />
             </div>
@@ -130,9 +136,11 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                   <Input
                     value={header}
                     onChange={(e) => updateHeader(index, e.target.value)}
+                    onKeyDown={preventEnterSubmit}
                     placeholder={`Cabeçalho ${index + 1}`}
                   />
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onPointerDown={(e) => e.preventDefault()}
@@ -146,6 +154,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                 </div>
               ))}
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onPointerDown={(e) => e.preventDefault()}
@@ -170,6 +179,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Linha {rowIndex + 1}</span>
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
                       onPointerDown={(e) => e.preventDefault()}
@@ -188,6 +198,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                           <Input
                             value={row[header] || ''}
                             onChange={(e) => updateCell(rowIndex, header, e.target.value)}
+                            onKeyDown={preventEnterSubmit}
                             placeholder={`Valor para ${header}`}
                           />
                         </div>
@@ -197,6 +208,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                 </Card>
               ))}
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onPointerDown={(e) => e.preventDefault()}
