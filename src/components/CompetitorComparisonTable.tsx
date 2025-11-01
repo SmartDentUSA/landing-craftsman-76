@@ -121,97 +121,108 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
             </div>
           </div>
 
-          {/* Tabela Editável */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="p-2 text-left w-8"></th>
-                    {localValue.table_headers.map((header, index) => (
-                      <th key={index} className="p-2">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={header}
-                            onChange={(e) => updateHeader(index, e.target.value)}
-                            className="h-8 text-sm font-semibold"
-                            placeholder={`Coluna ${index + 1}`}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeColumn(index)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </th>
-                    ))}
-                    <th className="p-2 w-24">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={addColumn}
-                        className="w-full"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {localValue.table_data.map((row, rowIndex) => (
-                    <tr key={rowIndex} className="border-t">
-                      <td className="p-2">
-                        <Badge variant="outline">{rowIndex + 1}</Badge>
-                      </td>
-                      {localValue.table_headers.map((header, colIndex) => (
-                        <td key={colIndex} className="p-2">
-                          <Input
-                            value={row[header] || ''}
-                            onChange={(e) => updateCell(rowIndex, header, e.target.value)}
-                            className="h-8 text-sm"
-                            placeholder="-"
-                          />
-                        </td>
-                      ))}
-                      <td className="p-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeRow(rowIndex)}
-                          className="h-8 w-full"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Cabeçalhos da Tabela */}
+          <div>
+            <Label className="font-medium">Cabeçalhos da Tabela</Label>
+            <div className="space-y-2 mt-2">
+              {localValue.table_headers.map((header, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={header}
+                    onChange={(e) => updateHeader(index, e.target.value)}
+                    placeholder={`Cabeçalho ${index + 1}`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeColumn(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addColumn}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Coluna
+              </Button>
             </div>
           </div>
 
-          {/* Botão Adicionar Linha */}
-          <Button
-            variant="outline"
-            onClick={addRow}
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Linha
-          </Button>
+          {/* Dados da Tabela */}
+          <div>
+            <Label className="font-medium">Dados da Tabela</Label>
+            <div className="space-y-3 mt-2">
+              {localValue.table_data.map((row, rowIndex) => (
+                <Card key={rowIndex}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Linha {rowIndex + 1}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeRow(rowIndex)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {localValue.table_headers.map((header, colIndex) => (
+                        <div key={colIndex}>
+                          <Label className="text-xs">{header}</Label>
+                          <Input
+                            value={row[header] || ''}
+                            onChange={(e) => updateCell(rowIndex, header, e.target.value)}
+                            placeholder={`Valor para ${header}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addRow}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Linha
+              </Button>
+            </div>
+          </div>
 
-          {/* Preview Badge */}
+          {/* Preview da Tabela */}
           {localValue.table_headers.length > 0 && localValue.table_data.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              <Badge variant="secondary">
-                {localValue.table_headers.length} colunas
-              </Badge>
-              <Badge variant="secondary">
-                {localValue.table_data.length} linhas
-              </Badge>
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <Label className="font-medium text-sm mb-2 block">Preview da Tabela</Label>
+              <div className="overflow-x-auto">
+                <table className="w-full border border-border rounded-md">
+                  <thead className="bg-muted">
+                    <tr>
+                      {localValue.table_headers.map((header, index) => (
+                        <th key={index} className="border border-border px-3 py-2 text-left text-sm font-medium">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {localValue.table_data.map((row, rowIndex) => (
+                      <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                        {localValue.table_headers.map((header, colIndex) => (
+                          <td key={colIndex} className="border border-border px-3 py-2 text-sm">
+                            {row[header] || '-'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
