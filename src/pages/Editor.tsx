@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { useSpinSolutionsByProducts } from "@/hooks/useSpinSolutionsByProducts";
 import { RotateCcw, RotateCw } from "lucide-react";
 import { BannerSection } from "@/components/editor/BannerSection";
 import { SolutionsSection } from "@/components/editor/SolutionsSection";
@@ -1392,6 +1393,9 @@ const EditorContent = () => {
   // Novo sistema centralizado de produtos
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   
+  // 🎯 SPIN: Buscar soluções SPIN relacionadas aos produtos selecionados
+  const { data: relatedSpinSolutions = [], isLoading: isLoadingSpinSolutions } = useSpinSolutionsByProducts(selectedProductIds);
+  
   // Carregar vídeos técnicos dos produtos selecionados
   useEffect(() => {
     const loadTechnicalVideos = async () => {
@@ -2173,7 +2177,8 @@ const EditorContent = () => {
           }
         };
         
-        const html = await generateHTML(finalData);
+        // 🎯 SPIN: Passar soluções SPIN relacionadas para o template-engine
+        const html = await generateHTML(finalData, relatedSpinSolutions);
         console.timeEnd('final-html-generation');
         setFinalHTML(html);
       } catch (error) {
@@ -5995,6 +6000,41 @@ const EditorContent = () => {
                     setPreviewTab('repository');
                   }}
                 />
+
+                {/* 🎯 SPIN Solutions Indicator */}
+                {relatedSpinSolutions.length > 0 && (
+                  <Card className="border-l-4 border-l-purple-500/50 bg-purple-50/50">
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                          <Sparkles className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-sm">Soluções SPIN Detectadas</h4>
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                              {relatedSpinSolutions.length}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Schema.org automático para: WebPage, Table, ItemList, FAQPage, PropertyValue
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {relatedSpinSolutions.map((solution: any) => (
+                          <Badge 
+                            key={solution.id} 
+                            variant="outline" 
+                            className="text-xs border-purple-300 text-purple-700"
+                          >
+                            {solution.title}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
               
               {/* 🆕 Reviews & LocalBusiness Schema */}

@@ -3190,7 +3190,11 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
   return Mustache.render(TEMPLATE_HTML, previewData);
 };
 
-export const generateHTML = async (data: any): Promise<string> => {
+export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Promise<string> => {
+  console.log('🎯 [template-engine] generateHTML - SPIN Solutions:', {
+    count: relatedSpinSolutions?.length || 0,
+    solutions: relatedSpinSolutions?.map(s => ({ id: s.id, title: s.title })) || []
+  });
   
   // Calcular larguras dinâmicas das colunas baseado na presença e escala das imagens
   const calculateColumnWidths = (solutions: any[]) => {
@@ -4252,6 +4256,106 @@ export const generateHTML = async (data: any): Promise<string> => {
     }
 
     schemaGraph.push(webPageSchema);
+
+    // 🎯 SPIN: Adicionar schemas das soluções SPIN relacionadas
+    if (relatedSpinSolutions && relatedSpinSolutions.length > 0) {
+      console.log('🎯 [Schema.org] Adicionando soluções SPIN:', relatedSpinSolutions.length);
+      
+      relatedSpinSolutions.forEach((spinSolution: any) => {
+        // 1. WebPage da Solução SPIN
+        if (spinSolution.title && spinSolution.sales_pitch) {
+          schemaGraph.push({
+            "@type": "WebPage",
+            "name": spinSolution.title,
+            "description": spinSolution.sales_pitch?.substring(0, 200) || '',
+            "url": spinSolution.custom_url?.enabled && spinSolution.custom_url?.url 
+              ? spinSolution.custom_url.url 
+              : undefined
+          });
+        }
+
+        // 2. Table (Comparação com Concorrentes)
+        if (spinSolution.competitor_comparison?.enabled && 
+            spinSolution.competitor_comparison?.table_data?.length > 0) {
+          schemaGraph.push({
+            "@type": "Table",
+            "name": spinSolution.competitor_comparison.title || "Comparação de Soluções",
+            "about": spinSolution.pain_type || "Comparação de características",
+            "numberOfRows": spinSolution.competitor_comparison.table_data.length,
+            "numberOfColumns": spinSolution.competitor_comparison.table_headers?.length || 0
+          });
+        }
+
+        // 3. ItemList + Review (Casos de Sucesso)
+        if (spinSolution.success_cases && Array.isArray(spinSolution.success_cases) && 
+            spinSolution.success_cases.length > 0) {
+          const reviewItems = spinSolution.success_cases.map((successCase: any, index: number) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "item": {
+              "@type": "Review",
+              "author": {
+                "@type": "Person",
+                "name": successCase.client_name || "Cliente"
+              },
+              "reviewRating": {
+                "@type": "Rating",
+                "ratingValue": "5",
+                "bestRating": "5"
+              },
+              "reviewBody": successCase.result || successCase.specialty || "",
+              "about": {
+                "@type": "Thing",
+                "name": spinSolution.title,
+                "description": successCase.specialty || ""
+              }
+            }
+          }));
+
+          schemaGraph.push({
+            "@type": "ItemList",
+            "name": `Casos de Sucesso - ${spinSolution.title}`,
+            "itemListElement": reviewItems
+          });
+        }
+
+        // 4. FAQPage (FAQs da Solução SPIN)
+        if (spinSolution.faq && Array.isArray(spinSolution.faq) && spinSolution.faq.length > 0) {
+          const faqEntities = spinSolution.faq.map((faqItem: any) => ({
+            "@type": "Question",
+            "name": faqItem.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faqItem.answer
+            }
+          }));
+
+          schemaGraph.push({
+            "@type": "FAQPage",
+            "mainEntity": faqEntities
+          });
+        }
+
+        // 5. PropertyValue (Métricas de Impacto)
+        if (spinSolution.pain_metrics && typeof spinSolution.pain_metrics === 'object') {
+          Object.entries(spinSolution.pain_metrics).forEach(([key, value]: [string, any]) => {
+            if (value && typeof value === 'object' && value.value) {
+              schemaGraph.push({
+                "@type": "PropertyValue",
+                "name": value.label || key,
+                "value": value.value,
+                "description": `Métrica de impacto relacionada a ${spinSolution.pain_type || 'solução'}`
+              });
+            }
+          });
+        }
+      });
+
+      console.log('✅ [Schema.org] SPIN Solutions adicionadas ao @graph:', {
+        totalSchemas: schemaGraph.length,
+        spinCount: relatedSpinSolutions.length
+      });
+    }
 
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
