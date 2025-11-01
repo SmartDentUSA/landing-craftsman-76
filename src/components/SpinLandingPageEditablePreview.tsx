@@ -179,7 +179,7 @@ export function SpinLandingPageEditablePreview({
       // Remover listeners antigos do document (previne duplicatas)
       doc.removeEventListener('click', handleElementClick as any, true);
       doc.removeEventListener('pointerdown', handleElementClick as any, true);
-      doc.removeEventListener('blur', handleElementBlur as any, true);
+      doc.removeEventListener('focusout', handleElementBlur as any, true);
 
       // Verificar se já injetou CSS (evitar duplicatas)
       if (doc.head.querySelector('style[data-editable-injected]')) {
@@ -244,7 +244,7 @@ export function SpinLandingPageEditablePreview({
       // Adicionar listeners ao document com capture
       doc.addEventListener('click', handleElementClick as any, true);
       doc.addEventListener('pointerdown', handleElementClick as any, true);
-      doc.addEventListener('blur', handleElementBlur as any, true);
+      doc.addEventListener('focusout', handleElementBlur as any, true);
       
       console.log(`✅ [Editor] Listeners injetados com sucesso na tentativa ${attempt}`);
       console.log('  - click handler:', typeof handleElementClick);
@@ -325,7 +325,7 @@ export function SpinLandingPageEditablePreview({
     // Remover listeners antigos do document
     doc.removeEventListener('click', handleElementClick as any, true);
     doc.removeEventListener('pointerdown', handleElementClick as any, true);
-    doc.removeEventListener('blur', handleElementBlur as any, true);
+    doc.removeEventListener('focusout', handleElementBlur as any, true);
     
     // ✅ Remover estilo CSS anterior
     const existingStyle = doc.head.querySelector('style[data-editable-injected]');
@@ -376,7 +376,7 @@ export function SpinLandingPageEditablePreview({
     // Readicionar listeners ao document com capture
     doc.addEventListener('click', handleElementClick as any, true);
     doc.addEventListener('pointerdown', handleElementClick as any, true);
-    doc.addEventListener('blur', handleElementBlur as any, true);
+    doc.addEventListener('focusout', handleElementBlur as any, true);
     
     const editableElements = doc.querySelectorAll('[data-editable]');
     setEditableElementsCount(editableElements.length);
