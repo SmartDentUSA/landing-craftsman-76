@@ -135,7 +135,10 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => removeColumn(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeColumn(index);
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -144,7 +147,10 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
               <Button
                 variant="outline"
                 size="sm"
-                onClick={addColumn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addColumn();
+                }}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Coluna
@@ -164,7 +170,10 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => removeRow(rowIndex)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeRow(rowIndex);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -187,7 +196,10 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
               <Button
                 variant="outline"
                 size="sm"
-                onClick={addRow}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addRow();
+                }}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Linha
