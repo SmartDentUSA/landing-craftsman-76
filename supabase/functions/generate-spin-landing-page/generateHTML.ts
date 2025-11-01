@@ -1489,12 +1489,6 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       <div class="video-container" style="max-width: 1000px; margin: 0 auto; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); background: #000;">
         ${generateVideoEmbed(solution.selected_video_url)}
       </div>
-      
-      ${solution.selected_video_title ? `
-        <p class="video-caption" data-editable="true" data-field="video_demo_caption" style="margin-top: 1.5rem; font-size: 18px; color: #6b7280; font-style: italic; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
-          ${escapeHtml(customText.video_demo_caption || solution.selected_video_title)}
-        </p>
-      ` : ''}
     </section>
   </div>
   ` : ''}
