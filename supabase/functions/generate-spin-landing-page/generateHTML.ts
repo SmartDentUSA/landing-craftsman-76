@@ -924,6 +924,111 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       hyphens: auto;
     }
 
+    /* ===== TABELA DE COMPARAÇÃO COM CONCORRENTES ===== */
+    .comparison-section {
+      text-align: center;
+      padding: 4rem 0;
+      background: var(--section-light-bg);
+    }
+
+    .comparison-section h2 {
+      font-size: 36px;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      color: var(--primary-dark);
+    }
+
+    .comparison-section .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 3rem;
+      font-weight: 500;
+    }
+
+    .desktop-table {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e0e0e0;
+    }
+
+    .desktop-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .desktop-table thead {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, #2a3442 100%);
+    }
+
+    .desktop-table th {
+      padding: 1.5rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      font-size: 16px;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 3px solid var(--accent-tech);
+    }
+
+    .desktop-table th:first-child {
+      border-top-left-radius: 12px;
+    }
+
+    .desktop-table th:last-child {
+      border-top-right-radius: 12px;
+    }
+
+    .desktop-table td {
+      padding: 1.25rem 1rem;
+      text-align: left;
+      font-size: 15px;
+      color: var(--text-color);
+      border-bottom: 1px solid #e8e8e8;
+      transition: background 0.2s;
+    }
+
+    .desktop-table tbody tr:hover {
+      background: #f8f9fa;
+    }
+
+    .desktop-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Destaque para a coluna "Nossa Solução" (segunda coluna) */
+    .desktop-table td:nth-child(2) {
+      background: linear-gradient(135deg, rgba(238, 122, 62, 0.08) 0%, rgba(255, 155, 103, 0.05) 100%);
+      font-weight: 600;
+      color: var(--primary-dark);
+    }
+
+    .desktop-table tbody tr:hover td:nth-child(2) {
+      background: linear-gradient(135deg, rgba(238, 122, 62, 0.12) 0%, rgba(255, 155, 103, 0.08) 100%);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .desktop-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .desktop-table table {
+        min-width: 600px;
+      }
+
+      .desktop-table th,
+      .desktop-table td {
+        padding: 1rem 0.75rem;
+        font-size: 14px;
+      }
+    }
+
     /* ===== FAQ - ESTILO GEMINI ===== */
     .faq {
       text-align: center;
@@ -1516,6 +1621,37 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
             <span data-editable="true" data-field="metric_label_${escapeHtml(key)}">${escapeHtml(finalLabel)}</span>
           </div>
         `}).join('')}
+      </div>
+    </section>
+  </div>
+  ` : ''}
+
+  ${solution.competitor_comparison?.enabled && solution.competitor_comparison.table_headers?.length > 0 && solution.competitor_comparison.table_data?.length > 0 ? `
+  <!-- ========== SEÇÃO: TABELA DE COMPARAÇÃO COM CONCORRENTES ========== -->
+  <div class="container section-padding">
+    <section class="comparison-section">
+      <h2 data-editable="true" data-field="comparison_title">${escapeHtml(solution.competitor_comparison.title || 'Por que escolher nossa solução?')}</h2>
+      ${solution.competitor_comparison.subtitle ? `<p class="subtitle" data-editable="true" data-field="comparison_subtitle">${escapeHtml(solution.competitor_comparison.subtitle)}</p>` : ''}
+      
+      <div class="desktop-table">
+        <table>
+          <thead>
+            <tr>
+              ${solution.competitor_comparison.table_headers.map((header: string, index: number) => `
+                <th data-editable="true" data-field="comparison_header_${index}">${escapeHtml(header)}</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${solution.competitor_comparison.table_data.map((row: any, rowIndex: number) => `
+              <tr>
+                ${solution.competitor_comparison.table_headers.map((header: string, colIndex: number) => `
+                  <td data-editable="true" data-field="comparison_cell_${rowIndex}_${colIndex}">${escapeHtml(row[header] || '-')}</td>
+                `).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
       </div>
     </section>
   </div>

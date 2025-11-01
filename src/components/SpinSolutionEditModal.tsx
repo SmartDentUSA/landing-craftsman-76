@@ -53,6 +53,7 @@ import { ManualBannerUploader } from './ManualBannerUploader';
 import { ClientPhotoUploader } from './ClientPhotoUploader';
 import { AIBannerGenerator } from './AIBannerGenerator';
 import { FAQEditor } from './FAQEditor';
+import { CompetitorComparisonTable } from './CompetitorComparisonTable';
 import { SpinLandingPageEditablePreview } from './SpinLandingPageEditablePreview';
 import { ConsolidatedProductVideosList } from './ConsolidatedProductVideosList';
 import { VideoSelectorForLandingPage } from './VideoSelectorForLandingPage';
@@ -179,6 +180,15 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       desire_label: "🎯 *Desejo:*",
       pain_label: "⚠️ *Dor:*",
       result_label: "✅ *Resultado Esperado:*"
+    },
+    
+    // 🆕 Tabela de Comparação com Concorrentes
+    competitor_comparison: {
+      enabled: false,
+      title: '',
+      subtitle: '',
+      table_headers: [],
+      table_data: []
     },
     
     // ⚡ Campos gerados pela IA (inicialmente null)
@@ -1506,6 +1516,18 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 </p>
               )}
             </Card>
+
+            {/* ===== SEÇÃO: TABELA DE COMPARAÇÃO COM CONCORRENTES ===== */}
+            <CompetitorComparisonTable
+              value={formData.competitor_comparison || {
+                enabled: false,
+                title: '',
+                subtitle: '',
+                table_headers: [],
+                table_data: []
+              }}
+              onChange={(value) => setFormData(prev => ({ ...prev, competitor_comparison: value }))}
+            />
 
             {/* ===== SEÇÃO: URL PERSONALIZADA ===== */}
             <Card className="p-4">

@@ -3917,6 +3917,62 @@ export const generateHTML = async (data: any): Promise<string> => {
       schemaGraph.push(productsSchema);
     }
 
+    // Include SPIN solutions related to selected products
+    if (data.spinSolutions && data.spinSolutions.length > 0) {
+      data.spinSolutions.forEach((solution: any) => {
+        const spinPageSchema: any = {
+          "@type": "WebPage",
+          "name": solution.title,
+          "description": solution.sales_pitch || `Solução para ${solution.pain_type}`
+        };
+        
+        if (solution.custom_url?.enabled && solution.custom_url.url) {
+          spinPageSchema.url = solution.custom_url.url;
+        }
+        
+        schemaGraph.push(spinPageSchema);
+        
+        if (solution.competitor_comparison?.enabled && solution.competitor_comparison.table_data?.length > 0) {
+          schemaGraph.push({
+            "@type": "Table",
+            "name": solution.competitor_comparison.title,
+            "numberOfRows": solution.competitor_comparison.table_data.length,
+            "numberOfColumns": solution.competitor_comparison.table_headers?.length || 0
+          });
+        }
+        
+        if (solution.success_cases && solution.success_cases.length > 0) {
+          schemaGraph.push({
+            "@type": "ItemList",
+            "name": `Casos de Sucesso - ${solution.title}`,
+            "numberOfItems": solution.success_cases.length,
+            "itemListElement": solution.success_cases.map((sc: any, index: number) => ({
+              "@type": "ListItem",
+              "position": index + 1,
+              "item": {
+                "@type": "Review",
+                "author": { "@type": "Person", "name": sc.client_name },
+                "reviewBody": sc.results_achieved,
+                "reviewRating": { "@type": "Rating", "ratingValue": "5" }
+              }
+            }))
+          });
+        }
+        
+        if (solution.faq && solution.faq.length > 0) {
+          schemaGraph.push({
+            "@type": "FAQPage",
+            "name": `FAQ - ${solution.title}`,
+            "mainEntity": solution.faq.map((faq: any) => ({
+              "@type": "Question",
+              "name": faq.question,
+              "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+            }))
+          });
+        }
+      });
+    }
+
     // Combinar reviews manuais, do Google e depoimentos em vídeo para agregateRating e reviews
     const manualReviews = data.schema?.manual_reviews || [];
     const googleReviews = data.schema?.google_reviews?.reviews || [];

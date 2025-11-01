@@ -1518,6 +1518,7 @@ export type Database = {
         Row: {
           active: boolean | null
           ai_generated_images: Json | null
+          competitor_comparison: Json | null
           created_at: string | null
           custom_url: Json | null
           faq: Json | null
@@ -1546,6 +1547,7 @@ export type Database = {
         Insert: {
           active?: boolean | null
           ai_generated_images?: Json | null
+          competitor_comparison?: Json | null
           created_at?: string | null
           custom_url?: Json | null
           faq?: Json | null
@@ -1574,6 +1576,7 @@ export type Database = {
         Update: {
           active?: boolean | null
           ai_generated_images?: Json | null
+          competitor_comparison?: Json | null
           created_at?: string | null
           custom_url?: Json | null
           faq?: Json | null
@@ -1749,22 +1752,40 @@ export type Database = {
       }
       calculate_landing_page_score: { Args: { lp_id: string }; Returns: Json }
       calculate_product_score: { Args: { product_id: string }; Returns: Json }
-      get_complete_knowledge_base: {
-        Args: {
-          p_approved_only?: boolean
-          p_category?: string
-          p_include_categories?: boolean
-          p_include_company?: boolean
-          p_include_google_reviews?: boolean
-          p_include_kols?: boolean
-          p_include_links?: boolean
-          p_include_products?: boolean
-          p_include_video_testimonials?: boolean
-          p_limit?: number
-          p_offset?: number
-        }
-        Returns: Json
-      }
+      get_complete_knowledge_base:
+        | {
+            Args: {
+              p_approved_only?: boolean
+              p_category?: string
+              p_include_categories?: boolean
+              p_include_company?: boolean
+              p_include_google_reviews?: boolean
+              p_include_kols?: boolean
+              p_include_links?: boolean
+              p_include_products?: boolean
+              p_include_video_testimonials?: boolean
+              p_limit?: number
+              p_offset?: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_approved_only?: boolean
+              p_category?: string
+              p_include_categories?: boolean
+              p_include_company?: boolean
+              p_include_google_reviews?: boolean
+              p_include_kols?: boolean
+              p_include_links?: boolean
+              p_include_products?: boolean
+              p_include_spin_solutions?: boolean
+              p_include_video_testimonials?: boolean
+              p_limit?: number
+              p_offset?: number
+            }
+            Returns: Json
+          }
       get_current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]

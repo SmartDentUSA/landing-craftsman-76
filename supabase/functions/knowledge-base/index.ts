@@ -17,6 +17,7 @@ interface KnowledgeBaseParams {
   include_video_testimonials?: boolean;
   include_google_reviews?: boolean;
   include_kols?: boolean;
+  include_spin_solutions?: boolean;
   approved_only?: boolean;
   category?: string;
   limit?: number;
@@ -245,6 +246,121 @@ function formatForAITraining(data: any): string {
     });
   }
   
+  // SPIN Selling Solutions
+  if (data.spin_solutions && Array.isArray(data.spin_solutions)) {
+    text += `## SOLUÇÕES SPIN SELLING (${data.spin_solutions.length})\n\n`;
+    
+    data.spin_solutions.forEach((solution: any) => {
+      text += `### ${solution.title}\n`;
+      text += `**Tipo de Dor:** ${solution.pain_type}\n`;
+      text += `**Prioridade:** ${solution.priority}\n`;
+      text += `**Frequência:** ${solution.frequency || 'N/A'}\n\n`;
+      
+      // PITCH DE VENDAS (campo mais importante)
+      if (solution.sales_pitch) {
+        text += `**Pitch de Vendas Completo:**\n`;
+        text += `${solution.sales_pitch}\n\n`;
+      }
+      
+      // CASOS DE SUCESSO
+      if (solution.success_cases && solution.success_cases.length > 0) {
+        text += `**Casos de Sucesso (${solution.success_cases.length}):**\n`;
+        solution.success_cases.forEach((sc: any, index: number) => {
+          text += `${index + 1}. ${sc.client_name} - ${sc.specialty}\n`;
+          text += `   Local: ${sc.city}, ${sc.state}\n`;
+          text += `   Resultados: ${sc.results_achieved}\n`;
+          if (sc.usage_time) text += `   Tempo de uso: ${sc.usage_time}\n`;
+          if (sc.instagram) text += `   Instagram: ${sc.instagram}\n`;
+          text += `\n`;
+        });
+      }
+      
+      // CITAÇÕES REAIS DE CLIENTES (Jornada SPIN)
+      if (solution.real_quotes && solution.real_quotes.length > 0) {
+        text += `**Depoimentos SPIN (${solution.real_quotes.length}):**\n`;
+        solution.real_quotes.forEach((quote: any, index: number) => {
+          text += `${index + 1}. ${quote.client_name}\n`;
+          text += `   Desejo: "${quote.desire}"\n`;
+          text += `   Dor: "${quote.pain}"\n`;
+          text += `   Resultado Esperado: "${quote.expected_result}"\n\n`;
+        });
+      }
+      
+      // TABELA DE COMPARAÇÃO COM CONCORRENTES
+      if (solution.competitor_comparison?.enabled && solution.competitor_comparison.table_data?.length > 0) {
+        text += `**Comparação com Concorrentes:**\n`;
+        text += `${solution.competitor_comparison.title}\n`;
+        if (solution.competitor_comparison.subtitle) {
+          text += `${solution.competitor_comparison.subtitle}\n`;
+        }
+        text += `\n`;
+        
+        // Cabeçalhos da tabela
+        const headers = solution.competitor_comparison.table_headers || [];
+        text += `| ${headers.join(' | ')} |\n`;
+        text += `|${headers.map(() => '---').join('|')}|\n`;
+        
+        // Dados da tabela
+        const tableData = solution.competitor_comparison.table_data || [];
+        tableData.forEach((row: any) => {
+          const cells = headers.map(header => row[header] || '-');
+          text += `| ${cells.join(' | ')} |\n`;
+        });
+        text += `\n`;
+      }
+      
+      // MÉTRICAS DE DOR
+      if (solution.pain_metrics && Object.keys(solution.pain_metrics).length > 0) {
+        text += `**Métricas de Impacto:**\n`;
+        Object.entries(solution.pain_metrics).forEach(([key, value]: [string, any]) => {
+          if (typeof value === 'object' && value.label) {
+            text += `- ${value.label}: ${value.value} ${value.unit}\n`;
+          } else {
+            text += `- ${key}: ${value}\n`;
+          }
+        });
+        text += `\n`;
+      }
+      
+      // FAQs DA SOLUÇÃO
+      if (solution.faq && solution.faq.length > 0) {
+        text += `**Perguntas Frequentes (${solution.faq.length}):**\n`;
+        solution.faq.forEach((faq: any, index: number) => {
+          text += `Q${index + 1}: ${faq.question}\n`;
+          text += `A${index + 1}: ${faq.answer}\n\n`;
+        });
+      }
+      
+      // URL PERSONALIZADA
+      if (solution.custom_url?.enabled) {
+        text += `**Link Personalizado:** ${solution.custom_url.label} - ${solution.custom_url.url}\n`;
+        if (solution.custom_url.type === 'landing_page' && solution.custom_url.landing_page_id) {
+          text += `(Landing Page ID: ${solution.custom_url.landing_page_id})\n`;
+        }
+        text += `\n`;
+      }
+      
+      // PRODUTOS RELACIONADOS
+      if (solution.product_ids && solution.product_ids.length > 0) {
+        text += `**Produtos Relacionados:** ${solution.product_ids.length} produto(s) vinculado(s)\n`;
+        text += `IDs: ${solution.product_ids.join(', ')}\n\n`;
+      }
+      
+      // CONTEÚDO GERADO PELA IA (se disponível)
+      if (solution.landing_page_html) {
+        text += `**Landing Page:** Gerada em ${solution.landing_page_generated_at || 'data desconhecida'}\n`;
+      }
+      if (solution.whatsapp_complete_message) {
+        text += `**Mensagem WhatsApp:** Disponível (mensagem otimizada)\n`;
+      }
+      if (solution.google_ads_campaign) {
+        text += `**Campanha Google Ads:** Gerada com ${solution.google_ads_campaign.keywords?.length || 0} keywords\n`;
+      }
+      
+      text += `\n---\n\n`;
+    });
+  }
+  
   return text;
 }
 
@@ -253,6 +369,7 @@ function formatForSystemB(data: any): any {
     company: data.company_profile,
     categories: data.categories_config,
     links: data.external_links,
+    spin_solutions: data.spin_solutions,
     products: data.products?.map((item: any) => ({
       ...item.product,
       cs_messages: item.cs_messages,
@@ -319,6 +436,7 @@ serve(async (req) => {
       include_video_testimonials: url.searchParams.get('include_video_testimonials') !== 'false',
       include_google_reviews: url.searchParams.get('include_google_reviews') !== 'false',
       include_kols: url.searchParams.get('include_kols') === 'true',
+      include_spin_solutions: url.searchParams.get('include_spin_solutions') !== 'false',
       approved_only: url.searchParams.get('approved_only') !== 'false',
       category: url.searchParams.get('category') || undefined,
       limit: parseInt(url.searchParams.get('limit') || '50'),
@@ -341,6 +459,7 @@ serve(async (req) => {
       p_include_video_testimonials: params.include_video_testimonials,
       p_include_google_reviews: params.include_google_reviews,
       p_include_kols: params.include_kols,
+      p_include_spin_solutions: params.include_spin_solutions,
       p_approved_only: params.approved_only,
       p_category: params.category,
       p_limit: params.limit,

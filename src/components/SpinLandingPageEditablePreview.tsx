@@ -36,7 +36,9 @@ interface EditedData {
   metrics_subtitle: string;
   faq_title: string;
   cta_text: string;
-  [key: string]: string;
+  comparison_title?: string;
+  comparison_subtitle?: string;
+  [key: string]: string | undefined;
 }
 
 export function SpinLandingPageEditablePreview({
@@ -54,6 +56,8 @@ export function SpinLandingPageEditablePreview({
     metrics_subtitle: '',
     faq_title: '',
     cta_text: '',
+    comparison_title: '',
+    comparison_subtitle: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

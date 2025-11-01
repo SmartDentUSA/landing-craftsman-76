@@ -72,6 +72,14 @@ export interface CustomMetric {
   unit: string;       // "minutos"
 }
 
+export interface CompetitorComparison {
+  enabled: boolean;
+  title: string;                    // "Por que escolher nossa solução?"
+  subtitle?: string;                // "Comparação técnica objetiva"
+  table_headers: string[];          // ["Característica", "Nossa Solução", "Concorrente A", "Concorrente B"]
+  table_data: Array<{[key: string]: string}>;  // [{ "Característica": "Tempo de Entrega", "Nossa Solução": "2 dias", ... }]
+}
+
 export interface SpinSellingSolution {
   id: string;
   title: string;
@@ -93,6 +101,9 @@ export interface SpinSellingSolution {
   // ✅ PERSONALIZAÇÃO DE TEXTOS WHATSAPP
   whatsapp_section_titles?: WhatsAppSectionTitles;
   spin_journey_labels?: SpinJourneyLabels;
+  
+  // 🆕 TABELA DE COMPARAÇÃO COM CONCORRENTES
+  competitor_comparison?: CompetitorComparison;
   
   // ⚡ CAMPOS GERADOS PELA IA (apenas quando o usuário clica)
   google_ads_campaign?: GoogleAdsCampaign;
