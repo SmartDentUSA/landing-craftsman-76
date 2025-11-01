@@ -808,7 +808,11 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl max-h-[90vh]">
+        <DialogContent 
+          className="max-w-5xl max-h-[90vh]"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>
               {solutionId ? 'Editar Solução SPIN' : 'Nova Solução SPIN'}

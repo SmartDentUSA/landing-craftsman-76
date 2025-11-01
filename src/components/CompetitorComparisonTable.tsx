@@ -132,29 +132,31 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                     onChange={(e) => updateHeader(index, e.target.value)}
                     placeholder={`Cabeçalho ${index + 1}`}
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeColumn(index);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeColumn(index);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
                 </div>
               ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addColumn();
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Coluna
-              </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                addColumn();
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Coluna
+            </Button>
             </div>
           </div>
 
@@ -167,16 +169,17 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Linha {rowIndex + 1}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeRow(rowIndex);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onPointerDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeRow(rowIndex);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {localValue.table_headers.map((header, colIndex) => (
@@ -193,17 +196,18 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                   </CardContent>
                 </Card>
               ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addRow();
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Linha
-              </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                addRow();
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Linha
+            </Button>
             </div>
           </div>
 
