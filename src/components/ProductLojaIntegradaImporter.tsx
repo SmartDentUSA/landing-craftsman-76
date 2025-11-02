@@ -183,7 +183,12 @@ export function ProductLojaIntegradaImporter({
     // -------- Normalização completa --------
     const normalized = {
       id: data.id || data.product_id || undefined,
-      name: data.name ?? data.nome ?? "",
+      name: data.name ?? 
+            data.nome ?? 
+            data.title ?? 
+            payload?.data?.name ?? 
+            payload?.name ?? 
+            "Produto sem nome",
       description: data.description ?? data.descricao_completa ?? data.body ?? "",
       sales_pitch: data.sales_pitch ?? "",
 

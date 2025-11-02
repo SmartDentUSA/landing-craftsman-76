@@ -759,6 +759,7 @@ function mapScrapedDataToRepository(scrapedData: any, li_product_id?: string) {
   });
 
   return {
+    name: scrapedData.name || scrapedData.title || 'Produto sem nome',
     ...scrapedData,
     variations: scrapedData.variations?.map((v: any) => ({
       name: v.name || v.sku || '',
