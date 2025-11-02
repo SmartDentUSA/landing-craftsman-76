@@ -54,6 +54,7 @@ interface ImportPreview {
   ean?: string;
   gtin?: string;
   availability?: string;
+  li_product_id?: string;
 }
 
 interface ProductLojaIntegradaImporterProps {
@@ -424,7 +425,8 @@ export function ProductLojaIntegradaImporter({
           data_quality: dataQuality,
           ean: result.ean,
           gtin: result.gtin,
-          availability: result.availability
+          availability: result.availability,
+          li_product_id: result.original_data?.li_product_id
         });
 
       // Handle based on mode
@@ -873,6 +875,16 @@ export function ProductLojaIntegradaImporter({
                 {preview.fields_extracted}/{preview.total_fields}
               </span>
             </div>
+
+            {preview.li_product_id ? (
+              <div className="bg-background rounded p-2 text-xs">
+                <span className="font-medium">ID do Produto (Loja Integrada):</span> {preview.li_product_id}
+              </div>
+            ) : (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded p-2 text-xs text-amber-600 dark:text-amber-500">
+                <span className="font-medium">⚠️ ID do Produto (Loja Integrada):</span> Não encontrado - o botão "Enviar Loja Integrada" não funcionará após importar
+              </div>
+            )}
           </div>
         )}
 

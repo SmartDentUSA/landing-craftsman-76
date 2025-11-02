@@ -14,6 +14,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface ProductEcommerceGeneratorProps {
   productId: string;
+  liProductId?: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdate?: () => void;
@@ -21,6 +22,7 @@ interface ProductEcommerceGeneratorProps {
 
 export function ProductEcommerceGenerator({ 
   productId, 
+  liProductId,
   isOpen, 
   onClose, 
   onUpdate 
@@ -184,13 +186,23 @@ export function ProductEcommerceGenerator({
       return;
     }
 
+    // ✅ VALIDAÇÃO ANTECIPADA NO FRONTEND
+    if (!liProductId) {
+      toast({
+        title: "⚠️ Produto não vinculado",
+        description: "Este produto não foi importado da Loja Integrada. Importe via URL primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSendingToLI(true);
     try {
-      console.log('📤 Enviando HTML para Loja Integrada...');
+      console.log('📤 Enviando HTML para Loja Integrada (ID:', liProductId, ')');
       const { data, error } = await supabase.functions.invoke(
         "update-loja-integrada-product",
         {
-          body: { productId, htmlContent },
+          body: { liProductId, htmlContent },
         }
       );
 
@@ -202,7 +214,7 @@ export function ProductEcommerceGenerator({
       if (data?.success) {
         toast({
           title: "✅ Enviado com Sucesso!",
-          description: `Descrição atualizada na Loja Integrada (ID: ${data.li_product_id})`,
+          description: `Descrição atualizada na Loja Integrada (ID: ${liProductId})`,
         });
         console.log('✅ Atualização confirmada:', data);
       } else {

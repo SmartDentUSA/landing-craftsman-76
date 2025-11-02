@@ -107,6 +107,10 @@ interface Product {
     ai_model_used: string;
     version: number;
   } | null;
+  original_data?: {
+    li_product_id?: string;
+    [key: string]: any;
+  };
 }
 
 interface TechnicalSpec {
@@ -823,12 +827,13 @@ export function ModernProductCard({
       )}
 
       {/* Modal de Descrição E-commerce */}
-      <ProductEcommerceGenerator
-        productId={product.id}
-        isOpen={showEcommerceModal}
-        onClose={() => setShowEcommerceModal(false)}
-        onUpdate={onProductUpdate}
-      />
+            <ProductEcommerceGenerator
+              productId={product.id}
+              liProductId={product.original_data?.li_product_id}
+              isOpen={showEcommerceModal}
+              onClose={() => setShowEcommerceModal(false)}
+              onUpdate={onProductUpdate}
+            />
     </>
   );
 }

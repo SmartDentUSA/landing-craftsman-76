@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface RequestBody {
-  productId: string;
+  liProductId: string;
   htmlContent: string;
 }
 
@@ -43,10 +43,10 @@ serve(async (req) => {
       );
     }
 
-    const { productId, htmlContent }: RequestBody = await req.json();
-    console.log('📥 Request recebido:', { productId, htmlSize: htmlContent?.length || 0 });
+    const { liProductId, htmlContent }: RequestBody = await req.json();
+    console.log('📥 Request recebido:', { liProductId, htmlSize: htmlContent?.length || 0 });
 
-    if (!productId || !htmlContent) {
+    if (!liProductId || !htmlContent) {
       return new Response(
         JSON.stringify({ success: false, message: "Parâmetros inválidos" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -64,44 +64,11 @@ serve(async (req) => {
       );
     }
 
-    // Fetch li_product_id from database
-    console.log('🔍 Buscando li_product_id para productId:', productId);
-    const { data, error } = await supabase
-      .from("products_repository")
-      .select("source_data")
-      .eq("id", productId)
-      .single();
-
-    if (error) {
-      console.error('❌ Erro ao buscar produto no banco:', error);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: `Erro ao buscar produto: ${error.message}`,
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('📦 Dados encontrados:', data?.source_data);
-    const li_product_id = data?.source_data?.li_product_id;
-
-    if (!li_product_id) {
-      console.warn('⚠️ Produto não possui li_product_id');
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Produto não vinculado à Loja Integrada. Importe o produto via URL primeiro.",
-        }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('🔑 li_product_id extraído:', li_product_id);
+    console.log('🔑 li_product_id recebido do frontend:', liProductId);
     console.log('📤 Enviando HTML para Loja Integrada...');
 
     // PUT request to Loja Integrada API
-    const url = `https://api.awsli.com.br/v1/produto/${li_product_id}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
+    const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
     let attempt = 0;
     let response;
@@ -148,7 +115,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        li_product_id,
+        li_product_id: liProductId,
         updated_at: new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
