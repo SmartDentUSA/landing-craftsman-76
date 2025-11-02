@@ -908,6 +908,13 @@ serve(async (req) => {
         
         if (scrapingResult.success && scrapingResult.data) {
           console.log('✅ Web scraping fallback successful');
+          console.log('📋 Scraped data:', {
+            has_name: !!scrapingResult.data.name,
+            name_value: scrapingResult.data.name,
+            has_price: !!scrapingResult.data.price,
+            has_images: !!scrapingResult.data.images_gallery?.length,
+            images_count: scrapingResult.data.images_gallery?.length || 0
+          });
           extractedProductId = scrapingResult.li_product_id;
           
           // Se extraímos um ID e ainda não tentamos a API com ele, tentar agora

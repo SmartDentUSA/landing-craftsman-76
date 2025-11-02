@@ -385,8 +385,20 @@ export function ProductLojaIntegradaImporter({
         });
       }
 
-      if (!result || !result.name) {
-        throw new Error('Nome do produto é obrigatório');
+      if (!result) {
+        throw new Error('Nenhum dado foi importado');
+      }
+
+      // Warn about missing name but allow import
+      if (!result.name || result.name === 'Produto sem nome') {
+        console.warn('⚠️ Product name is missing or generic');
+        toast({
+          title: "⚠️ Nome do produto ausente",
+          description: "Por favor, adicione um nome manualmente antes de salvar",
+          variant: "default",
+        });
+        // Set a placeholder name so user can continue
+        result.name = result.name || 'Produto sem nome';
       }
 
       // Generate preview
@@ -816,7 +828,14 @@ export function ProductLojaIntegradaImporter({
             </div>
 
             <div className="space-y-1">
-              <div className="font-medium text-sm">{preview.name}</div>
+              <div className="flex items-center gap-2">
+                <div className="font-medium text-sm">{preview.name}</div>
+                {preview.name === 'Produto sem nome' && (
+                  <Badge variant="destructive" className="text-xs">
+                    ⚠️ Adicione um nome
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {preview.category && <span>{preview.category}</span>}
                 {preview.brand && <span>• {preview.brand}</span>}
