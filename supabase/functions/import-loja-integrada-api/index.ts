@@ -975,7 +975,7 @@ serve(async (req) => {
               }
               
               if (retryProductData) {
-                finalData = mapAPIProductToRepository(retryProductData);
+                finalData = await mapAPIProductToRepository(retryProductData, lojaIntegradaApiKey, lojaIntegradaAppKey);
                 dataSource = 'api_via_scraping';
               } else {
                 // Fallback to scraping data
