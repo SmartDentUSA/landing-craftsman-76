@@ -200,6 +200,21 @@ export function RepositoryPanel({
     handleCategoryUpdate();
   }, [refreshAllCategories]);
 
+  // Realtime updates for products_repository
+  useEffect(() => {
+    const channel = supabase
+      .channel('products-repository-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products_repository' }, () => {
+        console.log('[Realtime] products_repository changed – refreshing list');
+        loadProducts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Apply filters
   useEffect(() => {
     let filtered = products;
@@ -343,6 +358,12 @@ export function RepositoryPanel({
       }));
       
       setProducts(formattedProducts);
+
+      // Auto-open all categories initially to avoid hidden data, including 'Sem categoria'
+      const initialCategories = new Set(
+        (formattedProducts || []).map(p => (p.category && p.category.trim().length > 0 ? p.category : 'Sem categoria'))
+      );
+      setOpenCategories(initialCategories);
 
       // Auto-select products marked for AI generation
       const aiProducts = formattedProducts.filter(p => p.use_in_ai_generation);
