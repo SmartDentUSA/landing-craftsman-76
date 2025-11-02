@@ -203,6 +203,7 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                           <Input
                             value={row[header] || ''}
                             onChange={(e) => updateCell(rowIndex, header, e.target.value)}
+                            onBlur={() => onChange(localValue)}
                             onKeyDown={preventEnterSubmit}
                             placeholder={`Valor para ${header}`}
                           />
@@ -246,11 +247,19 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
                   <tbody>
                     {localValue.table_data.map((row, rowIndex) => (
                       <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
-                        {localValue.table_headers.map((header, colIndex) => (
-                          <td key={colIndex} className="border border-border px-3 py-2 text-sm">
-                            {row[header] || '-'}
-                          </td>
-                        ))}
+                        {localValue.table_headers.map((header, colIndex) => {
+                          const cellValue = row[header];
+                          const isEmpty = !cellValue || cellValue.trim() === '';
+                          
+                          return (
+                            <td 
+                              key={colIndex} 
+                              className={`border border-border px-3 py-2 text-sm ${isEmpty ? 'bg-yellow-50 text-yellow-600' : ''}`}
+                            >
+                              {isEmpty ? '⚠️ Vazio' : cellValue}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>

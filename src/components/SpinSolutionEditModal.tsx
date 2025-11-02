@@ -294,6 +294,42 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       }
     }
 
+    // ✅ VALIDAR TABELA DE COMPARAÇÃO ANTES DE SALVAR
+    if (formData.competitor_comparison?.enabled) {
+      const { table_headers, table_data } = formData.competitor_comparison;
+      
+      if (!table_headers || table_headers.length === 0) {
+        toast({
+          title: "Erro de Validação",
+          description: "Tabela de comparação ativada mas sem colunas definidas",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (!table_data || table_data.length === 0) {
+        toast({
+          title: "Erro de Validação", 
+          description: "Tabela de comparação ativada mas sem linhas definidas",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Verificar se há células vazias
+      const emptyCells = table_data.some(row => 
+        table_headers.some(header => !row[header] || row[header].trim() === '')
+      );
+      
+      if (emptyCells) {
+        toast({
+          title: "⚠️ Atenção",
+          description: "Tabela de comparação contém células vazias. Preencha todos os campos ou desative a tabela.",
+        });
+        // Não bloquear o save, apenas avisar
+      }
+    }
+
     const dataToSubmit = {
       title: formData.title,
       pain_type: formData.pain_type,
@@ -568,6 +604,46 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       toast({
         title: "Salve primeiro!",
         description: "Salve a solução antes de gerar a landing page",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // ✅ GARANTIR QUE OS DADOS MAIS RECENTES ESTEJAM NO BANCO
+    try {
+      console.log('💾 Salvando dados antes de gerar HTML...', {
+        competitor_comparison: formData.competitor_comparison
+      });
+      
+      const { error: saveError } = await supabase
+        .from('spin_selling_solutions')
+        .update({
+          competitor_comparison: formData.competitor_comparison as any,
+          title: formData.title,
+          faq: formData.faq as any,
+          pain_metrics: formData.pain_metrics as any,
+          sales_pitch: formData.sales_pitch,
+          success_cases: formData.success_cases as any,
+          ai_generated_images: formData.ai_generated_images as any
+        })
+        .eq('id', solutionId);
+      
+      if (saveError) {
+        console.error('❌ Erro ao salvar antes de gerar:', saveError);
+        toast({
+          title: "Erro ao salvar",
+          description: saveError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('✅ Dados salvos, gerando HTML...');
+    } catch (error) {
+      console.error('❌ Erro ao salvar antes de gerar:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Falha ao salvar dados antes de gerar HTML",
         variant: "destructive"
       });
       return;

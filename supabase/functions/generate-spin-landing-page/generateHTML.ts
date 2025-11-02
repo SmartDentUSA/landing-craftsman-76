@@ -337,6 +337,20 @@ export function generateLandingPageHTML(
   };
   const badge = painTypeLabels[solution.pain_type] || 'SOLUÇÃO ODONTOLÓGICA';
 
+  // 🔍 DEBUG: Verificar dados da tabela de comparação
+  console.log('🔍 [COMPARISON TABLE DEBUG]', {
+    enabled: solution.competitor_comparison?.enabled,
+    title: solution.competitor_comparison?.title,
+    headers: solution.competitor_comparison?.table_headers,
+    headersLength: solution.competitor_comparison?.table_headers?.length,
+    data: solution.competitor_comparison?.table_data,
+    dataLength: solution.competitor_comparison?.table_data?.length,
+    firstRow: solution.competitor_comparison?.table_data?.[0],
+    willRender: !!(solution.competitor_comparison?.enabled && 
+                   solution.competitor_comparison.table_headers?.length > 0 && 
+                   solution.competitor_comparison.table_data?.length > 0)
+  });
+
   // Lista de chaves das métricas recomendadas (padrão do sistema)
   const RECOMMENDED_METRIC_KEYS = [
     'ROI',
@@ -1645,9 +1659,16 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
           <tbody>
             ${solution.competitor_comparison.table_data.map((row: any, rowIndex: number) => `
               <tr>
-                ${solution.competitor_comparison.table_headers.map((header: string, colIndex: number) => `
-                  <td data-editable="true" data-field="comparison_cell_${rowIndex}_${colIndex}">${escapeHtml(row[header] || '-')}</td>
-                `).join('')}
+                ${solution.competitor_comparison.table_headers.map((header: string, colIndex: number) => {
+                  const cellValue = row[header];
+                  const displayValue = (cellValue !== undefined && cellValue !== null && cellValue !== '') 
+                    ? cellValue 
+                    : '-';
+                  
+                  console.log(`🔍 Cell [${rowIndex}, ${colIndex}] header="${header}" value="${cellValue}" display="${displayValue}"`);
+                  
+                  return `<td data-editable="true" data-field="comparison_cell_${rowIndex}_${colIndex}">${escapeHtml(displayValue)}</td>`;
+                }).join('')}
               </tr>
             `).join('')}
           </tbody>
