@@ -7,8 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Configuration - CORRECTED: Using AWS endpoint and Bearer auth
-const LOJA_INTEGRADA_API_BASE = 'https://api.lojaintegrada.com.br/api/v1';
+// Configuration - Official Loja Integrada API (https://lojaintegrada.docs.apiary.io)
+const LOJA_INTEGRADA_API_BASE = 'https://api.awsli.com.br/v1';
 const RATE_LIMIT_DELAY = 800; // 800ms between requests
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
@@ -166,6 +166,7 @@ async function fetchWithRetry(
 
 async function fetchFromLojaIntegradaAPI(
   apiKey: string,
+  appKey: string,
   endpoint: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   // Check circuit breaker
@@ -180,8 +181,14 @@ async function fetchFromLojaIntegradaAPI(
   const startTime = Date.now();
 
   try {
-    const url = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
-    console.log(`📡 Fetching from Loja Integrada API: ${url}`);
+    // Build URL with authentication query parameters (as per Loja Integrada docs)
+    const baseUrl = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
+    const authParams = `chave_api=${encodeURIComponent(apiKey)}&chave_aplicacao=${encodeURIComponent(appKey)}`;
+    const url = baseUrl.includes('?') ? `${baseUrl}&${authParams}` : `${baseUrl}?${authParams}`;
+    
+    console.log(`📡 API Base URL: ${LOJA_INTEGRADA_API_BASE}`);
+    console.log(`📋 Endpoint: ${endpoint}`);
+    console.log(`🔑 Auth: chave_api + chave_aplicacao`);
 
     const response = await fetchWithRetry(
       url,
@@ -546,13 +553,14 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
+    const lojaIntegradaAppKey = Deno.env.get('LOJA_INTEGRADA_APP_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-if (!lojaIntegradaApiKey) {
-  throw new Error('LOJA_INTEGRADA_API_KEY not configured');
-}
+    if (!lojaIntegradaApiKey || !lojaIntegradaAppKey) {
+      throw new Error('LOJA_INTEGRADA_API_KEY and LOJA_INTEGRADA_APP_KEY are required');
+    }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { productId, productUrl, endpoint = '/produtos' } = await req.json();
@@ -575,10 +583,11 @@ if (!lojaIntegradaApiKey) {
     // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, `/produtos/${productId}`);
+      // Use singular endpoint /produto/{id} as per official docs
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `/produto/${productId}`);
     } else if (!productUrl) {
       // Se não tem nem productId nem productUrl, tenta o endpoint genérico
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, endpoint);
     }
 
     let finalData: any = null;
@@ -638,10 +647,11 @@ if (!lojaIntegradaApiKey) {
           // Se extraímos um ID e ainda não tentamos a API com ele, tentar agora
           if (extractedProductId && !productId) {
             console.log(`🔄 Trying API with extracted ID: ${extractedProductId}`);
-            // ✅ CORREÇÃO: Usar endpoint singular /produto/{id}.json
+            // Retry with API using extracted product ID
             const apiRetry = await fetchFromLojaIntegradaAPI(
               lojaIntegradaApiKey,
-              `/produtos/${extractedProductId}`
+              lojaIntegradaAppKey,
+              `/produto/${extractedProductId}`
             );
             
             if (apiRetry.success && apiRetry.data) {
