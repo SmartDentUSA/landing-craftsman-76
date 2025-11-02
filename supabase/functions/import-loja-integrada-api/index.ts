@@ -166,6 +166,7 @@ async function fetchWithRetry(
 
 async function fetchFromLojaIntegradaAPI(
   apiKey: string,
+  appKey: string,
   endpoint: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   // Check circuit breaker
@@ -188,7 +189,7 @@ async function fetchFromLojaIntegradaAPI(
       {
         method: 'GET',
         headers: {
-          'Authorization': `chave_api ${apiKey}`,
+          'Authorization': `chave_api ${apiKey} chave_aplicacao ${appKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
@@ -544,11 +545,12 @@ serve(async (req) => {
 
   try {
     const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
+    const lojaIntegradaAppKey = Deno.env.get('LOJA_INTEGRADA_APP_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!lojaIntegradaApiKey) {
-      throw new Error('LOJA_INTEGRADA_API_KEY not configured');
+    if (!lojaIntegradaApiKey || !lojaIntegradaAppKey) {
+      throw new Error('LOJA_INTEGRADA_API_KEY and LOJA_INTEGRADA_APP_KEY not configured');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -572,10 +574,10 @@ serve(async (req) => {
     // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, `${endpoint}/${productId}`);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `${endpoint}/${productId}`);
     } else if (!productUrl) {
       // Se não tem nem productId nem productUrl, tenta o endpoint genérico
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, endpoint);
     }
 
     let finalData: any = null;
@@ -637,6 +639,7 @@ serve(async (req) => {
             console.log(`🔄 Trying API with extracted ID: ${extractedProductId}`);
             const apiRetry = await fetchFromLojaIntegradaAPI(
               lojaIntegradaApiKey,
+              lojaIntegradaAppKey,
               `${endpoint}/${extractedProductId}`
             );
             
