@@ -60,6 +60,8 @@ interface ProductData {
   tags?: string[];
   data_criacao?: string;
   data_ultima_modificacao?: string;
+  tipo?: string; // 'produto' | 'atributo_opcao' (variação)
+  pai?: string; // URI do produto pai (ex: /api/v1/produto/123)
 }
 
 // Circuit breaker state (in-memory, resets on cold start)
@@ -307,7 +309,77 @@ async function fallbackToWebScraping(
   }
 }
 
+// Fetch parent product for variations
+async function fetchParentProduct(
+  apiKey: string,
+  appKey: string,
+  parentUri: string // Ex: "/api/v1/produto/351902699"
+): Promise<ProductData | null> {
+  try {
+    // Extract endpoint from URI
+    const endpoint = parentUri.replace('/api/v1', '');
+    console.log(`📞 Fetching parent product: ${endpoint}`);
+    
+    const result = await fetchFromLojaIntegradaAPI(apiKey, appKey, endpoint);
+    
+    if (result.success && result.data) {
+      console.log(`✅ Parent product fetched: ${result.data.nome}`);
+      return result.data;
+    }
+    
+    console.warn(`⚠️ Failed to fetch parent product`);
+    return null;
+  } catch (error) {
+    console.error(`❌ Error fetching parent: ${error.message}`);
+    return null;
+  }
+}
+
+// Extract visual attributes from variations array
+function extractAttributesFromVariations(variacoes: any[]): {
+  color: string | null;
+  size: string | null;
+  material: string | null;
+} {
+  if (!Array.isArray(variacoes) || variacoes.length === 0) {
+    return { color: null, size: null, material: null };
+  }
+
+  // Search for variation patterns: "Cor: Azul", "Tamanho: G", etc.
+  const colorMatch = variacoes.find(v => 
+    v.nome?.toLowerCase().includes('cor') || 
+    v.nome?.toLowerCase().includes('color')
+  );
+  const sizeMatch = variacoes.find(v => 
+    v.nome?.toLowerCase().includes('tamanho') || 
+    v.nome?.toLowerCase().includes('tam') ||
+    v.nome?.toLowerCase().includes('size')
+  );
+  const materialMatch = variacoes.find(v => 
+    v.nome?.toLowerCase().includes('material')
+  );
+
+  return {
+    color: colorMatch?.nome?.split(':')[1]?.trim() || null,
+    size: sizeMatch?.nome?.split(':')[1]?.trim() || null,
+    material: materialMatch?.nome?.split(':')[1]?.trim() || null,
+  };
+}
+
 function mapAPIProductToRepository(apiProduct: ProductData): any {
+  // Detect if this is a variation/child product
+  const isVariation = apiProduct.tipo === 'atributo_opcao' || !!apiProduct.pai;
+  const parentProductUri = apiProduct.pai;
+
+  console.log(`🔍 Product type: ${apiProduct.tipo || 'not specified'}, Is variation: ${isVariation}`);
+  if (isVariation && parentProductUri) {
+    console.log(`👨‍👦 This is a child product. Parent: ${parentProductUri}`);
+  }
+
+  // Extract visual attributes from variations
+  const extractedAttributes = extractAttributesFromVariations(apiProduct.variacoes);
+  console.log(`🎨 Extracted attributes:`, extractedAttributes);
+
   // Safe fallbacks for potentially missing fields
   const name = apiProduct.nome?.trim() || 'Produto sem nome';
   const price = apiProduct.preco_cheio ?? apiProduct.preco_promocional ?? 0;
@@ -316,6 +388,14 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
   const brand = apiProduct.marca?.nome?.trim() || '';
   
   console.log(`🔍 Mapping product: "${name}"`);
+  
+  // Ensure images and categories come from parent if this is a variation
+  const images = Array.isArray(apiProduct.imagens) && apiProduct.imagens.length > 0
+    ? apiProduct.imagens
+    : [];
+  const categories = Array.isArray(apiProduct.categorias) && apiProduct.categorias.length > 0
+    ? apiProduct.categorias
+    : [];
   console.log(`📊 API Product data available:`, {
     nome: !!apiProduct.nome,
     preco_cheio: !!apiProduct.preco_cheio,
@@ -335,11 +415,24 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
   }
 
   // Multiple categories mapping
-  const allCategories = apiProduct.categorias?.map(cat => ({
+  const allCategories = categories.map(cat => ({
     name: cat.nome,
     level: cat.nivel
-  })) || [];
+  }));
   console.log(`📁 Categories mapped: ${allCategories.length} categories`);
+
+  // Log fields that need manual population
+  const manualFields = [];
+  if (!apiProduct.ncm) manualFields.push('EAN');
+  manualFields.push('GTIN'); // Always manual
+  manualFields.push('Categoria Google'); // Always manual
+  if (!extractedAttributes.color) manualFields.push('Cor');
+  if (!extractedAttributes.size) manualFields.push('Tamanho');
+  if (!extractedAttributes.material) manualFields.push('Material');
+
+  if (manualFields.length > 0) {
+    console.log(`⚠️ Campos que precisam ser preenchidos manualmente: ${manualFields.join(', ')}`);
+  }
 
   // ✅ FASE 2: Garantir que TODOS os campos do DB estejam presentes (mesmo que null)
   const mapped: any = {
@@ -360,8 +453,8 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     sku: apiProduct.sku || null,
     mpn: apiProduct.mpn || null,
     ncm: apiProduct.ncm || null,
-    ean: apiProduct.ncm || null, // NCM pode servir como EAN temporariamente
-    gtin: null,
+    ean: null, // API não fornece EAN - deve ser preenchido manualmente
+    gtin: null, // API não fornece GTIN - deve ser preenchido manualmente
     
     // Brand and category from API (using safe fallbacks)
     brand,
@@ -372,7 +465,7 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     google_product_category: null,
     
     // Enhanced stock control
-    condition: 'new',
+    condition: 'new', // Fixo - API não informa condição do produto
     availability: availability,
     stock_available: apiProduct.estoque_gerenciado ? apiProduct.quantidade_disponivel : null,
     
@@ -399,18 +492,16 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     tax_situation: apiProduct.situacao_tributaria || null,
     fiscal_origin: apiProduct.origem || null,
     
-    // Images - structured array with validation
-    image_url: apiProduct.imagens?.[0]?.url || null,
-    images_gallery: Array.isArray(apiProduct.imagens) 
-      ? apiProduct.imagens
-          .filter(img => img && (img.url || img.grande || img.media || img.thumbnail))
-          .map((img, index) => ({
-            url: img.url || img.grande || img.media || img.thumbnail || '',
-            alt: apiProduct.nome || 'Product image',
-            order: typeof img.ordem === 'number' ? img.ordem : index,
-            is_main: index === 0,
-          }))
-      : [],
+    // Images - structured array with validation (guaranteed from parent if variation)
+    image_url: images?.[0]?.url || null,
+    images_gallery: images
+      .filter(img => img && (img.url || img.grande || img.media || img.thumbnail))
+      .map((img, index) => ({
+        url: img.url || img.grande || img.media || img.thumbnail || '',
+        alt: name || 'Product image',
+        order: typeof img.ordem === 'number' ? img.ordem : index,
+        is_main: index === 0,
+      })),
     
     // Variations - structured array with validation
     variations: Array.isArray(apiProduct.variacoes) 
@@ -475,14 +566,14 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     selected: false,
     display_order: null,
     
-    // Fields NOT available in Loja Integrada API - require manual input
-    color: null,
-    size: null,
-    material: null,
-    package_size: null,
-    age_group: null,
-    gender: null,
-    sales_pitch: null,
+    // Visual attributes (extracted from variations or null)
+    color: extractedAttributes.color,
+    size: extractedAttributes.size,
+    material: extractedAttributes.material,
+    package_size: null, // Não disponível na API
+    age_group: null, // Não disponível na API
+    gender: null, // Não disponível na API
+    sales_pitch: null, // Não disponível na API
     
     // Timestamps
     created_at: apiProduct.data_criacao || new Date().toISOString(),
@@ -642,7 +733,45 @@ serve(async (req) => {
         throw new Error('Unexpected API response structure');
       }
       
-      finalData = mapAPIProductToRepository(productData);
+      // Check if this is a variation and fetch parent if needed
+      let productToMap = productData;
+      
+      if (productData.tipo === 'atributo_opcao' && productData.pai) {
+        console.log(`🔄 Variation detected, fetching parent product...`);
+        const parentProduct = await fetchParentProduct(
+          lojaIntegradaApiKey,
+          lojaIntegradaAppKey,
+          productData.pai
+        );
+        
+        if (parentProduct) {
+          // Merge data: parent (name, images, categories) + variation (price, SKU)
+          productToMap = {
+            ...parentProduct,                         // Parent data (name, images, categories)
+            preco_cheio: productData.preco_cheio,     // Variation price
+            preco_promocional: productData.preco_promocional,
+            sku: productData.sku,                     // Variation SKU
+            variacoes: parentProduct.variacoes,       // Keep parent variations array
+            resource_uri: productData.resource_uri,   // Variation URI
+            tipo: productData.tipo,                   // Keep variation type
+            pai: productData.pai,                     // Keep parent reference
+          };
+          console.log(`✅ Merged parent + variation data`);
+        } else {
+          console.warn(`⚠️ Could not fetch parent, using variation data only`);
+        }
+      }
+      
+      finalData = mapAPIProductToRepository(productToMap);
+      
+      // Save complete original_data with parent info if variation
+      if (productData.tipo === 'atributo_opcao' && productData.pai) {
+        finalData.original_data = {
+          variation: productData,           // Original variation data
+          parent: productToMap !== productData ? productToMap : null, // Parent data if fetched
+          merged: productToMap              // Final merged data
+        };
+      }
       
       // Validar que o mapeamento produziu dados válidos
       if (!finalData || !finalData.name) {
