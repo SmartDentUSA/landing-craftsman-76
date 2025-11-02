@@ -503,12 +503,12 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
         is_main: index === 0,
       })),
     
-    // Variations - structured array with validation
+    // Variations - structured array with validation (aceita nome OU sku)
     variations: Array.isArray(apiProduct.variacoes) 
       ? apiProduct.variacoes
-          .filter(v => v && v.nome)
+          .filter(v => v && (v.nome || v.sku))
           .map((v) => ({
-            name: v.nome,
+            name: v.nome || v.sku || '',
             price: typeof v.preco === 'number' ? v.preco : null,
             promo_price: null, // API não fornece preco promocional por variação
             stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : null,

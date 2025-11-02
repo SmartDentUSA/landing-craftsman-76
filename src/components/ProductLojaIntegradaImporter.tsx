@@ -233,6 +233,16 @@ export function ProductLojaIntegradaImporter({
           (data.disponivel ? "em estoque" : "sem estoque")
       ),
 
+      // ✅ Stock & Logistics (from API)
+      stock_quantity: data.stock_quantity ?? data.quantidade_disponivel ?? null,
+      stock_managed: data.stock_managed ?? data.estoque_gerenciado ?? false,
+      min_order_quantity: data.min_order_quantity ?? data.quantidade_minima ?? null,
+      max_order_quantity: data.max_order_quantity ?? data.quantidade_maxima ?? null,
+      multiple_order_quantity: data.multiple_order_quantity ?? data.multiplo_quantidade ?? null,
+      unit_measure: data.unit_measure ?? data.unidade_medida ?? null,
+      shipping_time: data.shipping_time ?? data.prazo_entrega ?? null,
+      free_shipping: data.free_shipping ?? data.frete_gratis ?? false,
+
       // Controle
       use_in_ai_generation: data.use_in_ai_generation !== undefined ? data.use_in_ai_generation : true,
       approved: data.approved !== undefined ? data.approved : true,
@@ -529,6 +539,44 @@ export function ProductLojaIntegradaImporter({
         if (result.store_category && shouldUpdate(currentFormData.store_category)) {
           updates.store_category = result.store_category;
           fieldsImported.push('Categoria da Loja');
+        }
+
+        // ✅ Stock & Logistics fields
+        if (result.stock_quantity !== null && result.stock_quantity !== undefined && shouldUpdate(currentFormData.stock_quantity)) {
+          updates.stock_quantity = result.stock_quantity;
+          fieldsImported.push('Estoque');
+        }
+        if (result.stock_managed !== undefined && shouldUpdate(currentFormData.stock_managed)) {
+          updates.stock_managed = result.stock_managed;
+          fieldsImported.push('Controle de Estoque');
+        }
+        if (result.min_order_quantity && shouldUpdate(currentFormData.min_order_quantity)) {
+          updates.min_order_quantity = result.min_order_quantity;
+          fieldsImported.push('Qtd Mínima');
+        }
+        if (result.max_order_quantity && shouldUpdate(currentFormData.max_order_quantity)) {
+          updates.max_order_quantity = result.max_order_quantity;
+          fieldsImported.push('Qtd Máxima');
+        }
+        if (result.multiple_order_quantity && shouldUpdate(currentFormData.multiple_order_quantity)) {
+          updates.multiple_order_quantity = result.multiple_order_quantity;
+          fieldsImported.push('Múltiplo de Qtd');
+        }
+        if (result.unit_measure && shouldUpdate(currentFormData.unit_measure)) {
+          updates.unit_measure = result.unit_measure;
+          fieldsImported.push('Unidade de Medida');
+        }
+        if (result.shipping_time && shouldUpdate(currentFormData.shipping_time)) {
+          updates.shipping_time = result.shipping_time;
+          fieldsImported.push('Prazo de Entrega');
+        }
+        if (result.free_shipping !== undefined && shouldUpdate(currentFormData.free_shipping)) {
+          updates.free_shipping = result.free_shipping;
+          fieldsImported.push('Frete Grátis');
+        }
+        if (result.ncm && shouldUpdate(currentFormData.ncm)) {
+          updates.ncm = result.ncm;
+          fieldsImported.push('NCM');
         }
 
         // Product URL
