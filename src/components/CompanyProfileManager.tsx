@@ -14,6 +14,7 @@ import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
 import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
 import { TrackingSEOTab } from "./TrackingSEOTab";
+import { InternationalPartnershipsManager } from "./InternationalPartnershipsManager";
 
 interface Video {
   url: string;
@@ -72,6 +73,20 @@ interface CompanyProfile {
     use_in_footer: boolean;
     priority: number;
   }>;
+  institutional_links?: Array<{
+    label: string;
+    url: string;
+    category: string;
+    description?: string;
+    partnership_type?: 'manufacturer' | 'distributor' | 'certification' | 'media' | 'other';
+    country?: string;
+    since_year?: number;
+    relevance_score?: number;
+  }>;
+  social_media_links?: Array<{
+    platform: string;
+    url: string;
+  }>;
 }
 
 interface CompanyProfileManagerProps {
@@ -114,6 +129,8 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       testimonial_videos: [],
       technical_videos: [],
     },
+    institutional_links: [],
+    social_media_links: [],
     tracking_pixels: {
       meta_pixel: { enabled: false, pixel_id: null, note: 'Meta Pixel global para todos os domínios' },
       google_analytics: { enabled: false, measurement_id: null, note: 'Google Analytics 4 (pode ser gerenciado via GTM)' },
@@ -189,6 +206,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           seo_technical_expertise: (data as any).seo_technical_expertise || "",
           seo_service_areas: (data as any).seo_service_areas || "",
           company_videos: videos,
+          institutional_links: Array.isArray((data as any).institutional_links)
+            ? (data as any).institutional_links
+            : [],
+          social_media_links: Array.isArray((data as any).social_media_links)
+            ? (data as any).social_media_links
+            : [],
           tracking_pixels: (data as any).tracking_pixels || {
             meta_pixel: { enabled: false, pixel_id: null, note: 'Meta Pixel global para todos os domínios' },
             google_analytics: { enabled: false, measurement_id: null, note: 'Google Analytics 4 (pode ser gerenciado via GTM)' },
@@ -258,6 +281,8 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
         seo_competitive_advantages: profile.seo_competitive_advantages,
         seo_technical_expertise: profile.seo_technical_expertise,
         seo_service_areas: profile.seo_service_areas,
+        institutional_links: profile.institutional_links || [],
+        social_media_links: profile.social_media_links || [],
         tracking_pixels: profile.tracking_pixels || null,
         seo_domains: profile.seo_domains || [],
         updated_at: new Date().toISOString()
@@ -369,12 +394,16 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
             <TabsTrigger value="social">Redes Sociais</TabsTrigger>
             <TabsTrigger value="videos">Vídeos da Empresa</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="seo">SEO Hidden</TabsTrigger>
+            <TabsTrigger value="partnerships" className="flex items-center gap-1">
+              <Globe className="h-3 w-3" />
+              Parcerias
+            </TabsTrigger>
             <TabsTrigger value="tracking" className="flex items-center gap-1">
               <Activity className="h-3 w-3" />
               Rastreamento & SEO
@@ -770,6 +799,42 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
 
           <TabsContent value="reviews" className="space-y-4">
             <ReviewsSection />
+          </TabsContent>
+
+          <TabsContent value="partnerships" className="space-y-4">
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Parcerias e Citações Internacionais
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Sites internacionais de grande relevância que citam ou fazem parceria com sua empresa.
+                Estes dados são usados para <strong>SEO, Schema.org e Knowledge Base AI</strong>.
+              </p>
+            </div>
+            
+            <InternationalPartnershipsManager
+              partnerships={(profile.institutional_links || []).filter(
+                link => link.category === 'international_partnership'
+              ) as any}
+              onChange={(newPartnerships) => {
+                // Preservar links de outras categorias
+                const otherLinks = (profile.institutional_links || []).filter(
+                  link => link.category !== 'international_partnership'
+                );
+                
+                // Combinar
+                const allLinks = [
+                  ...otherLinks,
+                  ...newPartnerships
+                ];
+                
+                setProfile({
+                  ...profile,
+                  institutional_links: allLinks
+                });
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="tracking" className="space-y-4">

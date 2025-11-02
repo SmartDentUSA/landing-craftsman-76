@@ -74,11 +74,42 @@ function formatForAITraining(data: any): string {
     }
     
     if (cp.institutional_links && Array.isArray(cp.institutional_links)) {
-      text += `**Links Institucionais:**\n`;
-      cp.institutional_links.forEach((link: any) => {
-        text += `- ${link.label}: ${link.url}\n`;
-      });
-      text += `\n`;
+      // Separar parcerias internacionais de outros links
+      const partnerships = cp.institutional_links.filter(
+        (link: any) => link.category === 'international_partnership'
+      );
+      const otherLinks = cp.institutional_links.filter(
+        (link: any) => link.category !== 'international_partnership'
+      );
+      
+      // Parcerias internacionais com destaque
+      if (partnerships.length > 0) {
+        text += `### PARCERIAS INTERNACIONAIS (${partnerships.length})\n\n`;
+        
+        // Ordenar por relevância
+        partnerships
+          .sort((a: any, b: any) => (b.relevance_score || 0) - (a.relevance_score || 0))
+          .forEach((p: any) => {
+            text += `**${p.label}**`;
+            if (p.country) text += ` (${p.country})`;
+            text += `\n`;
+            text += `- URL: ${p.url}\n`;
+            if (p.partnership_type) text += `- Tipo: ${p.partnership_type}\n`;
+            if (p.description) text += `- Descrição: ${p.description}\n`;
+            if (p.since_year) text += `- Desde: ${p.since_year}\n`;
+            if (p.relevance_score) text += `- Relevância: ${p.relevance_score}/10\n`;
+            text += `\n`;
+          });
+      }
+      
+      // Outros links institucionais (formato original)
+      if (otherLinks.length > 0) {
+        text += `**Links Institucionais:**\n`;
+        otherLinks.forEach((link: any) => {
+          text += `- ${link.label}: ${link.url}\n`;
+        });
+        text += `\n`;
+      }
     }
   }
   

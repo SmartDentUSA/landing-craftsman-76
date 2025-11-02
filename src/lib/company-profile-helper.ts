@@ -30,6 +30,12 @@ export interface CompanyProfileData {
     label: string;
     url: string;
     category: string;
+    // ✨ NOVOS CAMPOS OPCIONAIS PARA PARCERIAS
+    description?: string;
+    partnership_type?: 'manufacturer' | 'distributor' | 'certification' | 'media' | 'other';
+    country?: string;
+    since_year?: number;
+    relevance_score?: number;
   }>;
   social_media_links: Array<{
     platform: string;
@@ -179,4 +185,45 @@ export function getPostalAddress(companyData: CompanyProfileData): {
     postalCode: companyData.postal_code || '',
     addressCountry: companyData.country || 'BR'
   };
+}
+
+/**
+ * Retorna parcerias internacionais ordenadas por relevância
+ */
+export function getInternationalPartnerships(companyData: CompanyProfileData): Array<{
+  name: string;
+  url: string;
+  description: string;
+  country: string;
+  type: string;
+  sinceYear?: number;
+  relevance: number;
+}> {
+  return (companyData.institutional_links || [])
+    .filter(link => link.category === 'international_partnership')
+    .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
+    .map(link => ({
+      name: link.label,
+      url: link.url,
+      description: link.description || '',
+      country: link.country || '',
+      type: link.partnership_type || 'other',
+      sinceYear: link.since_year,
+      relevance: link.relevance_score || 0
+    }));
+}
+
+/**
+ * Gera Schema.org para parcerias (memberOf / partner)
+ */
+export function generatePartnershipsSchema(companyData: CompanyProfileData): any[] {
+  const partnerships = getInternationalPartnerships(companyData);
+  
+  return partnerships.map(p => ({
+    '@type': 'Organization',
+    'name': p.name,
+    'url': p.url,
+    'description': p.description,
+    'areaServed': p.country || undefined
+  }));
 }
