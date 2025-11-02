@@ -126,6 +126,16 @@ function isCircuitOpen(): boolean {
   return circuitBreaker.isOpen;
 }
 
+// Manual circuit breaker reset function
+export function resetCircuitBreaker(): void {
+  circuitBreaker.isOpen = false;
+  circuitBreaker.failures = 0;
+  circuitBreaker.successes = 0;
+  circuitBreaker.totalRequests = 0;
+  circuitBreaker.openedAt = undefined;
+  console.log('🔄 Circuit breaker manually reset');
+}
+
 async function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -195,8 +205,6 @@ async function fetchFromLojaIntegradaAPI(
       {
         method: 'GET',
         headers: {
-          'X-Api-Key': apiKey,
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
         },
@@ -205,6 +213,8 @@ async function fetchFromLojaIntegradaAPI(
 
     const responseTime = Date.now() - startTime;
     console.log(`✅ API Response: ${response.status} (${responseTime}ms)`);
+    console.log(`📋 Content-Type: ${response.headers.get('content-type')}`);
+    console.log(`📋 Request URL (sem chaves): ${LOJA_INTEGRADA_API_BASE}${endpoint}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -298,7 +308,14 @@ async function fallbackToWebScraping(
 }
 
 function mapAPIProductToRepository(apiProduct: ProductData): any {
-  console.log(`🔍 Mapping product: "${apiProduct.nome}"`);
+  // Safe fallbacks for potentially missing fields
+  const name = apiProduct.nome?.trim() || 'Produto sem nome';
+  const price = apiProduct.preco_cheio ?? apiProduct.preco_promocional ?? 0;
+  const description = apiProduct.descricao_completa?.trim() || apiProduct.descricao?.trim() || '';
+  const category = apiProduct.categorias?.[0]?.nome?.trim() || 'Sem categoria';
+  const brand = apiProduct.marca?.nome?.trim() || '';
+  
+  console.log(`🔍 Mapping product: "${name}"`);
   console.log(`📊 API Product data available:`, {
     nome: !!apiProduct.nome,
     preco_cheio: !!apiProduct.preco_cheio,
@@ -326,11 +343,11 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
 
   // ✅ FASE 2: Garantir que TODOS os campos do DB estejam presentes (mesmo que null)
   const mapped: any = {
-    // Core fields from API
-    name: apiProduct.nome,
-    price: apiProduct.preco_cheio,
+    // Core fields from API (using safe fallbacks)
+    name,
+    price,
     promo_price: apiProduct.preco_promocional || null,
-    description: apiProduct.descricao_completa || null,
+    description,
     currency: 'BRL',
     
     // Physical specifications from API
@@ -346,9 +363,9 @@ function mapAPIProductToRepository(apiProduct: ProductData): any {
     ean: apiProduct.ncm || null, // NCM pode servir como EAN temporariamente
     gtin: null,
     
-    // Brand and category from API
-    brand: apiProduct.marca?.nome || null,
-    category: apiProduct.categorias?.[0]?.nome || null,
+    // Brand and category from API (using safe fallbacks)
+    brand,
+    category,
     subcategory: null,
     all_categories: allCategories,
     store_category: null,
