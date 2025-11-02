@@ -297,9 +297,26 @@ export function ProductLojaIntegradaImporter({
       color: data.color ?? null,
       sku: data.sku ?? null,
 
-      // Dados originais
-      original_data: payload
+      // Dados originais com li_product_id preservado
+      original_data: {
+        ...(data?.original_data || {}),
+        li_product_id: payload?.li_product_id || 
+                       payload?.data?.li_product_id || 
+                       data?.original_data?.li_product_id || 
+                       null
+      }
     };
+
+    // -------- Debug li_product_id extraction --------
+    console.log('🆔 Frontend - li_product_id extraído:', {
+      from_payload_root: payload?.li_product_id,
+      from_payload_data: payload?.data?.li_product_id,
+      from_data_original: data?.original_data?.li_product_id,
+      final: payload?.li_product_id || 
+             payload?.data?.li_product_id || 
+             data?.original_data?.li_product_id || 
+             'NULL'
+    });
 
     // -------- Logging melhorado --------
     console.info("🔍 Dados normalizados:", {
