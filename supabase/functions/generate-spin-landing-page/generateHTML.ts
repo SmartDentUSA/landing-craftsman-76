@@ -257,6 +257,51 @@ function generateVideoEmbed(url: string): string {
   `;
 }
 
+/**
+ * Enriquece keywords extraídas com benefits e features dos produtos
+ */
+function enrichKeywordsWithProductData(
+  baseKeywords: string[],
+  products: any[]
+): string[] {
+  const enrichedKeywords = [...baseKeywords];
+  
+  products.forEach(product => {
+    // Adicionar top 3 benefits
+    if (product.benefits && Array.isArray(product.benefits)) {
+      const topBenefits = product.benefits.slice(0, 3);
+      topBenefits.forEach((benefit: any) => {
+        const benefitText = typeof benefit === 'string' 
+          ? benefit 
+          : benefit.title || benefit.text || '';
+        
+        if (benefitText && benefitText.length > 5) {
+          enrichedKeywords.push(benefitText);
+        }
+      });
+    }
+    
+    // Adicionar top 3 features
+    if (product.features && Array.isArray(product.features)) {
+      const topFeatures = product.features.slice(0, 3);
+      topFeatures.forEach((feature: any) => {
+        const featureText = typeof feature === 'string'
+          ? feature
+          : feature.title || feature.text || '';
+        
+        if (featureText && featureText.length > 5) {
+          enrichedKeywords.push(featureText);
+        }
+      });
+    }
+  });
+  
+  // Remover duplicatas e limitar a 20 keywords
+  return [...new Set(enrichedKeywords)]
+    .filter(k => k && k.length > 0)
+    .slice(0, 20);
+}
+
 // Função auxiliar para gerar o HTML da Landing Page com CSS padronizado
 export function generateLandingPageHTML(
   solution: any, 
@@ -437,16 +482,20 @@ export function generateLandingPageHTML(
   const canonicalUrl = solution.custom_url?.url || `${company?.website || 'https://smartdent.com.br'}/solucoes/${solution.id}`;
   
   // Extrair keywords de múltiplas fontes
-  const extractedKeywords = [
+  const baseKeywords = [
     ...Object.keys(pain_metrics),
     ...(products.flatMap(p => p.keywords || [])),
     ...(products.flatMap(p => p.market_keywords || [])),
     ...(products.flatMap(p => p.search_intent_keywords || []))
   ]
     .filter((k, i, arr) => arr.indexOf(k) === i) // unique
-    .slice(0, 10)
     .map(k => typeof k === 'string' ? k : k.keyword || k.name || '')
     .filter(k => k.length > 0);
+
+  // 🎯 ENRIQUECIMENTO: Adicionar benefits e features
+  const extractedKeywords = enrichKeywordsWithProductData(baseKeywords, products);
+
+  console.log(`✅ [KEYWORDS] Enriquecidas: base=${baseKeywords.length}, final=${extractedKeywords.length}`);
 
   // Gerar schemas consolidados
   const schemas = generateSPINSchemas(
@@ -476,6 +525,7 @@ export function generateLandingPageHTML(
   <title>${escapeHtml(seoTitle)}</title>
   <meta name="description" content="${escapeHtml(seoDescription)}">
   <meta name="keywords" content="${escapeHtml(extractedKeywords.join(', '))}">
+  <!-- Keywords enriquecidas com benefits e features dos produtos -->
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
   
