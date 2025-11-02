@@ -181,8 +181,10 @@ async function fetchFromLojaIntegradaAPI(
   const startTime = Date.now();
 
   try {
-    const url = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
-    console.log(`📡 Fetching from Loja Integrada API: ${url}`);
+    const baseUrl = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
+    const authQuery = `chave_api=${encodeURIComponent(apiKey)}&chave_aplicacao=${encodeURIComponent(appKey)}`;
+    const url = baseUrl.includes('?') ? `${baseUrl}&${authQuery}` : `${baseUrl}?${authQuery}`;
+    console.log(`📡 Fetching from Loja Integrada API: ${baseUrl}`);
 
     const response = await fetchWithRetry(
       url,
@@ -574,7 +576,7 @@ serve(async (req) => {
     // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `${endpoint}/${productId}`);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `${endpoint}/${productId}/`);
     } else if (!productUrl) {
       // Se não tem nem productId nem productUrl, tenta o endpoint genérico
       apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, endpoint);
@@ -640,7 +642,7 @@ serve(async (req) => {
             const apiRetry = await fetchFromLojaIntegradaAPI(
               lojaIntegradaApiKey,
               lojaIntegradaAppKey,
-              `${endpoint}/${extractedProductId}`
+              `${endpoint}/${extractedProductId}/`
             );
             
             if (apiRetry.success && apiRetry.data) {
