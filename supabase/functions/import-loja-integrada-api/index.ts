@@ -366,14 +366,47 @@ function extractAttributesFromVariations(variacoes: any[]): {
   };
 }
 
-function mapAPIProductToRepository(apiProduct: ProductData): any {
+async function mapAPIProductToRepository(apiProduct: ProductData, apiKey?: string, appKey?: string): Promise<any> {
   // Detect if this is a variation/child product
-  const isVariation = apiProduct.tipo === 'atributo_opcao' || !!apiProduct.pai;
+  const isVariation = !!apiProduct.pai; // Apenas verificar se tem pai, ignorar tipo
   const parentProductUri = apiProduct.pai;
 
   console.log(`🔍 Product type: ${apiProduct.tipo || 'not specified'}, Is variation: ${isVariation}`);
   if (isVariation && parentProductUri) {
     console.log(`👨‍👦 This is a child product. Parent: ${parentProductUri}`);
+  }
+
+  // ✅ BUSCAR PRODUTO PAI se existir (independente do tipo)
+  let parentProduct: ProductData | null = null;
+  if (parentProductUri && apiKey && appKey) {
+    console.log(`🔄 Fetching parent product because 'pai' exists (tipo=${apiProduct.tipo || 'missing'})`);
+    parentProduct = await fetchParentProduct(apiKey, appKey, parentProductUri);
+    
+    if (parentProduct) {
+      console.log(`✅ Parent product fetched successfully:`, {
+        name: parentProduct.nome,
+        variations: parentProduct.variacoes?.length || 0,
+        images: parentProduct.imagens?.length || 0,
+        categories: parentProduct.categorias?.length || 0
+      });
+      
+      // Merge: pai tem prioritário para nome, descrição, categorias, imagens, variacoes
+      // Filhos têm prioritário para preços e SKU
+      apiProduct = {
+        ...parentProduct,
+        preco_cheio: apiProduct.preco_cheio,
+        preco_promocional: apiProduct.preco_promocional,
+        sku: apiProduct.sku,
+        variacoes: parentProduct.variacoes, // ✅ Garantir que as variations vêm do pai
+        resource_uri: apiProduct.resource_uri,
+        tipo: apiProduct.tipo,
+        pai: apiProduct.pai,
+      } as ProductData;
+      
+      console.log(`🔀 Merged parent + child. Final variations count: ${apiProduct.variacoes?.length || 0}`);
+    } else {
+      console.warn(`⚠️ Parent product could not be fetched for child: ${parentProductUri}`);
+    }
   }
 
   // Extract visual attributes from variations
@@ -733,11 +766,11 @@ serve(async (req) => {
         throw new Error('Unexpected API response structure');
       }
       
-      // Check if this is a variation and fetch parent if needed
+      // ✅ CORREÇÃO: Buscar produto pai se existir (independente do tipo)
       let productToMap = productData;
       
-      if (productData.tipo === 'atributo_opcao' && productData.pai) {
-        console.log(`🔄 Variation detected, fetching parent product...`);
+      if (productData.pai) {
+        console.log(`🔄 Child product detected (tipo="${productData.tipo || 'missing'}"), fetching parent product...`);
         const parentProduct = await fetchParentProduct(
           lojaIntegradaApiKey,
           lojaIntegradaAppKey,
@@ -745,6 +778,13 @@ serve(async (req) => {
         );
         
         if (parentProduct) {
+          console.log(`✅ Parent product fetched:`, {
+            name: parentProduct.nome,
+            variations: parentProduct.variacoes?.length || 0,
+            images: parentProduct.imagens?.length || 0,
+            categories: parentProduct.categorias?.length || 0
+          });
+          
           // Merge data: parent (name, images, categories) + variation (price, SKU)
           productToMap = {
             ...parentProduct,                         // Parent data (name, images, categories)
@@ -756,13 +796,13 @@ serve(async (req) => {
             tipo: productData.tipo,                   // Keep variation type
             pai: productData.pai,                     // Keep parent reference
           };
-          console.log(`✅ Merged parent + variation data`);
+          console.log(`✅ Merged parent + child data. Final variations: ${productToMap.variacoes?.length || 0}`);
         } else {
-          console.warn(`⚠️ Could not fetch parent, using variation data only`);
+          console.warn(`⚠️ Could not fetch parent product for: ${productData.pai}`);
         }
       }
       
-      finalData = mapAPIProductToRepository(productToMap);
+      finalData = await mapAPIProductToRepository(productToMap, lojaIntegradaApiKey, lojaIntegradaAppKey);
       
       // Save complete original_data with parent info if variation
       if (productData.tipo === 'atributo_opcao' && productData.pai) {

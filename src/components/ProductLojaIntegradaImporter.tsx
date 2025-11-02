@@ -92,6 +92,33 @@ export function ProductLojaIntegradaImporter({
     return false;
   };
 
+  // ✅ Nova função para campos específicos (booleans, números, strings)
+  const shouldUpdateField = (current: any, incoming: any): boolean => {
+    // Se overwrite está ativo, sempre atualizar
+    if (overwriteData) return true;
+    
+    // Se incoming não é válido, não atualizar
+    if (incoming === null || incoming === undefined) return false;
+    
+    // Para booleans: atualizar se current é undefined ou diferente
+    if (typeof incoming === 'boolean') {
+      return current === undefined || current !== incoming;
+    }
+    
+    // Para números: atualizar se current é nulo/undefined ou diferente
+    if (typeof incoming === 'number') {
+      return current === null || current === undefined || current !== incoming;
+    }
+    
+    // Para strings: atualizar se current está vazio ou diferente
+    if (typeof incoming === 'string') {
+      return !current || current !== incoming;
+    }
+    
+    // Fallback: aplicar lógica padrão
+    return shouldUpdate(current);
+  };
+
   // Helpers internos
   const parsePrice = (value: any): number | undefined => {
     if (!value) return undefined;
@@ -529,10 +556,12 @@ export function ProductLojaIntegradaImporter({
           fieldsImported.push('Tamanho Embalagem');
         }
 
-        // Variations
-        if (result.variations && Array.isArray(result.variations) && (overwriteData || !currentFormData.variations?.length)) {
+        // Variations - atualizar se overwrite OU se current está vazio/só tem placeholders
+        const hasValidVariations = currentFormData.variations?.some(v => v.name?.trim() || v.price || v.stock);
+        if (result.variations && Array.isArray(result.variations) && (overwriteData || !hasValidVariations)) {
           updates.variations = result.variations;
           fieldsImported.push('Variações');
+          console.info(`✅ Imported ${result.variations.length} variations from API`);
         }
 
         // Store category
@@ -541,40 +570,43 @@ export function ProductLojaIntegradaImporter({
           fieldsImported.push('Categoria da Loja');
         }
 
-        // ✅ Stock & Logistics fields
-        if (result.stock_quantity !== null && result.stock_quantity !== undefined && shouldUpdate(currentFormData.stock_quantity)) {
+        // ✅ Stock & Logistics fields usando shouldUpdateField
+        if (shouldUpdateField(currentFormData.stock_quantity, result.stock_quantity)) {
           updates.stock_quantity = result.stock_quantity;
           fieldsImported.push('Estoque');
+          console.info(`✅ Stock quantity: ${result.stock_quantity}`);
         }
-        if (result.stock_managed !== undefined && shouldUpdate(currentFormData.stock_managed)) {
+        if (shouldUpdateField(currentFormData.stock_managed, result.stock_managed)) {
           updates.stock_managed = result.stock_managed;
           fieldsImported.push('Controle de Estoque');
+          console.info(`✅ Stock managed: ${result.stock_managed}`);
         }
-        if (result.min_order_quantity && shouldUpdate(currentFormData.min_order_quantity)) {
+        if (shouldUpdateField(currentFormData.min_order_quantity, result.min_order_quantity)) {
           updates.min_order_quantity = result.min_order_quantity;
           fieldsImported.push('Qtd Mínima');
         }
-        if (result.max_order_quantity && shouldUpdate(currentFormData.max_order_quantity)) {
+        if (shouldUpdateField(currentFormData.max_order_quantity, result.max_order_quantity)) {
           updates.max_order_quantity = result.max_order_quantity;
           fieldsImported.push('Qtd Máxima');
         }
-        if (result.multiple_order_quantity && shouldUpdate(currentFormData.multiple_order_quantity)) {
+        if (shouldUpdateField(currentFormData.multiple_order_quantity, result.multiple_order_quantity)) {
           updates.multiple_order_quantity = result.multiple_order_quantity;
           fieldsImported.push('Múltiplo de Qtd');
         }
-        if (result.unit_measure && shouldUpdate(currentFormData.unit_measure)) {
+        if (shouldUpdateField(currentFormData.unit_measure, result.unit_measure)) {
           updates.unit_measure = result.unit_measure;
           fieldsImported.push('Unidade de Medida');
         }
-        if (result.shipping_time && shouldUpdate(currentFormData.shipping_time)) {
+        if (shouldUpdateField(currentFormData.shipping_time, result.shipping_time)) {
           updates.shipping_time = result.shipping_time;
           fieldsImported.push('Prazo de Entrega');
         }
-        if (result.free_shipping !== undefined && shouldUpdate(currentFormData.free_shipping)) {
+        if (shouldUpdateField(currentFormData.free_shipping, result.free_shipping)) {
           updates.free_shipping = result.free_shipping;
           fieldsImported.push('Frete Grátis');
+          console.info(`✅ Free shipping: ${result.free_shipping}`);
         }
-        if (result.ncm && shouldUpdate(currentFormData.ncm)) {
+        if (shouldUpdateField(currentFormData.ncm, result.ncm)) {
           updates.ncm = result.ncm;
           fieldsImported.push('NCM');
         }
