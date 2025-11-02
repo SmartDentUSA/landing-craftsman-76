@@ -1144,6 +1144,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         technical_specifications: formData.technical_specifications || [],
         // Resource Descriptions
         resource_descriptions: formData.resource_descriptions,
+        // Original Data (inclui li_product_id da Loja Integrada)
+        original_data: formData.original_data || product?.original_data || null,
         updated_at: new Date().toISOString()
       };
 

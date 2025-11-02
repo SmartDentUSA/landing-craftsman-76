@@ -395,6 +395,16 @@ export function ModernProductCard({
                   Ofertas
                 </Badge>
               )}
+              
+              {product.original_data?.li_product_id && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs px-1.5 py-0.5 h-5"
+                  title="ID do Produto na Loja Integrada"
+                >
+                  LI: {product.original_data.li_product_id}
+                </Badge>
+              )}
             </div>
 
             {/* LINHA 3: Conteúdo Gerado e Promoções (Roxo/Laranja) */}
