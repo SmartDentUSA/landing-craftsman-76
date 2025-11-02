@@ -181,10 +181,20 @@ async function fetchFromLojaIntegradaAPI(
   const startTime = Date.now();
 
   try {
-    const baseUrl = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
+    // 🔧 URL Blindagem: Forçar endpoint correto com .json
+    let finalEndpoint = endpoint;
+    
+    // Se é um endpoint de produto individual (/produto/{id}), garantir .json
+    const productIdMatch = endpoint.match(/\/produto\/(\d+)/i);
+    if (productIdMatch && !endpoint.endsWith('.json')) {
+      finalEndpoint = `/produto/${productIdMatch[1]}.json`;
+      console.log(`🔧 Auto-corrected endpoint to: ${finalEndpoint}`);
+    }
+    
+    const baseUrl = `${LOJA_INTEGRADA_API_BASE}${finalEndpoint}`;
     const authQuery = `chave_api=${encodeURIComponent(apiKey)}&chave_aplicacao=${encodeURIComponent(appKey)}`;
     const url = baseUrl.includes('?') ? `${baseUrl}&${authQuery}` : `${baseUrl}?${authQuery}`;
-    console.log(`📡 Fetching from Loja Integrada API: ${baseUrl}`);
+    console.log(`📡 Fetching from Loja Integrada API: ${url}`);
 
     const response = await fetchWithRetry(
       url,
@@ -214,16 +224,19 @@ async function fetchFromLojaIntegradaAPI(
 
     // Validar content-type antes de fazer parse
     const contentType = response.headers.get('content-type');
+    console.log(`📋 Response content-type: ${contentType}`);
+    
+    const responseText = await response.text();
+    
     if (!contentType || !contentType.includes('application/json')) {
       console.error(`❌ Invalid content-type: ${contentType}`);
+      console.error(`📄 Response body preview: ${responseText.substring(0, 120)}...`);
       updateCircuitBreaker(false);
       return {
         success: false,
-        error: `API returned non-JSON response (${contentType}). The API may be returning HTML instead of JSON.`,
+        error: `API returned non-JSON response (${contentType}). Preview: ${responseText.substring(0, 100)}`,
       };
     }
-
-    const responseText = await response.text();
     
     // Validar se é JSON válido antes de fazer parse
     let data;
@@ -576,7 +589,8 @@ serve(async (req) => {
     // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `${endpoint}/${productId}/`);
+      // ✅ CORREÇÃO: Usar endpoint singular /produto/{id}.json
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `/produto/${productId}.json`);
     } else if (!productUrl) {
       // Se não tem nem productId nem productUrl, tenta o endpoint genérico
       apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, endpoint);
@@ -639,10 +653,11 @@ serve(async (req) => {
           // Se extraímos um ID e ainda não tentamos a API com ele, tentar agora
           if (extractedProductId && !productId) {
             console.log(`🔄 Trying API with extracted ID: ${extractedProductId}`);
+            // ✅ CORREÇÃO: Usar endpoint singular /produto/{id}.json
             const apiRetry = await fetchFromLojaIntegradaAPI(
               lojaIntegradaApiKey,
               lojaIntegradaAppKey,
-              `${endpoint}/${extractedProductId}/`
+              `/produto/${extractedProductId}.json`
             );
             
             if (apiRetry.success && apiRetry.data) {
