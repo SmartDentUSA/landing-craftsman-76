@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 // Configuration - CORRECTED: Using AWS endpoint and Bearer auth
-const LOJA_INTEGRADA_API_BASE = 'https://api.awsli.com.br/v1';
+const LOJA_INTEGRADA_API_BASE = 'https://api.lojaintegrada.com.br/api/v1';
 const RATE_LIMIT_DELAY = 800; // 800ms between requests
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
@@ -166,7 +166,6 @@ async function fetchWithRetry(
 
 async function fetchFromLojaIntegradaAPI(
   apiKey: string,
-  appKey: string,
   endpoint: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   // Check circuit breaker
@@ -181,19 +180,7 @@ async function fetchFromLojaIntegradaAPI(
   const startTime = Date.now();
 
   try {
-    // 🔧 URL Blindagem: Forçar endpoint correto com .json
-    let finalEndpoint = endpoint;
-    
-    // Se é um endpoint de produto individual (/produto/{id}), garantir .json
-    const productIdMatch = endpoint.match(/\/produto\/(\d+)/i);
-    if (productIdMatch && !endpoint.endsWith('.json')) {
-      finalEndpoint = `/produto/${productIdMatch[1]}.json`;
-      console.log(`🔧 Auto-corrected endpoint to: ${finalEndpoint}`);
-    }
-    
-    const baseUrl = `${LOJA_INTEGRADA_API_BASE}${finalEndpoint}`;
-    const authQuery = `chave_api=${encodeURIComponent(apiKey)}&chave_aplicacao=${encodeURIComponent(appKey)}`;
-    const url = baseUrl.includes('?') ? `${baseUrl}&${authQuery}` : `${baseUrl}?${authQuery}`;
+    const url = `${LOJA_INTEGRADA_API_BASE}${endpoint}`;
     console.log(`📡 Fetching from Loja Integrada API: ${url}`);
 
     const response = await fetchWithRetry(
@@ -201,7 +188,7 @@ async function fetchFromLojaIntegradaAPI(
       {
         method: 'GET',
         headers: {
-          'Authorization': `chave_api ${apiKey} chave_aplicacao ${appKey}`,
+          'X-Api-Key': apiKey,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Supabase-Edge-Function',
@@ -559,14 +546,13 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
-    const lojaIntegradaAppKey = Deno.env.get('LOJA_INTEGRADA_APP_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const lojaIntegradaApiKey = Deno.env.get('LOJA_INTEGRADA_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!lojaIntegradaApiKey || !lojaIntegradaAppKey) {
-      throw new Error('LOJA_INTEGRADA_API_KEY and LOJA_INTEGRADA_APP_KEY not configured');
-    }
+if (!lojaIntegradaApiKey) {
+  throw new Error('LOJA_INTEGRADA_API_KEY not configured');
+}
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { productId, productUrl, endpoint = '/produtos' } = await req.json();
@@ -589,11 +575,10 @@ serve(async (req) => {
     // Try API first (if productId provided directly)
     let apiResult = { success: false, data: null };
     if (productId) {
-      // ✅ CORREÇÃO: Usar endpoint singular /produto/{id}.json
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, `/produto/${productId}.json`);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, `/produtos/${productId}`);
     } else if (!productUrl) {
       // Se não tem nem productId nem productUrl, tenta o endpoint genérico
-      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, lojaIntegradaAppKey, endpoint);
+      apiResult = await fetchFromLojaIntegradaAPI(lojaIntegradaApiKey, endpoint);
     }
 
     let finalData: any = null;
@@ -656,8 +641,7 @@ serve(async (req) => {
             // ✅ CORREÇÃO: Usar endpoint singular /produto/{id}.json
             const apiRetry = await fetchFromLojaIntegradaAPI(
               lojaIntegradaApiKey,
-              lojaIntegradaAppKey,
-              `/produto/${extractedProductId}.json`
+              `/produtos/${extractedProductId}`
             );
             
             if (apiRetry.success && apiRetry.data) {
