@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.generate-spin-faqs]
 verify_jwt = false
+
+[functions.update-loja-integrada-product]
+verify_jwt = true

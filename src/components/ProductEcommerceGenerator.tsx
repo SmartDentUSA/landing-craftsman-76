@@ -36,6 +36,7 @@ export function ProductEcommerceGenerator({
     faqLimit: 8,
     regenerateBenefits: false
   });
+  const [isSendingToLI, setIsSendingToLI] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -173,6 +174,52 @@ export function ProductEcommerceGenerator({
     }
   };
 
+  const handleSendToLojaIntegrada = async () => {
+    if (!htmlContent) {
+      toast({
+        title: "❌ Erro",
+        description: "Nenhum HTML disponível para enviar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingToLI(true);
+    try {
+      console.log('📤 Enviando HTML para Loja Integrada...');
+      const { data, error } = await supabase.functions.invoke(
+        "update-loja-integrada-product",
+        {
+          body: { productId, htmlContent },
+        }
+      );
+
+      if (error) {
+        console.error('❌ Erro da Edge Function:', error);
+        throw error;
+      }
+
+      if (data?.success) {
+        toast({
+          title: "✅ Enviado com Sucesso!",
+          description: `Descrição atualizada na Loja Integrada (ID: ${data.li_product_id})`,
+        });
+        console.log('✅ Atualização confirmada:', data);
+      } else {
+        throw new Error(data?.message || "Falha ao enviar");
+      }
+    } catch (error: any) {
+      console.error("❌ Erro ao enviar para Loja Integrada:", error);
+      toast({
+        title: "❌ Erro ao Enviar",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingToLI(false);
+    }
+  };
+
   const renderContent = () => {
     // Estado: EMPTY
     if (state === 'empty') {
@@ -267,6 +314,24 @@ export function ProductEcommerceGenerator({
               <Button variant="outline" size="sm" onClick={handleCopyHtml}>
                 <Copy className="h-4 w-4 mr-1" />
                 Copiar HTML
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSendToLojaIntegrada}
+                disabled={isSendingToLI}
+              >
+                {isSendingToLI ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4 mr-1" />
+                    🚀 Enviar Loja Integrada
+                  </>
+                )}
               </Button>
               <Button variant="outline" size="sm" onClick={handleEdit}>
                 <Edit className="h-4 w-4 mr-1" />
