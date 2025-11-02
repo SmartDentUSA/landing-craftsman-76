@@ -226,7 +226,14 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         pain_metrics: existingSolution.pain_metrics || {},
         sales_pitch: existingSolution.sales_pitch || '',
         faq: existingSolution.faq || [],
-        custom_url: existingSolution.custom_url || { url: '', enabled: false, label: 'Saiba Mais' }
+        custom_url: existingSolution.custom_url || { url: '', enabled: false, label: 'Saiba Mais' },
+        competitor_comparison: existingSolution.competitor_comparison || {
+          enabled: false,
+          title: '',
+          subtitle: '',
+          table_headers: [],
+          table_data: []
+        }
       });
     }
   }, [existingSolution]);
@@ -302,6 +309,15 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       // ✅ Novos campos: Sales Pitch e FAQs
       sales_pitch: formData.sales_pitch,
       faq: formData.faq || [],
+      
+      // ✅ Tabela de Comparação com Concorrentes
+      competitor_comparison: formData.competitor_comparison || {
+        enabled: false,
+        title: '',
+        subtitle: '',
+        table_headers: [],
+        table_data: []
+      },
       
       // ✅ URL Personalizada
       custom_url: formData.custom_url || { url: '', enabled: false, label: 'Saiba Mais' },
