@@ -291,7 +291,10 @@ export function RepositoryPanel({
       console.log('[DEBUG] Carregando produtos do repositório...');
       const { data, error } = await supabase
         .from('products_repository')
-        .select('*')
+        .select(`
+          *,
+          variations
+        `)
         .eq('approved', showUnapproved ? false : true)
         .order('display_order', { ascending: true });
 
