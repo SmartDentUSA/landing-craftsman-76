@@ -190,6 +190,15 @@ export function ProductLojaIntegradaImporter({
             payload?.name ?? 
             "Produto sem nome",
       description: data.description ?? data.descricao_completa ?? data.body ?? "",
+      
+      // Debug log para verificar extração de nome
+      ...(console.log('📝 Nome extraído:', {
+        from_data_name: data.name,
+        from_data_nome: data.nome,
+        from_data_title: data.title,
+        from_payload_data: payload?.data?.name,
+        final: data.name ?? data.nome ?? data.title ?? payload?.data?.name ?? payload?.name ?? "Produto sem nome"
+      }), {}),
       sales_pitch: data.sales_pitch ?? "",
 
       // Preços consolidados
@@ -305,21 +314,21 @@ export function ProductLojaIntegradaImporter({
       // Dados originais com li_product_id preservado
       original_data: {
         ...(data?.original_data || {}),
-        li_product_id: payload?.li_product_id || 
-                       payload?.data?.li_product_id || 
-                       data?.original_data?.li_product_id || 
+        li_product_id: data?.original_data?.li_product_id || 
+                       payload?.data?.original_data?.li_product_id || 
+                       payload?.li_product_id || 
                        null
       }
     };
 
     // -------- Debug li_product_id extraction --------
     console.log('🆔 Frontend - li_product_id extraído:', {
-      from_payload_root: payload?.li_product_id,
-      from_payload_data: payload?.data?.li_product_id,
       from_data_original: data?.original_data?.li_product_id,
-      final: payload?.li_product_id || 
-             payload?.data?.li_product_id || 
-             data?.original_data?.li_product_id || 
+      from_payload_data_original: payload?.data?.original_data?.li_product_id,
+      from_payload_root: payload?.li_product_id,
+      final: data?.original_data?.li_product_id || 
+             payload?.data?.original_data?.li_product_id || 
+             payload?.li_product_id || 
              'NULL'
     });
 

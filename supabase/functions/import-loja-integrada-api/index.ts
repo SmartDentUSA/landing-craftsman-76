@@ -1046,6 +1046,7 @@ serve(async (req) => {
         success: true,
         data: finalData,
         product: finalData, // Manter compatibilidade com código antigo
+        li_product_id: finalData.original_data?.li_product_id || null, // Expor na raiz para fácil acesso
         metadata: {
           dataSource,
           fallbackUsed,
