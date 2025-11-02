@@ -694,6 +694,16 @@ export function ProductLojaIntegradaImporter({
           fieldsImported.push('URL/Slug');
         }
 
+        // ID do Produto (Loja Integrada) - CRÍTICO para integração
+        if (result?.original_data?.li_product_id) {
+          updates.original_data = {
+            ...(currentFormData.original_data || {}),
+            li_product_id: result.original_data.li_product_id,
+          };
+          fieldsImported.push('ID Loja Integrada');
+          console.info(`✅ Loja Integrada ID: ${result.original_data.li_product_id}`);
+        }
+
         setImportResult({
           success: true,
           source: importMethod === 'api' ? 'API' : 'Web Scraping',
