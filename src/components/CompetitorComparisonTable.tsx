@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,11 @@ interface CompetitorComparisonTableProps {
 
 export function CompetitorComparisonTable({ value, onChange }: CompetitorComparisonTableProps) {
   const [localValue, setLocalValue] = useState<CompetitorComparison>(value);
+
+  // Sincroniza o estado local com os dados vindos do banco
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
   const handleChange = (updates: Partial<CompetitorComparison>) => {
     const newValue = { ...localValue, ...updates };
