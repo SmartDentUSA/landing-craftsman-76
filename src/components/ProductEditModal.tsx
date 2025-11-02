@@ -1372,9 +1372,23 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                   if (importedData.package_size) setPackageSize(importedData.package_size);
                   if (importedData.store_category) setStoreCategory(importedData.store_category);
 
+                  // Show success toast with variation count
+                  const variationsCount = importedData.variations?.length || 0;
                   toast({
-                    title: "Campos preenchidos",
-                    description: "Os dados foram importados. Revise e edite conforme necessário antes de salvar.",
+                    title: "Campos preenchidos com sucesso",
+                    description: (
+                      <div className="space-y-1">
+                        <p>Os dados foram importados. Revise antes de salvar.</p>
+                        {variationsCount > 0 && (
+                          <p className="text-sm font-medium text-green-600">
+                            ✅ {variationsCount} variações importadas
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          ⚠️ Clique em "Salvar" no topo para persistir as alterações
+                        </p>
+                      </div>
+                    ),
                   });
                 } catch (error) {
                   console.error('❌ Erro ao processar dados importados:', error);

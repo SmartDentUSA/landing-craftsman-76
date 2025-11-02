@@ -309,6 +309,14 @@ async function fallbackToWebScraping(
   }
 }
 
+// Extract product ID from Loja Integrada URI
+function extractIdFromUri(uri: string): string | null {
+  if (!uri) return null;
+  // Match patterns like: /api/v1/produto/123456 or /produto/123456
+  const match = uri.match(/\/produto\/(\d+)/);
+  return match ? match[1] : null;
+}
+
 // Fetch parent product for variations
 async function fetchParentProduct(
   apiKey: string,
@@ -316,21 +324,40 @@ async function fetchParentProduct(
   parentUri: string // Ex: "/api/v1/produto/351902699"
 ): Promise<ProductData | null> {
   try {
-    // Extract endpoint from URI
-    const endpoint = parentUri.replace('/api/v1', '');
-    console.log(`📞 Fetching parent product: ${endpoint}`);
+    // 🔧 Sanitize URI: remove /api/v1 e trailing slashes
+    const endpoint = parentUri
+      .replace(/^\/api\/v1\/?/, '/')  // Remove /api/v1 ou /api/v1/
+      .replace(/\/$/, '');             // Remove trailing slash
+
+    console.log(`📞 Fetching parent product`);
+    console.log(`   Original URI: ${parentUri}`);
+    console.log(`   Sanitized endpoint: ${endpoint}`);
     
     const result = await fetchFromLojaIntegradaAPI(apiKey, appKey, endpoint);
     
     if (result.success && result.data) {
-      console.log(`✅ Parent product fetched: ${result.data.nome}`);
+      console.log(`✅ Parent product fetched successfully:`);
+      console.log(`   Name: ${result.data.nome || 'NO NAME'}`);
+      console.log(`   Variations: ${result.data.variacoes?.length || 0}`);
+      console.log(`   Images: ${result.data.imagens?.length || 0}`);
+      console.log(`   Categories: ${result.data.categorias?.length || 0}`);
+      console.log(`   Has variacoes field: ${!!result.data.variacoes}`);
       return result.data;
     }
     
-    console.warn(`⚠️ Failed to fetch parent product`);
+    // 🔍 Log detalhado da falha
+    console.error(`❌ Failed to fetch parent product:`);
+    console.error(`   URI: ${parentUri}`);
+    console.error(`   Endpoint: ${endpoint}`);
+    console.error(`   Success: ${result.success}`);
+    console.error(`   Has data: ${!!result.data}`);
+    console.error(`   Error: ${result.error || 'No error message'}`);
     return null;
   } catch (error) {
-    console.error(`❌ Error fetching parent: ${error.message}`);
+    console.error(`❌ Exception fetching parent product:`);
+    console.error(`   URI: ${parentUri}`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Stack: ${error.stack}`);
     return null;
   }
 }
@@ -379,33 +406,67 @@ async function mapAPIProductToRepository(apiProduct: ProductData, apiKey?: strin
   // ✅ BUSCAR PRODUTO PAI se existir (independente do tipo)
   let parentProduct: ProductData | null = null;
   if (parentProductUri && apiKey && appKey) {
-    console.log(`🔄 Fetching parent product because 'pai' exists (tipo=${apiProduct.tipo || 'missing'})`);
+    console.log(`🔄 Child product detected`);
+    console.log(`   tipo: "${apiProduct.tipo || 'missing'}"`);
+    console.log(`   pai: ${parentProductUri}`);
+    
     parentProduct = await fetchParentProduct(apiKey, appKey, parentProductUri);
     
     if (parentProduct) {
-      console.log(`✅ Parent product fetched successfully:`, {
-        name: parentProduct.nome,
-        variations: parentProduct.variacoes?.length || 0,
-        images: parentProduct.imagens?.length || 0,
-        categories: parentProduct.categorias?.length || 0
-      });
+      console.log(`✅ Parent product fetched successfully`);
+      console.log(`   Name: ${parentProduct.nome}`);
+      console.log(`   Variations: ${parentProduct.variacoes?.length || 0}`);
+      
+      // 🚨 CRITICAL: Se parent não trouxer variações, buscar explicitamente
+      if (!parentProduct.variacoes || parentProduct.variacoes.length === 0) {
+        const parentId = parentProduct.id || extractIdFromUri(parentProduct.resource_uri || parentProductUri);
+        
+        if (parentId) {
+          console.log(`📞 Parent has no embedded variations, fetching /produto/${parentId}/variacao`);
+          
+          try {
+            const variationsResult = await fetchFromLojaIntegradaAPI(
+              apiKey,
+              appKey,
+              `/produto/${parentId}/variacao`
+            );
+            
+            if (variationsResult.success && variationsResult.data?.objects) {
+              parentProduct.variacoes = variationsResult.data.objects;
+              console.log(`✅ Loaded ${variationsResult.data.objects.length} variations from dedicated endpoint`);
+            } else {
+              console.warn(`⚠️ Failed to fetch variations: ${variationsResult.error || 'Unknown error'}`);
+            }
+          } catch (e) {
+            console.error(`❌ Exception fetching variations: ${e.message}`);
+          }
+        } else {
+          console.warn(`⚠️ Could not extract parent ID from: ${parentProduct.resource_uri || parentProductUri}`);
+        }
+      } else {
+        console.log(`✅ Parent already has ${parentProduct.variacoes.length} embedded variations`);
+      }
       
       // Merge: pai tem prioritário para nome, descrição, categorias, imagens, variacoes
       // Filhos têm prioritário para preços e SKU
       apiProduct = {
         ...parentProduct,
-        preco_cheio: apiProduct.preco_cheio,
-        preco_promocional: apiProduct.preco_promocional,
+        preco_cheio: apiProduct.preco_cheio ?? parentProduct.preco_cheio,
+        preco_promocional: apiProduct.preco_promocional ?? parentProduct.preco_promocional,
         sku: apiProduct.sku,
-        variacoes: parentProduct.variacoes, // ✅ Garantir que as variations vêm do pai
+        variacoes: parentProduct.variacoes, // ✅ Array completo de variações
         resource_uri: apiProduct.resource_uri,
         tipo: apiProduct.tipo,
         pai: apiProduct.pai,
       } as ProductData;
       
-      console.log(`🔀 Merged parent + child. Final variations count: ${apiProduct.variacoes?.length || 0}`);
+      console.log(`✅ Parent merge complete:`);
+      console.log(`   Final name: ${apiProduct.nome || 'NO NAME'}`);
+      console.log(`   Final variations: ${apiProduct.variacoes?.length || 0}`);
+      console.log(`   Final images: ${apiProduct.imagens?.length || 0}`);
+      console.log(`   Final categories: ${apiProduct.categorias?.length || 0}`);
     } else {
-      console.warn(`⚠️ Parent product could not be fetched for child: ${parentProductUri}`);
+      console.error(`❌ Parent product fetch returned NULL for: ${parentProductUri}`);
     }
   }
 
@@ -537,17 +598,36 @@ async function mapAPIProductToRepository(apiProduct: ProductData, apiKey?: strin
       })),
     
     // Variations - structured array with validation (aceita nome OU sku)
-    variations: Array.isArray(apiProduct.variacoes) 
-      ? apiProduct.variacoes
-          .filter(v => v && (v.nome || v.sku))
-          .map((v) => ({
-            name: v.nome || v.sku || '',
-            price: typeof v.preco === 'number' ? v.preco : null,
-            promo_price: null, // API não fornece preco promocional por variação
-            stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : null,
-            sku: v.sku || null,
-          }))
-      : [],
+    variations: (() => {
+      const rawVariations = apiProduct.variacoes;
+      
+      if (!Array.isArray(rawVariations)) {
+        console.warn(`⚠️ apiProduct.variacoes is not an array: ${typeof rawVariations}`);
+        return [];
+      }
+      
+      console.log(`🔍 Mapping variations:`);
+      console.log(`   Input count: ${rawVariations.length}`);
+      
+      const filtered = rawVariations.filter(v => v && (v.nome || v.sku));
+      console.log(`   After filter (nome OR sku): ${filtered.length}`);
+      
+      const mapped = filtered.map((v, index) => {
+        const variation = {
+          name: v.nome || v.sku || '',
+          price: typeof v.preco === 'number' ? v.preco : null,
+          promo_price: null, // API não fornece preco promocional por variação
+          stock: typeof v.quantidade_disponivel === 'number' ? v.quantidade_disponivel : null,
+          sku: v.sku || null,
+        };
+        
+        console.log(`   📌 Variation ${index + 1}: ${variation.name} (SKU: ${variation.sku || 'N/A'})`);
+        return variation;
+      });
+      
+      console.log(`✅ Mapped ${mapped.length} variations successfully`);
+      return mapped;
+    })(),
     
     // Additional metadata from API
     video_url: apiProduct.url_video_youtube || null,

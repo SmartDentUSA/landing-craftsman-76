@@ -221,15 +221,26 @@ export function ProductLojaIntegradaImporter({
       depth: data.depth ?? data.profundidade ? parseFloat(data.depth ?? data.profundidade) : null,
 
       // Variações completas com suporte a preços promocionais
-      variations: (data.variations ?? data.variacoes ?? []).map((v: any) => ({
-        name: v.name || v.nome || "",
-        price: parsePrice(v.price ?? v.preco),
-        promo_price: parsePrice(v.promo_price ?? v.preco_promocional),
-        stock: v.stock ?? v.estoque ?? undefined,
-        sku: v.sku || "",
-        color: v.color || v.cor || "",
-        size: v.size || v.tamanho || ""
-      })),
+      variations: (() => {
+        const rawVariations = data.variations ?? data.variacoes ?? [];
+        if (!Array.isArray(rawVariations)) {
+          console.warn('⚠️ Variations is not an array:', typeof rawVariations);
+          return [];
+        }
+        
+        const mapped = rawVariations.map((v: any) => ({
+          name: v.name || v.nome || "",
+          price: parsePrice(v.price ?? v.preco),
+          promo_price: parsePrice(v.promo_price ?? v.preco_promocional),
+          stock: v.stock ?? v.estoque ?? v.quantidade_disponivel ?? undefined,
+          sku: v.sku || "",
+          color: v.color || v.cor || "",
+          size: v.size || v.tamanho || ""
+        }));
+        
+        console.log(`📊 Normalized ${mapped.length} variations from API`);
+        return mapped;
+      })(),
 
       // SEO e IA
       keywords: data.keywords ?? [],
@@ -558,10 +569,29 @@ export function ProductLojaIntegradaImporter({
 
         // Variations - atualizar se overwrite OU se current está vazio/só tem placeholders
         const hasValidVariations = currentFormData.variations?.some(v => v.name?.trim() || v.price || v.stock);
+        
+        console.group('🔍 Variations Import Decision');
+        console.log('Imported variations:', result.variations?.length || 0);
+        console.log('Current has valid variations:', hasValidVariations);
+        console.log('Overwrite enabled:', overwriteData);
+        console.log('Will update:', overwriteData || !hasValidVariations);
+        
+        if (result.variations && result.variations.length > 0) {
+          console.log('Variation details:', result.variations.map(v => ({
+            name: v.name,
+            has_price: !!v.price,
+            has_stock: !!v.stock,
+            has_sku: !!v.sku
+          })));
+        }
+        console.groupEnd();
+        
         if (result.variations && Array.isArray(result.variations) && (overwriteData || !hasValidVariations)) {
           updates.variations = result.variations;
           fieldsImported.push('Variações');
           console.info(`✅ Imported ${result.variations.length} variations from API`);
+        } else if (result.variations && result.variations.length > 0 && !overwriteData && hasValidVariations) {
+          console.warn(`⚠️ Variations import blocked - ${currentFormData.variations?.length || 0} existing variations found and overwrite=false`);
         }
 
         // Store category
