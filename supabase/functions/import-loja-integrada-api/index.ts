@@ -747,6 +747,36 @@ async function mapAPIProductToRepository(apiProduct: ProductData, apiKey?: strin
   return mapped;
 }
 
+// Map scraped data to repository format
+function mapScrapedDataToRepository(scrapedData: any) {
+  console.log('🔄 Mapping scraped data to repository format');
+  console.log('📦 Raw scraped variations:', {
+    count: scrapedData.variations?.length || 0,
+    sample: scrapedData.variations?.[0] || null
+  });
+
+  return {
+    ...scrapedData,
+    variations: scrapedData.variations?.map((v: any) => ({
+      name: v.name || v.sku || '',
+      price: v.price || null,
+      stock: v.stock !== undefined ? v.stock : null,
+      sku: v.sku || ''
+    })) || [],
+    images_gallery: scrapedData.images_gallery || [],
+    all_categories: scrapedData.all_categories || [],
+    keywords: scrapedData.keywords || [],
+    benefits: scrapedData.benefits || [],
+    features: scrapedData.features || [],
+    technical_specifications: scrapedData.technical_specifications || [],
+    faq: scrapedData.faq || [],
+    tags: scrapedData.tags || [],
+    target_audience: scrapedData.target_audience || [],
+    market_keywords: scrapedData.market_keywords || [],
+    search_intent_keywords: scrapedData.search_intent_keywords || []
+  };
+}
+
 async function logToMonitoring(
   supabase: any,
   eventType: string,
@@ -941,16 +971,19 @@ serve(async (req) => {
                 dataSource = 'api_via_scraping';
               } else {
                 // Fallback to scraping data
-                finalData = scrapingResult.data;
+                finalData = mapScrapedDataToRepository(scrapingResult.data);
+                console.log(`🔍 Mapped scraped data with ${finalData.variations?.length || 0} variations`);
                 dataSource = 'web_scraping';
               }
             } else {
               // Se API com ID falhar, usar dados do scraping
-              finalData = scrapingResult.data;
+              finalData = mapScrapedDataToRepository(scrapingResult.data);
+              console.log(`🔍 Mapped scraped data with ${finalData.variations?.length || 0} variations`);
               dataSource = 'web_scraping';
             }
           } else {
-            finalData = scrapingResult.data;
+            finalData = mapScrapedDataToRepository(scrapingResult.data);
+            console.log(`🔍 Mapped scraped data with ${finalData.variations?.length || 0} variations`);
             dataSource = 'web_scraping';
           }
         } else {
