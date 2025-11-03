@@ -463,8 +463,30 @@ export const useAdvancedSchemaGenerator = () => {
       schema.areaServed = companyData.seo_service_areas;
     }
 
+    // ✅ FASE 1: Adicionar seo_market_positioning à descrição
+    if (companyData.seo_market_positioning) {
+      schema.description = schema.description 
+        ? `${schema.description} ${companyData.seo_market_positioning}`
+        : companyData.seo_market_positioning;
+    }
+
+    // ✅ FASE 1: Mover seo_competitive_advantages e seo_technical_expertise para knowsAbout
+    const knowsAboutItems: string[] = [];
+    
     if (companyData.seo_technical_expertise) {
-      schema.knowsAbout = companyData.seo_technical_expertise;
+      knowsAboutItems.push(companyData.seo_technical_expertise);
+    }
+    
+    if (companyData.seo_competitive_advantages) {
+      const advantages = companyData.seo_competitive_advantages
+        .split(',')
+        .map(a => a.trim())
+        .filter(Boolean);
+      knowsAboutItems.push(...advantages);
+    }
+    
+    if (knowsAboutItems.length > 0) {
+      schema.knowsAbout = knowsAboutItems;
     }
 
     // ✨ PHASE 1: Campos adicionais da empresa para SEO
@@ -476,12 +498,13 @@ export const useAdvancedSchemaGenerator = () => {
       schema.mission = companyData.mission_statement;
     }
 
-    if (companyData.seo_competitive_advantages) {
+    // ✅ FASE 1: Adicionar vision_statement como PropertyValue
+    if (companyData.vision_statement) {
       schema.additionalProperty = schema.additionalProperty || [];
       schema.additionalProperty.push({
         "@type": "PropertyValue",
-        "name": "Diferenciais Competitivos",
-        "value": companyData.seo_competitive_advantages
+        "name": "Visão da Empresa",
+        "value": companyData.vision_statement
       });
     }
 
@@ -490,66 +513,52 @@ export const useAdvancedSchemaGenerator = () => {
       schema.sameAs = companyData.institutional_links.map(link => link.url);
     }
 
-    // ✅ MELHORIA SEO #2: Adicionar vídeos da empresa ao schema LocalBusiness
-    if ((companyData as any).company_videos && typeof (companyData as any).company_videos === 'object') {
+    // ✅ FASE 3: Adicionar vídeos da empresa ao schema LocalBusiness (CORRIGIDO)
+    const companyVideos = (companyData as any).company_videos;
+    
+    if (companyVideos && typeof companyVideos === 'object') {
       const allCompanyVideos: any[] = [];
-      const companyVideos = (companyData as any).company_videos;
       
-      // YouTube
-      if (companyVideos.youtube_videos?.length > 0) {
-        companyVideos.youtube_videos.forEach((video: any, idx: number) => {
-          allCompanyVideos.push({
-            "@type": "VideoObject",
-            "contentUrl": typeof video === 'string' ? video : video.url,
-            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Vídeo YouTube ${idx + 1}`,
-            "description": (typeof video === 'object' ? video.description : null) || companyData.company_description || "",
-            "thumbnailUrl": (companyData as any).company_logo_url,
-            "uploadDate": (companyData as any).created_at
-          });
-        });
-      }
+      // Processar cada tipo de vídeo com melhor tratamento
+      const videoTypes = [
+        { key: 'youtube_videos', label: 'YouTube' },
+        { key: 'instagram_videos', label: 'Instagram' },
+        { key: 'technical_videos', label: 'Técnico' },
+        { key: 'testimonial_videos', label: 'Depoimento' }
+      ];
       
-      // Instagram
-      if (companyVideos.instagram_videos?.length > 0) {
-        companyVideos.instagram_videos.forEach((video: any, idx: number) => {
-          allCompanyVideos.push({
-            "@type": "VideoObject",
-            "contentUrl": typeof video === 'string' ? video : video.url,
-            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Vídeo Instagram ${idx + 1}`,
-            "description": (typeof video === 'object' ? video.description : null) || companyData.company_description || "",
-            "thumbnailUrl": (companyData as any).company_logo_url
+      videoTypes.forEach(({ key, label }) => {
+        if (Array.isArray(companyVideos[key]) && companyVideos[key].length > 0) {
+          companyVideos[key].forEach((video: any, idx: number) => {
+            // Suportar tanto string (URL) quanto objeto { url, title, description, thumbnail }
+            const videoUrl = typeof video === 'string' ? video : video.url;
+            const videoTitle = typeof video === 'object' && video.title 
+              ? video.title 
+              : `${companyData.company_name} - Vídeo ${label} ${idx + 1}`;
+            const videoDesc = typeof video === 'object' && video.description
+              ? video.description
+              : (label === 'Técnico' ? companyData.seo_technical_expertise : companyData.company_description) || '';
+            const videoThumb = typeof video === 'object' && video.thumbnail
+              ? video.thumbnail
+              : (companyData as any).company_logo_url;
+            
+            if (videoUrl) {
+              allCompanyVideos.push({
+                "@type": "VideoObject",
+                "contentUrl": videoUrl,
+                "name": videoTitle,
+                "description": videoDesc,
+                "thumbnailUrl": videoThumb || '',
+                "uploadDate": (companyData as any).created_at || new Date().toISOString()
+              });
+            }
           });
-        });
-      }
-      
-      // Técnicos
-      if (companyVideos.technical_videos?.length > 0) {
-        companyVideos.technical_videos.forEach((video: any, idx: number) => {
-          allCompanyVideos.push({
-            "@type": "VideoObject",
-            "contentUrl": typeof video === 'string' ? video : video.url,
-            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Vídeo Técnico ${idx + 1}`,
-            "description": (typeof video === 'object' ? video.description : null) || companyData.seo_technical_expertise || "",
-            "thumbnailUrl": (companyData as any).company_logo_url
-          });
-        });
-      }
-      
-      // Depoimentos
-      if (companyVideos.testimonial_videos?.length > 0) {
-        companyVideos.testimonial_videos.forEach((video: any, idx: number) => {
-          allCompanyVideos.push({
-            "@type": "VideoObject",
-            "contentUrl": typeof video === 'string' ? video : video.url,
-            "name": (typeof video === 'object' ? video.description : null) || `${companyData.company_name} - Depoimento ${idx + 1}`,
-            "description": (typeof video === 'object' ? video.description : null) || "Depoimento de cliente satisfeito",
-            "thumbnailUrl": (companyData as any).company_logo_url
-          });
-        });
-      }
+        }
+      });
       
       if (allCompanyVideos.length > 0) {
         schema.video = allCompanyVideos;
+        console.log(`✅ FASE 3: ${allCompanyVideos.length} vídeos adicionados ao Schema LocalBusiness`);
       }
     }
 

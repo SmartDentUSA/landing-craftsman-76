@@ -10,7 +10,7 @@ import { getCompanyProfileForSEO, buildSEOMetaFromCompany } from '@/lib/company-
 import { generateSchemaFromCompanyProfile } from '@/lib/schema-reviews';
 import { supabase } from '@/integrations/supabase/client';
 import type { UnifiedReview } from '@/types/reviews';
-import { getTrackingConfig, injectTrackingPixels, injectGTMNoScript, generateSEODomainTags, generateSchemaSameAs, generateFooterLinks, type TrackingConfig } from '@/lib/tracking-injector';
+import { getTrackingConfig, injectTrackingPixels, injectGTMNoScript, generateSEODomainTags, generateSchemaSameAs, generateFooterLinks, generateSEODomainsFooter, type TrackingConfig } from '@/lib/tracking-injector';
 import { generateBlogHTML } from '@/services/seo/blogHTMLGenerator';
 import { buildIntelligentLinksMap, applyIntelligentLinks } from '@/services/seo/intelligentLinksProcessor';
 import { generateSchema } from '@/services/seo/schemaGenerator';
@@ -18,6 +18,8 @@ import { buildMetaTags } from '@/services/seo/metaTagsBuilder';
 import { generateSmoothScrollScript } from '@/services/seo/criticalCSS';
 import { generateTableOfContents, addIdsToHeadings } from '@/services/seo/blogHTMLHelpers';
 import { applyAutoLinksOncePerTerm } from '@/lib/auto-link';
+// ✅ FASE 2: Importar função de parcerias
+import { generatePartnershipsSchema } from '@/lib/company-profile-helper';
 
 // Helper para truncar títulos SEO (≤60 caracteres)
 const truncateSEOTitle = (title: string, maxLength = 60): string => {
@@ -1108,6 +1110,35 @@ export const useSEOHTMLGenerator = () => {
           }
         } catch (error) {
           console.error('❌ Erro ao parsear reviews schema:', error);
+        }
+      }
+
+      // ✅ FASE 2: Adicionar Schema de Parcerias Internacionais
+      if (companyProfile && companyProfile.institutional_links) {
+        try {
+          const partnershipsSchemas = generatePartnershipsSchema(companyProfile);
+          if (partnershipsSchemas.length > 0) {
+            const partnershipsItemList = {
+              "@type": "ItemList",
+              "name": "Parcerias Internacionais",
+              "numberOfItems": partnershipsSchemas.length,
+              "itemListElement": partnershipsSchemas.map((partner, idx) => ({
+                "@type": "ListItem",
+                "position": idx + 1,
+                "item": partner
+              }))
+            };
+            
+            if (Array.isArray(completeSchema)) {
+              completeSchema.push(partnershipsItemList);
+            } else {
+              completeSchema = [completeSchema, partnershipsItemList];
+            }
+            
+            console.log(`✅ FASE 2: ${partnershipsSchemas.length} parcerias adicionadas ao Schema`);
+          }
+        } catch (error) {
+          console.error('❌ Erro ao gerar schema de parcerias:', error);
         }
       }
     } else {
@@ -2224,6 +2255,11 @@ export const useSEOHTMLGenerator = () => {
     
     ${excludeFooter ? '' : `
     ${companySEO?.companyFooter || ''}
+    ${(() => {
+      // ✅ FASE 4: Adicionar footer com links SEO domains
+      const seoDomainsFooter = generateSEODomainsFooter(trackingConfig);
+      return seoDomainsFooter;
+    })()}
     ${companySEO?.institutionalLinksHtml ? `
     <section class="institutional-links">
       ${companySEO.institutionalLinksHtml}

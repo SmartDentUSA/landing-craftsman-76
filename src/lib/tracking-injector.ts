@@ -227,3 +227,38 @@ export function generateFooterLinks(config: TrackingConfig | null): string {
     </ul>
   </footer>`;
 }
+
+/**
+ * ✅ FASE 4: Gera footer HTML compacto com links para domínios SEO habilitados
+ * Usado para integração em HTML gerado (landing pages, blogs, etc.)
+ */
+export function generateSEODomainsFooter(config: TrackingConfig | null): string {
+  if (!config?.seo_domains || !Array.isArray(config.seo_domains)) {
+    return '';
+  }
+  
+  const footerDomains = config.seo_domains
+    .filter(d => d.enabled && d.use_in_footer)
+    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  
+  if (footerDomains.length === 0) {
+    return '';
+  }
+  
+  const linksHtml = footerDomains
+    .map(d => `<a href="https://${d.domain}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none; font-size: 0.875rem;">${d.name}</a>`)
+    .join(' | ');
+  
+  console.log(`✅ FASE 4: Footer SEO gerado com ${footerDomains.length} domínios`);
+  
+  return `
+    <div class="seo-domains-footer" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+      <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem; font-weight: 500;">
+        Nossos Sites:
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+        ${linksHtml}
+      </div>
+    </div>
+  `;
+}

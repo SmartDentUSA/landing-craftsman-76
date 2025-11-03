@@ -15,6 +15,13 @@ export interface MetaTagsOptions {
   twitterCard?: string;
   keywords?: string[];
   robots?: string;
+  // ✅ FASE 5: Domínios SEO para canonical alternativo
+  seoDomains?: Array<{
+    domain: string;
+    enabled: boolean;
+    use_in_seo: boolean;
+    priority: number;
+  }>;
 }
 
 export function buildMetaTags(options: MetaTagsOptions): string {
@@ -27,7 +34,8 @@ export function buildMetaTags(options: MetaTagsOptions): string {
     ogType = 'website',
     twitterCard = 'summary_large_image',
     keywords = [],
-    robots = 'index, follow'
+    robots = 'index, follow',
+    seoDomains = []
   } = options;
   
   // Validate meta description
@@ -60,6 +68,20 @@ export function buildMetaTags(options: MetaTagsOptions): string {
     // Canonical
     `<link rel="canonical" href="${canonicalUrl}">`
   ];
+  
+  // ✅ FASE 5: Adicionar canonical alternativo se houver domínio SEO primário
+  const primarySEODomain = seoDomains.find(
+    d => d.enabled && d.use_in_seo && d.priority === 1
+  );
+  
+  if (primarySEODomain && canonicalUrl) {
+    const alternateUrl = canonicalUrl.replace(
+      /^https?:\/\/[^\/]+/, 
+      `https://${primarySEODomain.domain}`
+    );
+    metaTags.push(`<link rel="alternate" href="${alternateUrl}" hreflang="pt-br" />`);
+    console.log(`✅ FASE 5: Canonical alternativo adicionado: ${alternateUrl}`);
+  }
   
   return metaTags.filter(tag => tag).join('\n    ');
 }
