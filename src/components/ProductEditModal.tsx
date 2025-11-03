@@ -1661,6 +1661,27 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 URL completa da Loja Integrada (usada para canonical e links)
               </p>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="li_product_id" className="flex items-center gap-2">
+                ID do Produto (Loja Integrada)
+                {formData.original_data?.li_product_id && (
+                  <Badge variant="secondary" className="text-xs">
+                    Importado
+                  </Badge>
+                )}
+              </Label>
+              <Input
+                id="li_product_id"
+                value={formData.original_data?.li_product_id || ''}
+                readOnly
+                className="bg-muted"
+                placeholder="Importar produto da Loja Integrada para preencher"
+              />
+              <p className="text-xs text-muted-foreground">
+                ID necessário para enviar descrição HTML para a Loja Integrada
+              </p>
+            </div>
           </Card>
 
           {/* Linha 1: Preço e Moeda (grid-cols-2) */}
