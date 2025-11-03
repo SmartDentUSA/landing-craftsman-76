@@ -2,6 +2,9 @@
 // 🎯 GERADOR DE SCHEMAS JSON-LD PARA SGE/AEO
 // ═══════════════════════════════════════════════════════════
 
+// ✅ FASE 3.1: Importar processamento de intelligent links
+import { buildIntelligentLinksMap, applyIntelligentLinks } from '../../../src/services/seo/intelligentLinksProcessor.ts';
+
 function generateSPINSchemas(
   solution: any,
   products: any[],
@@ -391,6 +394,18 @@ export function generateLandingPageHTML(
   console.log('🎨 [HTML] Texto final do hero subtitle:', finalHeroSubtitle.substring(0, 100));
   console.log('🎨 [HTML] Texto final metrics title:', finalMetricsTitle);
   
+  // ✅ FASE 3.1: Aplicar Intelligent Links nos textos SPIN
+  const canonicalUrl = solution.custom_url?.url || 'https://smartdent.com.br';
+  const intelligentLinks = buildIntelligentLinksMap(products, canonicalUrl);
+  
+  // Enriquecer textos com links inteligentes
+  const enrichedHeroSubtitle = applyIntelligentLinks(finalHeroSubtitle, intelligentLinks);
+  const enrichedMetricsSubtitle = applyIntelligentLinks(finalMetricsSubtitle, intelligentLinks);
+  const enrichedSalesPitch = solution.sales_pitch ? applyIntelligentLinks(solution.sales_pitch, intelligentLinks) : '';
+  const enrichedPainDescription = solution.pain_description ? applyIntelligentLinks(solution.pain_description, intelligentLinks) : '';
+  
+  console.log('🔗 [INTELLIGENT LINKS] Links aplicados:', Object.keys(intelligentLinks).length);
+  
   // HERO IMAGE (prioridade CORRETA: manual > IA > NADA)
   let heroImageSrc = '';
   let heroImageAlt = 'Banner hero';
@@ -526,7 +541,7 @@ export function generateLandingPageHTML(
 
   // SEO
   const seoTitle = `${solution.title} | ${company?.company_name || 'Smart Dent'}`;
-  const seoDescription = finalHeroSubtitle.substring(0, 160);
+  const seoDescription = enrichedHeroSubtitle.substring(0, 160).replace(/<[^>]*>/g, ''); // Remove HTML tags for meta
   const canonicalUrl = solution.custom_url?.url || `${company?.website || 'https://smartdent.com.br'}/solucoes/${solution.id}`;
   
   // Extrair keywords de múltiplas fontes
@@ -1670,7 +1685,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       <div class="text-overlay">
         <small><i class="fas fa-microchip"></i> ${escapeHtml(badge)}</small>
         <h1 data-editable="true" data-field="hero_title">${escapeHtml(finalHeroTitle)}</h1>
-        <p data-editable="true" data-field="hero_subtitle">${escapeHtml(finalHeroSubtitle)}</p>
+        <p data-editable="true" data-field="hero_subtitle">${enrichedHeroSubtitle}</p>
       </div>
     </div>
     ` : `
@@ -1678,7 +1693,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     <div class="hero-text-only">
       <small><i class="fas fa-microchip"></i> ${escapeHtml(badge)}</small>
       <h1 data-editable="true" data-field="hero_title">${escapeHtml(finalHeroTitle)}</h1>
-      <p data-editable="true" data-field="hero_subtitle">${escapeHtml(finalHeroSubtitle)}</p>
+      <p data-editable="true" data-field="hero_subtitle">${enrichedHeroSubtitle}</p>
     </div>
     `}
     </div>
@@ -1715,7 +1730,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <div class="container section-padding">
     <section class="metrics-section">
       <h2 data-editable="true" data-field="metrics_title">${escapeHtml(finalMetricsTitle)}</h2>
-      <p data-editable="true" data-field="metrics_subtitle">${escapeHtml(finalMetricsSubtitle)}</p>
+      <p data-editable="true" data-field="metrics_subtitle">${enrichedMetricsSubtitle}</p>
       <div class="metrics-cards" id="metrics-counter">
         ${metricsArray.map(([key, displayValue, numericValue, label]) => {
           // 🔥 Aplicar edições do customText aos rótulos das métricas
