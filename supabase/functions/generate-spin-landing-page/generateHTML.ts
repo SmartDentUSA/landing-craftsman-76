@@ -14,11 +14,14 @@ function generateSPINSchemas(
 
   // 1. Organization Schema
   if (company) {
-    schemas.push({
+    const orgSchema: any = {
       '@type': 'Organization',
       name: company.company_name || 'Smart Dent',
       url: company.website || canonicalUrl,
-      logo: company.logo_url,
+      
+      // ✅ FASE 1: Logo CRÍTICO (priorizar company_logo_url)
+      logo: company.company_logo_url || company.logo_url || '',
+      
       contactPoint: {
         '@type': 'ContactPoint',
         telephone: company.phone_number,
@@ -35,7 +38,52 @@ function generateSPINSchemas(
         postalCode: company.postal_code,
         addressCountry: 'BR'
       }
-    });
+    };
+    
+    // ✅ FASE 1: Ano de fundação (CRÍTICO Schema.org)
+    if (company.founded_year) {
+      orgSchema.foundingDate = company.founded_year.toString();
+    }
+    
+    // ✅ FASE 1: Missão da empresa (SGE prioriza)
+    if (company.mission_statement) {
+      orgSchema.mission = company.mission_statement;
+    }
+    
+    // ✅ FASE 1: Visão como slogan (SGE prioriza)
+    if (company.vision_statement) {
+      orgSchema.slogan = company.vision_statement;
+    }
+    
+    // ✅ FASE 1: Tamanho da equipe
+    if (company.team_size) {
+      orgSchema.numberOfEmployees = {
+        "@type": "QuantitativeValue",
+        "value": company.team_size
+      };
+    }
+    
+    // ✅ FASE 1: Expertise expandido com company_culture, working_methodology, differentiators
+    if (company.seo_technical_expertise) {
+      const knowsAboutItems = [company.seo_technical_expertise];
+      
+      if (company.company_culture) {
+        knowsAboutItems.push(company.company_culture);
+      }
+      
+      if (company.working_methodology) {
+        knowsAboutItems.push(company.working_methodology);
+      }
+      
+      if (company.differentiators) {
+        const diffs = company.differentiators.split(',').map((d: string) => d.trim()).filter(Boolean);
+        knowsAboutItems.push(...diffs);
+      }
+      
+      orgSchema.knowsAbout = knowsAboutItems.filter(Boolean);
+    }
+    
+    schemas.push(orgSchema);
   }
 
   // 2. WebPage Schema

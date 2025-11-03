@@ -21,6 +21,17 @@ export interface CompanyProfileData {
   vision_statement: string;
   instagram_profile?: string;
   youtube_channel?: string;
+  
+  // ✅ FASE 1: Campos críticos para SEO/SGE
+  company_culture?: string;
+  working_methodology?: string;
+  delivery_approach?: string;
+  differentiators?: string;
+  founded_year?: number;
+  team_size?: string;
+  company_logo_url?: string;
+  youtube_company_footer?: string;
+  
   seo_context_keywords: string[];
   seo_market_positioning: string;
   seo_service_areas: string;
@@ -74,6 +85,16 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         brand_values,
         mission_statement,
         vision_statement,
+        company_culture,
+        working_methodology,
+        delivery_approach,
+        differentiators,
+        founded_year,
+        team_size,
+        company_logo_url,
+        youtube_company_footer,
+        instagram_profile,
+        youtube_channel,
         seo_context_keywords,
         seo_market_positioning,
         seo_service_areas,

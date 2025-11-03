@@ -80,6 +80,10 @@ interface CompanyData {
   differentiators?: string;
   working_methodology?: string;
   company_culture?: string;
+  // ✅ FASE 1: Campos críticos para SEO/SGE
+  founded_year?: number;
+  team_size?: string;
+  company_logo_url?: string;
   institutional_links?: Array<{ name: string; url: string }>;
 }
 
@@ -485,6 +489,25 @@ export const useAdvancedSchemaGenerator = () => {
       knowsAboutItems.push(...advantages);
     }
     
+    // ✅ FASE 1: Enriquecer knowsAbout com company_culture
+    if (companyData.company_culture) {
+      knowsAboutItems.push(companyData.company_culture);
+    }
+    
+    // ✅ FASE 1: Adicionar working_methodology ao knowsAbout
+    if (companyData.working_methodology) {
+      knowsAboutItems.push(companyData.working_methodology);
+    }
+    
+    // ✅ FASE 1: Adicionar differentiators ao knowsAbout
+    if (companyData.differentiators) {
+      const diffs = companyData.differentiators
+        .split(',')
+        .map(d => d.trim())
+        .filter(Boolean);
+      knowsAboutItems.push(...diffs);
+    }
+    
     if (knowsAboutItems.length > 0) {
       schema.knowsAbout = knowsAboutItems;
     }
@@ -496,6 +519,28 @@ export const useAdvancedSchemaGenerator = () => {
 
     if (companyData.mission_statement) {
       schema.mission = companyData.mission_statement;
+    }
+    
+    // ✅ FASE 1: Ano de fundação (CRÍTICO Schema.org)
+    if (companyData.founded_year) {
+      schema.foundingDate = companyData.founded_year.toString();
+    }
+    
+    // ✅ FASE 1: Logo da empresa (CRÍTICO Schema.org)
+    if (companyData.company_logo_url) {
+      schema.logo = {
+        "@type": "ImageObject",
+        "url": companyData.company_logo_url,
+        "caption": `Logo oficial ${companyData.company_name}`
+      };
+    }
+    
+    // ✅ FASE 1: Tamanho da equipe
+    if (companyData.team_size) {
+      schema.numberOfEmployees = {
+        "@type": "QuantitativeValue",
+        "value": companyData.team_size
+      };
     }
 
     // ✅ FASE 1: Adicionar vision_statement como PropertyValue
