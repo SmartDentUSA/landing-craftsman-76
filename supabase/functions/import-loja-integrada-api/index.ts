@@ -703,7 +703,7 @@ async function mapAPIProductToRepository(apiProduct: ProductData, apiKey?: strin
     source_landing_page_id: null,
     original_data: {
       ...apiProduct,
-      li_product_id: apiProduct.id || extractIdFromUri(apiProduct.resource_uri) || null
+      li_product_id: String(apiProduct.id || extractIdFromUri(apiProduct.resource_uri) || '')
     },
   };
 
@@ -780,7 +780,7 @@ function mapScrapedDataToRepository(scrapedData: any, li_product_id?: string) {
     search_intent_keywords: scrapedData.search_intent_keywords || [],
     original_data: {
       ...(scrapedData.original_data || {}),
-      li_product_id: li_product_id || null
+      li_product_id: li_product_id ? String(li_product_id) : null
     }
   };
 }

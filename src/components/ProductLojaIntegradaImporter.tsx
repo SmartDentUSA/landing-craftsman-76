@@ -89,7 +89,9 @@ export function ProductLojaIntegradaImporter({
   useEffect(() => {
     const idFromForm = currentFormData?.original_data?.li_product_id;
     if (idFromForm) {
-      setProductId(String(idFromForm));
+      // Garantir que seja string e não notação científica
+      const cleanId = String(idFromForm).replace(/e\+\d+$/, '');
+      setProductId(cleanId);
     }
   }, [currentFormData]);
 

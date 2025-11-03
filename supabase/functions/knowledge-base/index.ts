@@ -185,6 +185,11 @@ function formatForAITraining(data: any): string {
         text += `**Público-alvo:** ${p.target_audience.join(', ')}\n`;
       }
       
+      // ID Loja Integrada (se disponível)
+      if (p.original_data?.li_product_id) {
+        text += `**ID Loja Integrada:** ${p.original_data.li_product_id}\n`;
+      }
+      
       if (p.technical_specifications && Array.isArray(p.technical_specifications) && p.technical_specifications.length > 0) {
         text += `**Especificações Técnicas:**\n`;
         p.technical_specifications.forEach((spec: any) => {

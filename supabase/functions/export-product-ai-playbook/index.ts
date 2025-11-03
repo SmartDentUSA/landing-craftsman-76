@@ -950,7 +950,7 @@ function generatePlaybookTXT(product: ProductData & {
 - Disponibilidade: ${product.availability || 'Em estoque'}
 - Condição: ${product.condition || 'Novo'}
 - Origem: ${product.source_type || 'N/A'}${product.source_landing_page_id ? ` (Landing Page: ${product.source_landing_page_id})` : ''}
-${product.original_data?.li_product_id ? `- ID do Produto (Loja Integrada): ${product.original_data.li_product_id}` : ''}
+${product.original_data?.li_product_id ? `- ID do Produto (Loja Integrada): ${String(product.original_data.li_product_id).replace(/e\+\d+$/, '')}` : ''}
 ${product.package_size ? `- Tamanho da Embalagem: ${product.package_size}` : ''}
 ${product.store_category ? `- Categoria na Loja: ${product.store_category}` : ''}
 
