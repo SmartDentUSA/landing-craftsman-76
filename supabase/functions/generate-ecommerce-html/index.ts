@@ -276,6 +276,15 @@ function isURL(value: string): boolean {
   }
 }
 
+/**
+ * ✅ Detecta se HTML já está pré-formatado (validado anteriormente)
+ * Previne duplicação de conteúdo ao re-empacotar HTML completo
+ */
+function isPreformattedHTML(html: string): boolean {
+  if (!html) return false;
+  return /<(section|html|body)\b/i.test(html);
+}
+
 function buildPackagingInfo(product: any): string {
   const dimensions = [];
   
@@ -562,8 +571,17 @@ function buildSEOHead(product: any): string {
 }
 
 function buildEcommerceHTML(product: any, benefits: string[], options: any, company: any): string {
+  const desc = product.description || '';
+  
+  // ✅ DETECÇÃO: Se HTML já está completo e validado, preservar EXATAMENTE como está
+  if (isPreformattedHTML(desc)) {
+    console.log('🧩 HTML pré-formatado detectado — preservando versão validada');
+    console.log('📏 Tamanho do HTML preservado:', desc.length, 'caracteres');
+    return desc;
+  }
+  
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
-  let enrichedDescription = product.description || '';
+  let enrichedDescription = desc;
   
   // Adicionar keywords de mercado contextualmente (primeiras 5)
   if (product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0) {

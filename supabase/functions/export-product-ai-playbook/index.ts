@@ -1740,10 +1740,13 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch product data
+    // Fetch product data (✅ INCLUIR original_data explicitamente)
     const { data: product, error } = await supabase
       .from('products_repository')
-      .select('*')
+      .select(`
+        *,
+        original_data
+      `)
       .eq('id', productId)
       .single();
 
@@ -1757,6 +1760,14 @@ serve(async (req) => {
         }
       );
     }
+
+    // ✅ DEBUG: Verificar se original_data foi carregado
+    console.log('🔍 DEBUG original_data:', {
+      has_original_data: !!product.original_data,
+      li_product_id: product.original_data?.li_product_id,
+      original_data_type: typeof product.original_data,
+      original_data_keys: product.original_data ? Object.keys(product.original_data) : []
+    });
 
     // Fetch product coupons
     const { data: coupons } = await supabase
