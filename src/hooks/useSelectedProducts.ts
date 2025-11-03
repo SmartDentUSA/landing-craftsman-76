@@ -46,6 +46,11 @@ interface Product {
     technical?: string | null;
     generated_at?: string | null;
   };
+  // Metadados técnicos (não exibir na UI)
+  original_data?: {
+    li_product_id?: string;
+    [key: string]: any;
+  };
 }
 
 
@@ -100,6 +105,8 @@ export const useSelectedProducts = () => {
           offer_discount_cta: (product as any).offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
           // Incluir blog content para curadoria
           individual_blog_content: (product.individual_blog_content as any) || { commercial: null, technical: null, generated_at: null },
+          // ✅ Preservar metadados técnicos (para IAs, não para UI)
+          original_data: (product as any).original_data || {},
         })) as Product[];
 
       return orderedProducts;
@@ -148,6 +155,8 @@ export const useSelectedProducts = () => {
       sourceType: 'repository' as const,
       lastUpdated: new Date().toISOString(),
       selected: true,
+      // ✅ Preservar metadados técnicos para edge functions
+      original_data: product.original_data,
     }));
   }, [loadProductsByIds]);
 

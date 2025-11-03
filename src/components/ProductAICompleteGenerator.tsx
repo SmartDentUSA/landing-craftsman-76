@@ -135,10 +135,10 @@ export function ProductAICompleteGenerator() {
       let response;
       let generatedContent;
 
-      // Detectar conteúdo existente para anti-duplicação
+      // Detectar conteúdo existente para anti-duplicação (incluindo original_data)
       const { data: existingProduct } = await supabase
         .from('products_repository')
-        .select('*')
+        .select('*, original_data')
         .eq('id', productId)
         .single();
 
