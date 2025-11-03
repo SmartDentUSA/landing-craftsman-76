@@ -220,6 +220,7 @@ export type Database = {
           city: string | null
           company_culture: string | null
           company_description: string | null
+          company_logo_supabase_path: string | null
           company_logo_url: string | null
           company_name: string
           company_reviews: Json | null
@@ -265,6 +266,7 @@ export type Database = {
           city?: string | null
           company_culture?: string | null
           company_description?: string | null
+          company_logo_supabase_path?: string | null
           company_logo_url?: string | null
           company_name: string
           company_reviews?: Json | null
@@ -310,6 +312,7 @@ export type Database = {
           city?: string | null
           company_culture?: string | null
           company_description?: string | null
+          company_logo_supabase_path?: string | null
           company_logo_url?: string | null
           company_name?: string
           company_reviews?: Json | null

@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2 } from "lucide-react";
 
 interface ImageData {
-  mode: 'url' | 'supabase';
+  mode: 'url' | 'supabase' | 'company';
   src: string;
   supabase_path?: string;
   alt: string;

@@ -77,7 +77,7 @@ interface BlogPost {
 
 // Interface de dados de imagem - migrado de Cloudflare para Supabase Storage
 export interface ImageData {
-  mode: 'url' | 'supabase';
+  mode: 'url' | 'supabase' | 'company';
   src: string;
   supabase_path?: string;
   alt: string;

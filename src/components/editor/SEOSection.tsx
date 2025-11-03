@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { validateCanonicalURL } from "@/lib/seo-validators";
 
 interface ImageData {
-  mode: 'url' | 'supabase';
+  mode: 'url' | 'supabase' | 'company';
   src: string;
   supabase_path?: string;
   alt: string;

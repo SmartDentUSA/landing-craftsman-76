@@ -1,16 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, Link, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Upload, Link, Loader2, X, Image as ImageIcon, AlertCircle, CheckCircle, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFileNameToAlt } from "@/lib/seo-image-helpers";
 
 interface ImageData {
-  mode: 'url' | 'supabase';
+  mode: 'url' | 'supabase' | 'company';
   src: string;
   supabase_path?: string;
   alt: string;
@@ -34,6 +35,8 @@ export const ImageUploader = ({
   proportionInfo
 }: ImageUploaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [companyLogo, setCompanyLogo] = useState<{ url: string; path?: string } | null>(null);
+  const [isLoadingCompanyLogo, setIsLoadingCompanyLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -42,6 +45,52 @@ export const ImageUploader = ({
     : value || { mode: 'url', src: '', alt: '', scale: 1.0 };
 
   const finalSrc = normalizedValue.src;
+
+  useEffect(() => {
+    loadCompanyLogo();
+  }, []);
+
+  const loadCompanyLogo = async () => {
+    setIsLoadingCompanyLogo(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('company_profile')
+        .select('company_logo_url, company_logo_supabase_path')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data?.company_logo_url) {
+        setCompanyLogo({
+          url: data.company_logo_url,
+          path: data.company_logo_supabase_path || undefined
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar logo da empresa:', error);
+    } finally {
+      setIsLoadingCompanyLogo(false);
+    }
+  };
+
+  const handleUseCompanyLogo = () => {
+    if (!companyLogo) return;
+    
+    updateImageData({
+      mode: 'company',
+      src: companyLogo.url,
+      supabase_path: companyLogo.path,
+      alt: normalizedValue.alt || 'Logo da empresa',
+      scale: normalizedValue.scale || 1.0
+    });
+    
+    toast({
+      title: '✅ Logo da empresa aplicado',
+      description: 'O logo do perfil da empresa foi aplicado com sucesso'
+    });
+  };
 
   const updateImageData = (updates: Partial<ImageData>) => {
     onChange({ ...normalizedValue, ...updates });
@@ -147,11 +196,15 @@ export const ImageUploader = ({
       )}
       
       <Tabs value={normalizedValue.mode} onValueChange={(value) => {
-        updateImageData({ mode: value as 'url' | 'supabase' });
+        updateImageData({ mode: value as 'url' | 'supabase' | 'company' });
       }}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="url">URL Externa</TabsTrigger>
           <TabsTrigger value="supabase">Supabase Upload</TabsTrigger>
+          <TabsTrigger value="company">
+            <Building2 className="h-4 w-4 mr-2" />
+            Logo da Empresa
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="url" className="space-y-3">
@@ -219,6 +272,63 @@ export const ImageUploader = ({
                 </CardContent>
               </Card>
             </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="company" className="mt-4 space-y-4">
+          {companyLogo ? (
+            <div className="space-y-4">
+              <Card className="border-2 border-dashed border-border bg-muted/30">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center gap-4">
+                    <img 
+                      src={companyLogo.url} 
+                      alt="Logo da empresa" 
+                      className="max-h-32 object-contain rounded"
+                    />
+                    <div className="text-sm text-muted-foreground text-center">
+                      Logo cadastrado no perfil da empresa
+                    </div>
+                    <Button
+                      onClick={handleUseCompanyLogo}
+                      disabled={isLoadingCompanyLogo}
+                      className="w-full max-w-xs"
+                    >
+                      {isLoadingCompanyLogo ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Carregando...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Usar Este Logo
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              {normalizedValue.mode === 'company' && (
+                <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    ✅ Usando logo da empresa
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Nenhum logo cadastrado no perfil da empresa.
+                <br />
+                <a href="/editor/new" className="text-primary underline hover:no-underline">
+                  Cadastre um logo em Dados Institucionais
+                </a>
+              </AlertDescription>
+            </Alert>
           )}
         </TabsContent>
       </Tabs>
