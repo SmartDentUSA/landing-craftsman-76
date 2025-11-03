@@ -85,6 +85,8 @@ interface CompanyData {
   team_size?: string;
   company_logo_url?: string;
   institutional_links?: Array<{ name: string; url: string }>;
+  // ✅ FASE 3: Campo para rodapé padrão em vídeos do YouTube
+  youtube_company_footer?: string;
 }
 
 interface FAQItem {
@@ -256,8 +258,8 @@ export const useAdvancedSchemaGenerator = () => {
           "@type": "VideoObject",
           "contentUrl": videoUrl,
           "name": videoTitle || `${product.name} - Vídeo Demonstrativo ${index + 1}`,
-          // ✅ MELHORIA: incluir description com fallbacks inteligentes
-          "description": videoDescription || product.sales_pitch || product.description || "",
+          // ✅ FASE 3: Incluir youtube_company_footer como fallback final
+          "description": videoDescription || product.sales_pitch || product.description || companyData?.youtube_company_footer || "",
           "thumbnailUrl": videoThumbnail || product.image_url,
           "uploadDate": videoUploadDate || (product as any).created_at
         };

@@ -92,7 +92,8 @@ serve(async (req) => {
         founded_year,
         website_url,
         contact_phone,
-        location
+        location,
+        youtube_company_footer
       `)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -580,13 +581,28 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   const technicalSpecs = product.technical_specifications || [];
   
   // Coletar vídeos por categoria
+  // ✅ FASE 3: Normalizar vídeos e adicionar youtube_company_footer como fallback
+  const normalizeVideos = (videos: any[] = [], defaultDescription: string = '') => {
+    return videos.map(v => {
+      if (typeof v === 'string') {
+        return { url: v, description: defaultDescription };
+      }
+      return { 
+        ...v, 
+        description: v.description || defaultDescription 
+      };
+    });
+  };
+  
+  const videoDefaultDescription = company?.youtube_company_footer || product.sales_pitch || product.description || '';
+  
   const videoCollections = {
-    youtube: product.youtube_videos || [],
-    instagram: product.instagram_videos || [],
-    testimonials: product.testimonial_videos || [],
-    technical: product.technical_videos || [],
-    tiktok: product.tiktok_videos || [],
-    tutorials: product.tutorial_resources?.tutorials || []
+    youtube: normalizeVideos(product.youtube_videos, videoDefaultDescription),
+    instagram: normalizeVideos(product.instagram_videos, videoDefaultDescription),
+    testimonials: normalizeVideos(product.testimonial_videos, videoDefaultDescription),
+    technical: normalizeVideos(product.technical_videos, videoDefaultDescription),
+    tiktok: normalizeVideos(product.tiktok_videos, videoDefaultDescription),
+    tutorials: normalizeVideos(product.tutorial_resources?.tutorials, videoDefaultDescription)
   };
   
   const hasVideos = options.includeVideoCollections && Object.values(videoCollections).some((v: any) => v.length > 0);
