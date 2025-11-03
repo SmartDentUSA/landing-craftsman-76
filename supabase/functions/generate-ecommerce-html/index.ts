@@ -607,8 +607,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   const hasVideos = options.includeVideoCollections && Object.values(videoCollections).some((v: any) => v.length > 0);
   
-  // ✅ Iniciar HTML completo com SEO Head
-  let html = buildSEOHead(product);
+  // ✅ Iniciar apenas com fragmento HTML (sem DOCTYPE/head/body)
+  let html = '';
   
   // ✅ Conteúdo principal em <section>
   html += `
@@ -899,9 +899,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   <a href="https://parametros.smartdent.com.br/" target="_blank" rel="noopener noreferrer" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px;">Parametrize sua Impressora</a>
 </div>
 
-</section>
-</body>
-</html>`;
+</section>`;
 
   return html;
 }
