@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,6 +84,14 @@ export function ProductLojaIntegradaImporter({
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [circuitStatus, setCircuitStatus] = useState<'closed' | 'open'>('closed');
   const { toast } = useToast();
+
+  // ✅ Sincronizar input com li_product_id existente
+  useEffect(() => {
+    const idFromForm = currentFormData?.original_data?.li_product_id;
+    if (idFromForm) {
+      setProductId(String(idFromForm));
+    }
+  }, [currentFormData]);
 
   // Helper function to check if field should be updated
   const shouldUpdate = (currentValue: any): boolean => {
@@ -419,6 +427,11 @@ export function ProductLojaIntegradaImporter({
 
       if (!result) {
         throw new Error('Nenhum dado foi importado');
+      }
+
+      // ✅ Atualizar input com ID extraído
+      if (result?.original_data?.li_product_id) {
+        setProductId(String(result.original_data.li_product_id));
       }
 
       // Warn about missing name but allow import
