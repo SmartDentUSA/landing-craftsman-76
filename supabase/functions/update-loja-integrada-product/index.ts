@@ -65,9 +65,33 @@ serve(async (req) => {
     }
 
     console.log('🔑 li_product_id recebido do frontend:', liProductId);
-    console.log('📤 Enviando HTML para Loja Integrada...');
+    
+    // Step 1: GET current product data to preserve all fields
+    console.log('📥 Buscando dados atuais do produto...');
+    const getUrl = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
+    
+    const getResponse = await fetch(getUrl, {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+    });
 
-    // PATCH request to Loja Integrada API (partial update of descricao_completa to avoid resetting required fields like categorias)
+    if (!getResponse.ok) {
+      const getError = await getResponse.json().catch(() => ({}));
+      console.error('❌ Erro ao buscar produto:', getError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Erro ao buscar produto: ${getError.message || getResponse.status}`,
+        }),
+        { status: getResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const currentProduct = await getResponse.json();
+    console.log('✅ Produto encontrado, atualizando descrição...');
+
+    // Step 2: Update only descricao_completa while preserving all other fields
+    console.log('📤 Enviando HTML atualizado para Loja Integrada...');
     const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
     let attempt = 0;
@@ -76,14 +100,20 @@ serve(async (req) => {
     while (attempt < 3) {
       console.log(`🔄 Tentativa ${attempt + 1}/3`);
       
+      // Send full product data with updated descricao_completa
+      const updatePayload = {
+        ...currentProduct,
+        descricao_completa: htmlContent,
+      };
+      
       response = await fetch(url, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ descricao_completa: htmlContent }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (response.ok) {
-        console.log('✅ PATCH bem-sucedido');
+        console.log('✅ PUT bem-sucedido');
         break;
       }
       
