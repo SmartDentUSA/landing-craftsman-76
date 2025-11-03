@@ -88,33 +88,47 @@ serve(async (req) => {
     }
 
     const currentProduct = await getResponse.json();
-    console.log('✅ Produto encontrado, atualizando descrição...');
+    console.log('✅ Produto encontrado, preparando atualização...');
 
-    // Step 2: Update only descricao_completa while preserving all other fields
+    // Step 2: Clean problematic fields that cause 400/405 errors
+    const cleanedProduct = { ...currentProduct };
+    delete cleanedProduct.categorias; // Remove categoria (vem como ID mas API espera objeto)
+    delete cleanedProduct.imagens; // Remove imagens (podem ter formato incompatível)
+    delete cleanedProduct.variacoes; // Remove variações (estrutura complexa)
+    console.log('🧹 Campos problemáticos removidos (categorias, imagens, variacoes)');
+
+    // Step 3: Try updating with cleaned product data
     console.log('📤 Enviando HTML atualizado para Loja Integrada...');
     const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
     let attempt = 0;
     let response;
+    let usedMethod = 'PUT';
     
     while (attempt < 3) {
-      console.log(`🔄 Tentativa ${attempt + 1}/3`);
+      console.log(`🔄 Tentativa ${attempt + 1}/3 (método: ${usedMethod})`);
       
-      // Send full product data with updated descricao_completa
-      const updatePayload = {
-        ...currentProduct,
-        descricao_completa: htmlContent,
-      };
+      // Prepare payload
+      const updatePayload = usedMethod === 'PUT' 
+        ? { ...cleanedProduct, descricao_completa: htmlContent }
+        : { descricao_completa: htmlContent };
       
       response = await fetch(url, {
-        method: "PUT",
+        method: usedMethod,
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(updatePayload),
       });
 
       if (response.ok) {
-        console.log('✅ PUT bem-sucedido');
+        console.log(`✅ ${usedMethod} bem-sucedido`);
         break;
+      }
+      
+      // Se PUT retornar 405 (Method Not Allowed), tenta PATCH
+      if (response.status === 405 && usedMethod === 'PUT') {
+        console.warn('⚠️ PUT não permitido (405), tentando PATCH...');
+        usedMethod = 'PATCH';
+        continue;
       }
       
       if (response.status === 429) {
