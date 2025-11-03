@@ -78,6 +78,36 @@ serve(async (req) => {
       hasInstagramVideos: !!product.instagram_videos?.length
     });
     
+    // 1.5. Buscar perfil da empresa (FASE 2)
+    console.log('🏢 Buscando perfil da empresa...');
+    const { data: companyProfile, error: companyError } = await supabase
+      .from('company_profile')
+      .select(`
+        company_name,
+        company_description,
+        company_logo_url,
+        mission_statement,
+        vision_statement,
+        differentiators,
+        founded_year,
+        website_url,
+        contact_phone,
+        location
+      `)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (companyError) {
+      console.warn('⚠️ Erro ao buscar company_profile:', companyError);
+    }
+
+    if (companyProfile) {
+      console.log(`✅ Perfil da empresa carregado: ${companyProfile.company_name}`);
+    } else {
+      console.warn('⚠️ Nenhum perfil de empresa cadastrado');
+    }
+    
     // 2. Gerar benefícios via IA (se necessário)
     let generatedBenefits: string[] = [];
     try {
@@ -103,7 +133,7 @@ serve(async (req) => {
       faqCount: Array.isArray(product.faq) ? product.faq.length : 0,
       options
     });
-    const htmlContent = buildEcommerceHTML(product, generatedBenefits, options);
+    const htmlContent = buildEcommerceHTML(product, generatedBenefits, options, companyProfile);
     console.log(`✅ HTML gerado: ${htmlContent.length} caracteres`);
     
     // 4. Salvar no banco
@@ -273,6 +303,37 @@ function buildPackagingInfo(product: any): string {
 }
 
 /**
+ * ✅ FASE 2: Header com branding da empresa (logo + missão)
+ */
+function buildCompanyHeader(company: any): string {
+  if (!company) return '';
+  
+  return `
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 20px; margin-bottom: 25px; border-radius: 8px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+  ${company.company_logo_url ? `
+    <img 
+      src="${company.company_logo_url}" 
+      alt="Logo ${company.company_name}" 
+      style="max-height: 60px; width: auto; background: white; padding: 8px; border-radius: 6px;"
+    />
+  ` : ''}
+  <div style="flex: 1; color: white;">
+    <h3 style="margin: 0; font-size: 1.2em; font-weight: 600;">${company.company_name}</h3>
+    ${company.mission_statement ? `
+      <p style="margin: 5px 0 0 0; font-size: 0.9em; opacity: 0.95; line-height: 1.4;">
+        ${company.mission_statement}
+      </p>
+    ` : ''}
+    ${company.founded_year ? `
+      <p style="margin: 5px 0 0 0; font-size: 0.85em; opacity: 0.85;">
+        🏆 Desde ${company.founded_year}
+      </p>
+    ` : ''}
+  </div>
+</div>`;
+}
+
+/**
  * Gera alt text semântico a partir do nome do arquivo ou URL
  * Utiliza sanitização para criar descrições SEO-friendly
  */
@@ -410,6 +471,25 @@ function generateProductSchema(product: any): string {
     };
   }
 
+  // ✅ FASE 2: Adicionar variações como hasVariant
+  if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
+    schema.hasVariant = product.variations.map((v: any) => ({
+      "@type": "Product",
+      "name": `${product.name} - ${v.name}`,
+      "sku": v.sku || `${product.id}-${v.name.toLowerCase().replace(/\s+/g, '-')}`,
+      ...(v.price && {
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": product.currency || "BRL",
+          "price": v.price.toString(),
+          "availability": (v.stock && v.stock > 0) 
+            ? "https://schema.org/InStock" 
+            : "https://schema.org/OutOfStock"
+        }
+      })
+    }));
+  }
+
   return JSON.stringify(schema, null, 2);
 }
 
@@ -432,11 +512,16 @@ function buildSEOHead(product: any): string {
   const canonicalUrl = product.canonical_url || product.product_url || '';
   const imageUrl = product.image_url || (product.images_gallery?.[0] || '');
   
-  // Extract keywords from multiple sources
+  // ✅ FASE 2: Expandir keywords com search_intent e bot_trigger_words
   const keywords = [
     ...(product.keywords || []),
-    ...(product.market_keywords || [])
-  ].slice(0, 10).join(', ');
+    ...(product.market_keywords || []),
+    ...(product.search_intent_keywords || []),
+    ...(product.bot_trigger_words || [])
+  ]
+    .filter(Boolean)
+    .slice(0, 15)
+    .join(', ');
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -475,7 +560,7 @@ function buildSEOHead(product: any): string {
 <body>`;
 }
 
-function buildEcommerceHTML(product: any, benefits: string[], options: any): string {
+function buildEcommerceHTML(product: any, benefits: string[], options: any, company: any): string {
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
   let enrichedDescription = product.description || '';
   
@@ -511,7 +596,12 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   
   // ✅ Conteúdo principal em <section>
   html += `
-<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">
+<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">`;
+
+  // ✅ FASE 2: Adicionar header da empresa ANTES do conteúdo
+  html += buildCompanyHeader(company);
+
+  html += `
 <h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
 
   html += `
@@ -570,6 +660,48 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any): str
   
   html += `
 </div>`;
+
+  // ✅ FASE 2: Variações do Produto (cores, tamanhos, modelos)
+  if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
+    html += `
+<div style="margin: 25px 0; padding: 20px; background: linear-gradient(to right, #f0f4ff 0%, #e9eeff 100%); border-left: 4px solid #667eea; border-radius: 8px;">
+  <h2 style="color: #2c3e50; font-size: 1.4em; margin-top: 0; margin-bottom: 15px;">
+    🎨 Variações Disponíveis
+  </h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">`;
+    
+    product.variations.forEach((variation: any) => {
+      const hasPrice = variation.price && variation.price > 0;
+      const hasStock = variation.stock !== undefined && variation.stock !== null;
+      const isInStock = !hasStock || variation.stock > 0;
+      
+      html += `
+    <div style="padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; ${!isInStock ? 'opacity: 0.6;' : ''}">
+      <h4 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1em;">
+        ${variation.name || 'Variação sem nome'}
+      </h4>
+      ${hasPrice ? `
+        <p style="margin: 4px 0; color: #27ae60; font-weight: 600; font-size: 1.1em;">
+          R$ ${variation.price.toFixed(2)}
+        </p>
+      ` : ''}
+      ${hasStock ? `
+        <p style="margin: 4px 0; font-size: 0.9em; color: ${isInStock ? '#666' : '#e74c3c'};">
+          ${isInStock ? `✅ ${variation.stock} em estoque` : '❌ Fora de estoque'}
+        </p>
+      ` : ''}
+      ${variation.sku ? `
+        <p style="margin: 4px 0; font-size: 0.85em; color: #999;">
+          SKU: ${variation.sku}
+        </p>
+      ` : ''}
+    </div>`;
+    });
+    
+    html += `
+  </div>
+</div>`;
+  }
 
   // ✅ FAQ (details/summary inline) com Keywords
   if (faq.length > 0) {
