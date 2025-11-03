@@ -542,7 +542,6 @@ export function generateLandingPageHTML(
   // SEO
   const seoTitle = `${solution.title} | ${company?.company_name || 'Smart Dent'}`;
   const seoDescription = enrichedHeroSubtitle.substring(0, 160).replace(/<[^>]*>/g, ''); // Remove HTML tags for meta
-  const canonicalUrl = solution.custom_url?.url || `${company?.website || 'https://smartdent.com.br'}/solucoes/${solution.id}`;
   
   // Extrair keywords de múltiplas fontes
   const baseKeywords = [
