@@ -67,7 +67,7 @@ serve(async (req) => {
     console.log('🔑 li_product_id recebido do frontend:', liProductId);
     console.log('📤 Enviando HTML para Loja Integrada...');
 
-    // PUT request to Loja Integrada API
+    // PATCH request to Loja Integrada API (partial update of descricao_completa to avoid resetting required fields like categorias)
     const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
     let attempt = 0;
@@ -77,13 +77,13 @@ serve(async (req) => {
       console.log(`🔄 Tentativa ${attempt + 1}/3`);
       
       response = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ descricao_completa: htmlContent }),
       });
 
       if (response.ok) {
-        console.log('✅ PUT bem-sucedido');
+        console.log('✅ PATCH bem-sucedido');
         break;
       }
       
