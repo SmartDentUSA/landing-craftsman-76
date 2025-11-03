@@ -10,7 +10,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 interface TrackingSEOTabProps {
   profile: any;
-  setProfile: (profile: any) => void;
+  setProfile: React.Dispatch<React.SetStateAction<any>>;
 }
 
 export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
@@ -30,32 +30,32 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
             <Switch
               checked={profile.tracking_pixels?.google_tag_manager?.enabled ?? false}
               onCheckedChange={(checked) => 
-                setProfile({
-                  ...profile,
+                setProfile(prev => ({
+                  ...prev,
                   tracking_pixels: {
-                    ...profile.tracking_pixels,
+                    ...prev.tracking_pixels,
                     google_tag_manager: {
                       enabled: checked,
-                      container_id: profile.tracking_pixels?.google_tag_manager?.container_id || null
+                      container_id: prev.tracking_pixels?.google_tag_manager?.container_id || null
                     }
                   }
-                })
+                }))
               }
             />
           </div>
           <Input
             value={profile.tracking_pixels?.google_tag_manager?.container_id || ''}
             onChange={(e) => 
-              setProfile({
-                ...profile,
+              setProfile(prev => ({
+                ...prev,
                 tracking_pixels: {
-                  ...profile.tracking_pixels,
+                  ...prev.tracking_pixels,
                   google_tag_manager: {
-                    ...profile.tracking_pixels?.google_tag_manager,
+                    ...prev.tracking_pixels?.google_tag_manager,
                     container_id: e.target.value || null
                   }
                 }
-              })
+              }))
             }
             placeholder="GTM-XXXXXXX"
             disabled={!profile.tracking_pixels?.google_tag_manager?.enabled}
@@ -81,33 +81,33 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
             <Switch
               checked={profile.tracking_pixels?.meta_pixel?.enabled ?? false}
               onCheckedChange={(checked) => 
-                setProfile({
-                  ...profile,
+                setProfile(prev => ({
+                  ...prev,
                   tracking_pixels: {
-                    ...profile.tracking_pixels,
+                    ...prev.tracking_pixels,
                     meta_pixel: {
                       enabled: checked,
-                      pixel_id: profile.tracking_pixels?.meta_pixel?.pixel_id || null,
+                      pixel_id: prev.tracking_pixels?.meta_pixel?.pixel_id || null,
                       note: 'Meta Pixel global para todos os domínios'
                     }
                   }
-                })
+                }))
               }
             />
           </div>
           <Input
             value={profile.tracking_pixels?.meta_pixel?.pixel_id || ''}
             onChange={(e) => 
-              setProfile({
-                ...profile,
+              setProfile(prev => ({
+                ...prev,
                 tracking_pixels: {
-                  ...profile.tracking_pixels,
+                  ...prev.tracking_pixels,
                   meta_pixel: {
-                    ...profile.tracking_pixels?.meta_pixel,
+                    ...prev.tracking_pixels?.meta_pixel,
                     pixel_id: e.target.value || null
                   }
                 }
-              })
+              }))
             }
             placeholder="123456789012345"
             disabled={!profile.tracking_pixels?.meta_pixel?.enabled}
@@ -133,33 +133,33 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
             <Switch
               checked={profile.tracking_pixels?.tiktok_pixel?.enabled ?? false}
               onCheckedChange={(checked) => 
-                setProfile({
-                  ...profile,
+                setProfile(prev => ({
+                  ...prev,
                   tracking_pixels: {
-                    ...profile.tracking_pixels,
+                    ...prev.tracking_pixels,
                     tiktok_pixel: {
                       enabled: checked,
-                      pixel_id: profile.tracking_pixels?.tiktok_pixel?.pixel_id || null,
+                      pixel_id: prev.tracking_pixels?.tiktok_pixel?.pixel_id || null,
                       note: 'TikTok Pixel para remarketing'
                     }
                   }
-                })
+                }))
               }
             />
           </div>
           <Input
             value={profile.tracking_pixels?.tiktok_pixel?.pixel_id || ''}
             onChange={(e) => 
-              setProfile({
-                ...profile,
+              setProfile(prev => ({
+                ...prev,
                 tracking_pixels: {
-                  ...profile.tracking_pixels,
+                  ...prev.tracking_pixels,
                   tiktok_pixel: {
-                    ...profile.tracking_pixels?.tiktok_pixel,
+                    ...prev.tracking_pixels?.tiktok_pixel,
                     pixel_id: e.target.value || null
                   }
                 }
-              })
+              }))
             }
             placeholder="C9ABC123456789DEF"
             disabled={!profile.tracking_pixels?.tiktok_pixel?.enabled}
@@ -185,33 +185,33 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
             <Switch
               checked={profile.tracking_pixels?.google_analytics?.enabled ?? false}
               onCheckedChange={(checked) => 
-                setProfile({
-                  ...profile,
+                setProfile(prev => ({
+                  ...prev,
                   tracking_pixels: {
-                    ...profile.tracking_pixels,
+                    ...prev.tracking_pixels,
                     google_analytics: {
                       enabled: checked,
-                      measurement_id: profile.tracking_pixels?.google_analytics?.measurement_id || null,
+                      measurement_id: prev.tracking_pixels?.google_analytics?.measurement_id || null,
                       note: 'Google Analytics 4 (pode ser gerenciado via GTM)'
                     }
                   }
-                })
+                }))
               }
             />
           </div>
           <Input
             value={profile.tracking_pixels?.google_analytics?.measurement_id || ''}
             onChange={(e) => 
-              setProfile({
-                ...profile,
+              setProfile(prev => ({
+                ...prev,
                 tracking_pixels: {
-                  ...profile.tracking_pixels,
+                  ...prev.tracking_pixels,
                   google_analytics: {
-                    ...profile.tracking_pixels?.google_analytics,
+                    ...prev.tracking_pixels?.google_analytics,
                     measurement_id: e.target.value || null
                   }
                 }
-              })
+              }))
             }
             placeholder="G-XXXXXXXXXX"
             disabled={!profile.tracking_pixels?.google_analytics?.enabled}
@@ -246,10 +246,10 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 use_in_footer: true,
                 priority: (profile.seo_domains?.length || 0) + 1
               };
-              setProfile({
-                ...profile,
-                seo_domains: [...(profile.seo_domains || []), newDomain]
-              });
+              setProfile(prev => ({
+                ...prev,
+                seo_domains: [...(prev.seo_domains || []), newDomain]
+              }));
             }}
           >
             <Plus className="h-4 w-4 mr-1" />
@@ -263,27 +263,33 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
               <Input
                 value={domain.name}
                 onChange={(e) => {
-                  const updated = [...(profile.seo_domains || [])];
-                  updated[index].name = e.target.value;
-                  setProfile({...profile, seo_domains: updated});
+                  setProfile(prev => {
+                    const updated = [...(prev.seo_domains || [])];
+                    updated[index].name = e.target.value;
+                    return {...prev, seo_domains: updated};
+                  });
                 }}
                 placeholder="Nome do Site"
               />
               <Input
                 value={domain.domain}
                 onChange={(e) => {
-                  const updated = [...(profile.seo_domains || [])];
-                  updated[index].domain = e.target.value;
-                  setProfile({...profile, seo_domains: updated});
+                  setProfile(prev => {
+                    const updated = [...(prev.seo_domains || [])];
+                    updated[index].domain = e.target.value;
+                    return {...prev, seo_domains: updated};
+                  });
                 }}
                 placeholder="smartdent.com.br"
               />
               <Input
                 value={domain.description}
                 onChange={(e) => {
-                  const updated = [...(profile.seo_domains || [])];
-                  updated[index].description = e.target.value;
-                  setProfile({...profile, seo_domains: updated});
+                  setProfile(prev => {
+                    const updated = [...(prev.seo_domains || [])];
+                    updated[index].description = e.target.value;
+                    return {...prev, seo_domains: updated};
+                  });
                 }}
                 placeholder="Descrição"
               />
@@ -293,25 +299,31 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
                   <Switch checked={domain.use_in_seo} onCheckedChange={(c) => {
-                    const updated = [...(profile.seo_domains || [])];
-                    updated[index].use_in_seo = c;
-                    setProfile({...profile, seo_domains: updated});
+                    setProfile(prev => {
+                      const updated = [...(prev.seo_domains || [])];
+                      updated[index].use_in_seo = c;
+                      return {...prev, seo_domains: updated};
+                    });
                   }} disabled={!domain.enabled} />
                   <Label className="text-xs">SEO</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch checked={domain.use_in_schema} onCheckedChange={(c) => {
-                    const updated = [...(profile.seo_domains || [])];
-                    updated[index].use_in_schema = c;
-                    setProfile({...profile, seo_domains: updated});
+                    setProfile(prev => {
+                      const updated = [...(prev.seo_domains || [])];
+                      updated[index].use_in_schema = c;
+                      return {...prev, seo_domains: updated};
+                    });
                   }} disabled={!domain.enabled} />
                   <Label className="text-xs">Schema</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch checked={domain.use_in_footer ?? false} onCheckedChange={(c) => {
-                    const updated = [...(profile.seo_domains || [])];
-                    updated[index].use_in_footer = c;
-                    setProfile({...profile, seo_domains: updated});
+                    setProfile(prev => {
+                      const updated = [...(prev.seo_domains || [])];
+                      updated[index].use_in_footer = c;
+                      return {...prev, seo_domains: updated};
+                    });
                   }} disabled={!domain.enabled} />
                   <Label className="text-xs">Footer</Label>
                 </div>
@@ -320,8 +332,10 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 variant="destructive"
                 size="icon"
                 onClick={() => {
-                  const updated = (profile.seo_domains || []).filter((_: any, i: number) => i !== index);
-                  setProfile({...profile, seo_domains: updated});
+                  setProfile(prev => ({
+                    ...prev,
+                    seo_domains: (prev.seo_domains || []).filter((_: any, i: number) => i !== index)
+                  }));
                 }}
               >
                 <Trash2 className="h-4 w-4" />

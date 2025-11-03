@@ -417,7 +417,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Input
                   id="company_name"
                   value={profile.company_name}
-                  onChange={(e) => setProfile({...profile, company_name: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, company_name: e.target.value}))}
                   placeholder="Nome da sua empresa"
                 />
               </div>
@@ -426,7 +426,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Input
                   id="business_sector"
                   value={profile.business_sector || ''}
-                  onChange={(e) => setProfile({...profile, business_sector: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, business_sector: e.target.value}))}
                   placeholder="Ex: Tecnologia, Saúde, Educação"
                 />
               </div>
@@ -437,7 +437,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               <Textarea
                 id="company_description"
                 value={profile.company_description || ''}
-                onChange={(e) => setProfile({...profile, company_description: e.target.value})}
+                onChange={(e) => setProfile(prev => ({...prev, company_description: e.target.value}))}
                 placeholder="Descreva sua empresa, seus produtos e serviços"
                 rows={3}
               />
@@ -476,7 +476,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Input
                   id="target_audience"
                   value={profile.target_audience || ''}
-                  onChange={(e) => setProfile({...profile, target_audience: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, target_audience: e.target.value}))}
                   placeholder="Defina seu público-alvo (ex: Dentistas, Profissionais de saúde, Clínicas)"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -489,7 +489,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   id="website_url"
                   type="url"
                   value={profile.website_url || ''}
-                  onChange={(e) => setProfile({...profile, website_url: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, website_url: e.target.value}))}
                   placeholder="https://www.suaempresa.com"
                 />
               </div>
@@ -513,7 +513,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   <Input
                     id="country"
                     value={profile.country || 'Brasil'}
-                    onChange={(e) => setProfile({...profile, country: e.target.value})}
+                    onChange={(e) => setProfile(prev => ({...prev, country: e.target.value}))}
                     placeholder="Brasil"
                   />
                 </div>
@@ -524,7 +524,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   <Input
                     id="state"
                     value={profile.state || ''}
-                    onChange={(e) => setProfile({...profile, state: e.target.value.toUpperCase().slice(0, 2)})}
+                    onChange={(e) => setProfile(prev => ({...prev, state: e.target.value.toUpperCase().slice(0, 2)}))}
                     placeholder="SP"
                     maxLength={2}
                     className="uppercase"
@@ -535,7 +535,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   <Input
                     id="city"
                     value={profile.city || ''}
-                    onChange={(e) => setProfile({...profile, city: e.target.value})}
+                    onChange={(e) => setProfile(prev => ({...prev, city: e.target.value}))}
                     placeholder="São Paulo"
                   />
                 </div>
@@ -548,7 +548,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   <Input
                     id="street_address"
                     value={profile.street_address || ''}
-                    onChange={(e) => setProfile({...profile, street_address: e.target.value})}
+                    onChange={(e) => setProfile(prev => ({...prev, street_address: e.target.value}))}
                     placeholder="Rua Exemplo, Bairro Centro"
                   />
                 </div>
@@ -557,7 +557,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   <Input
                     id="address_number"
                     value={profile.address_number || ''}
-                    onChange={(e) => setProfile({...profile, address_number: e.target.value})}
+                    onChange={(e) => setProfile(prev => ({...prev, address_number: e.target.value}))}
                     placeholder="123"
                   />
                 </div>
@@ -576,7 +576,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                       const formatted = value.length > 5 
                         ? `${value.slice(0, 5)}-${value.slice(5)}`
                         : value;
-                      setProfile({...profile, postal_code: formatted});
+                      setProfile(prev => ({...prev, postal_code: formatted}));
                     }}
                     placeholder="00000-000"
                     maxLength={9}
@@ -596,7 +596,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               <Textarea
                 id="main_products_services"
                 value={profile.main_products_services || ''}
-                onChange={(e) => setProfile({...profile, main_products_services: e.target.value})}
+                onChange={(e) => setProfile(prev => ({...prev, main_products_services: e.target.value}))}
                 placeholder="Liste os principais produtos ou serviços da empresa"
                 rows={2}
               />
@@ -607,7 +607,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               <Textarea
                 id="brand_values"
                 value={profile.brand_values || ''}
-                onChange={(e) => setProfile({...profile, brand_values: e.target.value})}
+                onChange={(e) => setProfile(prev => ({...prev, brand_values: e.target.value}))}
                 placeholder="Quais são os valores e princípios da sua empresa?"
                 rows={2}
               />
@@ -622,7 +622,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   id="contact_email"
                   type="email"
                   value={profile.contact_email || ''}
-                  onChange={(e) => setProfile({...profile, contact_email: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, contact_email: e.target.value}))}
                   placeholder="contato@suaempresa.com"
                 />
               </div>
@@ -631,7 +631,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Input
                   id="contact_phone"
                   value={profile.contact_phone || ''}
-                  onChange={(e) => setProfile({...profile, contact_phone: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, contact_phone: e.target.value}))}
                   placeholder="(11) 99999-9999"
                 />
               </div>
@@ -646,7 +646,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Input
                   id="youtube_channel"
                   value={profile.youtube_channel || ''}
-                  onChange={(e) => setProfile({...profile, youtube_channel: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, youtube_channel: e.target.value}))}
                   placeholder="https://youtube.com/@seucanal"
                 />
               </div>
@@ -658,7 +658,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Input
                   id="instagram_profile"
                   value={profile.instagram_profile || ''}
-                  onChange={(e) => setProfile({...profile, instagram_profile: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, instagram_profile: e.target.value}))}
                   placeholder="https://instagram.com/seuperfil"
                 />
               </div>
@@ -740,10 +740,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Label htmlFor="seo_context_keywords">Palavras-chave de Contexto SEO</Label>
                 <TagInput
                   value={profile.seo_context_keywords || []}
-                  onChange={(keywords) => setProfile({
-                    ...profile, 
+                  onChange={(keywords) => setProfile(prev => ({
+                    ...prev, 
                     seo_context_keywords: keywords
-                  })}
+                  }))}
                   placeholder="Digite e pressione Enter ou vírgula para adicionar"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -756,7 +756,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Textarea
                   id="seo_market_positioning"
                   value={profile.seo_market_positioning || ''}
-                  onChange={(e) => setProfile({...profile, seo_market_positioning: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, seo_market_positioning: e.target.value}))}
                   placeholder="Como sua empresa se posiciona no mercado? Qual é seu diferencial competitivo?"
                   rows={3}
                 />
@@ -767,7 +767,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Textarea
                   id="seo_competitive_advantages"
                   value={profile.seo_competitive_advantages || ''}
-                  onChange={(e) => setProfile({...profile, seo_competitive_advantages: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, seo_competitive_advantages: e.target.value}))}
                   placeholder="Quais são as principais vantagens da sua empresa sobre a concorrência?"
                   rows={3}
                 />
@@ -778,7 +778,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Textarea
                   id="seo_technical_expertise"
                   value={profile.seo_technical_expertise || ''}
-                  onChange={(e) => setProfile({...profile, seo_technical_expertise: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, seo_technical_expertise: e.target.value}))}
                   placeholder="Descreva a expertise técnica e conhecimentos específicos da empresa"
                   rows={3}
                 />
@@ -789,7 +789,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <Textarea
                   id="seo_service_areas"
                   value={profile.seo_service_areas || ''}
-                  onChange={(e) => setProfile({...profile, seo_service_areas: e.target.value})}
+                  onChange={(e) => setProfile(prev => ({...prev, seo_service_areas: e.target.value}))}
                   placeholder="Quais regiões, cidades ou áreas geográficas sua empresa atende?"
                   rows={2}
                 />
@@ -818,21 +818,13 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 link => link.category === 'international_partnership'
               ) as any}
               onChange={(newPartnerships) => {
-                // Preservar links de outras categorias
-                const otherLinks = (profile.institutional_links || []).filter(
-                  link => link.category !== 'international_partnership'
-                );
-                
-                // Combinar
-                const allLinks = [
-                  ...otherLinks,
-                  ...newPartnerships
-                ];
-                
-                setProfile({
-                  ...profile,
-                  institutional_links: allLinks
-                });
+                setProfile(prev => ({
+                  ...prev,
+                  institutional_links: [
+                    ...(prev.institutional_links || []).filter(link => link.category !== 'international_partnership'),
+                    ...newPartnerships
+                  ]
+                }));
               }}
             />
           </TabsContent>
