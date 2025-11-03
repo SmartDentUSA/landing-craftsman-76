@@ -18,7 +18,8 @@ import {
   X,
   RefreshCw,
   Clock,
-  RotateCcw
+  RotateCcw,
+  Download
 } from 'lucide-react';
 
 interface SpinLandingPageEditablePreviewProps {
@@ -557,6 +558,88 @@ export function SpinLandingPageEditablePreview({
     }
   };
 
+  const exportHTML = async () => {
+    try {
+      // Sanitizar HTML do iframe (mesma lógica de copyUpdatedHTML)
+      const doc = iframeRef.current?.contentDocument;
+      let finalHtml: string;
+      
+      if (!doc) {
+        finalHtml = html;
+      } else {
+        const clone = doc.cloneNode(true) as Document;
+        
+        // Sanitizar
+        clone.head.querySelector('style[data-editable-injected]')?.remove();
+        clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+        clone.querySelectorAll('[data-prev-user-select]').forEach(el => el.removeAttribute('data-prev-user-select'));
+        
+        clone.querySelectorAll('[style]').forEach(el => {
+          const element = el as HTMLElement;
+          const style = element.style;
+          if (style.userSelect || (style as any).webkitUserSelect || 
+              (style as any).mozUserSelect || (style as any).msUserSelect) {
+            style.userSelect = '';
+            (style as any).webkitUserSelect = '';
+            (style as any).mozUserSelect = '';
+            (style as any).msUserSelect = '';
+            if (!element.getAttribute('style')?.trim()) {
+              element.removeAttribute('style');
+            }
+          }
+        });
+        
+        finalHtml = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML;
+      }
+      
+      // Buscar título da solução para nome do arquivo
+      const { data: solution } = await supabase
+        .from('spin_selling_solutions')
+        .select('title')
+        .eq('id', solutionId)
+        .single();
+      
+      // Gerar nome de arquivo (sanitizar título para nome de arquivo válido)
+      const safeTitle = solution?.title
+        ? solution.title
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+            .replace(/[^a-z0-9]+/g, '-')      // Substitui caracteres especiais por hífen
+            .replace(/^-+|-+$/g, '')          // Remove hífens no início/fim
+            .slice(0, 50)                     // Limita a 50 caracteres
+        : `spin-${solutionId.slice(0, 8)}`;
+      
+      const filename = `landing-page-${safeTitle}.html`;
+      
+      // Criar Blob
+      const blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+      
+      // Criar link temporário e disparar download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: '📥 HTML exportado',
+        description: `Arquivo "${filename}" baixado com sucesso`
+      });
+      
+    } catch (error: any) {
+      console.error('Erro ao exportar HTML:', error);
+      toast({
+        title: '❌ Erro ao exportar',
+        description: error.message || 'Não foi possível exportar o arquivo',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col">
@@ -687,6 +770,16 @@ export function SpinLandingPageEditablePreview({
               >
                 <Copy className="h-4 w-4 mr-2" />
                 Copiar
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportHTML}
+                title="Baixar arquivo HTML completo"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar HTML
               </Button>
               
               <Button
