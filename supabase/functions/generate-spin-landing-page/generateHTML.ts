@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // ✅ FASE 3.1: Importar processamento de intelligent links
-import { buildIntelligentLinksMap, applyIntelligentLinks } from '../../../src/services/seo/intelligentLinksProcessor.ts';
+import { buildIntelligentLinksMap, applyIntelligentLinks } from '../_shared/intelligent-links-processor.ts';
 
 function generateSPINSchemas(
   solution: any,
