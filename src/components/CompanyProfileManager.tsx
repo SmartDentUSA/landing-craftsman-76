@@ -406,7 +406,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             </TabsTrigger>
             <TabsTrigger value="tracking" className="flex items-center gap-1">
               <Activity className="h-3 w-3" />
-              Rastreamento & SEO
+              TRK SEO
             </TabsTrigger>
           </TabsList>
           
