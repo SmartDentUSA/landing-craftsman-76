@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar } from "lucide-react";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
@@ -87,6 +87,17 @@ interface CompanyProfile {
     platform: string;
     url: string;
   }>;
+  // ✨ NOVOS CAMPOS: Missão, Visão, Cultura e Dados Institucionais
+  mission_statement?: string;
+  vision_statement?: string;
+  company_culture?: string;
+  working_methodology?: string;
+  delivery_approach?: string;
+  differentiators?: string;
+  founded_year?: number;
+  team_size?: string;
+  company_logo_url?: string;
+  youtube_company_footer?: string;
 }
 
 interface CompanyProfileManagerProps {
@@ -218,7 +229,18 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             google_tag_manager: { enabled: false, container_id: null, note: 'GTM - Única fonte de tags recomendada' },
             tiktok_pixel: { enabled: false, pixel_id: null, note: 'TikTok Pixel para remarketing' }
           },
-          seo_domains: Array.isArray((data as any).seo_domains) ? (data as any).seo_domains : []
+          seo_domains: Array.isArray((data as any).seo_domains) ? (data as any).seo_domains : [],
+          // ✨ NOVOS CAMPOS
+          mission_statement: (data as any).mission_statement || '',
+          vision_statement: (data as any).vision_statement || '',
+          company_culture: (data as any).company_culture || '',
+          working_methodology: (data as any).working_methodology || '',
+          delivery_approach: (data as any).delivery_approach || '',
+          differentiators: (data as any).differentiators || '',
+          founded_year: (data as any).founded_year || undefined,
+          team_size: (data as any).team_size || '',
+          company_logo_url: (data as any).company_logo_url || '',
+          youtube_company_footer: (data as any).youtube_company_footer || ''
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
@@ -280,13 +302,24 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
         seo_market_positioning: profile.seo_market_positioning,
         seo_competitive_advantages: profile.seo_competitive_advantages,
         seo_technical_expertise: profile.seo_technical_expertise,
-        seo_service_areas: profile.seo_service_areas,
-        institutional_links: profile.institutional_links || [],
-        social_media_links: profile.social_media_links || [],
-        tracking_pixels: profile.tracking_pixels || null,
-        seo_domains: profile.seo_domains || [],
-        updated_at: new Date().toISOString()
-      };
+          seo_service_areas: profile.seo_service_areas,
+          institutional_links: profile.institutional_links || [],
+          social_media_links: profile.social_media_links || [],
+          tracking_pixels: profile.tracking_pixels || null,
+          seo_domains: profile.seo_domains || [],
+          // ✨ NOVOS CAMPOS
+          mission_statement: profile.mission_statement,
+          vision_statement: profile.vision_statement,
+          company_culture: profile.company_culture,
+          working_methodology: profile.working_methodology,
+          delivery_approach: profile.delivery_approach,
+          differentiators: profile.differentiators,
+          founded_year: profile.founded_year,
+          team_size: profile.team_size,
+          company_logo_url: profile.company_logo_url,
+          youtube_company_footer: profile.youtube_company_footer,
+          updated_at: new Date().toISOString()
+        };
 
       console.log('Salvando perfil da empresa:', profileData);
 
@@ -612,6 +645,167 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 rows={2}
               />
             </div>
+
+            {/* ✨ NOVA SEÇÃO: Missão, Visão e Cultura */}
+            <div className="space-y-4 border-t pt-6 mt-6">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Missão, Visão e Cultura
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Informações estratégicas usadas para Schema.org e SGE (Search Generative Experience)
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="mission_statement">
+                  Missão da Empresa
+                  <span className="text-xs text-muted-foreground ml-2">(Usado em Schema.org)</span>
+                </Label>
+                <Textarea
+                  id="mission_statement"
+                  value={profile.mission_statement || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, mission_statement: e.target.value}))}
+                  placeholder="Qual é o propósito da sua empresa? O que vocês se propõem a fazer?"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="vision_statement">
+                  Visão da Empresa
+                  <span className="text-xs text-red-500 ml-2">⭐ CRÍTICO para SGE</span>
+                </Label>
+                <Textarea
+                  id="vision_statement"
+                  value={profile.vision_statement || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, vision_statement: e.target.value}))}
+                  placeholder="Onde sua empresa quer chegar? Qual é o futuro que vocês buscam?"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="company_culture">Cultura da Empresa</Label>
+                <Textarea
+                  id="company_culture"
+                  value={profile.company_culture || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, company_culture: e.target.value}))}
+                  placeholder="Descreva o ambiente de trabalho, valores no dia a dia, como a equipe opera"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* ✨ NOVA SEÇÃO: Metodologia e Diferenciais */}
+            <div className="space-y-4 border-t pt-6 mt-6">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Metodologia e Diferenciais
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Como sua empresa trabalha e o que a torna única
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="working_methodology">Metodologia de Trabalho</Label>
+                <Textarea
+                  id="working_methodology"
+                  value={profile.working_methodology || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, working_methodology: e.target.value}))}
+                  placeholder="Descreva como sua equipe trabalha (ex: Agile, Scrum, metodologia própria)"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="delivery_approach">Abordagem de Entrega</Label>
+                <Textarea
+                  id="delivery_approach"
+                  value={profile.delivery_approach || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, delivery_approach: e.target.value}))}
+                  placeholder="Como vocês entregam valor aos clientes? Quais são os processos?"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="differentiators">Diferenciais Competitivos</Label>
+                <Textarea
+                  id="differentiators"
+                  value={profile.differentiators || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, differentiators: e.target.value}))}
+                  placeholder="O que torna sua empresa única no mercado? Por que clientes escolhem vocês?"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* ✨ NOVA SEÇÃO: Dados Institucionais */}
+            <div className="space-y-4 border-t pt-6 mt-6">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Dados Institucionais
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Informações da empresa usadas em Schema.org e compartilhamentos sociais
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="founded_year">
+                    Ano de Fundação
+                    <span className="text-xs text-red-500 ml-2">⭐ CRÍTICO Schema.org</span>
+                  </Label>
+                  <Input
+                    id="founded_year"
+                    type="number"
+                    min="1800"
+                    max={new Date().getFullYear()}
+                    value={profile.founded_year || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, founded_year: parseInt(e.target.value) || undefined}))}
+                    placeholder="Ex: 2010"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="team_size">Tamanho da Equipe</Label>
+                  <Input
+                    id="team_size"
+                    value={profile.team_size || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, team_size: e.target.value}))}
+                    placeholder="Ex: 10-50 funcionários, 100+"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="company_logo_url">
+                  URL do Logo da Empresa
+                  <span className="text-xs text-red-500 ml-2">⭐ CRÍTICO Schema.org</span>
+                </Label>
+                <Input
+                  id="company_logo_url"
+                  type="url"
+                  value={profile.company_logo_url || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, company_logo_url: e.target.value}))}
+                  placeholder="https://seusite.com/logo.png"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recomendado: imagem quadrada (1:1), mínimo 112x112px, formato PNG ou JPG
+                </p>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="social" className="space-y-4">
@@ -724,6 +918,41 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 }}
                 maxVideos={20}
               />
+            </div>
+
+            {/* ✨ NOVO CAMPO: Footer Customizado para YouTube */}
+            <div className="space-y-4 border-t pt-6 mt-6">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Youtube className="h-4 w-4" />
+                    Footer Customizado para Descrições do YouTube
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Texto padrão que será adicionado ao final de todas as descrições de vídeos do YouTube
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="youtube_company_footer">
+                  Footer do YouTube
+                  <span className="text-xs text-muted-foreground ml-2">(Opcional)</span>
+                </Label>
+                <Textarea
+                  id="youtube_company_footer"
+                  value={profile.youtube_company_footer || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, youtube_company_footer: e.target.value}))}
+                  placeholder="Ex: 
+📱 Siga-nos nas redes sociais
+🌐 Visite nosso site: www.exemplo.com
+📧 Contato: contato@exemplo.com"
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Este texto será automaticamente adicionado ao final das descrições geradas para vídeos do YouTube
+                </p>
+              </div>
             </div>
           </TabsContent>
 
