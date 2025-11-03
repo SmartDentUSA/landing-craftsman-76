@@ -90,14 +90,33 @@ serve(async (req) => {
     const currentProduct = await getResponse.json();
     console.log('✅ Produto encontrado, preparando atualização...');
 
-    // Step 2: Clean problematic fields that cause 400/405 errors
+    // Step 2: Extract category ID and reconstruct in URI format
+    let categoriaId = null;
+    if (currentProduct.categorias) {
+      if (typeof currentProduct.categorias === 'number') {
+        categoriaId = currentProduct.categorias;
+      } else if (typeof currentProduct.categorias === 'object' && currentProduct.categorias.id) {
+        categoriaId = currentProduct.categorias.id;
+      }
+    }
+    console.log('📂 Categoria ID detectada:', categoriaId);
+
+    // Step 3: Clean problematic fields and reconstruct categorias
     const cleanedProduct = { ...currentProduct };
-    delete cleanedProduct.categorias; // Remove categoria (vem como ID mas API espera objeto)
     delete cleanedProduct.imagens; // Remove imagens (podem ter formato incompatível)
     delete cleanedProduct.variacoes; // Remove variações (estrutura complexa)
-    console.log('🧹 Campos problemáticos removidos (categorias, imagens, variacoes)');
+    
+    // Reconstruct categorias in URI format
+    if (categoriaId) {
+      cleanedProduct.categorias = `/v1/categoria/${categoriaId}/`;
+      console.log('✅ Campo categorias reconstruído:', cleanedProduct.categorias);
+    } else {
+      delete cleanedProduct.categorias;
+      console.warn('⚠️ Categoria ID não encontrada, removendo campo');
+    }
+    console.log('🧹 Campos problemáticos tratados (categorias reconstruída, imagens/variacoes removidos)');
 
-    // Step 3: Try updating with cleaned product data
+    // Step 4: Try updating with cleaned product data
     console.log('📤 Enviando HTML atualizado para Loja Integrada...');
     const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
