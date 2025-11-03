@@ -1361,6 +1361,11 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                     condition: importedData.condition || 'new',
                     availability: importedData.availability || 'in stock',
                     currency: importedData.currency || 'BRL',
+                    // Merge profundo de original_data para preservar li_product_id
+                    original_data: {
+                      ...(prev.original_data || {}),
+                      ...(importedData.original_data || {}),
+                    },
                   }));
 
                   // Estados controlados
