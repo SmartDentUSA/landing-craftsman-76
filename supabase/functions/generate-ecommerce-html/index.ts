@@ -763,28 +763,43 @@ function cleanGoogleDocsHTML(html: string): string {
   if (!html) return '';
   
   return html
+    // Remove comentários HTML
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Remove tags style e script
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     // Remove todos os <span> mantendo apenas o conteúdo
     .replace(/<span[^>]*>(.*?)<\/span>/gi, '$1')
-    // Remove atributos data-start, data-end
-    .replace(/\s*data-start="[^"]*"/gi, '')
-    .replace(/\s*data-end="[^"]*"/gi, '')
+    // Remove tabelas HTML completas (incluindo contêineres de editores)
+    .replace(/<div[^>]*class="[^"]*(?:_tableContainer|_tableWrapper|tableContainer|tableWrapper)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+    .replace(/<table[\s\S]*?<\/table>/gi, '')
     // Remove tags <p> e <h2> do Google Docs (parseRichDescription recria)
     .replace(/<\/?p[^>]*>/gi, '\n')
     .replace(/<\/?h[1-6][^>]*>/gi, '\n')
     // Remove <ul>, <li>, <strong> do Google Docs
     .replace(/<\/?ul[^>]*>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '\n• ')
-    .replace(/<\/li>/gi, '')
+    .replace(/<\/?ol[^>]*>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<\/li>/gi, '\n')
     .replace(/<\/?strong[^>]*>/gi, '')
     .replace(/<\/?em[^>]*>/gi, '')
     // Remove quebras <br /> ou <br> múltiplas
     .replace(/<br\s*\/?>/gi, '\n')
-    // Remove tabelas HTML completas (incluindo contêineres de editores)
-    .replace(/<div[^>]*class="[^"]*(?:_tableContainer|_tableWrapper|tableContainer|tableWrapper)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
-    .replace(/<table[\s\S]*?<\/table>/gi, '')
     // Remove <hr> e <div> soltos que possam restar
     .replace(/<\/?:?hr[^>]*>/gi, '\n')
     .replace(/<\/?:?div[^>]*>/gi, '\n')
+    // Remove atributos data-*, class, style
+    .replace(/\s*data-[^=]*="[^"]*"/gi, '')
+    .replace(/\s*class="[^"]*"/gi, '')
+    .replace(/\s*style="[^"]*"/gi, '')
+    // Substituir entidades HTML
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    // Remover quaisquer tags HTML restantes
+    .replace(/<[^>]+>/g, '')
     // Remove espaços múltiplos em branco (mas preserva quebras de linha)
     .replace(/ {2,}/g, ' ')
     // Limpa quebras de linha múltiplas (máximo 2)
@@ -797,6 +812,9 @@ function cleanGoogleDocsHTML(html: string): string {
  */
 function parseRichDescription(text: string): string {
   if (!text) return '';
+  
+  // ✅ DUPLA PROTEÇÃO: Remover tags HTML antes do split
+  text = text.replace(/<[^>]+>/g, '');
   
   let html = '';
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
@@ -1304,11 +1322,10 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   const secondaryKeyword = (product.keywords?.[1] || product.market_keywords?.[1] || '');
   const firstBenefit = product.benefits?.[0] || 'Qualidade garantida';
   
-  // ✅ PRIORIZAR URL DE DESCONTO SE CONFIGURADA
   // ✅ PRIORIZAR LABEL DE DESCONTO (mesmo se visible=false ou url vazia)
   const ctaLabel = (product.offer_discount_cta?.label && product.offer_discount_cta.label.trim() !== '')
     ? product.offer_discount_cta.label
-    : 'Ver Detalhes e Preços';
+    : 'Comprar com Desconto';
 
   // ✅ URL: usar offer_discount_cta.url se preenchida, senão product_url
   const ctaUrl = (product.offer_discount_cta?.url && product.offer_discount_cta.url.trim() !== '')
