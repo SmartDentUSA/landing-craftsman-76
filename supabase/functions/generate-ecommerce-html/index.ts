@@ -983,16 +983,37 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">📦 Recursos e Informações</h2>
 <div style="margin: 20px 0;">
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
-    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 600;">📋 Aplicações</h3>
-    <p style="margin: 0; line-height: 1.5; white-space: pre-wrap;">${product.applications || '<em style="color: #999;">Nenhuma informação de aplicação cadastrada. Preencha o campo "Aplicações do Produto" no editor para exibir aqui.</em>'}</p>
+  <!-- Card de Aplicações -->
+  <div style="
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 3px solid #EE7A3E;
+  ">
+    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 700; letter-spacing: -0.3px;">📋 Aplicações</h3>
+    <p style="margin: 0; line-height: 1.7; color: #333;">${
+      product.applications 
+        ? product.applications 
+        : '<span style="background: linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); padding: 8px 12px; border-radius: 6px; display: inline-block; color: #3E4B5E; font-weight: 500;">ℹ️ Nenhuma informação de aplicação cadastrada. Preencha o campo "Aplicações do Produto" no editor.</span>'
+    }</p>
   </div>
-  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
-    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 600;">📦 Embalagem</h3>
-    ${buildPackagingInfo(product)}
-  </div>`;
   
-  html += `
+  <!-- Card de Embalagem -->
+  <div style="
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 3px solid #EE7A3E;
+  ">
+    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 700; letter-spacing: -0.3px;">📦 Embalagem</h3>
+    ${buildPackagingInfo(product)}
+  </div>
 </div>`;
 
   // ✅ FASE 2: Variações do Produto (cores, tamanhos, modelos)
@@ -1048,9 +1069,29 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
     faq.forEach(item => {
       html += `
-<details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">${item.question}${topKeywords ? ` | ${topKeywords}` : ''}</summary>
-  <p style="padding: 10px 12px; margin: 0; line-height: 1.6; color: #333333;">${item.answer}</p>
+<details style="margin: 12px 0;">
+  <summary style="
+    cursor: pointer;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%);
+    border-radius: 8px;
+    border-left: 3px solid #EE7A3E;
+    font-weight: 700;
+    font-size: 1.05em;
+    color: #3E4B5E;
+    letter-spacing: -0.3px;
+    transition: background 0.2s ease;
+  " onmouseover="this.style.background='linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%)'">
+    ${item.question}${topKeywords ? ` | ${topKeywords}` : ''}
+  </summary>
+  <p style="
+    padding: 14px 16px;
+    margin: 0;
+    line-height: 1.7;
+    color: #333;
+    background: #FCFCFD;
+    border-radius: 0 0 8px 8px;
+  ">${item.answer}</p>
 </details>`;
     });
   }
@@ -1067,17 +1108,34 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     
     if (videoCollections.youtube.length > 0) {
       html += `
-<details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
-    Vídeos YouTube${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
+<details style="margin: 12px 0;">
+  <summary style="
+    cursor: pointer;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%);
+    border-radius: 8px;
+    border-left: 3px solid #EE7A3E;
+    font-weight: 700;
+    font-size: 1.05em;
+    color: #3E4B5E;
+    letter-spacing: -0.3px;
+  ">
+    Vídeos YouTube${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #EE7A3E; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 8px; font-weight: 600;">${videoCollections.youtube.length}</span>
   </summary>
-  <div style="margin: 10px 0 10px 20px;">
+  <div style="margin: 10px 0 10px 20px; padding: 10px; background: #FCFCFD; border-radius: 0 0 8px 8px;">
     ${videoCollections.youtube.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
-      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
-    </div>`;
+      return `<div style="
+        margin: 12px 0;
+        padding: 12px;
+        background: #fff;
+        border-radius: 6px;
+        border: 1px solid #e8e8e8;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      ">
+        <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 6px; font-size: 1.05em;">📹 Vídeo ${i + 1}</a>
+        ${description ? `<p style="margin: 4px 0 0 0; color: #333; font-size: 0.95em; line-height: 1.6;">${description}</p>` : ''}
+      </div>`;
     }).join('\n    ')}
   </div>
 </details>`;
@@ -1085,17 +1143,34 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     
     if (videoCollections.instagram.length > 0) {
       html += `
-<details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
-    Vídeos Instagram<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.instagram.length}</span>
+<details style="margin: 12px 0;">
+  <summary style="
+    cursor: pointer;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%);
+    border-radius: 8px;
+    border-left: 3px solid #EE7A3E;
+    font-weight: 700;
+    font-size: 1.05em;
+    color: #3E4B5E;
+    letter-spacing: -0.3px;
+  ">
+    Vídeos Instagram<span style="background: #EE7A3E; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 8px; font-weight: 600;">${videoCollections.instagram.length}</span>
   </summary>
-  <div style="margin: 10px 0 10px 20px;">
+  <div style="margin: 10px 0 10px 20px; padding: 10px; background: #FCFCFD; border-radius: 0 0 8px 8px;">
     ${videoCollections.instagram.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
-      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
-    </div>`;
+      return `<div style="
+        margin: 12px 0;
+        padding: 12px;
+        background: #fff;
+        border-radius: 6px;
+        border: 1px solid #e8e8e8;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      ">
+        <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 6px; font-size: 1.05em;">📹 Vídeo ${i + 1}</a>
+        ${description ? `<p style="margin: 4px 0 0 0; color: #333; font-size: 0.95em; line-height: 1.6;">${description}</p>` : ''}
+      </div>`;
     }).join('\n    ')}
   </div>
 </details>`;
@@ -1103,17 +1178,34 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     
     if (videoCollections.testimonials.length > 0) {
       html += `
-<details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
-    Depoimentos em Vídeo<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.testimonials.length}</span>
+<details style="margin: 12px 0;">
+  <summary style="
+    cursor: pointer;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%);
+    border-radius: 8px;
+    border-left: 3px solid #EE7A3E;
+    font-weight: 700;
+    font-size: 1.05em;
+    color: #3E4B5E;
+    letter-spacing: -0.3px;
+  ">
+    Depoimentos em Vídeo<span style="background: #EE7A3E; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 8px; font-weight: 600;">${videoCollections.testimonials.length}</span>
   </summary>
-  <div style="margin: 10px 0 10px 20px;">
+  <div style="margin: 10px 0 10px 20px; padding: 10px; background: #FCFCFD; border-radius: 0 0 8px 8px;">
     ${videoCollections.testimonials.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
-      return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Depoimento ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
-    </div>`;
+      return `<div style="
+        margin: 12px 0;
+        padding: 12px;
+        background: #fff;
+        border-radius: 6px;
+        border: 1px solid #e8e8e8;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      ">
+        <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 6px; font-size: 1.05em;">📹 Depoimento ${i + 1}</a>
+        ${description ? `<p style="margin: 4px 0 0 0; color: #333; font-size: 0.95em; line-height: 1.6;">${description}</p>` : ''}
+      </div>`;
     }).join('\n    ')}
   </div>
 </details>`;
