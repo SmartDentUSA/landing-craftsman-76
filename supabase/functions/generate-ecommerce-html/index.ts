@@ -377,6 +377,68 @@ function getSpinStylesCSS(): string {
     transition: background 0.2s;
   }
   
+  .spin-ecom table tbody tr:hover td {
+    background: #f8fafc !important;
+  }
+  
+  /* SPIN Landing Page Tech Table Styles */
+  .spin-ecom .tech-table-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    margin: 0 auto 25px auto;
+    max-width: 1100px;
+  }
+  
+  .spin-ecom .tech-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .spin-ecom .tech-table thead {
+    background: linear-gradient(135deg, #3E4B5E 0%, #2a3442 100%);
+  }
+  
+  .spin-ecom .tech-table th {
+    padding: 1.5rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    font-size: 16px;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 3px solid #EE7A3E;
+  }
+  
+  .spin-ecom .tech-table td {
+    padding: 1.25rem 1rem;
+    text-align: left;
+    font-size: 15px;
+    color: #333;
+    border-bottom: 1px solid #e8e8e8;
+    transition: background 0.2s;
+  }
+  
+  .spin-ecom .tech-table tbody tr:hover {
+    background: #f8f9fa;
+  }
+  
+  .spin-ecom .tech-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .spin-ecom .tech-table td:nth-child(2) {
+    background: linear-gradient(135deg, rgba(238, 122, 62, 0.08) 0%, rgba(255, 155, 103, 0.05) 100%);
+    font-weight: 600;
+    color: #3E4B5E;
+  }
+  
+  .spin-ecom .tech-table tbody tr:hover td:nth-child(2) {
+    background: linear-gradient(135deg, rgba(238, 122, 62, 0.12) 0%, rgba(255, 155, 103, 0.08) 100%);
+  }
+  
   .spin-ecom .check {
     color: #EE7A3E;
     font-weight: 700;
@@ -800,31 +862,33 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 </div>`;
   }
 
-  // ✅ Especificações Técnicas (tabela 100% width inline)
+  // ✅ Especificações Técnicas (SPIN Landing Page Style)
   if (technicalSpecs.length > 0) {
     html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
-<table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1em; margin-bottom: 25px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
-  <thead>
-    <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%); color: white;">
-      <th style="padding: 12px 16px; text-align: left; font-weight: 700; letter-spacing: -0.3px; border: none;">Especificação</th>
-      <th style="padding: 12px 16px; text-align: left; font-weight: 700; letter-spacing: -0.3px; border: none;">Valor</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${technicalSpecs.map(spec => {
-      const valueCell = isURL(spec.value)
-        ? `<a href="${spec.value}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none;">
-             <span style="background:#EE7A3E; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:600; box-shadow: 0 2px 6px rgba(238, 122, 62, 0.3); transition: transform 0.2s;">📥 Download</span>
-           </a>`
-        : spec.value;
-      return `<tr>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: white; transition: background 0.2s;">${spec.label}</td>
-        <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: white; transition: background 0.2s;">${valueCell}</td>
-      </tr>`;
-    }).join('\n    ')}
-  </tbody>
-</table>`;
+<div class="tech-table-wrapper">
+  <table class="tech-table">
+    <thead>
+      <tr>
+        <th>Especificação</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${technicalSpecs.map(spec => {
+        const valueCell = isURL(spec.value)
+          ? `<a href="${spec.value}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none;">
+               <span style="background:#EE7A3E; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:600; box-shadow: 0 2px 6px rgba(238, 122, 62, 0.3); transition: transform 0.2s;">📥 Download</span>
+             </a>`
+          : spec.value;
+        return `<tr>
+          <td>${spec.label}</td>
+          <td>${valueCell}</td>
+        </tr>`;
+      }).join('\n      ')}
+    </tbody>
+  </table>
+</div>`;
   }
 
   // ✅ Cards Empilhados (sem CSS Grid, inline styles)
