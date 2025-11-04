@@ -968,16 +968,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
   
-  // Adicionar keywords de mercado contextualmente (primeiras 5)
-  if (product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0) {
-    const keywordsText = product.market_keywords.slice(0, 5).join(', ');
-    enrichedDescription += `\n\nPalavras-chave: ${keywordsText}`;
+  // ✅ Enriquecer descrição com Sales Pitch e Aplicações (sem keywords explícitas)
+  if (product.sales_pitch && !enrichedDescription.includes(product.sales_pitch)) {
+    enrichedDescription += `\n\n🎯 **Por que escolher este produto?**\n${product.sales_pitch}`;
   }
-  
-  // Adicionar público-alvo contextualmente
-  if (product.target_audience && Array.isArray(product.target_audience) && product.target_audience.length > 0) {
-    const audienceText = product.target_audience.join(', ');
-    enrichedDescription += `\n\nIdeal para: ${audienceText}`;
+
+  if (product.applications && !enrichedDescription.includes(product.applications)) {
+    enrichedDescription += `\n\n🔧 **Aplicações do Produto**\n${product.applications}`;
   }
 
   const faq = options.includeFAQ && product.faq ? product.faq.slice(0, options.faqLimit) : [];
