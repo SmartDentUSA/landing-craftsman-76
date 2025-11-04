@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface RequestBody {
+  productId: string;
   liProductId: string;
   htmlContent: string;
 }
@@ -43,10 +44,10 @@ serve(async (req) => {
       );
     }
 
-    const { liProductId, htmlContent }: RequestBody = await req.json();
-    console.log('📥 Request recebido:', { liProductId, htmlSize: htmlContent?.length || 0 });
+    const { productId, liProductId, htmlContent }: RequestBody = await req.json();
+    console.log('📥 Request recebido:', { productId, liProductId, htmlSize: htmlContent?.length || 0 });
 
-    if (!liProductId || !htmlContent) {
+    if (!productId || !liProductId || !htmlContent) {
       return new Response(
         JSON.stringify({ success: false, message: "Parâmetros inválidos" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -64,99 +65,77 @@ serve(async (req) => {
       );
     }
 
-    console.log('🔑 li_product_id recebido do frontend:', liProductId);
-    
-    // Step 1: GET current product data to preserve all fields
-    console.log('📥 Buscando dados atuais do produto...');
-    const getUrl = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
-    
-    const getResponse = await fetch(getUrl, {
-      method: "GET",
-      headers: { "Accept": "application/json" },
-    });
+    // Buscar categoria do banco
+    const { data: product, error: productError } = await supabase
+      .from('products_repository')
+      .select('original_data')
+      .eq('id', productId)
+      .single();
 
-    if (!getResponse.ok) {
-      const getError = await getResponse.json().catch(() => ({}));
-      console.error('❌ Erro ao buscar produto:', getError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: `Erro ao buscar produto: ${getError.message || getResponse.status}`,
-        }),
-        { status: getResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (productError) {
+      console.error('❌ Erro ao buscar produto:', productError);
     }
 
-    const currentProduct = await getResponse.json();
-    console.log('✅ Produto encontrado, preparando atualização...');
+    // Extrair categoria ID do original_data
+    let categoryId = null;
 
-    // Step 2: Extract category ID and reconstruct in URI format
-    let categoriaId = null;
-    if (currentProduct.categorias) {
-      if (typeof currentProduct.categorias === 'number') {
-        categoriaId = currentProduct.categorias;
-      } else if (typeof currentProduct.categorias === 'object' && currentProduct.categorias.id) {
-        categoriaId = currentProduct.categorias.id;
+    if (product?.original_data?.categorias) {
+      const cats = product.original_data.categorias;
+      
+      // Formato 1: ID direto
+      if (typeof cats === 'number') {
+        categoryId = cats;
+      }
+      // Formato 2: Objeto { id: X }
+      else if (cats.id) {
+        categoryId = cats.id;
+      }
+      // Formato 3: Array [{ id: X }, ...]
+      else if (Array.isArray(cats) && cats.length > 0 && cats[0]?.id) {
+        categoryId = cats[0].id;
       }
     }
-    console.log('📂 Categoria ID detectada:', categoriaId);
 
-    // Step 3: Clean problematic fields and reconstruct categorias
-    const cleanedProduct = { ...currentProduct };
-    delete cleanedProduct.imagens; // Remove imagens (podem ter formato incompatível)
-    delete cleanedProduct.variacoes; // Remove variações (estrutura complexa)
-    
-    // Reconstruct categorias in URI format
-    if (categoriaId) {
-      cleanedProduct.categorias = `/v1/categoria/${categoriaId}/`;
-      console.log('✅ Campo categorias reconstruído:', cleanedProduct.categorias);
-    } else {
-      delete cleanedProduct.categorias;
-      console.warn('⚠️ Categoria ID não encontrada, removendo campo');
+    console.log('📂 Categoria extraída do banco:', categoryId);
+
+    // Preparar payload com HTML e categoria
+    const updatePayload: any = { 
+      descricao_completa: htmlContent 
+    };
+
+    if (categoryId) {
+      updatePayload.categorias = `/v1/categoria/${categoryId}/`;
+      console.log('✅ Categoria URI:', updatePayload.categorias);
     }
-    console.log('🧹 Campos problemáticos tratados (categorias reconstruída, imagens/variacoes removidos)');
 
-    // Step 4: Try updating with cleaned product data
-    console.log('📤 Enviando HTML atualizado para Loja Integrada...');
+    // Enviar PATCH direto
+    console.log('📤 Enviando PATCH para Loja Integrada...');
     const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
     let attempt = 0;
     let response;
-    let usedMethod = 'PUT';
     
     while (attempt < 3) {
-      console.log(`🔄 Tentativa ${attempt + 1}/3 (método: ${usedMethod})`);
-      
-      // Prepare payload
-      const updatePayload = usedMethod === 'PUT' 
-        ? { ...cleanedProduct, descricao_completa: htmlContent }
-        : { descricao_completa: htmlContent };
+      console.log(`🔄 Tentativa ${attempt + 1}/3`);
       
       response = await fetch(url, {
-        method: usedMethod,
+        method: 'PATCH',
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(updatePayload),
       });
 
       if (response.ok) {
-        console.log(`✅ ${usedMethod} bem-sucedido`);
+        console.log('✅ PATCH bem-sucedido');
         break;
       }
       
-      // Se PUT retornar 405 (Method Not Allowed), tenta PATCH
-      if (response.status === 405 && usedMethod === 'PUT') {
-        console.warn('⚠️ PUT não permitido (405), tentando PATCH...');
-        usedMethod = 'PATCH';
-        continue;
-      }
-      
       if (response.status === 429) {
-        console.warn('⚠️ Rate limit atingido, aguardando 800ms...');
+        console.warn('⚠️ Rate limit, aguardando 800ms...');
         await new Promise((r) => setTimeout(r, 800));
         attempt++;
-        continue;
       } else {
-        console.error(`❌ Erro HTTP ${response.status}`);
+        const error = await response.json().catch(() => ({}));
+        console.error(`❌ Erro HTTP ${response.status}:`, error);
         break;
       }
     }
@@ -174,11 +153,12 @@ serve(async (req) => {
       );
     }
 
-    console.log('✅ Descrição atualizada com sucesso!');
+    console.log('✅ HTML + Categoria atualizados com sucesso!');
     return new Response(
       JSON.stringify({
         success: true,
         li_product_id: liProductId,
+        category_sent: !!categoryId,
         updated_at: new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

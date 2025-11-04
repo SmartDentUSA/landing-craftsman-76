@@ -202,7 +202,7 @@ export function ProductEcommerceGenerator({
       const { data, error } = await supabase.functions.invoke(
         "update-loja-integrada-product",
         {
-          body: { liProductId, htmlContent },
+          body: { productId, liProductId, htmlContent },
         }
       );
 
