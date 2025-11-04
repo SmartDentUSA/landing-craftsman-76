@@ -250,6 +250,21 @@ const FIELD_FRIENDLY_NAMES = {
   "selected_data_sources": "Fontes de Dados Selecionadas",
   "selected_fields": "Campos Selecionados",
   
+  // === SPIN SELLING ===
+  "situation": "Situação (SPIN)",
+  "problem": "Problema (SPIN)",
+  "implication": "Implicação (SPIN)",
+  "need_solution": "Necessidade de Solução (SPIN)",
+  "pain_metrics": "Métricas de Dor (SPIN)",
+  "success_cases": "Casos de Sucesso",
+  "pain_type": "Tipo de Dor",
+  "pain_description": "Descrição da Dor",
+  
+  // === GOOGLE ADS ===
+  "seo_title": "Título SEO",
+  "seo_description": "Descrição SEO",
+  "primary_keyword": "Palavra-chave Principal",
+  
   // === CAMPOS DE SISTEMA ===
   "id": "ID",
   "created_at": "Criado em",
@@ -467,6 +482,19 @@ const DATA_SOURCES = {
     fields: [
       // Configuração ❌ NÃO UTILIZADO
       "edge_function_id", "prompt_name", "custom_prompt", "selected_data_sources", "selected_fields"
+    ]
+  },
+  spin_selling_solutions: {
+    label: "Soluções SPIN Selling",
+    fields: [
+      // Dados básicos ✅ UTILIZADOS
+      "title", "pain_type", "pain_description", "sales_pitch",
+      // SPIN framework ✅ UTILIZADOS
+      "situation", "problem", "implication", "need_solution",
+      // Métricas e casos ✅ UTILIZADOS
+      "pain_metrics", "success_cases",
+      // Produtos e keywords ✅ UTILIZADOS
+      "product_ids", "keywords", "target_audience"
     ]
   }
 };

@@ -55,6 +55,78 @@ const EDGE_FUNCTIONS = [
     status: "active" as const,
     prompts: ["WhatsApp", "Instagram", "TikTok", "YouTube", "Sequência de 7 Mensagens WhatsApp"],
     dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "generate-ad-copies",
+    name: "Gerador de Anúncios Google Ads",
+    description: "Cria headlines, descriptions e paths para campanhas RSA no Google Ads",
+    icon: Search,
+    status: "active" as const,
+    prompts: ["Cópias Google Ads"],
+    dataSources: ["products_repository", "company_profile", "landing_pages"]
+  },
+  {
+    id: "generate-tiktok-content",
+    name: "Gerador de Conteúdo TikTok",
+    description: "Cria scripts virais para TikTok com hooks, transições e CTAs",
+    icon: TikTokIcon,
+    status: "active" as const,
+    prompts: ["Script TikTok Viral"],
+    dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "generate-product-faqs",
+    name: "Gerador de FAQs de Produtos",
+    description: "Gera 10 perguntas frequentes contextualizadas baseadas em dados do produto",
+    icon: MessageSquare,
+    status: "active" as const,
+    prompts: ["10 FAQs Produto"],
+    dataSources: ["products_repository"]
+  },
+  {
+    id: "generate-spin-campaign",
+    name: "Gerador de Campanhas SPIN",
+    description: "Cria sequências WhatsApp baseadas no framework SPIN Selling",
+    icon: Zap,
+    status: "active" as const,
+    prompts: ["Campanha WhatsApp SPIN"],
+    dataSources: ["spin_selling_solutions", "products_repository", "company_profile"]
+  },
+  {
+    id: "generate-spin-faqs",
+    name: "Gerador de FAQs SPIN",
+    description: "Gera 10 FAQs estratégicas para landing pages SPIN",
+    icon: MessageSquare,
+    status: "active" as const,
+    prompts: ["10 FAQs SPIN"],
+    dataSources: ["spin_selling_solutions", "products_repository", "company_profile"]
+  },
+  {
+    id: "generate-spin-hero-banner",
+    name: "Gerador de Banners Hero IA",
+    description: "Cria imagens hero 16:9 profissionais com múltiplos produtos",
+    icon: Edit3,
+    status: "active" as const,
+    prompts: ["Imagem Hero 16:9"],
+    dataSources: ["spin_selling_solutions", "products_repository"]
+  },
+  {
+    id: "generate-ecommerce-html",
+    name: "Gerador de HTML E-commerce",
+    description: "Gera HTML completo de página de produto para e-commerce",
+    icon: FileText,
+    status: "active" as const,
+    prompts: ["HTML E-commerce Completo"],
+    dataSources: ["products_repository", "company_profile"]
+  },
+  {
+    id: "moderate-reviews",
+    name: "Moderador de Reviews",
+    description: "Analisa sentimento, detecta spam e modera reviews automaticamente",
+    icon: Brain,
+    status: "active" as const,
+    prompts: ["Moderação Automática"],
+    dataSources: ["approved_reviews", "raw_reviews"]
   }
 ];
 
