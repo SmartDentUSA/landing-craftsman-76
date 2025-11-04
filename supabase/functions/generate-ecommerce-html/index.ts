@@ -765,8 +765,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   html += `
 <section class="spin-ecom" style="max-width: 1200px; margin: 0 auto; padding: 20px;">`;
 
-  // ✅ FASE 2: Adicionar header da empresa ANTES do conteúdo
-  html += buildCompanyHeader(company);
+  // 🗑️ Banner roxo da empresa removido - conteúdo inicia direto no título do produto
+  // html += buildCompanyHeader(company);
 
   html += `
 <h1 style="color: #3E4B5E; font-size: 2em; font-weight: 800; letter-spacing: -0.8px; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
