@@ -383,6 +383,17 @@ function getSpinStylesCSS(): string {
   .spin-ecom li {
     margin: 0.5rem 0;
   }
+  
+  .spin-ecom p {
+    margin: 1rem 0;
+    line-height: 1.6;
+    white-space: normal;
+  }
+  
+  .spin-ecom strong {
+    color: #3E4B5E;
+    font-weight: 600;
+  }
 </style>`;
 }
 
@@ -693,7 +704,10 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   console.log('🎨 Aplicando SPIN Design System ao HTML E-commerce');
   
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
-  let enrichedDescription = desc;
+  let enrichedDescription = desc
+    .replace(/\s+/g, ' ')  // Substituir múltiplos espaços por 1
+    .replace(/\n{3,}/g, '\n\n')  // Máximo 2 quebras consecutivas
+    .trim();
   
   // Adicionar keywords de mercado contextualmente (primeiras 5)
   if (product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0) {
@@ -751,7 +765,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 <h1 style="color: #3E4B5E; font-size: 2em; font-weight: 800; letter-spacing: -0.8px; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
 
   html += `
-<div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #333333; white-space: pre-wrap;">${enrichedDescription}</div>`;
+<div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #333333; line-height: 1.6;">${enrichedDescription.replace(/\s+/g, ' ').trim()}</div>`;
 
   // ✅ Benefícios IA (inline styles)
   if (options.includeBenefits && benefits.length > 0) {
@@ -1004,29 +1018,29 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     : 'Ver Detalhes e Preços';
   
   html += `
-<div style="margin: 30px 0; padding: 25px; background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #667eea; border-radius: 8px;">
-  <h3 style="color: #2c3e50; margin-top: 0; font-size: 1.3em;">
-    🔍 Procurando <strong style="color: #667eea;">${primaryKeyword}</strong>?
+<div style="margin: 30px 0; padding: 25px; background: #f8fafc; border-left: 4px solid #EE7A3E; border-radius: 8px;">
+  <h3 style="color: #3E4B5E; margin-top: 0; font-size: 1.3em; font-weight: 700;">
+    🔍 Procurando <strong style="color: #3E4B5E;">${primaryKeyword}</strong>?
   </h3>
   <p style="color: #555; line-height: 1.7; margin: 15px 0;">
-    ${secondaryKeyword ? `Explore nossas opções de <strong>${secondaryKeyword}</strong> e ` : ''}Descubra por que <a href="${ctaUrl}" style="color: #667eea; text-decoration: underline; font-weight: 600;">${product.name}</a> é a escolha ideal para seu consultório. 
+    ${secondaryKeyword ? `Explore nossas opções de <strong>${secondaryKeyword}</strong> e ` : ''}Descubra por que <a href="${ctaUrl}" style="color: #EE7A3E; text-decoration: underline; font-weight: 600;">${product.name}</a> é a escolha ideal para seu consultório. 
     <strong>${firstBenefit}</strong> com entrega rápida em todo Brasil.
   </p>
   <div style="margin-top: 20px;">
     <a href="${ctaUrl}" 
-       style="display: inline-block; padding: 12px 30px; background: #667eea; color: white; font-weight: bold; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s;">
+       style="display: inline-block; padding: 12px 30px; background: #EE7A3E; color: white; font-weight: bold; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 15px rgba(238, 122, 62, 0.3); transition: all 0.3s;">
       ${ctaLabel} →
     </a>
   </div>
 </div>
 `;
 
-  // ✅ CTA Final (gradiente inline)
+  // ✅ CTA Final (gradiente inline com cores SPIN)
   html += `
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
-  <h2 style="color: white; margin-top: 0; font-size: 1.5em;">Parametrize a sua impressora</h2>
+<div style="background: linear-gradient(135deg, #3E4B5E 0%, #EE7A3E 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
+  <h2 style="color: white; margin-top: 0; font-size: 1.5em; font-weight: 700;">Parametrize a sua impressora</h2>
   <p style="margin: 15px 0; line-height: 1.6;">Utilize nosso seletor de parâmetros, parâmetros e indicações para que sua impressão seja perfeita</p>
-  <a href="https://parametros.smartdent.com.br/" target="_blank" rel="noopener noreferrer" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px;">Parametrize sua Impressora</a>
+  <a href="https://parametros.smartdent.com.br/" target="_blank" rel="noopener noreferrer" style="background: #EE7A3E; color: white; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 15px rgba(238, 122, 62, 0.3);">Parametrize sua Impressora</a>
 </div>
 
 </section>`;
