@@ -68,7 +68,7 @@ serve(async (req) => {
     // Buscar categoria do banco
     const { data: product, error: productError } = await supabase
       .from('products_repository')
-      .select('original_data')
+      .select('original_data, name')
       .eq('id', productId)
       .single();
 
@@ -122,10 +122,22 @@ serve(async (req) => {
     const currentProduct = await getResponse.json();
     console.log('✅ Produto atual obtido, preparando atualização...');
 
+    // 🔄 Fallback robusto para garantir que 'nome' nunca seja null
+    const productName = currentProduct?.nome 
+                     || currentProduct?.produto?.nome
+                     || product?.name
+                     || product?.original_data?.nome
+                     || product?.original_data?.titulo
+                     || product?.original_data?.name
+                     || 'Produto';
+    
+    console.log('📝 Nome que será usado:', productName);
+
     // 2. Mesclar HTML atualizado com dados existentes
     const updatePayload = {
       ...currentProduct,
       descricao_completa: htmlContent,
+      nome: productName,  // ← SEMPRE presente, sobrescreve null
     };
 
     // 3. Se tiver categoria no banco, usa ela (prioridade) - FORMATO: ARRAY de URIs
