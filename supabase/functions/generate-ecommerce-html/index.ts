@@ -351,23 +351,30 @@ function getSpinStylesCSS(): string {
   
   .spin-ecom table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     margin: 1rem 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
-  
+
   .spin-ecom table th {
-    background: #3E4B5E;
+    background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%);
     color: white;
-    font-weight: 600;
-    padding: 12px;
+    font-weight: 700;
+    padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid #e5e7eb;
+    border: none;
+    letter-spacing: -0.3px;
   }
-  
+
   .spin-ecom table td {
-    padding: 12px;
+    padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+    transition: background 0.2s;
   }
   
   .spin-ecom .check {
