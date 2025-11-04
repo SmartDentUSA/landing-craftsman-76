@@ -128,10 +128,10 @@ serve(async (req) => {
       descricao_completa: htmlContent,
     };
 
-    // 3. Se tiver categoria no banco, usa ela (prioridade)
+    // 3. Se tiver categoria no banco, usa ela (prioridade) - FORMATO: ARRAY de URIs
     if (categoryId) {
-      updatePayload.categorias = `/v1/categoria/${categoryId}/`;
-      console.log('✅ Categoria do banco aplicada:', updatePayload.categorias);
+      updatePayload.categorias = [`/v1/categoria/${categoryId}/`];
+      console.log('✅ Categoria do banco aplicada (array):', updatePayload.categorias);
     }
 
     // 4. Limpar campos que a API não aceita no PUT
@@ -166,20 +166,34 @@ serve(async (req) => {
         await new Promise((r) => setTimeout(r, 800));
         attempt++;
       } else {
-        const error = await response.json().catch(() => ({}));
+        // Capturar tanto JSON quanto texto para debug completo
+        const errorText = await response.text();
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { raw_response: errorText };
+        }
         console.error(`❌ Erro HTTP ${response.status}:`, error);
         break;
       }
     }
 
-    const result = await response!.json().catch(() => ({}));
+    // Processar resposta final
+    const resultText = await response!.text();
+    let result;
+    try {
+      result = JSON.parse(resultText);
+    } catch {
+      result = { raw_response: resultText };
+    }
     
     if (!response!.ok) {
       console.error('❌ Resposta de erro da Loja Integrada:', result);
       return new Response(
         JSON.stringify({
           success: false,
-          message: result.detail || result.message || `Erro (${response!.status}) na API da Loja Integrada`,
+          message: result.detail || result.message || result.raw_response || `Erro (${response!.status}) na API da Loja Integrada`,
         }),
         { status: response!.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
