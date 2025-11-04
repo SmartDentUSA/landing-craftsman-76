@@ -761,6 +761,14 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   // ✅ Iniciar com SPIN Design System CSS
   let html = getSpinStylesCSS();
   
+  // 🎨 Adicionar estilos para hover da tabela
+  html += `
+<style>
+  .spin-ecom table tbody tr:hover td {
+    background: #f8fafc !important;
+  }
+</style>`;
+  
   // ✅ Conteúdo principal em <section> com classe SPIN
   html += `
 <section class="spin-ecom" style="max-width: 1200px; margin: 0 auto; padding: 20px;">`;
@@ -789,23 +797,23 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   if (technicalSpecs.length > 0) {
     html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95em; margin-bottom: 25px;">
+<table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1em; margin-bottom: 25px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
   <thead>
-    <tr style="background-color: #3E4B5E; color: white;">
-      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Especificação</th>
-      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Valor</th>
+    <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%); color: white;">
+      <th style="padding: 12px 16px; text-align: left; font-weight: 700; letter-spacing: -0.3px; border: none;">Especificação</th>
+      <th style="padding: 12px 16px; text-align: left; font-weight: 700; letter-spacing: -0.3px; border: none;">Valor</th>
     </tr>
   </thead>
   <tbody>
     ${technicalSpecs.map(spec => {
       const valueCell = isURL(spec.value)
         ? `<a href="${spec.value}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none;">
-             <span style="background:#ffffff; color:#EE7A3E; border:1px solid #EE7A3E; padding:6px 10px; border-radius:6px; font-weight:600;">📥 Download</span>
+             <span style="background:#EE7A3E; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:600; box-shadow: 0 2px 6px rgba(238, 122, 62, 0.3); transition: transform 0.2s;">📥 Download</span>
            </a>`
         : spec.value;
       return `<tr>
-        <td style="padding: 8px; border: 1px solid #ddd;">${spec.label}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${valueCell}</td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: white; transition: background 0.2s;">${spec.label}</td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: white; transition: background 0.2s;">${valueCell}</td>
       </tr>`;
     }).join('\n    ')}
   </tbody>
