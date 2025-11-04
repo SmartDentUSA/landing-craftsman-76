@@ -216,7 +216,7 @@ export const ImageUploader = ({
             <Label className="text-sm font-medium">URL da Imagem</Label>
             <Input
               placeholder={placeholder}
-              value={normalizedValue.mode === 'url' ? normalizedValue.src : ''}
+              value={normalizedValue.src || ''}
               onChange={(e) => updateImageData({ src: e.target.value, supabase_path: undefined })}
             />
           </div>
