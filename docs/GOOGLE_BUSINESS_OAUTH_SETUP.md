@@ -99,11 +99,30 @@ Adicione no **OAuth Consent Screen → Scopes**:
 - `https://www.googleapis.com/auth/userinfo.profile`
 - `openid`
 
-### 📚 APIs Obrigatórias
-Ative no **APIs & Services → Library**:
-1. ✅ **My Business Business Information API** (crítico!)
-2. ✅ **Business Profile Performance API**
-3. ✅ **Google Places API** (opcional, fallback)
+### 📚 APIs Obrigatórias (ATUALIZADO 2025)
+
+⚠️ **IMPORTANTE:** A API v4 foi descontinuada em 2022. Use apenas v1.
+
+**APIs CORRETAS (v1 - ativas desde 2021):**
+1. ✅ **My Business Business Information API v1** (crítico!)
+   - Endpoint: `mybusinessbusinessinformation.googleapis.com/v1`
+   - Usado para: Locations, Reviews
+   
+2. ✅ **My Business Account Management API v1** (crítico!)
+   - Endpoint: `mybusinessaccountmanagement.googleapis.com/v1`
+   - Usado para: Accounts
+
+3. ✅ **Business Profile Performance API** (opcional, fallback)
+4. ✅ **Google Places API** (opcional, fallback)
+
+**APIs INCORRETAS (NÃO USAR):**
+- ❌ ~~Google My Business API v4~~ (DESCONTINUADO desde 2022)
+- ❌ ~~mybusiness.googleapis.com/v4~~ (retorna 404)
+
+**Como ativar:**
+1. Google Cloud Console → APIs & Services → Library
+2. Buscar "My Business Business Information API" → Enable
+3. Buscar "My Business Account Management API" → Enable
 
 ### 👤 Usuário de Teste
 - ✅ Adicione seu email em **OAuth Consent Screen → Test users**

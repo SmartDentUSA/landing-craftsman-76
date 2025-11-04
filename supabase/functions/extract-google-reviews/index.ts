@@ -395,6 +395,25 @@ async function getGoogleBusinessAccessToken(
   return tokenData.access_token;
 }
 
+// Helper function to parse star ratings (API v1 format)
+function parseStarRating(rating: string): number {
+  const ratingMap: Record<string, number> = {
+    // API v1 format
+    'STAR_RATING_FIVE': 5,
+    'STAR_RATING_FOUR': 4,
+    'STAR_RATING_THREE': 3,
+    'STAR_RATING_TWO': 2,
+    'STAR_RATING_ONE': 1,
+    // API v4 fallback (backward compatibility)
+    'FIVE': 5,
+    'FOUR': 4,
+    'THREE': 3,
+    'TWO': 2,
+    'ONE': 1,
+  };
+  return ratingMap[rating] || 0;
+}
+
 // Function to extract reviews from Google Business Profile API (Priority 1)
 async function extractReviewsFromBusinessAPI(
   placeId: string,
@@ -403,10 +422,18 @@ async function extractReviewsFromBusinessAPI(
   console.log('🔵 Extracting reviews from Business Profile API...');
   
   try {
-    // 1. Fetch accounts
-    const accountsRes = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+    // 1. Fetch accounts (API v1 - Account Management)
+    console.log('📡 Fetching accounts from Account Management API v1...');
+    const accountsRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    
+    console.log(`✅ Accounts API response status: ${accountsRes.status}`);
+    if (!accountsRes.ok) {
+      const errorBody = await accountsRes.text();
+      console.error(`❌ Accounts API error: ${errorBody}`);
+    }
+    
     const accountsData = await accountsRes.json();
     
     if (!accountsRes.ok || !accountsData.accounts?.length) {
@@ -416,10 +443,18 @@ async function extractReviewsFromBusinessAPI(
     const accountId = accountsData.accounts[0].name;
     console.log('✅ Account found:', accountId);
     
-    // 2. Fetch locations
-    const locationsRes = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+    // 2. Fetch locations (API v1 - Business Information)
+    console.log('📡 Fetching locations from Business Information API v1...');
+    const locationsRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    
+    console.log(`✅ Locations API response status: ${locationsRes.status}`);
+    if (!locationsRes.ok) {
+      const errorBody = await locationsRes.text();
+      console.error(`❌ Locations API error: ${errorBody}`);
+    }
+    
     const locationsData = await locationsRes.json();
     
     if (!locationsRes.ok || !locationsData.locations?.length) {
@@ -429,10 +464,18 @@ async function extractReviewsFromBusinessAPI(
     const locationId = locationsData.locations[0].name;
     console.log('✅ Location found:', locationId);
     
-    // 3. Fetch reviews
-    const reviewsRes = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews`, {
+    // 3. Fetch reviews (API v1 - Business Information)
+    console.log('📡 Fetching reviews from Business Information API v1...');
+    const reviewsRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${locationId}/reviews`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    
+    console.log(`✅ Reviews API response status: ${reviewsRes.status}`);
+    if (!reviewsRes.ok) {
+      const errorBody = await reviewsRes.text();
+      console.error(`❌ Reviews API error: ${errorBody}`);
+    }
+    
     const reviewsData = await reviewsRes.json();
     
     if (!reviewsRes.ok) {
@@ -445,10 +488,10 @@ async function extractReviewsFromBusinessAPI(
       place_id: placeId,
       author_name: r.reviewer?.displayName || 'Anonymous',
       author_url: '',
-      rating: r.starRating === 'FIVE' ? 5 : r.starRating === 'FOUR' ? 4 : r.starRating === 'THREE' ? 3 : r.starRating === 'TWO' ? 2 : 1,
+      rating: parseStarRating(r.starRating),
       review_text: r.comment || '',
       review_date: r.createTime || new Date().toISOString(),
-      relative_time: 'via Business API',
+      relative_time: getRelativeTime(r.createTime),
       profile_photo_url: r.reviewer?.profilePhotoUrl || '',
       response_from_owner: r.reviewReply?.comment || '',
       response_date: r.reviewReply?.updateTime || '',
