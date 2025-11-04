@@ -25,6 +25,7 @@ interface ImageUploaderProps {
   placeholder?: string;
   className?: string;
   proportionInfo?: string;
+  hideCompanyLogoTab?: boolean;
 }
 
 export const ImageUploader = ({ 
@@ -32,7 +33,8 @@ export const ImageUploader = ({
   onChange, 
   placeholder = "URL da imagem",
   className,
-  proportionInfo
+  proportionInfo,
+  hideCompanyLogoTab = false
 }: ImageUploaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [companyLogo, setCompanyLogo] = useState<{ url: string; path?: string } | null>(null);
@@ -105,7 +107,7 @@ export const ImageUploader = ({
       const filePath = `${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('product-images')
+        .from('landing-page-images')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
@@ -114,7 +116,7 @@ export const ImageUploader = ({
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
+        .from('landing-page-images')
         .getPublicUrl(filePath);
 
       // Extrair alt text do nome do arquivo original
@@ -195,16 +197,18 @@ export const ImageUploader = ({
         </div>
       )}
       
-      <Tabs value={normalizedValue.mode} onValueChange={(value) => {
+      <Tabs value={hideCompanyLogoTab && normalizedValue.mode === 'company' ? 'url' : normalizedValue.mode} onValueChange={(value) => {
         updateImageData({ mode: value as 'url' | 'supabase' | 'company' });
       }}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${hideCompanyLogoTab ? 'grid-cols-2' : 'grid-cols-3'}`}>
           <TabsTrigger value="url">URL Externa</TabsTrigger>
           <TabsTrigger value="supabase">Supabase Upload</TabsTrigger>
-          <TabsTrigger value="company">
-            <Building2 className="h-4 w-4 mr-2" />
-            Logo da Empresa
-          </TabsTrigger>
+          {!hideCompanyLogoTab && (
+            <TabsTrigger value="company">
+              <Building2 className="h-4 w-4 mr-2" />
+              Logo da Empresa
+            </TabsTrigger>
+          )}
         </TabsList>
         
         <TabsContent value="url" className="space-y-3">
@@ -275,62 +279,64 @@ export const ImageUploader = ({
           )}
         </TabsContent>
 
-        <TabsContent value="company" className="mt-4 space-y-4">
-          {companyLogo ? (
-            <div className="space-y-4">
-              <Card className="border-2 border-dashed border-border bg-muted/30">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col items-center gap-4">
-                    <img 
-                      src={companyLogo.url} 
-                      alt="Logo da empresa" 
-                      className="max-h-32 object-contain rounded"
-                    />
-                    <div className="text-sm text-muted-foreground text-center">
-                      Logo cadastrado no perfil da empresa
+        {!hideCompanyLogoTab && (
+          <TabsContent value="company" className="mt-4 space-y-4">
+            {companyLogo ? (
+              <div className="space-y-4">
+                <Card className="border-2 border-dashed border-border bg-muted/30">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <img 
+                        src={companyLogo.url} 
+                        alt="Logo da empresa" 
+                        className="max-h-32 object-contain rounded"
+                      />
+                      <div className="text-sm text-muted-foreground text-center">
+                        Logo cadastrado no perfil da empresa
+                      </div>
+                      <Button
+                        onClick={handleUseCompanyLogo}
+                        disabled={isLoadingCompanyLogo}
+                        className="w-full max-w-xs"
+                      >
+                        {isLoadingCompanyLogo ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Carregando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Usar Este Logo
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      onClick={handleUseCompanyLogo}
-                      disabled={isLoadingCompanyLogo}
-                      className="w-full max-w-xs"
-                    >
-                      {isLoadingCompanyLogo ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Carregando...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Usar Este Logo
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              {normalizedValue.mode === 'company' && (
-                <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <AlertDescription className="text-green-800 dark:text-green-200">
-                    ✅ Usando logo da empresa
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          ) : (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Nenhum logo cadastrado no perfil da empresa.
-                <br />
-                <a href="/editor/new" className="text-primary underline hover:no-underline">
-                  Cadastre um logo em Dados Institucionais
-                </a>
-              </AlertDescription>
-            </Alert>
-          )}
-        </TabsContent>
+                  </CardContent>
+                </Card>
+                {normalizedValue.mode === 'company' && (
+                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <AlertDescription className="text-green-800 dark:text-green-200">
+                      ✅ Usando logo da empresa
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            ) : (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Nenhum logo cadastrado no perfil da empresa.
+                  <br />
+                  <a href="/editor/new" className="text-primary underline hover:no-underline">
+                    Cadastre um logo em Dados Institucionais
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
       
       {finalSrc && (

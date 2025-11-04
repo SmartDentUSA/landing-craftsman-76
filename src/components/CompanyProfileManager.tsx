@@ -815,6 +815,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   }}
                   placeholder="URL ou faça upload do logo"
                   proportionInfo="Recomendado: imagem quadrada (1:1), mínimo 112x112px"
+                  hideCompanyLogoTab={true}
                 />
               </div>
             </div>
