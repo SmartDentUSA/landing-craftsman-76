@@ -120,34 +120,12 @@ serve(async (req) => {
     }
 
     const currentProduct = await getResponse.json();
-    
-    // 📊 Log estruturado para análise
-    console.log('✅ Produto obtido da LI - Estrutura:', {
-      keys: Object.keys(currentProduct).slice(0, 10),
-      has_nome: !!currentProduct?.nome,
-      has_produto_nome: !!currentProduct?.produto?.nome,
-      has_titulo: !!currentProduct?.titulo,
-      has_name: !!currentProduct?.name,
-      sample: JSON.stringify(currentProduct).substring(0, 500)
-    });
-
-    // 🔄 Fallback inteligente de nome
-    const normalizedName = currentProduct?.nome ?? 
-                          currentProduct?.produto?.nome ?? 
-                          currentProduct?.titulo ?? 
-                          currentProduct?.name;
-    
-    if (!normalizedName) {
-      console.warn('⚠️ Nome não encontrado em nenhum campo conhecido, prosseguindo sem nome');
-    } else {
-      console.log('✅ Nome identificado:', normalizedName);
-    }
+    console.log('✅ Produto atual obtido, preparando atualização...');
 
     // 2. Mesclar HTML atualizado com dados existentes
     const updatePayload = {
       ...currentProduct,
       descricao_completa: htmlContent,
-      ...(normalizedName ? { nome: normalizedName } : {}),
     };
 
     // 3. Se tiver categoria no banco, usa ela (prioridade) - FORMATO: ARRAY de URIs
