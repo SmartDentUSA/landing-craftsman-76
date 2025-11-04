@@ -1058,7 +1058,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 
   // ✅ Cards Empilhados (sem CSS Grid, inline styles)
   html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">📦 Recursos e Informações</h2>
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">Recursos e Informações</h2>
 <div style="margin: 20px 0;">
   <!-- Card de Aplicações -->
   <div style="
@@ -1070,7 +1070,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border-left: 3px solid #EE7A3E;
   ">
-    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 700; letter-spacing: -0.3px;">📋 Aplicações</h3>
+    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 700; letter-spacing: -0.3px;">Aplicações</h3>
     <p style="margin: 0; line-height: 1.7; color: #333;">${
       product.applications 
         ? product.applications 
@@ -1088,7 +1088,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border-left: 3px solid #EE7A3E;
   ">
-    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 700; letter-spacing: -0.3px;">📦 Embalagem</h3>
+    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 700; letter-spacing: -0.3px;">Embalagem</h3>
     ${buildPackagingInfo(product)}
   </div>
 </div>`;
@@ -1098,7 +1098,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     html += `
 <div style="margin: 25px 0; padding: 20px; background: #f8fafc; border-left: 4px solid #EE7A3E; border-radius: 8px;">
   <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 0; margin-bottom: 15px;">
-    🎨 Variações Disponíveis
+    Variações Disponíveis
   </h2>
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">`;
     
@@ -1148,7 +1148,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
       .join(' | ');
     
     html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">Perguntas Frequentes</h2>`;
     faq.forEach(item => {
       // Substituir placeholder "Produto sem nome" pelo nome real do produto
       const cleanQuestion = item.question.replace(/produto sem nome/gi, product.name);
@@ -1373,7 +1373,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   html += `
 <div style="margin: 30px 0; padding: 25px; background: #f8fafc; border-left: 4px solid #EE7A3E; border-radius: 8px;">
   <h3 style="color: #3E4B5E; margin-top: 0; font-size: 1.3em; font-weight: 700;">
-    🔍 Procurando <strong style="color: #3E4B5E;">${primaryKeyword}</strong>?
+    Garanta agora o seu <strong style="color: #3E4B5E;">${primaryKeyword}</strong>
   </h3>
   <p style="color: #555; line-height: 1.7; margin: 15px 0;">
     ${secondaryKeyword ? `Explore nossas opções de <strong>${secondaryKeyword}</strong> e ` : ''}Descubra por que <a href="${ctaUrl}" style="color: #EE7A3E; text-decoration: underline; font-weight: 600;">${product.name}</a> é a escolha ideal para seu consultório. 
