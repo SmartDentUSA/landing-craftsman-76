@@ -463,6 +463,58 @@ function getSpinStylesCSS(): string {
     color: #3E4B5E;
     font-weight: 600;
   }
+  
+  /* 📱 Responsividade Mobile */
+  @media (max-width: 768px) {
+    .spin-ecom {
+      padding: 8px !important;
+    }
+    
+    .spin-ecom h1 {
+      font-size: 1.5em !important;
+      letter-spacing: -0.5px !important;
+      margin-bottom: 1rem !important;
+    }
+    
+    .spin-ecom h2 {
+      font-size: 1.25em !important;
+      margin-top: 1.5rem !important;
+    }
+    
+    .spin-ecom h3 {
+      font-size: 1.1em !important;
+      margin-top: 1rem !important;
+    }
+    
+    .spin-ecom table th,
+    .spin-ecom table td {
+      padding: 10px 8px !important;
+      font-size: 14px !important;
+    }
+    
+    .spin-ecom .tech-table th {
+      padding: 12px 8px !important;
+      font-size: 14px !important;
+    }
+    
+    .spin-ecom .tech-table td {
+      padding: 10px 8px !important;
+      font-size: 13px !important;
+    }
+    
+    .spin-ecom .panel {
+      padding: 12px !important;
+      margin: 0.75rem 0 !important;
+    }
+    
+    .spin-ecom ul {
+      padding-left: 1.2rem !important;
+    }
+    
+    .spin-ecom p {
+      font-size: 15px !important;
+    }
+  }
 </style>`;
 }
 
