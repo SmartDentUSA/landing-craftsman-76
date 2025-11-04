@@ -15,6 +15,7 @@ interface GenerateEcommerceRequest {
     includeVideoCollections: boolean;
     faqLimit: number;
     regenerateBenefits: boolean;
+    forceSpinStyles?: boolean;
   };
 }
 
@@ -283,6 +284,106 @@ function isURL(value: string): boolean {
 function isPreformattedHTML(html: string): boolean {
   if (!html) return false;
   return /<(section|html|body)\b/i.test(html);
+}
+
+/**
+ * 🎨 SPIN Design System CSS - Injetado no fragmento HTML
+ */
+function getSpinStylesCSS(): string {
+  return `<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  
+  .spin-ecom {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #333333;
+    line-height: 1.6;
+  }
+  
+  .spin-ecom h1 {
+    color: #3E4B5E;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .spin-ecom h2 {
+    color: #3E4B5E;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+  
+  .spin-ecom h3,
+  .spin-ecom h4 {
+    color: #3E4B5E;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .spin-ecom a {
+    color: #EE7A3E;
+    text-decoration: none;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  
+  .spin-ecom a:hover {
+    opacity: 0.8;
+  }
+  
+  .spin-ecom .badge {
+    background: #EE7A3E;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.85em;
+    font-weight: 600;
+  }
+  
+  .spin-ecom .panel {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 1rem 0;
+  }
+  
+  .spin-ecom table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+  
+  .spin-ecom table th {
+    background: #3E4B5E;
+    color: white;
+    font-weight: 600;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .spin-ecom table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .spin-ecom .check {
+    color: #EE7A3E;
+    font-weight: 700;
+  }
+  
+  .spin-ecom ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+  }
+  
+  .spin-ecom li {
+    margin: 0.5rem 0;
+  }
+</style>`;
 }
 
 function buildPackagingInfo(product: any): string {
@@ -578,12 +679,18 @@ function buildSEOHead(product: any): string {
 function buildEcommerceHTML(product: any, benefits: string[], options: any, company: any): string {
   const desc = product.description || '';
   
-  // ✅ DETECÇÃO: Se HTML já está completo e validado, preservar EXATAMENTE como está
-  if (isPreformattedHTML(desc)) {
-    console.log('🧩 HTML pré-formatado detectado — preservando versão validada');
+  // ✅ DETECÇÃO: Se HTML já está completo e validado, preservar EXATAMENTE como está (com bypass opcional)
+  if (isPreformattedHTML(desc) && !options.forceSpinStyles) {
+    console.log('📄 HTML pré-formatado detectado — preservando versão original');
     console.log('📏 Tamanho do HTML preservado:', desc.length, 'caracteres');
     return desc;
   }
+  
+  if (options.forceSpinStyles) {
+    console.log('⚡ Forçando layout SPIN (override de pré-formatado ativo)');
+  }
+  
+  console.log('🎨 Aplicando SPIN Design System ao HTML E-commerce');
   
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
   let enrichedDescription = desc;
@@ -630,12 +737,12 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   const hasVideos = options.includeVideoCollections && Object.values(videoCollections).some((v: any) => v.length > 0);
   
-  // ✅ Iniciar apenas com fragmento HTML (sem DOCTYPE/head/body)
-  let html = '';
+  // ✅ Iniciar com SPIN Design System CSS
+  let html = getSpinStylesCSS();
   
-  // ✅ Conteúdo principal em <section>
+  // ✅ Conteúdo principal em <section> com classe SPIN
   html += `
-<section style="font-family: 'Inter', sans-serif; color: #333333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">`;
+<section class="spin-ecom" style="max-width: 1200px; margin: 0 auto; padding: 20px;">`;
 
   // ✅ FASE 2: Adicionar header da empresa ANTES do conteúdo
   html += buildCompanyHeader(company);
@@ -924,5 +1031,6 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 
 </section>`;
 
+  console.log('✅ SPIN Design System aplicado ao HTML final');
   return html;
 }

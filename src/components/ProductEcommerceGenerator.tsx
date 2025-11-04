@@ -36,7 +36,8 @@ export function ProductEcommerceGenerator({
     includeFAQ: true,
     includeVideoCollections: true,
     faqLimit: 8,
-    regenerateBenefits: false
+    regenerateBenefits: false,
+    forceSpinStyles: false
   });
   const [isSendingToLI, setIsSendingToLI] = useState(false);
   const { toast } = useToast();
@@ -277,6 +278,22 @@ export function ProductEcommerceGenerator({
                 onCheckedChange={(checked) => setOptions(prev => ({ ...prev, regenerateBenefits: checked }))}
               />
             </div>
+
+            <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border border-[#EE7A3E]/20">
+              <Switch
+                id="forceSpin"
+                checked={options.forceSpinStyles}
+                onCheckedChange={(checked) => setOptions(prev => ({ ...prev, forceSpinStyles: checked }))}
+              />
+              <div className="flex-1">
+                <Label htmlFor="forceSpin" className="font-semibold text-[#3E4B5E]">
+                  Forçar novo layout SPIN
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Aplica o design system SPIN mesmo se houver HTML pré-formatado
+                </p>
+              </div>
+            </div>
           </div>
 
           <Button onClick={handleGenerate} className="w-full">
@@ -308,19 +325,26 @@ export function ProductEcommerceGenerator({
         <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <FileCode className="h-5 w-5" />
-                HTML E-commerce Gerado
-              </CardTitle>
-              <div className="flex gap-2 text-sm text-muted-foreground">
-                {metadata?.generated_at && (
-                  <Badge variant="outline">Gerado: {new Date(metadata.generated_at).toLocaleString('pt-BR')}</Badge>
-                )}
-                {metadata?.last_edited_at && (
-                  <Badge variant="secondary">Editado: {new Date(metadata.last_edited_at).toLocaleString('pt-BR')}</Badge>
-                )}
+            <div className="flex items-center gap-3">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2">
+                  <FileCode className="h-5 w-5" />
+                  HTML E-commerce Gerado
+                </CardTitle>
+                <div className="flex gap-2 text-sm text-muted-foreground">
+                  {metadata?.generated_at && (
+                    <Badge variant="outline">Gerado: {new Date(metadata.generated_at).toLocaleString('pt-BR')}</Badge>
+                  )}
+                  {metadata?.last_edited_at && (
+                    <Badge variant="secondary">Editado: {new Date(metadata.last_edited_at).toLocaleString('pt-BR')}</Badge>
+                  )}
+                </div>
               </div>
+              {options.forceSpinStyles && (
+                <Badge className="bg-[#EE7A3E] hover:bg-[#EE7A3E]/90 text-white font-semibold">
+                  🎨 SPIN Design System
+                </Badge>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleCopyHtml}>
