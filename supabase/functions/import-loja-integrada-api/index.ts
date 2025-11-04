@@ -945,6 +945,25 @@ serve(async (req) => {
         }
       }
       
+      // ✅ GARANTIR VARIAÇÕES: Se não há variações no produto (mesmo sendo pai), buscar explicitamente
+      if ((!productToMap.variacoes || productToMap.variacoes.length === 0) && productToMap.id) {
+        console.log(`🔍 No variations found, fetching from dedicated endpoint: /produto/${productToMap.id}/variacao`);
+        const variationsResult = await fetchFromLojaIntegradaAPI(
+          lojaIntegradaApiKey,
+          lojaIntegradaAppKey,
+          `/produto/${productToMap.id}/variacao`
+        );
+        
+        if (variationsResult.success && variationsResult.data) {
+          // O endpoint retorna { meta: {...}, objects: [...] }
+          const variations = variationsResult.data.objects || [];
+          productToMap.variacoes = variations;
+          console.log(`✅ Loaded ${variations.length} variations from /produto/${productToMap.id}/variacao (parent fetch)`);
+        } else {
+          console.warn(`⚠️ Failed to fetch variations from dedicated endpoint`);
+        }
+      }
+      
       finalData = await mapAPIProductToRepository(productToMap, lojaIntegradaApiKey, lojaIntegradaAppKey);
       
       // Save complete original_data with parent info if variation

@@ -818,14 +818,14 @@ function parseRichDescription(text: string): string {
   
   let html = '';
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  let inList = false;
   let bulletBuffer: string[] = [];
   
+  // ✅ SPIN IDÊNTICO: Flush bullets com tipografia exata do SPIN
   const flushBullets = () => {
     if (bulletBuffer.length > 0) {
-      html += '<ul style="list-style: none; padding: 0; margin: 15px 0;">';
+      html += '<ul style="list-style: none; padding: 0; margin: 12px 0;">';
       bulletBuffer.forEach(content => {
-        html += `<li style="padding: 8px 0 8px 30px; position: relative; line-height: 1.6;"><span style="color: #EE7A3E; font-weight: 700; position: absolute; left: 0; font-size: 1.1em;">✓</span>${content}</li>`;
+        html += `<li style="padding: 8px 0 8px 24px; position: relative; line-height: 1.6; font-family: Inter, system-ui, sans-serif;"><span style="color: #EE7A3E; font-weight: 700; position: absolute; left: 0;">✓</span>${content}</li>`;
       });
       html += '</ul>';
       bulletBuffer = [];
@@ -845,25 +845,15 @@ function parseRichDescription(text: string): string {
     
     // Detectar títulos em MAIÚSCULAS
     if (line === line.toUpperCase() && line.length > 5 && !/^[0-9️⃣⏱🦷]/.test(line)) {
-      html += `<h3 style="color: #3E4B5E; font-size: 1.25em; font-weight: 700; margin: 20px 0 10px 0; letter-spacing: -0.3px;">${line}</h3>`;
+      html += `<h3 style="color: #3E4B5E; font-size: 1.25em; font-weight: 700; margin: 16px 0 12px 0; letter-spacing: -0.3px; font-family: Inter, system-ui, sans-serif;">${line}</h3>`;
       continue;
     }
     
-    // Detectar listas numeradas com emojis
+    // Detectar listas numeradas com emojis (transformar em bullets também)
     if (/^[0-9️⃣🔟]+\s*[–—-]\s*/.test(line)) {
-      if (!inList) {
-        html += '<ul style="list-style: none; padding: 0; margin: 15px 0;">';
-        inList = true;
-      }
       const content = line.replace(/^[0-9️⃣🔟]+\s*[–—-]\s*/, '');
-      html += `<li style="padding: 8px 0 8px 30px; position: relative; line-height: 1.6;"><span style="color: #EE7A3E; font-weight: 700; position: absolute; left: 0; font-size: 1.1em;">✓</span>${content}</li>`;
+      bulletBuffer.push(content);
       continue;
-    }
-    
-    // Fechar lista numerada se aberta
-    if (inList) {
-      html += '</ul>';
-      inList = false;
     }
     
     // Detectar tempo de impressão
@@ -873,16 +863,12 @@ function parseRichDescription(text: string): string {
       continue;
     }
     
-    // Parágrafos normais
-    html += `<p style="margin: 12px 0; line-height: 1.7; color: #333;">${line}</p>`;
+    // ✅ SPIN IDÊNTICO: Parágrafos com margem menor e line-height preciso
+    html += `<p style="margin: 10px 0; line-height: 1.6; color: #333; font-family: Inter, system-ui, sans-serif;">${line}</p>`;
   }
   
   // Esvaziar buffer final
   flushBullets();
-  
-  if (inList) {
-    html += '</ul>';
-  }
   
   return html;
 }
