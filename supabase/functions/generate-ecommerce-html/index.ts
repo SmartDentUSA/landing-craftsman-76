@@ -709,6 +709,13 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     .replace(/\n{3,}/g, '\n\n')  // Máximo 2 quebras consecutivas
     .trim();
   
+  // 🧹 Remover seção duplicada de "Características Técnicas" do description
+  enrichedDescription = enrichedDescription.replace(
+    /<hr[^>]*>\s*<h3[^>]*>\s*<strong[^>]*>Características Técnicas<\/strong>\s*<\/h3>[\s\S]*?(<hr[^>]*>|$)/gi,
+    ''
+  );
+  console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
+  
   // Adicionar keywords de mercado contextualmente (primeiras 5)
   if (product.market_keywords && Array.isArray(product.market_keywords) && product.market_keywords.length > 0) {
     const keywordsText = product.market_keywords.slice(0, 5).join(', ');
