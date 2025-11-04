@@ -24,7 +24,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { 
+    let { 
       url, 
       extract_individual_reviews = false,
       sync_to_company_profile = false,
@@ -33,8 +33,26 @@ serve(async (req) => {
     
     console.log('Extracting Google Reviews from URL:', url);
 
-    if (!url || !isValidGoogleUrl(url)) {
-      throw new Error('URL inválida. Use um link do Google Maps ou Google My Business.');
+    // Validação e normalização de URL/Place ID/CID
+    if (!url || typeof url !== 'string' || url.trim().length === 0) {
+      throw new Error('URL inválida. Forneça uma URL do Google Maps, Place ID ou CID.');
+    }
+
+    // Detectar e converter Place ID direto (começa com ChIJ)
+    if (url.match(/^ChIJ[a-zA-Z0-9_-]+$/)) {
+      url = `https://www.google.com/maps/place/?q=place_id:${url}`;
+      console.log(`✅ Place ID detectado, URL construída: ${url}`);
+    }
+
+    // Detectar e converter CID direto (apenas números)
+    if (url.match(/^\d+$/)) {
+      url = `https://www.google.com/maps/?cid=${url}`;
+      console.log(`✅ CID detectado, URL construída: ${url}`);
+    }
+
+    // Validação final da URL
+    if (!isValidGoogleUrl(url)) {
+      throw new Error('URL inválida. Use um link do Google Maps, Place ID (ChIJxxx) ou CID.');
     }
 
     // Get auth header for OAuth credential lookup
@@ -87,6 +105,17 @@ serve(async (req) => {
 
 function isValidGoogleUrl(url: string): boolean {
   try {
+    // Aceitar Place IDs diretos (começam com ChIJ)
+    if (url.match(/^ChIJ[a-zA-Z0-9_-]+$/)) {
+      return true;
+    }
+    
+    // Aceitar CIDs diretos (apenas números)
+    if (url.match(/^\d+$/)) {
+      return true;
+    }
+    
+    // Validar URLs completas do Google
     const urlObj = new URL(url);
     return urlObj.hostname.includes('google.com') || 
            urlObj.hostname.includes('maps.google.com') ||
@@ -673,11 +702,28 @@ async function extractAndSaveReviews(
     if (clientId && clientSecret && refreshToken) {
       try {
         console.log('🥇 Attempting Business Profile API extraction...');
+        
+        // Validar se o token pode ser trocado antes de tentar usar a API
+        console.log('🔐 Exchanging refresh token for access token...');
         const accessToken = await getGoogleBusinessAccessToken(clientId, clientSecret, refreshToken);
+        
+        if (!accessToken || accessToken.trim() === '') {
+          console.warn('⚠️ No valid OAuth token obtained, falling back to HTML scraping');
+          throw new Error('OAuth_NOT_CONFIGURED');
+        }
+        
+        console.log('✅ Access token obtained, calling Business API...');
         reviews = await extractReviewsFromBusinessAPI(place_id, accessToken);
-        console.log('✅ Business API extraction successful');
+        console.log(`✅ Business API extraction successful: ${reviews.length} reviews found`);
       } catch (error) {
-        console.log('⚠️ Business API failed, trying fallback methods...', error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error('❌ Business API failed:', errorMsg);
+        console.log('🔄 Falling back to HTML scraping...');
+        
+        // Se for erro de OAuth, logar detalhes
+        if (errorMsg.includes('invalid_grant') || errorMsg.includes('deleted_client')) {
+          console.error('⚠️ OAuth credentials may be expired or invalid. Please re-authenticate.');
+        }
       }
     } else {
       console.log('ℹ️ Google Business OAuth credentials not configured, using web scraping');
