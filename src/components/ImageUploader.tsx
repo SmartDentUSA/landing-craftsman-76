@@ -46,11 +46,22 @@ export const ImageUploader = ({
     ? { mode: 'url', src: value, alt: '', scale: 1.0 }
     : value || { mode: 'url', src: '', alt: '', scale: 1.0 };
 
+  const [activeTab, setActiveTab] = useState<'url' | 'supabase' | 'company'>(() => {
+    const initial = normalizedValue.mode;
+    return hideCompanyLogoTab && initial === 'company' ? 'url' : initial;
+  });
+
   const finalSrc = normalizedValue.src;
 
   useEffect(() => {
     loadCompanyLogo();
   }, []);
+
+  useEffect(() => {
+    if (hideCompanyLogoTab && activeTab === 'company') {
+      setActiveTab('url');
+    }
+  }, [hideCompanyLogoTab, activeTab]);
 
   const loadCompanyLogo = async () => {
     setIsLoadingCompanyLogo(true);
@@ -197,8 +208,10 @@ export const ImageUploader = ({
         </div>
       )}
       
-      <Tabs value={hideCompanyLogoTab && normalizedValue.mode === 'company' ? 'url' : normalizedValue.mode} onValueChange={(value) => {
-        updateImageData({ mode: value as 'url' | 'supabase' | 'company' });
+      <Tabs value={activeTab} onValueChange={(value) => {
+        const newTab = value as 'url' | 'supabase' | 'company';
+        setActiveTab(newTab);
+        updateImageData({ mode: newTab });
       }}>
         <TabsList className={`grid w-full ${hideCompanyLogoTab ? 'grid-cols-2' : 'grid-cols-3'}`}>
           <TabsTrigger value="url">URL Externa</TabsTrigger>
@@ -232,25 +245,36 @@ export const ImageUploader = ({
           />
 
           {!normalizedValue.src ? (
-            <Card 
-              className="border-2 border-dashed cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                    <p className="text-sm text-muted-foreground">Enviando para Supabase Storage...</p>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Clique para fazer upload</p>
-                    <p className="text-xs text-muted-foreground mt-1">Máx: 10MB</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <>
+              <Card 
+                className="border-2 border-dashed cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">Enviando para Supabase Storage...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">Clique para fazer upload</p>
+                      <p className="text-xs text-muted-foreground mt-1">Máx: 10MB</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="w-full"
+                variant="outline"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Selecionar arquivo
+              </Button>
+            </>
           ) : (
             <div className="space-y-3">
               <Card>
