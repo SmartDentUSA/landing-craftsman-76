@@ -916,7 +916,7 @@ function parseRichDescription(text: string): string {
     }
     
     // ✅ SPIN IDÊNTICO: Parágrafos com margem menor e line-height preciso
-    html += `<p style="margin: 10px 0; line-height: 1.6; color: #333; font-family: Inter, system-ui, sans-serif;">${line}</p>`;
+    html += `<p style="margin: 0 0 20px 0; line-height: 1.8; color: #333; font-family: Inter, system-ui, sans-serif;">${line}</p>`;
   }
   
   // Esvaziar buffer final
