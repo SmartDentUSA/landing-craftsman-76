@@ -234,6 +234,7 @@ export type Database = {
           founded_year: number | null
           id: string
           instagram_profile: string | null
+          instagram_verified: boolean | null
           institutional_links: Json | null
           location: string | null
           main_products_services: string | null
@@ -258,6 +259,7 @@ export type Database = {
           working_methodology: string | null
           youtube_channel: string | null
           youtube_company_footer: string | null
+          youtube_verified: boolean | null
         }
         Insert: {
           address_number?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           founded_year?: number | null
           id?: string
           instagram_profile?: string | null
+          instagram_verified?: boolean | null
           institutional_links?: Json | null
           location?: string | null
           main_products_services?: string | null
@@ -304,6 +307,7 @@ export type Database = {
           working_methodology?: string | null
           youtube_channel?: string | null
           youtube_company_footer?: string | null
+          youtube_verified?: boolean | null
         }
         Update: {
           address_number?: string | null
@@ -326,6 +330,7 @@ export type Database = {
           founded_year?: number | null
           id?: string
           instagram_profile?: string | null
+          instagram_verified?: boolean | null
           institutional_links?: Json | null
           location?: string | null
           main_products_services?: string | null
@@ -350,6 +355,7 @@ export type Database = {
           working_methodology?: string | null
           youtube_channel?: string | null
           youtube_company_footer?: string | null
+          youtube_verified?: boolean | null
         }
         Relationships: []
       }

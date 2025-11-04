@@ -5,10 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2 } from "lucide-react";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
@@ -36,6 +37,8 @@ interface CompanyProfile {
   contact_phone?: string;
   youtube_channel?: string;
   instagram_profile?: string;
+  youtube_verified?: boolean;
+  instagram_verified?: boolean;
   
   // ✨ NOVOS CAMPOS DE ENDEREÇO ESTRUTURADO
   country?: string;
@@ -844,32 +847,65 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="youtube_channel" className="flex items-center gap-2">
-                  <Youtube className="h-4 w-4" />
-                  Canal do YouTube
-                </Label>
-                <Input
-                  id="youtube_channel"
-                  value={profile.youtube_channel || ''}
-                  onChange={(e) => setProfile(prev => ({...prev, youtube_channel: e.target.value}))}
-                  placeholder="https://youtube.com/@seucanal"
-                />
-              </div>
-              <div>
-                <Label htmlFor="instagram_profile" className="flex items-center gap-2">
-                  <Instagram className="h-4 w-4" />
-                  Perfil do Instagram
-                </Label>
-                <Input
-                  id="instagram_profile"
-                  value={profile.instagram_profile || ''}
-                  onChange={(e) => setProfile(prev => ({...prev, instagram_profile: e.target.value}))}
-                  placeholder="https://instagram.com/seuperfil"
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <Label htmlFor="youtube_channel" className="flex items-center gap-2">
+                      <Youtube className="h-4 w-4" />
+                      Canal do YouTube
+                    </Label>
+                    <Input
+                      id="youtube_channel"
+                      value={profile.youtube_channel || ''}
+                      onChange={(e) => setProfile(prev => ({...prev, youtube_channel: e.target.value}))}
+                      placeholder="https://youtube.com/@seucanal"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="youtube_verified"
+                        checked={profile.youtube_verified || false}
+                        onCheckedChange={(checked) => 
+                          setProfile(prev => ({...prev, youtube_verified: checked as boolean}))
+                        }
+                      />
+                      <Label 
+                        htmlFor="youtube_verified" 
+                        className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                        Canal Verificado
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="instagram_profile" className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4" />
+                      Perfil do Instagram
+                    </Label>
+                    <Input
+                      id="instagram_profile"
+                      value={profile.instagram_profile || ''}
+                      onChange={(e) => setProfile(prev => ({...prev, instagram_profile: e.target.value}))}
+                      placeholder="https://instagram.com/seuperfil"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="instagram_verified"
+                        checked={profile.instagram_verified || false}
+                        onCheckedChange={(checked) => 
+                          setProfile(prev => ({...prev, instagram_verified: checked as boolean}))
+                        }
+                      />
+                      <Label 
+                        htmlFor="instagram_verified" 
+                        className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                        Perfil Verificado
+                      </Label>
+                    </div>
+                  </div>
+                </div>
           </TabsContent>
 
           <TabsContent value="videos" className="space-y-4">
