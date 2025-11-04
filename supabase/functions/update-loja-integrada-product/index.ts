@@ -120,7 +120,17 @@ serve(async (req) => {
     }
 
     const currentProduct = await getResponse.json();
-    console.log('✅ Produto atual obtido, preparando atualização...');
+    
+    // ✅ VALIDAÇÃO: API exige nome obrigatório
+    if (!currentProduct.nome) {
+      console.error('❌ Produto sem nome na Loja Integrada');
+      return new Response(
+        JSON.stringify({ success: false, message: "Produto não possui nome definido na Loja Integrada" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log('✅ Produto atual obtido:', currentProduct.nome);
 
     // 2. Mesclar HTML atualizado com dados existentes
     const updatePayload = {
@@ -139,6 +149,14 @@ serve(async (req) => {
     delete updatePayload.id;
     delete updatePayload.created_at;
     delete updatePayload.updated_at;
+    
+    // ✅ DEBUG: Mostrar exatamente o que vai ser enviado
+    console.log('📦 Campos principais do payload:', {
+      nome: updatePayload.nome,
+      disponibilidade: updatePayload.disponibilidade,
+      categoria: updatePayload.categorias,
+      htmlSize: updatePayload.descricao_completa?.length
+    });
 
     // Enviar PUT com payload completo
     console.log('📤 Enviando PUT para Loja Integrada...');
@@ -175,7 +193,15 @@ serve(async (req) => {
           error = { raw_response: errorText };
         }
         console.error(`❌ Erro HTTP ${response.status}:`, error);
-        break;
+        
+        // ✅ RETURN imediato para evitar continuar processamento
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: error.detail || error.error_message || error.message || error.raw_response || `Erro ${response.status}`,
+          }),
+          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
