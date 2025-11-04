@@ -15,6 +15,7 @@ import { useCompanyVideos } from "@/hooks/useCompanyVideos";
 import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
 import { TrackingSEOTab } from "./TrackingSEOTab";
 import { InternationalPartnershipsManager } from "./InternationalPartnershipsManager";
+import { ImageUploader } from "@/components/ImageUploader";
 
 interface Video {
   url: string;
@@ -97,6 +98,7 @@ interface CompanyProfile {
   founded_year?: number;
   team_size?: string;
   company_logo_url?: string;
+  company_logo_supabase_path?: string | null;
   youtube_company_footer?: string;
 }
 
@@ -240,6 +242,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           founded_year: (data as any).founded_year || undefined,
           team_size: (data as any).team_size || '',
           company_logo_url: (data as any).company_logo_url || '',
+          company_logo_supabase_path: (data as any).company_logo_supabase_path || null,
           youtube_company_footer: (data as any).youtube_company_footer || ''
         });
       } else {
@@ -317,6 +320,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           founded_year: profile.founded_year,
           team_size: profile.team_size,
           company_logo_url: profile.company_logo_url,
+          company_logo_supabase_path: profile.company_logo_supabase_path || null,
           youtube_company_footer: profile.youtube_company_footer,
           updated_at: new Date().toISOString()
         };
@@ -790,20 +794,28 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               </div>
 
               <div>
-                <Label htmlFor="company_logo_url">
-                  URL do Logo da Empresa
+                <Label>
+                  Logo da Empresa
                   <span className="text-xs text-red-500 ml-2">⭐ CRÍTICO Schema.org</span>
                 </Label>
-                <Input
-                  id="company_logo_url"
-                  type="url"
-                  value={profile.company_logo_url || ''}
-                  onChange={(e) => setProfile(prev => ({...prev, company_logo_url: e.target.value}))}
-                  placeholder="https://seusite.com/logo.png"
+                <ImageUploader
+                  value={{
+                    mode: profile.company_logo_supabase_path ? 'supabase' : 'url',
+                    src: profile.company_logo_url || '',
+                    supabase_path: profile.company_logo_supabase_path,
+                    alt: 'Logo da empresa',
+                    scale: 1.0
+                  }}
+                  onChange={(imageData) => {
+                    setProfile(prev => ({
+                      ...prev,
+                      company_logo_url: imageData.src,
+                      company_logo_supabase_path: imageData.supabase_path || null
+                    }));
+                  }}
+                  placeholder="URL ou faça upload do logo"
+                  proportionInfo="Recomendado: imagem quadrada (1:1), mínimo 112x112px"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recomendado: imagem quadrada (1:1), mínimo 112x112px, formato PNG ou JPG
-                </p>
               </div>
             </div>
           </TabsContent>
