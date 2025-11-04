@@ -250,6 +250,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   // Caption states
   const [videoCaptions, setVideoCaptions] = useState<any>({});
   
+  // ✅ Flag para evitar resetar vídeos após salvamento
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   const { toast } = useToast();
 
   // Função para carregar configurações padrão de categoria
@@ -342,13 +345,18 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       setMarketKeywords(product.market_keywords || []);
       setSearchIntentKeywords(product.search_intent_keywords || []);
       setBotTriggerWords(product.bot_trigger_words || []);
-      setInstagramVideos(product.instagram_videos || []);
-      setYoutubeVideos(product.youtube_videos || []);
-      setTestimonialVideos(product.testimonial_videos || []);
-      setTechnicalVideos(product.technical_videos || []);
-      setTiktokVideos(product.tiktok_videos || []);
-      setTutorials(product.tutorial_resources?.tutorials || []);
-      setVideoCaptions(product.video_captions || {});
+      
+      // ✅ Só inicializa vídeos na primeira vez (evita resetar após salvamento)
+      if (!isInitialized) {
+        setInstagramVideos(product.instagram_videos || []);
+        setYoutubeVideos(product.youtube_videos || []);
+        setTestimonialVideos(product.testimonial_videos || []);
+        setTechnicalVideos(product.technical_videos || []);
+        setTiktokVideos(product.tiktok_videos || []);
+        setTutorials(product.tutorial_resources?.tutorials || []);
+        setVideoCaptions(product.video_captions || {});
+        setIsInitialized(true); // Marca como inicializado
+      }
       setPromoPrice((product as any).promo_price);
       
       // Physical specifications
@@ -424,7 +432,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       // Reset images gallery
       setImagesGallery([]);
     }
-  }, [product]);
+  }, [product, isInitialized]);
 
   const handleImageUploaded = (imageUrl: string) => {
     setFormData(prev => ({ ...prev, image_url: imageUrl }));
@@ -1309,8 +1317,16 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     }
   };
 
+  // ✅ Wrapper para resetar flag de inicialização ao fechar modal
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      setIsInitialized(false); // Reseta para próxima abertura
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between">
