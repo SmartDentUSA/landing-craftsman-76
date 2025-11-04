@@ -955,6 +955,17 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     .replace(/Certificação & Conformidade[^\n<]*(\n|$)/gi, '')
     .replace(/Graças à sua composição[^\n<]*(\n|$)/gi, '');
   
+  // 🧹 Remover seção duplicada de "Principais Benefícios" do description
+  enrichedDescription = enrichedDescription.replace(
+    /(?:💡\s*)?(?:principais\s+)?benef[íi]cios[:\s]*\n(?:[-•✓]\s*[^\n]+\n?)+/gi,
+    ''
+  );
+  
+  // 🧹 Remover títulos de benefícios isolados
+  enrichedDescription = enrichedDescription
+    .replace(/💡[^\n<]*benef[íi]cios[^\n<]*(\n|$)/gi, '')
+    .replace(/principais\s+benef[íi]cios[^\n<]*(\n|$)/gi, '');
+  
   console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
   
   // Adicionar keywords de mercado contextualmente (primeiras 5)
@@ -1019,7 +1030,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   if (options.includeBenefits && benefits.length > 0) {
     html += `
 <div style="background-color: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
-  <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; margin-top: 0;">💡 Principais Benefícios</h2>
+  <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; margin-top: 0;">Principais Benefícios</h2>
   <ul style="list-style: none; padding: 0; margin: 0;">
     ${benefits.map(b => `<li style="padding: 8px 0 8px 24px; position: relative;"><span style="color: #EE7A3E; font-weight: bold; position: absolute; left: 0;">✓</span>${b}</li>`).join('\n    ')}
   </ul>
@@ -1029,7 +1040,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   // ✅ Especificações Técnicas (SPIN Landing Page Style)
   if (technicalSpecs.length > 0) {
     html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">Especificações Técnicas</h2>
 <div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
   <table style="width:100%; border-collapse:separate; border-spacing:0;">
     <thead>
