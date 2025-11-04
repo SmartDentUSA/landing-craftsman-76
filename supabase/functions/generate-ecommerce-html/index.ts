@@ -968,13 +968,9 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
   
-  // ✅ Enriquecer descrição com Sales Pitch e Aplicações (sem keywords explícitas)
+  // ✅ Enriquecer descrição com Sales Pitch (sem keywords explícitas ou aplicações duplicadas)
   if (product.sales_pitch && !enrichedDescription.includes(product.sales_pitch)) {
     enrichedDescription += `\n\n🎯 **Por que escolher este produto?**\n${product.sales_pitch}`;
-  }
-
-  if (product.applications && !enrichedDescription.includes(product.applications)) {
-    enrichedDescription += `\n\n🔧 **Aplicações do Produto**\n${product.applications}`;
   }
 
   const faq = options.includeFAQ && product.faq ? product.faq.slice(0, options.faqLimit) : [];
