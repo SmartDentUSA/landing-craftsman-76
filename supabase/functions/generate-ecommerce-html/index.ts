@@ -860,13 +860,23 @@ function cleanGoogleDocsHTML(html: string): string {
 }
 
 /**
- * 🔍 Parse inteligente do description com formatação estruturada
+ * 🔍 Parse inteligente do description com formatação estruturada e detecção automática de parágrafos
  */
 function parseRichDescription(text: string): string {
   if (!text) return '';
   
   // ✅ DUPLA PROTEÇÃO: Remover tags HTML antes do split
   text = text.replace(/<[^>]+>/g, '');
+  
+  // ✅ DETECÇÃO INTELIGENTE: Inserir quebras de parágrafo automaticamente
+  // Detectar padrões como: emoji + título, final de frase longa + início maiúsculo
+  text = text
+    // Quebra antes de emoji seguido de texto em maiúscula (ex: 🔬 O Poder)
+    .replace(/([.!?])\s*([🔬🛡️🔑💎✨🌟⭐🎯📊🏆💼🔥⚡🎨🌈]+)\s*([A-Z])/g, '$1\n\n$2 $3')
+    // Quebra antes de títulos óbvios que começam com maiúscula após ponto
+    .replace(/([.!?])\s+([A-Z][a-zà-ú]{2,}\s+[A-Z])/g, '$1\n\n$2')
+    // Quebra antes de frases que começam com palavras contextuais
+    .replace(/([.!?])\s+(A |O |Com |Para |Além |Esta |Este |Estes |Estas |Nossa |Nosso )/g, '$1\n\n$2');
   
   let html = '';
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
