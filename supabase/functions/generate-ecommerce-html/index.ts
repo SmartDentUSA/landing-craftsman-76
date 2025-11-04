@@ -801,19 +801,37 @@ function parseRichDescription(text: string): string {
   let html = '';
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   let inList = false;
+  let bulletBuffer: string[] = [];
+  
+  const flushBullets = () => {
+    if (bulletBuffer.length > 0) {
+      html += '<ul style="list-style: none; padding: 0; margin: 15px 0;">';
+      bulletBuffer.forEach(content => {
+        html += `<li style="padding: 8px 0 8px 30px; position: relative; line-height: 1.6;"><span style="color: #EE7A3E; font-weight: 700; position: absolute; left: 0; font-size: 1.1em;">✓</span>${content}</li>`;
+      });
+      html += '</ul>';
+      bulletBuffer = [];
+    }
+  };
   
   for (const line of lines) {
-    // Detectar títulos em MAIÚSCULAS (sem emojis no início)
+    // Detectar bullets (• ou -)
+    if (/^[•\-]\s+/.test(line)) {
+      const content = line.replace(/^[•\-]\s+/, '');
+      bulletBuffer.push(content);
+      continue;
+    }
+    
+    // Se não é bullet, esvaziar buffer
+    flushBullets();
+    
+    // Detectar títulos em MAIÚSCULAS
     if (line === line.toUpperCase() && line.length > 5 && !/^[0-9️⃣⏱🦷]/.test(line)) {
-      if (inList) {
-        html += '</ul>';
-        inList = false;
-      }
       html += `<h3 style="color: #3E4B5E; font-size: 1.25em; font-weight: 700; margin: 20px 0 10px 0; letter-spacing: -0.3px;">${line}</h3>`;
       continue;
     }
     
-    // Detectar listas numeradas com emojis (1️⃣, 2️⃣, etc.)
+    // Detectar listas numeradas com emojis
     if (/^[0-9️⃣🔟]+\s*[–—-]\s*/.test(line)) {
       if (!inList) {
         html += '<ul style="list-style: none; padding: 0; margin: 15px 0;">';
@@ -824,24 +842,25 @@ function parseRichDescription(text: string): string {
       continue;
     }
     
-    // Detectar tempo de impressão (⏱️🦷)
+    // Fechar lista numerada se aberta
+    if (inList) {
+      html += '</ul>';
+      inList = false;
+    }
+    
+    // Detectar tempo de impressão
     if (/^⏱️🦷/.test(line)) {
-      if (inList) {
-        html += '</ul>';
-        inList = false;
-      }
       const content = line.replace(/^⏱️🦷\s*/, '');
       html += `<div style="background: linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); padding: 12px 16px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #EE7A3E;"><strong style="color: #3E4B5E;">⏱️ ${content}</strong></div>`;
       continue;
     }
     
     // Parágrafos normais
-    if (inList) {
-      html += '</ul>';
-      inList = false;
-    }
     html += `<p style="margin: 12px 0; line-height: 1.7; color: #333;">${line}</p>`;
   }
+  
+  // Esvaziar buffer final
+  flushBullets();
   
   if (inList) {
     html += '</ul>';
@@ -853,12 +872,8 @@ function parseRichDescription(text: string): string {
 function buildEcommerceHTML(product: any, benefits: string[], options: any, company: any): string {
   const desc = product.description || '';
   
-  // ✅ DETECÇÃO: Se HTML já está completo e validado, preservar EXATAMENTE como está (com bypass opcional)
-  if (isPreformattedHTML(desc) && !options.forceSpinStyles) {
-    console.log('📄 HTML pré-formatado detectado — preservando versão original');
-    console.log('📏 Tamanho do HTML preservado:', desc.length, 'caracteres');
-    return desc;
-  }
+  // ✅ SEMPRE REGENERAR (remover bypass de pré-formatado)
+  console.log('🔄 Regenerando HTML com SPIN Design System (bypass desabilitado)');
   
   if (options.forceSpinStyles) {
     console.log('⚡ Forçando layout SPIN (override de pré-formatado ativo)');
@@ -1290,13 +1305,15 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   const firstBenefit = product.benefits?.[0] || 'Qualidade garantida';
   
   // ✅ PRIORIZAR URL DE DESCONTO SE CONFIGURADA
-  const ctaUrl = (product.offer_discount_cta?.visible && product.offer_discount_cta?.url) 
-    ? product.offer_discount_cta.url 
-    : (product.product_url || '#');
-
-  const ctaLabel = (product.offer_discount_cta?.visible && product.offer_discount_cta?.label)
+  // ✅ PRIORIZAR LABEL DE DESCONTO (mesmo se visible=false ou url vazia)
+  const ctaLabel = (product.offer_discount_cta?.label && product.offer_discount_cta.label.trim() !== '')
     ? product.offer_discount_cta.label
     : 'Ver Detalhes e Preços';
+
+  // ✅ URL: usar offer_discount_cta.url se preenchida, senão product_url
+  const ctaUrl = (product.offer_discount_cta?.url && product.offer_discount_cta.url.trim() !== '')
+    ? product.offer_discount_cta.url
+    : (product.product_url || '#');
   
   html += `
 <div style="margin: 30px 0; padding: 25px; background: #f8fafc; border-left: 4px solid #EE7A3E; border-radius: 8px;">
