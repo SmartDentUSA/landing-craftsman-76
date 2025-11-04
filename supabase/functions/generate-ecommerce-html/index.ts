@@ -756,6 +756,64 @@ function buildSEOHead(product: any): string {
 <body>`;
 }
 
+/**
+ * 🔍 Parse inteligente do description com formatação estruturada
+ */
+function parseRichDescription(text: string): string {
+  if (!text) return '';
+  
+  let html = '';
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let inList = false;
+  
+  for (const line of lines) {
+    // Detectar títulos em MAIÚSCULAS (sem emojis no início)
+    if (line === line.toUpperCase() && line.length > 5 && !/^[0-9️⃣⏱🦷]/.test(line)) {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      html += `<h3 style="color: #3E4B5E; font-size: 1.25em; font-weight: 700; margin: 20px 0 10px 0; letter-spacing: -0.3px;">${line}</h3>`;
+      continue;
+    }
+    
+    // Detectar listas numeradas com emojis (1️⃣, 2️⃣, etc.)
+    if (/^[0-9️⃣🔟]+\s*[–—-]\s*/.test(line)) {
+      if (!inList) {
+        html += '<ul style="list-style: none; padding: 0; margin: 15px 0;">';
+        inList = true;
+      }
+      const content = line.replace(/^[0-9️⃣🔟]+\s*[–—-]\s*/, '');
+      html += `<li style="padding: 8px 0 8px 30px; position: relative; line-height: 1.6;"><span style="color: #EE7A3E; font-weight: 700; position: absolute; left: 0; font-size: 1.1em;">✓</span>${content}</li>`;
+      continue;
+    }
+    
+    // Detectar tempo de impressão (⏱️🦷)
+    if (/^⏱️🦷/.test(line)) {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      const content = line.replace(/^⏱️🦷\s*/, '');
+      html += `<div style="background: linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); padding: 12px 16px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #EE7A3E;"><strong style="color: #3E4B5E;">⏱️ ${content}</strong></div>`;
+      continue;
+    }
+    
+    // Parágrafos normais
+    if (inList) {
+      html += '</ul>';
+      inList = false;
+    }
+    html += `<p style="margin: 12px 0; line-height: 1.7; color: #333;">${line}</p>`;
+  }
+  
+  if (inList) {
+    html += '</ul>';
+  }
+  
+  return html;
+}
+
 function buildEcommerceHTML(product: any, benefits: string[], options: any, company: any): string {
   const desc = product.description || '';
   
@@ -774,7 +832,6 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
   let enrichedDescription = desc
-    .replace(/\s+/g, ' ')  // Substituir múltiplos espaços por 1
     .replace(/\n{3,}/g, '\n\n')  // Máximo 2 quebras consecutivas
     .trim();
   
@@ -849,7 +906,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 <h1 style="color: #3E4B5E; font-size: 2em; font-weight: 800; letter-spacing: -0.8px; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
 
   html += `
-<div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #333333; line-height: 1.6;">${enrichedDescription.replace(/\s+/g, ' ').trim()}</div>`;
+<div style="font-size: 1.05em; margin-bottom: 25px;">${parseRichDescription(enrichedDescription)}</div>`;
 
   // ✅ Benefícios IA (inline styles)
   if (options.includeBenefits && benefits.length > 0) {
