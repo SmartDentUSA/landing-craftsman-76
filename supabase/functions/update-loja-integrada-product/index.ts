@@ -120,17 +120,7 @@ serve(async (req) => {
     }
 
     const currentProduct = await getResponse.json();
-    
-    // ✅ VALIDAÇÃO: API exige nome obrigatório
-    if (!currentProduct.nome) {
-      console.error('❌ Produto sem nome na Loja Integrada');
-      return new Response(
-        JSON.stringify({ success: false, message: "Produto não possui nome definido na Loja Integrada" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    console.log('✅ Produto atual obtido:', currentProduct.nome);
+    console.log('✅ Produto atual obtido, preparando merge...');
 
     // 2. Mesclar HTML atualizado com dados existentes
     const updatePayload = {
