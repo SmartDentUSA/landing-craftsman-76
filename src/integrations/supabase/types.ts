@@ -1103,6 +1103,7 @@ export type Database = {
           tags: Json | null
           target_audience: Json | null
           tax_situation: string | null
+          technical_documents: Json | null
           technical_specifications: Json | null
           technical_videos: Json | null
           testimonial_videos: Json | null
@@ -1204,6 +1205,7 @@ export type Database = {
           tags?: Json | null
           target_audience?: Json | null
           tax_situation?: string | null
+          technical_documents?: Json | null
           technical_specifications?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null
@@ -1305,6 +1307,7 @@ export type Database = {
           tags?: Json | null
           target_audience?: Json | null
           tax_situation?: string | null
+          technical_documents?: Json | null
           technical_specifications?: Json | null
           technical_videos?: Json | null
           testimonial_videos?: Json | null

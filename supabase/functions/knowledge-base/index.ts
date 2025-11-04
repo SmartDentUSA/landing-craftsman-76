@@ -233,6 +233,22 @@ function formatForAITraining(data: any): string {
         }
         text += `\n`;
       }
+
+      // 📄 DOCUMENTOS TÉCNICOS
+      if (p.technical_documents && Array.isArray(p.technical_documents) && p.technical_documents.length > 0) {
+        text += `\n📄 DOCUMENTOS TÉCNICOS (${p.technical_documents.length}):\n`;
+        p.technical_documents.forEach((doc: any, idx: number) => {
+          text += `  ${idx + 1}. ${doc.nome}\n`;
+          if (doc.descricao) {
+            text += `     Descrição: ${doc.descricao}\n`;
+          }
+          text += `     Arquivo: ${doc.nome_arquivo}\n`;
+          text += `     Download: ${doc.url_download}\n`;
+          text += `     Tamanho: ${(doc.tamanho_bytes / 1024).toFixed(1)} KB\n`;
+          text += `     Origem: ${doc.origem === 'catalog_documents' ? 'Catálogo' : 'Resinas'}\n`;
+        });
+        text += `\n`;
+      }
       
       text += `\n---\n\n`;
     });
@@ -508,6 +524,32 @@ serve(async (req) => {
     }
 
     console.log('Knowledge base data fetched successfully');
+
+    // Fetch technical_documents separately if products are included
+    if (params.include_products && data?.products) {
+      const productIds = data.products.map((p: any) => p.product.id);
+      
+      if (productIds.length > 0) {
+        console.log(`📄 Fetching technical_documents for ${productIds.length} products...`);
+        const { data: productsWithDocs } = await supabase
+          .from('products_repository')
+          .select('id, technical_documents')
+          .in('id', productIds);
+
+        // Merge technical_documents into products
+        if (productsWithDocs) {
+          const docsMap = new Map(productsWithDocs.map(p => [p.id, p.technical_documents]));
+          data.products = data.products.map((p: any) => ({
+            ...p,
+            product: {
+              ...p.product,
+              technical_documents: docsMap.get(p.product.id) || []
+            }
+          }));
+          console.log('✅ Technical documents merged successfully');
+        }
+      }
+    }
 
     // Formatar resposta baseado no formato solicitado
     let response: any;
