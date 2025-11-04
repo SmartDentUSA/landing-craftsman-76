@@ -45,6 +45,24 @@ interface Tutorial {
   created_at: string;
 }
 
+interface TechnicalDocument {
+  id: string;
+  origem: 'catalog_documents' | 'resin_documents';
+  nome: string;
+  descricao?: string;
+  nome_arquivo: string;
+  url_download: string;
+  tamanho_bytes: number;
+  ordem_exibicao?: number;
+  ativo: boolean;
+  metadata_sistema_b: {
+    produto_slug?: string;
+    resina_slug?: string;
+    url_pagina?: string;
+  };
+  sincronizado_em: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -140,6 +158,8 @@ interface Product {
   faq?: Array<{ question: string; answer: string }>;
   // Technical Specifications
   technical_specifications?: Array<{ label: string; value: string }>;
+  // Technical Documents (Sistema B)
+  technical_documents?: TechnicalDocument[];
 }
 
 interface ProductEditModalProps {
@@ -252,6 +272,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   
   // ✅ Flag para evitar resetar vídeos após salvamento
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Technical Documents (Sistema B)
+  const [technicalDocuments, setTechnicalDocuments] = useState<TechnicalDocument[]>([]);
   
   const { toast } = useToast();
 
@@ -370,6 +393,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       
       // Images gallery
       setImagesGallery((product as any).images_gallery || []);
+      
+      // Technical documents (Sistema B)
+      setTechnicalDocuments(product.technical_documents || []);
     } else {
       setFormData({
         name: '',
@@ -431,6 +457,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       
       // Reset images gallery
       setImagesGallery([]);
+      
+      // Reset technical documents
+      setTechnicalDocuments([]);
     }
   }, [product, isInitialized]);
 
@@ -2889,6 +2918,73 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 Produtos com GTIN, MPN e Marca têm melhor ranqueamento no Google Shopping e Google Merchant Center.
               </p>
             </div>
+          </div>
+
+          {/* Documentos Técnicos (Sistema B) */}
+          <div className="space-y-4 border-t pt-6 bg-gradient-to-br from-purple/5 to-purple/10 p-6 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Documentos Técnicos
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <Badge variant="outline" className="mr-2">Sistema B</Badge>
+                  Documentos importados automaticamente
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {technicalDocuments.length} documento(s)
+              </Badge>
+            </div>
+
+            {technicalDocuments.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-semibold text-sm">Nome do Documento</th>
+                      <th className="text-left p-3 font-semibold text-sm">Descrição SEO</th>
+                      <th className="text-left p-3 font-semibold text-sm">Link externo do documento</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {technicalDocuments
+                      .sort((a, b) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0))
+                      .map((doc) => (
+                        <tr 
+                          key={doc.id} 
+                          className="border-b hover:bg-muted/30 transition-colors"
+                        >
+                          {/* Coluna 1: Nome do Documento */}
+                          <td className="p-3">
+                            <p className="font-medium text-sm">{doc.nome}</p>
+                          </td>
+                          
+                          {/* Coluna 2: Descrição SEO */}
+                          <td className="p-3">
+                            <p className="text-sm text-muted-foreground">
+                              {doc.descricao || <em className="opacity-50">Sem descrição</em>}
+                            </p>
+                          </td>
+                          
+                          {/* Coluna 3: Link externo do documento */}
+                          <td className="p-3">
+                            <a
+                              href={doc.url_download}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline break-all"
+                            >
+                              {doc.url_download}
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Landing Page Sections Configuration */}
