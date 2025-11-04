@@ -703,7 +703,32 @@ async function mapAPIProductToRepository(apiProduct: ProductData, apiKey?: strin
     source_landing_page_id: null,
     original_data: {
       ...apiProduct,
-      li_product_id: String(apiProduct.id || extractIdFromUri(apiProduct.resource_uri) || '')
+      li_product_id: String(apiProduct.id || extractIdFromUri(apiProduct.resource_uri) || ''),
+      
+      // ✅ Garantir que categorias sejam preservadas de forma explícita
+      categorias: apiProduct.categorias || [],
+      
+      // ✅ Extrair ID da primeira categoria para acesso rápido
+      li_category_id: (() => {
+        if (!apiProduct.categorias) return null;
+        
+        // Se for array
+        if (Array.isArray(apiProduct.categorias) && apiProduct.categorias.length > 0) {
+          return apiProduct.categorias[0]?.id || null;
+        }
+        
+        // Se for objeto
+        if (typeof apiProduct.categorias === 'object' && apiProduct.categorias.id) {
+          return apiProduct.categorias.id;
+        }
+        
+        // Se for número direto
+        if (typeof apiProduct.categorias === 'number') {
+          return apiProduct.categorias;
+        }
+        
+        return null;
+      })(),
     },
   };
 

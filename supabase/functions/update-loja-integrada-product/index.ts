@@ -98,34 +98,66 @@ serve(async (req) => {
 
     console.log('📂 Categoria extraída do banco:', categoryId);
 
-    // Preparar payload com HTML e categoria
-    const updatePayload: any = { 
-      descricao_completa: htmlContent 
-    };
+    // 1. Buscar dados atuais do produto via GET
+    console.log('📥 Buscando dados atuais do produto via API...');
+    const getUrl = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
-    if (categoryId) {
-      updatePayload.categorias = `/v1/categoria/${categoryId}/`;
-      console.log('✅ Categoria URI:', updatePayload.categorias);
+    const getResponse = await fetch(getUrl, {
+      method: 'GET',
+      headers: { "Accept": "application/json" },
+    });
+
+    if (!getResponse.ok) {
+      const error = await getResponse.json().catch(() => ({}));
+      console.error(`❌ Erro ao buscar produto: ${getResponse.status}`, error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Erro ao buscar produto: ${error.detail || error.message || getResponse.status}`,
+        }),
+        { status: getResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Enviar PATCH direto
-    console.log('📤 Enviando PATCH para Loja Integrada...');
+    const currentProduct = await getResponse.json();
+    console.log('✅ Produto atual obtido, preparando atualização...');
+
+    // 2. Mesclar HTML atualizado com dados existentes
+    const updatePayload = {
+      ...currentProduct,
+      descricao_completa: htmlContent,
+    };
+
+    // 3. Se tiver categoria no banco, usa ela (prioridade)
+    if (categoryId) {
+      updatePayload.categorias = `/v1/categoria/${categoryId}/`;
+      console.log('✅ Categoria do banco aplicada:', updatePayload.categorias);
+    }
+
+    // 4. Limpar campos que a API não aceita no PUT
+    delete updatePayload.resource_uri;
+    delete updatePayload.id;
+    delete updatePayload.created_at;
+    delete updatePayload.updated_at;
+
+    // Enviar PUT com payload completo
+    console.log('📤 Enviando PUT para Loja Integrada...');
     const url = `https://api.awsli.com.br/v1/produto/${liProductId}?chave_api=${LOJA_INTEGRADA_API_KEY}&chave_aplicacao=${LOJA_INTEGRADA_APP_KEY}`;
 
     let attempt = 0;
     let response;
     
     while (attempt < 3) {
-      console.log(`🔄 Tentativa ${attempt + 1}/3`);
+      console.log(`🔄 Tentativa ${attempt + 1}/3 (PUT)`);
       
       response = await fetch(url, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(updatePayload),
       });
 
       if (response.ok) {
-        console.log('✅ PATCH bem-sucedido');
+        console.log('✅ PUT bem-sucedido');
         break;
       }
       
