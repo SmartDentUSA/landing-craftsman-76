@@ -1097,7 +1097,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     letter-spacing: -0.3px;
     transition: background 0.2s ease;
   " onmouseover="this.style.background='linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%)'">
-    ${cleanQuestion}${topKeywords ? ` | ${topKeywords}` : ''}
+    ${cleanQuestion}
   </summary>
   <p style="
     padding: 14px 16px;
