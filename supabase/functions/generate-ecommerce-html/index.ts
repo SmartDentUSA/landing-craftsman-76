@@ -562,6 +562,11 @@ function buildSEOHead(product: any): string {
   <meta name="twitter:description" content="${description}">
   ${imageUrl ? `<meta name="twitter:image" content="${imageUrl}">` : ''}
   
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <!-- Product Schema JSON-LD -->
   <script type="application/ld+json">
   ${generateProductSchema(product)}
@@ -630,24 +635,24 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   // ✅ Conteúdo principal em <section>
   html += `
-<section style="font-family: 'Roboto', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">`;
+<section style="font-family: 'Inter', sans-serif; color: #333333; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">`;
 
   // ✅ FASE 2: Adicionar header da empresa ANTES do conteúdo
   html += buildCompanyHeader(company);
 
   html += `
-<h1 style="color: #2c3e50; font-size: 2em; font-weight: 700; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
+<h1 style="color: #3E4B5E; font-size: 2em; font-weight: 800; letter-spacing: -0.8px; text-align: center; margin-bottom: 20px;">${product.name}</h1>`;
 
   html += `
-<div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #555; white-space: pre-wrap;">${enrichedDescription}</div>`;
+<div style="font-size: 1.05em; text-align: justify; margin-bottom: 25px; color: #333333; white-space: pre-wrap;">${enrichedDescription}</div>`;
 
   // ✅ Benefícios IA (inline styles)
   if (options.includeBenefits && benefits.length > 0) {
     html += `
-<div style="background-color: #f8f9fb; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
-  <h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px; margin-top: 0;">💡 Principais Benefícios</h2>
+<div style="background-color: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+  <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; margin-top: 0;">💡 Principais Benefícios</h2>
   <ul style="list-style: none; padding: 0; margin: 0;">
-    ${benefits.map(b => `<li style="padding: 8px 0 8px 24px; position: relative;"><span style="color: #27ae60; font-weight: bold; position: absolute; left: 0;">✓</span>${b}</li>`).join('\n    ')}
+    ${benefits.map(b => `<li style="padding: 8px 0 8px 24px; position: relative;"><span style="color: #EE7A3E; font-weight: bold; position: absolute; left: 0;">✓</span>${b}</li>`).join('\n    ')}
   </ul>
 </div>`;
   }
@@ -655,10 +660,10 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   // ✅ Especificações Técnicas (tabela 100% width inline)
   if (technicalSpecs.length > 0) {
     html += `
-<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
 <table style="width: 100%; border-collapse: collapse; font-size: 0.95em; margin-bottom: 25px;">
   <thead>
-    <tr style="background-color: #34495e; color: white;">
+    <tr style="background-color: #3E4B5E; color: white;">
       <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Especificação</th>
       <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Valor</th>
     </tr>
@@ -667,7 +672,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     ${technicalSpecs.map(spec => {
       const valueCell = isURL(spec.value)
         ? `<a href="${spec.value}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none;">
-             <span style="background:#ffffff; color:#3498db; border:1px solid #3498db; padding:6px 10px; border-radius:6px; font-weight:600;">📥 Download</span>
+             <span style="background:#ffffff; color:#EE7A3E; border:1px solid #EE7A3E; padding:6px 10px; border-radius:6px; font-weight:600;">📥 Download</span>
            </a>`
         : spec.value;
       return `<tr>
@@ -681,14 +686,14 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 
   // ✅ Cards Empilhados (sem CSS Grid, inline styles)
   html += `
-<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">📦 Recursos e Informações</h2>
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">📦 Recursos e Informações</h2>
 <div style="margin: 20px 0;">
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
-    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📋 Aplicações</h3>
+    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 600;">📋 Aplicações</h3>
     <p style="margin: 0; line-height: 1.5; white-space: pre-wrap;">${product.applications || '<em style="color: #999;">Nenhuma informação de aplicação cadastrada. Preencha o campo "Aplicações do Produto" no editor para exibir aqui.</em>'}</p>
   </div>
   <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fff; margin-bottom: 15px;">
-    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.2em;">📦 Embalagem</h3>
+    <h3 style="margin-top: 0; color: #3E4B5E; font-size: 1.2em; font-weight: 600;">📦 Embalagem</h3>
     ${buildPackagingInfo(product)}
   </div>`;
   
@@ -698,8 +703,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   // ✅ FASE 2: Variações do Produto (cores, tamanhos, modelos)
   if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
     html += `
-<div style="margin: 25px 0; padding: 20px; background: linear-gradient(to right, #f0f4ff 0%, #e9eeff 100%); border-left: 4px solid #667eea; border-radius: 8px;">
-  <h2 style="color: #2c3e50; font-size: 1.4em; margin-top: 0; margin-bottom: 15px;">
+<div style="margin: 25px 0; padding: 20px; background: #f8fafc; border-left: 4px solid #EE7A3E; border-radius: 8px;">
+  <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 0; margin-bottom: 15px;">
     🎨 Variações Disponíveis
   </h2>
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">`;
@@ -711,11 +716,11 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
       
       html += `
     <div style="padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; ${!isInStock ? 'opacity: 0.6;' : ''}">
-      <h4 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1em;">
+      <h4 style="margin: 0 0 8px 0; color: #3E4B5E; font-size: 1em; font-weight: 600;">
         ${variation.name || 'Variação sem nome'}
       </h4>
       ${hasPrice ? `
-        <p style="margin: 4px 0; color: #27ae60; font-weight: 600; font-size: 1.1em;">
+        <p style="margin: 4px 0; color: #EE7A3E; font-weight: 600; font-size: 1.1em;">
           R$ ${variation.price.toFixed(2)}
         </p>
       ` : ''}
@@ -745,12 +750,12 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     ].slice(0, 3).join(' | ');
     
     html += `
-<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
     faq.forEach(item => {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">${item.question}${topKeywords ? ` | ${topKeywords}` : ''}</summary>
-  <p style="padding: 10px 12px; margin: 0; line-height: 1.6;">${item.answer}</p>
+  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">${item.question}${topKeywords ? ` | ${topKeywords}` : ''}</summary>
+  <p style="padding: 10px 12px; margin: 0; line-height: 1.6; color: #333333;">${item.answer}</p>
 </details>`;
     });
   }
@@ -763,20 +768,20 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     ].slice(0, 3).join(' | ');
     
     html += `
-<h2 style="color: #2c3e50; font-size: 1.4em; margin-bottom: 10px;">🎥 Recursos de Vídeo</h2>`;
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🎥 Recursos de Vídeo</h2>`;
     
     if (videoCollections.youtube.length > 0) {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Vídeos YouTube${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
+  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
+    Vídeos YouTube${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.youtube.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.youtube.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
       return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
     </div>`;
     }).join('\n    ')}
   </div>
@@ -786,15 +791,15 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     if (videoCollections.instagram.length > 0) {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Vídeos Instagram<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.instagram.length}</span>
+  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
+    Vídeos Instagram<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.instagram.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.instagram.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
       return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
     </div>`;
     }).join('\n    ')}
   </div>
@@ -804,15 +809,15 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     if (videoCollections.testimonials.length > 0) {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Depoimentos em Vídeo<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.testimonials.length}</span>
+  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
+    Depoimentos em Vídeo<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.testimonials.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.testimonials.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
       return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Depoimento ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Depoimento ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
     </div>`;
     }).join('\n    ')}
   </div>
@@ -822,15 +827,15 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     if (videoCollections.technical.length > 0) {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Explicações Técnicas${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.technical.length}</span>
+  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
+    Explicações Técnicas${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.technical.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.technical.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
       return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Explicação ${i + 1}</a>
-      ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Explicação ${i + 1}</a>
+      ${description ? `<p style="margin: 4px 0 0 0; color: #333333; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
     </div>`;
     }).join('\n    ')}
   </div>
@@ -840,14 +845,14 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     if (videoCollections.tiktok.length > 0) {
       html += `
 <details style="margin: 10px 0;">
-  <summary style="cursor: pointer; padding: 12px; background: #ecf0f1; border-radius: 4px; font-weight: bold;">
-    Vídeos TikTok${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tiktok.length}</span>
+  <summary style="cursor: pointer; padding: 12px; background: #f8fafc; border-radius: 4px; font-weight: bold; color: #3E4B5E;">
+    Vídeos TikTok${topKeywords ? ` | ${topKeywords}` : ''}<span style="background: #EE7A3E; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-left: 8px;">${videoCollections.tiktok.length}</span>
   </summary>
   <div style="margin: 10px 0 10px 20px;">
     ${videoCollections.tiktok.map((v, i) => {
       const description = truncateToWords(v.description || '', 50);
       return `<div style="margin: 12px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-      <a href="${v.url}" target="_blank" rel="noopener" style="color: #3498db; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
+      <a href="${v.url}" target="_blank" rel="noopener" style="color: #EE7A3E; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">📹 Vídeo ${i + 1}</a>
       ${description ? `<p style="margin: 4px 0 0 0; color: #666; font-size: 0.9em; line-height: 1.4;">${description}</p>` : ''}
     </div>`;
     }).join('\n    ')}
