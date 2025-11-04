@@ -917,6 +917,10 @@ serve(async (req) => {
             
             // Extrair variações (passando html também)
             productData.variations = extractVariations(product, doc, html);
+            console.log('🎯 Variations extracted:', {
+              count: productData.variations?.length || 0,
+              sample: productData.variations?.slice(0, 2) || []
+            });
             
             // Extrair galeria de imagens (passando URL e HTML)
             productData.images_gallery = extractImagesGallery(product, productData.image, doc, url, html);
@@ -1086,9 +1090,20 @@ serve(async (req) => {
     }
 
     console.info('Dados extraídos:', productData);
+    console.log('📦 Scraping response final:', {
+      has_name: !!productData.name,
+      variations_count: productData.variations?.length || 0,
+      images_count: productData.images_gallery?.length || 0,
+      li_product_id: li_product_id || 'not_found'
+    });
 
     return new Response(
-      JSON.stringify({ success: true, data: productData, li_product_id }),
+      JSON.stringify({ 
+        success: true, 
+        data: productData, 
+        li_product_id,
+        variations_count: productData.variations?.length || 0
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

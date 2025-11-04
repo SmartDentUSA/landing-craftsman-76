@@ -946,21 +946,36 @@ serve(async (req) => {
       }
       
       // ✅ GARANTIR VARIAÇÕES: Se não há variações no produto (mesmo sendo pai), buscar explicitamente
-      if ((!productToMap.variacoes || productToMap.variacoes.length === 0) && productToMap.id) {
-        console.log(`🔍 No variations found, fetching from dedicated endpoint: /produto/${productToMap.id}/variacao`);
+      const productIdStr = String(productToMap.id || '');
+      const hasVariations = productToMap.variacoes && Array.isArray(productToMap.variacoes) && productToMap.variacoes.length > 0;
+      
+      // 🐛 DEBUG: Log antes da checagem
+      console.log('🐛 DEBUG variations check:', {
+        has_variacoes: !!productToMap.variacoes,
+        is_array: Array.isArray(productToMap.variacoes),
+        length: productToMap.variacoes?.length || 0,
+        has_id: !!productToMap.id,
+        id_value: productToMap.id,
+        id_type: typeof productToMap.id,
+        tipo: productToMap.tipo,
+        will_fetch: !hasVariations && !!productIdStr
+      });
+      
+      if (!hasVariations && productIdStr) {
+        console.log(`🔍 No variations found, fetching from dedicated endpoint: /produto/${productIdStr}/variacao`);
         const variationsResult = await fetchFromLojaIntegradaAPI(
           lojaIntegradaApiKey,
           lojaIntegradaAppKey,
-          `/produto/${productToMap.id}/variacao`
+          `/produto/${productIdStr}/variacao`
         );
         
         if (variationsResult.success && variationsResult.data) {
           // O endpoint retorna { meta: {...}, objects: [...] }
-          const variations = variationsResult.data.objects || [];
-          productToMap.variacoes = variations;
-          console.log(`✅ Loaded ${variations.length} variations from /produto/${productToMap.id}/variacao (parent fetch)`);
+          const variations = variationsResult.data.objects || variationsResult.data || [];
+          productToMap.variacoes = Array.isArray(variations) ? variations : [];
+          console.log(`✅ Loaded ${productToMap.variacoes.length} variations from /produto/${productIdStr}/variacao (parent fetch)`);
         } else {
-          console.warn(`⚠️ Failed to fetch variations from dedicated endpoint`);
+          console.warn(`⚠️ Failed to fetch variations from dedicated endpoint:`, variationsResult.error);
         }
       }
       
@@ -1085,6 +1100,15 @@ serve(async (req) => {
       }
     }
 
+    // 📦 Log final data antes do response
+    console.log('📦 Final data before return:', {
+      name: finalData.name,
+      variations_count: finalData.variations?.length || 0,
+      images_count: finalData.images_gallery?.length || 0,
+      has_description: !!finalData.description,
+      data_source: dataSource
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -1096,6 +1120,7 @@ serve(async (req) => {
           fallbackUsed,
           totalTimeMs: totalTime,
           circuitBreakerStatus: isCircuitOpen() ? 'open' : 'closed',
+          variations_count: finalData.variations?.length || 0,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
