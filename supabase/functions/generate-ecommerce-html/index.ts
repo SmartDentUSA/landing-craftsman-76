@@ -779,6 +779,12 @@ function cleanGoogleDocsHTML(html: string): string {
     .replace(/<\/?em[^>]*>/gi, '')
     // Remove quebras <br /> ou <br> múltiplas
     .replace(/<br\s*\/?>/gi, '\n')
+    // Remove tabelas HTML completas (incluindo contêineres de editores)
+    .replace(/<div[^>]*class="[^"]*(?:_tableContainer|_tableWrapper|tableContainer|tableWrapper)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+    .replace(/<table[\s\S]*?<\/table>/gi, '')
+    // Remove <hr> e <div> soltos que possam restar
+    .replace(/<\/?:?hr[^>]*>/gi, '\n')
+    .replace(/<\/?:?div[^>]*>/gi, '\n')
     // Remove espaços múltiplos em branco (mas preserva quebras de linha)
     .replace(/ {2,}/g, ' ')
     // Limpa quebras de linha múltiplas (máximo 2)
@@ -870,6 +876,14 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     /<hr[^>]*>\s*<h3[^>]*>\s*<strong[^>]*>Características Técnicas<\/strong>\s*<\/h3>[\s\S]*?(<hr[^>]*>|$)/gi,
     ''
   );
+  
+  // 🧹 Remover títulos órfãos de seções técnicas que vinham antes das tabelas coladas
+  enrichedDescription = enrichedDescription
+    .replace(/📏[^\n<]*Propriedades[^\n<]*(\n|$)/gi, '')
+    .replace(/Testes de Segurança[^\n<]*(\n|$)/gi, '')
+    .replace(/Certificação & Conformidade[^\n<]*(\n|$)/gi, '')
+    .replace(/Graças à sua composição[^\n<]*(\n|$)/gi, '');
+  
   console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
   
   // Adicionar keywords de mercado contextualmente (primeiras 5)
@@ -916,14 +930,6 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   // ✅ Iniciar com SPIN Design System CSS
   let html = getSpinStylesCSS();
-  
-  // 🎨 Adicionar estilos para hover da tabela
-  html += `
-<style>
-  .spin-ecom table tbody tr:hover td {
-    background: #f8fafc !important;
-  }
-</style>`;
   
   // ✅ Conteúdo principal em <section> com classe SPIN
   html += `
@@ -1060,14 +1066,23 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 
   // ✅ FAQ (details/summary inline) com Keywords
   if (faq.length > 0) {
+    // Filtrar keywords genéricas/placeholder indesejadas
+    const blacklist = ['palavras-chave', 'produto', 'prompt', 'palavra-chave'];
     const topKeywords = [
       ...(product.keywords || []),
       ...(product.market_keywords || [])
-    ].slice(0, 3).join(' | ');
+    ]
+      .filter(kw => !blacklist.includes(kw.toLowerCase().trim()))
+      .slice(0, 3)
+      .join(' | ');
     
     html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">❓ Perguntas Frequentes</h2>`;
     faq.forEach(item => {
+      // Substituir placeholder "Produto sem nome" pelo nome real do produto
+      const cleanQuestion = item.question.replace(/produto sem nome/gi, product.name);
+      const cleanAnswer = item.answer.replace(/Produto sem nome/g, product.name);
+      
       html += `
 <details style="margin: 12px 0;">
   <summary style="
@@ -1082,7 +1097,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     letter-spacing: -0.3px;
     transition: background 0.2s ease;
   " onmouseover="this.style.background='linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, #f8fafc 0%, #f1f3f5 100%)'">
-    ${item.question}${topKeywords ? ` | ${topKeywords}` : ''}
+    ${cleanQuestion}${topKeywords ? ` | ${topKeywords}` : ''}
   </summary>
   <p style="
     padding: 14px 16px;
@@ -1091,7 +1106,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     color: #333;
     background: #FCFCFD;
     border-radius: 0 0 8px 8px;
-  ">${item.answer}</p>
+  ">${cleanAnswer}</p>
 </details>`;
     });
   }
