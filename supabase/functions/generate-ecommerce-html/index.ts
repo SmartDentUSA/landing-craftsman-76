@@ -757,6 +757,36 @@ function buildSEOHead(product: any): string {
 }
 
 /**
+ * 🧹 Remove HTML do Google Docs (spans, atributos data-*, inline styles)
+ */
+function cleanGoogleDocsHTML(html: string): string {
+  if (!html) return '';
+  
+  return html
+    // Remove todos os <span> mantendo apenas o conteúdo
+    .replace(/<span[^>]*>(.*?)<\/span>/gi, '$1')
+    // Remove atributos data-start, data-end
+    .replace(/\s*data-start="[^"]*"/gi, '')
+    .replace(/\s*data-end="[^"]*"/gi, '')
+    // Remove tags <p> e <h2> do Google Docs (parseRichDescription recria)
+    .replace(/<\/?p[^>]*>/gi, '\n')
+    .replace(/<\/?h[1-6][^>]*>/gi, '\n')
+    // Remove <ul>, <li>, <strong> do Google Docs
+    .replace(/<\/?ul[^>]*>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n• ')
+    .replace(/<\/li>/gi, '')
+    .replace(/<\/?strong[^>]*>/gi, '')
+    .replace(/<\/?em[^>]*>/gi, '')
+    // Remove quebras <br /> ou <br> múltiplas
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Remove espaços múltiplos em branco (mas preserva quebras de linha)
+    .replace(/ {2,}/g, ' ')
+    // Limpa quebras de linha múltiplas (máximo 2)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
  * 🔍 Parse inteligente do description com formatação estruturada
  */
 function parseRichDescription(text: string): string {
@@ -830,8 +860,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   console.log('🎨 Aplicando SPIN Design System ao HTML E-commerce');
   
-  // ✅ ENRIQUECER DESCRIÇÃO COM KEYWORDS E TARGET AUDIENCE (SEM DUPLICAÇÕES)
-  let enrichedDescription = desc
+  // ✅ LIMPAR HTML DO GOOGLE DOCS + ENRIQUECER DESCRIÇÃO
+  let enrichedDescription = cleanGoogleDocsHTML(desc)
     .replace(/\n{3,}/g, '\n\n')  // Máximo 2 quebras consecutivas
     .trim();
   
