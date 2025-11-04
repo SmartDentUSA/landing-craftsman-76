@@ -278,13 +278,13 @@ const DATA_SOURCES = {
     label: "Repositório de Produtos",
     fields: [
       // Campos básicos ✅ UTILIZADOS
-      "name", "description", "price", "category", "subcategory", "currency",
+      "name", "description", "price", "category", "subcategory", "currency", "promo_price", "slug",
       
       // Campos de marketing ✅ UTILIZADOS  
-      "benefits", "features", "keywords", "target_audience", "sales_pitch", "faq",
+      "benefits", "features", "keywords", "target_audience", "sales_pitch", "faq", "warranty_info", "applications",
       
       // URLs e dados comerciais ✅ UTILIZADOS
-      "product_url", "image_url",
+      "product_url", "image_url", "images_gallery",
       
       // Especificações técnicas ✅ UTILIZADOS
       "technical_specifications",
@@ -299,10 +299,10 @@ const DATA_SOURCES = {
       "bot_trigger_words",
       
       // ===== 📦 ESPECIFICAÇÕES FÍSICAS ✅ UTILIZADOS =====
-      "variations", "package_size", "weight", "height", "width", "depth",
+      "variations", "package_size", "weight", "height", "width", "depth", "stock_quantity", "stock_managed",
       
       // ===== 🏷️ IDENTIFICAÇÃO COMERCIAL ✅ UTILIZADOS =====
-      "brand", "gtin", "mpn", "store_category",
+      "brand", "gtin", "mpn", "store_category", "all_categories",
       
       // ===== 🎨 VARIAÇÕES E OPÇÕES ✅ UTILIZADOS =====
       "color", "size", "material",
@@ -311,7 +311,7 @@ const DATA_SOURCES = {
       "market_keywords", "search_intent_keywords", "seo_title_override", "seo_description_override", "canonical_url",
       
       // ===== 💰 RECURSOS COMERCIAIS ✅ UTILIZADOS =====
-      "promo_price", "resource_descriptions", "resource_cta1", "resource_cta2", "resource_cta3", "offer_discount_cta",
+      "resource_descriptions", "resource_cta1", "resource_cta2", "resource_cta3", "offer_discount_cta",
       
       // ===== 🎥 LEGENDAS DE VÍDEO ✅ UTILIZADOS =====
       "video_captions",
@@ -398,8 +398,11 @@ const DATA_SOURCES = {
       // Dados básicos ✅ UTILIZADOS
       "author_name", "rating", "review_text", 
       
+      // Dados de gestão ✅ UTILIZADOS para moderação
+      "landing_page_id", "raw_review_id", "display_order", "notes", "approved_by",
+      
       // SEO ❌ NÃO UTILIZADO  
-      "contextual_seo_info", "ai_keywords", "notes"
+      "contextual_seo_info", "ai_keywords"
     ]
   },
   key_opinion_leaders: {
@@ -422,13 +425,13 @@ const DATA_SOURCES = {
   raw_reviews: {
     label: "Avaliações Brutas (Google)",
     fields: [
-      // Dados do autor ❌ NÃO UTILIZADO
+      // Dados do autor ✅ UTILIZADOS para moderação
       "author_name", "profile_photo_url", "author_url", "is_local_guide",
       
-      // Dados da avaliação ❌ NÃO UTILIZADO
+      // Dados da avaliação ✅ UTILIZADOS para moderação
       "rating", "review_text", "review_date", "relative_time", "review_likes",
       
-      // Resposta do proprietário ❌ NÃO UTILIZADO
+      // Resposta do proprietário ✅ UTILIZADOS para moderação
       "response_from_owner", "response_date"
     ]
   },
@@ -492,9 +495,11 @@ const DATA_SOURCES = {
       // SPIN framework ✅ UTILIZADOS
       "situation", "problem", "implication", "need_solution",
       // Métricas e casos ✅ UTILIZADOS
-      "pain_metrics", "success_cases",
+      "pain_metrics", "success_cases", "real_quotes",
+      // WhatsApp customization ✅ UTILIZADOS
+      "custom_url", "spin_journey_labels", "whatsapp_section_titles",
       // Produtos e keywords ✅ UTILIZADOS
-      "product_ids", "keywords", "target_audience"
+      "product_ids", "keywords", "target_audience", "selected_product_ids"
     ]
   }
 };

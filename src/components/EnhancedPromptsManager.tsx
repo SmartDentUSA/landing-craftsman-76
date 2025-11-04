@@ -63,7 +63,23 @@ const EDGE_FUNCTIONS = [
     icon: Search,
     status: "active" as const,
     prompts: ["Cópias Google Ads"],
-    dataSources: ["products_repository", "company_profile", "landing_pages"]
+    dataSources: ["products_repository", "company_profile", "landing_pages"],
+    defaultPrompt: `Você é um especialista em copywriting para Google Ads com foco em campanhas para {targetAudience}, PRIORIZANDO CATEGORIAS E SUBCATEGORIAS.
+
+Gere cópias para um Responsive Search Ad (RSA) baseadas nas seguintes informações:
+- SEO Title: {seoTitle}
+- SEO Description: {seoDescription}
+- Keyword Principal: {primaryKeyword}
+- Público-alvo: {targetAudience}
+
+REGRAS OBRIGATÓRIAS:
+1. Headlines: 6-10 variações, máximo 30 caracteres cada
+2. Descriptions: 2-4 variações, máximo 90 caracteres cada
+3. Paths: 2 caminhos, máximo 15 caracteres cada
+4. Incluir keyword principal em pelo menos 2 headlines
+5. EVITAR: CAPSLOCK, "cura", "milagre", "garantido"
+
+Retorne APENAS JSON: {"headlines": [...], "descriptions": [...], "paths": [...]}`
   },
   {
     id: "generate-tiktok-content",
@@ -81,7 +97,23 @@ const EDGE_FUNCTIONS = [
     icon: MessageSquare,
     status: "active" as const,
     prompts: ["10 FAQs Produto"],
-    dataSources: ["products_repository"]
+    dataSources: ["products_repository"],
+    defaultPrompt: `Você é um especialista em produtos e FAQ. Gere EXATAMENTE 10 perguntas frequentes sobre o produto.
+
+PRODUTO: {product.name}
+Descrição: {product.description}
+Benefícios: {product.benefits}
+Recursos: {product.features}
+Especificações: {product.technical_specifications}
+
+INSTRUÇÕES:
+1. Gere 10 FAQs práticos e relevantes
+2. Perguntas devem começar com: "Como", "Qual", "Quais", "O que"
+3. Respostas devem ter 60-100 palavras
+4. Incorpore keywords naturalmente
+5. Use HTML básico: <strong>, <em>, <ul>, <li>
+
+IMPORTANTE: Retorne APENAS JSON válido sem texto adicional.`
   },
   {
     id: "generate-spin-campaign",
@@ -90,7 +122,22 @@ const EDGE_FUNCTIONS = [
     icon: Zap,
     status: "active" as const,
     prompts: ["Campanha WhatsApp SPIN"],
-    dataSources: ["spin_selling_solutions", "products_repository", "company_profile"]
+    dataSources: ["spin_selling_solutions", "products_repository", "company_profile"],
+    defaultPrompt: `Você é um copywriter especializado em vendas SPIN. Crie um storytelling ULTRA persuasivo (máx 150 caracteres) para WhatsApp.
+
+SOLUÇÃO: {solution.title}
+PITCH: {solution.sales_pitch}
+PRODUTOS: {products}
+BENEFÍCIOS: {benefits}
+
+REGRAS:
+1. Comece com gancho emocional forte
+2. Apresente transformação rápida
+3. Feche com benefício + emojis (máx 2)
+4. Máximo 150 caracteres
+5. Tom conversacional e urgente
+
+Exemplo: "Cansado de retrabalho? Imagine sua clínica voando com impressões perfeitas. A Smart Dent te entrega isso! 🚀"`
   },
   {
     id: "generate-spin-faqs",
@@ -99,7 +146,25 @@ const EDGE_FUNCTIONS = [
     icon: MessageSquare,
     status: "active" as const,
     prompts: ["10 FAQs SPIN"],
-    dataSources: ["spin_selling_solutions", "products_repository", "company_profile"]
+    dataSources: ["spin_selling_solutions", "products_repository", "company_profile"],
+    defaultPrompt: `Você é um especialista em SPIN Selling e Marketing Odontológico B2B. Gere 10 FAQs estratégicas que conduzam pela Jornada SPIN (Situação → Problema → Implicação → Necessidade).
+
+SOLUÇÃO: {solution.title}
+PITCH: {solution.sales_pitch}
+MÉTRICAS: {pain_metrics}
+PRODUTOS: {products}
+
+DISTRIBUIÇÃO OBRIGATÓRIA:
+- 3 FAQs: DESEJO & IDENTIFICAÇÃO
+- 3 FAQs: DOR & URGÊNCIA
+- 4 FAQs: RESULTADO & IMPLEMENTAÇÃO
+
+REGRAS:
+1. Use linguagem do pitch
+2. Integre métricas naturalmente
+3. Tom profissional mas conversacional
+4. 60-180 palavras por resposta
+5. Mencione produtos específicos quando relevante`
   },
   {
     id: "generate-spin-hero-banner",
@@ -108,7 +173,29 @@ const EDGE_FUNCTIONS = [
     icon: Edit3,
     status: "active" as const,
     prompts: ["Imagem Hero 16:9"],
-    dataSources: ["spin_selling_solutions", "products_repository"]
+    dataSources: ["spin_selling_solutions", "products_repository"],
+    defaultPrompt: `CRÍTICO: ABSOLUTAMENTE NENHUM TEXTO NA IMAGEM - apenas fotografia pura.
+
+PRODUTOS: {products}
+DIMENSÕES FÍSICAS: {dimensions}
+
+AMBIENTE:
+- Consultório odontológico moderno
+- Fundo branco puro (#FFFFFF)
+- Iluminação profissional (soft box + refletor)
+
+CÂMERA:
+- Proporção: 16:9 landscape
+- Lente: 50mm f/2.8
+- Profundidade de campo: Shallow (foco progressivo)
+- Iluminação: 5500K (luz do dia)
+
+COMPOSIÇÃO:
+- Produto maior: centro-frontal, sharp focus
+- Produtos menores: laterais/fundo, blur progressivo
+- Respeitar EXATAMENTE proporções de volume calculadas
+
+SEM TEXTO, SEM MARCAS, SEM OVERLAYS - APENAS FOTOGRAFIA PROFISSIONAL`
   },
   {
     id: "generate-ecommerce-html",
