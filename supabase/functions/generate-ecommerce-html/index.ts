@@ -840,7 +840,7 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   // ✅ Conteúdo principal em <section> com classe SPIN
   html += `
-<section class="spin-ecom" style="max-width: 1200px; margin: 0 auto; padding: 20px;">`;
+<section class="spin-ecom" style="max-width: 1200px; margin: 0 auto; padding: 20px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #333333; line-height: 1.6;">`;
 
   // 🗑️ Banner roxo da empresa removido - conteúdo inicia direto no título do produto
   // html += buildCompanyHeader(company);
@@ -866,24 +866,25 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   if (technicalSpecs.length > 0) {
     html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🔧 Especificações Técnicas</h2>
-<div class="tech-table-wrapper">
-  <table class="tech-table">
+<div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
+  <table style="width:100%; border-collapse:separate; border-spacing:0;">
     <thead>
-      <tr>
-        <th>Especificação</th>
-        <th>Valor</th>
+      <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%);">
+        <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Especificação</th>
+        <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Valor</th>
       </tr>
     </thead>
     <tbody>
-      ${technicalSpecs.map(spec => {
+      ${technicalSpecs.map((spec, i) => {
+        const zebraBackground = i % 2 === 0 ? '#FFFFFF' : '#FCFCFD';
         const valueCell = isURL(spec.value)
           ? `<a href="${spec.value}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none;">
-               <span style="background:#EE7A3E; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:600; box-shadow: 0 2px 6px rgba(238, 122, 62, 0.3); transition: transform 0.2s;">📥 Download</span>
+               <span style="background:#EE7A3E; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:600; box-shadow:0 2px 6px rgba(238,122,62,0.3);">📥 Download</span>
              </a>`
           : spec.value;
         return `<tr>
-          <td>${spec.label}</td>
-          <td>${valueCell}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">${spec.label}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); font-size:15px; color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anywhere;">${valueCell}</td>
         </tr>`;
       }).join('\n      ')}
     </tbody>
