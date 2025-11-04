@@ -533,78 +533,9 @@ async function extractReviewsFromBusinessAPI(
   }
 }
 
-// Function to sync reviews to company_profile table
-async function syncReviewsToCompanyProfile(
-  supabase: any,
-  userId: string,
-  reviews: any[],
-  placeId: string
-) {
-  console.log('💾 Syncing reviews to company_profile...');
-  console.log(`User ID: ${userId}, Reviews: ${reviews.length}, PlaceID: ${placeId}`);
-  
-  const { data: profile, error: fetchError } = await supabase
-    .from('company_profile')
-    .select('company_reviews')
-    .eq('user_id', userId)
-    .maybeSingle();
-  
-  if (fetchError) {
-    console.error('❌ Error fetching company_profile:', fetchError);
-    throw fetchError;
-  }
-  
-  if (!profile) {
-    console.error('❌ No company_profile found for user:', userId);
-    throw new Error('Company profile not found');
-  }
-  
-  const existingReviews = profile?.company_reviews || {
-    manual_reviews: [],
-    google_reviews_imported: false,
-    google_place_id: null,
-    last_google_sync: null
-  };
-  
-  console.log('📊 Current state:', {
-    manual_reviews_count: existingReviews.manual_reviews?.length || 0,
-    google_imported: existingReviews.google_reviews_imported,
-    place_id: existingReviews.google_place_id
-  });
-  
-  // 🆕 SUBSTITUIR reviews do Google (não adicionar)
-  const googleReviews = reviews.map(r => ({
-    author_name: r.author_name,
-    rating: r.rating,
-    review_text: r.review_text,
-    review_date: r.review_date
-  }));
-  
-  const updatedReviews = {
-    ...existingReviews,
-    manual_reviews: googleReviews, // Substituir, não adicionar
-    google_reviews_imported: true,
-    google_place_id: placeId,
-    last_google_sync: new Date().toISOString()
-  };
-  
-  console.log('📤 Updating company_profile with:', {
-    manual_reviews_count: updatedReviews.manual_reviews.length,
-    place_id: updatedReviews.google_place_id
-  });
-  
-  const { error: updateError } = await supabase
-    .from('company_profile')
-    .update({ company_reviews: updatedReviews })
-    .eq('user_id', userId);
-    
-  if (updateError) {
-    console.error('❌ Error updating company_profile:', updateError);
-    throw updateError;
-  }
-  
-  console.log('✅ Reviews synced to company_profile successfully');
-}
+// ✅ Reviews do Google são salvos APENAS em raw_reviews
+// Não sincronizamos mais com company_profile.company_reviews.manual_reviews
+// A consolidação busca reviews do Google direto de raw_reviews
 
 // New function to extract individual reviews and save to database
 async function extractAndSaveReviews(
@@ -802,19 +733,9 @@ async function extractAndSaveReviews(
       }
     }
 
-    // Sync to company_profile if requested
-    console.log('🔍 DEBUG - Sync check:', {
-      sync_to_company_profile,
-      company_id,
-      reviews_count: reviews.length,
-      will_sync: !!(sync_to_company_profile && company_id)
-    });
-
-    if (sync_to_company_profile && company_id) {
-      console.log('✅ Starting sync to company_profile...');
-      await syncReviewsToCompanyProfile(supabase, company_id, reviews, place_id);
-      console.log('✅ Sync completed successfully');
-    }
+    // ✅ Reviews do Google já estão salvos em raw_reviews
+    // A consolidação vai buscar direto de lá usando google_place_id
+    console.log('✅ Google reviews saved to raw_reviews:', savedCount);
 
     // Update extraction job
     await supabase

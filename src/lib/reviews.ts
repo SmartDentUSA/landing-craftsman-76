@@ -136,7 +136,33 @@ export async function fetchAllReviewsForSchema(
     } else if (companyProfile?.company_reviews) {
       const companyReviews = companyProfile.company_reviews as any;
       
-      // Reviews manuais globais
+      // ✅ NOVO: Buscar reviews do Google de raw_reviews usando google_place_id
+      if (companyReviews.google_place_id) {
+        const { data: googleRawReviews, error: googleRawError } = await supabase
+          .from("raw_reviews")
+          .select("*")
+          .eq("place_id", companyReviews.google_place_id);
+
+        if (googleRawError) {
+          console.error("Erro ao buscar Google reviews de raw_reviews:", googleRawError);
+        } else if (googleRawReviews) {
+          googleRawReviews.forEach((review: any) => {
+            const sanitized = sanitizeReviewData({
+              author_name: review.author_name,
+              rating: review.rating,
+              review_text: review.review_text,
+              review_date: review.review_date
+            });
+            
+            allReviews.push({
+              type: "google_approved",
+              ...sanitized
+            });
+          });
+        }
+      }
+      
+      // Reviews manuais globais da empresa
       if (Array.isArray(companyReviews.manual_reviews)) {
         companyReviews.manual_reviews.forEach((review: any) => {
           const sanitized = sanitizeReviewData({
