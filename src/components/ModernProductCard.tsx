@@ -354,112 +354,18 @@ export function ModernProductCard({
               {product.description}
             </p>
           )}
-          {/* Badges organizados em 2 linhas categorizadas */}
-          <div className="mt-2.5 space-y-2.5">
-            {/* LINHA 1: Status e Seções (Azul/Cinza) */}
-            <div className="flex flex-wrap gap-1.5">
-              {/* Approval Status */}
-              <Badge 
-                variant={product.approved ? "default" : "destructive"}
+          {/* Badge de ID da Loja Integrada */}
+          {product.original_data?.li_product_id && (
+            <div className="mt-2.5">
+              <Badge
+                variant="secondary"
                 className="text-xs px-1.5 py-0.5 h-5"
+                title="ID do Produto na Loja Integrada"
               >
-                {product.approved ? (
-                  <>
-                    <Check className="h-3 w-3 mr-1" />
-                    Aprovado
-                  </>
-                ) : (
-                  <>
-                    <X className="h-3 w-3 mr-1" />
-                    Pendente
-                  </>
-                )}
+                LI: {product.original_data.li_product_id}
               </Badge>
-
-              {/* Landing Page Sections */}
-              {product.show_in_resources && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
-                  <Download className="h-3 w-3 mr-1" />
-                  Recursos
-                </Badge>
-              )}
-              
-              {product.selected && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
-                  <ShoppingCart className="h-3 w-3 mr-1" />
-                  Ofertas
-                </Badge>
-              )}
-              
-              {product.original_data?.li_product_id && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs px-1.5 py-0.5 h-5"
-                  title="ID do Produto na Loja Integrada"
-                >
-                  LI: {product.original_data.li_product_id}
-                </Badge>
-              )}
             </div>
-
-            {/* LINHA 3: Conteúdo Gerado e Promoções (Roxo/Laranja) */}
-            <div className="flex flex-wrap gap-1.5">
-              {/* Coupon Badge - Laranja */}
-              {productCoupon && productCoupon.allow_promotions && (
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs px-1.5 py-0.5 h-5 bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 cursor-pointer"
-                  onClick={() => setShowWhatsAppPromoModal(true)}
-                  title="Clique para gerar mensagem promocional"
-                >
-                  🎟️ {productCoupon.coupon_code} (-{productCoupon.discount_percentage}%)
-                </Badge>
-              )}
-              
-              {/* Blog Status - Roxo */}
-              {(product.individual_blog_content?.commercial || product.individual_blog_content?.technical) && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-purple-100 text-purple-700 border-purple-200">
-                  <FileText className="h-3 w-3 mr-1" />
-                  {product.individual_blog_content?.commercial && product.individual_blog_content?.technical 
-                    ? '2 Blogs' 
-                    : '1 Blog'}
-                </Badge>
-              )}
-              
-              {/* Active CTAs Count - Roxo */}
-              {product.show_in_resources && (
-                (() => {
-                  const activeCTAs = [
-                    product.resource_cta1?.visible,
-                    product.resource_cta2?.visible,
-                    product.resource_cta3?.visible
-                  ].filter(Boolean).length;
-                  
-                  return activeCTAs > 0 ? (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-purple-100 text-purple-700 border-purple-200">
-                      {activeCTAs} CTA{activeCTAs > 1 ? 's' : ''}
-                    </Badge>
-                  ) : null;
-                })()
-              )}
-
-              {/* Technical Specs - Roxo */}
-              {product.technical_specifications && Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0 && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-purple-100 text-purple-700 border-purple-200">
-                  <Settings className="h-3 w-3 mr-1" />
-                  Especificações
-                </Badge>
-              )}
-              
-              {/* E-commerce HTML - Roxo */}
-              {product.ecommerce_html?.html_content && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5 bg-indigo-100 text-indigo-700 border-indigo-200">
-                  <ShoppingCart className="h-3 w-3 mr-1" />
-                  E-commerce
-                </Badge>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Separador visual */}
