@@ -1679,13 +1679,13 @@ function buildEcommerceHTML(
             ${description || '<span style="color:#999;">Sem descrição</span>'}
           </td>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); text-align:center;">
-            <a href="${doc.url_download}" target="_blank" rel="noopener" download style="display:inline-block; text-decoration:none;">
-              <span style="background:#EE7A3E; color:#fff; border:none; padding:10px 16px; border-radius:6px; font-weight:600; box-shadow:0 2px 6px rgba(238,122,62,0.3); cursor:pointer; transition: all 0.3s ease; display:inline-block;" 
-                    onmouseover="this.style.background='#FF8B4A'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 10px rgba(238,122,62,0.4)';" 
-                    onmouseout="this.style.background='#EE7A3E'; this.style.transform='scale(1)'; this.style.boxShadow='0 2px 6px rgba(238,122,62,0.3)';">
-                📥
-              </span>
-            </a>
+              <a href="${doc.url_download}" target="_blank" rel="noopener" download style="display:inline-block; text-decoration:none;">
+                <span style="background:#EE7A3E; color:#fff; border:none; padding:10px 16px; border-radius:6px; font-weight:600; box-shadow:0 2px 6px rgba(238,122,62,0.3); cursor:pointer; transition: all 0.3s ease; display:inline-block;" 
+                      onmouseover="this.style.background='#FF8B4A'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 10px rgba(238,122,62,0.4)';" 
+                      onmouseout="this.style.background='#EE7A3E'; this.style.transform='scale(1)'; this.style.boxShadow='0 2px 6px rgba(238,122,62,0.3)';">
+                  👁️
+                </span>
+              </a>
           </td>
         </tr>`;
       }).join('\n      ')}
