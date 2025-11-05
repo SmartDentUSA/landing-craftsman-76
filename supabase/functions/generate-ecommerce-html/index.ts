@@ -1140,8 +1140,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
              </a>`
           : spec.value;
         return `<tr>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anything;">${spec.label}</td>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); font-size:15px; color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anything;">${valueCell}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">${spec.label}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); font-size:15px; color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anywhere;">${valueCell}</td>
         </tr>`;
       }).join('\n      ')}
     </tbody>
@@ -1150,11 +1150,19 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   }
 
   // ✅ Documentos Técnicos (SPIN Landing Page Style)
-  const technicalDocs = product.technical_documents && Array.isArray(product.technical_documents)
+  const technicalDocsRaw = product.technical_documents && Array.isArray(product.technical_documents)
     ? product.technical_documents
         .filter((doc: any) => doc.ativo !== false)
         .sort((a: any, b: any) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0))
     : [];
+
+  // Filtra documentos válidos para exibição (com nome ou nome_arquivo)
+  const technicalDocs = technicalDocsRaw.filter((doc: any) => {
+    const nome = typeof doc.nome === 'string' ? doc.nome.trim() : '';
+    const nomeArquivo = typeof doc.nome_arquivo === 'string' ? doc.nome_arquivo.trim() : '';
+    const isPlaceholder = (v: string) => /^documento sem nome$/i.test(v);
+    return (!!nome && !isPlaceholder(nome)) || !!nomeArquivo;
+  });
 
   if (technicalDocs.length > 0) {
     html += `
@@ -1171,18 +1179,23 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
     <tbody>
       ${technicalDocs.map((doc: any, i: number) => {
         const zebraBackground = i % 2 === 0 ? '#FFFFFF' : '#FCFCFD';
-        const docName = doc.nome_documento || 'Documento sem nome';
-        const docSize = doc.tamanho_bytes ? ` (${formatFileSize(doc.tamanho_bytes)})` : '';
+        
+        const nome = typeof doc.nome === 'string' ? doc.nome.trim() : '';
+        const nomeArquivo = typeof doc.nome_arquivo === 'string' ? doc.nome_arquivo.trim() : '';
+        const isPlaceholder = (v: string) => /^documento sem nome$/i.test(v);
+        
+        const docName = nome && !isPlaceholder(nome) ? nome : nomeArquivo;
+        
         const description = doc.descricao || '';
         const truncatedDesc = description.length > 150 
           ? description.substring(0, 150) + '...' 
           : description;
         
         return `<tr>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anything;">
-            ${docName}${docSize}
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
+            ${docName}
           </td>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anything;">
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
             ${truncatedDesc || '<span style="color:#999;">Sem descrição</span>'}
           </td>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); text-align:center;">
