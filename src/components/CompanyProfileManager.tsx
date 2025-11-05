@@ -103,6 +103,11 @@ interface CompanyProfile {
   company_logo_url?: string;
   company_logo_supabase_path?: string | null;
   youtube_company_footer?: string;
+  
+  // ✨ NOVOS CAMPOS: Hashtags e Handles das Redes Sociais
+  social_media_hashtags?: string[];  // #Redes sociais
+  social_media_handles?: string[];   // @ Redes Sociais
+  youtube_tags?: string[];           // #Tags Youtube
 }
 
 interface CompanyProfileManagerProps {
@@ -153,7 +158,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       google_tag_manager: { enabled: false, container_id: null, note: 'GTM - Única fonte de tags recomendada' },
       tiktok_pixel: { enabled: false, pixel_id: null, note: 'TikTok Pixel para remarketing' }
     },
-    seo_domains: []
+    seo_domains: [],
+    
+    // ✨ NOVOS CAMPOS
+    social_media_hashtags: [],
+    social_media_handles: [],
+    youtube_tags: [],
   });
   
   const [loading, setLoading] = useState(true);
@@ -246,7 +256,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           team_size: (data as any).team_size || '',
           company_logo_url: (data as any).company_logo_url || '',
           company_logo_supabase_path: (data as any).company_logo_supabase_path || null,
-          youtube_company_footer: (data as any).youtube_company_footer || ''
+          youtube_company_footer: (data as any).youtube_company_footer || '',
+          
+          // ✨ NOVOS CAMPOS: Carregar hashtags e handles
+          social_media_hashtags: (data as any).social_media_hashtags || [],
+          social_media_handles: (data as any).social_media_handles || [],
+          youtube_tags: (data as any).youtube_tags || [],
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
@@ -904,6 +919,86 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                         Perfil Verificado
                       </Label>
                     </div>
+                  </div>
+                </div>
+
+                {/* ✨ NOVOS CAMPOS: Hashtags e Handles */}
+                <div className="space-y-4 border-t pt-6 mt-6">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Zap className="h-4 w-4" />
+                        Hashtags e Handles das Redes Sociais
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configure hashtags e handles padrão para suas redes sociais e YouTube
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Campo 1: #Redes sociais */}
+                  <div>
+                    <Label htmlFor="social_media_hashtags" className="flex items-center gap-2">
+                      <span className="text-primary">#</span>
+                      Hashtags das Redes Sociais
+                    </Label>
+                    <TagInput
+                      value={profile.social_media_hashtags || []}
+                      onChange={(tags) => setProfile(prev => ({
+                        ...prev, 
+                        social_media_hashtags: tags
+                      }))}
+                      placeholder="Digite hashtags sem # (ex: suaempresa, produto) e pressione Enter"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Hashtags gerais usadas em todas as redes sociais. Digite sem o símbolo #
+                    </p>
+                  </div>
+
+                  {/* Campo 2: @ Redes Sociais */}
+                  <div>
+                    <Label htmlFor="social_media_handles" className="flex items-center gap-2">
+                      <span className="text-primary">@</span>
+                      Handles das Redes Sociais
+                    </Label>
+                    <TagInput
+                      value={profile.social_media_handles || []}
+                      onChange={(tags) => setProfile(prev => ({
+                        ...prev, 
+                        social_media_handles: tags
+                      }))}
+                      placeholder="Digite handles sem @ (ex: suaempresa, marcaparceira) e pressione Enter"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Usernames/handles mencionados nas redes sociais (@empresa, @parceiros). Digite sem o símbolo @
+                    </p>
+                  </div>
+
+                  {/* Campo 3: #Tags Youtube */}
+                  <div>
+                    <Label htmlFor="youtube_tags" className="flex items-center gap-2">
+                      <Youtube className="h-4 w-4" />
+                      <span className="text-primary">#</span>
+                      Tags para YouTube
+                    </Label>
+                    <TagInput
+                      value={profile.youtube_tags || []}
+                      onChange={(tags) => setProfile(prev => ({
+                        ...prev, 
+                        youtube_tags: tags
+                      }))}
+                      placeholder="Digite tags sem # (ex: odontologia, tecnologia) e pressione Enter"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tags específicas para vídeos do YouTube. Usadas automaticamente na geração de descrições
+                    </p>
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-md">
+                    <span className="text-xs text-muted-foreground">
+                      💡 <strong>Dica:</strong> Essas informações serão automaticamente incluídas nas gerações de conteúdo para redes sociais e exportadas na Knowledge Base API
+                    </span>
                   </div>
                 </div>
           </TabsContent>

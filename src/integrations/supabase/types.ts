@@ -246,6 +246,8 @@ export type Database = {
           seo_market_positioning: string | null
           seo_service_areas: string | null
           seo_technical_expertise: string | null
+          social_media_handles: string[] | null
+          social_media_hashtags: string[] | null
           social_media_links: Json | null
           state: string | null
           street_address: string | null
@@ -259,6 +261,7 @@ export type Database = {
           working_methodology: string | null
           youtube_channel: string | null
           youtube_company_footer: string | null
+          youtube_tags: string[] | null
           youtube_verified: boolean | null
         }
         Insert: {
@@ -294,6 +297,8 @@ export type Database = {
           seo_market_positioning?: string | null
           seo_service_areas?: string | null
           seo_technical_expertise?: string | null
+          social_media_handles?: string[] | null
+          social_media_hashtags?: string[] | null
           social_media_links?: Json | null
           state?: string | null
           street_address?: string | null
@@ -307,6 +312,7 @@ export type Database = {
           working_methodology?: string | null
           youtube_channel?: string | null
           youtube_company_footer?: string | null
+          youtube_tags?: string[] | null
           youtube_verified?: boolean | null
         }
         Update: {
@@ -342,6 +348,8 @@ export type Database = {
           seo_market_positioning?: string | null
           seo_service_areas?: string | null
           seo_technical_expertise?: string | null
+          social_media_handles?: string[] | null
+          social_media_hashtags?: string[] | null
           social_media_links?: Json | null
           state?: string | null
           street_address?: string | null
@@ -355,6 +363,7 @@ export type Database = {
           working_methodology?: string | null
           youtube_channel?: string | null
           youtube_company_footer?: string | null
+          youtube_tags?: string[] | null
           youtube_verified?: boolean | null
         }
         Relationships: []

@@ -73,6 +73,21 @@ function formatForAITraining(data: any): string {
       text += `\n`;
     }
     
+    // ✨ NOVOS CAMPOS: Hashtags e Handles das Redes Sociais
+    if (cp.social_media_hashtags && Array.isArray(cp.social_media_hashtags) && cp.social_media_hashtags.length > 0) {
+      text += `**Hashtags das Redes Sociais:** #${cp.social_media_hashtags.join(' #')}\n`;
+    }
+
+    if (cp.social_media_handles && Array.isArray(cp.social_media_handles) && cp.social_media_handles.length > 0) {
+      text += `**Handles das Redes Sociais:** @${cp.social_media_handles.join(' @')}\n`;
+    }
+
+    if (cp.youtube_tags && Array.isArray(cp.youtube_tags) && cp.youtube_tags.length > 0) {
+      text += `**Tags YouTube:** #${cp.youtube_tags.join(' #')}\n`;
+    }
+
+    text += `\n`;
+    
     if (cp.institutional_links && Array.isArray(cp.institutional_links)) {
       // Separar parcerias internacionais de outros links
       const partnerships = cp.institutional_links.filter(
@@ -417,8 +432,21 @@ function formatForAITraining(data: any): string {
 }
 
 function formatForSystemB(data: any): any {
+  const cp = data.company_profile;
+  
   return {
-    company: data.company_profile,
+    company: {
+      ...cp,
+      // ✨ ADICIONAR: Estrutura social_media consolidada
+      social_media: {
+        links: cp?.social_media_links || [],
+        hashtags: cp?.social_media_hashtags || [],
+        handles: cp?.social_media_handles || [],
+        youtube_tags: cp?.youtube_tags || [],
+        youtube_channel: cp?.youtube_channel,
+        instagram_profile: cp?.instagram_profile,
+      }
+    },
     categories: data.categories_config,
     links: data.external_links,
     spin_solutions: data.spin_solutions,
