@@ -769,6 +769,28 @@ function getSpinStylesCSS(): string {
     font-size: 16px;
   }
   
+  /* ========== RESET GLOBAL DE MARGENS ========== */
+  .spin-ecom h1,
+  .spin-ecom h2,
+  .spin-ecom h3,
+  .spin-ecom h4 {
+    margin: 0 !important;
+  }
+
+  .spin-ecom p,
+  .spin-ecom li,
+  .spin-ecom ul {
+    margin: 0 !important;
+  }
+
+  .spin-ecom .panel {
+    margin: 0 !important;
+  }
+
+  .spin-ecom table {
+    margin: 0 !important;
+  }
+  
   .spin-ecom h1 {
     color: #3E4B5E;
     font-weight: 800;
@@ -1603,7 +1625,7 @@ function buildEcommerceHTML(
   // ✅ Especificações Técnicas (SPIN Landing Page Style)
   if (technicalSpecs.length > 0) {
     html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">Especificações Técnicas</h2>
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 25px; margin-bottom: 10px;">Especificações Técnicas</h2>
 <div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
   <table style="width:100%; border-collapse:separate; border-spacing:0;">
     <thead>
@@ -1705,7 +1727,7 @@ function buildEcommerceHTML(
 
   // ✅ Cards Empilhados (sem CSS Grid, inline styles)
   html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">Recursos e Informações</h2>
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 25px; margin-bottom: 10px;">Recursos e Informações</h2>
 <div style="margin: 20px 0;">
   <!-- Card de Aplicações -->
   <div style="
@@ -1795,7 +1817,7 @@ function buildEcommerceHTML(
       .join(' | ');
     
     html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">Perguntas Frequentes</h2>`;
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 25px; margin-bottom: 10px;">Perguntas Frequentes</h2>`;
     faq.forEach(item => {
       // Substituir placeholder "Produto sem nome" pelo nome real do produto
       const cleanQuestion = item.question.replace(/produto sem nome/gi, product.name);
@@ -1837,7 +1859,7 @@ function buildEcommerceHTML(
     ].slice(0, 3).join(' | ');
     
     html += `
-<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px;">🎥 Recursos de Vídeo</h2>`;
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 25px; margin-bottom: 10px;">🎥 Recursos de Vídeo</h2>`;
     
     if (videoCollections.youtube.length > 0) {
       html += `
