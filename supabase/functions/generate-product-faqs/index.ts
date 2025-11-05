@@ -134,6 +134,21 @@ A: "Sim, o ${product.name} (GTIN: ${product.gtin || 'N/A'}) possui integração 
 4. SE não houver comparativos → usar termos genéricos ("alternativas tradicionais")
 5. SEMPRE validar cada afirmação contra os dados fornecidos
 
+**REGRA CRÍTICA - DIVERSIDADE DE ARGUMENTOS:**
+Cada FAQ DEVE ter um argumento central DIFERENTE. Não repita o mesmo dado técnico, benefício ou certificação como foco principal em mais de UMA FAQ.
+
+Exemplo ERRADO (repetição):
+- FAQ 1: "Qual a precisão da impressora?" → "Precisão de 50 mícrons..."
+- FAQ 2: "A impressora é precisa?" → "Sim, com 50 mícrons de precisão..."
+- FAQ 3: "Como funciona a precisão?" → "Através de tecnologia de 50 mícrons..."
+
+Exemplo CORRETO (diversidade):
+- FAQ 1: "Qual a precisão da impressora?" → "Precisão de 50 mícrons..."
+- FAQ 2: "Qual o tempo de impressão?" → "5 horas para modelo completo..."
+- FAQ 3: "É compatível com Exocad?" → "Sim, integração nativa via STL..."
+
+VERIFIQUE: Antes de gerar a FAQ, releia as 9 anteriores e garanta que o argumento central seja NOVO.
+
     **INSTRUÇÕES DE FORMATAÇÃO:**
     1. Gere EXATAMENTE 10 FAQs práticos e relevantes
     2. Perguntas devem começar com: "Como", "Qual", "Quais", "O que", "Por que", "Quando"
@@ -295,6 +310,80 @@ OBRIGATÓRIO:
       });
     };
 
+    // 🔍 Função para calcular similaridade entre duas strings
+    const calculateSimilarity = (text1: string, text2: string): number => {
+      const words1 = text1.toLowerCase().replace(/<[^>]*>/g, '').split(/\s+/);
+      const words2 = text2.toLowerCase().replace(/<[^>]*>/g, '').split(/\s+/);
+      
+      const set1 = new Set(words1);
+      const set2 = new Set(words2);
+      
+      const intersection = new Set([...set1].filter(x => set2.has(x)));
+      const union = new Set([...set1, ...set2]);
+      
+      return intersection.size / union.size; // Jaccard similarity
+    };
+
+    // 🔍 Detectar FAQs duplicadas ou muito similares
+    const removeDuplicates = (faqs: Array<{question: string; answer: string}>) => {
+      const uniqueFaqs: Array<{question: string; answer: string}> = [];
+      const SIMILARITY_THRESHOLD = 0.65; // 65% de similaridade = duplicado
+      
+      // Função auxiliar para extrair números
+      const extractNumbers = (text: string) => {
+        return text.match(/\d+(\.\d+)?/g) || [];
+      };
+
+      // Função auxiliar para extrair termos técnicos
+      const extractKeyTerms = (text: string) => {
+        const terms = text.toLowerCase().match(/\b(iso|gtin|mpn|certificad|compatív|precis|velocidad|garant|anvisa|fda|ce)\w*/g) || [];
+        return new Set(terms);
+      };
+      
+      for (const faq of faqs) {
+        let isDuplicate = false;
+        
+        for (const existingFaq of uniqueFaqs) {
+          // Comparar similaridade das RESPOSTAS (mais importante que perguntas)
+          const answerSimilarity = calculateSimilarity(faq.answer, existingFaq.answer);
+          
+          // Comparar similaridade das PERGUNTAS
+          const questionSimilarity = calculateSimilarity(faq.question, existingFaq.question);
+          
+          // Detectar se ambas as FAQs focam no mesmo dado técnico/número
+          const numbers1 = extractNumbers(faq.answer);
+          const numbers2 = extractNumbers(existingFaq.answer);
+          const commonNumbers = numbers1.filter(n => numbers2.includes(n));
+
+          const terms1 = extractKeyTerms(faq.answer);
+          const terms2 = extractKeyTerms(existingFaq.answer);
+          const commonTerms = [...terms1].filter(t => terms2.has(t));
+          
+          // Se resposta OU pergunta for muito similar = duplicado
+          if (answerSimilarity > SIMILARITY_THRESHOLD || questionSimilarity > 0.75) {
+            console.warn(`[FAQ Deduplication] FAQ removida (${Math.round(answerSimilarity * 100)}% similar):`, 
+              faq.question.substring(0, 60) + '...');
+            isDuplicate = true;
+            break;
+          }
+          
+          // Se compartilham mais de 2 números iguais OU mais de 3 termos técnicos = duplicado provável
+          if (commonNumbers.length >= 2 || commonTerms.length >= 3) {
+            console.warn(`[FAQ Deduplication] FAQ removida (dados técnicos repetidos):`, 
+              `Números: ${commonNumbers.join(', ')} | Termos: ${commonTerms.join(', ')}`);
+            isDuplicate = true;
+            break;
+          }
+        }
+        
+        if (!isDuplicate) {
+          uniqueFaqs.push(faq);
+        }
+      }
+      
+      return uniqueFaqs;
+    };
+
     // Filtrar FAQs suspeitos
     const cleanedFaqs = validFaqs.filter(faq => {
       const hasHallucination = 
@@ -312,9 +401,26 @@ OBRIGATÓRIO:
       throw new Error('Todos os FAQs gerados continham informações não verificáveis. Adicione mais dados ao produto.');
     }
 
-    console.log(`[generate-product-faqs] FAQs validados: ${cleanedFaqs.length}/${validFaqs.length}`);
+    console.log(`[generate-product-faqs] FAQs validados (sem alucinações): ${cleanedFaqs.length}/${validFaqs.length}`);
 
-    return new Response(JSON.stringify({ faqs: cleanedFaqs }), {
+    // 🔄 Aplicar deduplicação
+    const uniqueFaqs = removeDuplicates(cleanedFaqs);
+    console.log(`[generate-product-faqs] FAQs únicos (sem duplicações): ${uniqueFaqs.length}/${cleanedFaqs.length}`);
+
+    // ⚠️ Validar se sobraram FAQs suficientes
+    if (uniqueFaqs.length < 5) {
+      console.warn(`[generate-product-faqs] Apenas ${uniqueFaqs.length} FAQs únicos restaram após deduplicação. Produto pode ter dados insuficientes.`);
+    }
+
+    return new Response(JSON.stringify({ 
+      faqs: uniqueFaqs,
+      metadata: {
+        total_generated: faqs.length,
+        after_validation: cleanedFaqs.length,
+        after_deduplication: uniqueFaqs.length,
+        removed_duplicates: cleanedFaqs.length - uniqueFaqs.length
+      }
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
