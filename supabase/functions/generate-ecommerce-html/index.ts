@@ -938,7 +938,7 @@ function getSpinStylesCSS(): string {
   
   .spin-ecom ul {
     margin: 0 !important;
-    padding-left: 1.5rem;
+    padding-left: 20px;
   }
   
   .spin-ecom strong {
@@ -989,10 +989,10 @@ function getSpinStylesCSS(): string {
   
   /* ========== MOBILE (< 768px) - 14px base ========== */
   @media (max-width: 767px) {
-    .spin-ecom {
-      padding: 8px 0;
-      font-size: 14px;
-    }
+  .spin-ecom {
+    padding: 0;
+    font-size: 14px;
+  }
     
     .spin-ecom h1 {
       font-size: 16px;
@@ -1021,8 +1021,37 @@ function getSpinStylesCSS(): string {
     
     .spin-ecom table th,
     .spin-ecom table td {
-      padding: 10px 8px;
+      padding: 10px 4px;
       font-size: 12px;
+    }
+    
+    .spin-ecom table {
+      min-width: 100%;
+      border-radius: 0 !important;
+    }
+    
+    /* Painel de Benefícios - Remove padding lateral */
+    .spin-ecom > div[style*="background-color: #f8fafc"] {
+      padding: 20px 0 !important;
+      border-radius: 0 !important;
+    }
+    
+    /* Containers de Tabelas - Remove arredondamento e margem lateral */
+    .spin-ecom > div[style*="border-radius:12px"] {
+      border-radius: 0 !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+    
+    /* Containers com scroll - Remove margem lateral */
+    .spin-ecom > div[style*="overflow-x:auto"] {
+      margin: 0 !important;
+    }
+    
+    /* CTAs e Divs com padding - Mantém padding mínimo para legibilidade */
+    .spin-ecom > div[style*="padding:"] {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
     }
     
     .spin-ecom .tech-table th {
@@ -1589,7 +1618,7 @@ function buildEcommerceHTML(
   // ✅ Benefícios IA (inline styles)
   if (options.includeBenefits && benefits.length > 0) {
     html += `
-<div style="background-color: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+<div style="background-color: #f8fafc; padding: 20px 12px; border-radius: 0; margin-bottom: 25px;">
   <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; margin-top: 0;">Principais Benefícios</h2>
   <ul style="list-style: none; padding: 0; margin: 0;">
     ${benefits.map(b => `<li style="padding: 8px 0 8px 24px; position: relative;"><span style="color: #EE7A3E; font-weight: bold; position: absolute; left: 0;">✓</span>${b}</li>`).join('\n    ')}
@@ -1601,7 +1630,7 @@ function buildEcommerceHTML(
   if (technicalSpecs.length > 0) {
     html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-top: 25px; margin-bottom: 10px;">Especificações Técnicas</h2>
-<div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
+      <div style="background:#fff; border:1px solid #e0e0e0; border-radius:0; overflow-x:auto; -webkit-overflow-scrolling:touch; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
   <table style="width:100%; border-collapse:separate; border-spacing:0;">
     <thead>
       <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%);">
@@ -1655,13 +1684,13 @@ function buildEcommerceHTML(
   if (technicalDocs.length > 0) {
     html += `
 <h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; margin-top: 25px;">Documentos Técnicos</h2>
-<div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
+<div style="background:#fff; border:1px solid #e0e0e0; border-radius:0; overflow-x:auto; -webkit-overflow-scrolling:touch; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
   <table style="width:100%; border-collapse:separate; border-spacing:0;">
     <thead>
       <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%);">
         <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Documento</th>
         <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Descrição</th>
-        <th style="padding:16px; text-align:center; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E; width:120px;">Download</th>
+        <th style="padding:16px; text-align:center; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E; width:90px;">Download</th>
       </tr>
     </thead>
     <tbody>
