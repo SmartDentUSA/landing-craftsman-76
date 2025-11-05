@@ -396,7 +396,7 @@ function getSpinStylesCSS(): string {
     text-align: left;
     border: none;
     letter-spacing: -0.3px;
-    font-size: 16px;
+    font-size: 12px;
   }
 
   .spin-ecom table td {
@@ -405,7 +405,7 @@ function getSpinStylesCSS(): string {
     border-bottom: 1px solid #e2e8f0;
     background: white;
     transition: background 0.2s;
-    font-size: 16px;
+    font-size: 12px;
   }
   
   .spin-ecom table tbody tr:hover td {
@@ -436,7 +436,7 @@ function getSpinStylesCSS(): string {
     padding: 1.5rem 1rem;
     text-align: left;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 12px;
     color: white;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -446,7 +446,7 @@ function getSpinStylesCSS(): string {
   .spin-ecom .tech-table td {
     padding: 1.25rem 1rem;
     text-align: left;
-    font-size: 16px;
+    font-size: 12px;
     color: #333;
     border-bottom: 1px solid #e8e8e8;
     transition: background 0.2s;
@@ -516,12 +516,12 @@ function getSpinStylesCSS(): string {
     }
     
     .spin-ecom .tech-table th {
-      font-size: 15px;
+      font-size: 11px;
       padding: 1.25rem 0.875rem;
     }
     
     .spin-ecom .tech-table td {
-      font-size: 15px;
+      font-size: 11px;
       padding: 1.1rem 0.875rem;
     }
   }
@@ -561,17 +561,17 @@ function getSpinStylesCSS(): string {
     .spin-ecom table th,
     .spin-ecom table td {
       padding: 10px 8px;
-      font-size: 14px;
+      font-size: 12px;
     }
     
     .spin-ecom .tech-table th {
       padding: 12px 8px;
-      font-size: 14px;
+      font-size: 12px;
     }
     
     .spin-ecom .tech-table td {
       padding: 10px 8px;
-      font-size: 14px;
+      font-size: 12px;
     }
     
     .spin-ecom .panel {
@@ -1140,8 +1140,8 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
              </a>`
           : spec.value;
         return `<tr>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">${spec.label}</td>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); font-size:15px; color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anywhere;">${valueCell}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">${spec.label}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anywhere;">${valueCell}</td>
         </tr>`;
       }).join('\n      ')}
     </tbody>
@@ -1192,10 +1192,10 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
           : description;
         
         return `<tr>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
             ${docName}
           </td>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
             ${truncatedDesc || '<span style="color:#999;">Sem descrição</span>'}
           </td>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); text-align:center;">
