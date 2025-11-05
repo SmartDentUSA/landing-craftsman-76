@@ -329,6 +329,14 @@ EXEMPLO DE TRANSFORMAÇÃO:
 ❌ ERRADO: "Este produto possui certificação ISO 10993 e viscosidade de 3000 mPa·s, garantindo resistência de 50 MPa."
 ✅ CORRETO: "Desenvolvido para profissionais que buscam resultados previsíveis e duradouros, este produto combina facilidade de aplicação com desempenho superior em restaurações estéticas."
 
+REQUISITO DE FORMATAÇÃO DO TEXTO NARRATIVO:
+Utilize a tag <strong> para:
+✓ Enfatizar no máximo **3 palavras-chave de valor por parágrafo** (ex: "segurança", "excelência", "confiança", "longevidade").
+✓ **PROIBIDO** usar <strong> em números, especificações técnicas, certificações ou unidades de medida (estes são o foco das FAQs).
+
+EXEMPLO DE APLICAÇÃO:
+"Este produto oferece <strong>segurança</strong> e <strong>durabilidade</strong> inigualáveis, garantindo a <strong>tranquilidade</strong> do seu consultório."
+
 DADOS DO PRODUTO:
 * DESCRIÇÃO ORIGINAL: ${product.description || 'N/A'}
 * PITCH DE VENDAS: ${product.sales_pitch || 'N/A'}
