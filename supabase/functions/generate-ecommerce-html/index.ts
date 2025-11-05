@@ -1408,8 +1408,9 @@ function cleanGoogleDocsHTML(html: string): string {
 function parseRichDescription(text: string): string {
   if (!text) return '';
   
-  // ✅ DUPLA PROTEÇÃO: Remover tags HTML antes do split
-  text = text.replace(/<[^>]+>/g, '');
+  // ✅ PROTEÇÃO SELETIVA: Preservar tags de formatação seguras (<strong>, <em>, <u>)
+  // Remove apenas tags perigosas ou não desejadas
+  text = text.replace(/<(?!\/?(?:strong|em|u|b|i)\b)[^>]+>/gi, '');
   
   // ✅ DETECÇÃO INTELIGENTE: Inserir quebras de parágrafo automaticamente
   // Detectar padrões como: emoji + título, final de frase longa + início maiúsculo
