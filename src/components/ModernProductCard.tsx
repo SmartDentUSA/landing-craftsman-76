@@ -46,6 +46,24 @@ import { useCoupons } from "@/hooks/useCoupons";
 import { useProductSEOExtractor } from "@/hooks/useProductSEOExtractor";
 
 
+interface TechnicalDocument {
+  id: string;
+  origem: 'catalog_documents' | 'resin_documents';
+  nome: string;
+  descricao?: string;
+  nome_arquivo: string;
+  url_download: string;
+  tamanho_bytes: number;
+  ordem_exibicao?: number;
+  ativo: boolean;
+  metadata_sistema_b: {
+    produto_slug?: string;
+    resina_slug?: string;
+    url_pagina?: string;
+  };
+  sincronizado_em: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -73,6 +91,7 @@ interface Product {
   testimonial_videos?: any[];
   tiktok_videos?: any[];
   faq?: Array<{ question: string; answer: string }>;
+  technical_documents?: TechnicalDocument[];
   // Google Merchant fields
   gtin?: string;
   ean?: string;
@@ -339,6 +358,31 @@ export function ModernProductCard({
                       ))}
                       {product.variations.length > 6 && (
                         <p className="text-xs text-muted-foreground mt-1">+{product.variations.length - 6} mais</p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {product.technical_documents && product.technical_documents.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="gap-1 ml-2 shrink-0 cursor-help">
+                      <FileText className="h-3 w-3" />
+                      {product.technical_documents.length} {product.technical_documents.length === 1 ? 'Doc' : 'Docs'}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-xs mb-2">Documentos Técnicos Sistema B:</p>
+                      {product.technical_documents.slice(0, 3).map(doc => (
+                        <p key={doc.id} className="text-xs">• {doc.nome}</p>
+                      ))}
+                      {product.technical_documents.length > 3 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          +{product.technical_documents.length - 3} mais...
+                        </p>
                       )}
                     </div>
                   </TooltipContent>

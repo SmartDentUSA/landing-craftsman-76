@@ -20,6 +20,7 @@ import { CouponsManager } from '@/components/CouponsManager';
 import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
 import { SpinSellingManager } from '@/components/SpinSellingManager';
+import { SystemBDocumentSync } from '@/components/SystemBDocumentSync';
 
 const Repository = () => {
   const location = useLocation();
@@ -147,6 +148,7 @@ const Repository = () => {
               
               <TabsContent value="repository">
                 <div className="space-y-6">
+                  <SystemBDocumentSync />
                   <ProductSEOBatchEnhancer />
                   <RepositoryPanel 
                     landingPageId="repository"
