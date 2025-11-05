@@ -184,7 +184,13 @@ serve(async (req) => {
       faqCount: Array.isArray(product.faq) ? product.faq.length : 0,
       options
     });
-    const htmlContent = buildEcommerceHTML(product, generatedBenefits, options, companyProfile);
+    const htmlContent = buildEcommerceHTML(
+      product, 
+      generatedBenefits, 
+      options, 
+      companyProfile,
+      technicalDocsWithDescriptions
+    );
     console.log(`✅ HTML gerado: ${htmlContent.length} caracteres`);
     
     // 4. Salvar no banco
@@ -1464,7 +1470,13 @@ function parseRichDescription(text: string): string {
   return html;
 }
 
-function buildEcommerceHTML(product: any, benefits: string[], options: any, company: any): string {
+function buildEcommerceHTML(
+  product: any, 
+  benefits: string[], 
+  options: any, 
+  company: any,
+  technicalDocsWithDescriptions: any[]
+): string {
   const desc = product.description || '';
   
   // ✅ SEMPRE REGENERAR (remover bypass de pré-formatado)
