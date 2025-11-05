@@ -1688,7 +1688,6 @@ function buildEcommerceHTML(
   <table style="width:100%; border-collapse:separate; border-spacing:0;">
     <thead>
       <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%);">
-        <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Documento</th>
         <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Descrição</th>
         <th style="padding:16px; text-align:center; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E; width:90px;">Download</th>
       </tr>
@@ -1707,9 +1706,6 @@ function buildEcommerceHTML(
         const description = doc.descricao || '';
         
         return `<tr>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
-            ${docName}
-          </td>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
             ${description || '<span style="color:#999;">Sem descrição</span>'}
           </td>
