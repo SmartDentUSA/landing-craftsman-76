@@ -288,15 +288,21 @@ function isPreformattedHTML(html: string): boolean {
 
 /**
  * 🎨 SPIN Design System CSS - Injetado no fragmento HTML
+ * ✨ Sistema Responsivo Padronizado:
+ * - Desktop: 16px base (títulos 20px/18px/16px)
+ * - Tablet: 15px base (títulos 19px/17px/15px)
+ * - Mobile: 14px base (títulos 16px/15px/14px)
  */
 function getSpinStylesCSS(): string {
   return `<style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   
+  /* ========== BASE DESKTOP (16px) ========== */
   .spin-ecom {
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
     color: #333333;
     line-height: 1.6;
+    font-size: 16px;
   }
   
   .spin-ecom h1 {
@@ -304,6 +310,7 @@ function getSpinStylesCSS(): string {
     font-weight: 800;
     letter-spacing: -0.8px;
     margin-bottom: 1.5rem;
+    font-size: 20px;
   }
   
   .spin-ecom h2 {
@@ -312,14 +319,36 @@ function getSpinStylesCSS(): string {
     letter-spacing: -0.5px;
     margin-top: 2rem;
     margin-bottom: 1rem;
+    font-size: 18px;
   }
   
-  .spin-ecom h3,
+  .spin-ecom h3 {
+    color: #3E4B5E;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+  }
+  
   .spin-ecom h4 {
     color: #3E4B5E;
     font-weight: 600;
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
+    font-size: 16px;
+  }
+  
+  .spin-ecom p {
+    margin: 1rem 0;
+    line-height: 1.7;
+    white-space: normal;
+    font-size: 16px;
+  }
+  
+  .spin-ecom li {
+    margin: 0.5rem 0;
+    font-size: 16px;
   }
   
   .spin-ecom a {
@@ -367,6 +396,7 @@ function getSpinStylesCSS(): string {
     text-align: left;
     border: none;
     letter-spacing: -0.3px;
+    font-size: 16px;
   }
 
   .spin-ecom table td {
@@ -375,10 +405,11 @@ function getSpinStylesCSS(): string {
     border-bottom: 1px solid #e2e8f0;
     background: white;
     transition: background 0.2s;
+    font-size: 16px;
   }
   
   .spin-ecom table tbody tr:hover td {
-    background: #f8fafc !important;
+    background: #f8fafc;
   }
   
   /* SPIN Landing Page Tech Table Styles */
@@ -415,7 +446,7 @@ function getSpinStylesCSS(): string {
   .spin-ecom .tech-table td {
     padding: 1.25rem 1rem;
     text-align: left;
-    font-size: 15px;
+    font-size: 16px;
     color: #333;
     border-bottom: 1px solid #e8e8e8;
     transition: background 0.2s;
@@ -449,70 +480,107 @@ function getSpinStylesCSS(): string {
     padding-left: 1.5rem;
   }
   
-  .spin-ecom li {
-    margin: 0.5rem 0;
-  }
-  
-  .spin-ecom p {
-    margin: 1rem 0;
-    line-height: 1.6;
-    white-space: normal;
-  }
-  
   .spin-ecom strong {
     color: #3E4B5E;
     font-weight: 600;
   }
   
-  /* 📱 Responsividade Mobile */
-  @media (max-width: 768px) {
+  /* ========== TABLET (768px - 1024px) - 15px base ========== */
+  @media (min-width: 768px) and (max-width: 1024px) {
     .spin-ecom {
-      padding: 8px !important;
+      font-size: 15px;
     }
     
     .spin-ecom h1 {
-      font-size: 1.5em !important;
-      letter-spacing: -0.5px !important;
-      margin-bottom: 1rem !important;
+      font-size: 19px;
+      letter-spacing: -0.6px;
     }
     
     .spin-ecom h2 {
-      font-size: 1.25em !important;
-      margin-top: 1.5rem !important;
+      font-size: 17px;
     }
     
     .spin-ecom h3 {
-      font-size: 1.1em !important;
-      margin-top: 1rem !important;
+      font-size: 15px;
+    }
+    
+    .spin-ecom h4 {
+      font-size: 15px;
+    }
+    
+    .spin-ecom p,
+    .spin-ecom li,
+    .spin-ecom table td,
+    .spin-ecom table th {
+      font-size: 15px;
+    }
+    
+    .spin-ecom .tech-table th {
+      font-size: 15px;
+      padding: 1.25rem 0.875rem;
+    }
+    
+    .spin-ecom .tech-table td {
+      font-size: 15px;
+      padding: 1.1rem 0.875rem;
+    }
+  }
+  
+  /* ========== MOBILE (< 768px) - 14px base ========== */
+  @media (max-width: 767px) {
+    .spin-ecom {
+      padding: 12px;
+      font-size: 14px;
+    }
+    
+    .spin-ecom h1 {
+      font-size: 16px;
+      letter-spacing: -0.5px;
+      margin-bottom: 1rem;
+    }
+    
+    .spin-ecom h2 {
+      font-size: 15px;
+      margin-top: 1.5rem;
+    }
+    
+    .spin-ecom h3 {
+      font-size: 14px;
+      margin-top: 1rem;
+    }
+    
+    .spin-ecom h4 {
+      font-size: 14px;
+    }
+    
+    .spin-ecom p,
+    .spin-ecom li {
+      font-size: 14px;
     }
     
     .spin-ecom table th,
     .spin-ecom table td {
-      padding: 10px 8px !important;
-      font-size: 14px !important;
+      padding: 10px 8px;
+      font-size: 14px;
     }
     
     .spin-ecom .tech-table th {
-      padding: 12px 8px !important;
-      font-size: 14px !important;
+      padding: 12px 8px;
+      font-size: 14px;
     }
     
     .spin-ecom .tech-table td {
-      padding: 10px 8px !important;
-      font-size: 13px !important;
+      padding: 10px 8px;
+      font-size: 14px;
     }
     
     .spin-ecom .panel {
-      padding: 12px !important;
-      margin: 0.75rem 0 !important;
+      padding: 12px;
+      margin: 0.75rem 0;
     }
     
     .spin-ecom ul {
-      padding-left: 1.2rem !important;
-    }
-    
-    .spin-ecom p {
-      font-size: 15px !important;
+      padding-left: 1.2rem;
     }
   }
 </style>`;
