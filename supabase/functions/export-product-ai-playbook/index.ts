@@ -36,6 +36,7 @@ interface ProductData {
   
   // Technical Info
   technical_specifications?: any[];
+  technical_documents?: any[];
   faq?: any[];
   color?: string;
   size?: string;
@@ -452,6 +453,15 @@ function generateAIPlaybookJSON(product: ProductData & {
       google_product_category: product.google_product_category
     },
     technical_specs: product.technical_specifications || [],
+    technical_documents: (product.technical_documents || []).map((doc: any) => ({
+      id: doc.id,
+      name: doc.nome,
+      filename: doc.nome_arquivo,
+      download_url: doc.url_download,
+      origin: doc.origem,
+      description: doc.descricao || null,
+      external_id: doc.loja_integrada_id || null
+    })),
     faq_knowledge: product.faq || [],
     media_library: {
       product_image: product.image_url,
@@ -999,6 +1009,25 @@ ${product.target_audience?.map(audience => `- ${audience}`).join('\n') || '- Pú
 
 ## 📊 ESPECIFICAÇÕES TÉCNICAS
 ${product.technical_specifications?.map(spec => `- ${spec.label}: ${spec.value}`).join('\n') || '- Especificações não disponíveis'}
+
+## 📄 DOCUMENTOS TÉCNICOS (Sistema B)
+${product.technical_documents?.length ? `
+✅ ${product.technical_documents.length} documentos disponíveis
+
+${product.technical_documents.map((doc: any, idx: number) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOCUMENTO ${idx + 1}: ${doc.nome}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📂 Arquivo: ${doc.nome_arquivo}
+🆔 ID: ${doc.id}
+📦 External ID: ${doc.loja_integrada_id || 'N/A'}
+🏢 Origem: ${doc.origem}
+📝 Descrição: ${doc.descricao || 'Sem descrição'}
+🔗 Download: ${doc.url_download}
+
+`).join('\n')}
+` : '❌ Nenhum documento técnico disponível'}
 
 ## ❓ PERGUNTAS FREQUENTES (FAQ)
 
