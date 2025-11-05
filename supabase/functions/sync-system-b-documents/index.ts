@@ -7,7 +7,7 @@ const corsHeaders = {
 
 interface TechnicalDocument {
   id: string;
-  origem: 'catalog_documents' | 'resin_documents';
+  origem: 'resin_documents';
   nome: string;
   descricao?: string;
   nome_arquivo: string;
@@ -16,8 +16,8 @@ interface TechnicalDocument {
   ordem_exibicao?: number;
   ativo: boolean;
   metadata_sistema_b: {
-    produto_slug?: string;
     resina_slug?: string;
+    resina_id?: string;
     url_pagina?: string;
   };
   sincronizado_em: string;
@@ -48,109 +48,134 @@ Deno.serve(async (req) => {
 
     console.log(`📦 ${products.length} produtos encontrados com li_product_id`);
 
-    // 2. Buscar documentos do Sistema B
-    const systemBUrl = 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/data-export?' +
-      'format=ai_ready&include_resin_documents=true&include_catalog_documents=true';
-
-    console.log('🌐 Buscando documentos do Sistema B...');
+    // 2. Buscar dados do Sistema B
+    const systemBUrl = 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/data-export?format=ai_ready';
+    
+    console.log('🌐 Buscando dados do Sistema B...');
     const systemBResponse = await fetch(systemBUrl);
     
     if (!systemBResponse.ok) {
       throw new Error(`Erro ao buscar Sistema B: ${systemBResponse.status}`);
     }
 
-    const systemBData = await systemBResponse.json();
-    console.log('✅ Dados do Sistema B recebidos');
-
-    // 3. Mapear documentos por external_id
-    const documentsByExternalId: { [key: string]: TechnicalDocument[] } = {};
+    const raw = await systemBResponse.json();
     
-    // Processar documentos de catálogo
-    if (systemBData.produtos?.documentos_catalogo) {
-      for (const doc of systemBData.produtos.documentos_catalogo) {
-        const externalId = doc.produto.external_id;
-        if (!externalId) continue;
+    // Normalizar payload (pode vir direto ou em .data)
+    const payload = raw?.data ?? raw;
+    
+    console.log('📦 Estrutura do payload Sistema B:', {
+      temProdutos: !!payload?.produtos,
+      temResinas: !!payload?.produtos?.resinas,
+      temDocumentos: !!payload?.produtos?.documentos_tecnicos,
+      totalResinas: payload?.produtos?.resinas?.length || 0,
+      totalDocumentos: payload?.produtos?.documentos_tecnicos?.length || 0
+    });
 
-        if (!documentsByExternalId[externalId]) {
-          documentsByExternalId[externalId] = [];
-        }
+    const resinas = payload?.produtos?.resinas || [];
+    const documentosTecnicos = payload?.produtos?.documentos_tecnicos || [];
 
-        documentsByExternalId[externalId].push({
-          id: doc.id,
-          origem: 'catalog_documents',
-          nome: doc.documento.nome,
-          descricao: doc.documento.descricao,
-          nome_arquivo: doc.documento.nome_arquivo,
-          url_download: doc.documento.url_download,
-          tamanho_bytes: doc.documento.tamanho_bytes,
-          ordem_exibicao: doc.ordem_exibicao,
-          ativo: doc.ativo,
-          metadata_sistema_b: {
-            produto_slug: doc.produto.slug,
-            url_pagina: doc.produto.url_pagina
-          },
-          sincronizado_em: new Date().toISOString()
-        });
+    // 3. FASE 2: Criar mapa de resinas por loja_integrada_id
+    const resinasByLojaId: { [key: string]: any } = {};
+    
+    for (const resina of resinas) {
+      const lojaId = String(resina?.correlacao?.loja_integrada_id || '').trim();
+      if (lojaId) {
+        resinasByLojaId[lojaId] = resina;
       }
     }
 
-    // Processar documentos de resinas
-    if (systemBData.resinas?.documentos_resinas) {
-      for (const doc of systemBData.resinas.documentos_resinas) {
-        // Resinas também têm external_id através do produto relacionado
-        const externalId = doc.resina?.produto?.external_id;
-        if (!externalId) continue;
+    console.log('🔑 Resinas mapeadas por loja_integrada_id:', {
+      totalResinas: Object.keys(resinasByLojaId).length,
+      idsExemplo: Object.keys(resinasByLojaId).slice(0, 10)
+    });
 
-        if (!documentsByExternalId[externalId]) {
-          documentsByExternalId[externalId] = [];
-        }
+    // 4. FASE 3: Mapear documentos por loja_integrada_id
+    const documentsByLojaId: { [key: string]: TechnicalDocument[] } = {};
 
-        documentsByExternalId[externalId].push({
-          id: doc.id,
-          origem: 'resin_documents',
-          nome: doc.documento.nome,
-          descricao: doc.documento.descricao,
-          nome_arquivo: doc.documento.nome_arquivo,
-          url_download: doc.documento.url_download,
-          tamanho_bytes: doc.documento.tamanho_bytes,
-          ordem_exibicao: doc.ordem_exibicao,
-          ativo: doc.ativo,
-          metadata_sistema_b: {
-            resina_slug: doc.resina.slug,
-            produto_slug: doc.resina?.produto?.slug,
-            url_pagina: doc.resina?.produto?.url_pagina
-          },
-          sincronizado_em: new Date().toISOString()
-        });
+    for (const docTecnico of documentosTecnicos) {
+      const resinaId = docTecnico?.resina?.id;
+      if (!resinaId) {
+        console.log('⚠️ Documento técnico sem resina.id:', docTecnico?.id);
+        continue;
       }
+
+      // Encontrar a resina correspondente
+      const resina = resinas.find((r: any) => r.id === resinaId);
+      if (!resina) {
+        console.log('⚠️ Resina não encontrada para documento:', resinaId);
+        continue;
+      }
+
+      const lojaId = String(resina?.correlacao?.loja_integrada_id || '').trim();
+      if (!lojaId) {
+        console.log('⚠️ Resina sem loja_integrada_id:', resina?.id);
+        continue;
+      }
+
+      if (!documentsByLojaId[lojaId]) {
+        documentsByLojaId[lojaId] = [];
+      }
+
+      // Processar cada documento dentro de documentos_tecnicos
+      const documento = docTecnico?.documento;
+      if (!documento) continue;
+
+      documentsByLojaId[lojaId].push({
+        id: docTecnico.id,
+        origem: 'resin_documents',
+        nome: documento.nome || documento.nome_arquivo || 'Documento sem nome',
+        descricao: documento.descricao,
+        nome_arquivo: documento.nome_arquivo,
+        url_download: documento.url_download,
+        tamanho_bytes: documento.tamanho_bytes || 0,
+        ordem_exibicao: docTecnico.ordem_exibicao,
+        ativo: docTecnico.ativo !== false,
+        metadata_sistema_b: {
+          resina_slug: resina.slug,
+          resina_id: resina.id,
+          url_pagina: resina.url_pagina
+        },
+        sincronizado_em: new Date().toISOString()
+      });
     }
 
-    console.log(`📚 ${Object.keys(documentsByExternalId).length} produtos do Sistema B com documentos`);
+    console.log('📚 Documentos mapeados por loja_integrada_id:', {
+      totalProdutosComDocs: Object.keys(documentsByLojaId).length,
+      idsExemplo: Object.keys(documentsByLojaId).slice(0, 10),
+      docsExemplo: Object.entries(documentsByLojaId).slice(0, 3).map(([id, docs]) => ({
+        lojaId: id,
+        totalDocs: docs.length,
+        primeiroDoc: docs[0]?.nome
+      }))
+    });
 
-    // 4. Atualizar produtos
+    // 5. FASE 4: Atualizar produtos no repositório
     let produtosAtualizados = 0;
     let documentosSincronizados = 0;
-    const documentosPorOrigemCount = {
-      catalog_documents: 0,
-      resin_documents: 0
-    };
 
     for (const product of products) {
-      const liProductId = product.original_data?.li_product_id;
+      const liProductId = String(product.original_data?.li_product_id || '').trim();
       if (!liProductId) continue;
 
-      const docs = documentsByExternalId[liProductId] || [];
+      const docs = documentsByLojaId[liProductId] || [];
       
-      if (docs.length === 0) continue;
+      if (docs.length === 0) {
+        console.log(`⚠️ [NO MATCH] ${product.name} → li_product_id="${liProductId}" → 0 docs`);
+        continue;
+      }
 
-      // Contar documentos por origem
-      docs.forEach(doc => {
-        documentosPorOrigemCount[doc.origem]++;
+      // Ordenar documentos por ordem_exibicao
+      const sortedDocs = docs.sort((a, b) => {
+        const orderA = a.ordem_exibicao ?? 999;
+        const orderB = b.ordem_exibicao ?? 999;
+        return orderA - orderB;
       });
+
+      console.log(`✅ [MATCH] ${product.name} → li_product_id="${liProductId}" → ${sortedDocs.length} docs`);
 
       const { error: updateError } = await supabase
         .from('products_repository')
-        .update({ technical_documents: docs })
+        .update({ technical_documents: sortedDocs })
         .eq('id', product.id);
 
       if (updateError) {
@@ -159,15 +184,18 @@ Deno.serve(async (req) => {
       }
 
       produtosAtualizados++;
-      documentosSincronizados += docs.length;
-      console.log(`✅ ${product.name}: ${docs.length} documentos sincronizados`);
+      documentosSincronizados += sortedDocs.length;
     }
 
+    // 6. FASE 5: Retornar summary correto
     const summary = {
       produtos_verificados: products.length,
       produtos_atualizados: produtosAtualizados,
       documentos_sincronizados: documentosSincronizados,
-      documentos_por_origem: documentosPorOrigemCount,
+      documentos_por_origem: {
+        catalog_documents: 0,
+        resin_documents: documentosSincronizados
+      },
       timestamp: new Date().toISOString()
     };
 
