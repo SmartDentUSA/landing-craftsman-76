@@ -127,6 +127,34 @@ serve(async (req) => {
       generatedBenefits = product.ecommerce_html?.generated_benefits || product.benefits || [];
     }
     
+    // 🆕 NOVO BLOCO: Refinamento de Descrição com Contexto de FAQs (Anti-Repetição)
+    if (product.faq && Array.isArray(product.faq) && product.faq.length > 0) {
+      const faqAnswers = product.faq
+        .map((f: any) => f.answer.replace(/<[^>]+>/g, '').trim()) // Remove HTML tags
+        .join(' | ');
+      
+      console.log(`📝 Refinando descrição com contexto de ${product.faq.length} FAQs (${faqAnswers.length} chars de contexto de exclusão)`);
+
+      try {
+        const refinedDescription = await refineDescriptionWithFAQContext(product, faqAnswers);
+
+        // Armazenar a descrição refinada no objeto product para uso posterior
+        product.processed_description = refinedDescription;
+        
+        if (refinedDescription && refinedDescription !== product.description) {
+           console.log(`✅ Descrição refinada: ${refinedDescription.substring(0, 100)}...`);
+        } else {
+           console.log('ℹ️ Descrição refinada igual à original (fallback ativado)');
+        }
+      } catch (refineError) {
+        console.error('⚠️ Erro ao refinar descrição:', refineError);
+        console.log('📝 Mantendo descrição original como fallback');
+        // Não faz nada - product.processed_description permanece undefined
+      }
+    } else {
+      console.log('ℹ️ Produto sem FAQs, pulando refinamento de descrição');
+    }
+    
     // 3. Montar HTML
     console.log('🏗️ Construindo HTML com:', {
       productName: product.name,
@@ -186,6 +214,144 @@ serve(async (req) => {
   }
 });
 
+/**
+ * NORMALIZAÇÃO TÉCNICA: Converte specs de múltiplos formatos para string legível.
+ * Suporta: string, array, object, array de objetos {label, value}
+ */
+function stringifyTechnicalSpecs(specs: any): string {
+  if (!specs || specs === null || specs === undefined) return 'N/A';
+  if (typeof specs === 'string') return specs;
+  
+  if (Array.isArray(specs)) {
+    // Array de objetos {label, value}
+    if (specs.length > 0 && typeof specs[0] === 'object' && (specs[0] as any).label) {
+      return specs.map((s: any) => `${s.label}: ${s.value}`).join(', ');
+    }
+    // Array simples de strings
+    return specs.join(', ');
+  }
+
+  if (typeof specs === 'object') {
+    return Object.entries(specs)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ');
+  }
+
+  return 'N/A';
+}
+
+/**
+ * LÓGICA ADAPTATIVA: Detecta se o produto tem dados ricos (≥3 fontes de dados técnicos).
+ * Usado para adaptar o número de benefícios (5 vs 8).
+ */
+function hasRichData(product: any): boolean {
+  const dataSources = [
+    product.technical_specifications,
+    product.features,
+    product.benefits,
+    product.warranty_info,
+    product.certifications 
+  ];
+  const dataScore = dataSources.filter(Boolean).length;
+  console.log(`📊 Data richness score: ${dataScore}/5 (threshold: 3)`);
+  return dataScore >= 3;
+}
+
+/**
+ * ANTI-REPETIÇÃO: Usa respostas de FAQ como contexto de exclusão para reescrever descrição.
+ * Garante que descrição principal foca em narrativa de alto nível, não em detalhes técnicos.
+ */
+async function refineDescriptionWithFAQContext(
+  product: any,
+  faqAnswers: string
+): Promise<string> {
+  const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+
+  // Fallback 1: Se não tem API key
+  if (!deepSeekApiKey) {
+    console.warn('⚠️ DEEPSEEK_API_KEY não configurada, usando descrição original');
+    return product.description || '';
+  }
+
+  // Fallback 2: Se não tem FAQs suficientes para contexto
+  if (!faqAnswers || faqAnswers.trim().length < 50) {
+    console.log('ℹ️ Sem FAQs suficientes para contexto, usando descrição original');
+    return product.description || '';
+  }
+
+  const prompt = `Você é um editor técnico de e-commerce. Sua missão é reescrever a 'DESCRIÇÃO ORIGINAL' e o 'PITCH DE VENDAS' em um texto único e coeso (máximo 200 palavras).
+
+REQUISITO CRÍTICO DE DIVERSIDADE E NÃO-REPETIÇÃO:
+O novo texto DEVE evitar usar como FOCO PRINCIPAL as informações já detalhadas nas 'RESPOSTAS DE FAQ'. 
+
+✅ PRIORIZE (Alto Nível - Introdução Narrativa):
+• Aplicações práticas no dia a dia (ex: "Ideal para clínicas que buscam agilizar o fluxo de trabalho")
+• Experiência do usuário e facilidade de uso (ex: "Aplicação intuitiva, sem necessidade de treinamento especializado")
+• Promessa de valor e diferencial competitivo (ex: "Reconhecido por profissionais como a melhor alternativa no mercado")
+• Para quem é indicado e em quais cenários (ex: "Perfeito para procedimentos estéticos em pacientes sensíveis")
+
+❌ EVITE (Detalhes Técnicos - já cobertos nas FAQs):
+• Certificações específicas (ex: "ISO 10993", "FDA aprovado")
+• Especificações numéricas (ex: "viscosidade de 3000 mPa·s")
+• Composição química detalhada
+• Dados de performance quantificados
+
+EXEMPLO DE TRANSFORMAÇÃO:
+❌ ERRADO: "Este produto possui certificação ISO 10993 e viscosidade de 3000 mPa·s, garantindo resistência de 50 MPa."
+✅ CORRETO: "Desenvolvido para profissionais que buscam resultados previsíveis e duradouros, este produto combina facilidade de aplicação com desempenho superior em restaurações estéticas."
+
+DADOS DO PRODUTO:
+* DESCRIÇÃO ORIGINAL: ${product.description || 'N/A'}
+* PITCH DE VENDAS: ${product.sales_pitch || 'N/A'}
+* ARGUMENTOS A EVITAR (Detalhes de FAQ): ${faqAnswers}
+
+Retorne APENAS o texto reescrito, sem títulos, markdown, ou JSON. O texto deve ser coeso, persuasivo e pronto para HTML.`;
+
+  const systemPrompt = 'Você é um copywriter especializado em e-commerce. Retorna APENAS o texto solicitado, sem explicações ou formatação adicional.';
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout de 30 segundos
+        
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${deepSeekApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      }),
+      signal: controller.signal
+    });
+        
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Deepseek API erro ${response.status}:`, errorText);
+      throw new Error(`Deepseek API retornou status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const refinedText = data.choices[0].message.content.trim();
+
+    console.log(`✅ Descrição refinada com sucesso. Contexto de exclusão: ${faqAnswers.length} chars de FAQs.`);
+    return refinedText;
+      
+  } catch (error) {
+    console.error('❌ Erro ao refinar descrição:', error);
+    // Fallback 3: Se a IA falhar, retornar descrição original
+    return product.description || '';
+  }
+}
+
 async function generateBenefitsWithAI(product: any): Promise<string[]> {
   const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
   if (!deepSeekApiKey) {
@@ -200,17 +366,25 @@ async function generateBenefitsWithAI(product: any): Promise<string[]> {
   }
 
   // ❌ Se não houver benefícios, gerar com IA
-  const prompt = `Analise o seguinte produto e gere EXATAMENTE 5 benefícios objetivos para descrição de e-commerce:
+  // Calcular número adaptativo de benefícios baseado na riqueza de dados
+  const benefitsCount = hasRichData(product) ? 8 : 5;
+  console.log(`🎯 Gerando ${benefitsCount} benefícios (adaptativo baseado em data richness)`);
+  
+  const prompt = `Analise o seguinte produto e gere EXATAMENTE ${benefitsCount} benefícios objetivos e altamente persuasivos para a descrição de e-commerce. Priorize dados quantificáveis (ex: resistência, certificações, economia de tempo) no foco principal de cada benefício:
 
 Produto: ${product.name}
 Descrição: ${product.description || 'N/A'}
 Categoria: ${product.category || 'N/A'}
+Especificações Técnicas: ${stringifyTechnicalSpecs(product.technical_specifications)}
+Recursos e Vantagens Chave: ${product.features?.join(', ') || 'N/A'}
+Certificações: ${product.certifications || 'N/A'}
+Garantia: ${product.warranty_info || 'N/A'}
 ${product.applications ? `Aplicações: ${product.applications}` : ''}
 ${product.sales_pitch ? `Pitch de Vendas: ${product.sales_pitch}` : ''}
 ${product.target_audience && product.target_audience.length > 0 ? `Público-Alvo: ${product.target_audience.join(', ')}` : ''}
 
 Retorne APENAS o array JSON puro sem markdown:
-["benefício 1", "benefício 2", "benefício 3", "benefício 4", "benefício 5"]`;
+${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`;
 
   console.log('🔑 API Key presente, chamando Deepseek...');
   
@@ -219,7 +393,7 @@ Retorne APENAS o array JSON puro sem markdown:
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${deepSeekApiKey}`,
@@ -228,7 +402,9 @@ Retorne APENAS o array JSON puro sem markdown:
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: 'Você extrai dados e retorna APENAS JSON puro.' },
+          { role: 'system', content: hasRichData(product)
+            ? 'Você extrai dados e retorna APENAS JSON puro. Priorize DIVERSIDADE nos benefícios: cada um deve destacar um aspecto técnico ÚNICO (certificação, especificação, uso prático).'
+            : 'Você extrai dados e retorna APENAS JSON puro.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
@@ -259,7 +435,8 @@ Retorne APENAS o array JSON puro sem markdown:
     }
     
     console.log(`✅ ${parsed.length} benefícios parseados com sucesso`);
-    return parsed.slice(0, 5);
+    const benefitsCount = hasRichData(product) ? 8 : 5;
+    return parsed.slice(0, benefitsCount);
     
   } catch (error) {
     console.error('❌ Erro ao chamar Deepseek API:', error);
@@ -1026,40 +1203,50 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
   
   console.log('🎨 Aplicando SPIN Design System ao HTML E-commerce');
   
-  // ✅ LIMPAR HTML DO GOOGLE DOCS + ENRIQUECER DESCRIÇÃO
-  let enrichedDescription = cleanGoogleDocsHTML(desc)
-    .replace(/\n{3,}/g, '\n\n')  // Máximo 2 quebras consecutivas
-    .trim();
-  
-  // 🧹 Remover seção duplicada de "Características Técnicas" do description
-  enrichedDescription = enrichedDescription.replace(
-    /<hr[^>]*>\s*<h3[^>]*>\s*<strong[^>]*>Características Técnicas<\/strong>\s*<\/h3>[\s\S]*?(<hr[^>]*>|$)/gi,
-    ''
-  );
-  
-  // 🧹 Remover títulos órfãos de seções técnicas que vinham antes das tabelas coladas
-  enrichedDescription = enrichedDescription
-    .replace(/📏[^\n<]*Propriedades[^\n<]*(\n|$)/gi, '')
-    .replace(/Testes de Segurança[^\n<]*(\n|$)/gi, '')
-    .replace(/Certificação & Conformidade[^\n<]*(\n|$)/gi, '')
-    .replace(/Graças à sua composição[^\n<]*(\n|$)/gi, '');
-  
-  // 🧹 Remover seção duplicada de "Principais Benefícios" do description
-  enrichedDescription = enrichedDescription.replace(
-    /(?:💡\s*)?(?:principais\s+)?benef[íi]cios[:\s]*\n(?:[-•✓]\s*[^\n]+\n?)+/gi,
-    ''
-  );
-  
-  // 🧹 Remover títulos de benefícios isolados
-  enrichedDescription = enrichedDescription
-    .replace(/💡[^\n<]*benef[íi]cios[^\n<]*(\n|$)/gi, '')
-    .replace(/principais\s+benef[íi]cios[^\n<]*(\n|$)/gi, '');
-  
-  console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
-  
-  // ✅ Enriquecer descrição com Sales Pitch (sem keywords explícitas ou aplicações duplicadas)
-  if (product.sales_pitch && !enrichedDescription.includes(product.sales_pitch)) {
-    enrichedDescription += `\n\n🎯 **Por que escolher este produto?**\n${product.sales_pitch}`;
+  // ✅ PRIORIZAR DESCRIÇÃO REFINADA (Anti-Repetição com FAQs)
+  let enrichedDescription = '';
+
+  if (product.processed_description) {
+    // Nível 1: Usar descrição refinada pela IA (já veio limpa e otimizada)
+    console.log('✅ Usando descrição refinada (Anti-Repetição ativado)');
+    enrichedDescription = product.processed_description;
+  } else {
+    // Nível 2: Fallback - Pipeline original (description + sales_pitch + limpezas)
+    console.log('ℹ️ Usando descrição original (Fallback - sem refinamento)');
+    enrichedDescription = cleanGoogleDocsHTML(desc)
+      .replace(/\n{3,}/g, '\n\n')  // Máximo 2 quebras consecutivas
+      .trim();
+    
+    // 🧹 Remover seção duplicada de "Características Técnicas" do description
+    enrichedDescription = enrichedDescription.replace(
+      /<hr[^>]*>\s*<h3[^>]*>\s*<strong[^>]*>Características Técnicas<\/strong>\s*<\/h3>[\s\S]*?(<hr[^>]*>|$)/gi,
+      ''
+    );
+    
+    // 🧹 Remover títulos órfãos de seções técnicas que vinham antes das tabelas coladas
+    enrichedDescription = enrichedDescription
+      .replace(/📏[^\n<]*Propriedades[^\n<]*(\n|$)/gi, '')
+      .replace(/Testes de Segurança[^\n<]*(\n|$)/gi, '')
+      .replace(/Certificação & Conformidade[^\n<]*(\n|$)/gi, '')
+      .replace(/Graças à sua composição[^\n<]*(\n|$)/gi, '');
+    
+    // 🧹 Remover seção duplicada de "Principais Benefícios" do description
+    enrichedDescription = enrichedDescription.replace(
+      /(?:💡\s*)?(?:principais\s+)?benef[íi]cios[:\s]*\n(?:[-•✓]\s*[^\n]+\n?)+/gi,
+      ''
+    );
+    
+    // 🧹 Remover títulos de benefícios isolados
+    enrichedDescription = enrichedDescription
+      .replace(/💡[^\n<]*benef[íi]cios[^\n<]*(\n|$)/gi, '')
+      .replace(/principais\s+benef[íi]cios[^\n<]*(\n|$)/gi, '');
+    
+    console.log('🧹 Sanitizando seção "Características Técnicas" duplicada do description');
+    
+    // ✅ Enriquecer descrição com Sales Pitch (APENAS NO FALLBACK)
+    if (product.sales_pitch && !enrichedDescription.includes(product.sales_pitch)) {
+      enrichedDescription += `\n\n🎯 **Por que escolher este produto?**\n${product.sales_pitch}`;
+    }
   }
 
   const faq = options.includeFAQ && product.faq ? product.faq.slice(0, options.faqLimit) : [];
