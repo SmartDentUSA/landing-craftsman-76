@@ -769,33 +769,11 @@ function getSpinStylesCSS(): string {
     font-size: 16px;
   }
   
-  /* ========== RESET GLOBAL DE MARGENS ========== */
-  .spin-ecom h1,
-  .spin-ecom h2,
-  .spin-ecom h3,
-  .spin-ecom h4 {
-    margin: 0 !important;
-  }
-
-  .spin-ecom p,
-  .spin-ecom li,
-  .spin-ecom ul {
-    margin: 0 !important;
-  }
-
-  .spin-ecom .panel {
-    margin: 0 !important;
-  }
-
-  .spin-ecom table {
-    margin: 0 !important;
-  }
-  
   .spin-ecom h1 {
     color: #3E4B5E;
     font-weight: 800;
     letter-spacing: -0.8px;
-    margin-bottom: 1.5rem;
+    margin: 0 !important;
     font-size: 20px;
   }
   
@@ -803,16 +781,14 @@ function getSpinStylesCSS(): string {
     color: #3E4B5E;
     font-weight: 800;
     letter-spacing: -0.5px;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
+    margin: 0 !important;
     font-size: 18px;
   }
   
   .spin-ecom h3 {
     color: #3E4B5E;
     font-weight: 700;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
+    margin: 0 !important;
     font-size: 16px;
     letter-spacing: -0.3px;
   }
@@ -820,20 +796,19 @@ function getSpinStylesCSS(): string {
   .spin-ecom h4 {
     color: #3E4B5E;
     font-weight: 600;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
+    margin: 0 !important;
     font-size: 16px;
   }
   
   .spin-ecom p {
-    margin: 1rem 0;
+    margin: 0 !important;
     line-height: 1.7;
     white-space: normal;
     font-size: 16px;
   }
   
   .spin-ecom li {
-    margin: 0.5rem 0;
+    margin: 0 !important;
     font-size: 16px;
   }
   
@@ -861,14 +836,14 @@ function getSpinStylesCSS(): string {
     background: #f8fafc;
     border-radius: 10px;
     padding: 20px;
-    margin: 1rem 0;
+    margin: 0 !important;
   }
   
   .spin-ecom table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    margin: 1rem 0;
+    margin: 0 !important;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -962,7 +937,7 @@ function getSpinStylesCSS(): string {
   }
   
   .spin-ecom ul {
-    margin: 1rem 0;
+    margin: 0 !important;
     padding-left: 1.5rem;
   }
   
