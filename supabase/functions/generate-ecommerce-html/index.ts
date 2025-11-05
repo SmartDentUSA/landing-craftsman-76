@@ -673,6 +673,17 @@ function truncateToWords(text: string, maxWords: number): string {
   return words.slice(0, maxWords).join(' ') + '...';
 }
 
+// Format file size from bytes to human-readable format
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 // Generate Product Schema.org JSON-LD
 function generateProductSchema(product: any): string {
   const schema: any = {
@@ -1061,8 +1072,60 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
              </a>`
           : spec.value;
         return `<tr>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">${spec.label}</td>
-          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); font-size:15px; color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anywhere;">${valueCell}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anything;">${spec.label}</td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); font-size:15px; color:#2f3a4a; line-height:1.6; font-weight:600; word-break:break-word; overflow-wrap:anything;">${valueCell}</td>
+        </tr>`;
+      }).join('\n      ')}
+    </tbody>
+  </table>
+</div>`;
+  }
+
+  // ✅ Documentos Técnicos (SPIN Landing Page Style)
+  const technicalDocs = product.technical_documents && Array.isArray(product.technical_documents)
+    ? product.technical_documents
+        .filter((doc: any) => doc.ativo !== false)
+        .sort((a: any, b: any) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0))
+    : [];
+
+  if (technicalDocs.length > 0) {
+    html += `
+<h2 style="color: #3E4B5E; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; margin-top: 25px;">Documentos Técnicos</h2>
+<div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin:0 0 25px 0;">
+  <table style="width:100%; border-collapse:separate; border-spacing:0;">
+    <thead>
+      <tr style="background: linear-gradient(135deg, #3E4B5E 0%, #2d3748 100%);">
+        <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Documento</th>
+        <th style="padding:16px; text-align:left; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E;">Descrição</th>
+        <th style="padding:16px; text-align:center; font-weight:700; font-size:16px; color:#fff; text-transform:uppercase; letter-spacing:0.5px; border-bottom:3px solid #EE7A3E; width:120px;">Download</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${technicalDocs.map((doc: any, i: number) => {
+        const zebraBackground = i % 2 === 0 ? '#FFFFFF' : '#FCFCFD';
+        const docName = doc.nome_documento || 'Documento sem nome';
+        const docSize = doc.tamanho_bytes ? ` (${formatFileSize(doc.tamanho_bytes)})` : '';
+        const description = doc.descricao || '';
+        const truncatedDesc = description.length > 150 
+          ? description.substring(0, 150) + '...' 
+          : description;
+        
+        return `<tr>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anything;">
+            ${docName}${docSize}
+          </td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; font-size:15px; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anything;">
+            ${truncatedDesc || '<span style="color:#999;">Sem descrição</span>'}
+          </td>
+          <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); text-align:center;">
+            <a href="${doc.url_download}" target="_blank" rel="noopener" download style="display:inline-block; text-decoration:none;">
+              <span style="background:#EE7A3E; color:#fff; border:none; padding:10px 16px; border-radius:6px; font-weight:600; box-shadow:0 2px 6px rgba(238,122,62,0.3); cursor:pointer; transition: all 0.3s ease; display:inline-block;" 
+                    onmouseover="this.style.background='#FF8B4A'; this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 10px rgba(238,122,62,0.4)';" 
+                    onmouseout="this.style.background='#EE7A3E'; this.style.transform='scale(1)'; this.style.boxShadow='0 2px 6px rgba(238,122,62,0.3)';">
+                📥
+              </span>
+            </a>
+          </td>
         </tr>`;
       }).join('\n      ')}
     </tbody>
