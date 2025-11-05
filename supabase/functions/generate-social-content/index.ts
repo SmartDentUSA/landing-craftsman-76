@@ -209,6 +209,52 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
       );
     }
 
+    // Tratamento para múltiplas variações de Instagram (Feed e Reels)
+    if (type === 'instagram' && (instagramType === 'feed' || instagramType === 'reels')) {
+      console.log(`🎨 Gerando 4 variações para ${instagramType}...`);
+      
+      const variations = await generateMultipleVariations(
+        productId,
+        instagramType,
+        deepseekApiKey,
+        supabase
+      );
+      
+      // Salvar as variações no banco
+      const { data: existingData } = await supabase
+        .from('products_repository')
+        .select('instagram_copies')
+        .eq('id', productId)
+        .single();
+      
+      const existingCopies = existingData?.instagram_copies || {};
+      
+      const fieldName = instagramType === 'feed' ? 'feed_copies' : 'reels_copies';
+      
+      const updatedCopies = {
+        ...existingCopies,
+        [fieldName]: variations,
+        last_generated: new Date().toISOString()
+      };
+      
+      const { error: updateError } = await supabase
+        .from('products_repository')
+        .update({ instagram_copies: updatedCopies })
+        .eq('id', productId);
+        
+      if (updateError) throw updateError;
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          content: { [fieldName]: variations },
+          message: `4 variações de ${instagramType} geradas com sucesso!`,
+          type: 'instagram'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Buscar configuração de prompt personalizado
     let finalPrompt: string = customPrompt || '';
     if (!finalPrompt) {
@@ -372,6 +418,217 @@ Retorne apenas o texto da mensagem formatada, sem explicações.
     );
   }
 });
+
+// Função para gerar múltiplas variações com diferentes abordagens
+async function generateMultipleVariations(
+  productId: string,
+  type: 'feed' | 'reels',
+  deepseekApiKey: string,
+  supabaseClient: any
+): Promise<Array<{ variation: number; approach: string; copy: string; hashtags?: string[]; call_to_action?: string }>> {
+  
+  const approaches = type === 'feed' 
+    ? ['storytelling', 'benefits', 'problem_solution', 'urgency']
+    : ['educational', 'trending', 'behind_scenes', 'demonstration'];
+  
+  const variations = [];
+  
+  for (let i = 0; i < 4; i++) {
+    console.log(`🎨 Gerando variação ${i+1}/4 para ${type} - Abordagem: ${approaches[i]}`);
+    
+    try {
+      // Gerar conteúdo com a abordagem específica
+      const result = await generateVariationWithApproach(
+        productId,
+        type,
+        approaches[i],
+        deepseekApiKey,
+        supabaseClient
+      );
+      
+      variations.push({
+        variation: i + 1,
+        approach: approaches[i],
+        copy: result.copy,
+        hashtags: result.hashtags,
+        call_to_action: result.call_to_action
+      });
+      
+      // Delay entre variações para evitar rate limit
+      if (i < 3) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      console.error(`Erro ao gerar variação ${i+1}:`, error);
+      // Continuar mesmo se uma variação falhar
+      variations.push({
+        variation: i + 1,
+        approach: approaches[i],
+        copy: `Erro ao gerar esta variação. Tente novamente.`,
+        hashtags: [],
+        call_to_action: ''
+      });
+    }
+  }
+  
+  return variations;
+}
+
+// Função para gerar uma variação com abordagem específica
+async function generateVariationWithApproach(
+  productId: string,
+  type: 'feed' | 'reels',
+  approach: string,
+  deepseekApiKey: string,
+  supabaseClient: any
+): Promise<{ copy: string; hashtags?: string[]; call_to_action?: string }> {
+  
+  // Buscar dados do produto
+  const { data: product, error: productError } = await supabaseClient
+    .from('products_repository')
+    .select('*')
+    .eq('id', productId)
+    .single();
+
+  if (productError || !product) {
+    throw new Error(`Produto não encontrado: ${productError?.message}`);
+  }
+
+  // Buscar dados da empresa
+  const { data: company } = await supabaseClient
+    .from('company_profile')
+    .select('*')
+    .limit(1)
+    .single();
+
+  // Construir prompt com a abordagem específica
+  const prompt = buildPromptWithApproach(product, company, type, approach);
+  
+  // Gerar conteúdo com Dual-AI
+  const result = await generateWithDualAI(deepseekApiKey, prompt, 'instagram', product);
+  
+  return {
+    copy: result.feed_copy || result.content || '',
+    hashtags: result.hashtags || [],
+    call_to_action: result.call_to_action || ''
+  };
+}
+
+// Construir prompt com abordagem específica
+function buildPromptWithApproach(
+  product: any,
+  company: any,
+  type: 'feed' | 'reels',
+  approach: string
+): string {
+  const approachGuides: Record<string, string> = {
+    storytelling: '📖 STORYTELLING: Conte uma história envolvente que conecte emocionalmente. Use narrativa pessoal, jornada do cliente, transformação.',
+    benefits: '✨ BENEFÍCIOS: Foque nos benefícios práticos e transformação que o produto oferece. Destaque resultados concretos.',
+    problem_solution: '💡 PROBLEMA/SOLUÇÃO: Identifique um problema específico do público e apresente o produto como solução ideal.',
+    urgency: '⏰ URGÊNCIA: Crie senso de urgência (oferta limitada, escassez, FOMO). Use gatilhos de ação imediata.',
+    educational: '🎓 EDUCATIVA: Ensine algo novo, dê dica valiosa, seja instrutivo. Agregue valor com conhecimento.',
+    trending: '🔥 TRENDING: Use trends atuais, sons populares, formatos virais. Adapte para o produto de forma criativa.',
+    behind_scenes: '🎬 BASTIDORES: Mostre os bastidores, processo, autenticidade. Humanize a marca e produto.',
+    demonstration: '🎯 DEMONSTRAÇÃO: Demonstre o produto em uso, mostre resultados práticos. Prova social e evidências.'
+  };
+
+  const baseInfo = `
+Informações do Produto:
+- Nome: ${product.name || 'N/A'}
+- Descrição: ${product.description || 'N/A'}
+- Categoria: ${product.category || 'N/A'}
+- Preço: ${product.price ? `R$ ${product.price}` : 'N/A'}
+- Benefícios: ${Array.isArray(product.benefits) ? product.benefits.join(', ') : 'N/A'}
+- Público-alvo: ${Array.isArray(product.target_audience) ? product.target_audience.join(', ') : 'N/A'}
+
+Informações da Empresa:
+- Nome: ${company?.company_name || 'N/A'}
+- Mention: @smartdentoficial
+
+PALAVRAS GATILHO BOT: ${Array.isArray(product.bot_trigger_words) && product.bot_trigger_words.length > 0 
+  ? product.bot_trigger_words.join(', ') 
+  : 'QUERO'}`;
+
+  if (type === 'feed') {
+    return `Você é um especialista em marketing digital no Instagram especializado em posts de Feed.
+
+${baseInfo}
+
+🎯 ABORDAGEM CRIATIVA OBRIGATÓRIA:
+${approachGuides[approach]}
+
+Crie uma copy ÚNICA e ORIGINAL seguindo EXCLUSIVAMENTE a abordagem "${approach}".
+NÃO misture outras abordagens. Seja criativo e autêntico.
+
+INSTRUÇÕES ESPECÍFICAS PARA FEED:
+1. Copy Principal: Máximo 2200 caracteres
+2. Hook inicial: Pare o scroll nos primeiros 2 segundos
+3. Estrutura: Introdução > Desenvolvimento > Call-to-action
+4. Hashtags: 5-10 hashtags relevantes (inclua sempre #dentala #eodonto quando apropriado)
+5. Call-to-Action OBRIGATÓRIO: Use uma palavra gatilho BOT
+
+TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
+- "💬 Comenta '{random_trigger_word}' que te explico tudo!"
+- "💬 Manda '{random_trigger_word}' no direct para mais informações!"
+- "💬 Deixa '{random_trigger_word}' nos comentários!"
+
+Se não houver palavras gatilho, use: "💬 Comenta 'QUERO' que te mando mais informações!"
+
+CRÍTICO: Retorne APENAS um JSON válido sem blocos de código markdown.
+
+Formato JSON obrigatório:
+{
+  "feed_copy": "Copy completa para feed seguindo a abordagem ${approach}",
+  "hashtags": ["#tag1", "#tag2"],
+  "call_to_action": "Frase final com palavra gatilho"
+}
+
+⚠️ INSTRUÇÕES ANTI-ALUCINAÇÃO:
+- Use APENAS informações fornecidas
+- NÃO invente características ou benefícios
+- Mantenha-se fiel à abordagem ${approach}`;
+  } else {
+    return `Você é um especialista em marketing digital no Instagram especializado em Reels.
+
+${baseInfo}
+
+🎯 ABORDAGEM CRIATIVA OBRIGATÓRIA:
+${approachGuides[approach]}
+
+Crie uma copy ÚNICA e ORIGINAL seguindo EXCLUSIVAMENTE a abordagem "${approach}".
+NÃO misture outras abordagens. Seja dinâmico e viral.
+
+INSTRUÇÕES ESPECÍFICAS PARA REELS:
+1. Copy Principal: Máximo 2200 caracteres, linguagem energética
+2. Hook inicial: MUITO impactante, cause curiosidade imediata
+3. Linguagem: Casual, use gírias quando apropriado
+4. Timing: Pense na sincronização com as cenas do vídeo
+5. Interação: Incentive likes, shares, comentários e saves
+6. Hashtags: Foque em hashtags de Reels e tendências
+7. Call-to-Action OBRIGATÓRIO: Use palavra gatilho BOT
+
+TEMPLATES OBRIGATÓRIOS PARA A ÚLTIMA FRASE (escolha 1):
+- "💬 Comenta '{random_trigger_word}' que te mando tudo no direct! 🔥"
+- "💬 Duplo toque + comenta '{random_trigger_word}' para mais informações!"
+- "💬 Deixa '{random_trigger_word}' nos comentários que te explico tudo!"
+
+Se não houver palavras gatilho, use: "💬 Comenta 'QUERO' que te mando mais informações!"
+
+CRÍTICO: Retorne APENAS um JSON válido sem blocos de código markdown.
+
+Formato JSON obrigatório:
+{
+  "feed_copy": "Copy dinâmica para Reels seguindo a abordagem ${approach}",
+  "hashtags": ["#reels", "#viral"],
+  "call_to_action": "Frase final com palavra gatilho"
+}
+
+⚠️ INSTRUÇÕES ANTI-ALUCINAÇÃO:
+- Use APENAS informações fornecidas
+- NÃO invente características ou benefícios
+- Mantenha-se fiel à abordagem ${approach}`;
+  }
+}
 
 function getDefaultPrompt(type: 'whatsapp' | 'youtube' | 'instagram', instagramType?: 'feed' | 'reels' | 'carousel'): string {
   if (type === 'whatsapp') {
