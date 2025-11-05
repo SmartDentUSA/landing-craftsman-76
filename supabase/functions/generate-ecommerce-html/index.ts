@@ -127,6 +127,21 @@ serve(async (req) => {
       generatedBenefits = product.ecommerce_html?.generated_benefits || product.benefits || [];
     }
     
+    // 3. Gerar descrições de documentos técnicos com IA
+    let technicalDocsWithDescriptions = product.technical_documents || [];
+    if (technicalDocsWithDescriptions.length > 0) {
+      try {
+        console.log('📄 Processando descrições de documentos técnicos com IA...');
+        technicalDocsWithDescriptions = await generateDocumentDescriptionsWithAI(
+          technicalDocsWithDescriptions,
+          product
+        );
+      } catch (docError) {
+        console.error('⚠️ Erro ao gerar descrições de documentos:', docError);
+        console.log('📝 Usando descrições originais como fallback');
+      }
+    }
+    
     // 🏆 DUAL-AI COMPETITIVE: Refinamento de Descrição com Lovable AI + Deepseek
     let aiWinner = 'none';
     let lovableScore = 0;
@@ -605,6 +620,102 @@ ${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`;
     console.log('♻️ Usando benefits existentes como fallback');
     return product.benefits || [];
   }
+}
+
+/**
+ * 📄 Gera descrições inteligentes de documentos técnicos usando IA
+ * Foco: Propósito clínico, concisão (30 palavras), E-E-A-T
+ */
+async function generateDocumentDescriptionsWithAI(
+  documents: any[], 
+  product: any
+): Promise<any[]> {
+  if (!documents || documents.length === 0) {
+    console.log('📋 Nenhum documento técnico para processar');
+    return documents;
+  }
+
+  console.log(`📄 Gerando descrições para ${documents.length} documentos técnicos...`);
+  
+  const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
+  if (!DEEPSEEK_API_KEY) {
+    console.warn('⚠️ DEEPSEEK_API_KEY não encontrada, usando descrições originais');
+    return documents;
+  }
+
+  const processedDocs = [];
+
+  for (const doc of documents) {
+    const docName = doc.nome || doc.nome_arquivo || 'Documento Técnico';
+    const originalDescription = doc.descricao || 'N/A';
+    
+    const prompt = `Você é um editor técnico de e-commerce e um especialista em simplificação de informações científicas para profissionais. Sua missão é gerar a descrição mais clara e concisa para a tabela de prova factual do produto.
+
+REQUISITOS CRÍTICOS DE SÍNTESE E E-E-A-T:
+1. **Síntese e Jargão:** Converta o nome do documento em uma frase que o profissional de odontologia entenda rapidamente, focando no **resultado** e **propósito clínico** (ex: "garante longevidade" ou "avalia a segurança biológica").
+2. **Concisão Estrita:** A descrição deve ter no máximo **30 palavras** para garantir que caiba perfeitamente na coluna da tabela.
+3. **Formato:** A tag <strong> deve ser usada APENAS para destacar o nome do TESTE (ex: Teste do Micronúcleo) ou a NORMA REGULATÓRIA (ex: ISO 10993).
+
+DADOS DE ENTRADA:
+* NOME DO DOCUMENTO: ${docName}
+* CONTEXTO DO PRODUTO: ${product.name || 'Produto'} - ${product.category || 'Material'} (${product.description?.substring(0, 100) || 'Produto técnico'})
+${product.certifications ? `* CERTIFICAÇÕES DO PRODUTO: ${product.certifications}` : ''}
+* DESCRIÇÃO ORIGINAL: ${originalDescription}
+
+✅ EXEMPLOS DE CLAREZA IDEAL (SEU OBJETIVO):
+- Se o documento for sobre Mutagênese: "Teste que avalia se o material pode causar dano ao DNA, crucial para a **segurança biológica** de longo prazo."
+- Se o documento for sobre Resistência Flexural: "Ensaio que comprova a **alta resistência mecânica** do material contra as forças de mastigação e desgaste."
+
+❌ NÃO USE <strong> EM: Palavras genéricas, frases completas ou resultados numéricos.
+Retorne APENAS a descrição sintetizada (sem aspas, sem título, sem explicações).`;
+
+    try {
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: 'Você gera descrições técnicas concisas, priorizando a clareza do propósito clínico. Use a tag <strong> APENAS no nome do teste ou norma para o E-E-A-T. Retorna APENAS o texto gerado.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 120
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`❌ Erro na API Deepseek para documento "${docName}":`, response.status);
+        processedDocs.push(doc); // Mantém descrição original
+        continue;
+      }
+
+      const data = await response.json();
+      const generatedDescription = data.choices[0]?.message?.content?.trim() || '';
+
+      if (generatedDescription) {
+        console.log(`✅ Descrição gerada para "${docName}": ${generatedDescription.substring(0, 50)}...`);
+        processedDocs.push({
+          ...doc,
+          descricao: generatedDescription,
+          ai_generated_description: true
+        });
+      } else {
+        console.warn(`⚠️ Descrição vazia para "${docName}", mantendo original`);
+        processedDocs.push(doc);
+      }
+
+    } catch (error) {
+      console.error(`❌ Erro ao gerar descrição para "${docName}":`, error);
+      processedDocs.push(doc); // Fallback para descrição original
+    }
+  }
+
+  console.log(`📄 ${processedDocs.length} documentos processados`);
+  return processedDocs;
 }
 
 function isURL(value: string): boolean {
@@ -1498,9 +1609,9 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
 </div>`;
   }
 
-  // ✅ Documentos Técnicos (SPIN Landing Page Style)
-  const technicalDocsRaw = product.technical_documents && Array.isArray(product.technical_documents)
-    ? product.technical_documents
+  // ✅ Documentos Técnicos (SPIN Landing Page Style - com descrições geradas pela IA)
+  const technicalDocsRaw = technicalDocsWithDescriptions && Array.isArray(technicalDocsWithDescriptions)
+    ? technicalDocsWithDescriptions
         .filter((doc: any) => doc.ativo !== false)
         .sort((a: any, b: any) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0))
     : [];
@@ -1535,17 +1646,15 @@ function buildEcommerceHTML(product: any, benefits: string[], options: any, comp
         
         const docName = nome && !isPlaceholder(nome) ? nome : nomeArquivo;
         
+        // ✅ Usar descrição gerada pela IA (sem truncamento)
         const description = doc.descricao || '';
-        const truncatedDesc = description.length > 150 
-          ? description.substring(0, 150) + '...' 
-          : description;
         
         return `<tr>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#111; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
             ${docName}
           </td>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:${zebraBackground}; color:#2f3a4a; line-height:1.6; word-break:break-word; overflow-wrap:anywhere;">
-            ${truncatedDesc || '<span style="color:#999;">Sem descrição</span>'}
+            ${description || '<span style="color:#999;">Sem descrição</span>'}
           </td>
           <td style="padding:14px 16px; border-bottom:1px solid #e8e8e8; background:linear-gradient(135deg, rgba(238,122,62,0.08) 0%, rgba(255,155,103,0.05) 100%); text-align:center;">
             <a href="${doc.url_download}" target="_blank" rel="noopener" download style="display:inline-block; text-decoration:none;">
