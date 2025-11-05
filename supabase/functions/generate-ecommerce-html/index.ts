@@ -127,32 +127,38 @@ serve(async (req) => {
       generatedBenefits = product.ecommerce_html?.generated_benefits || product.benefits || [];
     }
     
-    // 🆕 NOVO BLOCO: Refinamento de Descrição com Contexto de FAQs (Anti-Repetição)
+    // 🏆 DUAL-AI COMPETITIVE: Refinamento de Descrição com Lovable AI + Deepseek
+    let aiWinner = 'none';
+    let lovableScore = 0;
+    let deepseekScore = 0;
+    
     if (product.faq && Array.isArray(product.faq) && product.faq.length > 0) {
       const faqAnswers = product.faq
         .map((f: any) => f.answer.replace(/<[^>]+>/g, '').trim()) // Remove HTML tags
         .join(' | ');
       
-      console.log(`📝 Refinando descrição com contexto de ${product.faq.length} FAQs (${faqAnswers.length} chars de contexto de exclusão)`);
+      console.log(`🏁 Iniciando refinamento Dual-AI com ${product.faq.length} FAQs (${faqAnswers.length} chars de contexto)`);
 
       try {
-        const refinedDescription = await refineDescriptionWithFAQContext(product, faqAnswers);
+        const { description, winner, lovableScore: lScore, deepseekScore: dScore } = 
+          await refineDescriptionWithDualAI(product, faqAnswers);
 
-        // Armazenar a descrição refinada no objeto product para uso posterior
-        product.processed_description = refinedDescription;
+        product.processed_description = description;
+        aiWinner = winner;
+        lovableScore = lScore;
+        deepseekScore = dScore;
         
-        if (refinedDescription && refinedDescription !== product.description) {
-           console.log(`✅ Descrição refinada: ${refinedDescription.substring(0, 100)}...`);
-        } else {
-           console.log('ℹ️ Descrição refinada igual à original (fallback ativado)');
-        }
+        console.log(`✅ Descrição refinada pelo vencedor: ${winner.toUpperCase()}`);
+        console.log(`📊 Scores: Lovable ${lScore.toFixed(1)} vs Deepseek ${dScore.toFixed(1)}`);
       } catch (refineError) {
-        console.error('⚠️ Erro ao refinar descrição:', refineError);
+        console.error('⚠️ Erro no refinamento Dual-AI:', refineError);
         console.log('📝 Mantendo descrição original como fallback');
-        // Não faz nada - product.processed_description permanece undefined
+        product.processed_description = product.description;
+        aiWinner = 'error';
       }
     } else {
       console.log('ℹ️ Produto sem FAQs, pulando refinamento de descrição');
+      product.processed_description = product.description;
     }
     
     // 3. Montar HTML
@@ -173,7 +179,9 @@ serve(async (req) => {
       generated_at: new Date().toISOString(),
       generated_benefits: generatedBenefits,
       generation_options: options,
-      ai_model_used: 'deepseek-chat',
+      ai_model_used: 'dual-ai-competitive',
+      ai_winner: aiWinner,
+      ai_scores: { lovable: lovableScore, deepseek: deepseekScore },
       version: (product.ecommerce_html?.version || 0) + 1
     };
     
@@ -258,25 +266,25 @@ function hasRichData(product: any): boolean {
 }
 
 /**
- * ANTI-REPETIÇÃO: Usa respostas de FAQ como contexto de exclusão para reescrever descrição.
- * Garante que descrição principal foca em narrativa de alto nível, não em detalhes técnicos.
+ * 🏆 DUAL-AI COMPETITIVE SYSTEM: Gera com Lovable AI + Deepseek em paralelo
+ * Seleciona automaticamente a melhor descrição refinada baseada em critérios de qualidade
  */
-async function refineDescriptionWithFAQContext(
+async function refineDescriptionWithDualAI(
   product: any,
   faqAnswers: string
-): Promise<string> {
+): Promise<{ description: string; winner: string; lovableScore: number; deepseekScore: number }> {
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 
-  // Fallback 1: Se não tem API key
-  if (!deepSeekApiKey) {
-    console.warn('⚠️ DEEPSEEK_API_KEY não configurada, usando descrição original');
-    return product.description || '';
-  }
-
-  // Fallback 2: Se não tem FAQs suficientes para contexto
+  // Fallback 1: Se não tem FAQs suficientes para contexto
   if (!faqAnswers || faqAnswers.trim().length < 50) {
     console.log('ℹ️ Sem FAQs suficientes para contexto, usando descrição original');
-    return product.description || '';
+    return { 
+      description: product.description || '', 
+      winner: 'original', 
+      lovableScore: 0, 
+      deepseekScore: 0 
+    };
   }
 
   const prompt = `Você é um editor técnico de e-commerce. Sua missão é reescrever a 'DESCRIÇÃO ORIGINAL' e o 'PITCH DE VENDAS' em um texto único e coeso (máximo 200 palavras).
@@ -309,47 +317,184 @@ Retorne APENAS o texto reescrito, sem títulos, markdown, ou JSON. O texto deve 
 
   const systemPrompt = 'Você é um copywriter especializado em e-commerce. Retorna APENAS o texto solicitado, sem explicações ou formatação adicional.';
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout de 30 segundos
-        
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${deepSeekApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      }),
-      signal: controller.signal
-    });
-        
-    clearTimeout(timeoutId);
+  console.log('🏁 Iniciando Sistema Dual-AI Competitivo...');
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Deepseek API erro ${response.status}:`, errorText);
-      throw new Error(`Deepseek API retornou status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const refinedText = data.choices[0].message.content.trim();
-
-    console.log(`✅ Descrição refinada com sucesso. Contexto de exclusão: ${faqAnswers.length} chars de FAQs.`);
-    return refinedText;
+  // 🔄 Gerar com ambas as AIs em PARALELO
+  const [lovableResult, deepseekResult] = await Promise.allSettled([
+    // Lovable AI
+    (async () => {
+      if (!lovableApiKey) throw new Error('LOVABLE_API_KEY não configurada');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       
-  } catch (error) {
-    console.error('❌ Erro ao refinar descrição:', error);
-    // Fallback 3: Se a IA falhar, retornar descrição original
-    return product.description || '';
+      try {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_completion_tokens: 500
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Lovable AI erro ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content?.trim() || '';
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    })(),
+    
+    // Deepseek
+    (async () => {
+      if (!deepSeekApiKey) throw new Error('DEEPSEEK_API_KEY não configurada');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      try {
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${deepSeekApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 500
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Deepseek erro ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content?.trim() || '';
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    })()
+  ]);
+
+  // 📊 Processar resultados
+  const lovableContent = lovableResult.status === 'fulfilled' ? lovableResult.value : '';
+  const deepseekContent = deepseekResult.status === 'fulfilled' ? deepseekResult.value : '';
+
+  if (lovableResult.status === 'rejected') {
+    console.error('❌ Lovable AI falhou:', lovableResult.reason);
   }
+  if (deepseekResult.status === 'rejected') {
+    console.error('❌ Deepseek falhou:', deepseekResult.reason);
+  }
+
+  // Fallback 2: Se ambas falharam
+  if (!lovableContent && !deepseekContent) {
+    console.warn('⚠️ Ambas as AIs falharam, usando descrição original');
+    return { 
+      description: product.description || '', 
+      winner: 'original', 
+      lovableScore: 0, 
+      deepseekScore: 0 
+    };
+  }
+
+  // Fallback 3: Se apenas uma gerou
+  if (!lovableContent) {
+    console.log('⚠️ Lovable AI falhou - usando Deepseek');
+    return { 
+      description: deepseekContent, 
+      winner: 'deepseek', 
+      lovableScore: 0, 
+      deepseekScore: 100 
+    };
+  }
+  if (!deepseekContent) {
+    console.log('⚠️ Deepseek falhou - usando Lovable AI');
+    return { 
+      description: lovableContent, 
+      winner: 'lovable', 
+      lovableScore: 100, 
+      deepseekScore: 0 
+    };
+  }
+
+  // 🎯 AVALIAR QUALIDADE - Critérios específicos para descrições de produto
+  function evaluateDescription(content: string, faqContext: string): number {
+    let score = 0;
+    
+    // 1. Estrutura Narrativa (30 pts) - Deve ser texto corrido, não lista
+    if (!content.match(/^[-•*]/m)) score += 15; // Não começa com bullet
+    if (content.split('\n\n').length >= 2) score += 10; // Tem parágrafos
+    if (content.length >= 150 && content.length <= 400) score += 5; // Tamanho ideal
+    
+    // 2. Legibilidade (25 pts)
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const avgWords = sentences.reduce((sum, s) => sum + s.split(' ').length, 0) / sentences.length;
+    if (avgWords >= 10 && avgWords <= 20) score += 15; // Frases médias
+    if (!content.includes('```') && !content.includes('"title":')) score += 10; // Não é código/JSON
+    
+    // 3. Anti-Repetição de FAQs (25 pts) - CRÍTICO
+    const faqKeywords = faqContext.toLowerCase().match(/\b\w{6,}\b/g) || [];
+    const uniqueKeywords = new Set(faqKeywords);
+    const contentLower = content.toLowerCase();
+    const repeatedCount = Array.from(uniqueKeywords).filter(kw => contentLower.includes(kw)).length;
+    const repetitionRatio = repeatedCount / (uniqueKeywords.size || 1);
+    score += Math.max(0, 25 - Math.floor(repetitionRatio * 50)); // Penaliza repetição
+    
+    // 4. Engajamento (20 pts)
+    if (/\b(ideal|perfeito|desenvolvido|reconhecido|facilita)\b/i.test(content)) score += 10; // Palavras persuasivas
+    if (/\b(profissionais|clínicas|pacientes|resultados)\b/i.test(content)) score += 5; // Foco no público
+    if (!content.includes('ISO') && !content.includes('FDA')) score += 5; // Evitou detalhes técnicos
+    
+    return Math.min(100, score);
+  }
+
+  const lovableScore = evaluateDescription(lovableContent, faqAnswers);
+  const deepseekScore = evaluateDescription(deepseekContent, faqAnswers);
+
+  console.log('📊 Resultados da Competição:');
+  console.log(`   🔵 Lovable AI (Gemini 2.5 Flash): ${lovableScore.toFixed(1)} pts`);
+  console.log(`   🟠 Deepseek: ${deepseekScore.toFixed(1)} pts`);
+
+  const winner = lovableScore >= deepseekScore ? 'lovable' : 'deepseek';
+  const winningContent = winner === 'lovable' ? lovableContent : deepseekContent;
+  const winningScore = winner === 'lovable' ? lovableScore : deepseekScore;
+
+  console.log(`✅ Vencedor: ${winner.toUpperCase()} (${winningScore.toFixed(1)} pts)`);
+  console.log(`📝 Preview: ${winningContent.substring(0, 100)}...`);
+
+  return { 
+    description: winningContent, 
+    winner, 
+    lovableScore, 
+    deepseekScore 
+  };
 }
 
 async function generateBenefitsWithAI(product: any): Promise<string[]> {
