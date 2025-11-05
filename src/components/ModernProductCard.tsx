@@ -320,7 +320,7 @@ export function ModernProductCard({
         {/* Conteúdo principal */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-base leading-tight line-clamp-1 flex-1">
+            <h3 className="font-semibold text-base leading-tight line-clamp-2 flex-1">
               {product.name}
             </h3>
             {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
