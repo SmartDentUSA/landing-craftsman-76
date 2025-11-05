@@ -1475,7 +1475,7 @@ function buildEcommerceHTML(
   benefits: string[], 
   options: any, 
   company: any,
-  technicalDocsWithDescriptions: any[]
+  technicalDocsWithDescriptions: any[] = []
 ): string {
   const desc = product.description || '';
   
@@ -1622,11 +1622,21 @@ function buildEcommerceHTML(
   }
 
   // ✅ Documentos Técnicos (SPIN Landing Page Style - com descrições geradas pela IA)
-  const technicalDocsRaw = technicalDocsWithDescriptions && Array.isArray(technicalDocsWithDescriptions)
+  // Fallback defensivo: usar technicalDocsWithDescriptions ou product.technical_documents
+  console.log('📄 Docs param status:', {
+    passed: Array.isArray(technicalDocsWithDescriptions) ? technicalDocsWithDescriptions.length : 'undefined',
+    fromProduct: Array.isArray(product.technical_documents) ? product.technical_documents.length : 0
+  });
+  
+  const docsSource = Array.isArray(technicalDocsWithDescriptions) && technicalDocsWithDescriptions.length > 0
     ? technicalDocsWithDescriptions
-        .filter((doc: any) => doc.ativo !== false)
-        .sort((a: any, b: any) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0))
-    : [];
+    : Array.isArray(product.technical_documents)
+      ? product.technical_documents
+      : [];
+  
+  const technicalDocsRaw = docsSource
+    .filter((doc: any) => doc.ativo !== false)
+    .sort((a: any, b: any) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0));
 
   // Filtra documentos válidos para exibição (com nome ou nome_arquivo)
   const technicalDocs = technicalDocsRaw.filter((doc: any) => {
