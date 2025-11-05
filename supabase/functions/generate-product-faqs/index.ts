@@ -242,11 +242,38 @@ OBRIGATÓRIO:
 
     const checkForHallucinations = (text: string): boolean => {
       const lowerText = text.toLowerCase();
-      return forbiddenTerms.some(term => 
-        lowerText.includes(term) && 
-        !product.description?.toLowerCase().includes(term) &&
-        !product.sales_pitch?.toLowerCase().includes(term)
-      );
+      
+      return forbiddenTerms.some(term => {
+        // 1. O termo proibido está no FAQ gerado?
+        if (!lowerText.includes(term)) {
+          return false; // Se não tem o termo, não é alucinação
+        }
+
+        // 2. O termo é justificado por QUALQUER campo de dado estruturado?
+        const isJustifiedIn = {
+          description: product.description?.toLowerCase().includes(term) || false,
+          sales_pitch: product.sales_pitch?.toLowerCase().includes(term) || false,
+          warranty: product.warranty_info?.toLowerCase().includes(term) || false,
+          benefits: (product.benefits || []).some((b: string) => b.toLowerCase().includes(term)),
+          features: (product.features || []).some((f: string) => f.toLowerCase().includes(term)),
+          technical_specs: Array.isArray(product.technical_specifications) 
+            ? product.technical_specifications.some((spec: any) => {
+                const specValue = typeof spec === 'object' ? spec.value : spec;
+                return specValue?.toString().toLowerCase().includes(term);
+              })
+            : (product.technical_specifications?.toString().toLowerCase().includes(term) || false)
+        };
+
+        const isJustified = Object.values(isJustifiedIn).some(v => v === true);
+
+        // 3. Se o termo está no FAQ, mas não em nenhum campo de dados = ALUCINAÇÃO
+        if (!isJustified) {
+          console.warn(`[FAQ Validation] Termo "${term}" encontrado no FAQ, mas não rastreável nos dados do produto`);
+          return true; // É alucinação
+        }
+
+        return false; // Termo justificado, não é alucinação
+      });
     };
 
     // Filtrar FAQs suspeitos
