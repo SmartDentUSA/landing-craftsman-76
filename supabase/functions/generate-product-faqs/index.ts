@@ -134,14 +134,19 @@ A: "Sim, o ${product.name} (GTIN: ${product.gtin || 'N/A'}) possui integração 
 4. SE não houver comparativos → usar termos genéricos ("alternativas tradicionais")
 5. SEMPRE validar cada afirmação contra os dados fornecidos
 
-**INSTRUÇÕES DE FORMATAÇÃO:**
-1. Gere EXATAMENTE 10 FAQs práticos e relevantes
-2. Perguntas devem começar com: "Como", "Qual", "Quais", "O que", "Por que", "Quando"
-3. Respostas devem ter entre 60-100 palavras (mais detalhadas que antes)
-4. Incorpore keywords naturalmente nas respostas para SEO
-5. Use HTML básico nas respostas: <strong>, <em>, <ul>, <li>, <p>
-6. Respostas devem ser informativas, técnicas e persuasivas
-7. Evite repetir informações entre FAQs
+    **INSTRUÇÕES DE FORMATAÇÃO:**
+    1. Gere EXATAMENTE 10 FAQs práticos e relevantes
+    2. Perguntas devem começar com: "Como", "Qual", "Quais", "O que", "Por que", "Quando"
+    3. Respostas devem ter entre 60-100 palavras (mais detalhadas que antes)
+    4. Incorpore keywords naturalmente nas respostas para SEO
+    5. Use HTML básico nas respostas: <strong>, <em>, <ul>, <li>, <p>
+    6. Respostas devem ser informativas, técnicas e persuasivas
+    7. Priorize DIVERSIDADE TÉCNICA: O dado quantificável, certificação ou USP que for o argumento central de uma FAQ deve ser DIFERENTE das demais FAQs. Explore todo o espectro de dados fornecidos:
+       - Especificações técnicas (viscosidade, resistência, cor, tempo de cura)
+       - Certificações e aprovações (ISO, FDA, ANVISA, CE)
+       - Benefícios quantificáveis (economia de tempo, durabilidade em anos, redução de custos)
+       - Casos de uso e compatibilidade (equipamentos, software, procedimentos)
+       - Dados numéricos únicos (GTIN, MPN, dimensões, peso)
 
 **REGRA OBRIGATÓRIA - HYPERLINKS:**
 ${product.product_url !== 'N/A' ? `SEMPRE que mencionar o nome do produto "${product.name}" nas respostas, use este formato exato:
@@ -179,7 +184,21 @@ IMPORTANTE: Retorne APENAS o JSON válido, sem texto adicional antes ou depois.`
 2. PROIBIDO mencionar especificações técnicas não fornecidas
 3. PROIBIDO assumir características ou funcionalidades
 4. PROIBIDO adicionar claims de benefícios não listados
-5. Se um campo está vazio (N/A), IGNORE completamente esse aspecto
+5. PROIBIDO repetir o principal dado quantificável (valor numérico), certificação ou USP (Unique Selling Point) de um produto como FOCO PRINCIPAL em mais de DUAS FAQs.
+   
+   DEFINIÇÃO DE "FOCO PRINCIPAL":
+   - Quando o dado aparece na primeira frase da resposta
+   - Quando é o assunto central da pergunta
+   - Quando é o argumento principal da FAQ
+   
+   PERMITIDO usar o mesmo dado em contexto secundário (ex: "...compatível com sistemas certificados ISO...")
+   
+   EXCEÇÃO: Se o produto tiver menos de 5 dados técnicos únicos (especificações + certificações + benefícios quantificáveis), você pode usar o dado principal em até 3 FAQs, MAS SEMPRE variando o ângulo de abordagem:
+   - FAQ 1: Compatibilidade técnica
+   - FAQ 2: ROI/Benefício financeiro
+   - FAQ 3: Comparação com alternativas
+
+6. Se um campo está vazio (N/A), IGNORE completamente esse aspecto
 
 PERMITIDO:
 - Reformular informações existentes nos dados fornecidos
