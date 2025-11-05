@@ -153,7 +153,6 @@ export function ModernProductCard({
   const { extractAndSaveProductSEO } = useProductSEOExtractor();
   const score = calculateProductScore(product);
   const productCoupon = getCouponByProductId(product.id);
-  const isResinProduct = product.category?.toUpperCase() === 'RESINAS 3D';
 
   const handleSaveTechnicalSpecs = async (specs: any[]) => {
     try {
@@ -355,16 +354,9 @@ export function ModernProductCard({
               {product.description}
             </p>
           )}
-          {/* Badges organizados em 3 linhas categorizadas */}
+          {/* Badges organizados em 2 linhas categorizadas */}
           <div className="mt-2.5 space-y-2.5">
-            {/* LINHA 1: Contadores de Conteúdo (Verde) - Oculto para Resinas 3D */}
-            {!isResinProduct && (
-              <div className="flex flex-wrap gap-1.5">
-                <CompletionBadges product={product} score={score} compact={true} />
-              </div>
-            )}
-            
-            {/* LINHA 2: Status e Seções (Azul/Cinza) */}
+            {/* LINHA 1: Status e Seções (Azul/Cinza) */}
             <div className="flex flex-wrap gap-1.5">
               {/* Approval Status */}
               <Badge 
