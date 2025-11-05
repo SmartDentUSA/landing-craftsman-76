@@ -36,6 +36,18 @@ const Repository = () => {
     }
   }, [location]);
 
+  // Listener para refresh após sincronização Sistema B
+  useEffect(() => {
+    const handleDocumentsSync = () => {
+      console.log("🔄 Documentos Sistema B sincronizados, recarregando produtos...");
+      // O RepositoryPanel tem seu próprio sistema de refetch via react-query
+      // Este evento serve para notificar que dados foram atualizados
+    };
+
+    window.addEventListener('systemB:documentsSynced', handleDocumentsSync);
+    return () => window.removeEventListener('systemB:documentsSynced', handleDocumentsSync);
+  }, []);
+
   return (
     <ProtectedRoute requiredRole="admin">
       <div className="flex flex-col min-h-screen bg-background">

@@ -25,17 +25,22 @@ export function SystemBDocumentSync() {
 
       if (error) throw error;
 
+      const summary = data?.summary || {};
+      
       setResult({
-        productsUpdated: data.products_updated || 0,
-        totalDocuments: data.total_documents || 0,
-        catalogDocuments: data.catalog_documents || 0,
-        resinDocuments: data.resin_documents || 0,
+        productsUpdated: summary.produtos_atualizados || 0,
+        totalDocuments: summary.documentos_sincronizados || 0,
+        catalogDocuments: summary.documentos_por_origem?.catalog_documents || 0,
+        resinDocuments: summary.documentos_por_origem?.resin_documents || 0,
       });
 
       toast({
         title: "✅ Sincronização concluída!",
-        description: `${data.products_updated} produtos atualizados com ${data.total_documents} documentos técnicos.`,
+        description: `${summary.produtos_atualizados || 0} produtos atualizados com ${summary.documentos_sincronizados || 0} documentos técnicos.`,
       });
+
+      // Disparar evento para refresh automático
+      window.dispatchEvent(new CustomEvent('systemB:documentsSynced'));
     } catch (error) {
       console.error('Erro na sincronização:', error);
       toast({
