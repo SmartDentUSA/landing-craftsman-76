@@ -528,6 +528,23 @@ ${product.applications ? `Aplicações: ${product.applications}` : ''}
 ${product.sales_pitch ? `Pitch de Vendas: ${product.sales_pitch}` : ''}
 ${product.target_audience && product.target_audience.length > 0 ? `Público-Alvo: ${product.target_audience.join(', ')}` : ''}
 
+🎯 REQUISITO CRÍTICO DE FORMATAÇÃO - REGRA DA TAG <strong>:
+Em cada um dos ${benefitsCount} benefícios, você DEVE utilizar a tag HTML <strong></strong> EXCLUSIVAMENTE sobre o dado quantificável, certificação, ou USP (Unique Selling Point) que for o FOCO PRINCIPAL da frase.
+
+✅ EXEMPLOS OBRIGATÓRIOS DE USO CORRETO:
+- Se o foco for longevidade: "Testado em casos clínicos comprovados por mais de <strong>5 anos</strong> de uso contínuo."
+- Se o foco for resistência mecânica: "Resistência Flexural de <strong>147 MPa</strong>, superior à maioria dos concorrentes."
+- Se o foco for segurança regulatória: "<strong>Certificação ISO 10993</strong> completa para biocompatibilidade."
+- Se o foco for durabilidade comparativa: "Oferece o dobro da <strong>durabilidade</strong> esperada em condições normais."
+- Se o foco for eficiência: "Reduz em até <strong>40% o tempo</strong> de trabalho clínico."
+
+❌ NÃO USE <strong> EM:
+- Palavras genéricas como "produto", "qualidade", "profissional"
+- Frases inteiras (use apenas na PALAVRA/DADO específico)
+- Repetições decorativas (máximo 1 tag <strong> por benefício)
+
+IMPORTANTE: O dado destacado pode ser repetido em FAQs ou outros benefícios - a repetição é permitida quando o contexto for diferente. O critério é: "Este é o ponto focal mais importante desta frase específica?"
+
 Retorne APENAS o array JSON puro sem markdown:
 ${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`;
 
@@ -548,8 +565,8 @@ ${JSON.stringify(Array(benefitsCount).fill('benefício X'))}`;
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: hasRichData(product)
-            ? 'Você extrai dados e retorna APENAS JSON puro. Priorize DIVERSIDADE nos benefícios: cada um deve destacar um aspecto técnico ÚNICO (certificação, especificação, uso prático).'
-            : 'Você extrai dados e retorna APENAS JSON puro.' },
+            ? 'Você extrai dados e retorna APENAS JSON puro. Priorize DIVERSIDADE nos benefícios: cada um deve destacar um aspecto técnico ÚNICO (certificação, especificação, uso prático). SEMPRE use a tag <strong> no dado quantificável/factual mais importante de cada benefício.'
+            : 'Você extrai dados e retorna APENAS JSON puro. SEMPRE use a tag <strong> no dado quantificável/factual mais importante de cada benefício.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
