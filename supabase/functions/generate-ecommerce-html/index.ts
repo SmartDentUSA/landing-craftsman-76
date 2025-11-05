@@ -529,7 +529,7 @@ function getSpinStylesCSS(): string {
   /* ========== MOBILE (< 768px) - 14px base ========== */
   @media (max-width: 767px) {
     .spin-ecom {
-      padding: 12px;
+      padding: 8px;
       font-size: 14px;
     }
     
