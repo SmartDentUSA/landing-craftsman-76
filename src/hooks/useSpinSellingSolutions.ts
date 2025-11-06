@@ -125,6 +125,15 @@ export interface SpinSellingSolution {
   } | null;
   journey_generated_at?: string | null;
   
+  // 📊 MÉTRICAS DE IMPACTO GERADAS POR IA
+  impact_metrics?: Array<{
+    label: string;
+    value: string;
+    unit: string;
+    description: string;
+  }> | null;
+  metrics_generated_at?: string | null;
+  
   active: boolean;
   created_at: string;
   updated_at: string;

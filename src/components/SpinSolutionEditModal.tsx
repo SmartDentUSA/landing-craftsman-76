@@ -149,6 +149,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [pitchConfidenceScore, setPitchConfidenceScore] = useState<number | null>(null);
   const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
+  const [isGeneratingMetrics, setIsGeneratingMetrics] = useState(false);
   
   // Filtrar apenas landing pages aprovadas
   const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
@@ -205,6 +206,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     spin_journey: null,
     journey_generated_at: null,
     
+    // 📊 Métricas de Impacto IA
+    impact_metrics: null,
+    metrics_generated_at: null,
+    
     active: true,
   });
 
@@ -243,7 +248,9 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
           table_data: []
         },
         spin_journey: existingSolution.spin_journey || null,
-        journey_generated_at: existingSolution.journey_generated_at || null
+        journey_generated_at: existingSolution.journey_generated_at || null,
+        impact_metrics: existingSolution.impact_metrics || null,
+        metrics_generated_at: existingSolution.metrics_generated_at || null
       });
       
       // Reset confidence score ao carregar solução existente
@@ -723,6 +730,90 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       });
     } finally {
       setIsGeneratingJourney(false);
+    }
+  };
+
+  const handleGenerateMetrics = async () => {
+    // Validação 1: Solução salva
+    if (!solutionId || solutionId === 'new') {
+      toast({
+        title: "⚠️ Salve a solução primeiro",
+        description: "As métricas só podem ser geradas após salvar a solução no banco",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 2: Sales Pitch existe (min 100 chars)
+    if (!formData.sales_pitch || formData.sales_pitch.trim().length < 100) {
+      toast({
+        title: "⚠️ Pitch de Vendas necessário",
+        description: "Gere o Sales Pitch primeiro (mínimo 100 caracteres)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 3: Pelo menos 1 caso de sucesso
+    if (!formData.success_cases || formData.success_cases.length === 0) {
+      toast({
+        title: "⚠️ Casos de sucesso necessários",
+        description: "Adicione pelo menos 1 caso de sucesso antes de gerar métricas",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 4: Pelo menos 1 caso tem results_achieved
+    const casesWithResults = formData.success_cases.filter(
+      sc => sc.results_achieved && sc.results_achieved.trim().length > 10
+    );
+
+    if (casesWithResults.length === 0) {
+      toast({
+        title: "⚠️ Resultados documentados necessários",
+        description: "Pelo menos 1 caso de sucesso precisa ter resultados mensuráveis documentados",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingMetrics(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-spin-metrics', {
+        body: { solutionId }
+      });
+
+      if (error) {
+        throw new Error(extractEdgeError(error, data));
+      }
+
+      if (data.error) {
+        throw new Error(data.error || 'Erro ao gerar métricas');
+      }
+
+      // Atualizar formData com as métricas geradas
+      setFormData(prev => ({
+        ...prev,
+        impact_metrics: data,
+        metrics_generated_at: new Date().toISOString()
+      }));
+
+      toast({
+        title: "✅ Métricas geradas com sucesso!",
+        description: `${data.length} métricas quantificáveis foram criadas automaticamente`,
+      });
+
+    } catch (error: any) {
+      console.error('❌ Erro ao gerar métricas:', error);
+      toast({
+        title: "❌ Erro ao gerar métricas",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingMetrics(false);
     }
   };
 
@@ -1693,13 +1784,121 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
 
             {/* ===== SEÇÃO: MÉTRICAS DE IMPACTO ===== */}
             <Card className="p-4">
-              <Label className="text-lg font-semibold mb-4 block">📊 Métricas de Impacto</Label>
-              
-              {/* Métricas Recomendadas */}
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-lg font-semibold">📊 Métricas de Impacto</Label>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateMetrics}
+                  disabled={
+                    isGeneratingMetrics || 
+                    !solutionId || 
+                    solutionId === 'new' ||
+                    !formData.sales_pitch ||
+                    formData.sales_pitch.length < 100 ||
+                    !formData.success_cases?.length ||
+                    !formData.success_cases.some(sc => sc.results_achieved?.trim().length > 10)
+                  }
+                >
+                  {isGeneratingMetrics ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Gerar com IA
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Alertas de Dependências */}
+              {(!solutionId || solutionId === 'new') && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Salve a solução primeiro</AlertTitle>
+                  <AlertDescription>
+                    As métricas só podem ser geradas após salvar a solução no banco.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {solutionId && solutionId !== 'new' && (!formData.sales_pitch || formData.sales_pitch.length < 100) && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Gere o Sales Pitch primeiro</AlertTitle>
+                  <AlertDescription>
+                    As métricas precisam do Sales Pitch (mínimo 100 caracteres) como base.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {solutionId && solutionId !== 'new' && formData.sales_pitch && formData.sales_pitch.length >= 100 && (!formData.success_cases || formData.success_cases.length === 0) && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Adicione casos de sucesso</AlertTitle>
+                  <AlertDescription>
+                    As métricas precisam de pelo menos 1 caso de sucesso documentado.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {solutionId && solutionId !== 'new' && formData.sales_pitch && formData.sales_pitch.length >= 100 && formData.success_cases && formData.success_cases.length > 0 && !formData.success_cases.some(sc => sc.results_achieved?.trim().length > 10) && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Documente os resultados</AlertTitle>
+                  <AlertDescription>
+                    Pelo menos 1 caso de sucesso precisa ter resultados mensuráveis (campo "Resultados Alcançados").
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Métricas Geradas por IA */}
+              {formData.impact_metrics && formData.impact_metrics.length > 0 && (
+                <div className="mb-6 p-4 bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span className="text-purple-900">Métricas Geradas por IA</span>
+                    </h4>
+                    {formData.metrics_generated_at && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(formData.metrics_generated_at).toLocaleString('pt-BR')}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {formData.impact_metrics.map((metric, index) => (
+                      <div key={index} className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                        <div className="flex items-start justify-between mb-2">
+                          <h5 className="font-semibold text-sm text-gray-900">{metric.label}</h5>
+                          <Badge variant="secondary" className="ml-2">
+                            {metric.value} {metric.unit}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 leading-relaxed">{metric.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Alert className="mt-4 bg-purple-50 border-purple-200">
+                    <Info className="h-4 w-4 text-purple-600" />
+                    <AlertDescription className="text-purple-900">
+                      Métricas baseadas em casos de sucesso reais. Clique em "Gerar com IA" novamente para regenerar.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {/* Métricas Recomendadas (Manual) */}
               <div className="mb-6">
                 <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                   <span className="w-1 h-4 bg-primary rounded" />
-                  Métricas Recomendadas
+                  Métricas Recomendadas (Manual)
                 </h4>
                 <div className="space-y-3">
                   {Object.entries(METRIC_LABELS).map(([key, label]) => (
