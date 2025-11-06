@@ -8,6 +8,136 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Função de filtragem de dados irrelevantes
+function filterIrrelevantData(extractedData: any, productName: string) {
+  const CORPORATE_KEYWORDS = [
+    'empresa', 'company', 'endereço', 'address', 'telefone', 'phone', 'tel',
+    'cnpj', 'cpf', 'email', 'e-mail', 'contato', 'contact', 'sede', 'headquarters',
+    'filial', 'branch', 'representante', 'representative', 'distribuidor', 'vendas',
+    'missão', 'visão', 'valores', 'mission', 'vision', 'atendimento', 'suporte',
+    'site', 'website', 'redes sociais', 'social media', 'whatsapp', 'instagram',
+    'facebook', 'linkedin', 'comercial', 'vendedor', 'atendimento ao cliente'
+  ];
+
+  const productNameWords = productName.toLowerCase()
+    .split(/\s+/)
+    .filter(w => w.length > 2); // Palavras > 2 letras
+
+  // Função auxiliar para verificar relevância
+  const isRelevant = (text: string): boolean => {
+    if (!text || text.trim().length === 0) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Rejeitar se contém palavras corporativas
+    const hasCorporateKeyword = CORPORATE_KEYWORDS.some(kw => 
+      lowerText.includes(kw)
+    );
+    if (hasCorporateKeyword) {
+      console.log('🗑️ Descartado (corporativo):', text.substring(0, 50) + '...');
+      return false;
+    }
+    
+    // Aceitar se menciona o nome do produto
+    const mentionsProduct = productNameWords.some(word => 
+      lowerText.includes(word)
+    );
+    if (mentionsProduct) {
+      return true;
+    }
+    
+    // Aceitar se for especificação técnica (contém números + unidades)
+    const hasSpec = /\d+\s*(mm|cm|m|kg|g|mg|v|w|kw|hz|khz|mhz|rpm|°c|°f|bar|psi|l|ml|mpa|a|ma|mah|min|max|±)/i.test(text);
+    if (hasSpec) {
+      return true;
+    }
+
+    // Aceitar se for certificação
+    const hasCertification = /(iso|ce|fda|anvisa|inmetro|ul|rohs|fcc|en\s*\d+)/i.test(lowerText);
+    if (hasCertification) {
+      return true;
+    }
+    
+    // Rejeitar se for muito curto (< 5 caracteres)
+    if (text.trim().length < 5) {
+      return false;
+    }
+    
+    return true; // Por padrão, manter
+  };
+
+  // Filtrar arrays
+  if (extractedData.features && Array.isArray(extractedData.features)) {
+    const original = extractedData.features.length;
+    extractedData.features = extractedData.features.filter(isRelevant);
+    console.log(`🧹 Features: ${original} → ${extractedData.features.length}`);
+  }
+
+  if (extractedData.benefits && Array.isArray(extractedData.benefits)) {
+    const original = extractedData.benefits.length;
+    extractedData.benefits = extractedData.benefits.filter(isRelevant);
+    console.log(`🧹 Benefits: ${original} → ${extractedData.benefits.length}`);
+  }
+
+  if (extractedData.applications && Array.isArray(extractedData.applications)) {
+    const original = extractedData.applications.length;
+    extractedData.applications = extractedData.applications.filter(isRelevant);
+    console.log(`🧹 Applications: ${original} → ${extractedData.applications.length}`);
+  }
+
+  if (extractedData.keywords && Array.isArray(extractedData.keywords)) {
+    const original = extractedData.keywords.length;
+    extractedData.keywords = extractedData.keywords.filter((kw: string) => 
+      kw.length > 3 && 
+      !CORPORATE_KEYWORDS.some(corp => kw.toLowerCase().includes(corp))
+    );
+    console.log(`🧹 Keywords: ${original} → ${extractedData.keywords.length}`);
+  }
+
+  if (extractedData.technical_specs && Array.isArray(extractedData.technical_specs)) {
+    const original = extractedData.technical_specs.length;
+    extractedData.technical_specs = extractedData.technical_specs.filter((spec: any) => 
+      isRelevant(spec.label + ' ' + spec.value)
+    );
+    console.log(`🧹 Technical Specs: ${original} → ${extractedData.technical_specs.length}`);
+  }
+
+  if (extractedData.materials && Array.isArray(extractedData.materials)) {
+    const original = extractedData.materials.length;
+    extractedData.materials = extractedData.materials.filter(isRelevant);
+    console.log(`🧹 Materials: ${original} → ${extractedData.materials.length}`);
+  }
+
+  if (extractedData.certifications && Array.isArray(extractedData.certifications)) {
+    const original = extractedData.certifications.length;
+    extractedData.certifications = extractedData.certifications.filter(isRelevant);
+    console.log(`🧹 Certifications: ${original} → ${extractedData.certifications.length}`);
+  }
+
+  if (extractedData.warnings && Array.isArray(extractedData.warnings)) {
+    const original = extractedData.warnings.length;
+    extractedData.warnings = extractedData.warnings.filter(isRelevant);
+    console.log(`🧹 Warnings: ${original} → ${extractedData.warnings.length}`);
+  }
+
+  // Validar campos de texto únicos
+  if (extractedData.warranty) {
+    if (!isRelevant(extractedData.warranty)) {
+      console.log('🗑️ Descartado warranty:', extractedData.warranty);
+      extractedData.warranty = null;
+    }
+  }
+
+  if (extractedData.price_info) {
+    if (!isRelevant(extractedData.price_info)) {
+      console.log('🗑️ Descartado price_info:', extractedData.price_info);
+      extractedData.price_info = null;
+    }
+  }
+
+  return extractedData;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -26,6 +156,8 @@ serve(async (req) => {
     // Parse do FormData para obter o arquivo PDF
     const formData = await req.formData();
     const pdfFile = formData.get('pdf') as File;
+    const productName = (formData.get('product_name') as string) || 'produto';
+    const productId = formData.get('product_id') as string;
 
     if (!pdfFile) {
       return new Response(
@@ -47,6 +179,7 @@ serve(async (req) => {
       size: pdfFile.size,
       type: pdfFile.type
     });
+    console.log('🎯 Produto alvo:', productName, '(ID:', productId, ')');
 
     // Converter PDF para texto usando pdfjs-serverless
     const arrayBuffer = await pdfFile.arrayBuffer();
@@ -75,74 +208,100 @@ serve(async (req) => {
 
     console.log('🔄 Processando com Lovable AI (Gemini 2.5 Flash)...');
 
-    // Prompt otimizado para extração de dados técnicos
+    // Prompt otimizado com filtragem por produto específico
     const EXTRACTION_PROMPT = `Você é um especialista em análise de documentos técnicos de produtos, especialmente equipamentos médicos, odontológicos e industriais.
 
-TAREFA: Analise o documento PDF fornecido e extraia TODAS as informações relevantes do produto de forma estruturada e detalhada.
+═══════════════════════════════════════════════════════════
+🎯 CONTEXTO CRÍTICO - PRODUTO ALVO
+═══════════════════════════════════════════════════════════
+PRODUTO: "${productName}"
+
+⚠️ REGRA ABSOLUTA DE FILTRAGEM:
+Extraia APENAS informações que se refiram DIRETAMENTE a "${productName}".
+
+IGNORAR COMPLETAMENTE (não extrair):
+❌ Dados da empresa (endereços, telefones, CNPJ, logos, sedes, filiais)
+❌ Informações de OUTROS produtos que não sejam "${productName}"
+❌ Índices, sumários, páginas de contato, rodapés
+❌ Avisos legais genéricos da empresa (termos de uso, políticas)
+❌ Informações de vendas/marketing não relacionadas ao produto
+❌ Dados corporativos (missão, visão, valores da empresa)
+❌ Informações de representantes, distribuidores genéricos
+❌ Informações comerciais genéricas (tabelas de preços de outros produtos)
+
+EXTRAIR SOMENTE:
+✅ Especificações técnicas de "${productName}"
+✅ Características e funcionalidades de "${productName}"
+✅ Aplicações e benefícios de "${productName}"
+✅ Dados técnicos (dimensões, peso, voltagem, materiais) de "${productName}"
+✅ Certificações específicas de "${productName}"
+✅ Garantia e informações comerciais de "${productName}"
+✅ Preço e informações de compra de "${productName}"
 
 INSTRUÇÕES DE EXTRAÇÃO:
 
 1. **IDENTIFICAÇÃO DO PRODUTO:**
-   - Nome completo do produto
-   - Marca/Fabricante
-   - Modelo/Código
-   - SKU ou código interno
+   - Nome completo do produto (deve ser "${productName}" ou variação)
+   - Marca/Fabricante (apenas se específico deste produto)
+   - Modelo/Código específico de "${productName}"
+   - SKU ou código interno específico
 
 2. **ESPECIFICAÇÕES TÉCNICAS:**
-   - Dimensões (altura, largura, profundidade, peso)
-   - Materiais de construção
+   - Dimensões (altura, largura, profundidade, peso) de "${productName}"
+   - Materiais de construção específicos
    - Componentes eletrônicos (voltagem, potência, frequência)
    - Capacidades (velocidade, temperatura, pressão, volume, etc.)
    - Conectividade (Bluetooth, Wi-Fi, USB, etc.)
-   - Certificações (ISO, CE, FDA, ANVISA, INMETRO, etc.)
-   - Normas regulatórias aplicáveis
+   - Certificações específicas de "${productName}"
+   - Normas regulatórias aplicáveis a este produto
 
 3. **CARACTERÍSTICAS E FUNCIONALIDADES:**
-   - Recursos principais (bullet points)
-   - Diferenciais competitivos
-   - Tecnologias embarcadas
-   - Modos de operação
+   - Recursos principais (bullet points) de "${productName}"
+   - Diferenciais competitivos específicos
+   - Tecnologias embarcadas neste produto
+   - Modos de operação específicos
    - Recursos de segurança
 
 4. **BENEFÍCIOS E APLICAÇÕES:**
-   - Benefícios para o usuário final
-   - Indicações de uso e aplicações clínicas/industriais
-   - Casos de aplicação específicos
-   - Público-alvo (profissionais, especialidades)
+   - Benefícios para o usuário final de "${productName}"
+   - Indicações de uso e aplicações clínicas/industriais específicas
+   - Casos de aplicação específicos deste produto
+   - Público-alvo (profissionais, especialidades) para este produto
 
 5. **INFORMAÇÕES COMERCIAIS:**
-   - Preço (se mencionado)
-   - Garantia
+   - Preço (se mencionado) de "${productName}"
+   - Garantia específica deste produto
    - País de origem/fabricação
-   - Registro ANVISA/FDA (se aplicável)
-   - Informações de importação
+   - Registro ANVISA/FDA específico (se aplicável)
 
 6. **AVISOS E OBSERVAÇÕES:**
-   - Contraindicações
+   - Contraindicações específicas de "${productName}"
    - Cuidados especiais e precauções
    - Manutenção recomendada
    - Requisitos de instalação
 
 7. **KEYWORDS SEO:**
-   - Extraia 15-20 palavras-chave relevantes do documento
-   - Inclua termos técnicos, aplicações, benefícios e tecnologias
+   - Extraia 15-20 palavras-chave relevantes APENAS relacionadas a "${productName}"
+   - Inclua termos técnicos, aplicações, benefícios e tecnologias específicas
    - Use plural e singular quando apropriado
+   - EXCLUA termos genéricos da empresa ou de outros produtos
 
 8. **TEXTO COMPLETO TRANSCRITO:**
-   - Forneça uma transcrição limpa e formatada de todo o conteúdo textual do documento
-   - Mantenha a hierarquia de informações (títulos, subtítulos, listas)
+   - Transcreva APENAS as seções do documento relacionadas a "${productName}"
+   - Se for um catálogo, identifique e transcreva APENAS a seção deste produto
+   - Mantenha hierarquia de informações (títulos, subtítulos, listas)
    - Preserve números, códigos e unidades de medida exatamente como aparecem
 
 FORMATO DE RESPOSTA:
 Retorne apenas o objeto JSON, sem texto adicional antes ou depois.
 
 REGRAS IMPORTANTES:
-- Se algum campo não estiver presente no documento, retorne null ou omita
+- Se o documento for um catálogo com múltiplos produtos, identifique a seção de "${productName}" e extraia APENAS dessa seção
+- Se alguma informação for ambígua ou não claramente relacionada ao produto alvo, DESCARTE
+- Se não houver informações sobre "${productName}" no documento, retorne campos vazios/null
+- Se algum campo não estiver presente, retorne null ou omita
 - Preserve números, unidades de medida e códigos EXATAMENTE como aparecem
-- Traduza siglas técnicas quando possível (ex: "rpm = rotações por minuto")
 - Seja preciso e objetivo - NÃO invente informações
-- Mantenha formatação de listas e hierarquias
-- Identifique o idioma do documento e mantenha a transcrição no idioma original
 - Para especificações técnicas, use arrays de objetos com "label" e "value"`;
 
     // Fazer requisição para Lovable AI com tool calling para estruturação
@@ -239,19 +398,31 @@ REGRAS IMPORTANTES:
       throw new Error('Formato de resposta inesperado da IA');
     }
 
-    const extractedData = JSON.parse(toolCall.function.arguments);
+    let extractedData = JSON.parse(toolCall.function.arguments);
     
     // Garantir que temos o texto transcrito
     if (!extractedData.transcribed_text) {
       throw new Error('Falha ao extrair texto do documento');
     }
 
-    console.log('📊 Dados extraídos:', {
+    // Aplicar filtro de relevância pós-extração
+    if (productName && productName !== 'produto') {
+      console.log('🧹 Aplicando filtro de relevância para:', productName);
+      const beforeFilter = JSON.stringify(extractedData).length;
+      extractedData = filterIrrelevantData(extractedData, productName);
+      const afterFilter = JSON.stringify(extractedData).length;
+      console.log(`📊 Tamanho dos dados: ${beforeFilter} → ${afterFilter} bytes (${Math.round((1 - afterFilter/beforeFilter) * 100)}% redução)`);
+    }
+
+    console.log('📊 Dados extraídos (pós-filtro):', {
       product_name: extractedData.product_name || 'N/A',
       specs_count: extractedData.technical_specs?.length || 0,
       features_count: extractedData.features?.length || 0,
+      benefits_count: extractedData.benefits?.length || 0,
       keywords_count: extractedData.keywords?.length || 0,
-      text_length: extractedData.transcribed_text.length
+      applications_count: extractedData.applications?.length || 0,
+      text_length: extractedData.transcribed_text.length,
+      filtering_applied: productName !== 'produto'
     });
 
     // Retornar resultado estruturado
@@ -261,6 +432,11 @@ REGRAS IMPORTANTES:
         transcription: {
           text: extractedData.transcribed_text,
           model: 'google/gemini-2.5-flash',
+          filtering: {
+            applied: productName !== 'produto',
+            target_product: productName,
+            target_product_id: productId
+          },
           extracted_data: {
             product_name: extractedData.product_name || null,
             brand: extractedData.brand || null,

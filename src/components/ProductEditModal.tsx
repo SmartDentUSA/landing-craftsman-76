@@ -70,6 +70,11 @@ interface DocumentTranscription {
   transcribed_at: string;
   transcribed_text: string;
   ai_model: string;
+  filtering?: {
+    applied: boolean;
+    target_product?: string;
+    target_product_id?: string;
+  };
   extracted_data: {
     product_name?: string;
     brand?: string;
@@ -1066,6 +1071,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     try {
       const formData = new FormData();
       formData.append('pdf', file);
+      
+      // Adicionar contexto do produto para filtragem
+      if (product?.name) {
+        formData.append('product_name', product.name);
+      }
+      if (product?.id) {
+        formData.append('product_id', product.id);
+      }
 
       setCurrentUploadProgress(40);
 
@@ -1084,14 +1097,19 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           transcribed_at: new Date().toISOString(),
           transcribed_text: data.transcription.text,
           ai_model: data.transcription.model || 'google/gemini-2.5-flash',
+          filtering: data.transcription.filtering,
           extracted_data: data.transcription.extracted_data
         };
 
         setDocumentTranscriptions(prev => [...prev, newTranscription]);
 
+        const filterMsg = data.transcription.filtering?.applied 
+          ? ` (filtrado para "${data.transcription.filtering.target_product}")`
+          : '';
+
         toast({
           title: "✅ Documento transcrito!",
-          description: `${file.name} foi processado com sucesso. Clique em "Aplicar ao Produto" para usar os dados.`
+          description: `${file.name} foi processado com sucesso${filterMsg}. Clique em "Aplicar ao Produto" para usar os dados.`
         });
       }
 
