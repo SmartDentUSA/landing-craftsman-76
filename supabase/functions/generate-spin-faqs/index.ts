@@ -88,6 +88,9 @@ serve(async (req) => {
           .join('\n')
       : 'Nenhuma métrica específica';
 
+    // Importar Super-Prompt
+    const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
+
     const aiPrompt = `Você é um especialista em Neurociência da Persuasão, SPIN Selling e Marketing Odontológico B2B.
 
 🎯 MISSÃO CRÍTICA:
@@ -511,6 +514,9 @@ IMPORTANTE FINAL:
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
+    // Importar Super-Prompt
+    const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
+    
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -520,10 +526,8 @@ IMPORTANTE FINAL:
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          {
-            role: 'user',
-            content: aiPrompt
-          }
+          { role: 'system', content: SPIN_SYSTEM_PROMPT },
+          { role: 'user', content: aiPrompt }
         ],
         temperature: 0.7,
       }),

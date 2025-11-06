@@ -301,6 +301,9 @@ serve(async (req) => {
           throw new Error('LOVABLE_API_KEY não configurada');
         }
 
+        // Importar Super-Prompt
+        const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
+
         const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling ULTRA persuasivo (máx 150 caracteres) para WhatsApp sobre:
 
 SOLUÇÃO: ${solution.title}
@@ -331,7 +334,10 @@ Exemplo: "Cansado de retrabalho? Imagine sua clínica voando com impressões per
           },
           body: JSON.stringify({
             model: 'google/gemini-2.5-flash',
-            messages: [{ role: 'user', content: prompt }],
+            messages: [
+              { role: 'system', content: SPIN_SYSTEM_PROMPT },
+              { role: 'user', content: prompt }
+            ],
             max_tokens: 150,
             temperature: 0.7
           })

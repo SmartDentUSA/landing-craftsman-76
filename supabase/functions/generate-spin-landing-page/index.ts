@@ -38,6 +38,9 @@ async function generateAllLandingPageContent(
   customText: Record<string, string> = {} // ✅ Novo parâmetro para textos customizados
 ): Promise<AIGeneratedContent> {
   
+  // Importar Super-Prompt
+  const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
+
   const productsNames = products.map(p => p.name).join(', ');
   
   const prompt = `Você é um copywriter especialista em neuromarketing e SPIN Selling para odontologia B2B.
@@ -314,6 +317,9 @@ Retorne APENAS JSON puro, sem markdown:
 
   console.log('📤 Enviando prompt para Lovable AI...');
 
+  // Importar Super-Prompt
+  const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
+
   const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -323,12 +329,10 @@ Retorne APENAS JSON puro, sem markdown:
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash',
       messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]
-      // ✅ Gemini 2.5 não suporta temperature
+        { role: 'system', content: SPIN_SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7
     }),
   });
 

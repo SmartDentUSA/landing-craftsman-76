@@ -120,6 +120,15 @@ verify_jwt = false
 [functions.generate-spin-landing-page]
 verify_jwt = false
 
+[functions.generate-spin-sales-pitch]
+verify_jwt = false
+
+[functions.generate-spin-journey]
+verify_jwt = false
+
+[functions.generate-spin-metrics]
+verify_jwt = false
+
 [functions.generate-spin-hero-banner]
 verify_jwt = false
 
