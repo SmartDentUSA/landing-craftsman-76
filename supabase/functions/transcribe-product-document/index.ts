@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as b64encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { getDocument } from "https://esm.sh/pdfjs-serverless@0.3.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,9 +48,30 @@ serve(async (req) => {
       type: pdfFile.type
     });
 
-    // Converter PDF para base64 de forma segura sem estourar a stack
+    // Converter PDF para texto usando pdfjs-serverless
     const arrayBuffer = await pdfFile.arrayBuffer();
-    const base64PDF = b64encode(new Uint8Array(arrayBuffer));
+    const pdfData = new Uint8Array(arrayBuffer);
+
+    const pdf = await getDocument({ data: pdfData }).promise;
+    const maxPages = Math.min(pdf.numPages, 20); // limita a 20 páginas por performance
+    let extractedText = '';
+
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = (textContent.items as any[])
+        .map((item) => (typeof item.str === 'string' ? item.str : ''))
+        .join(' ');
+      extractedText += `\n\n--- Página ${pageNum} ---\n${pageText}`;
+    }
+
+    // Limitar tamanho do texto para evitar estouro de tokens
+    const MAX_CHARS = 60000;
+    const clippedText = extractedText.length > MAX_CHARS
+      ? extractedText.slice(0, MAX_CHARS) + '\n\n[Texto truncado]'
+      : extractedText;
+
+    console.log('📝 Texto extraído (tamanho):', clippedText.length);
 
     console.log('🔄 Processando com Lovable AI (Gemini 2.5 Flash)...');
 
@@ -134,19 +156,12 @@ REGRAS IMPORTANTES:
         model: 'google/gemini-2.5-flash',
         messages: [
           {
+            role: 'system',
+            content: 'Você é um assistente especialista em análise de documentos técnicos de produtos. Responda com precisão e extraia dados estruturados conforme solicitado.'
+          },
+          {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: EXTRACTION_PROMPT
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:application/pdf;base64,${base64PDF}`
-                }
-              }
-            ]
+            content: `${EXTRACTION_PROMPT}\n\nDOCUMENTO (texto extraído):\n${clippedText}`
           }
         ],
         tools: [
@@ -178,55 +193,24 @@ REGRAS IMPORTANTES:
                     },
                     description: 'Especificações técnicas detalhadas'
                   },
-                  materials: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Materiais de construção'
-                  },
-                  features: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Características e funcionalidades principais'
-                  },
-                  benefits: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Benefícios para o usuário'
-                  },
-                  applications: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Aplicações e casos de uso'
-                  },
-                  certifications: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Certificações e normas (ISO, CE, FDA, ANVISA, etc.)'
-                  },
-                  warnings: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Avisos, contraindicações e cuidados especiais'
-                  },
-                  manufacturer: { type: 'string', description: 'Nome do fabricante' },
-                  country_of_origin: { type: 'string', description: 'País de origem' },
-                  warranty: { type: 'string', description: 'Informações de garantia' },
-                  price_info: { type: 'string', description: 'Informações sobre preço' },
-                  keywords: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: '15-20 palavras-chave SEO relevantes'
-                  }
+                  materials: { type: 'array', items: { type: 'string' } },
+                  features: { type: 'array', items: { type: 'string' } },
+                  benefits: { type: 'array', items: { type: 'string' } },
+                  applications: { type: 'array', items: { type: 'string' } },
+                  certifications: { type: 'array', items: { type: 'string' } },
+                  warnings: { type: 'array', items: { type: 'string' } },
+                  manufacturer: { type: 'string' },
+                  country_of_origin: { type: 'string' },
+                  warranty: { type: 'string' },
+                  price_info: { type: 'string' },
+                  keywords: { type: 'array', items: { type: 'string' } }
                 },
                 required: ['transcribed_text']
               }
             }
           }
         ],
-        tool_choice: {
-          type: 'function',
-          function: { name: 'extract_product_data' }
-        }
+        tool_choice: { type: 'function', function: { name: 'extract_product_data' } }
       }),
     });
 
@@ -235,13 +219,15 @@ REGRAS IMPORTANTES:
       console.error('❌ Erro da API Lovable AI:', response.status, errorText);
       
       if (response.status === 429) {
-        throw new Error('Limite de requisições excedido. Tente novamente em alguns instantes.');
+        return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded (429)' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       if (response.status === 402) {
-        throw new Error('Créditos insuficientes. Adicione créditos no workspace.');
+        return new Response(JSON.stringify({ success: false, error: 'Payment required (402)' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      
-      throw new Error(`Erro da API de IA: ${response.status}`);
+      return new Response(
+        JSON.stringify({ success: false, error: `AI gateway error (${response.status})`, details: errorText }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const aiResponse = await response.json();
