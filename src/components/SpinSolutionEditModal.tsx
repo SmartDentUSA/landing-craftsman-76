@@ -148,6 +148,7 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [generatedHTML, setGeneratedHTML] = useState<string | null>(null);
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [pitchConfidenceScore, setPitchConfidenceScore] = useState<number | null>(null);
+  const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
   
   // Filtrar apenas landing pages aprovadas
   const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
@@ -200,6 +201,10 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
     storytelling_auto_generated: undefined,
     ai_generated_images: undefined,
     
+    // 🗺️ Jornada SPIN IA
+    spin_journey: null,
+    journey_generated_at: null,
+    
     active: true,
   });
 
@@ -236,7 +241,9 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
           subtitle: '',
           table_headers: [],
           table_data: []
-        }
+        },
+        spin_journey: existingSolution.spin_journey || null,
+        journey_generated_at: existingSolution.journey_generated_at || null
       });
       
       // Reset confidence score ao carregar solução existente
@@ -645,6 +652,77 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       });
     } finally {
       setIsGeneratingPitch(false);
+    }
+  };
+
+  // Handler: Gerar Jornada SPIN com IA
+  const handleGenerateJourney = async () => {
+    // Validação 1: Solução deve estar salva
+    if (!solutionId || solutionId === 'new') {
+      toast({
+        title: "⚠️ Salve a solução primeiro",
+        description: "A jornada SPIN só pode ser gerada após salvar a solução no banco",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 2: Sales Pitch deve existir
+    if (!formData.sales_pitch || formData.sales_pitch.trim().length < 100) {
+      toast({
+        title: "⚠️ Pitch de Vendas necessário",
+        description: "Gere o Sales Pitch primeiro (mínimo 100 caracteres)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 3: Deve ter pelo menos 1 caso de sucesso
+    if (!formData.success_cases || formData.success_cases.length === 0) {
+      toast({
+        title: "⚠️ Casos de sucesso necessários",
+        description: "Adicione pelo menos 1 caso de sucesso antes de gerar a jornada",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingJourney(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-spin-journey', {
+        body: { solutionId }
+      });
+
+      if (error) {
+        throw new Error(extractEdgeError(error, data));
+      }
+
+      if (data.error) {
+        throw new Error(data.error || 'Erro ao gerar jornada');
+      }
+
+      // Atualizar o formData com a jornada gerada
+      setFormData(prev => ({
+        ...prev,
+        spin_journey: data,
+        journey_generated_at: new Date().toISOString()
+      }));
+
+      toast({
+        title: "✅ Jornada SPIN gerada com sucesso!",
+        description: "Desejo, Dor e Resultado foram criados automaticamente",
+      });
+
+    } catch (error: any) {
+      console.error('❌ Erro ao gerar jornada:', error);
+      toast({
+        title: "❌ Erro ao gerar jornada",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingJourney(false);
     }
   };
 
@@ -1150,6 +1228,118 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   </Badge>
                 )}
               </div>
+            </Card>
+
+            {/* ===== SEÇÃO: JORNADA SPIN IA ===== */}
+            <Card className="p-4 border-2 border-blue-200 bg-blue-50/30">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-lg font-semibold">🗺️ Jornada SPIN (IA)</Label>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateJourney}
+                  disabled={
+                    isGeneratingJourney || 
+                    !solutionId || 
+                    solutionId === 'new' ||
+                    !formData.sales_pitch ||
+                    formData.sales_pitch.length < 100 ||
+                    !formData.success_cases?.length
+                  }
+                >
+                  {isGeneratingJourney ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Gerar com IA
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-4">
+                Gera automaticamente <strong>Desejo → Dor → Resultado</strong> baseado no Sales Pitch e casos de sucesso reais.
+              </p>
+
+              {/* Alertas de Dependências */}
+              {(!solutionId || solutionId === 'new') && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Salve a solução primeiro</AlertTitle>
+                  <AlertDescription>
+                    A jornada SPIN só pode ser gerada após salvar a solução no banco.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {solutionId && solutionId !== 'new' && (!formData.sales_pitch || formData.sales_pitch.length < 100) && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Gere o Sales Pitch primeiro</AlertTitle>
+                  <AlertDescription>
+                    A jornada SPIN precisa do Sales Pitch (mínimo 100 caracteres) como base.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {solutionId && solutionId !== 'new' && formData.sales_pitch && formData.sales_pitch.length >= 100 && (!formData.success_cases || formData.success_cases.length === 0) && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Adicione casos de sucesso</AlertTitle>
+                  <AlertDescription>
+                    A jornada SPIN precisa de pelo menos 1 caso de sucesso real para gerar resultados autênticos.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Exibir Jornada Gerada */}
+              {formData.spin_journey && (
+                <div className="space-y-4">
+                  {/* DESEJO */}
+                  <div className="p-4 bg-blue-100 rounded-lg border border-blue-300">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="default" className="bg-blue-600">Desejo</Badge>
+                      {formData.journey_generated_at && (
+                        <span className="text-xs text-muted-foreground">
+                          Gerado em {new Date(formData.journey_generated_at).toLocaleString('pt-BR')}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm leading-relaxed">{formData.spin_journey.desire}</p>
+                  </div>
+
+                  {/* DOR */}
+                  <div className="p-4 bg-red-100 rounded-lg border border-red-300">
+                    <Badge variant="destructive" className="mb-2">Dor</Badge>
+                    <p className="text-sm leading-relaxed">{formData.spin_journey.pain}</p>
+                  </div>
+
+                  {/* RESULTADO */}
+                  <div className="p-4 bg-green-100 rounded-lg border border-green-300">
+                    <Badge variant="default" className="bg-green-600 mb-2">Resultado</Badge>
+                    <p className="text-sm leading-relaxed">{formData.spin_journey.result}</p>
+                  </div>
+
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Jornada gerada automaticamente</AlertTitle>
+                    <AlertDescription>
+                      Para editar ou regenerar, clique novamente em "Gerar com IA".
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {!formData.spin_journey && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">Nenhuma jornada gerada ainda</p>
+                </div>
+              )}
             </Card>
 
             {/* ===== SEÇÃO: CASOS DE SUCESSO (MÚLTIPLOS) ===== */}

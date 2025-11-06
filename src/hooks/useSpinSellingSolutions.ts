@@ -117,6 +117,14 @@ export interface SpinSellingSolution {
   selected_video_url?: string;
   selected_video_title?: string;
   
+  // 🗺️ JORNADA SPIN GERADA POR IA
+  spin_journey?: {
+    desire: string;
+    pain: string;
+    result: string;
+  } | null;
+  journey_generated_at?: string | null;
+  
   active: boolean;
   created_at: string;
   updated_at: string;

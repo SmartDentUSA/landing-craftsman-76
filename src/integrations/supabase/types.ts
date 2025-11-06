@@ -1549,6 +1549,7 @@ export type Database = {
           frequency: string | null
           google_ads_campaign: Json | null
           id: string
+          journey_generated_at: string | null
           landing_page_custom_text: Json
           landing_page_generated_at: string | null
           landing_page_html: string | null
@@ -1560,6 +1561,7 @@ export type Database = {
           sales_pitch: string | null
           selected_video_title: string | null
           selected_video_url: string | null
+          spin_journey: Json | null
           spin_journey_labels: Json | null
           storytelling_auto_generated: string | null
           success_cases: Json | null
@@ -1578,6 +1580,7 @@ export type Database = {
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
+          journey_generated_at?: string | null
           landing_page_custom_text?: Json
           landing_page_generated_at?: string | null
           landing_page_html?: string | null
@@ -1589,6 +1592,7 @@ export type Database = {
           sales_pitch?: string | null
           selected_video_title?: string | null
           selected_video_url?: string | null
+          spin_journey?: Json | null
           spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
@@ -1607,6 +1611,7 @@ export type Database = {
           frequency?: string | null
           google_ads_campaign?: Json | null
           id?: string
+          journey_generated_at?: string | null
           landing_page_custom_text?: Json
           landing_page_generated_at?: string | null
           landing_page_html?: string | null
@@ -1618,6 +1623,7 @@ export type Database = {
           sales_pitch?: string | null
           selected_video_title?: string | null
           selected_video_url?: string | null
+          spin_journey?: Json | null
           spin_journey_labels?: Json | null
           storytelling_auto_generated?: string | null
           success_cases?: Json | null
