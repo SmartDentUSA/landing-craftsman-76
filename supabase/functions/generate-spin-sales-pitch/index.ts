@@ -19,31 +19,58 @@ serve(async (req) => {
   }
 
   try {
-    const { solutionId } = await req.json();
+    const { 
+      solutionId, 
+      solution_title, 
+      pain_type, 
+      product_ids: bodyProductIds,
+      manual_context 
+    } = await req.json();
+    
     console.log('🎯 Generating Sales Pitch for solution:', solutionId);
-
-    if (!solutionId) {
-      throw new Error('solutionId é obrigatório');
-    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Buscar solução SPIN
-    const { data: solution, error: solutionError } = await supabase
-      .from('spin_selling_solutions')
-      .select('*')
-      .eq('id', solutionId)
-      .single();
+    let solution: any;
+    let productIds: string[] = [];
 
-    if (solutionError || !solution) {
-      throw new Error('Solução SPIN não encontrada');
+    // 1. Buscar solução SPIN (apenas se não for 'new')
+    if (solutionId && solutionId !== 'new') {
+      const { data: existingSolution, error: solutionError } = await supabase
+        .from('spin_selling_solutions')
+        .select('*')
+        .eq('id', solutionId)
+        .single();
+
+      if (solutionError || !existingSolution) {
+        throw new Error('Solução SPIN não encontrada');
+      }
+
+      solution = existingSolution;
+      productIds = solution.selected_product_ids || solution.product_ids || [];
+    } else {
+      // Para novas soluções, usar dados do body
+      if (!bodyProductIds || bodyProductIds.length === 0) {
+        throw new Error('product_ids é obrigatório para novas soluções');
+      }
+
+      if (!pain_type) {
+        throw new Error('pain_type é obrigatório para novas soluções');
+      }
+
+      solution = {
+        title: solution_title || 'Nova Solução',
+        pain_type: pain_type,
+        pain_description: null,
+        manual_context: manual_context || ''
+      };
+      productIds = bodyProductIds;
     }
 
-    // 2. Buscar produtos associados
-    const productIds = solution.selected_product_ids || solution.product_ids || [];
+    // 2. Validar produtos
     if (productIds.length === 0) {
       throw new Error('Nenhum produto associado à solução');
     }
