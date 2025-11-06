@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
@@ -145,6 +146,8 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
   const [newMetric, setNewMetric] = useState({ label: '', value: '', unit: '' });
   const [showEditablePreview, setShowEditablePreview] = useState(false);
   const [generatedHTML, setGeneratedHTML] = useState<string | null>(null);
+  const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
+  const [pitchConfidenceScore, setPitchConfidenceScore] = useState<number | null>(null);
   
   // Filtrar apenas landing pages aprovadas
   const approvedLandingPages = landingPages.filter(lp => lp.status === 'approved');
@@ -235,6 +238,9 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
           table_data: []
         }
       });
+      
+      // Reset confidence score ao carregar solução existente
+      setPitchConfidenceScore(null);
     }
   }, [existingSolution]);
 
@@ -572,6 +578,74 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
         [field]: value
       } as SpinJourneyLabels
     }));
+  };
+
+  // Handler: Gerar Pitch de Vendas com IA
+  const handleGenerateSalesPitch = async () => {
+    // Validações
+    if (!formData.product_ids || formData.product_ids.length === 0) {
+      toast({
+        title: "⚠️ Produtos não selecionados",
+        description: "Selecione pelo menos 1 produto antes de gerar o pitch",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.pain_type) {
+      toast({
+        title: "⚠️ Tipo de dor não definido",
+        description: "Selecione o tipo de dor antes de gerar o pitch",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingPitch(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-spin-sales-pitch', {
+        body: {
+          solutionId: solutionId || 'new',
+          solution_title: formData.title || 'Nova Solução',
+          pain_type: formData.pain_type,
+          product_ids: formData.product_ids,
+          manual_context: formData.sales_pitch || '' // Contexto adicional se o usuário já escreveu algo
+        }
+      });
+
+      if (error) {
+        throw new Error(extractEdgeError(error, data));
+      }
+
+      if (data.error) {
+        throw new Error(data.message || 'Erro ao gerar pitch');
+      }
+
+      // Atualizar o pitch no formulário
+      setFormData(prev => ({
+        ...prev,
+        sales_pitch: data.sales_pitch
+      }));
+
+      // Salvar confidence score para exibir
+      setPitchConfidenceScore(data.confidence_score);
+
+      toast({
+        title: "✅ Pitch gerado com sucesso!",
+        description: `Qualidade: ${data.confidence_score}% | ${data.sales_pitch.length} caracteres`,
+      });
+
+    } catch (error: any) {
+      console.error('❌ Erro ao gerar pitch:', error);
+      toast({
+        title: "❌ Erro ao gerar pitch",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPitch(false);
+    }
   };
 
   // Landing Page Generation Handlers
@@ -989,21 +1063,93 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
 
             {/* ===== SEÇÃO: PITCH DE VENDAS SPIN ===== */}
             <Card className="p-4">
-              <Label className="text-lg font-semibold mb-2 block">📝 Pitch de Vendas SPIN</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-lg font-semibold">📝 Pitch de Vendas SPIN</Label>
+                <div className="flex gap-2 items-center">
+                  {/* Badge de Status */}
+                  {pitchConfidenceScore && (
+                    <Badge variant="secondary" className="text-xs">
+                      ✅ IA: {pitchConfidenceScore}% confiança
+                    </Badge>
+                  )}
+                  {formData.sales_pitch && !pitchConfidenceScore && (
+                    <Badge variant="outline" className="text-xs">
+                      ✏️ Manual
+                    </Badge>
+                  )}
+                  
+                  {/* Botão Gerar com IA */}
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateSalesPitch}
+                    disabled={isGeneratingPitch || !formData.product_ids?.length}
+                  >
+                    {isGeneratingPitch ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Gerar com IA
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
               <p className="text-sm text-muted-foreground mb-4">
-                Discurso comercial rico preparado pelo time comercial integrando os produtos desta solução. 
-                Será usado pela IA para gerar conteúdo mais preciso em landing pages, WhatsApp, Google Ads, etc.
+                Gere automaticamente um pitch profissional baseado nos produtos selecionados ou escreva manualmente. 
+                O pitch será usado pela IA para gerar conteúdo em landing pages, WhatsApp, Google Ads, etc.
               </p>
+
+              {/* Alerta de Dependências */}
+              {(!formData.product_ids || formData.product_ids.length === 0) && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Selecione produtos primeiro</AlertTitle>
+                  <AlertDescription>
+                    A geração automática de pitch requer que você selecione pelo menos 1 produto.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Textarea
-                placeholder="Descreva como os produtos desta solução trabalham juntos para resolver o problema do cliente. Inclua detalhes sobre a integração entre os produtos, o processo de implementação, benefícios específicos e diferenciais competitivos..."
+                placeholder="Clique em 'Gerar com IA' para criar automaticamente ou escreva manualmente o pitch de vendas integrando os produtos desta solução..."
                 value={formData.sales_pitch || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, sales_pitch: e.target.value }))}
-                rows={8}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, sales_pitch: e.target.value }));
+                  // Limpar confidence score ao editar manualmente
+                  if (pitchConfidenceScore) setPitchConfidenceScore(null);
+                }}
+                rows={10}
                 className="resize-none"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                {formData.sales_pitch?.length || 0} caracteres (mínimo recomendado: 100)
-              </p>
+              
+              <div className="flex justify-between items-center mt-2">
+                <p className="text-xs text-muted-foreground">
+                  {formData.sales_pitch?.length || 0} caracteres (recomendado: 300-500)
+                </p>
+                
+                {/* Indicador de Qualidade */}
+                {formData.sales_pitch && formData.sales_pitch.length > 0 && (
+                  <Badge 
+                    variant={
+                      formData.sales_pitch.length < 300 ? "destructive" :
+                      formData.sales_pitch.length > 500 ? "secondary" :
+                      "default"
+                    }
+                    className="text-xs"
+                  >
+                    {formData.sales_pitch.length < 300 ? '⚠️ Muito curto' :
+                     formData.sales_pitch.length > 500 ? '✓ Longo' :
+                     '✅ Ideal'}
+                  </Badge>
+                )}
+              </div>
             </Card>
 
             {/* ===== SEÇÃO: CASOS DE SUCESSO (MÚLTIPLOS) ===== */}
