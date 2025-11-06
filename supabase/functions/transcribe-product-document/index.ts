@@ -38,9 +38,17 @@ serve(async (req) => {
       type: pdfFile.type
     });
 
-    // Converter PDF para base64 para enviar à IA
+    // Converter PDF para base64 em chunks (evita Maximum call stack size exceeded)
     const arrayBuffer = await pdfFile.arrayBuffer();
-    const base64PDF = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    
+    let binary = '';
+    const chunkSize = 8192; // 8KB chunks
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    const base64PDF = btoa(binary);
 
     console.log('🔄 Processando com Lovable AI (Gemini 2.5 Flash)...');
 
