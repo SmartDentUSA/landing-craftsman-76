@@ -1051,6 +1051,7 @@ export type Database = {
           depth: number | null
           description: string | null
           display_order: number | null
+          document_transcriptions: Json | null
           ean: string | null
           ecommerce_html: Json | null
           faq: Json | null
@@ -1153,6 +1154,7 @@ export type Database = {
           depth?: number | null
           description?: string | null
           display_order?: number | null
+          document_transcriptions?: Json | null
           ean?: string | null
           ecommerce_html?: Json | null
           faq?: Json | null
@@ -1255,6 +1257,7 @@ export type Database = {
           depth?: number | null
           description?: string | null
           display_order?: number | null
+          document_transcriptions?: Json | null
           ean?: string | null
           ecommerce_html?: Json | null
           faq?: Json | null

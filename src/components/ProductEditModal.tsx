@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { TagInput, TagInputHandle } from "@/components/ui/tag-input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info } from "lucide-react";
+import { Save, Trash2, Plus, X, Sparkles, Download, Check, ChevronsUpDown, FileText, Package, AlertCircle, Info, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSection } from "@/components/VideoSection";
@@ -61,6 +62,32 @@ interface TechnicalDocument {
     url_pagina?: string;
   };
   sincronizado_em: string;
+}
+
+interface DocumentTranscription {
+  id: string;
+  filename: string;
+  transcribed_at: string;
+  transcribed_text: string;
+  ai_model: string;
+  extracted_data: {
+    product_name?: string;
+    brand?: string;
+    model?: string;
+    sku?: string;
+    technical_specs?: Array<{ label: string; value: string }>;
+    materials?: string[];
+    features?: string[];
+    benefits?: string[];
+    applications?: string[];
+    certifications?: string[];
+    warnings?: string[];
+    manufacturer?: string;
+    country_of_origin?: string;
+    warranty?: string;
+    price_info?: string;
+    keywords?: string[];
+  };
 }
 
 interface Product {
@@ -160,6 +187,8 @@ interface Product {
   technical_specifications?: Array<{ label: string; value: string }>;
   // Technical Documents (Sistema B)
   technical_documents?: TechnicalDocument[];
+  // Document Transcriptions (IA PDF Processing)
+  document_transcriptions?: DocumentTranscription[];
 }
 
 interface ProductEditModalProps {
@@ -275,6 +304,11 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   
   // Technical Documents (Sistema B)
   const [technicalDocuments, setTechnicalDocuments] = useState<TechnicalDocument[]>([]);
+  
+  // Document Transcriptions (IA PDF Processing)
+  const [documentTranscriptions, setDocumentTranscriptions] = useState<DocumentTranscription[]>([]);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [currentUploadProgress, setCurrentUploadProgress] = useState(0);
   
   const { toast } = useToast();
 
@@ -396,6 +430,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       
       // Technical documents (Sistema B)
       setTechnicalDocuments(product.technical_documents || []);
+      
+      // Document transcriptions
+      setDocumentTranscriptions(product.document_transcriptions || []);
     } else {
       setFormData({
         name: '',
@@ -460,6 +497,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       
       // Reset technical documents
       setTechnicalDocuments([]);
+      
+      // Reset document transcriptions
+      setDocumentTranscriptions([]);
     }
   }, [product, isInitialized]);
 
@@ -997,6 +1037,157 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
     }
   };
 
+  // Document transcription functions
+  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Formato inválido",
+        description: "Apenas arquivos PDF são aceitos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB
+      toast({
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo é 10MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadingDocument(true);
+    setCurrentUploadProgress(20);
+
+    try {
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      setCurrentUploadProgress(40);
+
+      const { data, error } = await supabase.functions.invoke('transcribe-product-document', {
+        body: formData
+      });
+
+      setCurrentUploadProgress(80);
+
+      if (error) throw error;
+
+      if (data?.success && data?.transcription) {
+        const newTranscription: DocumentTranscription = {
+          id: crypto.randomUUID(),
+          filename: file.name,
+          transcribed_at: new Date().toISOString(),
+          transcribed_text: data.transcription.text,
+          ai_model: data.transcription.model || 'google/gemini-2.5-flash',
+          extracted_data: data.transcription.extracted_data
+        };
+
+        setDocumentTranscriptions(prev => [...prev, newTranscription]);
+
+        toast({
+          title: "✅ Documento transcrito!",
+          description: `${file.name} foi processado com sucesso. Clique em "Aplicar ao Produto" para usar os dados.`
+        });
+      }
+
+      setCurrentUploadProgress(100);
+
+    } catch (error) {
+      console.error('Erro ao transcrever documento:', error);
+      toast({
+        title: "Erro na transcrição",
+        description: "Não foi possível processar o documento. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingDocument(false);
+      setCurrentUploadProgress(0);
+      event.target.value = ''; // Reset input
+    }
+  };
+
+  const applyTranscriptionData = (transcription: DocumentTranscription) => {
+    const extracted = transcription.extracted_data;
+    
+    if (!extracted) {
+      toast({
+        title: "Sem dados estruturados",
+        description: "Esta transcrição não possui dados extraídos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Mesclar dados extraídos com formData existente (sem sobrescrever)
+    const updates: Partial<Product> = {};
+    
+    if (extracted.product_name && !formData.name) {
+      updates.name = extracted.product_name;
+    }
+    
+    if (extracted.brand && !formData.brand) {
+      updates.brand = extracted.brand;
+    }
+    
+    if (extracted.model && !formData.description) {
+      updates.description = `Modelo: ${extracted.model}`;
+    }
+    
+    if (extracted.technical_specs && extracted.technical_specs.length > 0) {
+      const existingSpecs = formData.technical_specifications || [];
+      updates.technical_specifications = [
+        ...existingSpecs,
+        ...extracted.technical_specs.filter(spec => 
+          !existingSpecs.some(existing => existing.label === spec.label)
+        )
+      ];
+    }
+    
+    if (extracted.features && extracted.features.length > 0) {
+      setFeatures(prev => [...new Set([...prev, ...extracted.features!])]);
+    }
+    
+    if (extracted.benefits && extracted.benefits.length > 0) {
+      setBenefits(prev => [...new Set([...prev, ...extracted.benefits!])]);
+    }
+    
+    if (extracted.keywords && extracted.keywords.length > 0) {
+      const existingKeywords = formData.keywords || [];
+      updates.keywords = [...new Set([...existingKeywords, ...extracted.keywords])];
+    }
+    
+    if (extracted.applications) {
+      const currentApplications = formData.applications || '';
+      const newApplications = extracted.applications.join('\n');
+      updates.applications = currentApplications 
+        ? `${currentApplications}\n\n${newApplications}`
+        : newApplications;
+    }
+    
+    setFormData(prev => ({ ...prev, ...updates }));
+    
+    toast({
+      title: "✨ Dados aplicados!",
+      description: `Informações de "${transcription.filename}" foram mescladas ao produto`
+    });
+  };
+
+  const removeTranscription = (transcriptionId: string) => {
+    setDocumentTranscriptions(prev => 
+      prev.filter(t => t.id !== transcriptionId)
+    );
+    
+    toast({
+      title: "Transcrição removida",
+      description: "O documento foi removido da lista"
+    });
+  };
+
   const handleSave = async () => {
     // ✅ FORÇAR BLUR de todos os editores FAQ antes de salvar
     faqEditorRef.current?.blurAllEditors();
@@ -1183,6 +1374,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         resource_descriptions: formData.resource_descriptions,
         // Original Data (inclui li_product_id da Loja Integrada)
         original_data: formData.original_data || product?.original_data || null,
+        // Document Transcriptions
+        document_transcriptions: documentTranscriptions.length > 0 ? documentTranscriptions as any : [],
         updated_at: new Date().toISOString()
       };
 
@@ -2985,6 +3178,172 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 </table>
               </div>
             )}
+          </div>
+
+          {/* SEÇÃO: TRANSCRIÇÕES DE DOCUMENTOS PDF */}
+          <div className="space-y-4 border-t pt-6 bg-gradient-to-br from-primary/5 to-primary/10 p-6 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Transcrições de Documentos
+                </Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Envie catálogos, fichas técnicas ou manuais em PDF para extração automática de dados via IA
+                </p>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {documentTranscriptions.length} documento(s)
+              </Badge>
+            </div>
+
+            {/* Lista de Transcrições */}
+            <div className="space-y-3">
+              {documentTranscriptions.map((transcription) => (
+                <Card key={transcription.id} className="border-l-4 border-l-primary">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      {/* Header do Card */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm">{transcription.filename}</span>
+                          <Badge variant="secondary" className="text-[10px]">
+                            {new Date(transcription.transcribed_at).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </Badge>
+                        </div>
+
+                        {/* Preview de Dados Extraídos */}
+                        {transcription.extracted_data && (
+                          <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                            {transcription.extracted_data.product_name && (
+                              <div>
+                                <span className="text-muted-foreground">Produto:</span>{' '}
+                                <span className="font-medium">{transcription.extracted_data.product_name}</span>
+                              </div>
+                            )}
+                            {transcription.extracted_data.brand && (
+                              <div>
+                                <span className="text-muted-foreground">Marca:</span>{' '}
+                                <span className="font-medium">{transcription.extracted_data.brand}</span>
+                              </div>
+                            )}
+                            {transcription.extracted_data.technical_specs && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Especificações:</span>{' '}
+                                <Badge variant="outline" className="text-[10px] ml-1">
+                                  {transcription.extracted_data.technical_specs.length} itens
+                                </Badge>
+                              </div>
+                            )}
+                            {transcription.extracted_data.keywords && transcription.extracted_data.keywords.length > 0 && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Keywords:</span>{' '}
+                                <Badge variant="outline" className="text-[10px] ml-1">
+                                  {transcription.extracted_data.keywords.length} palavras
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Texto Transcrito (collapsible) */}
+                        <details className="text-xs">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                            Ver texto completo ({transcription.transcribed_text.length} caracteres)
+                          </summary>
+                          <div className="mt-2 p-3 bg-muted/50 rounded-md max-h-40 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap font-mono text-xs">
+                              {transcription.transcribed_text}
+                            </pre>
+                          </div>
+                        </details>
+                      </div>
+
+                      {/* Ações */}
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => applyTranscriptionData(transcription)}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Aplicar ao Produto
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeTranscription(transcription.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Botão de Upload + Área de Drop */}
+            <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors">
+              <input
+                type="file"
+                id="pdf-upload"
+                accept=".pdf"
+                className="hidden"
+                onChange={handlePDFUpload}
+                disabled={uploadingDocument}
+              />
+              
+              {uploadingDocument ? (
+                <div className="space-y-2">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                  <p className="text-sm font-medium">Transcrevendo documento com IA...</p>
+                  <Progress value={currentUploadProgress} className="w-full max-w-xs mx-auto" />
+                  <p className="text-xs text-muted-foreground">
+                    Isso pode levar de 10 a 60 segundos dependendo do tamanho do documento
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="text-sm font-semibold mb-1">Adicionar Nova Transcrição</h3>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Upload de PDF (máx. 10MB) • A IA extrairá todas as informações automaticamente
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('pdf-upload')?.click()}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Selecionar Documento PDF
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 p-3 rounded-md border border-blue-200 dark:border-blue-900">
+              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800 dark:text-blue-300">
+                <p className="font-semibold mb-1">Como funciona:</p>
+                <ul className="list-disc list-inside text-xs space-y-1">
+                  <li>Envie catálogos técnicos, fichas de produtos ou manuais em PDF</li>
+                  <li>A IA (Gemini 2.5 Flash) extrai automaticamente: nome, marca, especificações, features, benefícios e keywords</li>
+                  <li>Clique em "Aplicar ao Produto" para mesclar os dados extraídos aos campos do produto</li>
+                  <li>O PDF não é armazenado, apenas o texto transcrito e os dados estruturados</li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           {/* Landing Page Sections Configuration */}
