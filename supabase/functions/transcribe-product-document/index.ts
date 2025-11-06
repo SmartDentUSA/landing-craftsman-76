@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as b64encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,23 +33,23 @@ serve(async (req) => {
       );
     }
 
+    // Limite de 10MB no servidor também
+    if (pdfFile.size > 10 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Arquivo excede 10MB' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('📎 Arquivo recebido:', {
       name: pdfFile.name,
       size: pdfFile.size,
       type: pdfFile.type
     });
 
-    // Converter PDF para base64 em chunks (evita Maximum call stack size exceeded)
+    // Converter PDF para base64 de forma segura sem estourar a stack
     const arrayBuffer = await pdfFile.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    
-    let binary = '';
-    const chunkSize = 8192; // 8KB chunks
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-      binary += String.fromCharCode.apply(null, Array.from(chunk));
-    }
-    const base64PDF = btoa(binary);
+    const base64PDF = b64encode(new Uint8Array(arrayBuffer));
 
     console.log('🔄 Processando com Lovable AI (Gemini 2.5 Flash)...');
 
