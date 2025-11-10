@@ -120,6 +120,31 @@ function filterIrrelevantData(extractedData: any, productName: string) {
     console.log(`🧹 Warnings: ${original} → ${extractedData.warnings.length}`);
   }
 
+  // Novos campos estruturados
+  if (extractedData.usage_instructions && Array.isArray(extractedData.usage_instructions)) {
+    const original = extractedData.usage_instructions.length;
+    extractedData.usage_instructions = extractedData.usage_instructions.filter((instr: any) => 
+      isRelevant(instr.instruction)
+    );
+    console.log(`🧹 Usage Instructions: ${original} → ${extractedData.usage_instructions.length}`);
+  }
+
+  if (extractedData.device_settings && Array.isArray(extractedData.device_settings)) {
+    const original = extractedData.device_settings.length;
+    extractedData.device_settings = extractedData.device_settings.filter((device: any) => 
+      isRelevant(device.device_name)
+    );
+    console.log(`🧹 Device Settings: ${original} → ${extractedData.device_settings.length}`);
+  }
+
+  if (extractedData.test_results && Array.isArray(extractedData.test_results)) {
+    const original = extractedData.test_results.length;
+    extractedData.test_results = extractedData.test_results.filter((test: any) => 
+      isRelevant(test.test_name)
+    );
+    console.log(`🧹 Test Results: ${original} → ${extractedData.test_results.length}`);
+  }
+
   // Validar campos de texto únicos
   if (extractedData.warranty) {
     if (!isRelevant(extractedData.warranty)) {
@@ -292,17 +317,62 @@ INSTRUÇÕES DE EXTRAÇÃO:
    - Mantenha hierarquia de informações (títulos, subtítulos, listas)
    - Preserve números, códigos e unidades de medida exatamente como aparecem
 
+9. **INSTRUÇÕES DE USO (PASSO A PASSO):**
+   - Se o documento contém instruções de aplicação/uso, extraia cada etapa como um objeto estruturado
+   - Identifique o número da etapa e a instrução clara e detalhada
+   - Se houver referências a imagens/diagramas, inclua no campo opcional
+   - Exemplos: "1. Limpe a superfície", "2. Aplique o produto uniformemente", "3. Aguarde 5 minutos"
+   - Preserve comandos imperativos e detalhes técnicos (tempo, temperatura, quantidade)
+
+10. **CONFIGURAÇÕES DE DISPOSITIVOS:**
+    - Se houver tabelas de parâmetros para equipamentos/dispositivos específicos, extraia:
+      * Nome do dispositivo/equipamento (ex: "NK-Optik Otoflash", "Lâmpada UV portátil")
+      * Modelo (se especificado, ex: "Curie+ Plus", "48W")
+      * Parâmetros técnicos: tempo, temperatura, potência, intensidade, comprimento de onda, ciclos, etc.
+    - Preserve valores numéricos e unidades EXATAMENTE como aparecem (ex: "5 minutos", "1.000 mW/cm²", "365–410 nm")
+    - Para cada parâmetro, especifique claramente o nome do parâmetro e seu valor
+    - Se houver observações especiais (ex: "sem nitrogênio", "luz azul ativada"), inclua como parâmetro
+
+11. **RESULTADOS DE TESTES:**
+    - Se houver dados de testes técnicos ou laboratoriais (resistência, flexão, tenacidade, dureza, etc.):
+      * Nome do teste (ex: "Resistência Flexural", "Módulo Flexural", "Tenacidade à Fratura")
+      * Tipo/categoria do teste (ex: "Mecânico", "Químico", "Térmico", "Performance")
+      * Metodologia do teste (se mencionada, ex: "ASTM D790", "ISO 178")
+      * Resultados comparativos organizados por condição testada
+    - Para cada resultado, especifique:
+      * Condição testada (ex: "Sem tratamento", "Com Glaze", "Após 1000 ciclos")
+      * Valor numérico (ex: "150", "165", "+10,5")
+      * Unidade de medida (ex: "MPa", "%", "N/mm²")
+    - Preserve aumentos/reduções percentuais e valores de comparação
+
+12. **COMPATIBILIDADE:**
+    - Liste materiais/resinas compatíveis (ex: "Todas as resinas Bite Splint", "Resinas flexíveis 3D")
+    - Liste dispositivos/equipamentos compatíveis (ex: "Impressoras 3D DLP", "Câmaras de cura UV")
+    - Liste aplicações/procedimentos compatíveis (ex: "Placas miorrelaxantes", "Guias cirúrgicos")
+    - EXCLUA compatibilidades genéricas ou não relacionadas ao produto específico
+    - Se houver restrições de compatibilidade, mencione-as (ex: "Não compatível com resinas rígidas")
+
+13. **ESTRUTURA DO DOCUMENTO:**
+    - Identifique seções principais do documento (títulos numerados ou em destaque)
+    - Preserve a hierarquia de seções (seção principal > subseção)
+    - Capture títulos exatos das seções (ex: "1. DESCRIÇÃO DO PRODUTO", "2. VANTAGENS", "6. PARÂMETROS TÉCNICOS")
+    - Se houver numeração, preserve-a (ex: "1.", "2.1", "3.2.1")
+    - Útil para navegação e compreensão da estrutura do documento
+    - Inclua um resumo breve do conteúdo de cada seção (1-2 linhas)
+
 FORMATO DE RESPOSTA:
-Retorne apenas o objeto JSON, sem texto adicional antes ou depois.
+Retorne apenas o objeto JSON estruturado, sem texto adicional antes ou depois.
 
 REGRAS IMPORTANTES:
 - Se o documento for um catálogo com múltiplos produtos, identifique a seção de "${productName}" e extraia APENAS dessa seção
 - Se alguma informação for ambígua ou não claramente relacionada ao produto alvo, DESCARTE
 - Se não houver informações sobre "${productName}" no documento, retorne campos vazios/null
-- Se algum campo não estiver presente, retorne null ou omita
-- Preserve números, unidades de medida e códigos EXATAMENTE como aparecem
-- Seja preciso e objetivo - NÃO invente informações
-- Para especificações técnicas, use arrays de objetos com "label" e "value"`;
+- Se algum campo não estiver presente, retorne null ou array vazio []
+- Preserve números, unidades de medida e códigos EXATAMENTE como aparecem (não arredonde, não converta)
+- Para valores com intervalos, preserve o formato exato (ex: "365–410 nm", "5-10 minutos")
+- Seja preciso e objetivo - NÃO invente informações que não estão no documento
+- Para especificações técnicas, use arrays de objetos com "label" e "value"
+- Para instruções, device_settings e test_results, use objetos estruturados conforme schema`;
 
     // Fazer requisição para Lovable AI com tool calling para estruturação
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -362,7 +432,103 @@ REGRAS IMPORTANTES:
                   country_of_origin: { type: 'string' },
                   warranty: { type: 'string' },
                   price_info: { type: 'string' },
-                  keywords: { type: 'array', items: { type: 'string' } }
+                  keywords: { type: 'array', items: { type: 'string' } },
+                  usage_instructions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        step_number: { type: 'number', description: 'Número da etapa (1, 2, 3...)' },
+                        instruction: { type: 'string', description: 'Instrução detalhada do passo' },
+                        image_reference: { type: 'string', description: 'Referência a imagem/diagrama (opcional)' }
+                      },
+                      required: ['step_number', 'instruction']
+                    },
+                    description: 'Instruções de uso passo a passo'
+                  },
+                  device_settings: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        device_name: { type: 'string', description: 'Nome do dispositivo/equipamento' },
+                        model: { type: 'string', description: 'Modelo do dispositivo (opcional)' },
+                        settings: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              parameter: { type: 'string', description: 'Nome do parâmetro (ex: "Tempo", "Potência", "Comprimento de onda")' },
+                              value: { type: 'string', description: 'Valor do parâmetro com unidade (ex: "5 minutos", "1.000 mW/cm²", "365–410 nm")' }
+                            },
+                            required: ['parameter', 'value']
+                          }
+                        }
+                      },
+                      required: ['device_name']
+                    },
+                    description: 'Configurações recomendadas para dispositivos/equipamentos específicos'
+                  },
+                  test_results: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        test_name: { type: 'string', description: 'Nome do teste (ex: "Resistência Flexural", "Módulo Flexural")' },
+                        test_type: { type: 'string', description: 'Tipo/categoria do teste (ex: "Mecânico", "Químico", "Térmico")' },
+                        methodology: { type: 'string', description: 'Metodologia do teste (ex: "ASTM D790", "ISO 178") - opcional' },
+                        description: { type: 'string', description: 'Descrição do que o teste mede - opcional' },
+                        results: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              condition: { type: 'string', description: 'Condição testada (ex: "Sem tratamento", "Com Glaze", "Aumento percentual")' },
+                              value: { type: 'string', description: 'Resultado numérico (ex: "150", "165", "+10,5")' },
+                              unit: { type: 'string', description: 'Unidade de medida (ex: "MPa", "%", "N/mm²")' }
+                            },
+                            required: ['condition', 'value']
+                          }
+                        }
+                      },
+                      required: ['test_name']
+                    },
+                    description: 'Resultados de testes técnicos e de performance'
+                  },
+                  compatibility: {
+                    type: 'object',
+                    properties: {
+                      compatible_materials: { 
+                        type: 'array', 
+                        items: { type: 'string' },
+                        description: 'Materiais/resinas compatíveis com o produto'
+                      },
+                      compatible_devices: { 
+                        type: 'array', 
+                        items: { type: 'string' },
+                        description: 'Equipamentos/dispositivos compatíveis'
+                      },
+                      compatible_applications: { 
+                        type: 'array', 
+                        items: { type: 'string' },
+                        description: 'Aplicações/procedimentos compatíveis'
+                      }
+                    },
+                    description: 'Informações de compatibilidade do produto'
+                  },
+                  document_sections: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        section_title: { type: 'string', description: 'Título exato da seção' },
+                        section_number: { type: 'string', description: 'Numeração da seção (ex: "1.", "2.1", "3.2.1") - opcional' },
+                        content: { type: 'string', description: 'Resumo breve do conteúdo da seção (1-2 linhas)' }
+                      },
+                      required: ['section_title', 'content']
+                    },
+                    description: 'Estrutura hierárquica do documento (seções principais identificadas)'
+                  }
                 },
                 required: ['transcribed_text']
               }
@@ -421,6 +587,13 @@ REGRAS IMPORTANTES:
       benefits_count: extractedData.benefits?.length || 0,
       keywords_count: extractedData.keywords?.length || 0,
       applications_count: extractedData.applications?.length || 0,
+      usage_instructions_count: extractedData.usage_instructions?.length || 0,
+      device_settings_count: extractedData.device_settings?.length || 0,
+      test_results_count: extractedData.test_results?.length || 0,
+      compatibility_items: (extractedData.compatibility?.compatible_materials?.length || 0) + 
+                          (extractedData.compatibility?.compatible_devices?.length || 0) + 
+                          (extractedData.compatibility?.compatible_applications?.length || 0),
+      document_sections_count: extractedData.document_sections?.length || 0,
       text_length: extractedData.transcribed_text.length,
       filtering_applied: productName !== 'produto'
     });
@@ -453,7 +626,16 @@ REGRAS IMPORTANTES:
             country_of_origin: extractedData.country_of_origin || null,
             warranty: extractedData.warranty || null,
             price_info: extractedData.price_info || null,
-            keywords: extractedData.keywords || []
+            keywords: extractedData.keywords || [],
+            usage_instructions: extractedData.usage_instructions || [],
+            device_settings: extractedData.device_settings || [],
+            test_results: extractedData.test_results || [],
+            compatibility: extractedData.compatibility || {
+              compatible_materials: [],
+              compatible_devices: [],
+              compatible_applications: []
+            },
+            document_sections: extractedData.document_sections || []
           }
         }
       }),
