@@ -2,6 +2,146 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
+// ====== FASE 2: PRODUCT MASTER CONTEXT INTEGRATION ======
+interface ProductMasterContext {
+  // Documentos técnicos (PRIORIDADE #1)
+  document_transcriptions?: any[];
+  has_technical_docs: boolean;
+  technical_summary?: string;
+  
+  // Documentos oficiais
+  technical_documents?: any[];
+  
+  // Especificações consolidadas
+  technical_specifications?: any[];
+  specs_consolidated: any;
+  
+  // Variações
+  variations?: any[];
+  has_variations: boolean;
+  variations_summary?: string;
+  
+  // Tutoriais
+  tutorial_resources?: any;
+  has_tutorials: boolean;
+  tutorials_count: number;
+  
+  // Contexto consolidado
+  master_technical_context: string;
+  data_quality_score: number;
+  priority_sources_used: string[];
+}
+
+/**
+ * FASE 2: Construir contexto técnico enriquecido do produto
+ */
+function buildEnrichedProductContext(product: any): ProductMasterContext {
+  const docTranscriptions = product.document_transcriptions as any[] | null;
+  const techDocs = product.technical_documents as any[] | null;
+  const techSpecs = product.technical_specifications as any[] | null;
+  const variations = product.variations as any[] | null;
+  const tutorialResources = product.tutorial_resources as any;
+  
+  // Consolidar especificações técnicas com hierarquia de prioridade
+  let specsConsolidated: any = {};
+  let technicalSummary = '';
+  const prioritySourcesUsed: string[] = [];
+  
+  // 1º PRIORIDADE: document_transcriptions (VERDADE ABSOLUTA)
+  if (docTranscriptions && Array.isArray(docTranscriptions) && docTranscriptions.length > 0) {
+    prioritySourcesUsed.push('document_transcriptions');
+    const firstDoc = docTranscriptions[0];
+    
+    if (firstDoc?.extracted_data?.summary) {
+      technicalSummary = firstDoc.extracted_data.summary;
+    }
+    
+    if (firstDoc?.extracted_data?.specifications) {
+      specsConsolidated = { ...specsConsolidated, ...firstDoc.extracted_data.specifications };
+    }
+  }
+  
+  // 2º PRIORIDADE: technical_documents
+  if (techDocs && Array.isArray(techDocs) && techDocs.length > 0) {
+    prioritySourcesUsed.push('technical_documents');
+  }
+  
+  // 3º PRIORIDADE: technical_specifications
+  if (techSpecs && Array.isArray(techSpecs) && techSpecs.length > 0) {
+    prioritySourcesUsed.push('technical_specifications');
+    techSpecs.forEach((spec: any) => {
+      if (spec.label && spec.value) {
+        specsConsolidated[spec.label] = spec.value;
+      }
+    });
+  }
+  
+  // Variações
+  const hasVariations = variations && Array.isArray(variations) && variations.length > 0;
+  let variationsSummary = '';
+  
+  if (hasVariations && variations) {
+    variationsSummary = `Disponível em ${variations.length} variações: ${variations
+      .slice(0, 3)
+      .map((v: any) => v.name || v.color || v.size)
+      .filter(Boolean)
+      .join(', ')}${variations.length > 3 ? '...' : ''}`;
+  }
+  
+  // Tutoriais
+  const tutorialsCount = tutorialResources?.tutorials?.length || 0;
+  const hasTutorials = tutorialsCount > 0;
+  
+  // Construir contexto técnico mestre
+  let masterTechnicalContext = '';
+  
+  if (technicalSummary) {
+    masterTechnicalContext += `📄 FONTE OFICIAL (PDF TRANSCRITO - PRIORIDADE #1):\n${technicalSummary}\n\n`;
+  }
+  
+  if (Object.keys(specsConsolidated).length > 0) {
+    masterTechnicalContext += `🔧 ESPECIFICAÇÕES TÉCNICAS CONSOLIDADAS:\n`;
+    Object.entries(specsConsolidated).slice(0, 10).forEach(([key, value]) => {
+      masterTechnicalContext += `  • ${key}: ${value}\n`;
+    });
+    masterTechnicalContext += '\n';
+  }
+  
+  if (hasVariations) {
+    masterTechnicalContext += `🎨 VARIAÇÕES: ${variationsSummary}\n\n`;
+  }
+  
+  if (hasTutorials && tutorialResources?.tutorials) {
+    masterTechnicalContext += `📺 TUTORIAIS DISPONÍVEIS (${tutorialsCount}):\n`;
+    tutorialResources.tutorials.slice(0, 3).forEach((t: any, idx: number) => {
+      masterTechnicalContext += `  ${idx + 1}. ${t.title}: ${t.url}\n`;
+    });
+  }
+  
+  return {
+    document_transcriptions: docTranscriptions || [],
+    has_technical_docs: (docTranscriptions?.length || 0) > 0,
+    technical_summary: technicalSummary,
+    
+    technical_documents: techDocs || [],
+    
+    technical_specifications: techSpecs || [],
+    specs_consolidated: specsConsolidated,
+    
+    variations: variations || [],
+    has_variations: hasVariations,
+    variations_summary: variationsSummary,
+    
+    tutorial_resources: tutorialResources,
+    has_tutorials: hasTutorials,
+    tutorials_count: tutorialsCount,
+    
+    master_technical_context: masterTechnicalContext,
+    data_quality_score: 0, // Calculado no frontend
+    priority_sources_used: prioritySourcesUsed
+  };
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -184,6 +324,17 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
   
   const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
   
+  // 🔥 FASE 2: CONSTRUIR CONTEXTO ENRIQUECIDO
+  const enrichedContext = buildEnrichedProductContext(product);
+  
+  console.log('📊 Enriched Context for Benefits:', {
+    has_technical_docs: enrichedContext.has_technical_docs,
+    has_variations: enrichedContext.has_variations,
+    has_tutorials: enrichedContext.has_tutorials,
+    priority_sources: enrichedContext.priority_sources_used,
+    master_context_length: enrichedContext.master_technical_context.length
+  });
+  
   // Buscar configuração de prompt customizado com selected_fields
   const { data: promptConfig } = await supabase
     .from('prompts_configuration')
@@ -212,11 +363,30 @@ async function generateProductBenefits(apiKey: string, product: any, existingBen
     const existingContext = existingBenefits.length > 0 ? 
       `\n\nDADOS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingBenefits.join(', ')}` : '';
     
+    // 🔥 FASE 2: ADICIONAR CONTEXTO TÉCNICO ENRIQUECIDO
+    const technicalContext = enrichedContext.master_technical_context ? `
+
+═══════════════════════════════════════════════════════════════
+🔥 CONTEXTO TÉCNICO PRIORITÁRIO (FASE 2 - USAR SEMPRE)
+═══════════════════════════════════════════════════════════════
+
+${enrichedContext.master_technical_context}
+
+⚠️ INSTRUÇÕES CRÍTICAS:
+1. Se há FONTE OFICIAL (PDF), use SEMPRE essas informações como VERDADE ABSOLUTA
+2. NÃO invente especificações - use apenas o que está documentado acima
+3. Se há VARIAÇÕES, mencione que o produto tem múltiplas opções
+4. Se há TUTORIAIS, mencione que há recursos de aprendizagem disponíveis
+
+📌 FONTES UTILIZADAS NESTE CONTEXTO: ${enrichedContext.priority_sources_used.join(', ') || 'dados estruturados do banco'}
+
+` : '';
+    
     const instruction = complementOnly && existingBenefits.length > 0 ? 
       'Gere APENAS 3 benefícios complementares que NÃO duplicem os existentes e preencham lacunas identificadas:' :
       'Gere APENAS um array JSON com 3-5 benefícios específicos, objetivos e focados no valor para o cliente:';
     
-    prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}
+    prompt = `Analise o seguinte produto e gere uma lista de benefícios específicos PRIORIZANDO CATEGORIA/SUBCATEGORIA:${existingContext}${technicalContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -232,6 +402,7 @@ INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 1. **Destaque benefícios específicos da categoria/subcategoria**
 2. **Conecte benefícios com a taxonomia do produto**
 3. **Use categoria como contexto principal dos benefícios**
+4. **Se há documentação técnica oficial (PDF), baseie-se NELA prioritariamente**
 
 Foque em:
 - Resultados práticos específicos da categoria/subcategoria
@@ -320,6 +491,35 @@ async function generateProductKeywords(apiKey: string, product: any, existingKey
     const existingContext = existingKeywords.length > 0 ? 
       `\n\nPALAVRAS-CHAVE MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingKeywords.join(', ')}` : '';
     
+    // 🔥 FASE 2: CONSTRUIR CONTEXTO ENRIQUECIDO
+    const enrichedContext = buildEnrichedProductContext(product);
+    
+    console.log('📊 Enriched Context for Keywords:', {
+      has_technical_docs: enrichedContext.has_technical_docs,
+      has_variations: enrichedContext.has_variations,
+      has_tutorials: enrichedContext.has_tutorials,
+      priority_sources: enrichedContext.priority_sources_used
+    });
+    
+    // 🔥 FASE 2: ADICIONAR CONTEXTO TÉCNICO ENRIQUECIDO
+    const technicalContext = enrichedContext.master_technical_context ? `
+
+═══════════════════════════════════════════════════════════════
+🔥 CONTEXTO TÉCNICO PRIORITÁRIO (FASE 2 - USAR SEMPRE)
+═══════════════════════════════════════════════════════════════
+
+${enrichedContext.master_technical_context}
+
+⚠️ INSTRUÇÕES CRÍTICAS:
+1. Se há ESPECIFICAÇÕES TÉCNICAS de PDFs, extrair keywords técnicas delas
+2. Se há VARIAÇÕES, gerar keywords com as variações (ex: "produto [cor]", "produto [tamanho]")
+3. Se há TUTORIAIS, incluir keywords como "tutorial [produto]", "como usar [produto]"
+4. NÃO inventar especificações - usar apenas documentação oficial
+
+📌 FONTES: ${enrichedContext.priority_sources_used.join(', ') || 'banco de dados'}
+
+` : '';
+    
     // FASE 5: ENRIQUECER COM VÍDEOS (PRIORIDADE MÁXIMA)
     const videoCaptionsContext = videoCaptionKeywords.length > 0 ? `
 
@@ -352,7 +552,7 @@ Portanto, SEMPRE gere pelo menos 3-4 keywords combinando:
       'Gere APENAS 3 palavras-chave complementares que NÃO duplicem as existentes:' :
       'Gere APENAS um array JSON com 8-12 palavras-chave relevantes:';
     
-    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA E VÍDEOS:${existingContext}${videoCaptionsContext}
+    prompt = `Analise o seguinte produto e gere palavras-chave para SEO e marketing PRIORIZANDO CATEGORIA/SUBCATEGORIA, DOCUMENTAÇÃO TÉCNICA E VÍDEOS:${existingContext}${technicalContext}${videoCaptionsContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -370,15 +570,17 @@ INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 3. **Combine categoria + subcategoria + nome do produto**
 4. **Use termos técnicos mencionados nos vídeos (se disponíveis)**
 
-Inclua NESTA ORDEM DE PRIORIDADE (FASE 5 OTIMIZADA):
-1. **Keywords de vídeos** (se disponíveis) - PRIORIDADE MÁXIMA
-2. **Categoria + keywords de vídeos** (combinar ambos)
-3. Categoria e subcategoria (primárias)
-4. Variações e sinônimos das categorias
-5. Categoria + subcategoria + benefícios
-6. Palavras-chave long-tail com categorias (especialmente as mencionadas em vídeos)
-7. Termos técnicos da categoria (priorizar os dos vídeos)
-8. Categoria + público-alvo
+Inclua NESTA ORDEM DE PRIORIDADE (FASE 2 + FASE 5 OTIMIZADA):
+1. **Especificações técnicas de PDFs** (se disponíveis) - VERDADE ABSOLUTA
+2. **Keywords de vídeos** (se disponíveis) - PRIORIDADE MÁXIMA
+3. **Keywords de variações** (ex: "produto pink", "produto ruby")
+4. **Categoria + keywords de vídeos** (combinar ambos)
+5. Categoria e subcategoria (primárias)
+6. Variações e sinônimos das categorias
+7. Categoria + subcategoria + benefícios
+8. Palavras-chave long-tail com categorias (especialmente as mencionadas em vídeos)
+9. Termos técnicos da categoria (priorizar os dos vídeos e PDFs)
+10. Categoria + público-alvo
 
 FORMATO DE RESPOSTA OBRIGATÓRIO:
 - Retorne APENAS o array JSON puro
@@ -419,6 +621,16 @@ async function generateProductFeatures(apiKey: string, product: any, existingFea
   
   const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
   
+  // 🔥 FASE 2: CONSTRUIR CONTEXTO ENRIQUECIDO
+  const enrichedContext = buildEnrichedProductContext(product);
+  
+  console.log('📊 Enriched Context for Features:', {
+    has_technical_docs: enrichedContext.has_technical_docs,
+    has_variations: enrichedContext.has_variations,
+    specs_count: Object.keys(enrichedContext.specs_consolidated).length,
+    priority_sources: enrichedContext.priority_sources_used
+  });
+  
   // Buscar configuração de prompt customizado
   const { data: promptConfig } = await supabase
     .from('prompts_configuration')
@@ -448,11 +660,30 @@ async function generateProductFeatures(apiKey: string, product: any, existingFea
     const existingContext = existingFeatures.length > 0 ? 
       `\n\nCARACTERÍSTICAS MANUAIS EXISTENTES (NÃO DUPLICAR): ${existingFeatures.join(', ')}` : '';
     
+    // 🔥 FASE 2: ADICIONAR CONTEXTO TÉCNICO ENRIQUECIDO
+    const technicalContext = enrichedContext.master_technical_context ? `
+
+═══════════════════════════════════════════════════════════════
+🔥 CONTEXTO TÉCNICO PRIORITÁRIO (FASE 2 - USAR SEMPRE)
+═══════════════════════════════════════════════════════════════
+
+${enrichedContext.master_technical_context}
+
+⚠️ INSTRUÇÕES CRÍTICAS:
+1. Se há ESPECIFICAÇÕES de PDFs, use-as como CARACTERÍSTICAS prioritárias
+2. Se há VARIAÇÕES, mencione as opções disponíveis como características
+3. NÃO invente características - base-se apenas na documentação oficial
+4. Priorize características técnicas e mensuráveis
+
+📌 FONTES: ${enrichedContext.priority_sources_used.join(', ') || 'banco de dados'}
+
+` : '';
+    
     const instruction = complementOnly && existingFeatures.length > 0 ? 
       'Gere APENAS 3 características complementares que NÃO duplicem as existentes:' :
       'Gere APENAS um array JSON com 4-6 características específicas:';
     
-    prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA:${existingContext}
+    prompt = `Analise o seguinte produto e gere características técnicas e funcionais CONTEXTUALIZADAS PELA CATEGORIA E DOCUMENTAÇÃO OFICIAL:${existingContext}${technicalContext}
 
 Produto: ${product.name}
 Descrição: ${product.description || 'Não informada'}
@@ -463,13 +694,17 @@ Aplicações: ${product.applications || 'Não informado'}
 
 ${instruction}
 
-INSTRUÇÕES PARA CATEGORIAS:
+INSTRUÇÕES PARA CATEGORIAS E DOCUMENTAÇÃO:
 1. **Mencione características relevantes da categoria**
 2. **Contextualize recursos dentro da subcategoria**
+3. **Se há especificações de PDFs, USE-AS como características prioritárias**
+4. **Se há variações, liste as opções disponíveis**
 
-Foque em:
+Foque em (PRIORIDADE FASE 2):
+- Especificações técnicas de PDFs (PRIORIDADE #1)
 - Especificações técnicas da categoria
 - Funcionalidades específicas da subcategoria
+- Variações disponíveis (cores, tamanhos, materiais)
 - Materiais e componentes típicos da categoria
 - Dimensões ou capacidades padrão da categoria
 - Compatibilidades dentro da categoria
