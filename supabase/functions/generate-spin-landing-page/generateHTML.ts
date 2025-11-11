@@ -597,10 +597,38 @@ export function generateLandingPageHTML(
   <meta property="og:type" content="website">
   <meta property="og:title" content="${escapeHtml(seoTitle)}">
   <meta property="og:description" content="${escapeHtml(seoDescription)}">
-  <meta property="og:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:site_name" content="${escapeHtml(company?.company_name || 'Smart Dent')}">
   <meta property="og:locale" content="pt_BR">
+  ${(() => {
+    // ✅ FASE 5: Múltiplas og:image da galeria de imagens dos produtos
+    const galleryImages = products
+      .filter(p => p.images_gallery && Array.isArray(p.images_gallery) && p.images_gallery.length > 0)
+      .flatMap(p => p.images_gallery.map((img: any) => ({
+        url: img.url || img.image_url,
+        alt: img.alt || img.description || p.name,
+        width: img.width || 1200,
+        height: img.height || 630,
+        is_main: img.is_main || false
+      })))
+      .filter(img => img.url)
+      .sort((a, b) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0)); // Priorizar is_main
+    
+    if (galleryImages.length > 0) {
+      console.log(`✅ FASE 5 (SPIN): ${galleryImages.length} imagens adicionadas às meta tags OG`);
+      return galleryImages.map((img, index) => `
+  <meta property="og:image" content="${escapeHtml(img.url)}">
+  <meta property="og:image:alt" content="${escapeHtml(img.alt)}">
+  <meta property="og:image:width" content="${img.width}">
+  <meta property="og:image:height" content="${img.height}">
+  ${index === 0 ? `<meta name="twitter:image" content="${escapeHtml(img.url)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(img.alt)}">` : ''}`).join('');
+    } else {
+      // Fallback: usar heroImageSrc ou logo
+      return `<meta property="og:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">
+  <meta name="twitter:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">`;
+    }
+  })()}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- TWITTER CARDS -->
@@ -608,7 +636,6 @@ export function generateLandingPageHTML(
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(seoTitle)}">
   <meta name="twitter:description" content="${escapeHtml(seoDescription)}">
-  <meta name="twitter:image" content="${escapeHtml(heroImageSrc || company?.logo_url || '')}">
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- HREFLANG (Multi-domínio) -->

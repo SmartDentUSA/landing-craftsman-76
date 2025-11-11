@@ -399,17 +399,36 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     });
   }
 
+  // ✅ FASE 5: Extrair galeria de imagens dos produtos
+  const imagesGallery = selectedProducts
+    .filter(p => p.images_gallery && Array.isArray(p.images_gallery) && p.images_gallery.length > 0)
+    .flatMap(p => p.images_gallery.map((img: any) => ({
+      url: img.url || img.image_url,
+      alt: img.alt || img.description || p.name,
+      width: img.width || 1200,
+      height: img.height || 630,
+      is_main: img.is_main || false
+    })))
+    .filter(img => img.url); // Remover imagens sem URL
+  
+  console.log('✅ FASE 5 (Blog): Galeria de imagens extraída:', {
+    productsWithGallery: selectedProducts.filter(p => p.images_gallery?.length > 0).length,
+    totalImages: imagesGallery.length,
+    images: imagesGallery.map(img => ({ url: img.url, is_main: img.is_main }))
+  });
+
   // ✅ 9. GERAR META TAGS COMPLETAS
   const metaTags = buildMetaTags({
     title: finalTitle,
     description: validatedDescription,
     canonicalUrl: preview ? '' : validatedCanonical, // Sem canonical em preview
     domain: domain,
-    ogImage: ogImage,
+    ogImage: ogImage, // Fallback se não houver galeria
     ogType: 'article',
     twitterCard: 'summary_large_image',
     keywords: uniqueKeywords,
-    robots: preview ? 'noindex, nofollow' : 'index, follow' // PREVIEW MODE
+    robots: preview ? 'noindex, nofollow' : 'index, follow', // PREVIEW MODE
+    imagesGallery: imagesGallery.length > 0 ? imagesGallery : undefined // ✅ FASE 5
   });
 
   // ✅ 10. GERAR RESOURCE HINTS PARA IMAGENS
