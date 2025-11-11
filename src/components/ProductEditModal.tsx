@@ -269,6 +269,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [generatingKeywords, setGeneratingKeywords] = useState(false);
+  const [generatingMarketKeywords, setGeneratingMarketKeywords] = useState(false);
+  const [generatingSearchIntentKeywords, setGeneratingSearchIntentKeywords] = useState(false);
   const [overwriteData, setOverwriteData] = useState(false);
   const [generatingSEO, setGeneratingSEO] = useState(false);
   const [generatingFAQs, setGeneratingFAQs] = useState(false);
@@ -1039,6 +1041,236 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       });
     } finally {
       setGeneratingKeywords(false);
+    }
+  };
+
+  const generateMarketKeywordsWithAI = async () => {
+    const hasContent = formData.description?.trim() || 
+                      formData.name?.trim() ||
+                      formData.category?.trim();
+
+    if (!hasContent) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos nome, descrição ou categoria para gerar keywords de mercado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeneratingMarketKeywords(true);
+    try {
+      const contentParts = [];
+      
+      if (formData.name?.trim()) {
+        contentParts.push(`Produto: ${formData.name}`);
+      }
+      
+      if (formData.description?.trim()) {
+        contentParts.push(`Descrição: ${formData.description}`);
+      }
+      
+      if (formData.category?.trim()) {
+        contentParts.push(`Categoria: ${formData.category}`);
+      }
+      
+      if (formData.subcategory?.trim()) {
+        contentParts.push(`Subcategoria: ${formData.subcategory}`);
+      }
+      
+      if (formData.sales_pitch?.trim()) {
+        contentParts.push(`Pitch de Vendas: ${formData.sales_pitch}`);
+      }
+
+      const content = contentParts.join('\n\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'market_keywords',
+          content: content
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.content) {
+        let newKeywords: string[] = [];
+        
+        if (Array.isArray(data.content)) {
+          newKeywords = data.content;
+        } else if (typeof data.content === 'string') {
+          try {
+            const parsed = JSON.parse(data.content);
+            if (Array.isArray(parsed)) {
+              newKeywords = parsed;
+            }
+          } catch (e) {
+            console.error('Failed to parse market keywords:', e);
+          }
+        }
+
+        const existingKeywords = marketKeywords || [];
+        const uniqueNewKeywords = newKeywords.filter(
+          keyword => !existingKeywords.includes(keyword)
+        );
+
+        const updatedKeywords = [...existingKeywords, ...uniqueNewKeywords];
+        setMarketKeywords(updatedKeywords);
+
+        if (product?.id) {
+          const { error: saveError } = await supabase
+            .from('products_repository')
+            .update({
+              market_keywords: updatedKeywords,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', product.id);
+
+          if (saveError) {
+            console.error('❌ Erro ao salvar market keywords:', saveError);
+            toast({
+              title: "⚠️ Keywords geradas mas não salvas",
+              description: "Keywords de mercado geradas com sucesso, mas não foi possível salvar automaticamente.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          toast({
+            title: "✅ Keywords de Mercado geradas e salvas!",
+            description: `${uniqueNewKeywords.length} novas keywords adicionadas automaticamente.`
+          });
+        } else {
+          toast({
+            title: "✅ Keywords de Mercado geradas!",
+            description: `${uniqueNewKeywords.length} novas keywords adicionadas. Salve o produto para persistir.`
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Market keywords generation error:', error);
+      toast({
+        title: "Erro na geração",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingMarketKeywords(false);
+    }
+  };
+
+  const generateSearchIntentKeywordsWithAI = async () => {
+    const hasContent = formData.description?.trim() || 
+                      formData.name?.trim() ||
+                      benefits.length > 0;
+
+    if (!hasContent) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos nome, descrição ou benefícios para gerar keywords de intenção",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeneratingSearchIntentKeywords(true);
+    try {
+      const contentParts = [];
+      
+      if (formData.name?.trim()) {
+        contentParts.push(`Produto: ${formData.name}`);
+      }
+      
+      if (formData.description?.trim()) {
+        contentParts.push(`Descrição: ${formData.description}`);
+      }
+      
+      if (benefits.length > 0) {
+        contentParts.push(`Benefícios: ${benefits.join(', ')}`);
+      }
+      
+      if (targetAudience.length > 0) {
+        contentParts.push(`Público-Alvo: ${targetAudience.join(', ')}`);
+      }
+      
+      if (formData.applications?.trim()) {
+        contentParts.push(`Aplicações: ${formData.applications}`);
+      }
+
+      const content = contentParts.join('\n\n');
+
+      const { data, error } = await supabase.functions.invoke('ai-seo-generator', {
+        body: {
+          type: 'search_intent_keywords',
+          content: content
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.content) {
+        let newKeywords: string[] = [];
+        
+        if (Array.isArray(data.content)) {
+          newKeywords = data.content;
+        } else if (typeof data.content === 'string') {
+          try {
+            const parsed = JSON.parse(data.content);
+            if (Array.isArray(parsed)) {
+              newKeywords = parsed;
+            }
+          } catch (e) {
+            console.error('Failed to parse search intent keywords:', e);
+          }
+        }
+
+        const existingKeywords = searchIntentKeywords || [];
+        const uniqueNewKeywords = newKeywords.filter(
+          keyword => !existingKeywords.includes(keyword)
+        );
+
+        const updatedKeywords = [...existingKeywords, ...uniqueNewKeywords];
+        setSearchIntentKeywords(updatedKeywords);
+
+        if (product?.id) {
+          const { error: saveError } = await supabase
+            .from('products_repository')
+            .update({
+              search_intent_keywords: updatedKeywords,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', product.id);
+
+          if (saveError) {
+            console.error('❌ Erro ao salvar search intent keywords:', saveError);
+            toast({
+              title: "⚠️ Keywords geradas mas não salvas",
+              description: "Keywords de intenção geradas com sucesso, mas não foi possível salvar automaticamente.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          toast({
+            title: "✅ Keywords de Intenção geradas e salvas!",
+            description: `${uniqueNewKeywords.length} novas keywords adicionadas automaticamente.`
+          });
+        } else {
+          toast({
+            title: "✅ Keywords de Intenção geradas!",
+            description: `${uniqueNewKeywords.length} novas keywords adicionadas. Salve o produto para persistir.`
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Search intent keywords generation error:', error);
+      toast({
+        title: "Erro na geração",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingSearchIntentKeywords(false);
     }
   };
 
@@ -2431,7 +2663,24 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           </div>
 
           <div className="space-y-2">
-            <Label>Keywords de Mercado</Label>
+            <div className="flex items-center justify-between">
+              <Label>Keywords de Mercado</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateMarketKeywordsWithAI}
+                disabled={generatingMarketKeywords}
+                className="gap-2"
+              >
+                {generatingMarketKeywords ? (
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Gerar com IA
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Termos relacionados ao seu nicho e concorrência para melhorar relevância SEO
             </p>
@@ -2443,7 +2692,24 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           </div>
 
           <div className="space-y-2">
-            <Label>Keywords de Intenção de Busca</Label>
+            <div className="flex items-center justify-between">
+              <Label>Keywords de Intenção de Busca</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateSearchIntentKeywordsWithAI}
+                disabled={generatingSearchIntentKeywords}
+                className="gap-2"
+              >
+                {generatingSearchIntentKeywords ? (
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Gerar com IA
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Termos que seus clientes pesquisam quando têm intenção de compra
             </p>

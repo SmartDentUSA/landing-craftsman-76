@@ -150,6 +150,8 @@ Use essas informações como contexto adicional quando relevante para o SEO.`;
       'meta_description': 'Meta Description',
       'seo_title': 'Título SEO', 
       'keywords': 'Keywords',
+      'market_keywords': 'Keywords de Mercado',
+      'search_intent_keywords': 'Keywords de Intenção',
       'hidden_content': 'Conteúdo Oculto',
       'blog_content': 'Conteúdo de Blog',
       'video_testimonial_analysis': 'Análise de Depoimento',
@@ -219,6 +221,59 @@ INSTRUÇÕES RESTRITIVAS:
 - Foque exclusivamente no que está escrito nos campos do produto
 
 Gere: 3-5 primárias (incluindo categorias se presentes), 4-6 secundárias, 4-6 LSI, 3-5 long-tail baseadas SOMENTE no conteúdo fornecido.`;
+        break;
+
+      case 'market_keywords':
+        systemPrompt = `Você é um especialista em SEO de nicho e análise de mercado. Gere keywords relacionadas ao NICHO, CONCORRÊNCIA e MERCADO do produto.
+
+IMPORTANTE: Retorne APENAS um array JSON com 6-10 keywords, sem explicações, sem markdown, sem \`\`\`json, sem texto adicional.
+
+Formato EXATO: ["keyword1", "keyword2", "keyword3"]`;
+
+        userPrompt = `Analise este produto e gere keywords de MERCADO focadas em:
+
+${content}${productsContext}
+
+INSTRUÇÕES PARA KEYWORDS DE MERCADO:
+1. **Nicho e Setor**: Termos do setor/indústria (ex: "odontologia digital", "implantodontia guiada")
+2. **Concorrência**: Termos usados por concorrentes (ex: "scanner intraoral premium", "CAD/CAM odontológico")
+3. **Tendências do Mercado**: Keywords emergentes no setor (ex: "fluxo digital simplificado", "impressão 3D dental")
+4. **Público B2B**: Termos que outros profissionais/revendedores buscam
+5. **Comparações**: "melhor [categoria]", "[produto] vs [concorrente]"
+6. **Termos Técnicos do Setor**: Nomenclaturas profissionais e jargões do mercado
+
+FOCO: Keywords que ajudam a posicionar o produto no CONTEXTO DO MERCADO e da CONCORRÊNCIA.
+
+Gere 6-10 keywords de mercado baseadas no conteúdo fornecido.
+
+Retorne APENAS o array JSON: ["keyword1", "keyword2"]`;
+        break;
+
+      case 'search_intent_keywords':
+        systemPrompt = `Você é um especialista em intenção de busca e comportamento do consumidor. Gere keywords que refletem INTENÇÃO DE COMPRA e dúvidas dos clientes.
+
+IMPORTANTE: Retorne APENAS um array JSON com 6-10 keywords, sem explicações, sem markdown, sem \`\`\`json, sem texto adicional.
+
+Formato EXATO: ["keyword1", "keyword2", "keyword3"]`;
+
+        userPrompt = `Analise este produto e gere keywords de INTENÇÃO DE BUSCA:
+
+${content}${productsContext}
+
+INSTRUÇÕES PARA KEYWORDS DE INTENÇÃO DE BUSCA:
+1. **Perguntas**: "como funciona [produto]", "qual o melhor [categoria]", "onde comprar [produto]"
+2. **Comparações**: "[produto] vale a pena", "[produto] vs [alternativa]", "diferença entre [A] e [B]"
+3. **Preço**: "preço de [produto]", "[produto] barato", "quanto custa [serviço]"
+4. **Localização**: "[produto] em [cidade]", "[serviço] perto de mim", "onde encontrar [produto]"
+5. **Urgência**: "[produto] entrega rápida", "[serviço] hoje", "[produto] pronta entrega"
+6. **Qualidade**: "melhor [produto]", "[produto] top", "[produto] profissional"
+7. **Problema→Solução**: "como resolver [problema] com [produto]", "[problema] [categoria]"
+
+FOCO: Keywords que pessoas REALMENTE digitam no Google quando estão PENSANDO EM COMPRAR ou PRECISANDO RESOLVER UM PROBLEMA.
+
+Gere 6-10 keywords de intenção de busca baseadas no conteúdo fornecido.
+
+Retorne APENAS o array JSON: ["keyword1", "keyword2"]`;
         break;
 
       case 'hidden_content':
