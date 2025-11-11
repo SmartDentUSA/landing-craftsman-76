@@ -16,6 +16,7 @@ import { useCompanyVideos } from "@/hooks/useCompanyVideos";
 import { useTargetAudienceAggregator } from "@/hooks/useTargetAudienceAggregator";
 import { TrackingSEOTab } from "./TrackingSEOTab";
 import { InternationalPartnershipsManager } from "./InternationalPartnershipsManager";
+import { NPSInsightsTab } from "./NPSInsightsTab";
 import { ImageUploader } from "@/components/ImageUploader";
 
 interface Video {
@@ -449,11 +450,15 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
             <TabsTrigger value="social">Redes Sociais</TabsTrigger>
             <TabsTrigger value="videos">Vídeos da Empresa</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="nps" className="flex items-center gap-1">
+              <Target className="h-3 w-3" />
+              NPS
+            </TabsTrigger>
             <TabsTrigger value="seo">SEO Hidden</TabsTrigger>
             <TabsTrigger value="partnerships" className="flex items-center gap-1">
               <Globe className="h-3 w-3" />
@@ -1172,6 +1177,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
 
           <TabsContent value="reviews" className="space-y-4">
             <ReviewsSection />
+          </TabsContent>
+
+          <TabsContent value="nps" className="space-y-4">
+            <NPSInsightsTab />
           </TabsContent>
 
           <TabsContent value="partnerships" className="space-y-4">

@@ -239,6 +239,7 @@ export type Database = {
           location: string | null
           main_products_services: string | null
           mission_statement: string | null
+          nps_metrics: Json | null
           postal_code: string | null
           seo_competitive_advantages: string | null
           seo_context_keywords: Json | null
@@ -290,6 +291,7 @@ export type Database = {
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
+          nps_metrics?: Json | null
           postal_code?: string | null
           seo_competitive_advantages?: string | null
           seo_context_keywords?: Json | null
@@ -341,6 +343,7 @@ export type Database = {
           location?: string | null
           main_products_services?: string | null
           mission_statement?: string | null
+          nps_metrics?: Json | null
           postal_code?: string | null
           seo_competitive_advantages?: string | null
           seo_context_keywords?: Json | null

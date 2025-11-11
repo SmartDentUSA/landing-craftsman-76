@@ -149,3 +149,9 @@ verify_jwt = false
 
 [functions.populate-review-photos]
 verify_jwt = true
+
+[functions.process-nps-csv]
+verify_jwt = true
+
+[functions.generate-content-from-interests]
+verify_jwt = true
