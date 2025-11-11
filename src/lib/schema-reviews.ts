@@ -93,22 +93,36 @@ export async function generateReviewsAndLocalBusinessForFooter(
     worstRating: "1"
   };
 
-  // Reviews individuais
-  schema.review = limitedReviews.map((review) => ({
-    "@type": "Review",
-    author: {
-      "@type": "Person",
-      name: review.author_name
-    },
-    reviewRating: {
-      "@type": "Rating",
-      ratingValue: sanitizeReviewRating(review.rating).toString(),
-      bestRating: "5",
-      worstRating: "1"
-    },
-    reviewBody: review.review_text || "",
-    datePublished: review.review_date || new Date().toISOString()
-  }));
+  // Reviews individuais com fotos
+  schema.review = limitedReviews.map((review) => {
+    const reviewSchema: any = {
+      "@type": "Review",
+      author: {
+        "@type": "Person",
+        name: review.author_name
+      },
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: sanitizeReviewRating(review.rating).toString(),
+        bestRating: "5",
+        worstRating: "1"
+      },
+      reviewBody: review.review_text || "",
+      datePublished: review.review_date || new Date().toISOString()
+    };
+    
+    // Adicionar foto do autor se disponível (melhora SEO)
+    if (review.profile_photo_url && review.profile_photo_url.trim() !== '') {
+      try {
+        new URL(review.profile_photo_url); // Validar URL
+        reviewSchema.author.image = review.profile_photo_url;
+      } catch (e) {
+        console.warn(`⚠️ URL de foto inválida para ${review.author_name}:`, review.profile_photo_url);
+      }
+    }
+    
+    return reviewSchema;
+  });
 
   // Converter para JSON string
   const jsonString = JSON.stringify(schema, null, 0); // Sem indentação para economizar espaço
@@ -119,18 +133,32 @@ export async function generateReviewsAndLocalBusinessForFooter(
     
     // Tentar novamente com menos reviews
     const reducedReviews = truncateReviewsForSize(reviews, 10);
-    schema.review = reducedReviews.map((review) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: review.author_name },
-      reviewRating: {
-        "@type": "Rating",
-        ratingValue: sanitizeReviewRating(review.rating).toString(),
-        bestRating: "5",
-        worstRating: "1"
-      },
-      reviewBody: review.review_text || "",
-      datePublished: review.review_date || new Date().toISOString()
-    }));
+    schema.review = reducedReviews.map((review) => {
+      const reviewSchema: any = {
+        "@type": "Review",
+        author: { "@type": "Person", name: review.author_name },
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: sanitizeReviewRating(review.rating).toString(),
+          bestRating: "5",
+          worstRating: "1"
+        },
+        reviewBody: review.review_text || "",
+        datePublished: review.review_date || new Date().toISOString()
+      };
+      
+      // Adicionar foto se disponível
+      if (review.profile_photo_url && review.profile_photo_url.trim() !== '') {
+        try {
+          new URL(review.profile_photo_url);
+          reviewSchema.author.image = review.profile_photo_url;
+        } catch (e) {
+          // Ignorar URL inválida silenciosamente
+        }
+      }
+      
+      return reviewSchema;
+    });
     
     schema.aggregateRating.reviewCount = reducedReviews.length;
     

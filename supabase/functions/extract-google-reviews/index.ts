@@ -774,6 +774,45 @@ async function extractAndSaveReviews(
   }
 }
 
+// Helper function to extract profile photo URL from HTML
+function extractProfilePhoto(reviewHtml: string, authorName: string): string {
+  // Padrões para extrair foto de perfil
+  const photoPatterns = [
+    // Avatar com src
+    /<img[^>]+aria-label="[^"]*foto[^"]*"[^>]+src="([^"]+)"/i,
+    /<img[^>]+class="[^"]*profile[^"]*"[^>]+src="([^"]+)"/i,
+    /<img[^>]+class="[^"]*avatar[^"]*"[^>]+src="([^"]+)"/i,
+    // Data attributes
+    /data-reviewer-image-url="([^"]+)"/,
+    /data-photo-url="([^"]+)"/,
+    // Google user content CDN (mais comum)
+    /(https:\/\/lh[3-6]\.googleusercontent\.com\/[a-zA-Z0-9_-]+)/g,
+    // Srcset patterns
+    /srcset="([^"]*lh[3-6]\.googleusercontent\.com[^"]+)"/i,
+  ];
+
+  for (const pattern of photoPatterns) {
+    const match = reviewHtml.match(pattern);
+    if (match && match[1]) {
+      let photoUrl = match[1].trim();
+      // Clean srcset (get first URL)
+      if (photoUrl.includes(' ')) {
+        photoUrl = photoUrl.split(' ')[0];
+      }
+      // Validate it's a proper URL
+      if (photoUrl.startsWith('http')) {
+        console.log(`✅ Extracted profile photo from HTML: ${photoUrl.substring(0, 80)}...`);
+        return photoUrl;
+      }
+    }
+  }
+
+  // Fallback: Generate avatar from ui-avatars.com
+  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=4285f4&color=fff&size=128`;
+  console.log(`⚠️ No profile photo found, using fallback for: ${authorName}`);
+  return fallbackUrl;
+}
+
 // Extract individual reviews from HTML
 function extractIndividualReviews(html: string, place_id: string) {
   const reviews = [];
@@ -790,15 +829,23 @@ function extractIndividualReviews(html: string, place_id: string) {
         try {
           const reviewData = JSON.parse(`{${match}}`);
           if (reviewData.author && reviewData.reviewRating) {
+            const authorName = reviewData.author.name || 'Usuário anônimo';
+            let photoUrl = reviewData.author.image || '';
+            
+            // Se não tem foto no JSON-LD, gerar fallback
+            if (!photoUrl || photoUrl.trim() === '') {
+              photoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=4285f4&color=fff&size=128`;
+            }
+            
             reviews.push({
               place_id,
-              author_name: reviewData.author.name || 'Usuário anônimo',
+              author_name: authorName,
               author_url: reviewData.author.url || '',
               rating: reviewData.reviewRating.ratingValue || 5,
               review_text: reviewData.reviewBody || '',
               review_date: reviewData.datePublished || new Date().toISOString(),
               relative_time: reviewData.datePublished ? getRelativeTime(reviewData.datePublished) : 'recente',
-              profile_photo_url: reviewData.author.image || '',
+              profile_photo_url: photoUrl,
               response_from_owner: '',
               response_date: '',
               is_local_guide: false,
@@ -826,15 +873,18 @@ function extractIndividualReviews(html: string, place_id: string) {
           const textMatch = reviewHtml.match(/<span[^>]*>(.*?)<\/span>/s);
           
           if (authorMatch) {
+            const authorName = authorMatch[1] || 'Usuário anônimo';
+            const photoUrl = extractProfilePhoto(reviewHtml, authorName);
+            
             reviews.push({
               place_id,
-              author_name: authorMatch[1] || 'Usuário anônimo',
+              author_name: authorName,
               author_url: '',
               rating: ratingMatch ? parseInt(ratingMatch[1]) || 5 : 5,
               review_text: textMatch ? textMatch[1].replace(/<[^>]*>/g, '').trim() : '',
               review_date: new Date().toISOString(),
               relative_time: 'recente',
-              profile_photo_url: '',
+              profile_photo_url: photoUrl,
               response_from_owner: '',
               response_date: '',
               is_local_guide: false,

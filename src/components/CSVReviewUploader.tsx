@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Trash2, Upload, CheckCircle, Star, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +14,7 @@ interface ManualReview {
   rating: number;
   review_text: string;
   approved: boolean;
+  profile_photo_url?: string;
 }
 
 interface CSVReviewUploaderProps {
@@ -60,7 +62,7 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
       }
       
       if (parts.length >= 3) {
-        const [name, rating, comment] = parts.map(part => part.trim());
+        const [name, rating, comment, photoUrl] = parts.map(part => part.trim());
         
         // Extract numeric rating from various formats (5/5, 5, etc.)
         let numericRating = 5; // Default to 5
@@ -74,13 +76,20 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
         if (isNaN(numericRating) || numericRating < 1) numericRating = 1;
         if (numericRating > 5) numericRating = 5;
         
+        // Generate fallback photo URL if not provided
+        let finalPhotoUrl = photoUrl && photoUrl.trim() !== '' ? photoUrl : '';
+        if (!finalPhotoUrl || finalPhotoUrl === '') {
+          finalPhotoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=4285f4&color=fff&size=128`;
+        }
+        
         if (name && comment) {
           parsedReviews.push({
             id: `manual_${Date.now()}_${i}`,
             author_name: name,
             rating: numericRating,
             review_text: comment,
-            approved: true // Auto-approve manual reviews
+            approved: true, // Auto-approve manual reviews
+            profile_photo_url: finalPhotoUrl
           });
         }
       }
@@ -217,7 +226,9 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
               />
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Formato: Nome,Nota,Comentário ou Nome;Nota;Comentário (ex: João Silva,5/5,Excelente serviço)
+              Formato: Nome;Nota;Comentário;Foto URL (ex: João Silva;5/5;Excelente serviço;https://...)
+              <br />
+              A coluna "Foto URL" é opcional. Se vazia, será gerado um avatar automático.
               <br />
               <a 
                 href="/template-reviews.csv" 
@@ -281,17 +292,28 @@ export const CSVReviewUploader: React.FC<CSVReviewUploaderProps> = ({
                       </div>
                     ) : (
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{review.author_name}</span>
-                            <div className="flex">{renderStars(review.rating)}</div>
-                            {review.approved && (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            )}
+                        <div className="flex items-center gap-3 flex-1">
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage 
+                              src={review.profile_photo_url} 
+                              alt={review.author_name} 
+                            />
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {review.author_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{review.author_name}</span>
+                              <div className="flex">{renderStars(review.rating)}</div>
+                              {review.approved && (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {review.review_text}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {review.review_text}
-                          </p>
                         </div>
                         <div className="flex items-center gap-1 ml-2">
                           <Button

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Star, Plus, Trash2, Edit, ExternalLink, Loader2, RefreshCw, CheckCircle2, Upload, ChevronDown, ChevronUp } from "lucide-react";
@@ -199,49 +200,60 @@ export function ReviewsSection() {
                       return (
                         <Card key={index} className="p-4 hover:shadow-md transition-shadow">
                           <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold">{review.author_name}</span>
-                                {renderStars(review.rating)}
+                            <div className="flex items-start gap-3 flex-1">
+                              <Avatar className="h-12 w-12 shrink-0">
+                                <AvatarImage 
+                                  src={review.profile_photo_url} 
+                                  alt={review.author_name} 
+                                />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {review.author_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{review.author_name}</span>
+                                  {renderStars(review.rating)}
+                                </div>
+                                <div 
+                                  className={shouldTruncate ? "cursor-pointer select-none" : ""}
+                                  onClick={() => {
+                                    if (shouldTruncate) {
+                                      setExpandedReviews(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(index)) {
+                                          newSet.delete(index);
+                                        } else {
+                                          newSet.add(index);
+                                        }
+                                        return newSet;
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <p className="text-sm text-muted-foreground">
+                                    {displayText}
+                                  </p>
+                                  {shouldTruncate && (
+                                    <div className="flex items-center gap-1 text-primary text-xs mt-1 font-medium hover:underline">
+                                      {isExpanded ? (
+                                        <>
+                                          <span>Ver menos</span>
+                                          <ChevronUp className="h-3 w-3" />
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span>Ver mais</span>
+                                          <ChevronDown className="h-3 w-3" />
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(review.review_date || "").toLocaleDateString("pt-BR")}
+                                </span>
                               </div>
-                              <div 
-                                className={shouldTruncate ? "cursor-pointer select-none" : ""}
-                                onClick={() => {
-                                  if (shouldTruncate) {
-                                    setExpandedReviews(prev => {
-                                      const newSet = new Set(prev);
-                                      if (newSet.has(index)) {
-                                        newSet.delete(index);
-                                      } else {
-                                        newSet.add(index);
-                                      }
-                                      return newSet;
-                                    });
-                                  }
-                                }}
-                              >
-                                <p className="text-sm text-muted-foreground">
-                                  {displayText}
-                                </p>
-                                {shouldTruncate && (
-                                  <div className="flex items-center gap-1 text-primary text-xs mt-1 font-medium hover:underline">
-                                    {isExpanded ? (
-                                      <>
-                                        <span>Ver menos</span>
-                                        <ChevronUp className="h-3 w-3" />
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span>Ver mais</span>
-                                        <ChevronDown className="h-3 w-3" />
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(review.review_date || "").toLocaleDateString("pt-BR")}
-                              </span>
                             </div>
                             <div className="flex gap-2">
                               <Button
@@ -372,7 +384,8 @@ export function ReviewsSection() {
                         rating: r.rating,
                         review_text: r.review_text,
                         review_date: new Date().toISOString(),
-                        approved: r.approved ?? true
+                        approved: r.approved ?? true,
+                        profile_photo_url: r.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.author_name)}&background=4285f4&color=fff&size=128`
                       }))
                     };
                     setReviews(updatedData);

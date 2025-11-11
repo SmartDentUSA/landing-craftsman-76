@@ -18,6 +18,7 @@ export interface UnifiedReview {
   rating: number; // 1..5
   review_text?: string;
   review_date?: string; // ISO 8601
+  profile_photo_url?: string; // URL da foto do perfil (Google, manual ou avatar gerado)
   
   // Campos extras para video_testimonial
   profession?: string;
@@ -38,6 +39,7 @@ export interface CompanyReviewsJSONB {
     review_text: string;
     review_date?: string;
     approved?: boolean;
+    profile_photo_url?: string; // URL da foto (opcional)
   }>;
   google_reviews_imported: boolean;
   google_place_id: string | null;

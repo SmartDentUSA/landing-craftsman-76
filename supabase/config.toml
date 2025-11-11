@@ -146,3 +146,6 @@ verify_jwt = true
 
 [functions.migrate-images-gallery]
 verify_jwt = false
+
+[functions.populate-review-photos]
+verify_jwt = true

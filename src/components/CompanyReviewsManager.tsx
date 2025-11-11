@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Star, Download, Plus, Edit, Trash2, Calendar, MapPin, ChevronDown, ChevronUp } from "lucide-react";
@@ -330,19 +331,30 @@ export function CompanyReviewsManager() {
             ) : (
               reviewsData?.manual_reviews.map((review, index) => (
                 <div key={index} className="p-4 border rounded-lg space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold">{review.author_name}</p>
-                        <div className="flex">{renderStars(review.rating)}</div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Avatar className="h-12 w-12 shrink-0">
+                        <AvatarImage 
+                          src={review.profile_photo_url} 
+                          alt={review.author_name} 
+                        />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {review.author_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{review.author_name}</p>
+                          <div className="flex">{renderStars(review.rating)}</div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{review.review_text}</p>
+                        {review.review_date && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            <Calendar className="h-3 w-3 inline mr-1" />
+                            {new Date(review.review_date).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{review.review_text}</p>
-                      {review.review_date && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          <Calendar className="h-3 w-3 inline mr-1" />
-                          {new Date(review.review_date).toLocaleDateString('pt-BR')}
-                        </p>
-                      )}
                     </div>
                     <div className="flex gap-1">
                       <Button
