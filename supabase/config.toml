@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.transcribe-product-document]
 verify_jwt = true
+
+[functions.migrate-images-gallery]
+verify_jwt = false
