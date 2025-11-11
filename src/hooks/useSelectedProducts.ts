@@ -16,6 +16,14 @@ interface Product {
   currency?: string;
   category?: string;
   image_url?: string;
+  images_gallery?: Array<{
+    url: string;
+    alt?: string;
+    description?: string;
+    width?: number;
+    height?: number;
+    is_main?: boolean;
+  }>;
   product_url?: string;
   target_audience?: string[];
   youtube_videos?: any[];
@@ -95,6 +103,7 @@ export const useSelectedProducts = () => {
           currency: product.currency || 'BRL',
           category: product.category || '',
           image_url: product.image_url || '',
+          images_gallery: (product.images_gallery as any) || [],
           product_url: product.product_url || '',
           target_audience: (product.target_audience as unknown as string[]) || [],
           youtube_videos: (product.youtube_videos as unknown as any[]) || [],
@@ -152,6 +161,7 @@ export const useSelectedProducts = () => {
       technical_videos: product.technical_videos,
       tiktok_videos: product.tiktok_videos,
       tutorial_resources: product.tutorial_resources,
+      images_gallery: product.images_gallery || [],
       sourceType: 'repository' as const,
       lastUpdated: new Date().toISOString(),
       selected: true,

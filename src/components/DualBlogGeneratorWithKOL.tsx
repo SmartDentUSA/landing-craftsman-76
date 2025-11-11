@@ -12,6 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { processContentWithIntelligentLinks } from "@/lib/intelligent-links";
 import useLandingPages from "@/hooks/useLandingPages";
 import { useKOLs } from "@/hooks/useKOLs";
+import { useSelectedProducts } from "@/hooks/useSelectedProducts";
+import { buildMetaTags } from "@/services/seo/metaTagsBuilder";
+import { sanitizeFileNameToAlt } from "@/lib/seo-image-helpers";
 
 interface DualBlogGeneratorProps {
   landingPageId: string;
@@ -41,6 +44,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
   const { toast } = useToast();
   const { markBlogGenerated } = useLandingPages();
   const { kols, loading: kolsLoading } = useKOLs(true); // Only approved KOLs
+  const { loadProductsByIds } = useSelectedProducts();
 
   const generateDualVersions = async () => {
     setGenerating(true);
@@ -165,6 +169,44 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
   };
 
   const generateCompleteHTML = async (blogVersion: BlogVersion, domain: string) => {
+    // ✅ FASE 6: Buscar produtos e extrair galeria de imagens
+    let imagesGallery: Array<{
+      url: string;
+      alt: string;
+      width: number;
+      height: number;
+      is_main: boolean;
+    }> = [];
+
+    if (selectedProductIds && selectedProductIds.length > 0) {
+      try {
+        const products = await loadProductsByIds(selectedProductIds);
+        
+        imagesGallery = products
+          .filter(p => p.images_gallery && Array.isArray(p.images_gallery) && p.images_gallery.length > 0)
+          .flatMap(p => 
+            p.images_gallery!.map(img => ({
+              url: img.url,
+              alt: img.alt || img.description || sanitizeFileNameToAlt(img.url) || p.name,
+              width: img.width || 1200,
+              height: img.height || 630,
+              is_main: img.is_main || false
+            }))
+          )
+          .filter(img => img.url)
+          .sort((a, b) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0)); // Priorizar is_main
+        
+        console.log('✅ FASE 6 (DualBlog): Galeria extraída', {
+          productsCount: products.length,
+          productsWithGallery: products.filter(p => p.images_gallery?.length).length,
+          totalImages: imagesGallery.length,
+          images: imagesGallery.map(img => ({ url: img.url, is_main: img.is_main }))
+        });
+      } catch (error) {
+        console.error('❌ FASE 6: Erro ao buscar galeria de produtos:', error);
+      }
+    }
+
     // Build author info and section for E-E-A-T
     let authorInfo = undefined;
     let authorSection = '';
@@ -229,6 +271,21 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
       }
     }
 
+    // ✅ FASE 6: Usar buildMetaTags com imagesGallery
+    const metaTags = buildMetaTags({
+      title: blogVersion.title,
+      description: blogVersion.metaDescription || blogVersion.meta_description || '',
+      canonicalUrl: `https://${domain}`,
+      domain: domain,
+      ogType: 'article',
+      twitterCard: 'summary_large_image',
+      keywords: blogVersion.keywords,
+      robots: 'index, follow',
+      imagesGallery: imagesGallery.length > 0 ? imagesGallery : undefined,
+      // Fallback se não houver galeria: primeira imagem do produto
+      ogImage: imagesGallery.length > 0 ? undefined : landingPageData?.hero_image_url || ''
+    });
+
     // Generate SEO optimized HTML directly
     const processedContent = processContentWithIntelligentLinks(blogVersion.content);
 
@@ -239,25 +296,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
-  <!-- SEO Meta Tags -->
-  <title>${blogVersion.title}</title>
-  <meta name="description" content="${blogVersion.metaDescription || blogVersion.meta_description || ''}">
-  <meta name="keywords" content="${blogVersion.keywords.join(', ')}">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://${domain}">
-  
-  <!-- Open Graph Meta Tags -->
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="${blogVersion.title}">
-  <meta property="og:description" content="${blogVersion.metaDescription || blogVersion.meta_description || ''}">
-  <meta property="og:url" content="https://${domain}">
-  <meta property="og:site_name" content="${domain}">
-  <meta property="og:locale" content="pt_BR">
-  
-  <!-- Twitter Card Meta Tags -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${blogVersion.title}">
-  <meta name="twitter:description" content="${blogVersion.metaDescription || blogVersion.meta_description || ''}">
+  ${metaTags}
   
   <!-- Additional SEO Meta Tags -->
   <meta name="author" content="${authorInfo?.name || domain}">
@@ -273,6 +312,7 @@ export function DualBlogGeneratorWithKOL({ landingPageId, landingPageData, selec
     "description": "${blogVersion.metaDescription || blogVersion.meta_description || ''}",
     "datePublished": "${new Date().toISOString()}",
     "dateModified": "${new Date().toISOString()}",
+    ${imagesGallery.length > 0 ? `"image": ${JSON.stringify(imagesGallery.map(img => img.url))},` : ''}
     "author": {
       "@type": "Person",
       "name": "${authorInfo?.name || domain}"
