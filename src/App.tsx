@@ -22,6 +22,7 @@ import Auth from "./pages/Auth";
 import PasswordReset from "./pages/PasswordReset";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import BlogImageTest from "./pages/BlogImageTest";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/oauth/launch" element={<OAuthLaunch />} />
           <Route path="/auth/launch" element={<AuthLaunch />} />
           <Route path="/password-reset" element={<PasswordReset />} />
+          <Route path="/blog-image-test" element={<ProtectedRoute><BlogImageTest /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
