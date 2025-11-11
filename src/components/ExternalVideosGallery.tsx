@@ -31,7 +31,10 @@ export function ExternalVideosGallery() {
     const matchesSearch =
       search === '' ||
       video.video.titulo.toLowerCase().includes(search.toLowerCase()) ||
-      video.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()));
+      video.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase())) ||
+      video.produto?.nome.toLowerCase().includes(search.toLowerCase()) ||
+      video.resina_vinculada?.nome.toLowerCase().includes(search.toLowerCase()) ||
+      video.artigo_vinculado?.titulo?.toLowerCase().includes(search.toLowerCase());
 
     return matchesFilter && matchesSearch;
   });
@@ -98,7 +101,7 @@ export function ExternalVideosGallery() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por título ou tags..."
+                placeholder="Buscar por título, tags, produto, resina ou artigo..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
