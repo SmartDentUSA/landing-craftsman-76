@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
@@ -450,25 +451,38 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
-            <TabsTrigger value="social">Redes Sociais</TabsTrigger>
-            <TabsTrigger value="videos">Vídeos da Empresa</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
-            <TabsTrigger value="nps" className="flex items-center gap-1">
-              <Target className="h-3 w-3" />
-              NPS
-            </TabsTrigger>
-            <TabsTrigger value="seo">SEO Hidden</TabsTrigger>
-            <TabsTrigger value="partnerships" className="flex items-center gap-1">
-              <Globe className="h-3 w-3" />
-              Parcerias
-            </TabsTrigger>
-            <TabsTrigger value="tracking" className="flex items-center gap-1">
-              <Activity className="h-3 w-3" />
-              TRK SEO
-            </TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full whitespace-nowrap rounded-md border-b">
+            <TabsList className="inline-flex w-auto h-auto space-x-1 bg-transparent p-1">
+              <TabsTrigger value="basic" className="data-[state=active]:bg-background">
+                Dados Básicos
+              </TabsTrigger>
+              <TabsTrigger value="social" className="data-[state=active]:bg-background">
+                Redes Sociais
+              </TabsTrigger>
+              <TabsTrigger value="videos" className="data-[state=active]:bg-background">
+                Vídeos da Empresa
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="data-[state=active]:bg-background">
+                Reviews
+              </TabsTrigger>
+              <TabsTrigger value="nps" className="flex items-center gap-1 data-[state=active]:bg-background">
+                <Target className="h-3 w-3" />
+                NPS & Interesses
+              </TabsTrigger>
+              <TabsTrigger value="seo" className="data-[state=active]:bg-background">
+                SEO Hidden
+              </TabsTrigger>
+              <TabsTrigger value="partnerships" className="flex items-center gap-1 data-[state=active]:bg-background">
+                <Globe className="h-3 w-3" />
+                Parcerias
+              </TabsTrigger>
+              <TabsTrigger value="tracking" className="flex items-center gap-1 data-[state=active]:bg-background">
+                <Activity className="h-3 w-3" />
+                TRK SEO
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
           
           <TabsContent value="basic" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
