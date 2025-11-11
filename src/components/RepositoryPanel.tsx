@@ -755,16 +755,18 @@ export function RepositoryPanel({
                   Perfil da Empresa
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col sm:max-w-[95vw]">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Building2 className="h-5 w-5" />
                     Perfil da Empresa
                   </DialogTitle>
                 </DialogHeader>
-                <CompanyProfileManager 
-                  onProfileChange={onCompanyProfileChange}
-                />
+                <div className="flex-1 overflow-y-auto">
+                  <CompanyProfileManager 
+                    onProfileChange={onCompanyProfileChange}
+                  />
+                </div>
               </DialogContent>
             </Dialog>
           </div>

@@ -485,7 +485,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           </ScrollArea>
           
           <TabsContent value="basic" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="company_name">Nome da Empresa *</Label>
                 <Input
@@ -504,6 +504,16 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   placeholder="Ex: Tecnologia, Saúde, Educação"
                 />
               </div>
+              <div>
+                <Label htmlFor="website_url">Website</Label>
+                <Input
+                  id="website_url"
+                  type="url"
+                  value={profile.website_url || ''}
+                  onChange={(e) => setProfile(prev => ({...prev, website_url: e.target.value}))}
+                  placeholder="https://www.suaempresa.com"
+                />
+              </div>
             </div>
 
             <div>
@@ -517,7 +527,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label htmlFor="target_audience">Público-Alvo</Label>
@@ -556,16 +566,6 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                 <p className="text-xs text-muted-foreground mt-1">
                   Este valor será usado automaticamente ao criar novos produtos e categorias
                 </p>
-              </div>
-              <div>
-                <Label htmlFor="website_url">Website</Label>
-                <Input
-                  id="website_url"
-                  type="url"
-                  value={profile.website_url || ''}
-                  onChange={(e) => setProfile(prev => ({...prev, website_url: e.target.value}))}
-                  placeholder="https://www.suaempresa.com"
-                />
               </div>
             </div>
 
