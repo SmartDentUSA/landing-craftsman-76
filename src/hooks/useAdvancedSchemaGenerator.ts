@@ -50,6 +50,11 @@ interface ProductData {
   technical_specifications?: Array<{ property: string; value: string }>;
   faq?: Array<{ question: string; answer: string }>;
   bot_trigger_words?: string[];
+  // 🔥 FASE 3: NOVOS CAMPOS PARA SCHEMA ENRIQUECIDO
+  images_gallery?: Array<{ url: string; alt?: string }> | string[];
+  technical_documents?: Array<{ nome: string; url: string }>;
+  document_transcriptions?: Array<{ extracted_data?: { summary?: string } }>;
+  tutorial_resources?: { tutorials?: Array<{ title: string; url: string; description?: string }> };
 }
 
 interface CompanyData {
@@ -187,8 +192,31 @@ export const useAdvancedSchemaGenerator = () => {
       }
     }
 
-    // ✨ Imagem do produto
-    if (product.image_url) {
+    // 🔥 FASE 3: Adicionar document_transcriptions ao description
+    if (product.document_transcriptions && Array.isArray(product.document_transcriptions) && product.document_transcriptions.length > 0) {
+      const firstDoc = product.document_transcriptions[0];
+      if (firstDoc?.extracted_data?.summary) {
+        schema.description += ` ${firstDoc.extracted_data.summary}`;
+      }
+    }
+
+    // 🔥 FASE 3: Adicionar technical_documents como associatedMedia
+    if (product.technical_documents && Array.isArray(product.technical_documents) && product.technical_documents.length > 0) {
+      schema.associatedMedia = product.technical_documents.map((doc: any) => ({
+        "@type": "MediaObject",
+        "contentUrl": doc.url,
+        "name": doc.nome,
+        "encodingFormat": "application/pdf"
+      }));
+    }
+
+    // 🔥 FASE 3: Adicionar images_gallery completa (múltiplas imagens)
+    if (product.images_gallery && Array.isArray(product.images_gallery) && product.images_gallery.length > 1) {
+      schema.image = product.images_gallery.map((img: any) => 
+        typeof img === 'string' ? img : img.url
+      );
+    } else if (product.image_url) {
+      // Fallback para imagem única
       schema.image = product.image_url;
     }
 
@@ -634,6 +662,72 @@ export const useAdvancedSchemaGenerator = () => {
     };
   }, []);
 
+  // 🔥 FASE 3: NOVO - Schema HowTo para tutoriais
+  const generateTutorialSchema = useCallback((product: ProductData) => {
+    if (!product.tutorial_resources?.tutorials?.length) return [];
+
+    return product.tutorial_resources.tutorials.map(tutorial => ({
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": tutorial.title,
+      "description": tutorial.description || `Tutorial sobre ${product.name}`,
+      "video": {
+        "@type": "VideoObject",
+        "name": tutorial.title,
+        "contentUrl": tutorial.url,
+        "thumbnailUrl": product.image_url,
+        "description": tutorial.description || `Aprenda a usar ${product.name}`
+      },
+      "about": {
+        "@type": "Product",
+        "name": product.name
+      },
+      "step": tutorial.description?.split('.').filter(Boolean).map((step, idx) => ({
+        "@type": "HowToStep",
+        "position": idx + 1,
+        "name": `Passo ${idx + 1}`,
+        "text": step.trim()
+      })) || []
+    }));
+  }, []);
+
+  // 🔥 FASE 3: NOVO - Schema ImageGallery para múltiplas imagens
+  const generateImageGallerySchema = useCallback((product: ProductData) => {
+    if (!product.images_gallery?.length || product.images_gallery.length <= 1) return null;
+
+    return {
+      "@context": "https://schema.org",
+      "@type": "ImageGallery",
+      "about": {
+        "@type": "Product",
+        "name": product.name
+      },
+      "image": product.images_gallery.map((img: any) => ({
+        "@type": "ImageObject",
+        "contentUrl": typeof img === 'string' ? img : img.url,
+        "name": typeof img === 'object' ? img.alt : `${product.name} - Imagem`,
+        "caption": typeof img === 'object' ? img.alt : undefined
+      }))
+    };
+  }, []);
+
+  // 🔥 FASE 3: NOVO - Schema DigitalDocument para manuais técnicos
+  const generateTechnicalDocsSchema = useCallback((product: ProductData) => {
+    if (!product.technical_documents?.length) return [];
+
+    return product.technical_documents.map((doc: any) => ({
+      "@context": "https://schema.org",
+      "@type": "DigitalDocument",
+      "name": doc.nome || `Manual de ${product.name}`,
+      "url": doc.url,
+      "encodingFormat": "application/pdf",
+      "about": {
+        "@type": "Product",
+        "name": product.name
+      }
+    }));
+  }, []);
+
   // ✅ AUTHOR SCHEMA (E-E-A-T for Google)
   const generateAuthorSchema = useCallback((author: {
     id: string;
@@ -733,6 +827,27 @@ export const useAdvancedSchemaGenerator = () => {
             schemas.push(productFaqSchema);
           }
         }
+
+        // 🔥 FASE 3: HowTo schemas para tutoriais
+        const tutorialSchemas = generateTutorialSchema(product);
+        tutorialSchemas.forEach((tutorialSchema, tutIdx) => {
+          tutorialSchema["@id"] = `#tutorial-${product.id}-${tutIdx}`;
+          schemas.push(tutorialSchema);
+        });
+
+        // 🔥 FASE 3: ImageGallery schema
+        const imageGallerySchema = generateImageGallerySchema(product);
+        if (imageGallerySchema) {
+          imageGallerySchema["@id"] = `#gallery-${product.id}`;
+          schemas.push(imageGallerySchema);
+        }
+
+        // 🔥 FASE 3: DigitalDocument schemas para manuais técnicos
+        const technicalDocsSchemas = generateTechnicalDocsSchema(product);
+        technicalDocsSchemas.forEach((docSchema, docIdx) => {
+          docSchema["@id"] = `#document-${product.id}-${docIdx}`;
+          schemas.push(docSchema);
+        });
       });
       
       // Se múltiplos produtos, adicionar também ItemList
@@ -769,7 +884,7 @@ export const useAdvancedSchemaGenerator = () => {
     const reviewsSchema = generateReviewsSchema(reviews || [], pageTitle);
     if (reviewsSchema) schemas.push(reviewsSchema);
 
-    console.log('🎯 Schema JSON-LD COMPLETO gerado (PHASE 1):', {
+    console.log('🎯 Schema JSON-LD COMPLETO gerado (FASE 3):', {
       totalSchemas: schemas.length,
       types: schemas.map(s => s['@type']),
       productsCount: products?.length || 0,
@@ -778,7 +893,14 @@ export const useAdvancedSchemaGenerator = () => {
       faqCount: faqItems?.length || 0,
       reviewsCount: reviews?.length || 0,
       technicalSpecsProducts: products?.filter(p => p.technical_specifications?.length > 0).length || 0,
-      botTriggerWordsProducts: products?.filter(p => p.bot_trigger_words?.length > 0).length || 0
+      botTriggerWordsProducts: products?.filter(p => p.bot_trigger_words?.length > 0).length || 0,
+      // 🔥 FASE 3: Novos contadores
+      howToTutorials: schemas.filter(s => s['@type'] === 'HowTo').length,
+      imageGalleries: schemas.filter(s => s['@type'] === 'ImageGallery').length,
+      digitalDocuments: schemas.filter(s => s['@type'] === 'DigitalDocument').length,
+      productsWithMultipleImages: products?.filter(p => p.images_gallery && p.images_gallery.length > 1).length || 0,
+      productsWithTutorials: products?.filter(p => p.tutorial_resources?.tutorials?.length).length || 0,
+      productsWithTechnicalDocs: products?.filter(p => p.technical_documents?.length).length || 0
     });
     
     // ✅ VALIDAR SCHEMAS CONSOLIDADOS
@@ -799,7 +921,7 @@ export const useAdvancedSchemaGenerator = () => {
       preview: `${schemas.length} schemas gerados: ${schemas.map(s => s['@type']).join(', ')}`,
       validation: allSchemasValid
     };
-  }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema, generateProductFAQSchema, toast]);
+  }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema, generateProductFAQSchema, generateTutorialSchema, generateImageGallerySchema, generateTechnicalDocsSchema, toast]);
 
   return {
     generateAdvancedProductSchema,
@@ -807,6 +929,10 @@ export const useAdvancedSchemaGenerator = () => {
     generateReviewsSchema,
     generateLocalBusinessSchema,
     generateCompletePageSchema,
-    generateProductFAQSchema // ✨ PHASE 1: Nova função para FAQ de produtos
+    generateProductFAQSchema, // ✨ PHASE 1: Nova função para FAQ de produtos
+    // 🔥 FASE 3: Novos geradores de schema
+    generateTutorialSchema,
+    generateImageGallerySchema,
+    generateTechnicalDocsSchema
   };
 };
