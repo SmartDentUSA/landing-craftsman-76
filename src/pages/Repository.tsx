@@ -21,11 +21,12 @@ import { AfterSalesManager } from '@/components/AfterSalesManager';
 import { CSManager } from '@/components/CSManager';
 import { SpinSellingManager } from '@/components/SpinSellingManager';
 import { SystemBDocumentSync } from '@/components/SystemBDocumentSync';
+import { ExternalVideosGallery } from '@/components/ExternalVideosGallery';
 
 const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
@@ -70,7 +71,7 @@ const Repository = () => {
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
-                  {activeView === 'repository' ? 'Repositório Central de Dados' : 
+                   {activeView === 'repository' ? 'Repositório Central de Dados' : 
                    activeView === 'categories' ? 'Gerenciar Categorias' : 
                    activeView === 'links' ? 'Gerenciador de Links' : 
                    activeView === 'merchant' ? 'Google Merchant Center' : 
@@ -79,7 +80,8 @@ const Repository = () => {
                    activeView === 'coupons' ? 'Cupons Promocionais' :
                    activeView === 'aftersales' ? 'Pós-Venda' :
                    activeView === 'cs' ? 'Customer Success (CS)' :
-                   activeView === 'spin-selling' ? 'SPIN Selling' : 'Prompts IA'}
+                   activeView === 'spin-selling' ? 'SPIN Selling' :
+                   activeView === 'external-videos' ? 'Vídeos Externos (Sistema B)' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
@@ -102,6 +104,8 @@ const Repository = () => {
                     ? 'Crie mensagens sequenciais para robô de Customer Success'
                     : activeView === 'spin-selling'
                     ? 'Estratégias comerciais baseadas em combinações de produtos'
+                    : activeView === 'external-videos'
+                    ? 'Biblioteca de vídeos com transcrições, legendas e Schema.org para SEO'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
@@ -155,6 +159,9 @@ const Repository = () => {
                 <TabsTrigger value="spin-selling" className="gap-2">
                   <Target className="h-4 w-4" />
                   SPIN Selling
+                </TabsTrigger>
+                <TabsTrigger value="external-videos" className="gap-2">
+                  🎬 Vídeos Externos
                 </TabsTrigger>
               </TabsList>
               
@@ -226,6 +233,10 @@ const Repository = () => {
 
               <TabsContent value="spin-selling">
                 <SpinSellingManager />
+              </TabsContent>
+
+              <TabsContent value="external-videos">
+                <ExternalVideosGallery />
               </TabsContent>
 
               <TabsContent value="prompts">
