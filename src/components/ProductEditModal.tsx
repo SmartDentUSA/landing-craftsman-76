@@ -1799,7 +1799,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col overflow-hidden sm:max-w-[95vw]">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>
@@ -2854,7 +2854,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           <div className="space-y-4 border-t pt-6">
             <h3 className="text-lg font-semibold">Especificações Físicas</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="weight">Peso (kg)</Label>
                 <Input
@@ -2896,7 +2896,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             <Card className="p-4 space-y-3 bg-muted/20 mt-4">
               <h3 className="text-sm font-medium">Estoque & Logística</h3>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="stock_quantity">Quantidade em Estoque</Label>
                   <Input
