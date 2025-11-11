@@ -31,17 +31,25 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get file from request
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
+    // Get file data from request body
+    const body = await req.json();
+    const { fileData, fileName } = body;
     
-    if (!file) {
-      throw new Error('No file provided');
+    if (!fileData) {
+      throw new Error('No file data provided');
+    }
+
+    console.log(`Processing file: ${fileName}`);
+
+    // Decode base64 to array buffer
+    const binaryString = atob(fileData);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
 
     // Read XLSX file
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+    const workbook = XLSX.read(bytes, { type: 'array' });
     
     // Get second sheet (NPS Responses)
     const sheetName = workbook.SheetNames[1] || workbook.SheetNames[0];

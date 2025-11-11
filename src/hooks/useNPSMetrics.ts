@@ -58,16 +58,25 @@ export const useNPSMetrics = () => {
       setProcessing(true);
       toast.info('Processando arquivo NPS... Isso pode levar alguns segundos.');
 
-      const formData = new FormData();
-      formData.append('file', file);
+      // Convert file to base64 for reliable transmission
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
 
       const { data, error } = await supabase.functions.invoke('process-nps-csv', {
-        body: formData,
+        body: { 
+          fileData: base64,
+          fileName: file.name 
+        },
       });
 
       if (error) {
         console.error('Error processing NPS file:', error);
-        toast.error('Erro ao processar arquivo NPS');
+        toast.error(`Erro ao processar arquivo NPS: ${error.message || 'Erro desconhecido'}`);
         return false;
       }
 
@@ -75,7 +84,7 @@ export const useNPSMetrics = () => {
       return true;
     } catch (error) {
       console.error('Error in processNPSFile:', error);
-      toast.error('Erro ao processar arquivo NPS');
+      toast.error(`Erro ao processar arquivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       return false;
     } finally {
       setProcessing(false);
