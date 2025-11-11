@@ -88,6 +88,138 @@ function formatForAITraining(data: any): string {
 
     text += `\n`;
     
+    // ✨ DADOS INSTITUCIONAIS
+    if (cp.founded_year) text += `**Ano de Fundação:** ${cp.founded_year}\n`;
+    if (cp.team_size) text += `**Tamanho da Equipe:** ${cp.team_size}\n`;
+    if (cp.main_products_services) text += `**Principais Produtos/Serviços:** ${cp.main_products_services}\n`;
+    
+    // ✨ CONTATO
+    if (cp.contact_email) text += `**Email de Contato:** ${cp.contact_email}\n`;
+    if (cp.contact_phone) text += `**Telefone de Contato:** ${cp.contact_phone}\n`;
+    
+    // ✨ VERIFICAÇÃO REDES SOCIAIS
+    if (cp.youtube_verified) text += `**YouTube Verificado:** Sim ✓\n`;
+    if (cp.instagram_verified) text += `**Instagram Verificado:** Sim ✓\n`;
+    
+    // ✨ METODOLOGIA E CULTURA
+    if (cp.working_methodology) text += `**Metodologia de Trabalho:** ${cp.working_methodology}\n`;
+    if (cp.delivery_approach) text += `**Abordagem de Entrega:** ${cp.delivery_approach}\n`;
+    if (cp.company_culture) text += `**Cultura da Empresa:** ${cp.company_culture}\n`;
+    
+    // ✨ SEO E POSICIONAMENTO
+    if (cp.seo_market_positioning) text += `**Posicionamento de Mercado (SEO):** ${cp.seo_market_positioning}\n`;
+    if (cp.seo_competitive_advantages) text += `**Vantagens Competitivas (SEO):** ${cp.seo_competitive_advantages}\n`;
+    if (cp.seo_technical_expertise) text += `**Expertise Técnica (SEO):** ${cp.seo_technical_expertise}\n`;
+    if (cp.seo_service_areas) text += `**Áreas de Serviço (SEO):** ${cp.seo_service_areas}\n`;
+    if (cp.seo_context_keywords && Array.isArray(cp.seo_context_keywords) && cp.seo_context_keywords.length > 0) {
+      text += `**Keywords de Contexto (SEO):** ${cp.seo_context_keywords.join(', ')}\n`;
+    }
+    if (cp.seo_domains && Array.isArray(cp.seo_domains) && cp.seo_domains.length > 0) {
+      text += `**Domínios SEO:** ${cp.seo_domains.join(', ')}\n`;
+    }
+    
+    // ✨ RODAPÉ YOUTUBE
+    if (cp.youtube_company_footer) {
+      text += `\n**Rodapé Padrão YouTube:**\n${cp.youtube_company_footer}\n`;
+    }
+    
+    // ✨ VÍDEOS DA EMPRESA
+    if (cp.company_videos) {
+      const videos = cp.company_videos;
+      let hasVideos = false;
+      
+      text += `\n### VÍDEOS DA EMPRESA\n`;
+      
+      if (videos.youtube_videos && Array.isArray(videos.youtube_videos) && videos.youtube_videos.length > 0) {
+        text += `**Vídeos YouTube (${videos.youtube_videos.length}):**\n`;
+        videos.youtube_videos.forEach((v: any) => {
+          text += `- ${v.url}${v.description ? ` - ${v.description}` : ''}\n`;
+        });
+        hasVideos = true;
+      }
+      
+      if (videos.instagram_videos && Array.isArray(videos.instagram_videos) && videos.instagram_videos.length > 0) {
+        text += `**Vídeos Instagram (${videos.instagram_videos.length}):**\n`;
+        videos.instagram_videos.forEach((v: any) => {
+          text += `- ${v.url}${v.description ? ` - ${v.description}` : ''}\n`;
+        });
+        hasVideos = true;
+      }
+      
+      if (videos.testimonial_videos && Array.isArray(videos.testimonial_videos) && videos.testimonial_videos.length > 0) {
+        text += `**Vídeos de Depoimentos (${videos.testimonial_videos.length}):**\n`;
+        videos.testimonial_videos.forEach((v: any) => {
+          text += `- ${v.url}${v.description ? ` - ${v.description}` : ''}\n`;
+        });
+        hasVideos = true;
+      }
+      
+      if (videos.technical_videos && Array.isArray(videos.technical_videos) && videos.technical_videos.length > 0) {
+        text += `**Vídeos Técnicos (${videos.technical_videos.length}):**\n`;
+        videos.technical_videos.forEach((v: any) => {
+          text += `- ${v.url}${v.description ? ` - ${v.description}` : ''}\n`;
+        });
+        hasVideos = true;
+      }
+      
+      if (hasVideos) text += `\n`;
+    }
+    
+    // ✨ REVIEWS DA EMPRESA
+    if (cp.company_reviews) {
+      const reviews = cp.company_reviews;
+      text += `\n### REVIEWS DA EMPRESA\n`;
+      
+      if (reviews.google_place_id) {
+        text += `**Google Place ID:** ${reviews.google_place_id}\n`;
+      }
+      
+      if (reviews.manual_reviews && Array.isArray(reviews.manual_reviews) && reviews.manual_reviews.length > 0) {
+        text += `**Reviews Manuais (${reviews.manual_reviews.length}):**\n`;
+        reviews.manual_reviews.forEach((r: any, idx: number) => {
+          text += `${idx + 1}. ${r.author_name} - ${r.rating}⭐\n`;
+          if (r.review_text) text += `   "${r.review_text}"\n`;
+          if (r.review_date) text += `   Data: ${r.review_date}\n`;
+        });
+        text += `\n`;
+      }
+    }
+    
+    // ✨ TRACKING PIXELS
+    if (cp.tracking_pixels) {
+      const tracking = cp.tracking_pixels;
+      let hasTracking = false;
+      
+      text += `\n### TRACKING E ANALYTICS\n`;
+      
+      if (tracking.google_tag_manager_id) {
+        text += `**Google Tag Manager ID:** ${tracking.google_tag_manager_id}\n`;
+        hasTracking = true;
+      }
+      if (tracking.meta_pixel_id) {
+        text += `**Meta Pixel ID:** ${tracking.meta_pixel_id}\n`;
+        hasTracking = true;
+      }
+      if (tracking.tiktok_pixel_id) {
+        text += `**TikTok Pixel ID:** ${tracking.tiktok_pixel_id}\n`;
+        hasTracking = true;
+      }
+      if (tracking.google_analytics_id) {
+        text += `**Google Analytics ID:** ${tracking.google_analytics_id}\n`;
+        hasTracking = true;
+      }
+      
+      if (hasTracking) text += `\n`;
+    }
+    
+    // ✨ ASSETS VISUAIS
+    if (cp.company_logo_url || cp.company_logo_supabase_path) {
+      text += `\n### ASSETS VISUAIS\n`;
+      if (cp.company_logo_url) text += `**Logo URL:** ${cp.company_logo_url}\n`;
+      if (cp.company_logo_supabase_path) text += `**Logo Supabase Path:** ${cp.company_logo_supabase_path}\n`;
+      text += `\n`;
+    }
+    
     if (cp.institutional_links && Array.isArray(cp.institutional_links)) {
       // Separar parcerias internacionais de outros links
       const partnerships = cp.institutional_links.filter(
@@ -435,9 +567,15 @@ function formatForSystemB(data: any): any {
   const cp = data.company_profile;
   
   return {
+    format: "system_b",
+    version: "2.0.0",
+    timestamp: new Date().toISOString(),
     company: {
       ...cp,
-      // ✨ ADICIONAR: Estrutura social_media consolidada
+      external_id: cp?.id,
+      name: cp?.company_name,
+      description: cp?.company_description,
+      // ✨ ESTRUTURA SOCIAL MEDIA CONSOLIDADA
       social_media: {
         links: cp?.social_media_links || [],
         hashtags: cp?.social_media_hashtags || [],
@@ -445,6 +583,15 @@ function formatForSystemB(data: any): any {
         youtube_tags: cp?.youtube_tags || [],
         youtube_channel: cp?.youtube_channel,
         instagram_profile: cp?.instagram_profile,
+        youtube_verified: cp?.youtube_verified || false,
+        instagram_verified: cp?.instagram_verified || false,
+      },
+      // ✨ ESTRUTURA TRACKING CONSOLIDADA
+      tracking: {
+        google_tag_manager_id: cp?.tracking_pixels?.google_tag_manager_id || null,
+        meta_pixel_id: cp?.tracking_pixels?.meta_pixel_id || null,
+        tiktok_pixel_id: cp?.tracking_pixels?.tiktok_pixel_id || null,
+        google_analytics_id: cp?.tracking_pixels?.google_analytics_id || null,
       }
     },
     categories: data.categories_config,

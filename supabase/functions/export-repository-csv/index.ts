@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 interface ExportRequest {
-  type: 'products' | 'reviews' | 'testimonials' | 'kols' | 'all'
+  type: 'products' | 'reviews' | 'testimonials' | 'kols' | 'company' | 'all'
   landingPageId?: string
 }
 
@@ -46,6 +46,9 @@ serve(async (req) => {
         break
       case 'kols':
         csvContent = await exportKOLs(supabaseClient)
+        break
+      case 'company':
+        csvContent = await exportCompanyProfile(supabaseClient)
         break
       case 'all':
         csvContent = await exportAll(supabaseClient, landingPageId)
@@ -261,10 +264,94 @@ async function exportKOLs(supabase: any): Promise<string> {
   return buildCSV(headers, rows)
 }
 
+async function exportCompanyProfile(supabase: any): Promise<string> {
+  console.log('🏢 Exportando perfil da empresa...')
+  
+  const { data: company, error } = await supabase
+    .from('company_profile')
+    .select('*')
+    .limit(1)
+    .single()
+
+  if (error) throw error
+
+  const headers = [
+    'ID', 'User ID', 'Nome da Empresa', 'Descrição', 'Setor', 'Missão', 'Visão', 'Valores',
+    'Público Alvo', 'Diferenciais', 'Website', 'Ano Fundação', 'Tamanho Equipe', 
+    'Principais Produtos/Serviços', 'Email Contato', 'Telefone Contato',
+    'Endereço', 'Número', 'Cidade', 'Estado', 'CEP', 'País', 'Localização Legado',
+    'YouTube Verificado', 'Instagram Verificado', 'Metodologia Trabalho', 
+    'Abordagem Entrega', 'Cultura Empresa',
+    'SEO Posicionamento Mercado', 'SEO Vantagens Competitivas', 'SEO Expertise Técnica',
+    'SEO Áreas Serviço', 'SEO Keywords Contexto', 'SEO Domínios',
+    'Rodapé YouTube', 'Redes Sociais', 'Hashtags Redes Sociais', 'Handles Redes Sociais',
+    'Tags YouTube', 'Links Institucionais', 'Vídeos Empresa', 'Reviews Empresa',
+    'GTM ID', 'Meta Pixel ID', 'TikTok Pixel ID', 'Google Analytics ID',
+    'Logo URL', 'Logo Supabase Path',
+    'Data Criação', 'Data Atualização'
+  ]
+
+  const row = [
+    escapeCSV(company.id),
+    escapeCSV(company.user_id),
+    escapeCSV(company.company_name),
+    escapeCSV(company.company_description),
+    escapeCSV(company.business_sector),
+    escapeCSV(company.mission_statement),
+    escapeCSV(company.vision_statement),
+    escapeCSV(company.brand_values),
+    escapeCSV(company.target_audience),
+    escapeCSV(company.differentiators),
+    escapeCSV(company.website_url),
+    company.founded_year || '',
+    escapeCSV(company.team_size),
+    escapeCSV(company.main_products_services),
+    escapeCSV(company.contact_email),
+    escapeCSV(company.contact_phone),
+    escapeCSV(company.street_address),
+    escapeCSV(company.address_number),
+    escapeCSV(company.city),
+    escapeCSV(company.state),
+    escapeCSV(company.postal_code),
+    escapeCSV(company.country),
+    escapeCSV(company.location),
+    company.youtube_verified ? 'Sim' : 'Não',
+    company.instagram_verified ? 'Sim' : 'Não',
+    escapeCSV(company.working_methodology),
+    escapeCSV(company.delivery_approach),
+    escapeCSV(company.company_culture),
+    escapeCSV(company.seo_market_positioning),
+    escapeCSV(company.seo_competitive_advantages),
+    escapeCSV(company.seo_technical_expertise),
+    escapeCSV(company.seo_service_areas),
+    formatArray(company.seo_context_keywords),
+    formatArray(company.seo_domains),
+    escapeCSV(company.youtube_company_footer),
+    formatObject(company.social_media_links),
+    formatArray(company.social_media_hashtags),
+    formatArray(company.social_media_handles),
+    formatArray(company.youtube_tags),
+    formatObject(company.institutional_links),
+    formatObject(company.company_videos),
+    formatObject(company.company_reviews),
+    escapeCSV(company.tracking_pixels?.google_tag_manager_id),
+    escapeCSV(company.tracking_pixels?.meta_pixel_id),
+    escapeCSV(company.tracking_pixels?.tiktok_pixel_id),
+    escapeCSV(company.tracking_pixels?.google_analytics_id),
+    escapeCSV(company.company_logo_url),
+    escapeCSV(company.company_logo_supabase_path),
+    formatDate(company.created_at),
+    formatDate(company.updated_at)
+  ]
+
+  return buildCSV(headers, [row])
+}
+
 async function exportAll(supabase: any, landingPageId?: string): Promise<string> {
   console.log('📊 Exportando todos os dados...')
   
-  const [products, reviews, testimonials, kols] = await Promise.all([
+  const [company, products, reviews, testimonials, kols] = await Promise.all([
+    exportCompanyProfile(supabase),
     exportProducts(supabase),
     exportReviews(supabase, landingPageId),
     exportTestimonials(supabase, landingPageId),
@@ -272,6 +359,9 @@ async function exportAll(supabase: any, landingPageId?: string): Promise<string>
   ])
 
   return [
+    '=== PERFIL DA EMPRESA ===',
+    company,
+    '',
     '=== PRODUTOS ===',
     products,
     '',
