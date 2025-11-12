@@ -32,10 +32,17 @@ export const useNPSMetrics = () => {
     try {
       setLoading(true);
       
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        console.error('Usuário não autenticado');
+        return null;
+      }
+
       const { data, error } = await supabase
         .from('company_profile')
         .select('nps_metrics')
-        .eq('id', '00000000-0000-0000-0000-000000000001')
+        .eq('user_id', userId)
         .single();
 
       if (error) {
@@ -67,10 +74,14 @@ export const useNPSMetrics = () => {
         )
       );
 
+      const { data: authUser } = await supabase.auth.getUser();
+      const userIdForUpload = authUser?.user?.id;
+
       const { data, error } = await supabase.functions.invoke('process-nps-csv', {
         body: { 
           fileData: base64,
-          fileName: file.name 
+          fileName: file.name,
+          user_id: userIdForUpload || null,
         },
       });
 

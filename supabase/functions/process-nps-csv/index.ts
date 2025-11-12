@@ -63,8 +63,8 @@ serve(async (req) => {
 
     // Get file data from request body
     const body = await req.json();
-    const { fileData, fileName } = body;
-    
+    const { fileData, fileName, user_id, userId } = body;
+    const resolvedUserId = user_id || userId || null;
     if (!fileData) {
       throw new Error('No file data provided');
     }
@@ -291,10 +291,17 @@ Retorne APENAS o JSON, sem markdown.`;
       last_updated: new Date().toISOString(),
     };
 
-    const { error: updateError } = await supabase
+    let updateQuery = supabase
       .from('company_profile')
-      .update({ nps_metrics: npsMetrics })
-      .eq('id', '00000000-0000-0000-0000-000000000001');
+      .update({ nps_metrics: npsMetrics });
+
+    if (resolvedUserId) {
+      updateQuery = updateQuery.eq('user_id', resolvedUserId);
+    } else {
+      updateQuery = updateQuery.eq('id', '00000000-0000-0000-0000-000000000001');
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       console.error('Error updating company profile:', updateError);
