@@ -123,6 +123,52 @@ function formatForAITraining(data: any): string {
       text += `\n**Rodapé Padrão YouTube:**\n${cp.youtube_company_footer}\n`;
     }
     
+    // ✨ INSIGHTS NPS (se disponível)
+    if (cp.nps_metrics) {
+      const nps = cp.nps_metrics;
+      text += `\n### 📊 INSIGHTS DE CLIENTES (NPS)\n`;
+      text += `**NPS Score:** ${nps.nps_score}\n`;
+      text += `**Total de Respostas:** ${nps.total_responses}\n`;
+      text += `**Satisfação Média:** ${nps.satisfaction_score}/5\n`;
+      text += `**Qualidade dos Treinamentos:** ${nps.training_quality_score}/5\n\n`;
+      
+      if (nps.interest_themes && Object.keys(nps.interest_themes).length > 0) {
+        text += `**🎯 Produtos e Cursos Mais Demandados:**\n`;
+        Object.entries(nps.interest_themes)
+          .sort((a: any, b: any) => b[1].count - a[1].count)
+          .slice(0, 8)
+          .forEach(([theme, data]: [string, any]) => {
+            text += `- ${theme}: ${data.count} interessados (${data.percentage}%)\n`;
+          });
+        text += '\n';
+      }
+      
+      if (nps.insights) {
+        if (nps.insights.top_keywords?.length > 0) {
+          text += `**🔑 Keywords SEO Validadas (baseadas em demanda real):**\n`;
+          text += nps.insights.top_keywords.slice(0, 12).join(', ') + '\n\n';
+        }
+        
+        if (nps.insights.common_themes?.length > 0) {
+          text += `**💡 Padrões de Demanda:**\n`;
+          nps.insights.common_themes.forEach((theme: string) => {
+            text += `- ${theme}\n`;
+          });
+          text += '\n';
+        }
+        
+        if (nps.insights.content_opportunities?.length > 0) {
+          text += `**📝 Oportunidades de Conteúdo (validadas por clientes):**\n`;
+          nps.insights.content_opportunities.slice(0, 5).forEach((opp: string) => {
+            text += `- ${opp}\n`;
+          });
+          text += '\n';
+        }
+      }
+      
+      text += `*Última atualização: ${new Date(nps.last_updated).toLocaleDateString('pt-BR')}*\n\n`;
+    }
+    
     // ✨ VÍDEOS DA EMPRESA
     if (cp.company_videos) {
       const videos = cp.company_videos;

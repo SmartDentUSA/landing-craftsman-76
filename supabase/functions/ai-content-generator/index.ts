@@ -129,10 +129,10 @@ serve(async (req) => {
     // Use only the selected/landing page products - no fallback products
     let allProducts = products || [];
 
-    // Fetch company profile for additional context - TODOS OS CAMPOS INCLUDING SEO HIDDEN
+    // Fetch company profile for additional context - TODOS OS CAMPOS INCLUDING SEO HIDDEN + NPS
     const { data: companyProfiles } = await supabase
       .from('company_profile')
-      .select('company_name, company_description, working_methodology, differentiators, business_sector, brand_values, mission_statement, vision_statement, target_audience, main_products_services, company_videos, social_media_links, seo_context_keywords, seo_market_positioning, seo_competitive_advantages, seo_technical_expertise, seo_service_areas, location, contact_phone, contact_email, website_url')
+      .select('company_name, company_description, working_methodology, differentiators, business_sector, brand_values, mission_statement, vision_statement, target_audience, main_products_services, company_videos, social_media_links, seo_context_keywords, seo_market_positioning, seo_competitive_advantages, seo_technical_expertise, seo_service_areas, location, contact_phone, contact_email, website_url, nps_metrics')
       .limit(1);
     
     const companyProfile = companyProfiles?.[0] || null;
@@ -414,10 +414,36 @@ function buildStrategicContext(
             }).join('\n\n')
           : '• DADOS INSUFICIENTES - Use apenas informações genéricas sobre soluções de qualidade';
 
+  // 🎯 NPS CONTEXT - Validated customer demand
+  const npsContext = companyProfile?.nps_metrics ? `
+
+🎯 DEMANDA VALIDADA POR CLIENTES (NPS):
+**NPS Score**: ${companyProfile.nps_metrics.nps_score} | **Total Respostas**: ${companyProfile.nps_metrics.total_responses}
+**Satisfação**: ${companyProfile.nps_metrics.satisfaction_score}/5 | **Qualidade Treinamentos**: ${companyProfile.nps_metrics.training_quality_score}/5
+
+**Produtos & Cursos Mais Demandados:**
+${Object.entries(companyProfile.nps_metrics.interest_themes || {})
+  .sort((a: any, b: any) => b[1].count - a[1].count)
+  .slice(0, 5)
+  .map(([theme, data]: [string, any]) => `- ${theme}: ${data.percentage}% dos clientes querem`)
+  .join('\n')}
+
+🔑 KEYWORDS SEO VALIDADAS:
+${companyProfile.nps_metrics.insights?.top_keywords?.slice(0, 8).join(', ') || 'N/A'}
+
+💡 INSIGHTS DE MERCADO:
+${companyProfile.nps_metrics.insights?.common_themes?.slice(0, 3).map((t: string) => `- ${t}`).join('\n') || 'N/A'}
+
+⚠️ USE ESTES DADOS PARA:
+- Priorizar temas com alta demanda
+- Incluir keywords validadas naturalmente no conteúdo
+- Criar CTAs alinhados com interesses reais dos clientes
+` : '';
+
   // Always provide meaningful context, even with minimal data
   return `
 # CONTEXTO ESTRATÉGICO PARA GERAÇÃO DE CONTEÚDO (GERAÇÃO PROGRESSIVA)
-
+${npsContext}
 ## Informações da Página:
 - **Título**: ${pageTitle}
 - **Subtítulo**: ${pageSubtitle}

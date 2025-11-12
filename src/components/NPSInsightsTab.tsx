@@ -189,11 +189,11 @@ export const NPSInsightsTab = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Temas Mais Demandados pelos Clientes
+                <Target className="h-5 w-5 text-primary" />
+                Produtos & Cursos Mais Demandados
               </CardTitle>
               <CardDescription>
-                Baseado em {npsMetrics.unique_respondents} profissionais únicos
+                Tendências de demanda do mercado odontológico - baseado em {npsMetrics.total_responses} profissionais
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
