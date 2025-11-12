@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -22,6 +22,8 @@ export const NPSInsightsTab = () => {
   const { loading, processing, loadNPSMetrics, processNPSFile, generateContentFromInterests } = useNPSMetrics();
   const [npsMetrics, setNpsMetrics] = useState<NPSMetrics | null>(null);
   const [generatedContent, setGeneratedContent] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputUpdateRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadMetrics();
@@ -75,23 +77,24 @@ export const NPSInsightsTab = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Faça upload do arquivo XLSX exportado do Google Forms com as respostas NPS
               </p>
-              <Button asChild disabled={processing}>
-                <label htmlFor="nps-file-upload" className="cursor-pointer">
-                  {processing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Fazer Upload
-                    </>
-                  )}
-                </label>
+              <Button 
+                onClick={() => fileInputRef.current?.click()} 
+                disabled={processing}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Fazer Upload
+                  </>
+                )}
               </Button>
               <input
-                id="nps-file-upload"
+                ref={fileInputRef}
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
@@ -325,23 +328,24 @@ export const NPSInsightsTab = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button asChild disabled={processing}>
-                <label htmlFor="nps-file-upload-update" className="cursor-pointer">
-                  {processing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Fazer Upload de Novo Arquivo
-                    </>
-                  )}
-                </label>
+              <Button 
+                onClick={() => fileInputUpdateRef.current?.click()} 
+                disabled={processing}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Fazer Upload de Novo Arquivo
+                  </>
+                )}
               </Button>
               <input
-                id="nps-file-upload-update"
+                ref={fileInputUpdateRef}
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
