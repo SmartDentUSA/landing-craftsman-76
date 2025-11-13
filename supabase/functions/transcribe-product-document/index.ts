@@ -233,146 +233,46 @@ serve(async (req) => {
 
     console.log('🔄 Processando com Lovable AI (Gemini 2.5 Flash)...');
 
-    // Prompt otimizado com filtragem por produto específico
-    const EXTRACTION_PROMPT = `Você é um especialista em análise de documentos técnicos de produtos, especialmente equipamentos médicos, odontológicos e industriais.
+    // Prompt otimizado e enxuto
+    const EXTRACTION_PROMPT = `Você é um extrator de dados técnicos de produtos médicos/odontológicos/industriais.
 
-═══════════════════════════════════════════════════════════
-🎯 CONTEXTO CRÍTICO - PRODUTO ALVO
-═══════════════════════════════════════════════════════════
-PRODUTO: "${productName}"
+🎯 PRODUTO ALVO: "${productName}"
 
-⚠️ REGRA ABSOLUTA DE FILTRAGEM:
-Extraia APENAS informações que se refiram DIRETAMENTE a "${productName}".
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REGRA CRÍTICA: Extraia APENAS dados DIRETAMENTE relacionados a "${productName}".
 
-IGNORAR COMPLETAMENTE (não extrair):
-❌ Dados da empresa (endereços, telefones, CNPJ, logos, sedes, filiais)
-❌ Informações de OUTROS produtos que não sejam "${productName}"
-❌ Índices, sumários, páginas de contato, rodapés
-❌ Avisos legais genéricos da empresa (termos de uso, políticas)
-❌ Informações de vendas/marketing não relacionadas ao produto
-❌ Dados corporativos (missão, visão, valores da empresa)
-❌ Informações de representantes, distribuidores genéricos
-❌ Informações comerciais genéricas (tabelas de preços de outros produtos)
+❌ NÃO EXTRAIR (ignorar completamente):
+- Dados corporativos (endereços, telefones, CNPJ, missão, visão, contatos, sedes, filiais, representantes)
+- Outros produtos (catálogo com múltiplos itens → extraia SOMENTE "${productName}")
+- Índices, sumários, rodapés, termos de uso, políticas genéricas
+- Marketing genérico não específico ao produto
 
-EXTRAIR SOMENTE:
-✅ Especificações técnicas de "${productName}"
-✅ Características e funcionalidades de "${productName}"
-✅ Aplicações e benefícios de "${productName}"
-✅ Dados técnicos (dimensões, peso, voltagem, materiais) de "${productName}"
-✅ Certificações específicas de "${productName}"
-✅ Garantia e informações comerciais de "${productName}"
-✅ Preço e informações de compra de "${productName}"
+✅ EXTRAIR:
+1. Identificação: nome completo, marca, modelo, SKU/código
+2. Especificações técnicas: dimensões, peso, materiais, componentes eletrônicos, capacidades, conectividade
+3. Certificações e normas (ISO, CE, FDA, ANVISA específicas)
+4. Características: recursos principais, diferenciais, tecnologias, modos de operação, segurança
+5. Benefícios e aplicações: casos de uso, indicações clínicas/industriais, público-alvo
+6. Dados comerciais: preço, garantia, país de origem, registro regulatório
+7. Avisos: contraindicações, precauções, manutenção, instalação
+8. Instruções de uso: passo a passo estruturado (número da etapa + instrução detalhada)
+9. Configurações de dispositivos: tabelas de parâmetros (equipamento, modelo, tempo, temperatura, potência, etc.)
+10. Resultados de testes: nome, tipo, metodologia, resultados comparativos (condição + valor + unidade)
+11. Compatibilidade: materiais, equipamentos e aplicações compatíveis/incompatíveis
+12. Estrutura do documento: seções principais, hierarquia, títulos e resumos
+13. Keywords SEO: 15-20 termos técnicos relevantes (exclua genéricos)
+14. Texto transcrito: APENAS seções sobre "${productName}" (preserve hierarquia, números, unidades)
 
-INSTRUÇÕES DE EXTRAÇÃO:
-
-1. **IDENTIFICAÇÃO DO PRODUTO:**
-   - Nome completo do produto (deve ser "${productName}" ou variação)
-   - Marca/Fabricante (apenas se específico deste produto)
-   - Modelo/Código específico de "${productName}"
-   - SKU ou código interno específico
-
-2. **ESPECIFICAÇÕES TÉCNICAS:**
-   - Dimensões (altura, largura, profundidade, peso) de "${productName}"
-   - Materiais de construção específicos
-   - Componentes eletrônicos (voltagem, potência, frequência)
-   - Capacidades (velocidade, temperatura, pressão, volume, etc.)
-   - Conectividade (Bluetooth, Wi-Fi, USB, etc.)
-   - Certificações específicas de "${productName}"
-   - Normas regulatórias aplicáveis a este produto
-
-3. **CARACTERÍSTICAS E FUNCIONALIDADES:**
-   - Recursos principais (bullet points) de "${productName}"
-   - Diferenciais competitivos específicos
-   - Tecnologias embarcadas neste produto
-   - Modos de operação específicos
-   - Recursos de segurança
-
-4. **BENEFÍCIOS E APLICAÇÕES:**
-   - Benefícios para o usuário final de "${productName}"
-   - Indicações de uso e aplicações clínicas/industriais específicas
-   - Casos de aplicação específicos deste produto
-   - Público-alvo (profissionais, especialidades) para este produto
-
-5. **INFORMAÇÕES COMERCIAIS:**
-   - Preço (se mencionado) de "${productName}"
-   - Garantia específica deste produto
-   - País de origem/fabricação
-   - Registro ANVISA/FDA específico (se aplicável)
-
-6. **AVISOS E OBSERVAÇÕES:**
-   - Contraindicações específicas de "${productName}"
-   - Cuidados especiais e precauções
-   - Manutenção recomendada
-   - Requisitos de instalação
-
-7. **KEYWORDS SEO:**
-   - Extraia 15-20 palavras-chave relevantes APENAS relacionadas a "${productName}"
-   - Inclua termos técnicos, aplicações, benefícios e tecnologias específicas
-   - Use plural e singular quando apropriado
-   - EXCLUA termos genéricos da empresa ou de outros produtos
-
-8. **TEXTO COMPLETO TRANSCRITO:**
-   - Transcreva APENAS as seções do documento relacionadas a "${productName}"
-   - Se for um catálogo, identifique e transcreva APENAS a seção deste produto
-   - Mantenha hierarquia de informações (títulos, subtítulos, listas)
-   - Preserve números, códigos e unidades de medida exatamente como aparecem
-
-9. **INSTRUÇÕES DE USO (PASSO A PASSO):**
-   - Se o documento contém instruções de aplicação/uso, extraia cada etapa como um objeto estruturado
-   - Identifique o número da etapa e a instrução clara e detalhada
-   - Se houver referências a imagens/diagramas, inclua no campo opcional
-   - Exemplos: "1. Limpe a superfície", "2. Aplique o produto uniformemente", "3. Aguarde 5 minutos"
-   - Preserve comandos imperativos e detalhes técnicos (tempo, temperatura, quantidade)
-
-10. **CONFIGURAÇÕES DE DISPOSITIVOS:**
-    - Se houver tabelas de parâmetros para equipamentos/dispositivos específicos, extraia:
-      * Nome do dispositivo/equipamento (ex: "NK-Optik Otoflash", "Lâmpada UV portátil")
-      * Modelo (se especificado, ex: "Curie+ Plus", "48W")
-      * Parâmetros técnicos: tempo, temperatura, potência, intensidade, comprimento de onda, ciclos, etc.
-    - Preserve valores numéricos e unidades EXATAMENTE como aparecem (ex: "5 minutos", "1.000 mW/cm²", "365–410 nm")
-    - Para cada parâmetro, especifique claramente o nome do parâmetro e seu valor
-    - Se houver observações especiais (ex: "sem nitrogênio", "luz azul ativada"), inclua como parâmetro
-
-11. **RESULTADOS DE TESTES:**
-    - Se houver dados de testes técnicos ou laboratoriais (resistência, flexão, tenacidade, dureza, etc.):
-      * Nome do teste (ex: "Resistência Flexural", "Módulo Flexural", "Tenacidade à Fratura")
-      * Tipo/categoria do teste (ex: "Mecânico", "Químico", "Térmico", "Performance")
-      * Metodologia do teste (se mencionada, ex: "ASTM D790", "ISO 178")
-      * Resultados comparativos organizados por condição testada
-    - Para cada resultado, especifique:
-      * Condição testada (ex: "Sem tratamento", "Com Glaze", "Após 1000 ciclos")
-      * Valor numérico (ex: "150", "165", "+10,5")
-      * Unidade de medida (ex: "MPa", "%", "N/mm²")
-    - Preserve aumentos/reduções percentuais e valores de comparação
-
-12. **COMPATIBILIDADE:**
-    - Liste materiais/resinas compatíveis (ex: "Todas as resinas Bite Splint", "Resinas flexíveis 3D")
-    - Liste dispositivos/equipamentos compatíveis (ex: "Impressoras 3D DLP", "Câmaras de cura UV")
-    - Liste aplicações/procedimentos compatíveis (ex: "Placas miorrelaxantes", "Guias cirúrgicos")
-    - EXCLUA compatibilidades genéricas ou não relacionadas ao produto específico
-    - Se houver restrições de compatibilidade, mencione-as (ex: "Não compatível com resinas rígidas")
-
-13. **ESTRUTURA DO DOCUMENTO:**
-    - Identifique seções principais do documento (títulos numerados ou em destaque)
-    - Preserve a hierarquia de seções (seção principal > subseção)
-    - Capture títulos exatos das seções (ex: "1. DESCRIÇÃO DO PRODUTO", "2. VANTAGENS", "6. PARÂMETROS TÉCNICOS")
-    - Se houver numeração, preserve-a (ex: "1.", "2.1", "3.2.1")
-    - Útil para navegação e compreensão da estrutura do documento
-    - Inclua um resumo breve do conteúdo de cada seção (1-2 linhas)
-
-FORMATO DE RESPOSTA:
-Retorne apenas o objeto JSON estruturado, sem texto adicional antes ou depois.
-
-REGRAS IMPORTANTES:
-- Se o documento for um catálogo com múltiplos produtos, identifique a seção de "${productName}" e extraia APENAS dessa seção
-- Se alguma informação for ambígua ou não claramente relacionada ao produto alvo, DESCARTE
-- Se não houver informações sobre "${productName}" no documento, retorne campos vazios/null
-- Se algum campo não estiver presente, retorne null ou array vazio []
-- Preserve números, unidades de medida e códigos EXATAMENTE como aparecem (não arredonde, não converta)
-- Para valores com intervalos, preserve o formato exato (ex: "365–410 nm", "5-10 minutos")
-- Seja preciso e objetivo - NÃO invente informações que não estão no documento
-- Para especificações técnicas, use arrays de objetos com "label" e "value"
-- Para instruções, device_settings e test_results, use objetos estruturados conforme schema`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REGRAS OBRIGATÓRIAS:
+✓ Preserve números/unidades EXATAMENTE (não arredonde, não converta)
+✓ Intervalos no formato original (ex: "365–410 nm", "5-10 min")
+✓ Para specs técnicas, use: { "label": "...", "value": "..." }
+✓ Se catálogo multiproduto → extraia SOMENTE seção de "${productName}"
+✓ Campo ausente → retorne null ou []
+✓ NÃO invente dados que não estão no documento
+✓ Se ambíguo ou não relacionado ao produto → DESCARTE
+✓ Retorne APENAS JSON estruturado (sem texto antes/depois)`;
 
     // Fazer requisição para Lovable AI com tool calling para estruturação
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
