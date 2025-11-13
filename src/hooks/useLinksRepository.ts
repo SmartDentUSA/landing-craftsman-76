@@ -44,7 +44,14 @@ export const useLinksRepository = () => {
         .order('category', { ascending: true })
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // Silenciar erros de autenticação (esperados)
+        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+          console.warn('⚠️ External links: User not authenticated');
+          return;
+        }
+        throw error;
+      }
       setExternalLinks(data || []);
     } catch (error) {
       console.error('Error loading external links:', error);
@@ -60,7 +67,14 @@ export const useLinksRepository = () => {
         .eq('status', 'published')
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // Silenciar erros de autenticação (esperados)
+        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+          console.warn('⚠️ Internal links: User not authenticated');
+          return;
+        }
+        throw error;
+      }
       
       const formatted = data?.map(page => {
         const pageData = page.data as any;
@@ -252,6 +266,15 @@ export const useLinksRepository = () => {
 
   useEffect(() => {
     const loadData = async () => {
+      // Verificar autenticação PRIMEIRO
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.warn('⚠️ useLinksRepository: User not authenticated, skipping load');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       await Promise.all([loadExternalLinks(), loadInternalLinks()]);
       setIsLoading(false);
