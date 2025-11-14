@@ -317,9 +317,6 @@ Retorne APENAS JSON puro, sem markdown:
 
   console.log('📤 Enviando prompt para Lovable AI...');
 
-  // Importar Super-Prompt
-  const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
-
   const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
