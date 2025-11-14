@@ -32,6 +32,7 @@ import { VariationCard } from './VariationCard';
 import { GalleryImageUploader } from './GalleryImageUploader';
 import { useProductAutoSave } from '@/hooks/useProductAutoSave';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { WorkflowStagesSection } from './WorkflowStagesSection';
 
 
 interface Video {
@@ -194,6 +195,24 @@ interface Product {
   technical_documents?: TechnicalDocument[];
   // Document Transcriptions (IA PDF Processing)
   document_transcriptions?: DocumentTranscription[];
+  // Workflow Stages
+  workflow_stages?: {
+    scan?: WorkflowStage;
+    design?: WorkflowStage;
+    print?: WorkflowStage;
+    process?: WorkflowStage;
+    finish?: WorkflowStage;
+    install?: WorkflowStage;
+  } | null;
+}
+
+interface WorkflowStage {
+  applicable: boolean;
+  role: 'principal' | 'acessorio' | 'consumivel' | null;
+  description: string | null;
+  pain_points_addressed: string[];
+  competitive_advantages: string[];
+  related_materials: string[];
 }
 
 interface ProductEditModalProps {
@@ -255,7 +274,9 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // FAQ
     faq: [],
     // Technical Specifications
-    technical_specifications: []
+    technical_specifications: [],
+    // Workflow Stages
+    workflow_stages: null
   });
   const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -2058,6 +2079,15 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               Este campo será usado pela IA para gerar conteúdo mais contextualizado
             </p>
           </div>
+
+          {/* Workflow Stages Section */}
+          <WorkflowStagesSection
+            workflowStages={formData.workflow_stages || null}
+            onChange={(stages) => {
+              setFormData(prev => ({ ...prev, workflow_stages: stages }));
+              autoSave({ workflow_stages: stages });
+            }}
+          />
 
           {/* SEO & URL Amigável Section */}
           <Card className="p-4 space-y-3 bg-muted/20">

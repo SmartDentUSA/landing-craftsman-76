@@ -77,3 +77,49 @@ export function generateBlogListSchema(blogs: Array<{ title: string; description
   
   return JSON.stringify(schema, null, 2);
 }
+
+export function generateWorkflowStageSchema(product: {
+  name: string;
+  workflow_stages?: Record<string, any>;
+}): string {
+  if (!product.workflow_stages) {
+    return '';
+  }
+  
+  const stageLabels: Record<string, string> = {
+    scan: 'Scanear',
+    design: 'Desenhar',
+    print: 'Imprimir',
+    process: 'Processar',
+    finish: 'Finalizar',
+    install: 'Instalar'
+  };
+  
+  const applicableStages = Object.entries(product.workflow_stages)
+    .filter(([_, stage]: [string, any]) => stage.applicable)
+    .map(([key, stage]: [string, any], index) => ({
+      '@type': 'HowToStep',
+      position: index + 1,
+      name: stageLabels[key],
+      text: stage.description || '',
+      itemListElement: stage.competitive_advantages?.map((advantage: string, i: number) => ({
+        '@type': 'HowToTip',
+        position: i + 1,
+        text: advantage
+      })) || []
+    }));
+  
+  if (applicableStages.length === 0) {
+    return '';
+  }
+  
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: `Workflow Digital com ${product.name}`,
+    description: 'Etapas do processo odontológico digital onde este produto é aplicado',
+    step: applicableStages
+  };
+  
+  return JSON.stringify(schema, null, 2);
+}
