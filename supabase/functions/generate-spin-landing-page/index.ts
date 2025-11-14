@@ -258,21 +258,7 @@ TEXTO DO BOTÃO (3-6 palavras):
 • Redutor de fricção
 • Exemplos: "Falar com Especialista Agora", "Agendar Demonstração Gratuita", "Solicitar Orçamento Personalizado"
 
-┌─────────────────────────────────────────────────────────┐
-│ 5. DEPOIMENTOS (Melhorar Success Cases)                │
-└─────────────────────────────────────────────────────────┘
-
-Para CADA caso de sucesso existente, REESCREVER em formato narrativo SPIN:
-• Situação: Como era antes?
-• Problema: Qual era a dor principal?
-• Implicação: O que estava perdendo?
-• Resultado: Métricas concretas pós-implementação
-
-Formato:
-"[Antes]: [Descrição da dor]. [Depois]: Com [Solução], [Resultados mensuráveis]. [Impacto final]."
-
-Exemplo:
-"Antes enfrentávamos atrasos de 15 dias na entrega de próteses, perdendo pacientes para concorrentes. Com o Scanner 3D Pro e Impressora Edge Mini, reduzimos para 24 horas e aumentamos 40% na captação de novos pacientes. Hoje somos referência em tecnologia na região."
+⚠️ IMPORTANTE: NÃO GERAR DEPOIMENTOS. Os depoimentos reais serão buscados do banco de dados.
 
 ═══════════════════════════════════════════════════════════
 ⚙️ REGRAS DE OURO
@@ -414,7 +400,7 @@ Retorne APENAS JSON puro, sem markdown:
       text: customText.cta_text || generatedContent.cta.text,
       buttonText: customText.cta_button_text || generatedContent.cta.buttonText
     },
-    testimonials: generatedContent.testimonials // ✅ Testimonials sempre vêm da IA
+    testimonials: [] // ✅ Testimonials não são mais gerados por IA, virão do banco
   };
 }
 
@@ -484,6 +470,46 @@ serve(async (req) => {
       console.warn('Empresa não encontrada, usando valores padrão');
     }
 
+    // ✅ BUSCAR DEPOIMENTOS REAIS DO BANCO DE DADOS
+    console.log('📋 Buscando depoimentos reais (video_testimonials)...');
+    const { data: videoTestimonials } = await supabaseClient
+      .from('video_testimonials')
+      .select('*')
+      .eq('approved', true)
+      .order('display_order', { ascending: true });
+
+    // Formatar depoimentos no formato esperado pelo HTML generator
+    const realTestimonials = (videoTestimonials || []).map((testimonial: any) => ({
+      quote: testimonial.testimonial_text,
+      clientName: testimonial.client_name,
+      clientPhoto: testimonial.photo_url || null,
+      location: testimonial.location || null,
+      profession: testimonial.profession || null,
+      specialty: testimonial.specialty || null
+    }));
+
+    console.log('✅ Depoimentos reais encontrados:', realTestimonials.length);
+
+    // ✅ BUSCAR DEPOIMENTOS REAIS DO BANCO DE DADOS
+    console.log('📋 Buscando depoimentos reais dos produtos associados...');
+    const { data: videoTestimonials } = await supabaseClient
+      .from('video_testimonials')
+      .select('*')
+      .eq('approved', true)
+      .order('display_order', { ascending: true });
+
+    // Formatar depoimentos no formato esperado pelo HTML generator
+    const realTestimonials = (videoTestimonials || []).map((testimonial: any) => ({
+      quote: testimonial.testimonial_text,
+      clientName: testimonial.client_name,
+      clientPhoto: testimonial.photo_url || null,
+      location: testimonial.location || null,
+      profession: testimonial.profession || null,
+      specialty: testimonial.specialty || null
+    }));
+
+    console.log('✅ Depoimentos reais encontrados:', realTestimonials.length);
+
     // 🔥 Mudança 4 (OPCIONAL): Gerar FAQ por IA se estiver vazia
     if (!solution.faq || solution.faq.length === 0) {
       console.log('🤖 FAQ vazia, gerando automaticamente...');
@@ -531,7 +557,7 @@ serve(async (req) => {
       heroSubtitle: aiGeneratedContent.hero.subtitle.substring(0, 50) + '...',
       metricsTitle: aiGeneratedContent.metrics.title,
       ctaText: aiGeneratedContent.cta.text.substring(0, 50) + '...',
-      testimonialsCount: aiGeneratedContent.testimonials.length
+      realTestimonialsCount: realTestimonials.length
     });
 
     console.log('🔍 [AI] Campos customizados preservados:', 
@@ -539,13 +565,19 @@ serve(async (req) => {
         .filter(key => solution.landing_page_custom_text[key])
     );
 
+    // ✅ MERGE: Adicionar depoimentos reais ao aiContent
+    const finalAiContent = {
+      ...aiGeneratedContent,
+      testimonials: realTestimonials
+    };
+
     // ✅ MERGE CORRETO: Passar separadamente IA e customText
     // O template HTML faz a priorização interna (customText > aiContent > defaults)
     const html = generateLandingPageHTML(
       solution, 
       products || [], 
       company, 
-      aiGeneratedContent, // ✅ Passar AI puro, deixar template decidir prioridades
+      finalAiContent, // ✅ Passar AI + depoimentos reais
       false // ✅ preview = false (produção - com tracking)
     );
 
