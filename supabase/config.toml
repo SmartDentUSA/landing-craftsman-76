@@ -1,5 +1,8 @@
 project_id = "pgfgripuanuwwolmtknn"
 
+[functions.generate-product-card-from-transcription]
+verify_jwt = true
+
 [functions.knowledge-feed]
 verify_jwt = false
 
