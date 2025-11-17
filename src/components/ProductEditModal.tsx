@@ -1443,7 +1443,27 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           extracted_data: data.transcription.extracted_data
         };
 
-        setDocumentTranscriptions(prev => [...prev, newTranscription]);
+        // Atualizar estado local
+        const updatedTranscriptions = [...documentTranscriptions, newTranscription];
+        setDocumentTranscriptions(updatedTranscriptions);
+
+        // 🔥 SALVAR IMEDIATAMENTE NO BANCO DE DADOS
+        if (product?.id) {
+          console.log('💾 Salvando transcrição no banco de dados...');
+          const { error: saveError } = await supabase
+            .from('products_repository')
+            .update({ 
+              document_transcriptions: updatedTranscriptions as any,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', product.id);
+
+          if (saveError) {
+            console.error('❌ Erro ao salvar transcrição:', saveError);
+            throw saveError;
+          }
+          console.log('✅ Transcrição salva no banco com sucesso!');
+        }
 
         const filterMsg = data.transcription.filtering?.applied 
           ? ` (filtrado para "${data.transcription.filtering.target_product}")`
