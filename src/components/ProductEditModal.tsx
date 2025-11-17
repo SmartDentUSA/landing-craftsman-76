@@ -294,6 +294,7 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const [generatingSearchIntentKeywords, setGeneratingSearchIntentKeywords] = useState(false);
   const [overwriteData, setOverwriteData] = useState(false);
   const [generatingSEO, setGeneratingSEO] = useState(false);
+  const [generatingCard, setGeneratingCard] = useState(false);
   const [generatingFAQs, setGeneratingFAQs] = useState(false);
   
   // Images gallery state
@@ -685,6 +686,94 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       });
     } finally {
       setGeneratingSEO(false);
+    }
+  };
+
+  const autoFillCardFromTranscription = async () => {
+    if (!formData.name) {
+      toast({
+        title: "Nome necessário",
+        description: "Preencha o nome do produto primeiro para filtrar a transcrição correta.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!product?.id) {
+      toast({
+        title: "Produto não salvo",
+        description: "Salve o produto primeiro antes de gerar o card.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeneratingCard(true);
+
+    try {
+      console.log('🤖 Gerando card completo para:', formData.name);
+      
+      const { data, error } = await supabase.functions.invoke('generate-product-card-from-transcription', {
+        body: {
+          product_id: product.id,
+          product_name: formData.name
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data?.success || !data?.data) {
+        throw new Error(data?.error || 'Resposta inválida da IA');
+      }
+
+      const generatedData = data.data;
+
+      console.log('✅ Card gerado:', generatedData);
+
+      // Preencher todos os campos do formulário
+      setFormData(prev => ({
+        ...prev,
+        description: generatedData.description || prev.description,
+        sales_pitch: generatedData.sales_pitch || prev.sales_pitch,
+        applications: generatedData.applications?.join('\n') || prev.applications,
+        slug: generatedData.slug || prev.slug,
+        seo_description_override: generatedData.seo_description || prev.seo_description_override,
+        target_audience: generatedData.target_audience || prev.target_audience,
+        keywords: generatedData.keywords || prev.keywords,
+        market_keywords: generatedData.market_keywords || prev.market_keywords,
+        search_intent_keywords: generatedData.search_intent_keywords || prev.search_intent_keywords,
+        benefits: generatedData.benefits || prev.benefits,
+        features: generatedData.features || prev.features,
+        faq: generatedData.faq || prev.faq,
+      }));
+
+      // Atualizar estados locais de arrays
+      if (generatedData.target_audience) setTargetAudience(generatedData.target_audience);
+      if (generatedData.benefits) setBenefits(generatedData.benefits);
+      if (generatedData.features) setFeatures(generatedData.features);
+
+      toast({
+        title: "✨ Card gerado com sucesso!",
+        description: (
+          <div className="space-y-1">
+            <p>Todos os campos foram preenchidos pela IA usando a transcrição:</p>
+            <p className="text-xs font-mono">{data.source_transcription?.filename}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              ⚠️ Revise os campos e clique em "Salvar" para persistir
+            </p>
+          </div>
+        ),
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao gerar card:', error);
+      toast({
+        title: "Erro ao gerar card",
+        description: error instanceof Error ? error.message : "Erro desconhecido ao gerar conteúdo",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingCard(false);
     }
   };
 
@@ -1945,6 +2034,51 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 ? "⚠️ Todos os campos serão substituídos pelos dados importados" 
                 : "✓ Apenas campos vazios serão preenchidos"}
             </p>
+          )}
+
+          {/* Auto-fill Card Button - Aparece quando há transcrições */}
+          {documentTranscriptions && documentTranscriptions.length > 0 && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <h4 className="text-sm font-semibold">Auto-Preencher Card com IA</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {documentTranscriptions.length} documento(s) transcrito(s) encontrado(s). 
+                        A IA vai usar o <strong>Nome do Produto</strong> para filtrar e gerar todos os campos automaticamente.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={autoFillCardFromTranscription}
+                      disabled={generatingCard || !formData.name}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {generatingCard ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Gerando Card...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Gerar Card Completo
+                        </>
+                      )}
+                    </Button>
+                    {!formData.name && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        ⚠️ Preencha o nome do produto primeiro
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           <div className="grid grid-cols-2 gap-4">
