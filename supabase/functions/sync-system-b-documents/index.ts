@@ -7,7 +7,7 @@ const corsHeaders = {
 
 interface TechnicalDocument {
   id: string;
-  origem: 'resin_documents';
+  origem: 'resin_documents' | 'catalog_documents';
   nome: string;
   descricao?: string;
   nome_arquivo: string;
@@ -18,6 +18,8 @@ interface TechnicalDocument {
   metadata_sistema_b: {
     resina_slug?: string;
     resina_id?: string;
+    catalog_id?: string;
+    product_external_id?: string;
     url_pagina?: string;
   };
   sincronizado_em: string;
@@ -67,12 +69,15 @@ Deno.serve(async (req) => {
       temProdutos: !!payload?.produtos,
       temResinas: !!payload?.produtos?.resinas,
       temDocumentos: !!payload?.produtos?.documentos_tecnicos,
+      temCatalogDocs: !!payload?.catalog_documents,
       totalResinas: payload?.produtos?.resinas?.length || 0,
-      totalDocumentos: payload?.produtos?.documentos_tecnicos?.length || 0
+      totalDocumentos: payload?.produtos?.documentos_tecnicos?.length || 0,
+      totalCatalogDocs: payload?.catalog_documents?.length || 0
     });
 
     const resinas = payload?.produtos?.resinas || [];
     const documentosTecnicos = payload?.produtos?.documentos_tecnicos || [];
+    const catalogDocuments = payload?.catalog_documents || [];
 
     // 3. FASE 2: Criar mapa de resinas por loja_integrada_id
     const resinasByLojaId: { [key: string]: any } = {};
@@ -139,6 +144,56 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Processar catalog_documents (vinculados diretamente ao produto)
+    console.log('📄 Processando catalog_documents...');
+    for (const catalogDoc of catalogDocuments) {
+      const externalId = String(catalogDoc?.product_external_id || '').trim();
+      if (!externalId || !catalogDoc.active) {
+        console.log('⚠️ Catalog document ignorado:', {
+          id: catalogDoc.id,
+          nome: catalogDoc.document_name,
+          external_id: externalId,
+          active: catalogDoc.active
+        });
+        continue;
+      }
+
+      if (!documentsByLojaId[externalId]) {
+        documentsByLojaId[externalId] = [];
+      }
+
+      documentsByLojaId[externalId].push({
+        id: `catalog_${catalogDoc.id}`,
+        origem: 'catalog_documents',
+        nome: catalogDoc.document_name || 'Documento Técnico',
+        descricao: catalogDoc.description,
+        nome_arquivo: catalogDoc.file_name || 'documento.pdf',
+        url_download: catalogDoc.file_url,
+        tamanho_bytes: catalogDoc.file_size || 0,
+        ordem_exibicao: catalogDoc.order_index,
+        ativo: true,
+        metadata_sistema_b: {
+          catalog_id: catalogDoc.id,
+          product_external_id: catalogDoc.product_external_id,
+          url_pagina: catalogDoc.product_url
+        },
+        sincronizado_em: new Date().toISOString()
+      });
+    }
+
+    console.log('📄 Documentos de catálogo mapeados:', {
+      totalIds: Object.keys(documentsByLojaId).filter(id => 
+        documentsByLojaId[id].some(d => d.origem === 'catalog_documents')
+      ).length,
+      produtosComCatalogDocs: Object.entries(documentsByLojaId)
+        .filter(([_, docs]) => docs.some(d => d.origem === 'catalog_documents'))
+        .map(([id, docs]) => ({
+          external_id: id,
+          totalDocs: docs.filter(d => d.origem === 'catalog_documents').length
+        }))
+        .slice(0, 5)
+    });
+
     console.log('📚 Documentos mapeados por loja_integrada_id:', {
       totalProdutosComDocs: Object.keys(documentsByLojaId).length,
       idsExemplo: Object.keys(documentsByLojaId).slice(0, 10),
@@ -160,7 +215,12 @@ Deno.serve(async (req) => {
       const docs = documentsByLojaId[liProductId] || [];
       
       if (docs.length === 0) {
-        console.log(`⚠️ [NO MATCH] ${product.name} → li_product_id="${liProductId}" → 0 docs`);
+        const temCatalogDocs = !!catalogDocuments.find(d => String(d.product_external_id) === liProductId);
+        console.log(`⚠️ [NO MATCH] ${product.name}`, {
+          li_product_id: liProductId,
+          tem_catalog_docs: temCatalogDocs,
+          total_docs: 0
+        });
         continue;
       }
 
@@ -188,13 +248,21 @@ Deno.serve(async (req) => {
     }
 
     // 6. FASE 5: Retornar summary correto
+    const totalCatalogDocs = Object.values(documentsByLojaId)
+      .flat()
+      .filter(d => d.origem === 'catalog_documents').length;
+
+    const totalResinDocs = Object.values(documentsByLojaId)
+      .flat()
+      .filter(d => d.origem === 'resin_documents').length;
+
     const summary = {
       produtos_verificados: products.length,
       produtos_atualizados: produtosAtualizados,
       documentos_sincronizados: documentosSincronizados,
       documentos_por_origem: {
-        catalog_documents: 0,
-        resin_documents: documentosSincronizados
+        catalog_documents: totalCatalogDocs,
+        resin_documents: totalResinDocs
       },
       timestamp: new Date().toISOString()
     };
