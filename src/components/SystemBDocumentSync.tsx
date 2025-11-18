@@ -5,9 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function SystemBDocumentSync() {
   const [isLoading, setIsLoading] = useState(false);
+  const [testProductId, setTestProductId] = useState('');
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
   const [result, setResult] = useState<{
     productsUpdated: number;
     totalDocuments: number;
@@ -50,6 +55,46 @@ export function SystemBDocumentSync() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTestProduct = async () => {
+    if (!testProductId.trim()) {
+      toast({
+        title: "⚠️ Campo vazio",
+        description: "Digite um li_product_id para testar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('debug-systemb-product', {
+        body: { li_product_id: testProductId }
+      });
+
+      if (error) throw error;
+
+      setTestResult(data);
+      
+      const totalDocs = (data.total_catalog_docs || 0) + (data.total_resin_docs || 0);
+      
+      toast({
+        title: totalDocs > 0 ? "✅ Documentos encontrados!" : "⚠️ Nenhum documento encontrado",
+        description: `Catálogo: ${data.total_catalog_docs} docs | Resinas: ${data.total_resin_docs} docs`
+      });
+    } catch (error) {
+      console.error('Erro ao testar produto:', error);
+      toast({
+        title: "❌ Erro no teste",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -113,6 +158,105 @@ export function SystemBDocumentSync() {
             </div>
           </div>
         )}
+
+        <div className="space-y-3 border-t pt-4 mt-4">
+          <div>
+            <Label htmlFor="test-product-id" className="text-sm font-medium">
+              🔍 Testar produto específico
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Digite o li_product_id para verificar se há documentos no Sistema B
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Input 
+              id="test-product-id"
+              placeholder="Digite li_product_id (ex: 373844367)"
+              value={testProductId}
+              onChange={(e) => setTestProductId(e.target.value)}
+              disabled={isTesting}
+            />
+            <Button 
+              onClick={handleTestProduct} 
+              variant="outline"
+              disabled={isTesting}
+            >
+              {isTesting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Testando...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Testar
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {testResult && (
+            <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Docs Catálogo</p>
+                  <Badge variant={testResult.total_catalog_docs > 0 ? "default" : "secondary"}>
+                    {testResult.total_catalog_docs}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Docs Resinas</p>
+                  <Badge variant={testResult.total_resin_docs > 0 ? "default" : "secondary"}>
+                    {testResult.total_resin_docs}
+                  </Badge>
+                </div>
+              </div>
+              
+              {testResult.catalog_examples?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">📄 Documentos do Catálogo:</p>
+                  {testResult.catalog_examples.map((doc: any) => (
+                    <a 
+                      key={doc.id}
+                      href={doc.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block text-sm text-blue-600 hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-3 w-3" />
+                      {doc.nome} ({(doc.tamanho / 1024).toFixed(0)} KB)
+                    </a>
+                  ))}
+                </div>
+              )}
+              
+              {testResult.resin_examples?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">🧪 Documentos de Resinas:</p>
+                  {testResult.resin_examples.map((doc: any) => (
+                    <a 
+                      key={doc.id}
+                      href={doc.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block text-sm text-blue-600 hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-3 w-3" />
+                      {doc.nome} ({(doc.tamanho / 1024).toFixed(0)} KB)
+                    </a>
+                  ))}
+                </div>
+              )}
+              
+              {testResult.total_catalog_docs + testResult.total_resin_docs === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  ⚠️ Nenhum documento encontrado no Sistema B para este produto
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="text-sm text-muted-foreground bg-info/10 border border-info/20 rounded-lg p-3 space-y-1">
           <p className="flex items-center gap-2">
