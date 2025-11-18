@@ -745,6 +745,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         benefits: generatedData.benefits || prev.benefits,
         features: generatedData.features || prev.features,
         faq: generatedData.faq || prev.faq,
+        technical_specifications: generatedData.technical_specifications || prev.technical_specifications,
       }));
 
       // Atualizar estados locais de arrays
@@ -758,8 +759,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         title: "✨ Card gerado com sucesso!",
         description: (
           <div className="space-y-1">
-            <p>Todos os campos foram preenchidos pela IA usando a transcrição:</p>
-            <p className="text-xs font-mono">{data.source_transcription?.filename}</p>
+            <p>Todos os campos foram preenchidos pela IA:</p>
+            <ul className="text-xs space-y-0.5 list-disc list-inside mt-1">
+              <li>{generatedData.benefits?.length || 0} benefícios</li>
+              <li>{generatedData.features?.length || 0} recursos</li>
+              <li>{generatedData.faq?.length || 0} FAQs</li>
+              <li>{generatedData.technical_specifications?.length || 0} especificações técnicas</li>
+            </ul>
+            <p className="text-xs font-mono mt-2">{data.source_transcription?.filename}</p>
             <p className="text-xs text-muted-foreground mt-2">
               ⚠️ Revise os campos e clique em "Salvar" para persistir
             </p>

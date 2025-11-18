@@ -128,7 +128,7 @@ ${JSON.stringify(inputJson, null, 2)}
 \`\`\`
 
 **TAREFAS DE GERAÇÃO:**
-Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 12 itens:
+Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 13 itens:
 
 1. **Descrição para E-commerce (300-400 palavras):** Texto amigável, focado em solução, destacando **Benefícios** e **Aplicações** (do input benefits[] e applications[]).
 
@@ -154,8 +154,27 @@ Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 12 itens:
 
 12. **10 FAQs:** Crie 10 perguntas e respostas curtas, usando as **instruções de uso**, **avisos** e **especificações técnicas** (do input usage_instructions[], warnings[], technical_specs[]) para otimizar SEO e responder dúvidas humanas.
 
+13. **Especificações Técnicas (technical_specifications):** Extraia 8-15 especificações técnicas CRÍTICAS do produto, usando os dados de technical_specs[], test_results[], materials[], device_settings[].
+    
+    **FORMATO OBRIGATÓRIO:** Array de objetos [{ label: "string", value: "string" }]
+    
+    **✅ EXEMPLOS CORRETOS:**
+    - { "label": "Resistência à Flexão", "value": "147 MPa" }
+    - { "label": "Rugosidade Superficial", "value": "1.5 μm" }
+    - { "label": "Composição de Carga", "value": "79,0±2% (peso)" }
+    - { "label": "Grau de Conversão", "value": "~53%" }
+    - { "label": "Tempo de Polimerização (Dentina)", "value": "30-40s" }
+    - { "label": "Radiopacidade", "value": "Conforme ISO 4049" }
+    - { "label": "Certificação", "value": "ISO 10993 completa" }
+    
+    **⚠️ REGRAS:**
+    - Priorize dados QUANTIFICÁVEIS (números, unidades, certificações)
+    - Use unidades padrão (MPa, μm, %, mm, s)
+    - Evite descrições longas no "value" (máx. 50 chars)
+    - Se houver range, use formato "30-40" ou "~53"
+
 **FORMATO DE SAÍDA:** 
-Retorne um JSON estruturado com os 12 campos. Use este schema exato:
+Retorne um JSON estruturado com os 13 campos. Use este schema exato:
 {
   "description": "string (descrição e-commerce 300-400 palavras)",
   "sales_pitch": "string (pitch de vendas 3 parágrafos)",
@@ -172,6 +191,12 @@ Retorne um JSON estruturado com os 12 campos. Use este schema exato:
     {
       "question": "string",
       "answer": "string"
+    }
+  ],
+  "technical_specifications": [
+    {
+      "label": "string (nome da especificação)",
+      "value": "string (valor ou dado quantificável)"
     }
   ]
 }`;
@@ -267,6 +292,18 @@ Retorne um JSON estruturado com os 12 campos. Use este schema exato:
                       required: ['question', 'answer']
                     },
                     description: '10 perguntas e respostas'
+                  },
+                  technical_specifications: { 
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        label: { type: 'string', description: 'Nome da especificação técnica' },
+                        value: { type: 'string', description: 'Valor ou dado quantificável' }
+                      },
+                      required: ['label', 'value']
+                    },
+                    description: '8-15 especificações técnicas estruturadas em formato { label, value }'
                   }
                 },
                 required: [
@@ -281,7 +318,8 @@ Retorne um JSON estruturado com os 12 campos. Use este schema exato:
                   'search_intent_keywords',
                   'benefits',
                   'features',
-                  'faq'
+                  'faq',
+                  'technical_specifications'
                 ],
                 additionalProperties: false
               }
