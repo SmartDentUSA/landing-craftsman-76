@@ -65,19 +65,62 @@ Deno.serve(async (req) => {
     // Normalizar payload (pode vir direto ou em .data)
     const payload = raw?.data ?? raw;
     
-    console.log('📦 Estrutura do payload Sistema B:', {
+    console.log('📦 Estrutura COMPLETA do payload Sistema B:', {
+      // Estrutura atual (manter)
       temProdutos: !!payload?.produtos,
       temResinas: !!payload?.produtos?.resinas,
       temDocumentos: !!payload?.produtos?.documentos_tecnicos,
       temCatalogDocs: !!payload?.catalog_documents,
       totalResinas: payload?.produtos?.resinas?.length || 0,
       totalDocumentos: payload?.produtos?.documentos_tecnicos?.length || 0,
-      totalCatalogDocs: payload?.catalog_documents?.length || 0
+      totalCatalogDocs: payload?.catalog_documents?.length || 0,
+      
+      // 🆕 NOVOS LOGS DIAGNÓSTICOS
+      chavesRaiz: Object.keys(payload || {}),
+      temCatalogDocsEmProdutos: !!(payload?.produtos?.catalog_documents),
+      temCatalogDocsEmData: !!(payload?.data?.catalog_documents),
+      totalCatalogDocsRaiz: (payload?.catalog_documents || []).length,
+      totalCatalogDocsProdutos: (payload?.produtos?.catalog_documents || []).length,
+      totalCatalogDocsData: (payload?.data?.catalog_documents || []).length,
+      
+      // Estrutura dos primeiros 3 catalog_documents
+      primeirosCatalogDocs: (
+        payload?.catalog_documents || 
+        payload?.produtos?.catalog_documents || 
+        payload?.data?.catalog_documents ||
+        []
+      ).slice(0, 3).map((doc: any) => ({
+        id: doc?.id,
+        nome: doc?.document_name,
+        product_external_id: doc?.product_external_id,
+        product_external_id_tipo: typeof doc?.product_external_id,
+        active: doc?.active,
+        file_url: doc?.file_url ? 'presente' : 'ausente'
+      }))
     });
 
     const resinas = payload?.produtos?.resinas || [];
     const documentosTecnicos = payload?.produtos?.documentos_tecnicos || [];
-    const catalogDocuments = payload?.catalog_documents || [];
+    
+    // 🆕 FALLBACK: Tentar MÚLTIPLAS localizações possíveis
+    const catalogDocuments = 
+      payload?.catalog_documents ||           // Raiz (esperado conforme docs)
+      payload?.produtos?.catalog_documents || // Dentro de produtos (fallback 1)
+      payload?.data?.catalog_documents ||     // Dentro de data (fallback 2)
+      [];
+
+    console.log('🔍 Origem de catalog_documents detectada:', {
+      naRaiz: !!(payload?.catalog_documents),
+      emProdutos: !!(payload?.produtos?.catalog_documents),
+      emData: !!(payload?.data?.catalog_documents),
+      totalEncontrado: catalogDocuments.length,
+      primeirosIds: catalogDocuments.slice(0, 5).map((d: any) => ({
+        id: d?.id,
+        nome: d?.document_name,
+        product_external_id: d?.product_external_id,
+        active: d?.active
+      }))
+    });
 
     // 3. FASE 2: Criar mapa de resinas por loja_integrada_id
     const resinasByLojaId: { [key: string]: any } = {};
@@ -213,6 +256,33 @@ Deno.serve(async (req) => {
       if (!liProductId) continue;
 
       const docs = documentsByLojaId[liProductId] || [];
+      
+      // 🆕 DEBUG ESPECÍFICO PARA PRODUTO 373844367
+      if (liProductId === '373844367') {
+        const catalogDocsParaEsseProduto = catalogDocuments.filter((d: any) => 
+          String(d?.product_external_id) === liProductId
+        );
+        
+        console.log('🔍 DEBUG DETALHADO PRODUTO 373844367:', {
+          liProductId,
+          totalCatalogDocsGlobal: catalogDocuments.length,
+          catalogDocsMatchingEsseProduto: catalogDocsParaEsseProduto.length,
+          catalogDocsMatchingExemplos: catalogDocsParaEsseProduto.map((d: any) => ({
+            id: d?.id,
+            nome: d?.document_name,
+            external_id: d?.product_external_id,
+            active: d?.active
+          })),
+          exemploIds10Primeiros: catalogDocuments.slice(0, 10).map((d: any) => ({
+            id: d?.id,
+            external_id: d?.product_external_id,
+            external_id_tipo: typeof d?.product_external_id,
+            match: String(d?.product_external_id) === liProductId
+          })),
+          docsEncontradosNoMap: docs.length,
+          docsNoMapOrigem: docs.map(d => d.origem)
+        });
+      }
       
       if (docs.length === 0) {
         const temCatalogDocs = !!catalogDocuments.find(d => String(d.product_external_id) === liProductId);
