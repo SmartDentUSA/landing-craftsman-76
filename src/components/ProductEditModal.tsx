@@ -730,6 +730,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
       console.log('✅ Card gerado:', generatedData);
 
+      // ========== FASE 1: DEBUG ESPECÍFICO PARA TECHNICAL_SPECIFICATIONS ==========
+      console.log('🔧 [DEBUG] Technical Specifications recebidas:', {
+        existe: !!generatedData.technical_specifications,
+        tipo: typeof generatedData.technical_specifications,
+        quantidade: generatedData.technical_specifications?.length || 0,
+        conteudo: generatedData.technical_specifications
+      });
+
       // Preencher todos os campos do formulário
       setFormData(prev => ({
         ...prev,
@@ -755,17 +763,37 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       if (generatedData.market_keywords) setMarketKeywords(generatedData.market_keywords);
       if (generatedData.search_intent_keywords) setSearchIntentKeywords(generatedData.search_intent_keywords);
 
+      // ========== FASE 4: INTERFACE DE VALIDAÇÃO VISUAL ==========
+      const hasSpecs = generatedData.technical_specifications?.length > 0;
+      
       toast({
-        title: "✨ Card gerado com sucesso!",
+        title: hasSpecs 
+          ? "✨ Card gerado com sucesso!" 
+          : "⚠️ Card gerado parcialmente",
         description: (
           <div className="space-y-1">
-            <p>Todos os campos foram preenchidos pela IA:</p>
+            <p>Campos preenchidos pela IA:</p>
             <ul className="text-xs space-y-0.5 list-disc list-inside mt-1">
               <li>{generatedData.benefits?.length || 0} benefícios</li>
               <li>{generatedData.features?.length || 0} recursos</li>
               <li>{generatedData.faq?.length || 0} FAQs</li>
-              <li>{generatedData.technical_specifications?.length || 0} especificações técnicas</li>
+              <li className={hasSpecs ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                {generatedData.technical_specifications?.length || 0} especificações técnicas
+                {!hasSpecs && ' ❌'}
+              </li>
             </ul>
+            {!hasSpecs && (
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <p className="font-semibold">⚠️ Especificações técnicas não foram geradas</p>
+                <p className="mt-1">Possíveis causas:</p>
+                <ul className="list-disc list-inside ml-2 mt-0.5">
+                  <li>Documento sem dados técnicos quantificáveis</li>
+                  <li>PDF muito genérico ou institucional</li>
+                </ul>
+                <p className="mt-1 font-semibold">💡 Recomendação:</p>
+                <p className="ml-2">Faça upload de fichas técnicas com especificações numéricas (MPa, %, μm, etc.)</p>
+              </div>
+            )}
             <p className="text-xs font-mono mt-2">{data.source_transcription?.filename}</p>
             <p className="text-xs text-muted-foreground mt-2">
               ⚠️ Revise os campos e clique em "Salvar" para persistir

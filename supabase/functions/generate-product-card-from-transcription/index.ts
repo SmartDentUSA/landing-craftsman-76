@@ -109,6 +109,26 @@ serve(async (req) => {
 
     console.log('📋 INPUT preparado:', JSON.stringify(inputJson).substring(0, 200), '...');
 
+    // ========== FASE 2: VALIDAÇÃO DE QUALIDADE DOS DADOS ==========
+    const dataQualityScore = {
+      technical_specs: (inputJson.technical_specs?.length || 0),
+      test_results: (inputJson.test_results?.length || 0),
+      materials: (inputJson.materials?.length || 0),
+      device_settings: (inputJson.device_settings?.length || 0)
+    };
+
+    const totalDataPoints = Object.values(dataQualityScore).reduce((a, b) => a + b, 0);
+
+    console.log('🔬 [VALIDAÇÃO] Qualidade dos dados de entrada:', {
+      ...dataQualityScore,
+      total: totalDataPoints,
+      qualidade: totalDataPoints >= 10 ? 'ALTA' : totalDataPoints >= 5 ? 'MÉDIA' : 'BAIXA'
+    });
+
+    if (totalDataPoints === 0) {
+      console.warn('⚠️ [VALIDAÇÃO] Nenhum dado técnico disponível! Não será possível gerar especificações.');
+    }
+
     // Prompt do usuário para geração do card
     const systemPrompt = `Você é um Copywriter Sênior especializado em produtos médicos e odontológicos, com foco em conversão e SEO.
 
@@ -154,9 +174,16 @@ Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 13 itens:
 
 12. **10 FAQs:** Crie 10 perguntas e respostas curtas, usando as **instruções de uso**, **avisos** e **especificações técnicas** (do input usage_instructions[], warnings[], technical_specs[]) para otimizar SEO e responder dúvidas humanas.
 
-13. **Especificações Técnicas (technical_specifications):** Extraia 8-15 especificações técnicas CRÍTICAS do produto, usando os dados de technical_specs[], test_results[], materials[], device_settings[].
+13. **Especificações Técnicas (technical_specifications):** 
+    ⚠️ CAMPO CRÍTICO - NUNCA RETORNE ARRAY VAZIO
     
-    **FORMATO OBRIGATÓRIO:** Array de objetos [{ label: "string", value: "string" }]
+    Extraia 8-15 especificações técnicas CRÍTICAS do produto usando ESTAS FONTES NA ORDEM DE PRIORIDADE:
+    1. technical_specs[] (PRIORIDADE MÁXIMA - dados quantificáveis)
+    2. test_results[] (se houver valores numéricos de testes)
+    3. materials[] (se houver composição quantificada)
+    4. device_settings[] (se houver parâmetros técnicos mensuráveis)
+    
+    **FORMATO OBRIGATÓRIO:** [{ label: "string", value: "string" }]
     
     **✅ EXEMPLOS CORRETOS:**
     - { "label": "Resistência à Flexão", "value": "147 MPa" }
@@ -167,11 +194,18 @@ Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 13 itens:
     - { "label": "Radiopacidade", "value": "Conforme ISO 4049" }
     - { "label": "Certificação", "value": "ISO 10993 completa" }
     
-    **⚠️ REGRAS:**
+    **⚠️ REGRAS OBRIGATÓRIAS:**
+    - NUNCA retorne array vazio []
+    - NUNCA invente dados não presentes no INPUT
     - Priorize dados QUANTIFICÁVEIS (números, unidades, certificações)
     - Use unidades padrão (MPa, μm, %, mm, s)
     - Evite descrições longas no "value" (máx. 50 chars)
     - Se houver range, use formato "30-40" ou "~53"
+    
+    **SE NÃO HOUVER DADOS TÉCNICOS SUFICIENTES:**
+    - Retorne pelo menos 3-5 especificações baseadas em device_settings[] ou materials[]
+    - Exemplo: { "label": "Tipo de Material", "value": "Resina Composta" }
+    - Exemplo: { "label": "Equipamento", "value": "Otoflash G171" }
 
 **FORMATO DE SAÍDA:** 
 Retorne um JSON estruturado com os 13 campos. Use este schema exato:
@@ -346,6 +380,69 @@ Retorne um JSON estruturado com os 13 campos. Use este schema exato:
     }
 
     const generatedData = JSON.parse(toolCall.function.arguments);
+    
+    // ========== FASE 1: LOGS DE DEBUG DETALHADOS ==========
+    console.log('📊 [DEBUG] Resposta completa da IA:', JSON.stringify(toolCall.function.arguments, null, 2).substring(0, 500), '...');
+
+    const techSpecs = generatedData.technical_specifications;
+    console.log('📋 [DEBUG] Technical Specifications retornadas pela IA:', techSpecs);
+    console.log('📏 [DEBUG] Quantidade de specs:', techSpecs?.length || 0);
+
+    if (!techSpecs || techSpecs.length === 0) {
+      console.warn('⚠️ [DEBUG] IA retornou array vazio de technical_specifications!');
+      console.log('🔬 [DEBUG] Dados disponíveis no input eram:', {
+        technical_specs: inputJson.technical_specs?.length || 0,
+        test_results: inputJson.test_results?.length || 0,
+        materials: inputJson.materials?.length || 0,
+        device_settings: inputJson.device_settings?.length || 0
+      });
+
+      // ========== FASE 5: SISTEMA DE FALLBACK INTELIGENTE ==========
+      console.warn('⚠️ Aplicando fallback: gerando especificações manualmente do input...');
+      
+      const fallbackSpecs = [];
+      
+      // Extrair de device_settings
+      if (inputJson.device_settings && inputJson.device_settings.length > 0) {
+        inputJson.device_settings.forEach(device => {
+          if (device.settings && device.settings.length > 0) {
+            device.settings.slice(0, 3).forEach(setting => {
+              fallbackSpecs.push({
+                label: setting.parameter || 'Configuração',
+                value: setting.value || 'N/A'
+              });
+            });
+          }
+        });
+      }
+      
+      // Extrair de technical_specs
+      if (inputJson.technical_specs && inputJson.technical_specs.length > 0) {
+        inputJson.technical_specs.slice(0, 5).forEach(spec => {
+          fallbackSpecs.push({
+            label: spec.property || spec.name || 'Especificação',
+            value: spec.value || 'N/A'
+          });
+        });
+      }
+      
+      // Extrair de materials
+      if (inputJson.materials && inputJson.materials.length > 0) {
+        inputJson.materials.slice(0, 3).forEach(material => {
+          fallbackSpecs.push({
+            label: material.name || 'Material',
+            value: material.percentage || material.composition || 'N/A'
+          });
+        });
+      }
+      
+      if (fallbackSpecs.length > 0) {
+        console.log('✅ Fallback gerou', fallbackSpecs.length, 'especificações');
+        generatedData.technical_specifications = fallbackSpecs;
+      } else {
+        console.error('❌ Fallback falhou: não foi possível gerar especificações');
+      }
+    }
     
     console.log('✅ Card gerado com sucesso!');
     console.log('📊 Campos gerados:', Object.keys(generatedData).join(', '));
