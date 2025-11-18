@@ -1305,6 +1305,41 @@ function generateProductSchema(product: any): string {
   return JSON.stringify(schema, null, 2);
 }
 
+// Generate FAQPage Schema.org JSON-LD
+function generateFAQSchema(product: any): string | null {
+  // Validar se há FAQs ricas suficientes
+  if (!product.faq || !Array.isArray(product.faq)) {
+    return null;
+  }
+
+  const validFaqs = product.faq.filter((faq: any) => 
+    faq.question && 
+    faq.answer && 
+    faq.answer.length > 100 // Apenas FAQs ricas (>100 chars)
+  );
+
+  if (validFaqs.length < 5) {
+    console.log(`⚠️ FAQs insuficientes para Schema.org (${validFaqs.length}/5 mínimo)`);
+    return null;
+  }
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": validFaqs.map((faq: any) => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer.replace(/<[^>]*>/g, '') // Remove HTML para Schema.org
+      }
+    }))
+  };
+
+  console.log(`✅ Schema FAQPage gerado com ${validFaqs.length} FAQs`);
+  return JSON.stringify(schema, null, 2);
+}
+
 // Build SEO Head section with meta tags
 function buildSEOHead(product: any): string {
   const title = product.seo_title_override || `${product.name} | Smartdent`;
@@ -1373,6 +1408,12 @@ function buildSEOHead(product: any): string {
   <script type="application/ld+json">
   ${generateProductSchema(product)}
   </script>
+  
+  <!-- FAQPage Schema JSON-LD -->
+  ${(() => {
+    const faqSchema = generateFAQSchema(product);
+    return faqSchema ? `<script type="application/ld+json">\n  ${faqSchema}\n  </script>` : '';
+  })()}
 </head>
 <body>`;
 }

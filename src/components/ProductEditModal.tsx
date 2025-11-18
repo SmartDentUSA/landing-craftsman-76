@@ -777,6 +777,19 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       // ========== FASE 4: INTERFACE DE VALIDAÇÃO VISUAL ==========
       const hasSpecs = generatedData.technical_specifications?.length > 0;
       
+      // Validar qualidade das FAQs
+      const faqQualityCheck = {
+        quantidade: generatedData.faq?.length || 0,
+        com_dados_tecnicos: generatedData.faq?.filter((f: any) => 
+          /\d+|MPa|ISO|FDA|ANVISA|%|mm|s|μm|GPa/.test(f.answer)
+        ).length || 0,
+        tamanho_medio: Math.round(
+          generatedData.faq?.reduce((acc: number, f: any) => 
+            acc + (f.answer?.split(/\s+/).length || 0), 0
+          ) / (generatedData.faq?.length || 1) || 0
+        )
+      };
+
       toast({
         title: hasSpecs 
           ? "✨ Card gerado com sucesso!" 
@@ -793,12 +806,50 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               </li>
               <li>{generatedData.benefits?.length || 0} benefícios</li>
               <li>{generatedData.features?.length || 0} recursos</li>
-              <li>{generatedData.faq?.length || 0} FAQs</li>
+              <li className={
+                faqQualityCheck.quantidade >= 10 && faqQualityCheck.com_dados_tecnicos >= 5
+                  ? 'text-green-600'
+                  : faqQualityCheck.quantidade > 0
+                  ? 'text-yellow-600'
+                  : 'text-red-600'
+              }>
+                {faqQualityCheck.quantidade} FAQs
+                {faqQualityCheck.quantidade >= 10 && faqQualityCheck.com_dados_tecnicos >= 5 && ' ✅'}
+                {faqQualityCheck.quantidade > 0 && faqQualityCheck.quantidade < 10 && ' ⚠️'}
+                {faqQualityCheck.tamanho_medio > 0 && (
+                  <span className="text-xs ml-1">
+                    ({faqQualityCheck.tamanho_medio} palavras/FAQ)
+                  </span>
+                )}
+              </li>
               <li className={hasSpecs ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
                 {generatedData.technical_specifications?.length || 0} especificações técnicas
                 {!hasSpecs && ' ❌'}
               </li>
             </ul>
+            
+            {/* Preview da primeira FAQ */}
+            {generatedData.faq && generatedData.faq.length > 0 && (
+              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                <p className="font-semibold text-blue-900">📋 Preview FAQ #1:</p>
+                <p className="text-blue-800 font-medium mt-1">{generatedData.faq[0].question}</p>
+                <div 
+                  className="text-blue-700 mt-1 line-clamp-2"
+                  dangerouslySetInnerHTML={{ 
+                    __html: generatedData.faq[0].answer?.substring(0, 150) + '...' 
+                  }}
+                />
+                <div className="flex gap-2 mt-1">
+                  <span className={/\d+/.test(generatedData.faq[0].answer) ? 'text-green-600' : 'text-red-600'}>
+                    {/\d+/.test(generatedData.faq[0].answer) ? '✅' : '❌'} Dados numéricos
+                  </span>
+                  <span className={/<strong>/.test(generatedData.faq[0].answer) ? 'text-green-600' : 'text-red-600'}>
+                    {/<strong>/.test(generatedData.faq[0].answer) ? '✅' : '❌'} Formatação
+                  </span>
+                </div>
+              </div>
+            )}
+            
             {!hasSpecs && (
               <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
                 <p className="font-semibold">⚠️ Especificações técnicas não foram geradas</p>
