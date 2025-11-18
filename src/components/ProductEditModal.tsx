@@ -751,6 +751,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       if (generatedData.target_audience) setTargetAudience(generatedData.target_audience);
       if (generatedData.benefits) setBenefits(generatedData.benefits);
       if (generatedData.features) setFeatures(generatedData.features);
+      if (generatedData.market_keywords) setMarketKeywords(generatedData.market_keywords);
+      if (generatedData.search_intent_keywords) setSearchIntentKeywords(generatedData.search_intent_keywords);
 
       toast({
         title: "✨ Card gerado com sucesso!",
