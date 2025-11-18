@@ -163,8 +163,8 @@ Os dados acima são TUDO que você tem. Se algum campo mostra "N/A", significa q
 6. Mencionar GTIN/MPN quando relevante
 
 **EXEMPLO DE FAQ PERFEITA**:
-Q: "O ${product.name} é compatível com Exocad e 3Shape?"
-A: "Sim, o ${product.name} (GTIN: ${product.gtin || 'N/A'}) possui integração nativa com Exocad 3.0+ e 3Shape Dental System 2021+ via protocolo STL/PLY. A conexão é plug-and-play via USB 3.0, sem necessidade de instalação de drivers adicionais. Isso permite exportar capturas diretamente para o workflow CAD/CAM em menos de 5 segundos após o escaneamento."
+Q: "O ${fullProduct.name} é compatível com Exocad e 3Shape?"
+A: "Sim, o ${fullProduct.name} (GTIN: ${fullProduct.gtin || 'N/A'}) possui integração nativa com Exocad 3.0+ e 3Shape Dental System 2021+ via protocolo STL/PLY. A conexão é plug-and-play via USB 3.0, sem necessidade de instalação de drivers adicionais. Isso permite exportar capturas diretamente para o workflow CAD/CAM em menos de 5 segundos após o escaneamento."
 
 **INSTRUÇÕES CRÍTICAS - ANTI-ALUCINAÇÃO:**
 1. Use APENAS as informações fornecidas acima - NÃO invente dados externos
@@ -203,11 +203,11 @@ VERIFIQUE: Antes de gerar a FAQ, releia as 9 anteriores e garanta que o argument
        - Dados numéricos únicos (GTIN, MPN, dimensões, peso)
 
 **REGRA OBRIGATÓRIA - HYPERLINKS:**
-${product.product_url !== 'N/A' ? `SEMPRE que mencionar o nome do produto "${product.name}" nas respostas, use este formato exato:
-<a href="${product.product_url}" target="_blank">${product.name}</a>
+${fullProduct.product_url !== 'N/A' ? `SEMPRE que mencionar o nome do produto "${fullProduct.name}" nas respostas, use este formato exato:
+<a href="${fullProduct.product_url}" target="_blank">${fullProduct.name}</a>
 
 Exemplo correto:
-"O <a href="${product.product_url}" target="_blank">${product.name}</a> oferece diversos benefícios..."` : 'Mencione o produto pelo nome sem hyperlinks.'}
+"O <a href="${fullProduct.product_url}" target="_blank">${fullProduct.name}</a> oferece diversos benefícios..."` : 'Mencione o produto pelo nome sem hyperlinks.'}
 
 **FORMATO DE SAÍDA (JSON VÁLIDO):**
 [
@@ -324,17 +324,17 @@ OBRIGATÓRIO:
 
         // 2. O termo é justificado por QUALQUER campo de dado estruturado?
         const isJustifiedIn = {
-          description: product.description?.toLowerCase().includes(term) || false,
-          sales_pitch: product.sales_pitch?.toLowerCase().includes(term) || false,
-          warranty: product.warranty_info?.toLowerCase().includes(term) || false,
-          benefits: (product.benefits || []).some((b: string) => b.toLowerCase().includes(term)),
-          features: (product.features || []).some((f: string) => f.toLowerCase().includes(term)),
-          technical_specs: Array.isArray(product.technical_specifications) 
-            ? product.technical_specifications.some((spec: any) => {
+          description: fullProduct.description?.toLowerCase().includes(term) || false,
+          sales_pitch: fullProduct.sales_pitch?.toLowerCase().includes(term) || false,
+          warranty: fullProduct.warranty_info?.toLowerCase().includes(term) || false,
+          benefits: (fullProduct.benefits || []).some((b: string) => b.toLowerCase().includes(term)),
+          features: (fullProduct.features || []).some((f: string) => f.toLowerCase().includes(term)),
+          technical_specs: Array.isArray(fullProduct.technical_specifications) 
+            ? fullProduct.technical_specifications.some((spec: any) => {
                 const specValue = typeof spec === 'object' ? spec.value : spec;
                 return specValue?.toString().toLowerCase().includes(term);
               })
-            : (product.technical_specifications?.toString().toLowerCase().includes(term) || false)
+            : (fullProduct.technical_specifications?.toString().toLowerCase().includes(term) || false)
         };
 
         const isJustified = Object.values(isJustifiedIn).some(v => v === true);
