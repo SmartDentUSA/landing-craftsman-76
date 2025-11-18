@@ -1947,23 +1947,63 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       return;
     }
 
+    if (!product?.id) {
+      toast({
+        title: "⚠️ Produto não salvo",
+        description: "Salve o produto antes de gerar FAQs.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setGeneratingFAQs(true);
     try {
-      console.log('[ProductEditModal] Gerando FAQs para:', formData.name);
+      console.log('[ProductEditModal] Iniciando geração de FAQs em 2 etapas para:', formData.name);
       
-    const { data, error } = await supabase.functions.invoke('generate-product-faqs', {
-      body: { 
-        product: {
-          name: formData.name,
-          description: formData.description,
-          sales_pitch: formData.sales_pitch,
-          keywords: formData.keywords,
-          benefits: formData.benefits,
-          features: formData.features,
-          product_url: formData.product_url || formData.slug || null,
+      // ETAPA 1: Verificar se precisa gerar card primeiro
+      const hasRichData = formData.technical_specifications && formData.technical_specifications.length >= 3;
+      
+      if (!hasRichData) {
+        console.log('[ProductEditModal] Etapa 1/2: Gerando conteúdo do card...');
+        toast({
+          title: "🔄 Etapa 1/2",
+          description: "Gerando conteúdo rico do produto...",
+        });
+
+        const { data: cardData, error: cardError } = await supabase.functions.invoke('generate-product-card-from-transcription', {
+          body: {
+            product_id: product.id,
+            product_name: formData.name
+          }
+        });
+
+        if (cardError) throw cardError;
+
+        if (cardData?.success && cardData?.data) {
+          console.log('[ProductEditModal] Card gerado com sucesso, aplicando dados...');
+          // Aplicar dados do card ao formData
+          setFormData(prev => ({
+            ...prev,
+            ...cardData.data,
+            // Preservar campos que não devem ser sobrescritos
+            id: prev.id,
+            name: prev.name,
+          }));
         }
       }
-    });
+
+      // ETAPA 2: Buscar produto completo do DB e gerar FAQs
+      console.log('[ProductEditModal] Etapa 2/2: Gerando FAQs otimizadas...');
+      toast({
+        title: "🔄 Etapa 2/2",
+        description: "Gerando FAQs otimizadas...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-product-faqs', {
+        body: {
+          productId: product.id
+        }
+      });
 
       if (error) {
         console.error('[ProductEditModal] Erro ao gerar FAQs:', error);
@@ -1972,13 +2012,12 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
 
       console.log('[ProductEditModal] FAQs gerados:', data.faqs.length);
 
-      // Adicionar FAQs gerados ao final dos existentes
-      const newFaqs = [...(formData.faq || []), ...data.faqs];
-      setFormData(prev => ({ ...prev, faq: newFaqs }));
+      // SUBSTITUIR FAQs existentes (modo replace)
+      setFormData(prev => ({ ...prev, faq: data.faqs }));
 
       toast({
         title: "✅ FAQs Gerados com Sucesso!",
-        description: `${data.faqs.length} FAQs foram adicionados ao produto. Total: ${newFaqs.length} FAQs`,
+        description: `${data.faqs.length} FAQs ricas foram geradas e substituíram as anteriores.`,
       });
 
     } catch (error) {
@@ -3108,7 +3147,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               
               <Button
                 onClick={handleGenerateFAQs}
-                disabled={generatingFAQs || !formData.name || !formData.description}
+                disabled={generatingFAQs || !formData.name || !formData.description || !product?.id}
                 variant="outline"
                 className="gap-2"
                 type="button"
@@ -3116,7 +3155,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 {generatingFAQs ? (
                   <>
                     <span className="animate-spin">⏳</span>
-                    Gerando FAQs...
+                    Gerando FAQs (2 etapas)...
                   </>
                 ) : (
                   <>
