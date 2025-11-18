@@ -199,7 +199,74 @@ Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 13 itens:
 
 11. **Recursos:** 5-7 frases descritivas das tecnologias ou diferenciais (baseado em features[]).
 
-12. **10 FAQs:** Crie 10 perguntas e respostas curtas, usando as **instruções de uso**, **avisos** e **especificações técnicas** (do input usage_instructions[], warnings[], technical_specs[]) para otimizar SEO e responder dúvidas humanas.
+12. **10 FAQs Otimizadas para IAs de Busca:** 
+    ⚠️ CAMPO CRÍTICO PARA SEO E IAs (Google Gemini, ChatGPT, Perplexity)
+    ⚠️ IMPORTANTE: Use as especificações técnicas (technical_specifications) que você gerou como FONTE DE DADOS primária para criar estas FAQs.
+    
+    **FONTES DE DADOS OBRIGATÓRIAS (USE TODAS):**
+    1. ✅ **technical_specifications** (que você acabou de gerar) → Dados quantificáveis principais
+    2. ✅ **technical_specs[]** → Especificações complementares
+    3. ✅ **test_results[]** → Resultados de testes clínicos
+    4. ✅ **materials[]** → Composição, certificações
+    5. ✅ **device_settings[]** → Protocolos de uso
+    6. ✅ **certifications[]** → ISO, FDA, ANVISA, CE
+    7. ✅ **usage_instructions[]** → Passo a passo
+    8. ✅ **warnings[]** → Contraindicações
+    9. ✅ **compatibility[]** → Equipamentos compatíveis
+    10. ✅ **applications[]** → Casos de uso
+    
+    **DISTRIBUIÇÃO OBRIGATÓRIA (10 FAQs):**
+    - 3 FAQs: **Compatibilidade Técnica** (equipamentos, protocolos, integração)
+    - 2 FAQs: **Especificações e Dados Técnicos** (resistência, composição, medidas)
+    - 2 FAQs: **Certificações e Segurança** (ISO, ANVISA, biocompatibilidade)
+    - 1 FAQ: **ROI e Custo-Benefício** (tempo de uso, durabilidade, payback)
+    - 1 FAQ: **Implementação Prática** (treinamento, instalação)
+    - 1 FAQ: **Caso de Uso Real** (aplicação específica, protocolo clínico)
+    
+    **FORMATO DE RESPOSTA OBRIGATÓRIO (60-100 palavras):**
+    
+    **Estrutura de 3 Sentenças:**
+    1. **Sentença 1 (Resposta Direta):** Responda com DADO NUMÉRICO ou CERTIFICAÇÃO
+       - Exemplo: "Sim, possui <strong>certificação ISO 10993 completa</strong> com resistência de <strong>148 MPa</strong>."
+    
+    2. **Sentença 2 (Contexto Técnico):** Adicione 2-3 especificações complementares
+       - Exemplo: "A composição de <strong>59% de carga em peso</strong> foi testada por <strong>5 anos</strong> em <em>estudos clínicos longitudinais</em>."
+    
+    3. **Sentença 3 (Benefício Prático):** Traduza dados em benefício real
+       - Exemplo: "Isso garante <em>durabilidade superior a 5 anos</em> em restaurações classe III e IV com taxa de sucesso de 98%."
+    
+    **FORMATAÇÃO HTML OBRIGATÓRIA:**
+    - Use <strong> para: números, unidades, certificações, normas
+    - Use <em> para: termos técnicos importantes, benefícios clínicos
+    - Use <ul><li> para: listas de compatibilidade, requisitos
+    
+    **EXEMPLOS DE FAQs PERFEITAS:**
+    
+    **Exemplo 1 - Certificação:**
+    Q: "O ${product_name} possui certificação de biocompatibilidade para uso intraoral?"
+    A: "Sim, o <strong>${product_name}</strong> possui <strong>certificação ISO 10993 completa</strong>, validando todos os testes de citotoxicidade, sensibilização e irritação cutânea. A composição com <strong>59% de carga em peso</strong> foi testada clinicamente por <strong>5 anos consecutivos</strong> com taxa de aprovação de <em>98% em restaurações diretas</em>. Isso garante segurança biológica para uso intraoral em pacientes com histórico de alergias a materiais odontológicos." (89 palavras)
+    
+    **Exemplo 2 - Protocolo Técnico:**
+    Q: "Qual o protocolo de pós-cura recomendado para o ${product_name} usando equipamento Otoflash?"
+    A: "O protocolo validado é <strong>Otoflash G171 com 5000 flashes</strong>, garantindo <strong>resistência à flexão de 148 MPa</strong> e módulo de elasticidade de <strong>7,4 GPa</strong>. Este protocolo foi clinicamente comprovado em <em>estudos longitudinais de 60 meses</em> com taxa de sucesso superior a 95%. A configuração otimizada evita degradação prematura e garante <em>estabilidade de cor por 3+ anos</em> em ambiente oral." (72 palavras)
+    
+    **⚠️ REGRAS ANTI-ALUCINAÇÃO:**
+    - ❌ NUNCA invente dados não presentes no INPUT
+    - ❌ SE não houver certificações[] → NÃO mencionar certificações específicas
+    - ❌ SE não houver test_results[] → NÃO citar estudos clínicos
+    - ❌ SE não houver device_settings[] → NÃO criar protocolos fictícios
+    - ✅ SE faltar dados, use linguagem genérica
+    - ✅ SEMPRE prefira silêncio à invenção
+    
+    **⚠️ REGRA DE DIVERSIDADE (CRÍTICA):**
+    Cada FAQ deve ter um **ARGUMENTO CENTRAL ÚNICO**. NUNCA repita o mesmo dado como foco principal em 2+ FAQs.
+    
+    **ESTRATÉGIA:**
+    1. Leia TODOS os campos do INPUT
+    2. Identifique os 10 dados mais importantes/únicos
+    3. Crie 1 FAQ focada em cada dado
+    4. Enriqueça com 2-3 dados secundários
+    5. Adicione benefício prático
 
 13. **Especificações Técnicas (technical_specifications):** 
     ⚠️ CAMPO CRÍTICO - NUNCA RETORNE ARRAY VAZIO
