@@ -738,6 +738,17 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         conteudo: generatedData.technical_specifications
       });
 
+      // ========== VALIDAÇÃO DE ESPECIFICIDADE DO CONTEÚDO ==========
+      const descriptionMentionsProduct = generatedData.description?.includes(product.name);
+      const pitchMentionsProduct = generatedData.sales_pitch?.includes(product.name);
+
+      if (!descriptionMentionsProduct) {
+        console.warn('⚠️ Descrição não menciona o nome do produto específico:', product.name);
+      }
+      if (!pitchMentionsProduct) {
+        console.warn('⚠️ Pitch não menciona o nome do produto específico:', product.name);
+      }
+
       // Preencher todos os campos do formulário
       setFormData(prev => ({
         ...prev,
@@ -774,6 +785,12 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           <div className="space-y-1">
             <p>Campos preenchidos pela IA:</p>
             <ul className="text-xs space-y-0.5 list-disc list-inside mt-1">
+              <li className={descriptionMentionsProduct ? 'text-green-600' : 'text-yellow-600'}>
+                Descrição {descriptionMentionsProduct ? '✅' : '⚠️ (genérica)'}
+              </li>
+              <li className={pitchMentionsProduct ? 'text-green-600' : 'text-yellow-600'}>
+                Pitch de Vendas {pitchMentionsProduct ? '✅' : '⚠️ (genérico)'}
+              </li>
               <li>{generatedData.benefits?.length || 0} benefícios</li>
               <li>{generatedData.features?.length || 0} recursos</li>
               <li>{generatedData.faq?.length || 0} FAQs</li>
