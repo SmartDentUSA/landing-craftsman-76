@@ -84,8 +84,14 @@ serve(async (req) => {
     const extractedData = bestTranscription.extracted_data || {};
     
     // Preparar INPUT JSON para o prompt
+    // Extrair variante específica do nome (ex: "DA1" de "Atos - DA1")
+    const variantMatch = product_name.match(/[-\s]([A-Z0-9]+)$/);
+    const variant_code = variantMatch ? variantMatch[1] : null;
+
     const inputJson = {
-      product_name: extractedData.product_name || product_name,
+      product_name: product_name, // SEMPRE usa o nome exato do card, não o genérico do PDF
+      product_line: extractedData.product_name || extractedData.brand, // Nome genérico da linha/família
+      variant_code: variant_code, // Ex: "DA1", "DA2", etc.
       brand: extractedData.brand,
       model: extractedData.model,
       sku: extractedData.sku,
@@ -134,6 +140,18 @@ serve(async (req) => {
 
 Sua tarefa é gerar conteúdo otimizado para um card de produto baseado SOMENTE nos dados fornecidos no INPUT JSON.
 
+CONTEXTO DO PRODUTO:
+- PRODUTO ESPECÍFICO: "${product_name}"
+${variant_code ? `- VARIANTE/CÓDIGO: "${variant_code}"` : ''}
+${inputJson.product_line ? `- LINHA/FAMÍLIA: "${inputJson.product_line}"` : ''}
+
+⚠️ REGRA DE ESPECIFICIDADE:
+Este card é para o produto INDIVIDUAL "${product_name}", NÃO para a linha/família genérica.
+- Se o documento menciona múltiplos produtos, foque APENAS no "${product_name}"
+- Se houver características específicas desta variante (cor, tonalidade, viscosidade, aplicação específica), destaque-as
+- Diferencie este produto dos demais da mesma linha quando aplicável
+- Use o nome completo "${product_name}" na primeira menção da descrição
+
 REGRAS CRÍTICAS:
 - Use APENAS os dados fornecidos no INPUT
 - NÃO invente informações
@@ -150,9 +168,18 @@ ${JSON.stringify(inputJson, null, 2)}
 **TAREFAS DE GERAÇÃO:**
 Usando **SOMENTE** os dados do INPUT fornecido, gere os seguintes 13 itens:
 
-1. **Descrição para E-commerce (300-400 palavras):** Texto amigável, focado em solução, destacando **Benefícios** e **Aplicações** (do input benefits[] e applications[]).
+1. **Descrição para E-commerce (300-400 palavras):** 
+   - PRIMEIRA FRASE: Comece mencionando o nome completo "${product_name}" e sua principal aplicação
+   - Foque nas características ESPECÍFICAS deste produto (não genéricas da linha)
+   - Se houver variante (ex: cor DA1, viscosidade específica), mencione no primeiro parágrafo
+   - Destaque o que torna ESTE produto único dentro da linha
+   - Texto amigável, focado em solução, destacando **Benefícios** e **Aplicações** (do input benefits[] e applications[])
 
-2. **Discurso Comercial / Pitch de Vendas (Para SPIN):** Três parágrafos curtos e persuasivos focados em **Diferenciais** (do input features[]) para iniciar uma conversa de vendas.
+2. **Discurso Comercial / Pitch de Vendas (Para SPIN):** 
+   - Foque nos diferenciais ESPECÍFICOS do "${product_name}"
+   - Se houver dados técnicos exclusivos desta variante, use-os como argumento
+   - Abordagem consultiva: "Por que escolher ${product_name} e não outro da linha?"
+   - Três parágrafos curtos e persuasivos focados em **Diferenciais** (do input features[]) para iniciar uma conversa de vendas
 
 3. **Aplicações do Produto (em Lista):** Lista objetiva (applications[] do JSON).
 
