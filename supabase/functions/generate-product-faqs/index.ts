@@ -12,58 +12,97 @@ serve(async (req) => {
   }
 
   try {
-    const { product } = await req.json();
+    const { product, productId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    console.log('[generate-product-faqs] Iniciando geração de FAQs para:', product.name);
+    let fullProduct = product;
+
+    // Se productId for fornecido, buscar produto completo do DB
+    if (productId) {
+      console.log('[generate-product-faqs] Buscando produto completo do DB:', productId);
+      
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/products_repository?id=eq.${productId}&select=*`, {
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar produto do banco de dados');
+      }
+
+      const products = await response.json();
+      if (!products || products.length === 0) {
+        throw new Error('Produto não encontrado');
+      }
+
+      fullProduct = products[0];
+      console.log('[generate-product-faqs] Produto carregado com sucesso:', fullProduct.name);
+    }
+
+    console.log('[generate-product-faqs] Iniciando geração de FAQs para:', fullProduct.name);
 
     // 🔍 Validação
-    if (!product.name || !product.description) {
+    if (!fullProduct.name || !fullProduct.description) {
       throw new Error('Nome e descrição são obrigatórios para gerar FAQs');
     }
 
     // Validar quantidade mínima de dados
     const hasMinimumData = (
-      product.description?.length > 20 ||
-      (product.benefits && product.benefits.length > 0) ||
-      (product.features && product.features.length > 0) ||
-      (product.keywords && product.keywords.length > 0)
+      fullProduct.description?.length > 20 ||
+      (fullProduct.benefits && fullProduct.benefits.length > 0) ||
+      (fullProduct.features && fullProduct.features.length > 0) ||
+      (fullProduct.keywords && fullProduct.keywords.length > 0) ||
+      (fullProduct.technical_specifications && fullProduct.technical_specifications.length > 0)
     );
 
     if (!hasMinimumData) {
-      throw new Error('Dados insuficientes para gerar FAQs. Adicione mais informações ao produto (descrição, benefícios, recursos ou keywords).');
+      throw new Error('Dados insuficientes para gerar FAQs. Adicione mais informações ao produto.');
     }
 
     console.log('[generate-product-faqs] Dados disponíveis:', {
-      description: product.description ? 'SIM' : 'NÃO',
-      benefits: product.benefits?.length || 0,
-      features: product.features?.length || 0,
-      keywords: product.keywords?.length || 0,
-      sales_pitch: product.sales_pitch ? 'SIM' : 'NÃO'
+      description: fullProduct.description ? 'SIM' : 'NÃO',
+      benefits: fullProduct.benefits?.length || 0,
+      features: fullProduct.features?.length || 0,
+      keywords: fullProduct.keywords?.length || 0,
+      technical_specifications: fullProduct.technical_specifications?.length || 0,
+      sales_pitch: fullProduct.sales_pitch ? 'SIM' : 'NÃO'
     });
 
     // FASE 2: Prompt OTIMIZADO para FAQs que IAs realmente fazem
+    const specsText = fullProduct.technical_specifications ? 
+      (Array.isArray(fullProduct.technical_specifications) ? 
+        fullProduct.technical_specifications.map((s: any) => 
+          typeof s === 'object' && s.label && s.value ? `${s.label}: ${s.value}` : 
+          typeof s === 'object' && s.name && s.value ? `${s.name}: ${s.value}` : 
+          String(s)
+        ).join('\n') : 
+        String(fullProduct.technical_specifications)
+      ) : 'N/A';
+
     const prompt = `Você é um especialista em produtos e FAQ. Gere EXATAMENTE 10 perguntas frequentes (FAQs) sobre o produto abaixo.
 
 **PRODUTO:**
-- Nome: ${product.name}
-- URL da Loja: ${product.product_url || 'N/A'}
-- Marca: ${product.brand || 'N/A'}
-- GTIN/EAN: ${product.gtin || 'N/A'}
-- MPN: ${product.mpn || 'N/A'}
-- Descrição: ${product.description}
-- Pitch de Vendas: ${product.sales_pitch || 'N/A'}
-- Keywords: ${product.keywords?.join(', ') || 'N/A'}
-- Benefícios: ${product.benefits?.join(', ') || 'N/A'}
-- Recursos: ${product.features?.join(', ') || 'N/A'}
-- Especificações Técnicas: ${product.technical_specifications ? 
-    (typeof product.technical_specifications === 'string' ? product.technical_specifications :
-     Array.isArray(product.technical_specifications) ? product.technical_specifications.map((s: any) => 
-       typeof s === 'object' ? `${s.name}: ${s.value}` : s
-     ).join(', ') : 'N/A') : 'N/A'}
-- Garantia: ${product.warranty_info || 'N/A'}
-- Categoria: ${product.category || 'N/A'}
-- Subcategoria: ${product.subcategory || 'N/A'}
+- Nome: ${fullProduct.name}
+- URL da Loja: ${fullProduct.product_url || 'N/A'}
+- Marca: ${fullProduct.brand || 'N/A'}
+- GTIN/EAN: ${fullProduct.gtin || 'N/A'}
+- MPN: ${fullProduct.mpn || 'N/A'}
+- Descrição: ${fullProduct.description}
+- Pitch de Vendas: ${fullProduct.sales_pitch || 'N/A'}
+- Keywords: ${fullProduct.keywords?.join(', ') || 'N/A'}
+- Benefícios: ${fullProduct.benefits?.join(', ') || 'N/A'}
+- Recursos: ${fullProduct.features?.join(', ') || 'N/A'}
+- Aplicações: ${fullProduct.applications || 'N/A'}
+- Especificações Técnicas:
+${specsText}
+- Garantia: ${fullProduct.warranty_info || 'N/A'}
+- Categoria: ${fullProduct.category || 'N/A'}
+- Subcategoria: ${fullProduct.subcategory || 'N/A'}
+- Público-alvo: ${fullProduct.target_audience ? JSON.stringify(fullProduct.target_audience) : 'N/A'}
 
 **ATENÇÃO - RESTRIÇÃO DE DADOS:**
 Os dados acima são TUDO que você tem. Se algum campo mostra "N/A", significa que essa informação NÃO EXISTE.
