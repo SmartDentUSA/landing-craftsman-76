@@ -195,35 +195,33 @@ Deno.serve(async (req) => {
     // Processar catalog_documents (vinculados diretamente ao produto)
     console.log('📄 Processando catalog_documents...');
     
-    // 🔬 LOG DIAGNÓSTICO: Ver campos REAIS dos primeiros 3 documentos
+    // 🔬 LOG DIAGNÓSTICO: Estrutura aninhada do Sistema B
     if (catalogDocuments.length > 0) {
-      console.log('🔬 PRIMEIROS 3 DOCUMENTOS DE CATÁLOGO:', 
+      console.log('🔬 PRIMEIROS 3 DOCUMENTOS DE CATÁLOGO (estrutura aninhada):', 
         catalogDocuments.slice(0, 3).map((doc: any) => ({
           id: doc?.id,
-          Id_: doc?.Id_,
-          document_name: doc?.document_name,
-          nome: doc?.nome,
-          file_url: doc?.file_url,
-          url_arquivo: doc?.url_arquivo,
-          active: doc?.active,
-          ativo: doc?.ativo,
-          todasAsChaves: Object.keys(doc || {}).slice(0, 15)
+          produto_external_id: doc?.produto?.external_id,
+          produto_nome: doc?.produto?.nome,
+          documento_nome: doc?.documento?.nome,
+          documento_arquivo: doc?.documento?.nome_arquivo,
+          documento_url: doc?.documento?.url_download,
+          ativo: doc?.ativo
         }))
       );
     }
     
     for (const catalogDoc of catalogDocuments) {
-      // ✅ CORREÇÃO: Usar campo Id_ do Sistema B ao invés de product_external_id
-      const externalId = String(catalogDoc?.Id_ || '').trim();
+      // ✅ CORREÇÃO: Usar estrutura aninhada produto.external_id
+      const externalId = String(catalogDoc?.produto?.external_id || '').trim();
       
-      // ✅ VALIDAÇÃO MAIS PERMISSIVA: Só ignora se explicitamente false
-      if (!externalId || catalogDoc.active === false) {
+      // ✅ VALIDAÇÃO: Só ignora se não tiver external_id ou se ativo for explicitamente false
+      if (!externalId || catalogDoc.ativo === false) {
         console.log('⚠️ Catalog document ignorado:', {
           id: catalogDoc.id,
-          nome: catalogDoc?.document_name || catalogDoc?.nome,
+          produto_nome: catalogDoc?.produto?.nome,
+          documento_nome: catalogDoc?.documento?.nome,
           external_id: externalId,
-          Id_: catalogDoc?.Id_,
-          active: catalogDoc.active
+          ativo: catalogDoc.ativo
         });
         continue;
       }
@@ -232,21 +230,23 @@ Deno.serve(async (req) => {
         documentsByLojaId[externalId] = [];
       }
 
-      // ✅ MAPEAMENTO COM FALLBACKS PARA CAMPOS EM PORTUGUÊS
+      // ✅ MAPEAMENTO COM ESTRUTURA ANINHADA CORRETA
       documentsByLojaId[externalId].push({
         id: `catalog_${catalogDoc.id}`,
         origem: 'catalog_documents',
-        nome: catalogDoc.document_name || catalogDoc.nome || 'Documento Técnico',
-        descricao: catalogDoc.description || catalogDoc.descricao,
-        nome_arquivo: catalogDoc.file_name || catalogDoc.nome_arquivo || 'documento.pdf',
-        url_download: catalogDoc.file_url || catalogDoc.url_arquivo,
-        tamanho_bytes: catalogDoc.file_size || catalogDoc.tamanho_bytes || 0,
-        ordem_exibicao: catalogDoc.order_index || catalogDoc.ordem || 0,
-        ativo: catalogDoc.active !== false, // ✅ Considerar ativo se não for explicitamente false
+        nome: catalogDoc.documento?.nome || 'Documento Técnico',
+        descricao: catalogDoc.documento?.descricao || '',
+        nome_arquivo: catalogDoc.documento?.nome_arquivo || 'documento.pdf',
+        url_download: catalogDoc.documento?.url_download || '',
+        tamanho_bytes: catalogDoc.documento?.tamanho_bytes || 0,
+        ordem_exibicao: catalogDoc.ordem_exibicao || 0,
+        ativo: catalogDoc.ativo !== false,
         metadata_sistema_b: {
           catalog_id: catalogDoc.id,
-          product_external_id: catalogDoc.Id_, // ✅ Campo correto do Sistema B
-          url_pagina: catalogDoc.product_url || catalogDoc.url_produto
+          product_external_id: catalogDoc.produto?.external_id,
+          url_pagina: catalogDoc.produto?.url_pagina,
+          produto_nome: catalogDoc.produto?.nome,
+          produto_slug: catalogDoc.produto?.slug
         },
         sincronizado_em: new Date().toISOString()
       });
