@@ -36,6 +36,10 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // 🚀 IDENTIFICADOR DE VERSÃO - FORÇAR NOVO DEPLOY
+    console.log('🚀 VERSÃO DA FUNÇÃO: v2.0-DIAGNOSTICO-COMPLETO');
+    console.log('📅 Deploy timestamp:', new Date().toISOString());
+    
     console.log('🔄 Iniciando sincronização de documentos do Sistema B...');
 
     // 1. Buscar produtos com li_product_id
