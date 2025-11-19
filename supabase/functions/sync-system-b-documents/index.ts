@@ -103,27 +103,28 @@ Deno.serve(async (req) => {
       }))
     });
 
-    const resinas = payload?.produtos?.resinas || [];
-    const documentosTecnicos = payload?.produtos?.documentos_tecnicos || [];
-    
-    // 🆕 FALLBACK: Tentar MÚLTIPLAS localizações possíveis
-    const catalogDocuments = 
-      payload?.catalog_documents ||           // Raiz (esperado conforme docs)
-      payload?.produtos?.catalog_documents || // Dentro de produtos (fallback 1)
-      payload?.data?.catalog_documents ||     // Dentro de data (fallback 2)
-      [];
+    // ✅ CAMPOS CORRETOS DO SISTEMA B
+    const resinas = payload?.documentos_resinas || [];
+    const documentosTecnicos = payload?.documentos_tecnicos || [];
+    const catalogDocuments = payload?.documentos_catalogo || [];
 
-    console.log('🔍 Origem de catalog_documents detectada:', {
-      naRaiz: !!(payload?.catalog_documents),
-      emProdutos: !!(payload?.produtos?.catalog_documents),
-      emData: !!(payload?.data?.catalog_documents),
-      totalEncontrado: catalogDocuments.length,
-      primeirosIds: catalogDocuments.slice(0, 5).map((d: any) => ({
-        id: d?.id,
-        nome: d?.document_name,
-        product_external_id: d?.product_external_id,
-        active: d?.active
-      }))
+    // 📦 LOG DE CONFIRMAÇÃO
+    console.log('📦 Documentos extraídos do payload:', {
+      documentos_resinas: resinas.length,
+      documentos_catalogo: catalogDocuments.length,
+      documentos_tecnicos: documentosTecnicos.length,
+      primeiroDocCatalogo: catalogDocuments[0]?.document_name || 'nenhum',
+      primeiraResina: resinas[0]?.document_name || 'nenhuma'
+    });
+
+    // 🔍 ESTRUTURA DO PAYLOAD SISTEMA B
+    console.log('🔍 Estrutura do payload Sistema B:', {
+      temDocumentosResinas: !!payload?.documentos_resinas,
+      temDocumentosCatalogo: !!payload?.documentos_catalogo,
+      temVideosProdutos: !!payload?.videos_produtos,
+      temVideosResinas: !!payload?.videos_resinas,
+      totalDocsCatalogo: catalogDocuments.length,
+      totalDocsResinas: resinas.length
     });
 
     // 3. FASE 2: Criar mapa de resinas por loja_integrada_id
