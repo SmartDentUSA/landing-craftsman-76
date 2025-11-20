@@ -514,8 +514,7 @@ IMPORTANTE FINAL:
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
-    // Importar Super-Prompt
-    const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
+    // Super-Prompt já importado anteriormente (linha 92)
     
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
