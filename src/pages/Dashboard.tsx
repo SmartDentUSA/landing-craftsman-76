@@ -1,3 +1,4 @@
+import { ContentQualityDashboard } from "@/components/ContentQualityDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1064,6 +1065,11 @@ const DashboardContent = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
+        {/* Content Quality Dashboard - FASE 4.2 */}
+        <div className="mb-8">
+          <ContentQualityDashboard />
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="gradient-soft border-0 shadow-medium">

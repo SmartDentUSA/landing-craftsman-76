@@ -598,10 +598,35 @@ IMPORTANTE FINAL:
       faqs_with_links: faqsWithLinks.filter(f => f.answer.includes('<a href')).length
     });
 
-    // Salvar FAQs na solução
+    // Salvar FAQs na solução com metadata
+    const { data: existingSolution } = await supabase
+      .from('spin_selling_solutions')
+      .select('metadata')
+      .eq('id', solutionId)
+      .single();
+
+    const existingMetadata = existingSolution?.metadata || {};
+    const updatedMetadata = {
+      ...existingMetadata,
+      artifact_chain: {
+        ...(existingMetadata.artifact_chain || {}),
+        faq_version: '2.0.0',
+        faq_generated_by: 'generate-spin-faqs',
+        faq_timestamp: new Date().toISOString()
+      },
+      quality_metrics: {
+        ...(existingMetadata.quality_metrics || {}),
+        faqs_generated_count: generatedFaqs.length,
+        faqs_with_product_links: faqsWithLinks.filter(f => f.answer.includes('<a href')).length
+      }
+    };
+
     const { error: updateError } = await supabase
       .from('spin_selling_solutions')
-      .update({ faq: faqsWithLinks })
+      .update({ 
+        faq: faqsWithLinks,
+        metadata: updatedMetadata
+      })
       .eq('id', solutionId);
 
     if (updateError) {

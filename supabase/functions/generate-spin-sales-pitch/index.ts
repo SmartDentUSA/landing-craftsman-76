@@ -326,19 +326,7 @@ Estruture obrigatoriamente em 4 fases:
     // 10. Calcular confidence score
     const confidenceScore = Math.min(100, dataQuality.score + 15); // Boost por ter gerado
 
-    // 11. Salvar no banco
-    await supabase
-      .from('spin_selling_solutions')
-      .update({ 
-        sales_pitch: result.sales_pitch,
-        key_benefits: result.key_benefits,
-        target_profile: result.target_profile,
-        pitch_confidence_score: confidenceScore,
-        pitch_generated_at: new Date().toISOString()
-      })
-      .eq('id', solutionId);
-
-    // 12. Criar artifact_chain para rastreabilidade
+    // 11. Criar artifact_chain e metadata
     const artifactChain = {
       source_data_ids: productIds,
       pitch_version: '2.0.0',
@@ -348,6 +336,36 @@ Estruture obrigatoriamente em 4 fases:
       model_used: 'google/gemini-2.5-flash',
       pain_type: solution.pain_type
     };
+
+    const metadata = {
+      artifact_chain: artifactChain,
+      quality_metrics: {
+        data_quality_score: dataQuality.score,
+        confidence_score: confidenceScore,
+        validation_score: 100
+      },
+      generation_history: [
+        {
+          version: '2.0.0',
+          generated_at: new Date().toISOString(),
+          data_quality: dataQuality.score,
+          confidence: confidenceScore
+        }
+      ]
+    };
+
+    // 12. Salvar no banco com metadata
+    await supabase
+      .from('spin_selling_solutions')
+      .update({ 
+        sales_pitch: result.sales_pitch,
+        key_benefits: result.key_benefits,
+        target_profile: result.target_profile,
+        pitch_confidence_score: confidenceScore,
+        pitch_generated_at: new Date().toISOString(),
+        metadata: metadata
+      })
+      .eq('id', solutionId);
 
     return new Response(
       JSON.stringify({
