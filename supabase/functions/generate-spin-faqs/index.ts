@@ -611,11 +611,23 @@ IMPORTANTE FINAL:
 
     console.log('✅ FAQs salvas com sucesso!');
 
+    // Criar artifact_chain para rastreabilidade
+    const artifactChain = {
+      source_data_ids: [solutionId, ...products.map(p => p.id)],
+      pitch_version: '2.0.0',
+      generated_by: 'generate-spin-faqs',
+      timestamp: new Date().toISOString(),
+      model_used: 'google/gemini-2.5-flash',
+      pain_type: solution.pain_type,
+      faqs_generated: generatedFaqs.length
+    };
+
     return new Response(
       JSON.stringify({
         success: true,
         faqs: generatedFaqs,
-        message: '10 FAQs estratégicas geradas e salvas com sucesso!'
+        message: '10 FAQs estratégicas geradas e salvas com sucesso!',
+        artifact_chain: artifactChain
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

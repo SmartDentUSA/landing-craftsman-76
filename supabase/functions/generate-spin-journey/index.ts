@@ -82,8 +82,18 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
    - Conexão direta com o pain_type e com o pitch
 
 3. RESULTADO (60–100 palavras)
+   ⚠️ REGRA CRÍTICA DE VALIDAÇÃO CRUZADA DOR-RESULTADO:
+   - A seção RESULTADO DEVE demonstrar EXPLICITAMENTE como os 
+     "results_achieved" dos casos de sucesso ANULARAM ou SOLUCIONARAM 
+     o "pain_type" e as Implicações descritas no Sales Pitch
+   - ESTRUTURA OBRIGATÓRIA:
+     • Conectar dor específica → resultado específico do case
+     • Citar métrica REAL do caso de sucesso (se disponível)
+     • Reforçar que a dor foi ELIMINADA (não apenas "melhorada")
+     • Mencionar nomes REAIS dos clientes
+   - EXEMPLO: "Dr. João Silva tinha o mesmo desafio de retrabalho. 
+     Hoje eliminou 100% dessas perdas e reduziu tempo de lab de 5h para 45min."
    - Resultados REAIS dos casos de sucesso
-   - Mencionar nomes dos clientes
    - Foco na transformação final
 
 ═══════════════════════════════════════════════════════════
@@ -162,8 +172,22 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
       })
       .eq('id', solutionId);
 
+    // 6. Criar artifact_chain para rastreabilidade
+    const artifactChain = {
+      source_data_ids: [solutionId],
+      pitch_version: '2.0.0',
+      generated_by: 'generate-spin-journey',
+      timestamp: new Date().toISOString(),
+      model_used: 'google/gemini-2.5-flash',
+      pain_type: solution.pain_type,
+      success_cases_count: successCases.length
+    };
+
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({
+        ...result,
+        artifact_chain: artifactChain
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
