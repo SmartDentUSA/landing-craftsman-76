@@ -85,15 +85,69 @@ serve(async (req) => {
     }
 
     // 3. Validar qualidade de dados
-    const dataQuality = calculateDataQuality(allProducts);
-    console.log('📊 Data Quality:', dataQuality);
+    let dataQuality = calculateDataQuality(allProducts);
+    console.log('📊 Data Quality inicial:', dataQuality);
 
-    if (dataQuality.score < 40) {
+    // ✅ FASE 1.2: PROACTIVE DATA FILL (Auto-enriquecimento)
+    if (dataQuality.score < 60) {
+      console.log('🔄 Data Quality < 60. Iniciando enriquecimento proativo...');
+      
+      // Identificar produtos com dados fracos (sem benefits ou features)
+      const weakProducts = allProducts.filter(p => {
+        const hasBenefits = Array.isArray(p.benefits) && p.benefits.length > 0;
+        const hasFeatures = Array.isArray(p.features) && p.features.length > 0;
+        return !hasBenefits || !hasFeatures;
+      });
+      
+      if (weakProducts.length > 0) {
+        console.log(`🔧 Enriquecendo ${weakProducts.length} produto(s) com dados fracos...`);
+        
+        // Chamar generate-product-ai-content para cada produto fraco
+        for (const product of weakProducts) {
+          try {
+            console.log(`⏳ Enriquecendo: ${product.name}`);
+            const { data: enriched, error: enrichError } = await supabase.functions.invoke(
+              'generate-product-ai-content',
+              {
+                body: {
+                  productId: product.id,
+                  complementOnly: false // ✅ FORÇAR GERAÇÃO COMPLETA
+                }
+              }
+            );
+            
+            if (enrichError) {
+              console.error(`⚠️ Erro ao enriquecer ${product.name}:`, enrichError);
+            } else {
+              console.log(`✅ Produto ${product.name} enriquecido com sucesso`);
+            }
+          } catch (enrichError) {
+            console.error(`⚠️ Exceção ao enriquecer ${product.name}:`, enrichError);
+          }
+        }
+        
+        // Re-buscar produtos atualizados do banco
+        console.log('🔄 Recarregando produtos atualizados do banco...');
+        const { data: refreshedProducts, error: refreshError } = await supabase
+          .from('products_repository')
+          .select('*')
+          .in('id', productIds);
+        
+        if (!refreshError && refreshedProducts) {
+          allProducts = refreshedProducts;
+          dataQuality = calculateDataQuality(allProducts);
+          console.log('📊 Nova Data Quality após enriquecimento:', dataQuality);
+        }
+      }
+    }
+
+    // Validação final com threshold 60
+    if (dataQuality.score < 60) {
       return new Response(JSON.stringify({
         error: true,
-        message: `Dados insuficientes para gerar pitch de qualidade. Score: ${dataQuality.score}/100`,
+        message: `Dados insuficientes. Score: ${dataQuality.score}/100 (mínimo 60)`,
         data_quality: dataQuality,
-        recommendation: "Adicione benefícios, características e descrições aos produtos antes de gerar o pitch."
+        recommendation: "Sistema tentou enriquecer dados automaticamente, mas ainda faltam informações críticas. Adicione manualmente: benefícios, características e descrições detalhadas."
       }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

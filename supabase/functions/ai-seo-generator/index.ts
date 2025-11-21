@@ -144,6 +144,77 @@ Use essas informações como contexto adicional quando relevante para o SEO.`;
     } catch (error) {
       console.error('Error fetching products context:', error);
     }
+
+    // ✅ FASE 1.3: INJEÇÃO DE DADOS SEO (Volume + Dificuldade)
+    let seoContext = '';
+    try {
+      console.log('🔍 Buscando Keywords Repository com métricas SEO...');
+      
+      const { data: keywordsData, error: keywordsError } = await supabase
+        .from('external_links')
+        .select('name, monthly_searches, competition_level, category, cpc_estimate, relevance_score')
+        .eq('approved', true)
+        .not('monthly_searches', 'is', null)
+        .order('monthly_searches', { ascending: false })
+        .limit(50);
+
+      if (!keywordsError && keywordsData && keywordsData.length > 0) {
+        console.log(`✅ Encontradas ${keywordsData.length} keywords com métricas`);
+        
+        seoContext = `
+
+═══════════════════════════════════════════════════════════
+📊 CONTEXTO DE SEO E VOLUME DE BUSCA
+═══════════════════════════════════════════════════════════
+
+KEYWORDS COM MÉTRICAS DE MERCADO (Top 50 por volume):
+${keywordsData.map(kw => {
+  const volume = kw.monthly_searches || 'N/A';
+  const difficulty = kw.competition_level || 'N/A';
+  const category = kw.category || 'Geral';
+  const cpc = kw.cpc_estimate ? `R$ ${kw.cpc_estimate.toFixed(2)}` : 'N/A';
+  const relevance = kw.relevance_score || 'N/A';
+  
+  return `• "${kw.name}" 
+  └─ Volume: ${volume}/mês | Dificuldade: ${difficulty} | CPC: ${cpc} | Relevância: ${relevance}
+  └─ Categoria: ${category}`;
+}).join('\n\n')}
+
+═══════════════════════════════════════════════════════════
+⚡ REGRAS DE OURO PARA USO DAS KEYWORDS
+═══════════════════════════════════════════════════════════
+
+1. **PRIORIDADE ABSOLUTA PARA CATEGORIAS**: 
+   - Keywords de CATEGORIA são OBRIGATÓRIAS e devem ser as primárias
+   - Use variações das categorias (plural, singular, com/sem acentos)
+
+2. **PRIORIZE ALTO VOLUME + DIFICULDADE MÉDIA**:
+   - Volume > 1000: Keywords de altíssimo valor comercial
+   - Volume 500-1000: Keywords estratégicas de médio prazo
+   - Volume 100-500: Keywords de nicho com conversão alta
+   - Dificuldade "medium" ou "low": Oportunidades de rankeamento
+
+3. **BALANCEAMENTO ESTRATÉGICO**:
+   - Títulos SEO: Use keywords com Volume > 500 e dificuldade média
+   - Meta Descriptions: Combine alto volume (awareness) + palavras de conversão
+   - Long-tail: Foque em volume 100-500 com intenção comercial clara
+
+4. **CPC COMO INDICADOR DE VALOR COMERCIAL**:
+   - CPC alto indica que anunciantes pagam mais (alta intenção de compra)
+   - Priorize keywords com CPC > R$ 5,00 para conteúdo de conversão
+
+5. **RELEVÂNCIA CONTEXTUAL**:
+   - Score de relevância indica fit com o conteúdo da página
+   - Priorize relevância > 70 para melhor experiência do usuário
+
+IMPORTANTE: Use essas métricas para criar conteúdo comercialmente eficaz que ranqueia E converte.
+`;
+      } else {
+        console.log('⚠️ Nenhuma keyword com métricas encontrada');
+      }
+    } catch (seoError) {
+      console.error('❌ Erro ao buscar SEO Context:', seoError);
+    }
     
     // Map API types to UI prompt names
     const promptNameMap: Record<string, string> = {
@@ -180,12 +251,12 @@ Use essas informações como contexto adicional quando relevante para o SEO.`;
       switch (type) {
         case 'meta_description':
           systemPrompt = 'Você é um especialista em SEO. Gere uma meta description otimizada, persuasiva e que incentive cliques. Máximo 160 caracteres.';
-          userPrompt = `Baseado no conteúdo da página: "${content}"${productsContext}\n\nGere uma meta description atrativa que:\n1. Destaque o principal benefício\n2. Inclua palavras-chave relevantes dos produtos quando disponíveis\n3. Use informações do discurso comercial/pitch para persuasão\n4. Tenha call-to-action implícito\n5. Seja única e persuasiva\n\nResponda APENAS com a meta description, sem aspas ou explicações.`;
+          userPrompt = `Baseado no conteúdo da página: "${content}"${productsContext}${seoContext}\n\nGere uma meta description atrativa que:\n1. Destaque o principal benefício\n2. Inclua palavras-chave relevantes dos produtos E com alto volume de busca (veja SEO Context)\n3. Use informações do discurso comercial/pitch para persuasão\n4. Tenha call-to-action implícito\n5. Priorize keywords com volume > 500 e dificuldade média\n6. Seja única e persuasiva\n\nResponda APENAS com a meta description, sem aspas ou explicações.`;
           break;
 
       case 'seo_title':
         systemPrompt = 'Você é um especialista em SEO. Gere títulos otimizados para CTR e posicionamento. Máximo 60 caracteres.';
-        userPrompt = `Baseado no conteúdo: "${content}"${productsContext}\n\nGere um título SEO que:\n1. Seja clicável e persuasivo\n2. Inclua palavra-chave principal dos produtos quando disponível\n3. Transmita valor/benefício usando informações dos produtos\n4. Aproveite o público-alvo e características dos produtos\n5. Seja único e relevante\n\nResponda APENAS com o título, sem aspas ou explicações.`;
+        userPrompt = `Baseado no conteúdo: "${content}"${productsContext}${seoContext}\n\nGere um título SEO que:\n1. Seja clicável e persuasivo\n2. Inclua palavra-chave principal com MAIOR volume de busca (veja SEO Context)\n3. Transmita valor/benefício usando informações dos produtos\n4. PRIORIZE keywords de CATEGORIA se disponíveis\n5. Use keywords com volume > 500 e dificuldade média\n6. Seja único e relevante\n\nResponda APENAS com o título, sem aspas ou explicações.`;
         break;
 
       case 'keywords':
@@ -206,7 +277,7 @@ Formato EXATO:
 }`;
         userPrompt = `Analise EXCLUSIVAMENTE este conteúdo do produto e gere palavras-chave baseadas SOMENTE nas informações fornecidas, PRIORIZANDO CATEGORIAS:
 
-${content}${productsContext}
+${content}${productsContext}${seoContext}
 
 INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 1. **PRIORIZE categoria e subcategoria como palavras primárias se presentes**
@@ -219,6 +290,11 @@ INSTRUÇÕES RESTRITIVAS:
 - NÃO adicione palavras relacionadas ao mercado que não estão mencionadas
 - NÃO use conhecimento externo sobre o produto ou setor
 - Foque exclusivamente no que está escrito nos campos do produto
+
+⚡ USE AS MÉTRICAS DE SEO PARA PRIORIZAÇÃO:
+- Se houver keywords no SEO Context relacionadas ao produto, PRIORIZE as com maior volume (>500)
+- Para long-tail, combine categorias com keywords de médio volume (100-500)
+- Considere o CPC como indicador de valor comercial da keyword
 
 Gere: 3-5 primárias (incluindo categorias se presentes), 4-6 secundárias, 4-6 LSI, 3-5 long-tail baseadas SOMENTE no conteúdo fornecido.`;
         break;
