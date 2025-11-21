@@ -50,8 +50,8 @@ export function calculateDataQuality(products: any[]): DataQualityResult {
   
   let level: 'poor' | 'acceptable' | 'good' | 'excellent';
   if (avgScore >= 80) level = 'excellent';
-  else if (avgScore >= 60) level = 'good';
-  else if (avgScore >= 40) level = 'acceptable';
+  else if (avgScore >= 60) level = 'good';      // ✅ THRESHOLD ELEVADO: Força dados mais ricos
+  else if (avgScore >= 40) level = 'acceptable';  // ⚠️ Warning zone - precisa enriquecimento
   else level = 'poor';
   
   return { 
