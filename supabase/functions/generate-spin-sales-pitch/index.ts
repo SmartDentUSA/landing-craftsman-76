@@ -338,11 +338,23 @@ Estruture obrigatoriamente em 4 fases:
       })
       .eq('id', solutionId);
 
+    // 12. Criar artifact_chain para rastreabilidade
+    const artifactChain = {
+      source_data_ids: productIds,
+      pitch_version: '2.0.0',
+      generated_by: 'generate-spin-sales-pitch',
+      timestamp: new Date().toISOString(),
+      data_quality_score: dataQuality.score,
+      model_used: 'google/gemini-2.5-flash',
+      pain_type: solution.pain_type
+    };
+
     return new Response(
       JSON.stringify({
         ...result,
         confidence_score: confidenceScore,
-        data_quality: dataQuality
+        data_quality: dataQuality,
+        artifact_chain: artifactChain
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

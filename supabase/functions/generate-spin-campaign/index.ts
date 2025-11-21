@@ -272,8 +272,23 @@ serve(async (req) => {
         .update({ google_ads_campaign: campaign })
         .eq('id', solutionId);
 
+      // Criar artifact_chain para rastreabilidade
+      const artifactChain = {
+        source_data_ids: [solutionId, ...products.map(p => p.id)],
+        pitch_version: '2.0.0',
+        generated_by: 'generate-spin-campaign',
+        timestamp: new Date().toISOString(),
+        model_used: 'google/gemini-2.5-flash',
+        pain_type: solution.pain_type,
+        content_type: 'google_ads'
+      };
+
       return new Response(
-        JSON.stringify({ csv, campaign }),
+        JSON.stringify({ 
+          csv, 
+          campaign,
+          artifact_chain: artifactChain 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -437,8 +452,23 @@ Exemplo: "Cansado de retrabalho? Imagine sua clínica voando com impressões per
         })
         .eq('id', solutionId);
 
+      // Criar artifact_chain para rastreabilidade
+      const artifactChain = {
+        source_data_ids: [solutionId, ...products.map(p => p.id)],
+        pitch_version: '2.0.0',
+        generated_by: 'generate-spin-campaign',
+        timestamp: new Date().toISOString(),
+        model_used: 'google/gemini-2.5-flash',
+        pain_type: solution.pain_type,
+        content_type: contentType
+      };
+
       return new Response(
-        JSON.stringify({ message, storytelling }),
+        JSON.stringify({ 
+          message, 
+          storytelling,
+          artifact_chain: artifactChain 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
