@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SPIN_SYSTEM_PROMPT } from "../_shared/spin-system-prompt.ts";
+import {
+  validateSpinJourney,
+  applyFallback,
+  DEFAULT_FALLBACKS
+} from "../_shared/content-validators.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,44 +135,104 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
 }
 `;
 
-    // 4. Chamar Lovable AI
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: SPIN_SYSTEM_PROMPT },
-          { role: 'user', content: specificPrompt }
-        ],
-        temperature: 0.7
-      })
-    });
+    // 4️⃣ GERAR SPIN JOURNEY COM VALIDAÇÃO (FASE 4)
+    console.log('[Journey] 🤖 Gerando SPIN Journey com validação automática...');
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      throw new Error(`AI API error: ${errorText}`);
+    let spinJourney: any = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+    const minQualityScore = 70;
+
+    // Função de geração
+    const generateJourney = async (): Promise<any> => {
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: SPIN_SYSTEM_PROMPT },
+            { role: 'user', content: specificPrompt }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!aiResponse.ok) {
+        throw new Error(`AI API error: ${aiResponse.status}`);
+      }
+
+      const aiData = await aiResponse.json();
+      const content = aiData.choices[0].message.content;
+      
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Failed to parse AI response as JSON');
+      }
+      
+      return JSON.parse(jsonMatch[0]);
+    };
+
+    // Loop de validação + regeneração
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      try {
+        spinJourney = await generateJourney();
+        
+        // Validar journey
+        const validation = validateSpinJourney(
+          spinJourney,
+          successCases
+        );
+
+        console.log(`[Journey Validator] Tentativa ${attempts}/${maxAttempts}:`, {
+          score: validation.score,
+          isValid: validation.isValid,
+          errors: validation.errors,
+          warnings: validation.warnings,
+          metadata: validation.metadata
+        });
+
+        // Se passou na validação, usar
+        if (validation.isValid && validation.score >= minQualityScore) {
+          console.log(`[Journey] ✅ SPIN Journey validado (tentativa ${attempts}):`, {
+            journey: spinJourney,
+            qualityScore: validation.score,
+            timestamp: new Date().toISOString()
+          });
+          break;
+        }
+
+        // Se não passou e ainda tem tentativas, continuar loop
+        if (attempts < maxAttempts) {
+          console.warn(`[Journey] Score ${validation.score} < ${minQualityScore}. Regenerando...`);
+        }
+
+      } catch (error) {
+        console.error(`[Journey Validator] Erro na tentativa ${attempts}:`, error);
+        
+        // Se última tentativa, usar fallback
+        if (attempts >= maxAttempts) {
+          spinJourney = DEFAULT_FALLBACKS.spinJourney;
+        }
+      }
     }
 
-    const aiData = await aiResponse.json();
-    const content = aiData.choices[0].message.content;
-    
-    // Parse JSON
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Failed to parse AI response as JSON');
+    // Se falhou todas as tentativas, usar fallback completo
+    if (!spinJourney) {
+      console.error('[Journey] ⚠️ Todas as tentativas falharam. Usando fallback.');
+      spinJourney = DEFAULT_FALLBACKS.spinJourney;
     }
-    
-    const result = JSON.parse(jsonMatch[0]);
 
     // 5. Salvar no banco
     await supabase
       .from('spin_selling_solutions')
       .update({ 
-        spin_journey: result,
+        spin_journey: spinJourney,
         journey_generated_at: new Date().toISOString()
       })
       .eq('id', solutionId);
@@ -180,12 +245,13 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
       timestamp: new Date().toISOString(),
       model_used: 'google/gemini-2.5-flash',
       pain_type: solution.pain_type,
-      success_cases_count: successCases.length
+      success_cases_count: successCases.length,
+      validation_attempts: attempts
     };
 
     return new Response(
       JSON.stringify({
-        ...result,
+        ...spinJourney,
         artifact_chain: artifactChain
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

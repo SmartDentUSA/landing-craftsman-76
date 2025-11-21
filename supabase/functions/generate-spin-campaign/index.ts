@@ -1,5 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import {
+  validateWhatsAppMessage,
+  applyFallback,
+  DEFAULT_FALLBACKS
+} from "../_shared/content-validators.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -326,54 +331,16 @@ serve(async (req) => {
         ? formatPainMetrics(solution.pain_metrics).slice(0, 2).join(' | ')
         : '';
 
-      // ✅ GERAR STORYTELLING COM IA REAL (Lovable AI Gateway)
+      // 3️⃣ GERAR STORYTELLING COM VALIDAÇÃO (FASE 4)
+      console.log('[WhatsApp] 🎯 Gerando storytelling com validação automática...');
+      
       let storytelling = '';
+      let attempts = 0;
+      const maxAttempts = 3;
+      const minQualityScore = 70;
 
-      try {
-        const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-        if (!lovableApiKey) {
-          throw new Error('LOVABLE_API_KEY não configurada');
-        }
-
-        // Importar Super-Prompt
-        const { SPIN_SYSTEM_PROMPT } = await import('../_shared/spin-system-prompt.ts');
-
-        const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling ULTRA persuasivo (máx 150 caracteres) para WhatsApp sobre:
-
-🎯 **PAIN_TYPE: ${solution.pain_type}** (CRÍTICO!)
-SOLUÇÃO: ${solution.title}
-PITCH: ${solution.sales_pitch || 'Não fornecido'}
-PRODUTOS: ${products.map(p => p.name).join(', ')}
-BENEFÍCIOS: ${products.flatMap(p => p.benefits || []).join(', ')}
-
-${urgencyContext ? `🚨 URGÊNCIA: ${urgencyContext}` : ''}
-
-${solution.pain_metrics ? `
-MÉTRICAS (contexto interno):
-${formatPainMetrics(solution.pain_metrics).join('\n')}
-` : ''}
-
-🚨 **PERSONALIZAÇÃO POR PAIN_TYPE (FASE 3)** 🚨
-
-**GANCHO OBRIGATÓRIO:**
-Use "${selectedHook}" para conectar emocionalmente.
-
-**ESTRUTURA EM 4 PARTES (150 CHARS TOTAIS):**
-1. Gancho emocional (20-30 chars): Use o hook específico do pain_type
-2. Transformação (40-50 chars): "Imagine [benefício principal]"
-3. Benefício (30-40 chars): Resultado tangível + métrica se disponível
-4. Fechamento (20-30 chars): "[Empresa] te entrega isso! 🚀"
-
-**EXEMPLO PAIN_TYPE="tempo":**
-"⏰ Cansado de perder horas no laboratório? Imagine digitalizar em 5min. Mais pacientes, menos retrabalho. Smart Dent te entrega isso! 🚀"
-
-**REGRAS CRÍTICAS:**
-- Máximo 150 caracteres TOTAIS (incluindo emojis)
-- Tom conversacional e urgente
-- Se houver métrica no urgencyContext, cite indiretamente
-- Máximo 2 emojis estratégicos
-- NUNCA truncar frases no meio`;
-
+      // Função de geração
+      const generateStory = async (): Promise<string> => {
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -392,26 +359,68 @@ Use "${selectedHook}" para conectar emocionalmente.
         });
 
         if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          throw new Error(`AI API error: ${errorText}`);
+          throw new Error(`AI API error: ${aiResponse.status}`);
         }
 
         const aiData = await aiResponse.json();
-        storytelling = aiData.choices[0].message.content.trim();
-        
-        // Logging detalhado FASE 3
-        console.log('✅ [FASE 3] Storytelling gerado:', {
-          storytelling,
-          pain_type: solution.pain_type,
-          hook_used: selectedHook,
-          has_urgency: !!urgencyContext,
-          length: storytelling.length,
-          timestamp: new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('⚠️ Falha na IA, usando fallback:', error);
-        // Fallback se IA falhar
-        storytelling = `${solution.title}: ${products.map(p => p.description).join('. ').substring(0, 150)}...`;
+        return aiData.choices[0].message.content.trim();
+      };
+
+      // Loop de validação + regeneração
+      while (attempts < maxAttempts) {
+        attempts++;
+
+        try {
+          storytelling = await generateStory();
+          
+          // Validar storytelling
+          const validation = validateWhatsAppMessage(
+            storytelling,
+            selectedHook,
+            solution.pain_type
+          );
+
+          console.log(`[WhatsApp Validator] Tentativa ${attempts}/${maxAttempts}:`, {
+            score: validation.score,
+            isValid: validation.isValid,
+            errors: validation.errors,
+            warnings: validation.warnings,
+            metadata: validation.metadata
+          });
+
+          // Se passou na validação, usar
+          if (validation.isValid && validation.score >= minQualityScore) {
+            console.log(`[WhatsApp] ✅ Storytelling validado (tentativa ${attempts}):`, {
+              storytelling,
+              pain_type: solution.pain_type,
+              hook_used: selectedHook.substring(0, 50),
+              has_urgency: !!urgencyContext,
+              length: storytelling.length,
+              qualityScore: validation.score,
+              timestamp: new Date().toISOString()
+            });
+            break;
+          }
+
+          // Se não passou e ainda tem tentativas, continuar loop
+          if (attempts < maxAttempts) {
+            console.warn(`[WhatsApp] Score ${validation.score} < ${minQualityScore}. Regenerando...`);
+          }
+
+        } catch (error) {
+          console.error(`[WhatsApp Validator] Erro na tentativa ${attempts}:`, error);
+          
+          // Se última tentativa, usar fallback
+          if (attempts >= maxAttempts) {
+            storytelling = applyFallback('whatsApp', 'message', error.message);
+          }
+        }
+      }
+
+      // Se falhou todas as tentativas, usar fallback
+      if (!storytelling) {
+        console.error('[WhatsApp] ⚠️ Todas as tentativas falharam. Usando fallback.');
+        storytelling = DEFAULT_FALLBACKS.whatsApp.message;
       }
 
       // Construir mensagem WhatsApp com personalização total
