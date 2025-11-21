@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertCircle, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, TrendingUp, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface SpinSolution {
   id: string;
@@ -18,6 +20,8 @@ interface SpinSolution {
 }
 
 export function ContentQualityDashboard() {
+  const queryClient = useQueryClient();
+  
   const { data: solutions, isLoading } = useQuery({
     queryKey: ['spin-solutions-quality'],
     queryFn: async () => {
@@ -28,6 +32,25 @@ export function ContentQualityDashboard() {
       
       if (error) throw error;
       return data as SpinSolution[];
+    }
+  });
+
+  const regenerateSolution = useMutation({
+    mutationFn: async (solutionId: string) => {
+      // Trigger regeneration with FASE 4 validation
+      const { data, error } = await supabase.functions.invoke('generate-spin-sales-pitch', {
+        body: { solutionId }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spin-solutions-quality'] });
+      toast.success('Solução regenerada com validação FASE 4!');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao regenerar: ${error.message}`);
     }
   });
 
@@ -107,9 +130,16 @@ export function ContentQualityDashboard() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {artifactChain.pitch_version || 'N/A'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">
+                            {artifactChain.pitch_version || 'N/A'}
+                          </Badge>
+                          {qualityMetrics.is_migrated && (
+                            <Badge variant="secondary" className="text-xs">
+                              Migrado
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {getQualityBadge(qualityMetrics.data_quality_score)}
@@ -139,15 +169,29 @@ export function ContentQualityDashboard() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <button
-                          className="text-xs text-primary hover:underline"
-                          onClick={() => {
-                            console.log('Metadata completo:', metadata);
-                            alert(JSON.stringify(metadata, null, 2));
-                          }}
-                        >
-                          Ver Histórico ({generationHistory.length})
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="text-xs text-primary hover:underline"
+                            onClick={() => {
+                              console.log('Metadata completo:', metadata);
+                              alert(JSON.stringify(metadata, null, 2));
+                            }}
+                          >
+                            Ver Histórico ({generationHistory.length})
+                          </button>
+                          {qualityMetrics.is_migrated && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => regenerateSolution.mutate(solution.id)}
+                              disabled={regenerateSolution.isPending}
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Regenerar v2
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
