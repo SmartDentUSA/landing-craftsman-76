@@ -1,6 +1,12 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import {
+  validateGoogleAdsHeadline,
+  validateGoogleAdsDescription,
+  validateGoogleAdsPath,
+  applyFallback
+} from "../_shared/content-validators.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -214,12 +220,21 @@ Retorne APENAS um JSON válido no formato:
       };
     }
 
-    // Validate and clean the copies
-    adCopies = validateAndCleanCopies(adCopies);
+    // 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO AUTOMÁTICA
+    const validatedCopies = await validateAndEnhanceCopies(
+      adCopies,
+      deepseekApiKey,
+      prompt
+    );
 
-    console.log('✅ Cópias geradas e validadas:', adCopies);
+    console.log('✅ Cópias validadas:', {
+      headlines: validatedCopies.headlines.length,
+      descriptions: validatedCopies.descriptions.length,
+      paths: validatedCopies.paths.length,
+      qualityScore: validatedCopies.metadata.qualityScore
+    });
 
-    return new Response(JSON.stringify(adCopies), {
+    return new Response(JSON.stringify(validatedCopies), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
@@ -235,38 +250,171 @@ Retorne APENAS um JSON válido no formato:
   }
 });
 
-function validateAndCleanCopies(copies: AdCopies): AdCopies {
-  // Validate and truncate headlines
-  const headlines = copies.headlines
-    .filter(h => h && h.trim().length > 0)
-    .map(h => h.length > 30 ? h.substring(0, 27) + '...' : h)
-    .slice(0, 10);
+// 🛡️ VALIDAÇÃO PROGRAMÁTICA + REGENERAÇÃO (FASE 4)
+async function validateAndEnhanceCopies(
+  copies: AdCopies,
+  apiKey: string,
+  prompt: string
+): Promise<AdCopies & { metadata: { qualityScore: number; validationErrors: string[] } }> {
+  let attempts = 0;
+  const maxAttempts = 3;
+  const minQualityScore = 70;
+  
+  let currentCopies = copies;
+  let validationErrors: string[] = [];
+  let qualityScore = 0;
 
-  // Validate and truncate descriptions
-  const descriptions = copies.descriptions
-    .filter(d => d && d.trim().length > 0)
-    .map(d => d.length > 90 ? d.substring(0, 87) + '...' : d)
-    .slice(0, 4);
+  while (attempts < maxAttempts) {
+    attempts++;
+    validationErrors = [];
+    let totalScore = 0;
+    let validationCount = 0;
 
-  // Validate and clean paths
-  const paths = copies.paths
-    .filter(p => p && p.trim().length > 0)
-    .map(p => p.replace(/[^a-zA-Z0-9]/g, '').toLowerCase())
-    .map(p => p.length > 15 ? p.substring(0, 15) : p)
-    .slice(0, 2);
+    // Validar Headlines
+    const validHeadlines = currentCopies.headlines.map((h, i) => {
+      const validation = validateGoogleAdsHeadline(h);
+      totalScore += validation.score;
+      validationCount++;
 
-  // Ensure minimum requirements
-  if (headlines.length < 3) {
-    headlines.push('Atendimento', 'Qualidade', 'Consulta');
+      if (!validation.isValid) {
+        validationErrors.push(`Headline ${i + 1}: ${validation.errors.join(', ')}`);
+        if (h.length > 30) {
+          const truncated = intelligentTruncate(h, 30);
+          console.warn(`[Validator] Headline ${i + 1} truncado: "${h}" → "${truncated}"`);
+          return truncated;
+        }
+      }
+
+      validation.warnings.forEach(w => {
+        console.warn(`[Validator] Headline ${i + 1} warning: ${w}`);
+      });
+
+      return h;
+    });
+
+    // Validar Descriptions
+    const validDescriptions = currentCopies.descriptions.map((d, i) => {
+      const validation = validateGoogleAdsDescription(d);
+      totalScore += validation.score;
+      validationCount++;
+
+      if (!validation.isValid) {
+        validationErrors.push(`Description ${i + 1}: ${validation.errors.join(', ')}`);
+        if (d.length > 90) {
+          const truncated = intelligentTruncate(d, 90);
+          console.warn(`[Validator] Description ${i + 1} truncado: "${d}" → "${truncated}"`);
+          return truncated;
+        }
+      }
+
+      validation.warnings.forEach(w => {
+        console.warn(`[Validator] Description ${i + 1} warning: ${w}`);
+      });
+
+      return d;
+    });
+
+    // Validar Paths
+    const validPaths = currentCopies.paths.map((p, i) => {
+      const validation = validateGoogleAdsPath(p);
+      totalScore += validation.score;
+      validationCount++;
+
+      if (!validation.isValid) {
+        validationErrors.push(`Path ${i + 1}: ${validation.errors.join(', ')}`);
+        return validation.metadata.cleaned.substring(0, 15);
+      }
+
+      validation.warnings.forEach(w => {
+        console.warn(`[Validator] Path ${i + 1} warning: ${w}`);
+      });
+
+      return validation.metadata.cleaned;
+    });
+
+    qualityScore = Math.round(totalScore / validationCount);
+
+    console.log(`[Validator] Tentativa ${attempts}/${maxAttempts}:`, {
+      qualityScore,
+      validationErrors: validationErrors.length,
+      minRequired: minQualityScore
+    });
+
+    // Se passou na validação, retornar
+    if (qualityScore >= minQualityScore && validationErrors.length === 0) {
+      return {
+        headlines: validHeadlines,
+        descriptions: validDescriptions,
+        paths: validPaths,
+        metadata: { qualityScore, validationErrors }
+      };
+    }
+
+    // Se ainda há tentativas, regenerar
+    if (attempts < maxAttempts) {
+      console.log(`[Validator] Score ${qualityScore} < ${minQualityScore}. Regenerando...`);
+      try {
+        const retryResponse = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              {
+                role: 'system',
+                content: 'Você é um copywriter especialista em Google Ads. Sempre retorne JSON válido e siga rigorosamente os limites de caracteres.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.8,
+            max_tokens: 1000
+          })
+        });
+
+        if (!retryResponse.ok) {
+          throw new Error(`Retry failed: ${retryResponse.status}`);
+        }
+
+        const retryData = await retryResponse.json();
+        const retryText = retryData.choices[0].message.content;
+        const jsonMatch = retryText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          currentCopies = JSON.parse(jsonMatch[0]);
+        }
+      } catch (error) {
+        console.error(`[Validator] Erro ao regenerar (tentativa ${attempts}):`, error);
+        break;
+      }
+    }
+  }
+
+  // Fallback: retornar último resultado truncado
+  console.warn(`[Validator] ⚠️ Usando resultado com score ${qualityScore} (abaixo de ${minQualityScore})`);
+  
+  return {
+    headlines: currentCopies.headlines.map(h => h.length > 30 ? intelligentTruncate(h, 30) : h),
+    descriptions: currentCopies.descriptions.map(d => d.length > 90 ? intelligentTruncate(d, 90) : d),
+    paths: currentCopies.paths.map(p => p.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15)),
+    metadata: { qualityScore, validationErrors }
+  };
+}
+
+// Truncamento inteligente
+function intelligentTruncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  
+  const truncated = text.substring(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  if (lastSpace > maxLength * 0.7) {
+    return truncated.substring(0, lastSpace).trim() + '...';
   }
   
-  if (descriptions.length < 2) {
-    descriptions.push('Atendimento especializado', 'Agende sua consulta');
-  }
-  
-  if (paths.length < 2) {
-    paths.push('atendimento', 'consulta');
-  }
-
-  return { headlines, descriptions, paths };
+  return truncated.substring(0, maxLength - 3).trim() + '...';
 }
