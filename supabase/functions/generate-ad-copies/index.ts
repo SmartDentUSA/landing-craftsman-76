@@ -102,6 +102,33 @@ REGRAS OBRIGATÓRIAS:
 8. EVITAR: alegações médicas proibidas, CAPSLOCK, termos como "cura", "milagre", "garantido"
 9. INCLUIR: benefícios claros, chamadas para ação sutis
 
+🚨 **VALIDAÇÃO PRÉ-PROMPT CRÍTICA - FASE 3** 🚨
+
+**HEADLINES (30 caracteres EXATOS):**
+- Gere frases COMPLETAS que façam sentido ANTES do caractere 30
+- Nunca truncar no meio de uma palavra
+- Use CTAs curtos e impactantes: "Agende Já", "Confira", "Saiba Mais"
+- Exemplo CORRETO: "Scanner Intraoral Premium" (27 chars)
+- Exemplo ERRADO: "Scanner Intraoral de Alta Q..." (TRUNCADO!)
+
+**DESCRIPTIONS (90 caracteres EXATOS):**
+- Frases completas com início, meio e fim DENTRO de 90 chars
+- Use verbos de ação + benefício claro
+- Exemplo CORRETO: "Digitalize sorrisos com precisão milimétrica. Entrega rápida para todo Brasil." (80 chars)
+- Exemplo ERRADO: "Digitalize sorrisos com precisão milimétrica e tecnologia de ponta que garante..." (TRUNCADO!)
+
+**PATHS (15 caracteres EXATOS):**
+- Palavras únicas ou compostas curtas
+- Apenas letras minúsculas e números, sem espaços ou acentos
+- Exemplo CORRETO: "scanner", "3d", "digital"
+- Exemplo ERRADO: "scanner-3d-pro" (contém hífens!)
+
+**PREENCHIMENTO CRIATIVO:**
+Se tiver espaço sobrando (<30 chars para headlines), use:
+- Emojis discretos: "✓", "→"
+- Números: "24h", "50%", "3D"
+- Destaque: "NOVO", "PRO"
+
 Retorne APENAS um JSON válido no formato:
 {
   "headlines": ["headline1", "headline2", ...],
