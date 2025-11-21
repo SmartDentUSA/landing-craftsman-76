@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { SPIN_SYSTEM_PROMPT } from "../_shared/spin-system-prompt.ts";
 import {
   validateWhatsAppMessage,
   applyFallback,
@@ -142,6 +143,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { solutionId, contentType } = await req.json();
@@ -339,6 +341,29 @@ serve(async (req) => {
       const maxAttempts = 3;
       const minQualityScore = 70;
 
+      // Construir prompt específico para storytelling
+      const whatsappPrompt = `
+Você é um especialista em SPIN Selling e copywriting para WhatsApp B2B.
+
+CONTEXTO:
+- Solução: ${solution.title}
+- Pain Type: ${solution.pain_type}
+- Emotional Hook: ${selectedHook}
+- Urgência: ${urgencyContext}
+
+TAREFA:
+Gerar um parágrafo de storytelling (máx. 150 caracteres) que:
+1. Comece com o emotional hook fornecido
+2. Siga estrutura: GANCHO → TRANSFORMAÇÃO → BENEFÍCIO → FECHAMENTO
+3. Mencione implicitamente a dor sem ser alarmista
+4. Crie senso de urgência sutil
+
+EXEMPLO:
+"${selectedHook} Imagine ter controle total sobre prazos, reduzir custos em 40% e conquistar autonomia profissional. Descubra como."
+
+Gere APENAS o texto, sem aspas ou formatação.
+`;
+
       // Função de geração
       const generateStory = async (): Promise<string> => {
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -351,7 +376,7 @@ serve(async (req) => {
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: SPIN_SYSTEM_PROMPT },
-              { role: 'user', content: prompt }
+              { role: 'user', content: whatsappPrompt }
             ],
             max_tokens: 150,
             temperature: 0.7
