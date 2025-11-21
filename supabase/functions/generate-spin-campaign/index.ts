@@ -307,6 +307,25 @@ serve(async (req) => {
 
       const firstQuote = realQuotes[0];
 
+      // 🎯 EMOTIONAL HOOK MAPPING POR PAIN TYPE (FASE 3)
+      const emotionalHooks: Record<string, string> = {
+        'tempo': '⏰ Cansado de perder horas no laboratório?',
+        'custo': '💸 Gastando demais com retrabalho?',
+        'qualidade': '🎯 Insatisfeito com resultados inconsistentes?',
+        'paciente': '😔 Perdendo pacientes para concorrentes?',
+        'tecnologia': '🔧 Equipamento obsoleto travando seu crescimento?',
+        'precisao': '📏 Erros de ajuste prejudicando sua reputação?',
+        'entrega': '📦 Atrasos comprometendo prazos?',
+        'default': '🚀 Pronto para transformar sua clínica?'
+      };
+
+      const selectedHook = emotionalHooks[solution.pain_type] || emotionalHooks['default'];
+      
+      // Contexto de urgência das métricas
+      const urgencyContext = solution.pain_metrics 
+        ? formatPainMetrics(solution.pain_metrics).slice(0, 2).join(' | ')
+        : '';
+
       // ✅ GERAR STORYTELLING COM IA REAL (Lovable AI Gateway)
       let storytelling = '';
 
@@ -321,25 +340,39 @@ serve(async (req) => {
 
         const prompt = `Você é um copywriter especializado em vendas SPIN. Crie um storytelling ULTRA persuasivo (máx 150 caracteres) para WhatsApp sobre:
 
+🎯 **PAIN_TYPE: ${solution.pain_type}** (CRÍTICO!)
 SOLUÇÃO: ${solution.title}
 PITCH: ${solution.sales_pitch || 'Não fornecido'}
 PRODUTOS: ${products.map(p => p.name).join(', ')}
 BENEFÍCIOS: ${products.flatMap(p => p.benefits || []).join(', ')}
+
+${urgencyContext ? `🚨 URGÊNCIA: ${urgencyContext}` : ''}
 
 ${solution.pain_metrics ? `
 MÉTRICAS (contexto interno):
 ${formatPainMetrics(solution.pain_metrics).join('\n')}
 ` : ''}
 
-REGRAS:
-1. Comece com um gancho emocional forte (ex: "Cansado de X?")
-2. Apresente a transformação rápida (ex: "Imagine sua clínica voando...")
-3. Feche com benefício + emojis (ex: "Smart Dent te entrega isso! 🚀✨")
-4. Máximo 150 caracteres
-5. Tom conversacional e urgente
-6. Use emojis estratégicos (máx 2)
+🚨 **PERSONALIZAÇÃO POR PAIN_TYPE (FASE 3)** 🚨
 
-Exemplo: "Cansado de retrabalho? Imagine sua clínica voando com impressões perfeitas em minutos. A Smart Dent te entrega isso! 🚀✨"`;
+**GANCHO OBRIGATÓRIO:**
+Use "${selectedHook}" para conectar emocionalmente.
+
+**ESTRUTURA EM 4 PARTES (150 CHARS TOTAIS):**
+1. Gancho emocional (20-30 chars): Use o hook específico do pain_type
+2. Transformação (40-50 chars): "Imagine [benefício principal]"
+3. Benefício (30-40 chars): Resultado tangível + métrica se disponível
+4. Fechamento (20-30 chars): "[Empresa] te entrega isso! 🚀"
+
+**EXEMPLO PAIN_TYPE="tempo":**
+"⏰ Cansado de perder horas no laboratório? Imagine digitalizar em 5min. Mais pacientes, menos retrabalho. Smart Dent te entrega isso! 🚀"
+
+**REGRAS CRÍTICAS:**
+- Máximo 150 caracteres TOTAIS (incluindo emojis)
+- Tom conversacional e urgente
+- Se houver métrica no urgencyContext, cite indiretamente
+- Máximo 2 emojis estratégicos
+- NUNCA truncar frases no meio`;
 
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -366,7 +399,15 @@ Exemplo: "Cansado de retrabalho? Imagine sua clínica voando com impressões per
         const aiData = await aiResponse.json();
         storytelling = aiData.choices[0].message.content.trim();
         
-        console.log('✅ Storytelling gerado com IA:', storytelling);
+        // Logging detalhado FASE 3
+        console.log('✅ [FASE 3] Storytelling gerado:', {
+          storytelling,
+          pain_type: solution.pain_type,
+          hook_used: selectedHook,
+          has_urgency: !!urgencyContext,
+          length: storytelling.length,
+          timestamp: new Date().toISOString()
+        });
       } catch (error) {
         console.error('⚠️ Falha na IA, usando fallback:', error);
         // Fallback se IA falhar
