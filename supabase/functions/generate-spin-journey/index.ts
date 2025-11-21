@@ -228,16 +228,7 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
       spinJourney = DEFAULT_FALLBACKS.spinJourney;
     }
 
-    // 5. Salvar no banco
-    await supabase
-      .from('spin_selling_solutions')
-      .update({ 
-        spin_journey: spinJourney,
-        journey_generated_at: new Date().toISOString()
-      })
-      .eq('id', solutionId);
-
-    // 6. Criar artifact_chain para rastreabilidade
+    // 5. Criar artifact_chain e metadata
     const artifactChain = {
       source_data_ids: [solutionId],
       pitch_version: '2.0.0',
@@ -248,6 +239,39 @@ ${sc.instagram ? `Instagram: @${sc.instagram}` : ''}
       success_cases_count: successCases.length,
       validation_attempts: attempts
     };
+
+    // Buscar metadata existente
+    const { data: existingSolution } = await supabase
+      .from('spin_selling_solutions')
+      .select('metadata')
+      .eq('id', solutionId)
+      .single();
+
+    const existingMetadata = existingSolution?.metadata || {};
+    const updatedMetadata = {
+      ...existingMetadata,
+      artifact_chain: {
+        ...(existingMetadata.artifact_chain || {}),
+        journey_version: '2.0.0',
+        journey_generated_by: 'generate-spin-journey',
+        journey_timestamp: new Date().toISOString()
+      },
+      quality_metrics: {
+        ...(existingMetadata.quality_metrics || {}),
+        journey_validation_attempts: attempts,
+        journey_success_cases_count: successCases.length
+      }
+    };
+
+    // 6. Salvar no banco com metadata atualizado
+    await supabase
+      .from('spin_selling_solutions')
+      .update({ 
+        spin_journey: spinJourney,
+        journey_generated_at: new Date().toISOString(),
+        metadata: updatedMetadata
+      })
+      .eq('id', solutionId);
 
     return new Response(
       JSON.stringify({

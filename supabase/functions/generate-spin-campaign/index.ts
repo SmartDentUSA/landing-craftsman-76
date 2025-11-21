@@ -519,11 +519,34 @@ Gere APENAS o texto, sem aspas ou formatação.
       message += `💬 Quer saber como implementar essa solução?\nResponda esta mensagem!`;
 
       // Salvar no banco
+      const { data: existingSolution } = await supabase
+        .from('spin_selling_solutions')
+        .select('metadata')
+        .eq('id', solutionId)
+        .single();
+
+      const existingMetadata = existingSolution?.metadata || {};
+      const updatedMetadata = {
+        ...existingMetadata,
+        artifact_chain: {
+          ...(existingMetadata.artifact_chain || {}),
+          whatsapp_version: '2.0.0',
+          whatsapp_generated_by: 'generate-spin-campaign',
+          whatsapp_timestamp: new Date().toISOString()
+        },
+        quality_metrics: {
+          ...(existingMetadata.quality_metrics || {}),
+          whatsapp_storytelling_quality: validationResult?.score || 85,
+          whatsapp_validation_attempts: validationAttempts
+        }
+      };
+
       await supabase
         .from('spin_selling_solutions')
         .update({ 
           whatsapp_complete_message: message,
-          storytelling_auto_generated: storytelling
+          storytelling_auto_generated: storytelling,
+          metadata: updatedMetadata
         })
         .eq('id', solutionId);
 

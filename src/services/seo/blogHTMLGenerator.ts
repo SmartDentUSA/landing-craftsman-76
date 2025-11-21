@@ -476,6 +476,26 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   
   ${imagePreloadHints}
   
+  <!-- ✅ FASE 4.2: Metadados de Rastreabilidade -->
+  <meta name="content-generated" content="${new Date().toISOString()}">
+  <meta name="blogs-count" content="${blogs.length}">
+  <meta name="products-count" content="${selectedProducts.length}">
+  
+  <!-- ✅ FASE 4.2: Metadados Ocultos para Analytics -->
+  <script type="application/json" class="content-metadata" data-hidden="true">
+  {
+    "generated_at": "${new Date().toISOString()}",
+    "blogs_count": ${blogs.length},
+    "products_used": ${JSON.stringify(selectedProducts.map(p => p.id))},
+    "quality_score": ${Math.round((selectedProducts.reduce((sum, p) => {
+      const metadata = (p as any).metadata || {};
+      return sum + (metadata.quality_metrics?.data_quality_score || 70);
+    }, 0) / Math.max(selectedProducts.length, 1)) || 0)},
+    "keywords_count": ${uniqueKeywords.length},
+    "domain": "${domain}"
+  }
+  </script>
+  
   <title>${finalTitle}</title>
   ${metaTags}
   ${seoDomainTags}

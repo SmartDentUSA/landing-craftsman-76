@@ -588,6 +588,12 @@ export function generateLandingPageHTML(
   <meta name="description" content="${escapeHtml(seoDescription)}">
   <meta name="keywords" content="${escapeHtml(extractedKeywords.join(', '))}">
   <!-- Keywords enriquecidas com benefits e features dos produtos -->
+  
+  <!-- ✅ FASE 4.2: Metadados de Rastreabilidade -->
+  ${solution.metadata?.artifact_chain?.pitch_version ? `<meta name="content-version" content="${solution.metadata.artifact_chain.pitch_version}">` : ''}
+  ${solution.metadata?.quality_metrics?.data_quality_score ? `<meta name="content-quality" content="${solution.metadata.quality_metrics.data_quality_score}">` : ''}
+  ${solution.metadata?.quality_metrics?.confidence_score ? `<meta name="content-confidence" content="${solution.metadata.quality_metrics.confidence_score}">` : ''}
+  ${solution.metadata?.artifact_chain?.timestamp ? `<meta name="content-generated" content="${solution.metadata.artifact_chain.timestamp}">` : ''}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
   
@@ -1936,6 +1942,22 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       </div>
     </div>
   </footer>
+
+  <!-- ✅ FASE 4.2: Metadados Ocultos para Analytics -->
+  <script type="application/json" class="content-metadata" data-hidden="true">
+  {
+    "solution_id": "${solution.id}",
+    "generated_at": "${solution.metadata?.artifact_chain?.timestamp || new Date().toISOString()}",
+    "pitch_version": "${solution.metadata?.artifact_chain?.pitch_version || 'unknown'}",
+    "data_quality_score": ${solution.metadata?.quality_metrics?.data_quality_score || 0},
+    "confidence_score": ${solution.metadata?.quality_metrics?.confidence_score || 0},
+    "model_used": "${solution.metadata?.artifact_chain?.model_used || 'unknown'}",
+    "products_used": ${JSON.stringify(products.map(p => p.id))},
+    "pain_type": "${solution.pain_type}",
+    "success_cases_count": ${successCases.length},
+    "faqs_count": ${faqs.length}
+  }
+  </script>
 
   <!-- Script para Contador Animado de Métricas -->
   <script>

@@ -1560,6 +1560,7 @@ export type Database = {
           landing_page_custom_text: Json
           landing_page_generated_at: string | null
           landing_page_html: string | null
+          metadata: Json | null
           metrics_generated_at: string | null
           pain_metrics: Json | null
           pain_type: string
@@ -1593,6 +1594,7 @@ export type Database = {
           landing_page_custom_text?: Json
           landing_page_generated_at?: string | null
           landing_page_html?: string | null
+          metadata?: Json | null
           metrics_generated_at?: string | null
           pain_metrics?: Json | null
           pain_type: string
@@ -1626,6 +1628,7 @@ export type Database = {
           landing_page_custom_text?: Json
           landing_page_generated_at?: string | null
           landing_page_html?: string | null
+          metadata?: Json | null
           metrics_generated_at?: string | null
           pain_metrics?: Json | null
           pain_type?: string
