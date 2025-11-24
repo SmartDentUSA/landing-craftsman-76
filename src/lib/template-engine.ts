@@ -520,11 +520,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             /* Sem transition - o scale inline deve ser instantâneo */
         }
         
-        /* Garantir que o transform da imagem não seja afetado pelo hover do container */
-        .control-item:hover .control-item-image {
-            transform: inherit;
-        }
-        
         @media (max-width: 767px) {
             .control-item:hover {
                 transform: translateY(-4px);
