@@ -1982,7 +1982,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#solutions}}
                 <div class="control-item {{size}}" {{#gridColumn}}style="{{gridColumn}}"{{/gridColumn}}>
                     <div class="image-container image-container-{{sizeType}}">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#containerScale}}style="transform: scale({{containerScale}})"{{/containerScale}}>
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}})">
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
                         </div>
@@ -1998,7 +1998,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         {{#solutions}}
                         <div class="carousel-slide">
                             <div class="image-container">
-                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#containerScale}}style="transform: scale({{containerScale}})"{{/containerScale}}>
+                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}})">
                                 <div class="control-item-text-overlay">
                                     <p>{{text}}</p>
                                 </div>
@@ -3072,7 +3072,14 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
       ...data.solutions_section,
       ...calculateSectionVisibility(data.solutions_section),
       // Ensure solutions have slideIndex for carousel
-      solutions: data.solutions_section?.solutions?.map((s: any, i: number) => ({ ...s, slideIndex: i })) || []
+      solutions: data.solutions_section?.solutions?.map((s: any, i: number) => {
+        console.log(`🔍 [TEMPLATE] Solution ${i} containerScale:`, s.containerScale);
+        return { 
+          ...s, 
+          slideIndex: i,
+          containerScale: s.containerScale || 1 // Garantir fallback
+        };
+      }) || []
     },
     resources_section: {
       ...data.resources_section,
