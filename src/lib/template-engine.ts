@@ -466,30 +466,23 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             display: block;
         }
         
-        /* Grid assimétrico para soluções */
+        /* Grid flexível para soluções */
         .control-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr; /* Mobile: 1 coluna */
             gap: 1.5rem;
             margin: 2rem 0;
         }
         
         @media (min-width: 768px) {
             .control-grid {
-                display: grid;
-                grid-template-columns: var(--col-1, 1fr) var(--col-2, 1fr) var(--col-3, 1fr) var(--col-4, 1fr);
-                grid-template-rows: repeat(3, minmax(200px, auto));
+                grid-template-columns: repeat(4, 1fr); /* Desktop: 4 colunas base */
                 gap: 1.5rem;
-                grid-template-areas: 
-                    "large large med1 small1"
-                    "large large med2 small2"
-                    "med3 med4 med5 small3";
             }
         }
         
         @media (min-width: 1200px) {
             .control-grid {
-                grid-template-rows: repeat(3, minmax(250px, auto));
                 gap: 2rem;
             }
         }
@@ -1988,7 +1981,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <!-- Desktop Grid -->
             <div class="control-grid">
                 {{#solutions}}
-                <div class="control-item {{size}}" {{#gridColumn}}style="{{gridColumn}}"{{/gridColumn}}>
+                <div class="control-item {{size}}" style="{{gridColumnStyle}}">
                     <div class="image-container image-container-{{sizeType}}">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}}); transform-origin: center;">
                         <div class="control-item-text-overlay">
@@ -3356,36 +3349,38 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     twitter_image: data.seo?.twitter_image,
     twitter_site: data.seo?.twitter_site,
     solutions: data.solutions?.map((solution: any, index: number) => {
-      // Define tamanhos para layout assimétrico
-      let size, sizeType, gridColumn = '';
-      if (index === 0) {
-        size = 'control-item-large';
+      // Sistema de grid flexível baseado em gridSpan
+      const gridSpan = solution.gridSpan || 2; // Default: 2 colunas (medium)
+      
+      // Calcular classes CSS baseadas no span
+      let sizeClass = '';
+      let sizeType = '';
+      
+      if (gridSpan === 4) {
+        sizeClass = 'control-item-full';
+        sizeType = 'full';
+      } else if (gridSpan === 3) {
+        sizeClass = 'control-item-large';
         sizeType = 'large';
-      } else if (index < 6) {
-        size = 'control-item-medium';
+      } else if (gridSpan === 2) {
+        sizeClass = 'control-item-medium';
         sizeType = 'medium';
-        
-        // Verificar se coluna adjacente está vazia para spanning
-        if (index === 1 && (!data.solutions[2] || !data.solutions[2].image?.src)) {
-          gridColumn = 'grid-column: span 2;'; // med1 expande para small1
-        } else if (index === 3 && (!data.solutions[4] || !data.solutions[4].image?.src)) {
-          gridColumn = 'grid-column: span 2;'; // med2 expande para small2
-        }
       } else {
-        size = 'control-item-small';
+        sizeClass = 'control-item-small';
         sizeType = 'small';
       }
       
       return {
         ...solution,
         index: index + 1,
-        size,
-        sizeType,
+        size: sizeClass,
+        sizeType: sizeType,
         slideIndex: index,
         isFirst3: index < 3,
         isLast2: index >= 3,
         containerScale: String(solution.containerScale || 1.0),
-        gridColumn
+        gridSpan: gridSpan,
+        gridColumnStyle: `grid-column: span ${gridSpan};`
       };
     }),
     footer: {

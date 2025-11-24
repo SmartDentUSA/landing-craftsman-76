@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@/components/ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Trash2 } from "lucide-react";
 
 interface ImageData {
@@ -19,6 +20,7 @@ interface Solution {
   text: string;
   image: ImageData;
   containerScale?: number;
+  gridSpan?: number; // 1-4 colunas no grid desktop
 }
 
 interface SolutionsSectionProps {
@@ -147,6 +149,40 @@ export function SolutionsSection({ title, solutions, onTitleChange, onSolutionsC
               </div>
             </div>
           </div>
+
+          <div>
+            <Label>Largura do Card (Desktop)</Label>
+            <RadioGroup
+              value={String(solution.gridSpan || 2)}
+              onValueChange={(value) => {
+                const newSolutions = [...solutions];
+                newSolutions[index].gridSpan = parseInt(value);
+                onSolutionsChange(newSolutions);
+              }}
+            >
+              <div className="flex gap-4 flex-wrap">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="1" id={`span-1-${index}`} />
+                  <Label htmlFor={`span-1-${index}`} className="font-normal cursor-pointer">1 coluna</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="2" id={`span-2-${index}`} />
+                  <Label htmlFor={`span-2-${index}`} className="font-normal cursor-pointer">2 colunas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="3" id={`span-3-${index}`} />
+                  <Label htmlFor={`span-3-${index}`} className="font-normal cursor-pointer">3 colunas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="4" id={`span-4-${index}`} />
+                  <Label htmlFor={`span-4-${index}`} className="font-normal cursor-pointer">4 colunas</Label>
+                </div>
+              </div>
+            </RadioGroup>
+            <p className="text-sm text-muted-foreground mt-2">
+              Define quantas colunas este card ocupará no grid desktop (mobile sempre usa largura total)
+            </p>
+          </div>
         </div>
       ))}
 
@@ -154,7 +190,7 @@ export function SolutionsSection({ title, solutions, onTitleChange, onSolutionsC
         variant="outline"
         size="sm"
         onClick={() => {
-          onSolutionsChange([...solutions, { text: '', image: createImageData(), containerScale: 1.0 }]);
+          onSolutionsChange([...solutions, { text: '', image: createImageData(), containerScale: 1.0, gridSpan: 2 }]);
         }}
         disabled={solutions.length >= 5}
       >
