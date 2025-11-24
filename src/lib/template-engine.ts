@@ -515,7 +515,14 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             height: 100%;
             object-fit: cover;
             object-position: center;
-            /* transition removida - o scale inline não deve ser animado */
+            will-change: transform;
+            display: block;
+            /* Sem transition - o scale inline deve ser instantâneo */
+        }
+        
+        /* Garantir que o transform da imagem não seja afetado pelo hover do container */
+        .control-item:hover .control-item-image {
+            transform: inherit;
         }
         
         @media (max-width: 767px) {
@@ -610,15 +617,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
         }
         
-        .control-item-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-            transition: transform 0.3s ease;
-            loading: lazy;
-            decoding: async;
-        }
         @media (min-width: 768px) {
             .banner-content { flex-direction: row; align-items: center; }
             .banner-text { flex: 1; padding-right: 2rem; }
