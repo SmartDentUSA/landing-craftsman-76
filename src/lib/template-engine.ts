@@ -1980,9 +1980,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <!-- Desktop Grid -->
             <div class="control-grid">
                 {{#solutions}}
-                <div class="control-item {{size}}" {{#gridColumn}}style="{{gridColumn}}"{{/gridColumn}}>
+                <div class="control-item {{size}}" style="{{#gridColumn}}{{gridColumn}} {{/gridColumn}}{{#cardStyle}}{{cardStyle}}{{/cardStyle}}">
                     <div class="image-container image-container-{{sizeType}}">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}})">
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
                         </div>
@@ -3377,7 +3377,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         isFirst3: index < 3,
         isLast2: index >= 3,
         containerScale: solution.containerScale || 1.0,
-        gridColumn
+        gridColumn,
+        // 🎯 Aplicar scale ao card inteiro
+        cardStyle: `transform: scale(${solution.containerScale || 1.0}); transform-origin: center;`
       };
     }),
     footer: {
