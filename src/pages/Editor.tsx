@@ -2034,18 +2034,23 @@ const EditorContent = () => {
           href: img.href
         }))
       },
-      solutions: processedData.solutions.map((s, index) => {
-        // Auto-generate size and sizeType based on index for asymmetric grid layout
+      solutions: processedData.solutions.map((s) => {
+        // ✅ Use gridSpan from user selection to determine size
+        const gridSpan = s.gridSpan ?? 2;
         let size = "control-item-medium";
         let sizeType = "medium";
         
-        if (index === 0) {
+        // Map gridSpan to correct CSS classes
+        if (gridSpan === 4) {
+          size = "control-item-full";
+          sizeType = "full";
+        } else if (gridSpan === 3) {
           size = "control-item-large";
           sizeType = "large";
-        } else if (index < 6) {
+        } else if (gridSpan === 2) {
           size = "control-item-medium";
           sizeType = "medium";
-        } else {
+        } else if (gridSpan === 1) {
           size = "control-item-small";
           sizeType = "small";
         }
@@ -2053,6 +2058,7 @@ const EditorContent = () => {
         return {
           ...s,
           containerScale: s.containerScale || 1,
+          gridSpan,  // ✅ Include gridSpan for template engine
           image: {
             src: s.image?.src || '',
             alt: s.image?.alt || '',
