@@ -126,10 +126,12 @@ export async function fetchAllReviewsForSchema(
     }
 
     // 4. Buscar Reviews Globais da Empresa (company_profile.company_reviews)
-    const { data: companyProfile, error: companyError } = await supabase
+    const { data: companyProfiles, error: companyError } = await supabase
       .from("company_profile")
       .select("company_reviews")
-      .maybeSingle();
+      .limit(1);
+    
+    const companyProfile = companyProfiles?.[0];
 
     if (companyError) {
       console.error("Erro ao buscar company reviews:", companyError);

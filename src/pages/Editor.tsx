@@ -2118,8 +2118,8 @@ const EditorContent = () => {
   const [finalHTML, setFinalHTML] = useState<string>('');
   const [isGeneratingFinal, setIsGeneratingFinal] = useState<boolean>(false);
 
-  // 🆕 Gerar HTML final completo quando dados mudarem (com debounce longo para evitar flickering)
-  const debouncedDataForFinal = useDebounceValue(data, 2000);
+  // 🆕 Gerar HTML final completo quando dados mudarem (com debounce para evitar regenerações excessivas)
+  const debouncedDataForFinal = useDebounceValue(data, 500);
   
   useEffect(() => {
     const generateFinalHTML = async () => {
@@ -2158,6 +2158,7 @@ const EditorContent = () => {
             
             return {
               ...s,
+              containerScale: s.containerScale || 1,
               image: {
                 src: s.image?.src || '',
                 alt: s.image?.alt || '',
