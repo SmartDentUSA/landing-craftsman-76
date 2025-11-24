@@ -2037,13 +2037,15 @@ const EditorContent = () => {
         
         return {
           ...s,
+          containerScale: s.containerScale || 1,
           image: {
             src: s.image?.src || '',
             alt: s.image?.alt || '',
             scale: s.image?.scale || 1
           },
           size,
-          sizeType
+          sizeType,
+          cardStyle: `transform: scale(${s.containerScale || 1}); transform-origin: center;`
         };
       }),
       advisory: {
@@ -2165,7 +2167,8 @@ const EditorContent = () => {
                 scale: s.image?.scale || 1
               },
               size,
-              sizeType
+              sizeType,
+              cardStyle: `transform: scale(${s.containerScale || 1}); transform-origin: center;`
             };
           }),
           advisory: {
