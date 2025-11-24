@@ -706,21 +706,23 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   
   processedData.logo_url = resolveImageSrc(data.logo_url);
   processedData.banner.images = data.banner?.images?.map(resolveImageSrc) || [];
-  processedData.solutions = data.solutions?.map(s => ({ 
-    ...s,
-    text: s.text,
-    containerScale: s.containerScale || 1.0,
-    image: resolveImageSrc(s?.image) 
-  })) || [];
+      processedData.solutions = data.solutions?.map(s => ({ 
+        ...s,
+        text: s.text,
+        containerScale: s.containerScale || 1.0,
+        gridSpan: s.gridSpan, // ✅ CRITICAL: Preserve gridSpan
+        image: resolveImageSrc(s?.image) 
+      })) || [];
   
-  console.log('🔍 [beforePreview] Solutions processed:', 
-    processedData.solutions.map((s, i) => ({
-      index: i,
-      text: s.text?.substring(0, 30),
-      containerScale: s.containerScale,
-      hasImage: !!s.image?.src
-    }))
-  );
+      console.log('🔍 [beforePreview] Solutions processed:', 
+        processedData.solutions.map((s, i) => ({
+          index: i,
+          text: s.text?.substring(0, 30),
+          containerScale: s.containerScale,
+          gridSpan: s.gridSpan, // ✅ Include gridSpan in debug
+          hasImage: !!s.image?.src
+        }))
+      );
   processedData.advisory.image = resolveImageSrc(data.advisory?.image);
   
   // Garantir que email e seo existem antes de definir propriedades
