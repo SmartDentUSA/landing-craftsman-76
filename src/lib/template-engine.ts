@@ -1982,7 +1982,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#solutions}}
                 <div class="control-item {{size}}" {{#gridColumn}}style="{{gridColumn}}"{{/gridColumn}}>
                     <div class="image-container image-container-{{sizeType}}">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#containerScale}}style="transform: scale({{containerScale}})"{{/containerScale}}>
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
                         </div>
@@ -1998,7 +1998,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         {{#solutions}}
                         <div class="carousel-slide">
                             <div class="image-container">
-                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#image.scale}}style="transform: scale({{image.scale}})"{{/image.scale}}>
+                                <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" {{#containerScale}}style="transform: scale({{containerScale}})"{{/containerScale}}>
                                 <div class="control-item-text-overlay">
                                     <p>{{text}}</p>
                                 </div>
