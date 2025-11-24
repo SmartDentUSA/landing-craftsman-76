@@ -1981,7 +1981,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <!-- Desktop Grid -->
             <div class="control-grid">
                 {{#solutions}}
-                <div class="control-item {{size}}" style="{{gridColumnStyle}}">
+                <div class="control-item {{size}}" style="{{gridColumnStyle}}" data-debug="{{debugInfo}}">
                     <div class="image-container image-container-{{sizeType}}">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}}); transform-origin: center;">
                         <div class="control-item-text-overlay">
@@ -3380,7 +3380,8 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         isLast2: index >= 3,
         containerScale: String(solution.containerScale || 1.0),
         gridSpan: gridSpan,
-        gridColumnStyle: `grid-column: span ${gridSpan};`
+        gridColumnStyle: `grid-column: span ${gridSpan};`,
+        debugInfo: `gridSpan=${gridSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}` // 🔍 DEBUG
       };
     }),
     footer: {
@@ -3392,9 +3393,14 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     }
   };
 
-  // Debug: verificar containerScale values
-  console.log('🎨 [TEMPLATE] containerScale values:', 
-    processedData.solutions?.map((s: any) => ({ index: s.slideIndex, scale: s.containerScale }))
+  // Debug: verificar containerScale and gridSpan values
+  console.log('🎨 [TEMPLATE] containerScale and gridSpan values:', 
+    processedData.solutions?.map((s: any) => ({ 
+      index: s.slideIndex, 
+      scale: s.containerScale,
+      gridSpan: s.gridSpan,
+      debugInfo: s.debugInfo
+    }))
   );
 
   // Process desktop info section

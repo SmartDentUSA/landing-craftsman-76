@@ -157,6 +157,7 @@ export function SolutionsSection({ title, solutions, onTitleChange, onSolutionsC
               onValueChange={(value) => {
                 const newSolutions = [...solutions];
                 newSolutions[index].gridSpan = parseInt(value);
+                console.log(`✅ [GRID-SPAN-CHANGE] Solução ${index} - novo gridSpan:`, parseInt(value));
                 onSolutionsChange(newSolutions);
               }}
             >

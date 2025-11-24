@@ -94,6 +94,7 @@ interface Solution {
   text: string;
   image: ImageData;
   containerScale?: number; // Escala do container (0.3-2.0) - padrão 1.0
+  gridSpan?: number; // 🆕 Largura do grid (1-4 colunas) - padrão 2
 }
 
 interface FAQ {
@@ -2169,9 +2170,13 @@ const EditorContent = () => {
               sizeType = "small";
             }
             
+            // 🔍 DEBUG: Log gridSpan antes de processar
+            console.log(`🎚️ [EDITOR-PREVIEW] Solução ${index} - gridSpan:`, s.gridSpan, 'containerScale:', s.containerScale);
+            
             return {
               ...s,
               containerScale: s.containerScale || 1,
+              gridSpan: s.gridSpan || 2, // ✅ CRITICAL: Pass gridSpan to template engine
               image: {
                 src: s.image?.src || '',
                 alt: s.image?.alt || '',
@@ -2197,6 +2202,7 @@ const EditorContent = () => {
             index: i,
             text: s.text?.substring(0, 30),
             containerScale: s.containerScale,
+            gridSpan: s.gridSpan, // ✅ Log gridSpan
             has_image: !!s.image?.src,
             size: s.size,
             sizeType: s.sizeType
