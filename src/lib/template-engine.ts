@@ -515,7 +515,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             height: 100%;
             object-fit: cover;
             object-position: center;
-            transition: transform 0.3s ease;
+            /* transition removida - o scale inline não deve ser animado */
         }
         
         @media (max-width: 767px) {
@@ -3391,7 +3391,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         slideIndex: index,
         isFirst3: index < 3,
         isLast2: index >= 3,
-        containerScale: solution.containerScale || 1.0,
+        containerScale: String(solution.containerScale || 1.0),
         gridColumn
       };
     }),
@@ -3403,6 +3403,11 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       }))
     }
   };
+
+  // Debug: verificar containerScale values
+  console.log('🎨 [TEMPLATE] containerScale values:', 
+    processedData.solutions?.map((s: any) => ({ index: s.slideIndex, scale: s.containerScale }))
+  );
 
   // Process desktop info section
   if (data.desktop_info && (data.desktop_info.visible_desktop || data.desktop_info.visible_mobile)) {
@@ -4524,7 +4529,13 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     }
   }
 
-  return Mustache.render(TEMPLATE_HTML, processedData);
+  const renderedHTML = Mustache.render(TEMPLATE_HTML, processedData);
+  
+  // Log temporário para debug
+  const scaleMatches = renderedHTML.match(/transform:\s*scale\(([\d.]+)\)/g);
+  console.log('🔍 [HTML-RENDERED] Scale values found:', scaleMatches);
+  
+  return renderedHTML;
 };
 
 export const generateEmailHTML = (emailData: any): string => {
