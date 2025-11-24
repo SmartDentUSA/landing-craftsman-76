@@ -3077,12 +3077,40 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
       ...data.solutions_section,
       ...calculateSectionVisibility(data.solutions_section),
       // Ensure solutions have slideIndex for carousel
-      solutions: data.solutions_section?.solutions?.map((s: any, i: number) => {
-        console.log(`🔍 [TEMPLATE] Solution ${i} containerScale:`, s.containerScale);
-        return { 
-          ...s, 
-          slideIndex: i,
-          containerScale: s.containerScale || 1 // Garantir fallback
+      solutions: data.solutions_section?.solutions?.map((solution: any, index: number) => {
+        // Sistema de grid flexível baseado em gridSpan
+        const gridSpan = solution.gridSpan || 2; // Default: 2 colunas (medium)
+        
+        // Calcular classes CSS baseadas no span
+        let sizeClass = '';
+        let sizeType = '';
+        
+        if (gridSpan === 4) {
+          sizeClass = 'control-item-full';
+          sizeType = 'full';
+        } else if (gridSpan === 3) {
+          sizeClass = 'control-item-large';
+          sizeType = 'large';
+        } else if (gridSpan === 2) {
+          sizeClass = 'control-item-medium';
+          sizeType = 'medium';
+        } else {
+          sizeClass = 'control-item-small';
+          sizeType = 'small';
+        }
+        
+        console.log(`🎨 [SOLUTIONS-SECTION] Solution ${index} - gridSpan: ${gridSpan}, size: ${sizeClass}`);
+        
+        return {
+          ...solution,
+          index: index + 1,
+          size: sizeClass,
+          sizeType: sizeType,
+          slideIndex: index,
+          containerScale: String(solution.containerScale || 1.0),
+          gridSpan: gridSpan,
+          gridColumnStyle: `grid-column: span ${gridSpan};`,
+          debugInfo: `gridSpan=${gridSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}`
         };
       }) || []
     },
