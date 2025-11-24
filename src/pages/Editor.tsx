@@ -2010,8 +2010,8 @@ const EditorContent = () => {
   // Generate optimized preview HTML for real-time updates
   const [generatedHTML, setGeneratedHTML] = useState<string>('');
   
-  // Debounce data to reduce preview flickering
-  const debouncedData = useDebounceValue(data, 800);
+  // Debounce data to reduce preview flickering (reduzido para melhor responsividade)
+  const debouncedData = useDebounceValue(data, 300);
 
   useEffect(() => {
     const generatePreview = async () => {
@@ -2450,7 +2450,7 @@ const EditorContent = () => {
     const currentFingerprint = generatePreviewFingerprint(data);
     const now = Date.now();
     const timeSinceLastUpdate = now - lastPreviewUpdateAt.current;
-    const THROTTLE_MS = 1500; // 1.5 segundos entre updates
+    const THROTTLE_MS = 300; // 300ms - resposta rápida para feedback visual
     
     // Se nada mudou visualmente, não atualizar
     if (currentFingerprint === previousFingerprint.current) {
