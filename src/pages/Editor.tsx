@@ -1240,11 +1240,12 @@ function generatePreviewFingerprint(data: LandingPageData): string {
     banner_images: data.banner?.images?.map(img => img.src),
     banner_cta: data.banner?.cta_primary?.label,
     
-    // Solutions
-    solutions: data.solutions?.map(s => ({ 
-      title: s.text,
-      image: s.image?.src 
-    })),
+        // Solutions
+        solutions: data.solutions?.map(s => ({ 
+          title: s.text,
+          image: s.image?.src,
+          containerScale: s.containerScale || 1
+        })),
     solutions_section_visibility: {
       desktop: data.solutions_section?.visible_desktop,
       mobile: data.solutions_section?.visible_mobile
@@ -2622,6 +2623,7 @@ const EditorContent = () => {
           description: "Landing page atualizada com sucesso!",
         });
         setIsSaving(false);
+        setPreviewVersion(prev => prev + 1); // Force preview regeneration
         
         // Liberar autosave após 2s
         setTimeout(() => {
