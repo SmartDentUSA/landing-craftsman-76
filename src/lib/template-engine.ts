@@ -1909,6 +1909,45 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </header>
 
+    <!-- Animated Banner Section (Independent) -->
+    {{#animated_banner_section}}
+    {{#visible_any}}
+    <section class="animated-banner-section {{visibility_class}}">
+        <div class="container">
+            <h2 class="sr-only">{{title}}</h2>
+            <div style="overflow: hidden; position: relative; padding: 2rem 0;">
+                <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
+                    {{#partners}}
+                    <img 
+                        src="{{logo.src}}"
+                        alt="{{#name}}{{name}}{{/name}}{{^name}}{{#seo_description}}{{seo_description}}{{/seo_description}}{{^seo_description}}Parceiro{{/seo_description}}{{/name}}"
+                        title="{{seo_description}}"
+                        loading="lazy"
+                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+                        onmouseover="this.style.filter='grayscale(0%)'"
+                        onmouseout="this.style.filter='grayscale(100%)'"
+                    />
+                    {{/partners}}
+                    <!-- Duplicar para loop infinito -->
+                    {{#partners}}
+                    <img 
+                        src="{{logo.src}}"
+                        alt="{{#name}}{{name}}{{/name}}{{^name}}{{#seo_description}}{{seo_description}}{{/seo_description}}{{^seo_description}}Parceiro{{/seo_description}}{{/name}}"
+                        title="{{seo_description}}"
+                        loading="lazy"
+                        aria-hidden="true"
+                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
+                        onmouseover="this.style.filter='grayscale(0%)'"
+                        onmouseout="this.style.filter='grayscale(100%)'"
+                    />
+                    {{/partners}}
+                </div>
+            </div>
+        </div>
+    </section>
+    {{/visible_any}}
+    {{/animated_banner_section}}
+
     <!-- Vídeo Explicativo do Produto -->
     {{#explanatory_video_section}}
     {{#visible_desktop_explanatory_video}}
@@ -1979,45 +2018,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </section>
     {{/solutions_section.visible_any}}
-
-    <!-- Animated Banner Section (Independent) -->
-    {{#animated_banner_section}}
-    {{#visible_any}}
-    <section class="animated-banner-section {{visibility_class}}">
-        <div class="container">
-            <h2 class="sr-only">{{title}}</h2>
-            <div style="overflow: hidden; position: relative; padding: 2rem 0;">
-                <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
-                    {{#partners}}
-                    <img 
-                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
-                        alt="{{name}} - {{seo_description}}"
-                        title="{{seo_description}}"
-                        loading="lazy"
-                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
-                        onmouseover="this.style.filter='grayscale(0%)'"
-                        onmouseout="this.style.filter='grayscale(100%)'"
-                    />
-                    {{/partners}}
-                    <!-- Duplicar para loop infinito -->
-                    {{#partners}}
-                    <img 
-                        src="{{#logo.supabase_path}}https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/{{logo.supabase_path}}{{/logo.supabase_path}}{{^logo.supabase_path}}{{logo.src}}{{/logo.supabase_path}}"
-                        alt="{{name}} - {{seo_description}}"
-                        title="{{seo_description}}"
-                        loading="lazy"
-                        aria-hidden="true"
-                        style="height: 3rem; object-fit: contain; filter: grayscale(100%); transition: all 0.3s ease; flex-shrink: 0;"
-                        onmouseover="this.style.filter='grayscale(0%)'"
-                        onmouseout="this.style.filter='grayscale(100%)'"
-                    />
-                    {{/partners}}
-                </div>
-            </div>
-        </div>
-    </section>
-    {{/visible_any}}
-    {{/animated_banner_section}}
 
     <!-- Desktop Info Section -->
     {{#desktop_info.visible_any}}

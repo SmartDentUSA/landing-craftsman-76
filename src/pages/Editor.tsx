@@ -2178,6 +2178,12 @@ const EditorContent = () => {
         };
         
         // 🎯 SPIN: Passar soluções SPIN relacionadas para o template-engine
+        console.log('🔄 [PREVIEW-REGEN] Regenerando HTML por mudança em:', {
+          has_animated_banner: !!finalData.animated_banner_section,
+          partners_count: finalData.animated_banner_section?.partners?.length ?? 0,
+          visible_desktop: finalData.animated_banner_section?.visible_desktop,
+          visible_mobile: finalData.animated_banner_section?.visible_mobile
+        });
         const html = await generateHTML(finalData, relatedSpinSolutions);
         console.timeEnd('final-html-generation');
         setFinalHTML(html);
