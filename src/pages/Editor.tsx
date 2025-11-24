@@ -515,7 +515,11 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
       selected_video: null
     },
     solutions_title: data.solutions_title || 'Nossas Soluções',
-    solutions: data.solutions || [],
+    solutions: (data.solutions || []).map((s: any) => ({
+      ...s,
+      gridSpan: s.gridSpan ?? 2, // Migração: garantir que gridSpan existe
+      containerScale: s.containerScale ?? 1.0
+    })),
     desktop_info,
     resources_section: data.resources_section || {
       visible_desktop: true,
@@ -530,10 +534,31 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
       subtitle: ''
     },
     advisory,
-    solutions_section: data.solutions_section || {
-      visible_desktop: true,
-      visible_mobile: true
-    },
+    solutions_section: (() => {
+      const section: any = data.solutions_section || {
+        visible_desktop: true,
+        visible_mobile: true
+      };
+      
+      // Migração: garantir que todas as solutions tenham gridSpan
+      if (section.solutions) {
+        section.solutions = section.solutions.map((s: any) => ({
+          ...s,
+          gridSpan: s.gridSpan ?? 2,
+          containerScale: s.containerScale ?? 1.0
+        }));
+        
+        console.log('✅ [MIGRATION] Solutions migradas com gridSpan:', 
+          section.solutions.map((s: any) => ({
+            text: s.text?.substring(0, 30) + '...',
+            gridSpan: s.gridSpan,
+            containerScale: s.containerScale
+          }))
+        );
+      }
+      
+      return section;
+    })(),
     faq_section: data.faq_section || {
       visible_desktop: true,
       visible_mobile: true
