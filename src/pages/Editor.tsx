@@ -706,9 +706,20 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
   processedData.logo_url = resolveImageSrc(data.logo_url);
   processedData.banner.images = data.banner?.images?.map(resolveImageSrc) || [];
   processedData.solutions = data.solutions?.map(s => ({ 
-    ...s, 
+    ...s,
+    text: s.text,
+    containerScale: s.containerScale || 1.0,
     image: resolveImageSrc(s?.image) 
   })) || [];
+  
+  console.log('🔍 [beforePreview] Solutions processed:', 
+    processedData.solutions.map((s, i) => ({
+      index: i,
+      text: s.text?.substring(0, 30),
+      containerScale: s.containerScale,
+      hasImage: !!s.image?.src
+    }))
+  );
   processedData.advisory.image = resolveImageSrc(data.advisory?.image);
   
   // Garantir que email e seo existem antes de definir propriedades
