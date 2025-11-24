@@ -2178,6 +2178,18 @@ const EditorContent = () => {
           }
         };
         
+        // 🔍 DEBUG: Log completo das soluções processadas para preview
+        console.log('🎯 [SOLUTIONS-DEBUG] Soluções processadas para preview:', 
+          finalData.solutions?.map((s, i) => ({
+            index: i,
+            text: s.text?.substring(0, 30),
+            containerScale: s.containerScale,
+            has_image: !!s.image?.src,
+            size: s.size,
+            sizeType: s.sizeType
+          }))
+        );
+        
         // 🎯 SPIN: Passar soluções SPIN relacionadas para o template-engine
         console.log('🔄 [PREVIEW-REGEN] Regenerando HTML por mudança em:', {
           has_animated_banner: !!finalData.animated_banner_section,

@@ -117,9 +117,15 @@ export function SolutionsSection({ title, solutions, onTitleChange, onSolutionsC
               <Slider
                 value={[solution.containerScale || 1.0]}
                 onValueChange={(value) => {
+                  console.log(`🎚️ [SLIDER] Alterando containerScale da solução ${index} para:`, value[0]);
                   const newSolutions = [...solutions];
                   newSolutions[index].containerScale = value[0];
                   onSolutionsChange(newSolutions);
+                  
+                  // Forçar re-render
+                  setTimeout(() => {
+                    console.log('✅ [SLIDER] Mudança aplicada, preview deve regenerar');
+                  }, 100);
                 }}
                 min={0.3}
                 max={2.0}
