@@ -20,6 +20,20 @@ export function InfinitePartnersCarousel({
   visibleDesktop,
   visibleMobile 
 }: Props) {
+  console.log('🎬 [CAROUSEL-DEBUG]', {
+    partners_count: partners?.length ?? 0,
+    partners_data: partners?.map((p, i) => ({
+      index: i,
+      id: p.id,
+      name: p.name,
+      seo_description: p.seo_description,
+      logo_src: p.logo?.src,
+      logo_mode: p.logo?.mode
+    })),
+    visibleDesktop,
+    visibleMobile
+  });
+
   if (!partners || partners.length === 0) return null;
   
   // Duplicar array para efeito seamless
@@ -42,10 +56,20 @@ export function InfinitePartnersCarousel({
               <img 
                 key={`${partner.id}-${index}`}
                 src={getImageUrl(partner.logo)}
-                alt={`${partner.name} - ${partner.seo_description}`}
-                title={partner.seo_description}
+                alt={partner.name || partner.seo_description || `Parceiro ${index + 1}`}
+                title={partner.seo_description || partner.name}
                 loading="lazy"
                 className="h-12 md:h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300 flex-shrink-0"
+                onLoad={(e) => console.log('✅ [IMG-LOAD]', { 
+                  index, 
+                  src: (e.target as HTMLImageElement).src,
+                  naturalWidth: (e.target as HTMLImageElement).naturalWidth 
+                })}
+                onError={(e) => console.error('❌ [IMG-ERROR]', { 
+                  index,
+                  attempted_src: (e.target as HTMLImageElement).src,
+                  logo_data: partner.logo 
+                })}
               />
             ))}
           </div>
