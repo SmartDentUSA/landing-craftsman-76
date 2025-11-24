@@ -710,7 +710,7 @@ const beforePreview = (data: LandingPageData): LandingPageData => {
         ...s,
         text: s.text,
         containerScale: s.containerScale || 1.0,
-        gridSpan: s.gridSpan, // ✅ CRITICAL: Preserve gridSpan
+        gridSpan: s.gridSpan ?? 2, // ✅ CRITICAL: Fallback to 2 columns if undefined/null
         image: resolveImageSrc(s?.image) 
       })) || [];
   
@@ -2178,7 +2178,7 @@ const EditorContent = () => {
             return {
               ...s,
               containerScale: s.containerScale || 1,
-              gridSpan: s.gridSpan || 2, // ✅ CRITICAL: Pass gridSpan to template engine
+              gridSpan: s.gridSpan ?? 2, // ✅ CRITICAL: Pass gridSpan to template engine (nullish coalescing)
               image: {
                 src: s.image?.src || '',
                 alt: s.image?.alt || '',
@@ -2540,6 +2540,15 @@ const EditorContent = () => {
           template: freshLP.template
         });
         
+        // ✅ MIGRAÇÃO: Garantir gridSpan em solutions antigas (fallback para 2 colunas)
+        if (safe.solutions && Array.isArray(safe.solutions)) {
+          safe.solutions = safe.solutions.map(s => ({
+            ...s,
+            gridSpan: s.gridSpan ?? 2, // Migração automática: fallback para 2 colunas
+            containerScale: s.containerScale ?? 1.0
+          }));
+        }
+        
         console.log('✅ [Rehydrate OK]', {
           updated_at: (freshLP as any).updated_at,
           bannerTitle: safe.banner?.title,
@@ -2587,6 +2596,15 @@ const EditorContent = () => {
     if (id) {
       // ✅ Processar dados locais
       const processedData = onSave(data);
+      
+      // ✅ Sanitizar solutions antes de salvar (garantir gridSpan válido)
+      if (processedData.solutions && Array.isArray(processedData.solutions)) {
+        processedData.solutions = processedData.solutions.map(s => ({
+          ...s,
+          gridSpan: typeof s.gridSpan === 'number' && s.gridSpan >= 1 && s.gridSpan <= 4 ? s.gridSpan : 2,
+          containerScale: typeof s.containerScale === 'number' ? s.containerScale : 1.0
+        }));
+      }
       
       // ✅ Montar payload completo - sem merge, apenas os dados atuais da tela
       const storeData: any = {
