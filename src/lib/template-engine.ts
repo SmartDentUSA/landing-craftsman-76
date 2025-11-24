@@ -546,20 +546,24 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             }
         }
         
-        /* Tamanhos específicos para layout assimétrico */
-        .control-item-large {
-            grid-area: large;
+        /* ✅ SISTEMA FLEXÍVEL DE GRID: Removido grid-area fixo */
+        /* Agora o grid usa grid-column: span X definido inline no template */
+        /* Isso permite que o usuário escolha 1-4 colunas dinamicamente */
+        .control-item-full {
+            /* Ocupa 4 colunas */
         }
         
-        .control-item-medium:nth-child(2) { grid-area: med1; }
-        .control-item-medium:nth-child(3) { grid-area: med2; }
-        .control-item-medium:nth-child(6) { grid-area: med3; }
-        .control-item-medium:nth-child(7) { grid-area: med4; }
-        .control-item-medium:nth-child(8) { grid-area: med5; }
+        .control-item-large {
+            /* Ocupa 3 colunas */
+        }
         
-        .control-item-small:nth-child(4) { grid-area: small1; }
-        .control-item-small:nth-child(5) { grid-area: small2; }
-        .control-item-small:nth-child(9) { grid-area: small3; }
+        .control-item-medium {
+            /* Ocupa 2 colunas */
+        }
+        
+        .control-item-small {
+            /* Ocupa 1 coluna */
+        }
         
         .image-container {
             width: 100%;
