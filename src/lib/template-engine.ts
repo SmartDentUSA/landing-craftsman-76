@@ -503,6 +503,21 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             position: relative;
         }
         
+        .image-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            background: #f0f0f0;
+        }
+        
+        .control-item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transition: transform 0.3s ease;
+        }
+        
         @media (max-width: 767px) {
             .control-item:hover {
                 transform: translateY(-4px);
@@ -1980,9 +1995,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <!-- Desktop Grid -->
             <div class="control-grid">
                 {{#solutions}}
-                <div class="control-item {{size}}" style="{{#gridColumn}}{{gridColumn}} {{/gridColumn}}{{#cardStyle}}{{cardStyle}}{{/cardStyle}}">
+                <div class="control-item {{size}}" {{#gridColumn}}style="{{gridColumn}}"{{/gridColumn}}>
                     <div class="image-container image-container-{{sizeType}}">
-                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image">
+                        <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}}); transform-origin: center;">
                         <div class="control-item-text-overlay">
                             <p>{{text}}</p>
                         </div>
@@ -3377,9 +3392,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         isFirst3: index < 3,
         isLast2: index >= 3,
         containerScale: solution.containerScale || 1.0,
-        gridColumn,
-        // 🎯 Aplicar scale ao card inteiro
-        cardStyle: `transform: scale(${solution.containerScale || 1.0}); transform-origin: center;`
+        gridColumn
       };
     }),
     footer: {

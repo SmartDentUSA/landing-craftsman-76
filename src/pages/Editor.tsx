@@ -2044,8 +2044,7 @@ const EditorContent = () => {
             scale: s.image?.scale || 1
           },
           size,
-          sizeType,
-          cardStyle: `transform: scale(${s.containerScale || 1}); transform-origin: center;`
+          sizeType
         };
       }),
       advisory: {
@@ -2167,8 +2166,7 @@ const EditorContent = () => {
                 scale: s.image?.scale || 1
               },
               size,
-              sizeType,
-              cardStyle: `transform: scale(${s.containerScale || 1}); transform-origin: center;`
+              sizeType
             };
           }),
           advisory: {
