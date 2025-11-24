@@ -26,10 +26,8 @@ export function InfinitePartnersCarousel({
   const duplicatedPartners = [...partners, ...partners];
   
   const getImageUrl = (logo: ImageData) => {
-    if (logo.mode === 'supabase' && logo.supabase_path) {
-      return `https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/${logo.supabase_path}`;
-    }
-    return logo.src;
+    // Usa diretamente logo.src que já contém a URL completa correta
+    return logo.src || '/placeholder.svg';
   };
   
   return (
