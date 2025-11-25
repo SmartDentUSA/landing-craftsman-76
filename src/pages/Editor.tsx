@@ -52,7 +52,7 @@ import { useProductSync } from "@/hooks/useProductSync";
 import { useSelectedProducts } from "@/hooks/useSelectedProducts";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDebounceValue } from "@/hooks/useDebounceValue";
-import { useOptimizedPreview } from "@/hooks/useOptimizedPreview";
+
 import { useDesktopInfoAutoSave } from "@/hooks/useDesktopInfoAutoSave";
 import { useExplanatoryVideoAutoSave } from "@/hooks/useExplanatoryVideoAutoSave";
 import { useAnimatedBannerAutoSave } from "@/hooks/useAnimatedBannerAutoSave";
@@ -2037,258 +2037,110 @@ const EditorContent = () => {
     }
   }, [hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
 
-  // Generate optimized preview HTML for real-time updates
+  // Preview simples e confiável como CodeView
   const [generatedHTML, setGeneratedHTML] = useState<string>('');
-  
-  // 🎯 Hook de preview otimizado para hot-swap CSS
-  const { updateVisualStyles, isVisualChange } = useOptimizedPreview();
-  const [lastSolutionsSnapshot, setLastSolutionsSnapshot] = React.useState(data.solutions || []);
-  const hotSwapTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // 🎯 PREVIEW INSTANTÂNEO com HOT-SWAP CSS
-  // Detecta mudanças visuais vs. mudanças de conteúdo
+  // 🎯 PREVIEW SIMPLES: Regenera 300ms após última mudança
   useEffect(() => {
-    const solutions = data.solutions || [];
-    
-    // Verificar se é apenas mudança visual (containerScale, gridSpan)
-    const onlyVisualChange = isVisualChange(lastSolutionsSnapshot, solutions);
-    
-    if (onlyVisualChange) {
-      // Cancelar timer anterior
-      if (hotSwapTimerRef.current) {
-        clearTimeout(hotSwapTimerRef.current);
-      }
+    const timer = setTimeout(async () => {
+      console.log('🔄 Gerando preview atualizado');
+      const processedData = beforePreview(data);
       
-      // ⚡ INSTANTÂNEO: Aplicar com micro-delay para agrupar múltiplas mudanças
-      hotSwapTimerRef.current = setTimeout(() => {
-        console.log('⚡ [HOT-SWAP] Mudança visual detectada - aplicando CSS diretamente');
-        const success = updateVisualStyles(solutions);
-        setLastSolutionsSnapshot(solutions);
-        
-        if (!success) {
-          // Fallback para regeneração completa se hot-swap falhar
-          console.warn('⚠️ Hot-swap falhou, regenerando preview completo');
-          const generatePreview = async () => {
-            console.time('preview-generation');
-            const processedData = beforePreview(data);
+      const previewData = {
+        ...processedData,
+        logo_url: processedData.logo_url.src,
+        banner: {
+          ...processedData.banner,
+          images: processedData.banner.images.map(img => ({
+            src: img.src,
+            alt: img.alt,
+            scale: img.scale,
+            href: img.href
+          }))
+        },
+        solutions: processedData.solutions.map((s) => {
+          const gridSpan = s.gridSpan ?? 2;
+          let size = "control-item-medium";
+          let sizeType = "medium";
           
-            const previewData = {
-              ...processedData,
-              // Converter ImageData para formato compatível com template
-              logo_url: processedData.logo_url.src,
-              banner: {
-                ...processedData.banner,
-                images: processedData.banner.images.map(img => ({
-                  src: img.src,
-                  alt: img.alt,
-                  scale: img.scale,
-                  href: img.href
-                }))
-              },
-              solutions: processedData.solutions.map((s) => {
-                // ✅ Use gridSpan from user selection to determine size
-                const gridSpan = s.gridSpan ?? 2;
-                let size = "control-item-medium";
-                let sizeType = "medium";
-                
-                // Map gridSpan to correct CSS classes
-                if (gridSpan === 4) {
-                  size = "control-item-full";
-                  sizeType = "full";
-                } else if (gridSpan === 3) {
-                  size = "control-item-large";
-                  sizeType = "large";
-                } else if (gridSpan === 2) {
-                  size = "control-item-medium";
-                  sizeType = "medium";
-                } else if (gridSpan === 1) {
-                  size = "control-item-small";
-                  sizeType = "small";
-                }
-                
-                return {
-                  ...s,
-                  containerScale: s.containerScale || 1,
-                  gridSpan,  // ✅ Include gridSpan for template engine
-                  image: {
-                    src: s.image?.src || '',
-                    alt: s.image?.alt || '',
-                    scale: s.image?.scale || 1
-                  },
-                  size,
-                  sizeType
-                };
-              }),
-              advisory: {
-                ...processedData.advisory,
-                image: {
-                  src: processedData.advisory?.image?.src || '',
-                  alt: processedData.advisory?.image?.alt || '',
-                  scale: processedData.advisory?.image?.scale || 1
-                }
-              },
-              animated_banner_section: processedData.animated_banner_section ? {
-                ...processedData.animated_banner_section,
-                visible_any: (processedData.animated_banner_section.visible_desktop || processedData.animated_banner_section.visible_mobile) && 
-                              (processedData.animated_banner_section.partners || []).length > 0,
-                visibility_class: processedData.animated_banner_section.visible_desktop && processedData.animated_banner_section.visible_mobile 
-                  ? '' 
-                  : processedData.animated_banner_section.visible_desktop 
-                    ? 'desktop-only' 
-                    : 'mobile-only',
-                partners: (processedData.animated_banner_section.partners || []).map(p => ({
-                  ...p,
-                  logo_url: p.logo?.supabase_path 
-                    ? `https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/${p.logo.supabase_path}`
-                    : p.logo?.src || '',
-                  logo: {
-                    src: p.logo?.src || '',
-                    alt: p.logo?.alt || '',
-                    scale: p.logo?.scale || 1,
-                    mode: p.logo?.mode || 'url',
-                    supabase_path: p.logo?.supabase_path
-                  }
-                }))
-              } : undefined,
-              knowledge_feed_section: processedData.knowledge_feed_section ? {
-                ...processedData.knowledge_feed_section,
-                visible_any: processedData.knowledge_feed_section.visible_desktop || processedData.knowledge_feed_section.visible_mobile,
-                visibility_class: processedData.knowledge_feed_section.visible_desktop && processedData.knowledge_feed_section.visible_mobile 
-                  ? '' 
-                  : processedData.knowledge_feed_section.visible_desktop 
-                    ? 'desktop-only' 
-                    : 'mobile-only',
-                // ✅ CORREÇÃO: Garantir feed_url e limit sempre existem
-                feed_url: processedData.knowledge_feed_section.feed_url || 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-                limit: processedData.knowledge_feed_section.limit || 12,
-                items: [] // Will be populated by generatePreviewHTML
-              } : undefined
-            };
-            
-            const html = await generatePreviewHTML(previewData);
-            setGeneratedHTML(html);
-          };
-          generatePreview();
-        }
-      }, 50); // 50ms - imperceptível, mas agrupa mudanças rápidas
-      
-      return () => {
-        if (hotSwapTimerRef.current) {
-          clearTimeout(hotSwapTimerRef.current);
-        }
-      };
-    } else {
-      // 🔄 REGENERAÇÃO COMPLETA: Mudança de conteúdo
-      console.log('🔄 [REGENERAÇÃO] Mudança de conteúdo detectada');
-      const timer = setTimeout(() => {
-        const generatePreview = async () => {
-          console.time('preview-generation');
-          const processedData = beforePreview(data);
-        
-        const previewData = {
-          ...processedData,
-          // Converter ImageData para formato compatível com template
-          logo_url: processedData.logo_url.src,
-          banner: {
-            ...processedData.banner,
-            images: processedData.banner.images.map(img => ({
-              src: img.src,
-              alt: img.alt,
-              scale: img.scale,
-              href: img.href
-            }))
-          },
-          solutions: processedData.solutions.map((s) => {
-            // ✅ Use gridSpan from user selection to determine size
-            const gridSpan = s.gridSpan ?? 2;
-            let size = "control-item-medium";
-            let sizeType = "medium";
-            
-            // Map gridSpan to correct CSS classes
-            if (gridSpan === 4) {
-              size = "control-item-full";
-              sizeType = "full";
-            } else if (gridSpan === 3) {
-              size = "control-item-large";
-              sizeType = "large";
-            } else if (gridSpan === 2) {
-              size = "control-item-medium";
-              sizeType = "medium";
-            } else if (gridSpan === 1) {
-              size = "control-item-small";
-              sizeType = "small";
-            }
-            
-            return {
-              ...s,
-              containerScale: s.containerScale || 1,
-              gridSpan,  // ✅ Include gridSpan for template engine
-              image: {
-                src: s.image?.src || '',
-                alt: s.image?.alt || '',
-                scale: s.image?.scale || 1
-              },
-              size,
-              sizeType
-            };
-          }),
-          advisory: {
-            ...processedData.advisory,
+          if (gridSpan === 4) {
+            size = "control-item-full";
+            sizeType = "full";
+          } else if (gridSpan === 3) {
+            size = "control-item-large";
+            sizeType = "large";
+          } else if (gridSpan === 2) {
+            size = "control-item-medium";
+            sizeType = "medium";
+          } else if (gridSpan === 1) {
+            size = "control-item-small";
+            sizeType = "small";
+          }
+          
+          return {
+            ...s,
+            containerScale: s.containerScale || 1,
+            gridSpan,
             image: {
-              src: processedData.advisory?.image?.src || '',
-              alt: processedData.advisory?.image?.alt || '',
-              scale: processedData.advisory?.image?.scale || 1
+              src: s.image?.src || '',
+              alt: s.image?.alt || '',
+              scale: s.image?.scale || 1
+            },
+            size,
+            sizeType
+          };
+        }),
+        advisory: {
+          ...processedData.advisory,
+          image: {
+            src: processedData.advisory?.image?.src || '',
+            alt: processedData.advisory?.image?.alt || '',
+            scale: processedData.advisory?.image?.scale || 1
+          }
+        },
+        animated_banner_section: processedData.animated_banner_section ? {
+          ...processedData.animated_banner_section,
+          visible_any: (processedData.animated_banner_section.visible_desktop || processedData.animated_banner_section.visible_mobile) && 
+                        (processedData.animated_banner_section.partners || []).length > 0,
+          visibility_class: processedData.animated_banner_section.visible_desktop && processedData.animated_banner_section.visible_mobile 
+            ? '' 
+            : processedData.animated_banner_section.visible_desktop 
+              ? 'desktop-only' 
+              : 'mobile-only',
+          partners: (processedData.animated_banner_section.partners || []).map(p => ({
+            ...p,
+            logo_url: p.logo?.supabase_path 
+              ? `https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/${p.logo.supabase_path}`
+              : p.logo?.src || '',
+            logo: {
+              src: p.logo?.src || '',
+              alt: p.logo?.alt || '',
+              scale: p.logo?.scale || 1,
+              mode: p.logo?.mode || 'url',
+              supabase_path: p.logo?.supabase_path
             }
-          },
-          animated_banner_section: processedData.animated_banner_section ? {
-            ...processedData.animated_banner_section,
-            visible_any: (processedData.animated_banner_section.visible_desktop || processedData.animated_banner_section.visible_mobile) && 
-                          (processedData.animated_banner_section.partners || []).length > 0,
-            visibility_class: processedData.animated_banner_section.visible_desktop && processedData.animated_banner_section.visible_mobile 
-              ? '' 
-              : processedData.animated_banner_section.visible_desktop 
-                ? 'desktop-only' 
-                : 'mobile-only',
-            partners: (processedData.animated_banner_section.partners || []).map(p => ({
-              ...p,
-              logo_url: p.logo?.supabase_path 
-                ? `https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/${p.logo.supabase_path}`
-                : p.logo?.src || '',
-              logo: {
-                src: p.logo?.src || '',
-                alt: p.logo?.alt || '',
-                scale: p.logo?.scale || 1,
-                mode: p.logo?.mode || 'url',
-                supabase_path: p.logo?.supabase_path
-              }
-            }))
-          } : undefined,
-          knowledge_feed_section: processedData.knowledge_feed_section ? {
-            ...processedData.knowledge_feed_section,
-            visible_any: processedData.knowledge_feed_section.visible_desktop || processedData.knowledge_feed_section.visible_mobile,
-            visibility_class: processedData.knowledge_feed_section.visible_desktop && processedData.knowledge_feed_section.visible_mobile 
-              ? '' 
-              : processedData.knowledge_feed_section.visible_desktop 
-                ? 'desktop-only' 
-                : 'mobile-only',
-            // ✅ CORREÇÃO: Garantir feed_url e limit sempre existem
-            feed_url: processedData.knowledge_feed_section.feed_url || 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
-            limit: processedData.knowledge_feed_section.limit || 12,
-            items: [] // Will be populated by generatePreviewHTML
-          } : undefined
-        };
-        
-        const html = await generatePreviewHTML(previewData);
-        setGeneratedHTML(html);
-        setLastSolutionsSnapshot(solutions);
-        };
-        generatePreview();
-      }, 100); // Debounce leve para mudanças de conteúdo
+          }))
+        } : undefined,
+        knowledge_feed_section: processedData.knowledge_feed_section ? {
+          ...processedData.knowledge_feed_section,
+          visible_any: processedData.knowledge_feed_section.visible_desktop || processedData.knowledge_feed_section.visible_mobile,
+          visibility_class: processedData.knowledge_feed_section.visible_desktop && processedData.knowledge_feed_section.visible_mobile 
+            ? '' 
+            : processedData.knowledge_feed_section.visible_desktop 
+              ? 'desktop-only' 
+              : 'mobile-only',
+          feed_url: processedData.knowledge_feed_section.feed_url || 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/knowledge-feed',
+          limit: processedData.knowledge_feed_section.limit || 12,
+          items: []
+        } : undefined
+      };
       
-      return () => clearTimeout(timer);
-    }
-  }, [data.solutions, lastSolutionsSnapshot, isVisualChange, updateVisualStyles, data]);
+      const html = await generatePreviewHTML(previewData);
+      setGeneratedHTML(html);
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timer);
+  }, [data]);
 
   // 🆕 Estado para HTML final completo (com todos os processamentos SEO)
   const [finalHTML, setFinalHTML] = useState<string>('');
@@ -7950,18 +7802,11 @@ dataLayer = [{
               <div className="h-full flex flex-col gap-4 overflow-auto">
                 <div className="flex-1 border rounded-lg overflow-hidden">
                     <iframe
-                      ref={iframeRef}
                       key={`landing-${previewVersion}`}
                       srcDoc={generatedHTML}
                       className="w-full h-full"
                       title="Landing Page Preview"
                       sandbox="allow-same-origin allow-scripts"
-                      onLoad={() => {
-                        // Aplicar hot-swap DEPOIS que o iframe carregar
-                        if (lastSolutionsSnapshot.length > 0) {
-                          updateVisualStyles(data.solutions || []);
-                        }
-                      }}
                     />
                 </div>
               </div>
