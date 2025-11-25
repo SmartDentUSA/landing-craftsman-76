@@ -40,6 +40,29 @@ function calculateProductVolume(product: any): ProductDimensions {
   };
 }
 
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    console.log(`📥 Baixando imagem: ${url.substring(0, 80)}...`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`❌ Erro ao baixar imagem (${response.status}): ${url}`);
+      return null;
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const base64 = btoa(String.fromCharCode(...uint8Array));
+    const contentType = response.headers.get('content-type') || 'image/png';
+    
+    console.log(`✅ Imagem convertida para base64 (${contentType}, ${Math.round(arrayBuffer.byteLength / 1024)}KB)`);
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error(`❌ Erro ao converter imagem para base64: ${url}`, error);
+    return null;
+  }
+}
+
 function buildIntelligentPrompt(products: any[]): string {
   const productNames = products.map(p => p.name).join(', ');
   
@@ -133,12 +156,33 @@ serve(async (req) => {
     const prompt = buildIntelligentPrompt(products);
     console.log('🎨 Prompt gerado:', prompt.substring(0, 300) + '...');
 
-    const productImages = selectedImageUrls.map(url => ({
+    // ✅ Limitar a 2-3 imagens para performance e converter para base64
+    const limitedUrls = selectedImageUrls.slice(0, 3);
+    console.log(`📸 Convertendo ${limitedUrls.length} imagens para base64...`);
+    
+    const base64Images = await Promise.all(
+      limitedUrls.map(url => fetchImageAsBase64(url))
+    );
+    
+    // Filtrar imagens que falharam na conversão
+    const validBase64Images = base64Images.filter(img => img !== null) as string[];
+    
+    if (validBase64Images.length === 0) {
+      console.error('❌ Nenhuma imagem pôde ser convertida para base64');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Erro ao processar as imagens. Verifique se as URLs são válidas e acessíveis.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const productImages = validBase64Images.map(base64 => ({
       type: "image_url",
-      image_url: { url }
+      image_url: { url: base64 }
     }));
 
-    console.log(`📸 Enviando ${productImages.length} imagens selecionadas para a IA`);
+    console.log(`✅ ${validBase64Images.length} imagens convertidas e prontas para envio`);
 
     const startTime = Date.now();
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -148,7 +192,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-2.5-flash-image-preview",
         messages: [{
           role: "user",
           content: [
@@ -205,7 +249,7 @@ serve(async (req) => {
           src: imageBase64,
           generated_at: new Date().toISOString(),
           prompt_used: prompt,
-          model: "google/gemini-2.5-flash-image",
+          model: "google/gemini-2.5-flash-image-preview",
           products_used: productIds,
           selected_images_count: selectedImageUrls.length,
           generation_time_ms: generationTime
@@ -224,7 +268,7 @@ serve(async (req) => {
         success: true,
         imageBase64,
         prompt,
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-2.5-flash-image-preview",
         details: {
           generation_time: generationTime,
           products_count: products.length,

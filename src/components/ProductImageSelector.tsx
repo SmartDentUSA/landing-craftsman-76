@@ -32,20 +32,40 @@ export function ProductImageSelector({
       try {
         const loadedProducts = await loadProductsByIds(productIds);
         
-        // Filtrar apenas produtos com image_url válida
-        const productsWithImages = loadedProducts
-          .filter(p => p.image_url && p.image_url.trim() !== '')
-          .map(p => ({
-            id: p.id,
-            name: p.name,
-            image_url: p.image_url
-          }));
+        // Extrair TODAS as imagens da galeria de cada produto
+        const allImages: ProductWithImage[] = [];
+        
+        loadedProducts.forEach(product => {
+          // Tentar obter images_gallery primeiro
+          const gallery = product.images_gallery || [];
+          
+          if (Array.isArray(gallery) && gallery.length > 0) {
+            // Adicionar cada imagem da galeria
+            gallery.forEach((img: any, idx: number) => {
+              const imageUrl = typeof img === 'string' ? img : img?.url || img?.src;
+              if (imageUrl && imageUrl.trim() !== '') {
+                allImages.push({
+                  id: `${product.id}-gallery-${idx}`,
+                  name: `${product.name} - Imagem ${idx + 1}`,
+                  image_url: imageUrl
+                });
+              }
+            });
+          } else if (product.image_url && product.image_url.trim() !== '') {
+            // Fallback: usar image_url principal se não houver galeria
+            allImages.push({
+              id: `${product.id}-main`,
+              name: product.name,
+              image_url: product.image_url
+            });
+          }
+        });
 
-        setProducts(productsWithImages);
+        setProducts(allImages);
 
         // Auto-selecionar todas as imagens por padrão se nada estiver selecionado
-        if (selectedImageUrls.length === 0 && productsWithImages.length > 0) {
-          onSelectionChange(productsWithImages.map(p => p.image_url));
+        if (selectedImageUrls.length === 0 && allImages.length > 0) {
+          onSelectionChange(allImages.map(p => p.image_url));
         }
       } catch (error) {
         console.error('Erro ao carregar produtos:', error);
