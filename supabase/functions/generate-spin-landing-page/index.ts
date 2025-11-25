@@ -490,26 +490,6 @@ serve(async (req) => {
 
     console.log('✅ Depoimentos reais encontrados:', realTestimonials.length);
 
-    // ✅ BUSCAR DEPOIMENTOS REAIS DO BANCO DE DADOS
-    console.log('📋 Buscando depoimentos reais dos produtos associados...');
-    const { data: videoTestimonials } = await supabaseClient
-      .from('video_testimonials')
-      .select('*')
-      .eq('approved', true)
-      .order('display_order', { ascending: true });
-
-    // Formatar depoimentos no formato esperado pelo HTML generator
-    const realTestimonials = (videoTestimonials || []).map((testimonial: any) => ({
-      quote: testimonial.testimonial_text,
-      clientName: testimonial.client_name,
-      clientPhoto: testimonial.photo_url || null,
-      location: testimonial.location || null,
-      profession: testimonial.profession || null,
-      specialty: testimonial.specialty || null
-    }));
-
-    console.log('✅ Depoimentos reais encontrados:', realTestimonials.length);
-
     // 🔥 Mudança 4 (OPCIONAL): Gerar FAQ por IA se estiver vazia
     if (!solution.faq || solution.faq.length === 0) {
       console.log('🤖 FAQ vazia, gerando automaticamente...');
