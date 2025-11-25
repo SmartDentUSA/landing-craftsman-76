@@ -22,6 +22,7 @@ interface Solution {
   image: ImageData;
   containerScale?: number;
   gridSpan?: number; // 1-4 colunas no grid desktop
+  gridRowSpan?: number; // 🆕 NOVO: 1-3 linhas no grid desktop
 }
 
 interface SolutionsSectionProps {
@@ -171,39 +172,71 @@ export function SolutionsSection({ title, solutions, autoExpandLastSolution = fa
           </div>
 
           <div>
-            <Label>Largura do Card (Desktop)</Label>
-            <RadioGroup
-              value={String(solution.gridSpan || 2)}
-              onValueChange={(value) => {
-                const newSolutions = [...solutions];
-                newSolutions[index].gridSpan = parseInt(value);
-                console.log(`✅ [GRID-SPAN-CHANGE] Solução ${index} - novo gridSpan:`, parseInt(value));
-                onSolutionsChange(newSolutions);
-              }}
-            >
-              <div className="flex gap-4 flex-wrap">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="1" id={`span-1-${index}`} />
-                  <Label htmlFor={`span-1-${index}`} className="font-normal cursor-pointer">1 coluna</Label>
+              <Label>Largura do Card (Desktop)</Label>
+              <RadioGroup
+                value={String(solution.gridSpan || 2)}
+                onValueChange={(value) => {
+                  const newSolutions = [...solutions];
+                  newSolutions[index].gridSpan = parseInt(value);
+                  console.log(`✅ [GRID-SPAN-CHANGE] Solução ${index} - novo gridSpan:`, parseInt(value));
+                  onSolutionsChange(newSolutions);
+                }}
+              >
+                <div className="flex gap-4 flex-wrap">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1" id={`span-1-${index}`} />
+                    <Label htmlFor={`span-1-${index}`} className="font-normal cursor-pointer">1 coluna</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2" id={`span-2-${index}`} />
+                    <Label htmlFor={`span-2-${index}`} className="font-normal cursor-pointer">2 colunas</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="3" id={`span-3-${index}`} />
+                    <Label htmlFor={`span-3-${index}`} className="font-normal cursor-pointer">3 colunas</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="4" id={`span-4-${index}`} />
+                    <Label htmlFor={`span-4-${index}`} className="font-normal cursor-pointer">4 colunas</Label>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="2" id={`span-2-${index}`} />
-                  <Label htmlFor={`span-2-${index}`} className="font-normal cursor-pointer">2 colunas</Label>
+              </RadioGroup>
+              <p className="text-sm text-muted-foreground mt-2">
+                Define quantas colunas este card ocupará no grid desktop (mobile sempre usa largura total)
+              </p>
+            </div>
+
+            {/* ============ NOVO CONTROLE: Altura do Card (Desktop) ============ */}
+            <div>
+              <Label>Altura do Card (Desktop)</Label>
+              <RadioGroup
+                value={String(solution.gridRowSpan || 1)}
+                onValueChange={(value) => {
+                  const newSolutions = [...solutions];
+                  newSolutions[index].gridRowSpan = parseInt(value);
+                  console.log(`✅ [GRID-ROW-SPAN-CHANGE] Solução ${index} - novo gridRowSpan:`, parseInt(value));
+                  onSolutionsChange(newSolutions);
+                }}
+              >
+                <div className="flex gap-4 flex-wrap">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1" id={`row-span-1-${index}`} />
+                    <Label htmlFor={`row-span-1-${index}`} className="font-normal cursor-pointer">1 linha</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2" id={`row-span-2-${index}`} />
+                    <Label htmlFor={`row-span-2-${index}`} className="font-normal cursor-pointer">2 linhas</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="3" id={`row-span-3-${index}`} />
+                    <Label htmlFor={`row-span-3-${index}`} className="font-normal cursor-pointer">3 linhas</Label>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="3" id={`span-3-${index}`} />
-                  <Label htmlFor={`span-3-${index}`} className="font-normal cursor-pointer">3 colunas</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="4" id={`span-4-${index}`} />
-                  <Label htmlFor={`span-4-${index}`} className="font-normal cursor-pointer">4 colunas</Label>
-                </div>
-              </div>
-            </RadioGroup>
-            <p className="text-sm text-muted-foreground mt-2">
-              Define quantas colunas este card ocupará no grid desktop (mobile sempre usa largura total)
-            </p>
-          </div>
+              </RadioGroup>
+              <p className="text-sm text-muted-foreground mt-2">
+                Define quantas linhas este card ocupará no grid desktop (mobile sempre usa altura automática)
+              </p>
+            </div>
         </div>
       ))}
 
@@ -211,7 +244,7 @@ export function SolutionsSection({ title, solutions, autoExpandLastSolution = fa
         variant="outline"
         size="sm"
         onClick={() => {
-          onSolutionsChange([...solutions, { text: '', image: createImageData(), containerScale: 1.0, gridSpan: 2 }]);
+          onSolutionsChange([...solutions, { text: '', image: createImageData(), containerScale: 1.0, gridSpan: 2, gridRowSpan: 1 }]);
         }}
         disabled={solutions.length >= 5}
       >

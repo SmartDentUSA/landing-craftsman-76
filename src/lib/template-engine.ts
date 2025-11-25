@@ -478,13 +478,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .control-grid {
                 grid-template-columns: repeat(4, 1fr); /* Desktop: 4 colunas base */
                 grid-auto-flow: dense; /* Preenche lacunas automaticamente */
-                grid-auto-rows: minmax(180px, auto); /* Altura mínima adaptável */
+                grid-auto-rows: 250px; /* 🆕 ALTERADO: Valor fixo para permitir grid-row: span X funcionar */
                 gap: 1.5rem;
             }
             
             /* 🆕 Expansão automática do último card quando ativada */
             .control-grid[data-auto-expand="true"] .control-item:last-child {
                 grid-column: 1 / -1 !important; /* Expande para largura total */
+            }
+            
+            /* 🆕 NOVO: Garantir que cards preencham toda a altura das linhas do grid */
+            .control-item,
+            .image-container {
+                height: 100%; /* Preenche todas as linhas ocupadas (gridRowSpan) */
+            }
+
+            .control-item .control-item-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover; /* Evita distorção */
             }
         }
         
@@ -3390,8 +3402,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     twitter_image: data.seo?.twitter_image,
     twitter_site: data.seo?.twitter_site,
     solutions: data.solutions?.map((solution: any, index: number) => {
-      // Sistema de grid flexível baseado em gridSpan
+      // Sistema de grid flexível baseado em gridSpan e gridRowSpan
       const gridSpan = solution.gridSpan || 2; // Default: 2 colunas (medium)
+      const gridRowSpan = solution.gridRowSpan || 1; // 🆕 NOVO: Default: 1 linha
       
       // Calcular classes CSS baseadas no span
       let sizeClass = '';
@@ -3422,8 +3435,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
         isLast2: index >= 3,
         containerScale: String(solution.containerScale || 1.0),
         gridSpan: gridSpan,
-        gridColumnStyle: `grid-column: span ${gridSpan};`,
-        debugInfo: `gridSpan=${gridSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}` // 🔍 DEBUG
+        gridRowSpan: gridRowSpan, // 🆕 NOVO
+        gridColumnStyle: `grid-column: span ${gridSpan}; grid-row: span ${gridRowSpan};`, // 🆕 ATUALIZADO
+        debugInfo: `gridSpan=${gridSpan}, gridRowSpan=${gridRowSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}` // 🆕 ATUALIZADO
       };
     }),
     footer: {
