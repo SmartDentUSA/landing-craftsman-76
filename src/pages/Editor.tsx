@@ -96,6 +96,7 @@ interface Solution {
   image: ImageData;
   containerScale?: number; // Escala do container (0.3-2.0) - padrão 1.0
   gridSpan?: number; // 🆕 Largura do grid (1-4 colunas) - padrão 2
+  gridRowSpan?: number; // 🆕 NOVO: Altura do grid (1-3 linhas) - padrão 1
 }
 
 interface FAQ {
