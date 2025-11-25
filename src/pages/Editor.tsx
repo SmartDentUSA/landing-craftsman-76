@@ -7716,9 +7716,9 @@ dataLayer = [{
             
             <TabsContent value="landing-preview" className="flex-1 p-4">
               <div className="h-full flex flex-col gap-4 overflow-auto">
-                <div className="flex-1 border rounded-lg overflow-hidden">
+                <div className="flex-1 border rounded-lg overflow-hidden max-w-[905px] mx-auto">
                     <iframe
-                      
+                      key={`preview-${generatedHTML?.length || 0}-${Date.now()}`}
                       srcDoc={generatedHTML}
                       className="w-full h-full"
                       title="Landing Page Preview"
