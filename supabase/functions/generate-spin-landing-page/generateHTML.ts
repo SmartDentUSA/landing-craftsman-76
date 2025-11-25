@@ -754,7 +754,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       color: var(--primary-dark);
       text-decoration: none;
       font-weight: 600;
-      font-size: 16px;
+      font-size: 11px;
       margin-left: 1.5rem;
       transition: color 0.2s;
     }
@@ -798,7 +798,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         }
 
     .text-overlay small {
-      font-size: 15px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--accent-glow);
       background: rgba(255, 255, 255, 0.15);
@@ -813,7 +813,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     }
 
     .text-overlay h1 {
-      font-size: 48px;
+      font-size: 34px;
       line-height: 1.1;
       font-weight: 900;
       color: white;
@@ -824,7 +824,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     }
 
     .text-overlay p {
-      font-size: 20px;
+      font-size: 14px;
       line-height: 1.7;
       color: #e0e0e0;
       margin: 0;
@@ -1508,7 +1508,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         padding: 28px 32px;
       }
       .text-overlay h1 {
-        font-size: 38px;
+        font-size: 27px;
       }
       .image1-container {
         aspect-ratio: 4 / 3;
@@ -1543,7 +1543,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       }
 
       .text-overlay h1 {
-        font-size: 30px;
+        font-size: 21px;
         margin-top: 0;
         color: white;
       }
