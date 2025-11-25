@@ -477,6 +477,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         @media (min-width: 768px) {
             .control-grid {
                 grid-template-columns: repeat(4, 1fr); /* Desktop: 4 colunas base */
+                grid-auto-flow: dense; /* Preenche lacunas automaticamente */
+                grid-auto-rows: minmax(180px, auto); /* Altura mínima adaptável */
                 gap: 1.5rem;
             }
         }
