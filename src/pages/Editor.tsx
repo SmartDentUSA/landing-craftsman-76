@@ -7721,7 +7721,7 @@ dataLayer = [{
                     <iframe
                       key={`preview-${generatedHTML?.length || 0}-${Date.now()}`}
                       srcDoc={generatedHTML}
-                      className="w-full h-full"
+                      className="w-full h-full min-w-[1440px]"
                       title="Landing Page Preview"
                       sandbox="allow-same-origin allow-scripts"
                     />
