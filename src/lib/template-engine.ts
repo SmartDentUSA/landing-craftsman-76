@@ -481,6 +481,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 grid-auto-rows: minmax(180px, auto); /* Altura mínima adaptável */
                 gap: 1.5rem;
             }
+            
+            /* 🆕 Expansão automática do último card quando ativada */
+            .control-grid[data-auto-expand="true"] .control-item:last-child {
+                grid-column: 1 / -1 !important; /* Expande para largura total */
+            }
         }
         
         @media (min-width: 1200px) {
@@ -1985,7 +1990,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <h2>{{solutions_title}}</h2>
             
             <!-- Desktop Grid -->
-            <div class="control-grid">
+            <div class="control-grid"{{#solutions_section.autoExpandLast}} data-auto-expand="true"{{/solutions_section.autoExpandLast}}>
                 {{#solutions}}
                 <div class="control-item {{size}}" style="{{gridColumnStyle}}" data-debug="{{debugInfo}}">
                     <div class="image-container image-container-{{sizeType}}">
@@ -3078,6 +3083,7 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
     solutions_section: {
       ...data.solutions_section,
       ...calculateSectionVisibility(data.solutions_section),
+      autoExpandLast: data.autoExpandLastSolution || false, // 🆕 Toggle para expansão automática
       // Ensure solutions have slideIndex for carousel
       solutions: data.solutions_section?.solutions?.map((solution: any, index: number) => {
         // Sistema de grid flexível baseado em gridSpan

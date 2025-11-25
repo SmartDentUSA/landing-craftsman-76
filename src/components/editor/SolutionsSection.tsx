@@ -5,6 +5,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2 } from "lucide-react";
 
 interface ImageData {
@@ -26,8 +27,10 @@ interface Solution {
 interface SolutionsSectionProps {
   title: string;
   solutions: Solution[];
+  autoExpandLastSolution?: boolean;
   onTitleChange: (title: string) => void;
   onSolutionsChange: (solutions: Solution[]) => void;
+  onAutoExpandChange?: (value: boolean) => void;
 }
 
 const createImageData = (src: string = '', alt: string = ''): ImageData => ({
@@ -38,7 +41,7 @@ const createImageData = (src: string = '', alt: string = ''): ImageData => ({
   scale: 1.0
 });
 
-export function SolutionsSection({ title, solutions, onTitleChange, onSolutionsChange }: SolutionsSectionProps) {
+export function SolutionsSection({ title, solutions, autoExpandLastSolution = false, onTitleChange, onSolutionsChange, onAutoExpandChange }: SolutionsSectionProps) {
   const getProportionInfo = (idx: number) => {
     if (idx <= 2) {
       return "480x720px ou 768x1152px ou 1200x1800px - Proporção vertical 2:3 (mais altas que largas)";
@@ -58,10 +61,27 @@ export function SolutionsSection({ title, solutions, onTitleChange, onSolutionsC
         />
       </div>
 
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <span className="text-sm text-muted-foreground">
           {solutions.length}/5 soluções
         </span>
+      </div>
+
+      {/* Toggle para expansão automática */}
+      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30 mb-4">
+        <div className="flex-1">
+          <Label htmlFor="auto-expand" className="text-sm font-medium cursor-pointer">
+            Expandir último card automaticamente
+          </Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Quando ativado, o último card preenche toda a linha se estiver sozinho
+          </p>
+        </div>
+        <Switch
+          id="auto-expand"
+          checked={autoExpandLastSolution}
+          onCheckedChange={onAutoExpandChange}
+        />
       </div>
 
       {solutions.map((solution, index) => (

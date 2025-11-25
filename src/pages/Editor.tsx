@@ -303,6 +303,7 @@ interface LandingPageData {
   };
   solutions_title: string;
   solutions: Solution[];
+  autoExpandLastSolution?: boolean; // 🆕 Toggle para expandir última solução automaticamente
   desktop_info: {
     title: string;
     text: string;
@@ -3795,8 +3796,10 @@ const EditorContent = () => {
                       <SolutionsSection
                         title={data.solutions_title}
                         solutions={data.solutions}
+                        autoExpandLastSolution={data.autoExpandLastSolution}
                         onTitleChange={(title) => setData(prev => ({ ...prev, solutions_title: title }))}
                         onSolutionsChange={(solutions) => setData(prev => ({ ...prev, solutions }))}
+                        onAutoExpandChange={(value) => setData(prev => ({ ...prev, autoExpandLastSolution: value }))}
                       />
                     )}
                   </AccordionContent>
