@@ -1959,9 +1959,19 @@ const EditorContent = () => {
 
   // 🎯 PREVIEW SIMPLES: Regenera 300ms após última mudança
   useEffect(() => {
+    console.log('🔄 [PREVIEW] useEffect triggered, data changed:', {
+      timestamp: new Date().toISOString(),
+      hasData: !!data,
+      dataKeys: Object.keys(data || {}),
+      solutionsCount: data?.solutions?.length,
+      hasBanner: !!data?.banner
+    });
+    
     const timer = setTimeout(async () => {
-      console.log('🔄 Gerando preview atualizado');
-      const processedData = beforePreview(data);
+      console.log('⏱️ [PREVIEW] Timer executado após 300ms');
+      
+      try {
+        const processedData = beforePreview(data);
       
       const previewData = {
         ...processedData,
@@ -2052,11 +2062,34 @@ const EditorContent = () => {
         } : undefined
       };
       
+      console.log('📦 [PREVIEW] Dados processados:', {
+        solutionsCount: previewData.solutions?.length,
+        hasBanner: !!previewData.banner,
+        hasLogo: !!previewData.logo_url,
+        bannerImagesCount: previewData.banner?.images?.length
+      });
+      
       const html = await generatePreviewHTML(previewData);
+      
+      console.log('✅ [PREVIEW] HTML gerado com sucesso:', {
+        htmlLength: html.length,
+        hasContent: html.includes('<html'),
+        preview: html.substring(0, 200)
+      });
+      
       setGeneratedHTML(html);
+      
+      console.log('🎯 [PREVIEW] Estado atualizado, iframe deve renderizar');
+      
+      } catch (error) {
+        console.error('❌ [PREVIEW] Erro ao gerar HTML:', error);
+      }
     }, 300); // 300ms debounce
     
-    return () => clearTimeout(timer);
+    return () => {
+      console.log('🧹 [PREVIEW] Timer cancelado (cleanup)');
+      clearTimeout(timer);
+    };
   }, [data]);
 
   // 🆕 Estado para HTML final completo (com todos os processamentos SEO)
