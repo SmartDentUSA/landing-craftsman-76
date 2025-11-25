@@ -193,7 +193,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-thinking-exp-1219",
+        model: "google/gemini-2.5-flash-image",
         messages: [{
           role: "user",
           content: [
@@ -250,7 +250,7 @@ serve(async (req) => {
           src: imageBase64,
           generated_at: new Date().toISOString(),
           prompt_used: prompt,
-          model: "google/gemini-2.0-flash-thinking-exp-1219",
+          model: "google/gemini-2.5-flash-image",
           products_used: productIds,
           selected_images_count: selectedImageUrls.length,
           generation_time_ms: generationTime
@@ -269,7 +269,7 @@ serve(async (req) => {
         success: true,
         imageBase64,
         prompt,
-        model: "google/gemini-2.0-flash-thinking-exp-1219",
+        model: "google/gemini-2.5-flash-image",
         details: {
           generation_time: generationTime,
           products_count: products.length,
