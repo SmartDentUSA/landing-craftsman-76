@@ -478,7 +478,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             .control-grid {
                 grid-template-columns: repeat(4, 1fr); /* Desktop: 4 colunas base */
                 grid-auto-flow: dense; /* Preenche lacunas automaticamente */
-                grid-auto-rows: 125px; /* 🆕 ALTERADO: Reduzido 50% para seção mais compacta */
+                grid-auto-rows: 175px; /* 🆕 ALTERADO: Valor intermediário (30% menor que original) */
                 gap: 1.5rem;
             }
             
