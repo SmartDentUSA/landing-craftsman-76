@@ -902,6 +902,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       color: var(--text-color);
       margin-bottom: 1.5rem;
       font-style: italic;
+      max-height: 120px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      text-overflow: ellipsis;
     }
 
     .profile-info {
@@ -1855,13 +1861,21 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         <div class="testimonials-track">
           ${(() => {
             const testimonials = aiContent?.testimonials || successCases;
+            // ✅ Limitar a máximo 6 depoimentos para evitar carrossel infinito
+            const limitedTestimonials = testimonials.slice(0, 6);
             // ✅ DUPLICAR ARRAY para efeito seamless (igual InfinitePartnersCarousel)
-            const duplicatedTestimonials = [...testimonials, ...testimonials];
+            const duplicatedTestimonials = [...limitedTestimonials, ...limitedTestimonials];
             
             return duplicatedTestimonials.map((testimonial, idx) => {
-              const originalIndex = idx % testimonials.length;
+              const originalIndex = idx % limitedTestimonials.length;
               const originalCase = successCases[originalIndex] || {};
-              const quote = testimonial.quote || originalCase.result_achieved || 'Resultado não especificado';
+              
+              // ✅ Truncar texto em 300 caracteres para evitar cards gigantes
+              const rawQuote = testimonial.quote || originalCase.result_achieved || 'Resultado não especificado';
+              const quote = rawQuote.length > 300 
+                ? rawQuote.substring(0, 300) + '...' 
+                : rawQuote;
+              
               const clientName = testimonial.clientName || originalCase.client_name;
               const clientPhoto = originalCase.client_photo;
               
