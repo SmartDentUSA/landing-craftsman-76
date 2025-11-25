@@ -1992,7 +1992,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <!-- Desktop Grid -->
             <div class="control-grid"{{#solutions_section.autoExpandLast}} data-auto-expand="true"{{/solutions_section.autoExpandLast}}>
                 {{#solutions}}
-                <div class="control-item {{size}}" style="{{gridColumnStyle}}" data-debug="{{debugInfo}}">
+                <div class="control-item {{size}}" style="{{gridColumnStyle}}" data-solution-index="{{solutionIndex}}" data-debug="{{debugInfo}}">
                     <div class="image-container image-container-{{sizeType}}">
                         <img src="{{image.src}}" alt="{{image.alt}}" class="control-item-image" style="transform: scale({{containerScale}}); transform-origin: center;">
                         <div class="control-item-text-overlay">
@@ -3112,6 +3112,7 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
         return {
           ...solution,
           index: index + 1,
+          solutionIndex: index, // Para data-solution-index no HTML
           size: sizeClass,
           sizeType: sizeType,
           slideIndex: index,
@@ -3413,6 +3414,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       return {
         ...solution,
         index: index + 1,
+        solutionIndex: index, // Para data-solution-index no HTML
         size: sizeClass,
         sizeType: sizeType,
         slideIndex: index,
