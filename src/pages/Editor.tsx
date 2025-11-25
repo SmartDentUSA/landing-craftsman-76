@@ -2039,13 +2039,13 @@ const EditorContent = () => {
   // Generate optimized preview HTML for real-time updates
   const [generatedHTML, setGeneratedHTML] = useState<string>('');
   
-  // Debounce data to reduce preview flickering (reduzido para melhor responsividade)
-  const debouncedData = useDebounceValue(data, 300);
+  // ✨ Preview instantâneo - sem debounce para feedback visual em tempo real
+  // O debounce é aplicado apenas no auto-save e no HTML final
 
   useEffect(() => {
     const generatePreview = async () => {
       console.time('preview-generation');
-      const processedData = beforePreview(debouncedData);
+      const processedData = beforePreview(data);
     
     const previewData = {
       ...processedData,
@@ -2160,7 +2160,7 @@ const EditorContent = () => {
     };
     
     generatePreview();
-  }, [debouncedData]);
+  }, [data]);
 
   // 🆕 Estado para HTML final completo (com todos os processamentos SEO)
   const [finalHTML, setFinalHTML] = useState<string>('');
@@ -2518,7 +2518,7 @@ const EditorContent = () => {
     lastPreviewUpdateAt.current = now;
     setPreviewVersion(prev => prev + 1);
     
-  }, [debouncedData]);
+  }, [data]);
 
   // ✅ Atalhos de teclado para Undo/Redo
   useEffect(() => {
