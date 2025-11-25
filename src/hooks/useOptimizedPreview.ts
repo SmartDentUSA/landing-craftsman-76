@@ -13,11 +13,19 @@ export const useOptimizedPreview = () => {
   const updateVisualStyles = useCallback((solutions: Solution[]) => {
     try {
       const iframe = document.querySelector('iframe[title="Landing Page Preview"]') as HTMLIFrameElement;
-      if (!iframe?.contentDocument) {
-        console.warn('⚠️ Iframe não encontrado ou sem acesso ao contentDocument');
+      
+      if (!iframe) {
+        console.error('❌ Iframe não encontrado no DOM');
         return false;
       }
-
+      
+      if (!iframe.contentDocument) {
+        console.error('❌ contentDocument é null - verifique sandbox attribute');
+        console.log('Iframe sandbox:', iframe.getAttribute('sandbox'));
+        return false;
+      }
+      
+      console.log('✅ Iframe encontrado e acessível');
       iframeRef.current = iframe;
 
       solutions.forEach((solution, index) => {
@@ -44,12 +52,14 @@ export const useOptimizedPreview = () => {
           }
           
           console.log(`✅ [HOT-SWAP] Solução ${index} atualizada: scale=${scale}, gridSpan=${gridSpan}`);
+        } else {
+          console.warn(`⚠️ Elemento .control-item[data-solution-index="${index}"] não encontrado`);
         }
       });
 
       return true;
     } catch (error) {
-      console.warn('⚠️ Erro no hot-swap CSS:', error);
+      console.error('❌ Erro no hot-swap CSS:', error);
       return false;
     }
   }, []);
