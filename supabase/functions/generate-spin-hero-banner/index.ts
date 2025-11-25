@@ -41,79 +41,34 @@ function calculateProductVolume(product: any): ProductDimensions {
 }
 
 function buildIntelligentPrompt(products: any[]): string {
-  const productDims = products
-    .map(calculateProductVolume)
-    .sort((a, b) => b.volume - a.volume);
+  const productNames = products.map(p => p.name).join(', ');
   
-  const maxVolume = productDims[0].volume;
-  productDims.forEach(p => {
-    p.relativeSize = (p.volume / maxVolume) * 100;
-  });
-
-  const productInstructions = productDims.map((p, idx) => {
-    const positions = ['center-front', 'left-mid', 'right-back', 'center-back'];
-    const focus = idx === 0 ? 'primary sharp focus' 
-      : idx === 1 ? 'secondary slight blur'
-      : 'tertiary background blur';
-    
-    return `
-PRODUTO ${idx + 1} - ${p.name}:
-- Dimensões físicas reais: ${p.width}cm (L) × ${p.height}cm (A) × ${p.depth}cm (P)
-- Volume calculado: ${p.volume.toLocaleString()}cm³
-- Categoria de tamanho: ${p.sizeClass}
-- Proporção na cena: ${p.relativeSize.toFixed(0)}% do produto maior
-- Posicionamento: ${positions[idx] || 'background'}
-- Foco ótico: ${focus}
-- Iluminação: ${idx === 0 ? 'key light principal' : 'fill light suave'}
-`.trim();
-  }).join('\n\n');
-
   return `
-🚨 CRITICAL INSTRUCTIONS - NO TEXT IN IMAGE:
-- ABSOLUTELY NO text, watermarks, labels, captions, or written content
-- NO product names, brand names, or any letters/numbers visible
-- PURE PHOTOGRAPHIC IMAGE ONLY - no overlays of any kind
+Crie um banner profissional para landing page usando EXATAMENTE os produtos mostrados nas imagens anexadas como referência visual.
 
-📦 PRODUTOS NA CENA (${products.length} ${products.length > 1 ? 'produtos' : 'produto'}):
-${productInstructions}
+🚨 INSTRUÇÕES OBRIGATÓRIAS:
+1. Use as imagens dos produtos fornecidas como BASE VISUAL - não invente produtos diferentes
+2. Componha os produtos em uma cena profissional com fundo limpo (branco ou cinza claro)
+3. Mantenha a aparência real dos produtos das imagens - não crie novos equipamentos
+4. Formato: 16:9 landscape horizontal
+5. SEM texto, logos, watermarks ou qualquer escrita na imagem
+6. Iluminação profissional de estúdio com sombras suaves
 
-🏥 AMBIENTE CLÍNICO ODONTOLÓGICO:
-- Consultório odontológico moderno e clean
-- Fundo branco puro (#FFFFFF) ou cinza claríssimo (#F8FAFC)
-- Iluminação profissional: soft box da esquerda + refletor da direita
-- Sombras suaves e naturais (sem contraste forte)
-- Texturas realistas dos materiais (metal, plástico, cerâmica)
-
-📷 ESPECIFICAÇÕES TÉCNICAS DA CÂMERA:
-- Proporção: EXATAMENTE 16:9 (landscape horizontal)
-- Resolução equivalente: 4K (3840×2160px)
-- Lente: 50mm f/2.8 (equivalente)
-- Profundidade de campo: Shallow (foco no produto maior, blur progressivo nos demais)
-- ISO: 100 (zero ruído)
-- Iluminação: 5500K (luz do dia neutra)
+📦 PRODUTOS A INCLUIR NA COMPOSIÇÃO:
+${productNames}
 
 🎨 COMPOSIÇÃO VISUAL:
-- Regra dos terços aplicada
-- Produto maior ocupando 40-50% do frame central
-- Produtos menores distribuídos harmonicamente
-- Espaço negativo (whitespace) para respiro visual
-- Perspectiva levemente elevada (15-30° acima da horizontal)
+- Produto principal centralizado em destaque
+- Demais produtos harmonicamente distribuídos ao redor
+- Fundo branco puro ou cinza muito claro
+- Iluminação suave e profissional
+- Sombras naturais e discretas
+- Perspectiva levemente elevada
 
-⚖️ REALISMO FÍSICO:
-- Respeitar EXATAMENTE as proporções dos volumes calculados
-- Produto de 200.000cm³ deve ser VISIVELMENTE maior que um de 50.000cm³
-- Manter escala realista entre todos os objetos
-- Gravidade e física corretas (produtos apoiados naturalmente)
+🎯 RESULTADO ESPERADO:
+Banner profissional mostrando os produtos das imagens em composição limpa e atrativa para landing page.
 
-🔍 HIERARQUIA VISUAL:
-1. Produto maior: Centro-frontal, sharp focus, key light
-2. Produtos médios: Laterais, slight blur, fill light
-3. Produtos menores: Background, soft blur, ambient light
-
-🎯 OBJETIVO FINAL:
-Criar uma imagem fotográfica profissional de alta qualidade que mostre ${products.length} ${products.length > 1 ? 'equipamentos odontológicos' : 'equipamento odontológico'} em um ambiente clínico realista, respeitando suas dimensões físicas reais e sem NENHUM texto visível.
-
-REPEAT: NO TEXT, NO WORDS, NO LABELS - PURE IMAGE ONLY
+CRÍTICO: Use as imagens anexadas como referência - não crie produtos inventados.
 `.trim();
 }
 
