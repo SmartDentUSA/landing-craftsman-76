@@ -5,7 +5,7 @@ import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones, Target } from 'lucide-react';
+import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones, Target, Image as ImageIcon } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
@@ -22,11 +22,12 @@ import { CSManager } from '@/components/CSManager';
 import { SpinSellingManager } from '@/components/SpinSellingManager';
 import { SystemBDocumentSync } from '@/components/SystemBDocumentSync';
 import { ExternalVideosGallery } from '@/components/ExternalVideosGallery';
+import { ImageMigrationManager } from '@/components/ImageMigrationManager';
 
 const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
@@ -81,7 +82,8 @@ const Repository = () => {
                    activeView === 'aftersales' ? 'Pós-Venda' :
                    activeView === 'cs' ? 'Customer Success (CS)' :
                    activeView === 'spin-selling' ? 'SPIN Selling' :
-                   activeView === 'external-videos' ? 'Vídeos Externos (Sistema B)' : 'Prompts IA'}
+                   activeView === 'external-videos' ? 'Vídeos Externos (Sistema B)' :
+                   activeView === 'image-migration' ? 'Migração de Imagens' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
@@ -106,6 +108,8 @@ const Repository = () => {
                     ? 'Estratégias comerciais baseadas em combinações de produtos'
                     : activeView === 'external-videos'
                     ? 'Biblioteca de vídeos com transcrições, legendas e Schema.org para SEO'
+                    : activeView === 'image-migration'
+                    ? 'Migre automaticamente imagens externas para Supabase Storage'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
@@ -162,6 +166,10 @@ const Repository = () => {
                 </TabsTrigger>
                 <TabsTrigger value="external-videos" className="gap-2">
                   🎬 Vídeos Externos
+                </TabsTrigger>
+                <TabsTrigger value="image-migration" className="gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Migração de Imagens
                 </TabsTrigger>
               </TabsList>
               
@@ -237,6 +245,10 @@ const Repository = () => {
 
               <TabsContent value="external-videos">
                 <ExternalVideosGallery />
+              </TabsContent>
+
+              <TabsContent value="image-migration">
+                <ImageMigrationManager />
               </TabsContent>
 
               <TabsContent value="prompts">

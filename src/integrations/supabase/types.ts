@@ -1105,6 +1105,7 @@ export type Database = {
           height: number | null
           id: string
           image_url: string | null
+          image_url_original: string | null
           images_gallery: Json | null
           individual_blog_content: Json | null
           instagram_copies: Json | null
@@ -1209,6 +1210,7 @@ export type Database = {
           height?: number | null
           id?: string
           image_url?: string | null
+          image_url_original?: string | null
           images_gallery?: Json | null
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
@@ -1313,6 +1315,7 @@ export type Database = {
           height?: number | null
           id?: string
           image_url?: string | null
+          image_url_original?: string | null
           images_gallery?: Json | null
           individual_blog_content?: Json | null
           instagram_copies?: Json | null
