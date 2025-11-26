@@ -930,6 +930,42 @@ export type Database = {
         }
         Relationships: []
       }
+      nps_generated_content: {
+        Row: {
+          action_type: string
+          applied: boolean
+          applied_at: string | null
+          created_at: string
+          generated_data: Json
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          applied?: boolean
+          applied_at?: string | null
+          created_at?: string
+          generated_data?: Json
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          applied?: boolean
+          applied_at?: string | null
+          created_at?: string
+          generated_data?: Json
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_client_configs: {
         Row: {
           client_id: string

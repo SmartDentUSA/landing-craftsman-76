@@ -199,7 +199,25 @@ Retorne APENAS o array JSON, sem markdown.`;
       throw new Error('Failed to parse AI response as JSON');
     }
 
-    return new Response(JSON.stringify({ 
+    console.log('✅ Content generated successfully');
+
+    // Save to nps_generated_content table for history
+    const { error: saveError } = await supabase
+      .from('nps_generated_content')
+      .insert({
+        user_id: userId,
+        action_type: action,
+        generated_data: result,
+      });
+
+    if (saveError) {
+      console.error('⚠️ Error saving to history:', saveError);
+      // Don't fail the request, just log the error
+    } else {
+      console.log('💾 Saved to history');
+    }
+
+    return new Response(JSON.stringify({
       success: true,
       data: result,
     }), {
