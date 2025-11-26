@@ -5,6 +5,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNPSMetrics, NPSMetrics } from '@/hooks/useNPSMetrics';
+import { useNPSGeneratedContent } from '@/hooks/useNPSGeneratedContent';
+import { NPSFormattedResults } from './NPSFormattedResults';
 import { 
   Upload, 
   TrendingUp, 
@@ -15,11 +17,17 @@ import {
   FileSpreadsheet,
   Loader2,
   RefreshCw,
+  FileText,
+  Package,
+  HelpCircle,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const NPSInsightsTab = () => {
   const { loading, processing, loadNPSMetrics, processNPSFile, generateContentFromInterests } = useNPSMetrics();
+  const { history, loadHistory, loading: historyLoading } = useNPSGeneratedContent();
   const [npsMetrics, setNpsMetrics] = useState<NPSMetrics | null>(null);
   const [generatedContent, setGeneratedContent] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,6 +35,7 @@ export const NPSInsightsTab = () => {
 
   useEffect(() => {
     loadMetrics();
+    loadHistory();
   }, []);
 
   const loadMetrics = async () => {
@@ -45,8 +54,21 @@ export const NPSInsightsTab = () => {
   };
 
   const handleGenerateContent = async (action: string) => {
-    const content = await generateContentFromInterests(action);
-    setGeneratedContent({ action, data: content });
+    try {
+      setGeneratedContent(null);
+      const content = await generateContentFromInterests(action);
+      if (content) {
+        setGeneratedContent({ action, data: content });
+      }
+    } catch (error) {
+      console.error('Error generating content:', error);
+    }
+  };
+
+  const handleContentApplied = () => {
+    loadMetrics();
+    loadHistory();
+    setGeneratedContent(null);
   };
 
   if (loading) {
@@ -181,10 +203,11 @@ export const NPSInsightsTab = () => {
       </div>
 
       <Tabs defaultValue="themes" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="themes">Temas de Interesse</TabsTrigger>
           <TabsTrigger value="insights">Insights IA</TabsTrigger>
           <TabsTrigger value="content">Geração de Conteúdo</TabsTrigger>
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
 
@@ -276,44 +299,162 @@ export const NPSInsightsTab = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleGenerateContent('suggest-landing-pages')}
-                >
-                  Sugerir Landing Pages
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleGenerateContent('generate-blog-topics')}
-                >
-                  Gerar Tópicos de Blog
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleGenerateContent('map-products-to-interests')}
-                >
-                  Mapear Produtos
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleGenerateContent('generate-faq-from-interests')}
-                >
-                  Gerar FAQs
-                </Button>
-              </div>
+              {generatedContent ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Conteúdo Gerado</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setGeneratedContent(null)}
+                    >
+                      Gerar Outro
+                    </Button>
+                  </div>
+                  
+                  <NPSFormattedResults 
+                    actionType={generatedContent.action as any}
+                    data={generatedContent.data}
+                    onApplied={handleContentApplied}
+                  />
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col items-start p-4"
+                    onClick={() => handleGenerateContent('suggest-landing-pages')}
+                  >
+                    <FileText className="h-5 w-5 mb-2 text-primary" />
+                    <div className="text-left">
+                      <div className="font-semibold">Sugerir Landing Pages</div>
+                      <div className="text-xs text-muted-foreground">
+                        Páginas baseadas nas demandas reais
+                      </div>
+                    </div>
+                  </Button>
 
-              {generatedContent && (
-                <Card className="mt-4 bg-muted/50">
-                  <CardHeader>
-                    <CardTitle className="text-base">Resultado: {generatedContent.action}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="text-xs overflow-auto max-h-96 bg-background p-4 rounded">
-                      {JSON.stringify(generatedContent.data, null, 2)}
-                    </pre>
-                  </CardContent>
-                </Card>
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col items-start p-4"
+                    onClick={() => handleGenerateContent('generate-blog-topics')}
+                  >
+                    <Lightbulb className="h-5 w-5 mb-2 text-primary" />
+                    <div className="text-left">
+                      <div className="font-semibold">Gerar Tópicos de Blog</div>
+                      <div className="text-xs text-muted-foreground">
+                        Conteúdo otimizado para SEO
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col items-start p-4"
+                    onClick={() => handleGenerateContent('map-products-to-interests')}
+                  >
+                    <Package className="h-5 w-5 mb-2 text-primary" />
+                    <div className="text-left">
+                      <div className="font-semibold">Mapear Produtos</div>
+                      <div className="text-xs text-muted-foreground">
+                        Correlacionar produtos × interesses
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col items-start p-4"
+                    onClick={() => handleGenerateContent('generate-faq-from-interests')}
+                  >
+                    <HelpCircle className="h-5 w-5 mb-2 text-primary" />
+                    <div className="text-left">
+                      <div className="font-semibold">Gerar FAQs</div>
+                      <div className="text-xs text-muted-foreground">
+                        Perguntas baseadas nos temas
+                      </div>
+                    </div>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="historico" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Conteúdo Gerado</CardTitle>
+              <CardDescription>
+                Visualize todo o conteúdo gerado a partir dos dados NPS
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {historyLoading ? (
+                <div className="flex items-center justify-center p-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : history.length === 0 ? (
+                <div className="text-center p-8">
+                  <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Nenhum conteúdo gerado ainda. Use a aba "Geração de Conteúdo" para começar.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {history.map((item) => (
+                    <Card key={item.id} className="p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant={item.applied ? "default" : "secondary"}>
+                              {item.applied ? (
+                                <>
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Aplicado
+                                </>
+                              ) : (
+                                "Pendente"
+                              )}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(item.created_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          
+                          <div className="text-sm font-medium mb-1">
+                            {item.action_type === 'faqs' && 'FAQs Geradas'}
+                            {item.action_type === 'blog-topics' && 'Tópicos de Blog'}
+                            {item.action_type === 'landing-pages' && 'Landing Pages Sugeridas'}
+                            {item.action_type === 'product-mapping' && 'Mapeamento de Produtos'}
+                          </div>
+                          
+                          {item.notes && (
+                            <p className="text-xs text-muted-foreground">{item.notes}</p>
+                          )}
+                        </div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setGeneratedContent({ 
+                            action: item.action_type, 
+                            data: item.generated_data 
+                          })}
+                        >
+                          Ver Detalhes
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
