@@ -107,6 +107,10 @@ Deno.serve(async (req) => {
     const resinas = payload?.documentos_resinas || [];
     const documentosTecnicos = payload?.documentos_tecnicos || [];
     const catalogDocuments = payload?.documentos_catalogo || [];
+    
+    // 🆕 AVALIAÇÕES DO GOOGLE
+    const avaliacoesGoogle = payload?.avaliacoes_google || [];
+    const reputacaoGoogle = payload?.perfil_empresa?.reputacao_google || {};
 
     // 📦 LOG DE CONFIRMAÇÃO
     console.log('📦 Documentos extraídos do payload:', {
@@ -115,6 +119,14 @@ Deno.serve(async (req) => {
       documentos_tecnicos: documentosTecnicos.length,
       primeiroDocCatalogo: catalogDocuments[0]?.document_name || 'nenhum',
       primeiraResina: resinas[0]?.document_name || 'nenhuma'
+    });
+
+    // 📊 LOG DE AVALIAÇÕES DO GOOGLE
+    console.log('📊 Avaliações Google do Sistema B:', {
+      total_avaliacoes: avaliacoesGoogle.length,
+      nota_media: reputacaoGoogle?.nota_media,
+      total_avaliacoes_google: reputacaoGoogle?.total_avaliacoes,
+      place_id: reputacaoGoogle?.place_id
     });
 
     // 🔍 ESTRUTURA DO PAYLOAD SISTEMA B
@@ -345,7 +357,81 @@ Deno.serve(async (req) => {
       documentosSincronizados += sortedDocs.length;
     }
 
-    // 6. FASE 5: Retornar summary correto
+    // 🆕 FASE 5: Sincronizar avaliações do Google
+    let avaliacoesSincronizadas = 0;
+    let reputacaoAtualizada = false;
+
+    if (avaliacoesGoogle.length > 0) {
+      console.log('🔄 Sincronizando avaliações do Google...');
+      
+      for (const review of avaliacoesGoogle) {
+        try {
+          const { error: reviewError } = await supabase.from('raw_reviews').upsert({
+            place_id: reputacaoGoogle?.place_id || 'sistema_b_import',
+            author_name: review.autor || review.author_name,
+            rating: review.nota || review.rating,
+            review_text: review.texto || review.review_text,
+            review_date: review.data || review.review_date,
+            profile_photo_url: review.foto_url || review.profile_photo_url,
+            is_local_guide: review.is_local_guide || false,
+            extracted_at: new Date().toISOString()
+          }, { 
+            onConflict: 'place_id,author_name',
+            ignoreDuplicates: false
+          });
+
+          if (!reviewError) {
+            avaliacoesSincronizadas++;
+          } else {
+            console.error('❌ Erro ao sincronizar avaliação:', reviewError.message);
+          }
+        } catch (err) {
+          console.error('❌ Erro ao processar avaliação:', err);
+        }
+      }
+
+      console.log(`✅ ${avaliacoesSincronizadas} avaliações sincronizadas`);
+    }
+
+    // Atualizar company_profile com reputação do Google
+    if (reputacaoGoogle?.nota_media) {
+      console.log('🔄 Atualizando reputação do Google no company_profile...');
+      
+      try {
+        // Buscar company_reviews atual para preservar manual_reviews
+        const { data: currentProfile } = await supabase
+          .from('company_profile')
+          .select('company_reviews')
+          .limit(1)
+          .single();
+
+        const currentReviews = currentProfile?.company_reviews || {};
+        const manualReviews = currentReviews.manual_reviews || [];
+
+        const { error: profileError } = await supabase
+          .from('company_profile')
+          .update({
+            company_reviews: {
+              google_place_id: reputacaoGoogle.place_id,
+              google_reviews_imported: true,
+              last_google_sync: new Date().toISOString(),
+              manual_reviews: manualReviews // Preservar avaliações manuais
+            }
+          })
+          .not('id', 'is', null);
+
+        if (!profileError) {
+          reputacaoAtualizada = true;
+          console.log('✅ Reputação do Google atualizada no company_profile');
+        } else {
+          console.error('❌ Erro ao atualizar reputação:', profileError.message);
+        }
+      } catch (err) {
+        console.error('❌ Erro ao atualizar company_profile:', err);
+      }
+    }
+
+    // 6. FASE 6: Retornar summary correto
     const totalCatalogDocs = Object.values(documentsByLojaId)
       .flat()
       .filter(d => d.origem === 'catalog_documents').length;
@@ -362,6 +448,8 @@ Deno.serve(async (req) => {
         catalog_documents: totalCatalogDocs,
         resin_documents: totalResinDocs
       },
+      avaliacoes_google_sincronizadas: avaliacoesSincronizadas,
+      reputacao_atualizada: reputacaoAtualizada,
       timestamp: new Date().toISOString()
     };
 
