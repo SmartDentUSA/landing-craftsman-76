@@ -20,12 +20,35 @@ serve(async (req) => {
 
     const { action } = await req.json();
 
-    // Get NPS metrics from company profile
+    // Extract user_id from JWT token
+    const authHeader = req.headers.get('Authorization');
+    let userId: string | null = null;
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      try {
+        const { data: { user } } = await supabase.auth.getUser(token);
+        userId = user?.id || null;
+      } catch (e) {
+        console.error('Could not extract user from token:', e);
+      }
+    }
+
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    console.log('🔍 Looking for NPS data for user:', userId);
+
+    // Get NPS metrics from company profile by user_id
     const { data: companyProfile, error: profileError } = await supabase
       .from('company_profile')
       .select('nps_metrics')
-      .eq('id', '00000000-0000-0000-0000-000000000001')
+      .eq('user_id', userId)
       .single();
+
+    console.log('📊 Company profile found:', !!companyProfile);
+    console.log('📊 NPS metrics exists:', !!companyProfile?.nps_metrics);
 
     if (profileError || !companyProfile?.nps_metrics) {
       throw new Error('NPS metrics not found. Please process NPS data first.');
