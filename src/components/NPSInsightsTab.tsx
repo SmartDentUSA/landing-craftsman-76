@@ -66,7 +66,7 @@ export const NPSInsightsTab = () => {
             Análise NPS & Interesses dos Clientes
           </CardTitle>
           <CardDescription>
-            Faça upload do arquivo XLSX de respostas NPS para análise automática de satisfação e temas de interesse
+            Faça upload do arquivo XLSX ou CSV de respostas NPS para análise automática de satisfação e temas de interesse
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -75,7 +75,7 @@ export const NPSInsightsTab = () => {
             <div>
               <h3 className="font-semibold mb-2">Nenhum dado NPS encontrado</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Faça upload do arquivo XLSX exportado do Google Forms com as respostas NPS
+                Faça upload do arquivo XLSX ou CSV exportado do Google Forms com as respostas NPS
               </p>
               <Button 
                 onClick={() => fileInputRef.current?.click()} 
@@ -96,7 +96,7 @@ export const NPSInsightsTab = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 className="hidden"
                 onChange={handleFileUpload}
                 disabled={processing}
@@ -347,7 +347,7 @@ export const NPSInsightsTab = () => {
               <input
                 ref={fileInputUpdateRef}
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 className="hidden"
                 onChange={handleFileUpload}
                 disabled={processing}
