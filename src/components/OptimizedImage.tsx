@@ -114,6 +114,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = React.memo(({
           )}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
+          referrerPolicy="no-referrer"
           onLoad={handleLoad}
           onError={handleError}
         />
