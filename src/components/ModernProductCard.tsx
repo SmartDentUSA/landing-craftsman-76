@@ -74,6 +74,7 @@ interface Product {
   category?: string;
   subcategory?: string;
   image_url?: string;
+  images_gallery?: Array<{ url: string; alt?: string }>;
   product_url?: string;
   sales_pitch?: string;
   use_in_ai_generation: boolean;
@@ -324,17 +325,24 @@ export function ModernProductCard({
         />
 
         {/* Imagem - aumentada para 80px */}
-        {product.image_url ? (
-          <OptimizedImage
-            src={product.image_url}
-            alt={product.name}
-            className="w-20 h-20 object-cover rounded-md flex-shrink-0"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-md bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center flex-shrink-0">
-            <Package className="h-8 w-8 text-muted-foreground/50" />
-          </div>
-        )}
+        {(() => {
+          const effectiveImageUrl = product.image_url || 
+            (Array.isArray(product.images_gallery) && product.images_gallery.length > 0 
+              ? product.images_gallery[0]?.url 
+              : null);
+          
+          return effectiveImageUrl ? (
+            <OptimizedImage
+              src={effectiveImageUrl}
+              alt={product.name}
+              className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-md bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center flex-shrink-0">
+              <Package className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+          );
+        })()}
 
         {/* Conteúdo principal */}
         <div className="flex-1 min-w-0">

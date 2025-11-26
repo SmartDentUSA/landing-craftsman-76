@@ -68,8 +68,18 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = React.memo(({
   };
 
   const handleError = () => {
+    console.error('❌ Image failed to load:', src);
     setHasError(true);
     onError?.();
+  };
+
+  // Cache busting para imagens externas da Loja Integrada
+  const getImageUrl = (url: string) => {
+    if (url.includes('cdn.awsli.com.br') || url.includes('http://') || url.includes('https://')) {
+      // Adiciona timestamp apenas para URLs externas para forçar recarga
+      return `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+    }
+    return url;
   };
 
   // Gerar blur placeholder se não fornecido
@@ -103,7 +113,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = React.memo(({
       {/* Imagem principal */}
       {isInView && (
         <img
-          src={hasError ? fallbackSrc : src}
+          src={hasError ? fallbackSrc : getImageUrl(src)}
           alt={alt}
           width={width}
           height={height}
