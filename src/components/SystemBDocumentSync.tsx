@@ -18,6 +18,8 @@ export function SystemBDocumentSync() {
     totalDocuments: number;
     catalogDocuments: number;
     resinDocuments: number;
+    googleReviews: number;
+    reputationUpdated: boolean;
   } | null>(null);
   const { toast } = useToast();
 
@@ -37,11 +39,17 @@ export function SystemBDocumentSync() {
         totalDocuments: summary.documentos_sincronizados || 0,
         catalogDocuments: summary.documentos_por_origem?.catalog_documents || 0,
         resinDocuments: summary.documentos_por_origem?.resin_documents || 0,
+        googleReviews: summary.avaliacoes_google_sincronizadas || 0,
+        reputationUpdated: summary.reputacao_atualizada || false,
       });
+
+      const googleReviewsMsg = summary.avaliacoes_google_sincronizadas 
+        ? ` + ${summary.avaliacoes_google_sincronizadas} avaliações Google`
+        : '';
 
       toast({
         title: "✅ Sincronização concluída!",
-        description: `${summary.produtos_atualizados || 0} produtos atualizados com ${summary.documentos_sincronizados || 0} documentos técnicos.`,
+        description: `${summary.produtos_atualizados || 0} produtos atualizados com ${summary.documentos_sincronizados || 0} documentos técnicos${googleReviewsMsg}.`,
       });
 
       // Disparar evento para refresh automático
@@ -129,33 +137,53 @@ export function SystemBDocumentSync() {
         </Button>
 
         {result && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Produtos Atualizados</p>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-success" />
-                <p className="text-2xl font-bold">{result.productsUpdated}</p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Produtos Atualizados</p>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  <p className="text-2xl font-bold">{result.productsUpdated}</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Total de Documentos</p>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <p className="text-2xl font-bold">{result.totalDocuments}</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Docs Catálogo</p>
+                <Badge variant="outline" className="text-sm font-bold">
+                  {result.catalogDocuments}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Docs Resinas</p>
+                <Badge variant="outline" className="text-sm font-bold">
+                  {result.resinDocuments}
+                </Badge>
               </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Total de Documentos</p>
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                <p className="text-2xl font-bold">{result.totalDocuments}</p>
+
+            {(result.googleReviews > 0 || result.reputationUpdated) && (
+              <div className="grid grid-cols-2 gap-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">⭐ Avaliações Google</p>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <p className="text-2xl font-bold">{result.googleReviews}</p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">🏆 Reputação</p>
+                  <Badge variant={result.reputationUpdated ? "default" : "secondary"}>
+                    {result.reputationUpdated ? "Atualizada" : "Não atualizada"}
+                  </Badge>
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Docs Catálogo</p>
-              <Badge variant="outline" className="text-sm font-bold">
-                {result.catalogDocuments}
-              </Badge>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Docs Resinas</p>
-              <Badge variant="outline" className="text-sm font-bold">
-                {result.resinDocuments}
-              </Badge>
-            </div>
+            )}
           </div>
         )}
 
@@ -268,6 +296,8 @@ export function SystemBDocumentSync() {
             <li>Consulta documentos no endpoint <code className="text-xs bg-muted px-1 py-0.5 rounded">/data-export</code></li>
             <li>Mapeia documentos por <code className="text-xs bg-muted px-1 py-0.5 rounded">external_id</code></li>
             <li>Atualiza campo <code className="text-xs bg-muted px-1 py-0.5 rounded">technical_documents</code> no banco</li>
+            <li>🆕 Sincroniza avaliações do Google na tabela <code className="text-xs bg-muted px-1 py-0.5 rounded">raw_reviews</code></li>
+            <li>🆕 Atualiza reputação em <code className="text-xs bg-muted px-1 py-0.5 rounded">company_profile.company_reviews</code></li>
             <li>Documentos aparecem automaticamente no modal de edição do produto</li>
           </ul>
         </div>
