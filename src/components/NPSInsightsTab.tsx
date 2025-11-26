@@ -25,6 +25,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Action type mapping for consistency
+const actionTypeMap: Record<string, string> = {
+  'suggest-landing-pages': 'landing-pages',
+  'generate-blog-topics': 'blog-topics',
+  'map-products-to-interests': 'product-mapping',
+  'generate-faq-from-interests': 'faqs',
+};
+
 export const NPSInsightsTab = () => {
   const { loading, processing, loadNPSMetrics, processNPSFile, generateContentFromInterests } = useNPSMetrics();
   const { history, loadHistory, loading: historyLoading } = useNPSGeneratedContent();
@@ -313,7 +321,7 @@ export const NPSInsightsTab = () => {
                   </div>
                   
                   <NPSFormattedResults 
-                    actionType={generatedContent.action as any}
+                    actionType={(actionTypeMap[generatedContent.action] || generatedContent.action) as any}
                     data={generatedContent.data}
                     onApplied={handleContentApplied}
                   />
@@ -445,7 +453,7 @@ export const NPSInsightsTab = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => setGeneratedContent({ 
-                            action: item.action_type, 
+                            action: actionTypeMap[item.action_type] || item.action_type,
                             data: item.generated_data 
                           })}
                         >

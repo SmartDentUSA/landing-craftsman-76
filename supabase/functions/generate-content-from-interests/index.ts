@@ -6,6 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Action type mapping for database consistency
+const actionTypeMap: Record<string, string> = {
+  'suggest-landing-pages': 'landing-pages',
+  'generate-blog-topics': 'blog-topics',
+  'map-products-to-interests': 'product-mapping',
+  'generate-faq-from-interests': 'faqs',
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -201,12 +209,15 @@ Retorne APENAS o array JSON, sem markdown.`;
 
     console.log('✅ Content generated successfully');
 
+    // Get normalized action type for database
+    const normalizedActionType = actionTypeMap[action] || action;
+
     // Save to nps_generated_content table for history
     const { error: saveError } = await supabase
       .from('nps_generated_content')
       .insert({
         user_id: userId,
-        action_type: action,
+        action_type: normalizedActionType,
         generated_data: result,
       });
 
@@ -220,6 +231,7 @@ Retorne APENAS o array JSON, sem markdown.`;
     return new Response(JSON.stringify({
       success: true,
       data: result,
+      action_type: normalizedActionType,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
