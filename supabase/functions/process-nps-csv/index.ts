@@ -78,13 +78,66 @@ serve(async (req) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
 
-    // Read XLSX file
-    const workbook = XLSX.read(bytes, { type: 'array' });
-    
-    // Get second sheet (NPS Responses)
-    const sheetName = workbook.SheetNames[1] || workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json(worksheet);
+    let rawData: any[] = [];
+    const isCSV = fileName.toLowerCase().endsWith('.csv');
+
+    if (isCSV) {
+      // Parse CSV manually for simplicity
+      const csvText = new TextDecoder().decode(bytes);
+      const lines = csvText.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      
+      // Map CSV columns to expected format
+      for (let i = 1; i < lines.length; i++) {
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        // Parse CSV line respecting quotes
+        for (const char of lines[i]) {
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim().replace(/^"|"$/g, ''));
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim().replace(/^"|"$/g, ''));
+        
+        // Extract themes from column 2
+        const themesStr = values[1] || '';
+        const themes = themesStr.split(',').map(t => t.trim()).filter(Boolean);
+        
+        // Create row object
+        const row: any = {
+          'Email Address': values[0] || '',
+          'Anonymized IP': '',
+          'Como você avalia a qualidade do atendimento recebido?': values[2] || '',
+          'Como você avalia a qualidade dos treinamentos oferecidos?': values[3] || '',
+          'Em uma escala de 0 a 10, o quanto você recomendaria nossos cursos para um amigo ou colega?': values[4] || '',
+          'Deixe seus comentários, sugestões ou elogios (opcional)': '',
+          'Timestamp': new Date().toISOString(),
+          'Country': 'Brasil',
+        };
+        
+        // Add theme columns
+        themes.forEach(theme => {
+          row[theme] = true;
+        });
+        
+        rawData.push(row);
+      }
+    } else {
+      // Read XLSX file
+      const workbook = XLSX.read(bytes, { type: 'array' });
+      
+      // Get second sheet (NPS Responses)
+      const sheetName = workbook.SheetNames[1] || workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      rawData = XLSX.utils.sheet_to_json(worksheet);
+    }
 
     console.log(`Processing ${rawData.length} responses`);
 
