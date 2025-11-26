@@ -226,7 +226,16 @@ export const NPSFormattedResults = ({
   };
 
   const renderContent = () => {
-    switch (actionType) {
+    // Map action types from edge function to display types
+    const normalizedActionType = actionType
+      .replace('suggest-', '')
+      .replace('generate-', '')
+      .replace('map-products-to-interests', 'product-mapping')
+      .replace('-from-interests', '')
+      .replace('blog-topics', 'blog-topics')
+      as 'landing-pages' | 'blog-topics' | 'product-mapping' | 'faqs';
+
+    switch (normalizedActionType) {
       case 'faqs':
         return renderFAQs();
       case 'blog-topics':
@@ -236,7 +245,8 @@ export const NPSFormattedResults = ({
       case 'product-mapping':
         return renderProductMapping();
       default:
-        return <p className="text-muted-foreground">Tipo de conteúdo não reconhecido</p>;
+        console.error('Unknown action type:', actionType, 'normalized to:', normalizedActionType);
+        return <p className="text-muted-foreground">Tipo de conteúdo não reconhecido: {actionType}</p>;
     }
   };
 

@@ -201,12 +201,22 @@ Retorne APENAS o array JSON, sem markdown.`;
 
     console.log('✅ Content generated successfully');
 
+    // Map action to valid action_type
+    const actionTypeMap: Record<string, string> = {
+      'suggest-landing-pages': 'landing-pages',
+      'generate-blog-topics': 'blog-topics',
+      'map-products-to-interests': 'product-mapping',
+      'generate-faq-from-interests': 'faqs',
+    };
+
+    const validActionType = actionTypeMap[action] || action;
+
     // Save to nps_generated_content table for history
     const { error: saveError } = await supabase
       .from('nps_generated_content')
       .insert({
         user_id: userId,
-        action_type: action,
+        action_type: validActionType,
         generated_data: result,
       });
 
