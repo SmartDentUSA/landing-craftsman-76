@@ -227,13 +227,14 @@ export const NPSFormattedResults = ({
 
   const renderContent = () => {
     // Map action types from edge function to display types
-    const normalizedActionType = actionType
+    let normalizedType = actionType
       .replace('suggest-', '')
       .replace('generate-', '')
       .replace('map-products-to-interests', 'product-mapping')
       .replace('-from-interests', '')
-      .replace('blog-topics', 'blog-topics')
-      as 'landing-pages' | 'blog-topics' | 'product-mapping' | 'faqs';
+      .replace('blog-topics', 'blog-topics');
+
+    const normalizedActionType = normalizedType as 'landing-pages' | 'blog-topics' | 'product-mapping' | 'faqs';
 
     switch (normalizedActionType) {
       case 'faqs':
