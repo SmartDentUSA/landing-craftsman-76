@@ -438,9 +438,17 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
         offer_discount_cta: product.offer_discount_cta || { label: 'Comprar com Desconto', url: '', visible: false },
         // FAQ
         faq: product.faq || [],
-        // Technical Specifications
+      // Technical Specifications
       technical_specifications: product.technical_specifications || [],
-      tutorial_resources: product.tutorial_resources || { tutorials: [] }
+      tutorial_resources: product.tutorial_resources || { tutorials: [] },
+      // Competitor Comparison Table
+      competitor_comparison: product.competitor_comparison || {
+        enabled: false,
+        title: '',
+        subtitle: '',
+        table_headers: [],
+        table_data: []
+      }
     });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -1878,6 +1886,14 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         original_data: formData.original_data || product?.original_data || null,
         // Document Transcriptions
         document_transcriptions: documentTranscriptions.length > 0 ? documentTranscriptions as any : [],
+        // Competitor Comparison Table
+        competitor_comparison: formData.competitor_comparison || {
+          enabled: false,
+          title: '',
+          subtitle: '',
+          table_headers: [],
+          table_data: []
+        },
         updated_at: new Date().toISOString()
       };
 
