@@ -33,6 +33,7 @@ import { GalleryImageUploader } from './GalleryImageUploader';
 import { useProductAutoSave } from '@/hooks/useProductAutoSave';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { WorkflowStagesSection } from './WorkflowStagesSection';
+import { CompetitorComparisonTable } from './CompetitorComparisonTable';
 
 
 interface Video {
@@ -204,6 +205,14 @@ interface Product {
     finish?: WorkflowStage;
     install?: WorkflowStage;
   } | null;
+  // Competitor Comparison Table
+  competitor_comparison?: {
+    enabled: boolean;
+    title: string;
+    subtitle?: string;
+    table_headers: string[];
+    table_data: Array<{ [key: string]: string }>;
+  };
 }
 
 interface WorkflowStage {
@@ -276,7 +285,15 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
     // Technical Specifications
     technical_specifications: [],
     // Workflow Stages
-    workflow_stages: null
+    workflow_stages: null,
+    // Competitor Comparison
+    competitor_comparison: {
+      enabled: false,
+      title: '',
+      subtitle: '',
+      table_headers: [],
+      table_data: []
+    }
   });
   const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -3956,6 +3973,23 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
                 </ul>
               </div>
             </div>
+          </div>
+
+          {/* SEÇÃO: COMPARATIVO COM CONCORRENTES */}
+          <div className="space-y-4 border-t pt-6">
+            <CompetitorComparisonTable
+              value={formData.competitor_comparison || {
+                enabled: false,
+                title: '',
+                subtitle: '',
+                table_headers: [],
+                table_data: []
+              }}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                competitor_comparison: value 
+              }))}
+            />
           </div>
 
           {/* Landing Page Sections Configuration */}
