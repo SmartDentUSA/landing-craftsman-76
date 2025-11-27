@@ -1857,10 +1857,12 @@ export type Database = {
             Args: {
               p_approved_only?: boolean
               p_category?: string
+              p_include_blog_posts?: boolean
               p_include_categories?: boolean
               p_include_company?: boolean
               p_include_google_reviews?: boolean
               p_include_kols?: boolean
+              p_include_landing_pages?: boolean
               p_include_links?: boolean
               p_include_products?: boolean
               p_include_spin_solutions?: boolean

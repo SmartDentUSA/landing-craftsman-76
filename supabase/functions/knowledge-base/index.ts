@@ -18,6 +18,9 @@ interface KnowledgeBaseParams {
   include_google_reviews?: boolean;
   include_kols?: boolean;
   include_spin_solutions?: boolean;
+  include_blog_posts?: boolean;
+  include_landing_pages?: boolean;
+  include_external_videos?: boolean;
   approved_only?: boolean;
   category?: string;
   limit?: number;
@@ -397,6 +400,42 @@ function formatForAITraining(data: any): string {
         });
       }
       
+      // 🎥 VÍDEOS DO PRODUTO
+      if (p.youtube_videos && Array.isArray(p.youtube_videos) && p.youtube_videos.length > 0) {
+        text += `**Vídeos YouTube (${p.youtube_videos.length}):**\n`;
+        p.youtube_videos.forEach((v: any) => {
+          text += `- ${v.url || v.video_url}${v.description || v.title ? ` - ${v.description || v.title}` : ''}\n`;
+        });
+      }
+      
+      if (p.instagram_videos && Array.isArray(p.instagram_videos) && p.instagram_videos.length > 0) {
+        text += `**Vídeos Instagram (${p.instagram_videos.length}):**\n`;
+        p.instagram_videos.forEach((v: any) => {
+          text += `- ${v.url || v.video_url}${v.description || v.title ? ` - ${v.description || v.title}` : ''}\n`;
+        });
+      }
+      
+      if (p.technical_videos && Array.isArray(p.technical_videos) && p.technical_videos.length > 0) {
+        text += `**Vídeos Técnicos (${p.technical_videos.length}):**\n`;
+        p.technical_videos.forEach((v: any) => {
+          text += `- ${v.url || v.video_url}${v.description || v.title ? ` - ${v.description || v.title}` : ''}\n`;
+        });
+      }
+      
+      if (p.testimonial_videos && Array.isArray(p.testimonial_videos) && p.testimonial_videos.length > 0) {
+        text += `**Vídeos de Depoimentos (${p.testimonial_videos.length}):**\n`;
+        p.testimonial_videos.forEach((v: any) => {
+          text += `- ${v.url || v.video_url}${v.description || v.client_name ? ` - ${v.description || v.client_name}` : ''}\n`;
+        });
+      }
+      
+      if (p.tiktok_videos && Array.isArray(p.tiktok_videos) && p.tiktok_videos.length > 0) {
+        text += `**Vídeos TikTok (${p.tiktok_videos.length}):**\n`;
+        p.tiktok_videos.forEach((v: any) => {
+          text += `- ${v.url || v.video_url}${v.description || v.title ? ` - ${v.description || v.title}` : ''}\n`;
+        });
+      }
+      
       // E-commerce HTML gerado
       if (p.ecommerce_html && p.ecommerce_html.html_content) {
         text += `**Descrição E-commerce (Gerada por IA):**\n`;
@@ -606,6 +645,95 @@ function formatForAITraining(data: any): string {
     });
   }
   
+  // Blog Posts
+  if (data.blog_posts && Array.isArray(data.blog_posts)) {
+    text += `## BLOG POSTS PUBLICADOS (${data.blog_posts.length})\n\n`;
+    data.blog_posts.forEach((post: any) => {
+      text += `### ${post.title}\n`;
+      if (post.meta_description) text += `**Meta Description:** ${post.meta_description}\n`;
+      if (post.keywords && Array.isArray(post.keywords)) {
+        text += `**Keywords:** ${post.keywords.join(', ')}\n`;
+      }
+      if (post.published_at) {
+        text += `**Publicado em:** ${new Date(post.published_at).toLocaleDateString('pt-BR')}\n`;
+      }
+      if (post.youtube_video_url) {
+        text += `**Vídeo YouTube:** ${post.youtube_video_url}\n`;
+      }
+      // Preview do conteúdo (primeiros 300 caracteres)
+      if (post.content) {
+        const preview = post.content.replace(/<[^>]*>/g, '').substring(0, 300);
+        text += `**Preview:** ${preview}...\n`;
+      }
+      text += `\n`;
+    });
+  }
+  
+  // Landing Pages
+  if (data.landing_pages && Array.isArray(data.landing_pages)) {
+    text += `## LANDING PAGES (${data.landing_pages.length})\n\n`;
+    data.landing_pages.forEach((lp: any) => {
+      text += `### ${lp.name}\n`;
+      text += `**Status:** ${lp.status}\n`;
+      text += `**Template:** ${lp.template}\n`;
+      
+      if (lp.data) {
+        // SEO
+        if (lp.data.seo?.seo_title) {
+          text += `**SEO Title:** ${lp.data.seo.seo_title}\n`;
+        }
+        if (lp.data.seo?.seo_description) {
+          text += `**SEO Description:** ${lp.data.seo.seo_description}\n`;
+        }
+        
+        // Banner
+        if (lp.data.banner?.title) {
+          text += `**Banner:** ${lp.data.banner.title}${lp.data.banner.subtitle ? ' - ' + lp.data.banner.subtitle : ''}\n`;
+        }
+        
+        // Produtos selecionados
+        if (lp.selected_product_ids && Array.isArray(lp.selected_product_ids) && lp.selected_product_ids.length > 0) {
+          text += `**Produtos Vinculados:** ${lp.selected_product_ids.length} produtos\n`;
+        }
+      }
+      
+      text += `\n`;
+    });
+  }
+  
+  // Vídeos Externos (Sistema B)
+  if (data.external_videos) {
+    const ev = data.external_videos;
+    
+    if (ev.videos_produtos && Array.isArray(ev.videos_produtos) && ev.videos_produtos.length > 0) {
+      text += `## VÍDEOS EXTERNOS - PRODUTOS (${ev.videos_produtos.length})\n\n`;
+      ev.videos_produtos.forEach((v: any) => {
+        text += `### ${v.nome_produto}\n`;
+        text += `**URL:** ${v.url_video}\n`;
+        if (v.descricao) text += `**Descrição:** ${v.descricao}\n`;
+        if (v.categoria) text += `**Categoria:** ${v.categoria}\n`;
+        if (v.duracao) text += `**Duração:** ${v.duracao}\n`;
+        text += `\n`;
+      });
+    }
+    
+    if (ev.videos_resinas && Array.isArray(ev.videos_resinas) && ev.videos_resinas.length > 0) {
+      text += `## VÍDEOS EXTERNOS - RESINAS (${ev.videos_resinas.length})\n\n`;
+      ev.videos_resinas.forEach((v: any) => {
+        text += `### ${v.nome_resina}\n`;
+        text += `**URL:** ${v.url_video}\n`;
+        if (v.descricao) text += `**Descrição:** ${v.descricao}\n`;
+        if (v.parametros_impressao) {
+          text += `**Parâmetros de Impressão:**\n`;
+          Object.entries(v.parametros_impressao).forEach(([key, value]) => {
+            text += `- ${key}: ${value}\n`;
+          });
+        }
+        text += `\n`;
+      });
+    }
+  }
+  
   return text;
 }
 
@@ -710,6 +838,9 @@ serve(async (req) => {
       include_google_reviews: url.searchParams.get('include_google_reviews') !== 'false',
       include_kols: url.searchParams.get('include_kols') === 'true',
       include_spin_solutions: url.searchParams.get('include_spin_solutions') !== 'false',
+      include_blog_posts: url.searchParams.get('include_blog_posts') === 'true',
+      include_landing_pages: url.searchParams.get('include_landing_pages') === 'true',
+      include_external_videos: url.searchParams.get('include_external_videos') === 'true',
       approved_only: url.searchParams.get('approved_only') !== 'false',
       category: url.searchParams.get('category') || undefined,
       limit: parseInt(url.searchParams.get('limit') || '50'),
@@ -733,6 +864,8 @@ serve(async (req) => {
       p_include_google_reviews: params.include_google_reviews,
       p_include_kols: params.include_kols,
       p_include_spin_solutions: params.include_spin_solutions,
+      p_include_blog_posts: params.include_blog_posts,
+      p_include_landing_pages: params.include_landing_pages,
       p_approved_only: params.approved_only,
       p_category: params.category,
       p_limit: params.limit,
@@ -769,6 +902,35 @@ serve(async (req) => {
           }));
           console.log('✅ Technical documents merged successfully');
         }
+      }
+    }
+    
+    // Buscar vídeos externos do Sistema B (se solicitado)
+    if (params.include_external_videos) {
+      console.log('🎥 Fetching external videos from Sistema B...');
+      try {
+        const systemBUrl = 'https://okeogjgqijbfkudfjadz.supabase.co/functions/v1/data-export?format=ai_ready&include_product_videos=true&include_resin_videos=true';
+        const systemBResponse = await fetch(systemBUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (systemBResponse.ok) {
+          const systemBData = await systemBResponse.json();
+          data.external_videos = {
+            videos_produtos: systemBData.data?.videos_produtos || [],
+            videos_resinas: systemBData.data?.videos_resinas || []
+          };
+          console.log(`✅ Fetched ${data.external_videos.videos_produtos.length} product videos and ${data.external_videos.videos_resinas.length} resin videos from Sistema B`);
+        } else {
+          console.warn('⚠️ Failed to fetch external videos from Sistema B:', systemBResponse.status);
+          data.external_videos = { videos_produtos: [], videos_resinas: [] };
+        }
+      } catch (externalError) {
+        console.error('❌ Error fetching external videos:', externalError);
+        data.external_videos = { videos_produtos: [], videos_resinas: [] };
       }
     }
 
