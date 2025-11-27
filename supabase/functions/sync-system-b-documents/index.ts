@@ -37,8 +37,9 @@ Deno.serve(async (req) => {
     );
 
     // 🚀 IDENTIFICADOR DE VERSÃO - FORÇAR NOVO DEPLOY
-    console.log('🚀 VERSÃO DA FUNÇÃO: v2.0-DIAGNOSTICO-COMPLETO');
+    console.log('🚀 VERSÃO DA FUNÇÃO: v3.0-CAMINHOS-CORRIGIDOS');
     console.log('📅 Deploy timestamp:', new Date().toISOString());
+    console.log('✅ Correção aplicada: payload.produtos.resinas e payload.produtos.documentos_tecnicos');
     
     console.log('🔄 Iniciando sincronização de documentos do Sistema B...');
 
@@ -103,9 +104,9 @@ Deno.serve(async (req) => {
       }))
     });
 
-    // ✅ CAMPOS CORRETOS DO SISTEMA B
-    const resinas = payload?.documentos_resinas || [];
-    const documentosTecnicos = payload?.documentos_tecnicos || [];
+    // ✅ CAMPOS CORRETOS DO SISTEMA B (caminhos corrigidos conforme estrutura real)
+    const resinas = payload?.produtos?.resinas || [];
+    const documentosTecnicos = payload?.produtos?.documentos_tecnicos || [];
     const catalogDocuments = payload?.documentos_catalogo || [];
     
     // 🆕 AVALIAÇÕES DO GOOGLE
@@ -113,12 +114,13 @@ Deno.serve(async (req) => {
     const reputacaoGoogle = payload?.perfil_empresa?.reputacao_google || {};
 
     // 📦 LOG DE CONFIRMAÇÃO
-    console.log('📦 Documentos extraídos do payload:', {
-      documentos_resinas: resinas.length,
-      documentos_catalogo: catalogDocuments.length,
-      documentos_tecnicos: documentosTecnicos.length,
+    console.log('📦 Documentos extraídos do payload (caminhos corretos):', {
+      'produtos.resinas': resinas.length,
+      'documentos_catalogo': catalogDocuments.length,
+      'produtos.documentos_tecnicos': documentosTecnicos.length,
       primeiroDocCatalogo: catalogDocuments[0]?.document_name || 'nenhum',
-      primeiraResina: resinas[0]?.document_name || 'nenhuma'
+      primeiraResina: resinas[0]?.nome || 'nenhuma',
+      primeiroDocTecnico: documentosTecnicos[0]?.documento?.nome || 'nenhum'
     });
 
     // 📊 LOG DE AVALIAÇÕES DO GOOGLE
@@ -129,14 +131,16 @@ Deno.serve(async (req) => {
       place_id: reputacaoGoogle?.place_id
     });
 
-    // 🔍 ESTRUTURA DO PAYLOAD SISTEMA B
+    // 🔍 ESTRUTURA DO PAYLOAD SISTEMA B (caminhos atualizados)
     console.log('🔍 Estrutura do payload Sistema B:', {
-      temDocumentosResinas: !!payload?.documentos_resinas,
+      temProdutosResinas: !!payload?.produtos?.resinas,
       temDocumentosCatalogo: !!payload?.documentos_catalogo,
+      temProdutosDocsTecnicos: !!payload?.produtos?.documentos_tecnicos,
       temVideosProdutos: !!payload?.videos_produtos,
       temVideosResinas: !!payload?.videos_resinas,
       totalDocsCatalogo: catalogDocuments.length,
-      totalDocsResinas: resinas.length
+      totalResinas: resinas.length,
+      totalDocsTecnicos: documentosTecnicos.length
     });
 
     // 3. FASE 2: Criar mapa de resinas por loja_integrada_id
