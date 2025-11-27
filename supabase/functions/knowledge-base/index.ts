@@ -481,6 +481,90 @@ function formatForAITraining(data: any): string {
         });
         text += `\n`;
       }
+
+      // 📝 TRANSCRIÇÕES DE DOCUMENTOS (PDFs, Ebooks, etc.)
+      if (p.document_transcriptions && Array.isArray(p.document_transcriptions) && p.document_transcriptions.length > 0) {
+        text += `\n📝 TRANSCRIÇÕES DE DOCUMENTOS (${p.document_transcriptions.length}):\n`;
+        p.document_transcriptions.forEach((trans: any, idx: number) => {
+          text += `  ${idx + 1}. ${trans.file_name || 'Documento'}\n`;
+          if (trans.transcription) {
+            // Limitar transcrição a 500 caracteres para não sobrecarregar
+            const transcriptionPreview = trans.transcription.substring(0, 500);
+            text += `     Conteúdo: ${transcriptionPreview}${trans.transcription.length > 500 ? '...' : ''}\n`;
+          }
+          if (trans.created_at) {
+            text += `     Data: ${new Date(trans.created_at).toLocaleDateString('pt-BR')}\n`;
+          }
+        });
+        text += `\n`;
+      }
+
+      // 📱 CONTEÚDOS GERADOS PARA REDES SOCIAIS
+
+      // Instagram Copies
+      if (p.instagram_copies?.copies && Array.isArray(p.instagram_copies.copies) && p.instagram_copies.copies.length > 0) {
+        text += `\n📸 POSTS INSTAGRAM GERADOS (${p.instagram_copies.copies.length}):\n`;
+        p.instagram_copies.copies.forEach((copy: any, idx: number) => {
+          text += `  Post ${idx + 1}:\n`;
+          text += `  ${copy.copy || copy.text}\n\n`;
+        });
+      }
+
+      // TikTok Copies
+      if (p.tiktok_content?.copies && Array.isArray(p.tiktok_content.copies) && p.tiktok_content.copies.length > 0) {
+        text += `\n🎵 SCRIPTS TIKTOK GERADOS (${p.tiktok_content.copies.length}):\n`;
+        p.tiktok_content.copies.forEach((copy: any, idx: number) => {
+          text += `  Script ${idx + 1}:\n`;
+          text += `  ${copy.copy || copy.text}\n\n`;
+        });
+      }
+
+      // WhatsApp Messages
+      if (p.whatsapp_messages?.messages && Array.isArray(p.whatsapp_messages.messages) && p.whatsapp_messages.messages.length > 0) {
+        text += `\n💬 MENSAGENS WHATSAPP GERADAS (${p.whatsapp_messages.messages.length}):\n`;
+        p.whatsapp_messages.messages.forEach((msg: any, idx: number) => {
+          text += `  Mensagem ${idx + 1}:\n`;
+          text += `  ${msg.message || msg.text}\n\n`;
+        });
+      }
+
+      // WhatsApp Sequences
+      if (p.whatsapp_sequences?.sequences && Array.isArray(p.whatsapp_sequences.sequences) && p.whatsapp_sequences.sequences.length > 0) {
+        text += `\n📲 SEQUÊNCIAS WHATSAPP (${p.whatsapp_sequences.sequences.length}):\n`;
+        p.whatsapp_sequences.sequences.forEach((seq: any, idx: number) => {
+          text += `  Sequência ${idx + 1}: ${seq.title || 'Sem título'}\n`;
+          if (seq.messages && Array.isArray(seq.messages)) {
+            seq.messages.forEach((msg: any, msgIdx: number) => {
+              text += `    ${msgIdx + 1}. ${msg.message}\n`;
+            });
+          }
+          text += `\n`;
+        });
+      }
+
+      // YouTube Descriptions
+      if (p.youtube_descriptions?.descriptions && Array.isArray(p.youtube_descriptions.descriptions) && p.youtube_descriptions.descriptions.length > 0) {
+        text += `\n🎬 DESCRIÇÕES YOUTUBE GERADAS (${p.youtube_descriptions.descriptions.length}):\n`;
+        p.youtube_descriptions.descriptions.forEach((desc: any, idx: number) => {
+          text += `  Descrição ${idx + 1}:\n`;
+          text += `  ${desc.description || desc.text}\n\n`;
+        });
+      }
+
+      // Conteúdo Individual de Blog
+      if (p.individual_blog_content) {
+        text += `\n📰 CONTEÚDO DE BLOG INDIVIDUAL:\n`;
+        if (p.individual_blog_content.technical) {
+          text += `  Blog Técnico:\n`;
+          const technicalPreview = p.individual_blog_content.technical.substring(0, 500);
+          text += `  ${technicalPreview}${p.individual_blog_content.technical.length > 500 ? '...' : ''}\n\n`;
+        }
+        if (p.individual_blog_content.commercial) {
+          text += `  Blog Comercial:\n`;
+          const commercialPreview = p.individual_blog_content.commercial.substring(0, 500);
+          text += `  ${commercialPreview}${p.individual_blog_content.commercial.length > 500 ? '...' : ''}\n\n`;
+        }
+      }
       
       text += `\n---\n\n`;
     });
