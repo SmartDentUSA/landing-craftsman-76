@@ -368,15 +368,35 @@ OBRIGATÓRIO:
       const uniqueFaqs: Array<{question: string; answer: string}> = [];
       const SIMILARITY_THRESHOLD = 0.65; // 65% de similaridade = duplicado
       
-      // Função auxiliar para extrair números
-      const extractNumbers = (text: string) => {
-        return text.match(/\d+(\.\d+)?/g) || [];
+      // ✅ CORRIGIDO: Função para extrair números SIGNIFICATIVOS únicos (excluindo números genéricos 0-5)
+      const extractSignificantNumbers = (text: string): Set<string> => {
+        const allNumbers = text.match(/\d+(\.\d+)?/g) || [];
+        // Filtrar números muito pequenos/genéricos (0-5) que aparecem em muitos contextos
+        const significantNumbers = allNumbers.filter(n => {
+          const numValue = parseFloat(n);
+          return numValue > 5 || n.includes('.'); // Mantém decimais e números > 5
+        });
+        return new Set(significantNumbers);
       };
 
       // Função auxiliar para extrair termos técnicos
       const extractKeyTerms = (text: string) => {
         const terms = text.toLowerCase().match(/\b(iso|gtin|mpn|certificad|compatív|precis|velocidad|garant|anvisa|fda|ce)\w*/g) || [];
         return new Set(terms);
+      };
+
+      // ✅ NOVO: Categorizar perguntas para validar contextos diferentes
+      const getQuestionCategory = (question: string): string => {
+        const lower = question.toLowerCase();
+        if (lower.includes('compatível') || lower.includes('integra')) return 'compatibilidade';
+        if (lower.includes('garanti') || lower.includes('suporte')) return 'garantia';
+        if (lower.includes('preço') || lower.includes('custo') || lower.includes('roi')) return 'financeiro';
+        if (lower.includes('como') && lower.includes('funciona')) return 'funcionamento';
+        if (lower.includes('especific') || lower.includes('técnic')) return 'specs';
+        if (lower.includes('diferenç') || lower.includes('compar')) return 'comparacao';
+        if (lower.includes('tempo') || lower.includes('quanto') && lower.includes('leva')) return 'implementacao';
+        if (lower.includes('certificaç') || lower.includes('aprovad') || lower.includes('norm')) return 'certificacao';
+        return 'geral';
       };
       
       for (const faq of faqs) {
@@ -389,14 +409,19 @@ OBRIGATÓRIO:
           // Comparar similaridade das PERGUNTAS
           const questionSimilarity = calculateSimilarity(faq.question, existingFaq.question);
           
-          // Detectar se ambas as FAQs focam no mesmo dado técnico/número
-          const numbers1 = extractNumbers(faq.answer);
-          const numbers2 = extractNumbers(existingFaq.answer);
-          const commonNumbers = numbers1.filter(n => numbers2.includes(n));
+          // ✅ CORRIGIDO: Usar Sets para números únicos e significativos
+          const numbers1 = extractSignificantNumbers(faq.answer);
+          const numbers2 = extractSignificantNumbers(existingFaq.answer);
+          const commonNumbers = [...numbers1].filter(n => numbers2.has(n));
 
           const terms1 = extractKeyTerms(faq.answer);
           const terms2 = extractKeyTerms(existingFaq.answer);
           const commonTerms = [...terms1].filter(t => terms2.has(t));
+          
+          // ✅ NOVO: Validar se perguntas são da mesma categoria
+          const category1 = getQuestionCategory(faq.question);
+          const category2 = getQuestionCategory(existingFaq.question);
+          const sameCategory = category1 === category2;
           
           // Se resposta OU pergunta for muito similar = duplicado
           if (answerSimilarity > SIMILARITY_THRESHOLD || questionSimilarity > 0.75) {
@@ -406,9 +431,10 @@ OBRIGATÓRIO:
             break;
           }
           
-          // Se compartilham mais de 2 números iguais OU mais de 3 termos técnicos = duplicado provável
-          if (commonNumbers.length >= 2 || commonTerms.length >= 3) {
-            console.warn(`[FAQ Deduplication] FAQ removida (dados técnicos repetidos):`, 
+          // ✅ CORRIGIDO: Threshold aumentado para 3 números E validação de categoria
+          // Só marca como duplicado se for mesma categoria E compartilhar muitos dados técnicos
+          if (sameCategory && (commonNumbers.length >= 3 || commonTerms.length >= 4)) {
+            console.warn(`[FAQ Deduplication] FAQ removida (mesma categoria "${category1}" + dados técnicos repetidos):`, 
               `Números: ${commonNumbers.join(', ')} | Termos: ${commonTerms.join(', ')}`);
             isDuplicate = true;
             break;
