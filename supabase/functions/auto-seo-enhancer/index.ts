@@ -6,30 +6,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ⚙️ CONFIGURAÇÕES DE BATCHING
+const BATCH_SIZE = 10; // Processar no máximo 10 produtos por execução
+const MAX_EXECUTION_TIME = 50000; // 50 segundos (margem de segurança)
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { productIds, mode = 'auto' } = await req.json();
+    const { productIds, mode = 'auto', batchSize = BATCH_SIZE } = await req.json();
     
-    console.log('🤖 Auto SEO Enhancer started:', { mode, productIds: productIds?.length || 'all' });
+    console.log('🤖 Auto SEO Enhancer started:', { 
+      mode, 
+      productIds: productIds?.length || 'auto', 
+      batchSize 
+    });
 
-    // Buscar produtos que precisam de otimização SEO
+    // Buscar produtos que precisam de otimização SEO (COM LIMITE)
     let query = supabase
       .from('products_repository')
-      .select('id, name, description, product_url, category, subcategory, seo_enhanced, seo_title_override, seo_description_override, slug');
+      .select('id, name, description, product_url, category, subcategory, seo_enhanced, seo_title_override, seo_description_override, slug')
+      .limit(batchSize); // ✅ LIMITE DE LOTE
 
     if (productIds && productIds.length > 0) {
-      query = query.in('id', productIds);
+      // Limitar aos IDs fornecidos (mas respeitar batch size)
+      const limitedIds = productIds.slice(0, batchSize);
+      query = query.in('id', limitedIds);
+      console.log(`📦 Processando ${limitedIds.length} produtos específicos`);
     } else if (mode === 'auto') {
       // Apenas produtos sem SEO otimizado
       query = query.or('seo_enhanced.is.null,seo_enhanced.eq.false');
+      console.log(`🔄 Modo automático: buscando até ${batchSize} produtos não otimizados`);
     }
 
     const { data: products, error: fetchError } = await query;
@@ -55,8 +70,19 @@ serve(async (req) => {
       details: [] as any[]
     };
 
-    // Processar cada produto
+    // Processar cada produto (com controle de timeout)
     for (const product of products) {
+      // ⏱️ VERIFICAR TIMEOUT
+      const elapsed = Date.now() - startTime;
+      if (elapsed > MAX_EXECUTION_TIME) {
+        console.warn(`⏱️ Timeout atingido após ${elapsed}ms - parando processamento`);
+        results.details.push({
+          status: 'timeout',
+          message: `Processamento interrompido após ${results.success + results.failed} produtos (tempo limite atingido)`
+        });
+        break;
+      }
+
       const productResult: any = {
         id: product.id,
         name: product.name,
@@ -199,18 +225,28 @@ serve(async (req) => {
       results.details.push(productResult);
     }
 
-    console.log(`🎉 Automação concluída:`, {
+    const executionTime = Date.now() - startTime;
+    console.log(`🎉 Automação concluída em ${executionTime}ms:`, {
       total: results.total,
       success: results.success,
       failed: results.failed,
       skipped: results.skipped
     });
 
+    // Verificar se há mais produtos para processar
+    const { count: remainingCount } = await supabase
+      .from('products_repository')
+      .select('id', { count: 'exact', head: true })
+      .or('seo_enhanced.is.null,seo_enhanced.eq.false');
+
     return new Response(
       JSON.stringify({
         success: true,
         message: `Processados ${results.total} produtos: ${results.success} otimizados, ${results.failed} falharam, ${results.skipped} pulados`,
-        results
+        results,
+        hasMore: (remainingCount || 0) > 0,
+        remaining: remainingCount || 0,
+        executionTime: `${executionTime}ms`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
