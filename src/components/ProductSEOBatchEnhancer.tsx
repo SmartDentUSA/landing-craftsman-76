@@ -16,17 +16,30 @@ interface BatchResult {
   details: Array<{
     id: string;
     name: string;
-    status: 'success' | 'failed' | 'skipped';
+    status: 'success' | 'failed' | 'skipped' | 'timeout';
     actions: string[];
     errors: string[];
     message?: string;
   }>;
 }
 
+interface BatchResponse {
+  success: boolean;
+  message: string;
+  results: BatchResult;
+  hasMore?: boolean;
+  remaining?: number;
+  executionTime?: string;
+  error?: string;
+}
+
 export const ProductSEOBatchEnhancer = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<BatchResult | null>(null);
   const [progress, setProgress] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [remaining, setRemaining] = useState(0);
+  const [executionTime, setExecutionTime] = useState<string>('');
   const { toast } = useToast();
 
   const handleBatchEnhance = async () => {
@@ -37,11 +50,11 @@ export const ProductSEOBatchEnhancer = () => {
     try {
       toast({
         title: "🤖 Automação SEO Iniciada",
-        description: "Processando produtos sem otimização..."
+        description: "Processando até 10 produtos por lote..."
       });
 
-      const { data, error } = await supabase.functions.invoke('auto-seo-enhancer', {
-        body: { mode: 'auto' }
+      const { data, error } = await supabase.functions.invoke<BatchResponse>('auto-seo-enhancer', {
+        body: { mode: 'auto', batchSize: 10 }
       });
 
       if (error) throw error;
@@ -49,10 +62,17 @@ export const ProductSEOBatchEnhancer = () => {
       if (data.success) {
         setResult(data.results);
         setProgress(100);
+        setHasMore(data.hasMore || false);
+        setRemaining(data.remaining || 0);
+        setExecutionTime(data.executionTime || '');
+        
+        const moreInfo = data.hasMore 
+          ? ` (${data.remaining} produtos restantes)`
+          : ' (Todos produtos processados!)';
         
         toast({
-          title: "✅ Automação Concluída!",
-          description: data.message
+          title: "✅ Lote Concluído!",
+          description: data.message + moreInfo
         });
       } else {
         throw new Error(data.error || 'Erro desconhecido');
@@ -88,7 +108,7 @@ export const ProductSEOBatchEnhancer = () => {
           <CardTitle>Automação SEO em Lote</CardTitle>
         </div>
         <CardDescription>
-          Otimiza automaticamente todos os produtos sem SEO configurado
+          Otimiza automaticamente produtos sem SEO (lotes de 10 produtos)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -122,6 +142,18 @@ export const ProductSEOBatchEnhancer = () => {
 
         {result && (
           <div className="space-y-4">
+            {/* Info do Lote */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
+              <span className="text-muted-foreground">
+                Tempo de execução: <strong>{executionTime}</strong>
+              </span>
+              {hasMore && (
+                <Badge variant="secondary">
+                  {remaining} produtos restantes
+                </Badge>
+              )}
+            </div>
+
             <div className="grid grid-cols-4 gap-2">
               <div className="text-center p-3 bg-muted rounded-lg">
                 <p className="text-2xl font-bold">{result.total}</p>
@@ -158,6 +190,9 @@ export const ProductSEOBatchEnhancer = () => {
                         )}
                         {detail.status === 'skipped' && (
                           <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        )}
+                        {detail.status === 'timeout' && (
+                          <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{detail.name}</p>
