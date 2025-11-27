@@ -17,8 +17,13 @@ export function CompetitorComparisonTable({ value, onChange }: CompetitorCompari
   const [localValue, setLocalValue] = useState<CompetitorComparison>(value);
 
   // Sincroniza o estado local com os dados vindos do banco
+  // ✅ CORRIGIDO: Só atualiza se os dados são realmente diferentes (comparação profunda)
   useEffect(() => {
-    setLocalValue(value);
+    const isDifferent = JSON.stringify(localValue) !== JSON.stringify(value);
+    if (isDifferent && value) {
+      console.log('[CompetitorComparisonTable] Sincronizando estado com valor externo:', value);
+      setLocalValue(value);
+    }
   }, [value]);
 
   const handleChange = (updates: Partial<CompetitorComparison>) => {

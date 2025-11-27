@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -244,6 +244,16 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
   const { getConfigByCategory } = useCategoryConfig();
   const { targetAudience: companyTargetAudience } = useCompanyTargetAudience();
   const { autoSave, lastSave } = useProductAutoSave(product?.id);
+  
+  // ✅ CORRIGIDO: Memoiza o valor default para evitar criar nova referência a cada render
+  const defaultCompetitorComparison = useMemo(() => ({
+    enabled: false,
+    title: '',
+    subtitle: '',
+    table_headers: [],
+    table_data: []
+  }), []);
+  
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -441,14 +451,8 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       // Technical Specifications
       technical_specifications: product.technical_specifications || [],
       tutorial_resources: product.tutorial_resources || { tutorials: [] },
-      // Competitor Comparison Table
-      competitor_comparison: product.competitor_comparison || {
-        enabled: false,
-        title: '',
-        subtitle: '',
-        table_headers: [],
-        table_data: []
-      }
+      // Competitor Comparison Table - Usa valor memoizado como default
+      competitor_comparison: product.competitor_comparison || defaultCompetitorComparison
     });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -1887,13 +1891,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         // Document Transcriptions
         document_transcriptions: documentTranscriptions.length > 0 ? documentTranscriptions as any : [],
         // Competitor Comparison Table
-        competitor_comparison: formData.competitor_comparison || {
-          enabled: false,
-          title: '',
-          subtitle: '',
-          table_headers: [],
-          table_data: []
-        },
+        competitor_comparison: formData.competitor_comparison || defaultCompetitorComparison,
         updated_at: new Date().toISOString()
       };
 
@@ -1901,6 +1899,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
       console.log('[DEBUG] bot_trigger_words especificamente:', dataToSave.bot_trigger_words);
       console.log('🔍 [FAQ DEBUG] FAQ no dataToSave:', dataToSave.faq);
       console.log('🔍 [FAQ DEBUG] FAQ filtrado length:', dataToSave.faq?.length || 0);
+      console.log('🏆 [COMPETITOR DEBUG] competitor_comparison antes de salvar:', formData.competitor_comparison);
+      console.log('🏆 [COMPETITOR DEBUG] competitor_comparison no dataToSave:', dataToSave.competitor_comparison);
 
       let result;
       if (isEditing) {
@@ -3994,13 +3994,7 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
           {/* SEÇÃO: COMPARATIVO COM CONCORRENTES */}
           <div className="space-y-4 border-t pt-6">
             <CompetitorComparisonTable
-              value={formData.competitor_comparison || {
-                enabled: false,
-                title: '',
-                subtitle: '',
-                table_headers: [],
-                table_data: []
-              }}
+              value={formData.competitor_comparison || defaultCompetitorComparison}
               onChange={(value) => setFormData(prev => ({ 
                 ...prev, 
                 competitor_comparison: value 
