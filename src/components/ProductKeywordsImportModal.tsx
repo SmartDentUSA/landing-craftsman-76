@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useLinksRepository } from "@/hooks/useLinksRepository";
-import { Search, Package, Target, TrendingUp, Bot, ExternalLink, Globe } from "lucide-react";
+import { Search, Package, Target, TrendingUp, Bot, ExternalLink, Globe, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 interface ProductKeyword {
@@ -58,6 +59,7 @@ export function ProductKeywordsImportModal({
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showAll, setShowAll] = useState(true); // Default true para mostrar todas as keywords
   
   const { allLinks } = useLinksRepository();
 
@@ -94,15 +96,16 @@ export function ProductKeywordsImportModal({
     return matches ? matches.length : 0;
   };
 
-  const processKeywords = (keywords: string[], type: keyof typeof keywordsByType): ProductKeyword[] => {
+  const processKeywords = (keywords: string[], type: keyof typeof keywordsByType, forceShowAll = false): ProductKeyword[] => {
+    const effectiveShowAll = showAllKeywords || forceShowAll;
     return keywords
       .filter(keyword => keyword && keyword.trim())
       .map(keyword => {
-        const occurrences = showAllKeywords ? 1 : countOccurrences(keyword.trim()); // Se showAllKeywords for true, simula 1 ocorrência
+        const occurrences = effectiveShowAll ? 1 : countOccurrences(keyword.trim()); // Se effectiveShowAll for true, simula 1 ocorrência
         return {
           keyword: keyword.trim(),
           occurrences,
-          selected: showAllKeywords ? false : occurrences > 0, // Se showAllKeywords, deixa desmarcado por padrão
+          selected: effectiveShowAll ? false : occurrences > 0, // Se effectiveShowAll, deixa desmarcado por padrão
           selectedUrl: ''
         };
       })
@@ -114,14 +117,14 @@ export function ProductKeywordsImportModal({
       const product = products.find(p => p.id === selectedProductId);
       if (product) {
         setKeywordsByType({
-          keywords: processKeywords(Array.isArray(product.keywords) ? product.keywords : [], 'keywords'),
-          search_intent_keywords: processKeywords(Array.isArray(product.search_intent_keywords) ? product.search_intent_keywords : [], 'search_intent_keywords'),
-          market_keywords: processKeywords(Array.isArray(product.market_keywords) ? product.market_keywords : [], 'market_keywords'),
-          bot_trigger_words: processKeywords(Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : [], 'bot_trigger_words')
+          keywords: processKeywords(Array.isArray(product.keywords) ? product.keywords : [], 'keywords', showAll),
+          search_intent_keywords: processKeywords(Array.isArray(product.search_intent_keywords) ? product.search_intent_keywords : [], 'search_intent_keywords', showAll),
+          market_keywords: processKeywords(Array.isArray(product.market_keywords) ? product.market_keywords : [], 'market_keywords', showAll),
+          bot_trigger_words: processKeywords(Array.isArray(product.bot_trigger_words) ? product.bot_trigger_words : [], 'bot_trigger_words', showAll)
         });
       }
     }
-  }, [selectedProductId, blogContent]);
+  }, [selectedProductId, blogContent, showAll]);
 
   const updateKeywordSelection = (type: keyof typeof keywordsByType, keyword: string, field: 'selected' | 'selectedUrl', value: boolean | string) => {
     setKeywordsByType(prev => ({
@@ -167,7 +170,8 @@ export function ProductKeywordsImportModal({
 
   const renderKeywordTab = (type: keyof typeof keywordsByType, title: string, icon: React.ReactNode) => {
     const keywords = keywordsByType[type];
-    const filteredKeywords = showAllKeywords ? keywords : keywords.filter(kw => kw.occurrences > 0);
+    const shouldShowAll = showAllKeywords || showAll;
+    const filteredKeywords = shouldShowAll ? keywords : keywords.filter(kw => kw.occurrences > 0);
 
     return (
       <div className="space-y-4">
@@ -182,7 +186,7 @@ export function ProductKeywordsImportModal({
         {filteredKeywords.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <p className="text-sm">
-              {showAllKeywords ? 'Nenhuma palavra-chave cadastrada para este produto' : 'Nenhuma palavra-chave encontrada no conteúdo'}
+              {shouldShowAll ? 'Nenhuma palavra-chave cadastrada para este produto' : 'Nenhuma palavra-chave encontrada no conteúdo'}
             </p>
           </div>
         ) : (
@@ -196,15 +200,15 @@ export function ProductKeywordsImportModal({
                   }
                 />
                 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium text-sm">{kw.keyword}</span>
-                    {!showAllKeywords && (
-                      <Badge variant="outline" className="text-xs">
-                        {kw.occurrences}× no texto
-                      </Badge>
-                    )}
-                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-sm">{kw.keyword}</span>
+                      {!shouldShowAll && (
+                        <Badge variant="outline" className="text-xs">
+                          {kw.occurrences}× no texto
+                        </Badge>
+                      )}
+                    </div>
                   
                   {kw.selected && (
                     <Select
@@ -284,9 +288,31 @@ export function ProductKeywordsImportModal({
             </Select>
           </div>
 
+          {/* Toggle para mostrar todas as keywords */}
+          {selectedProductId && (
+            <>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Mostrar todas as keywords</span>
+                </div>
+                <Switch 
+                  checked={showAll} 
+                  onCheckedChange={setShowAll}
+                />
+              </div>
+
+              {!showAll && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  💡 Filtrando apenas keywords que aparecem no conteúdo do blog
+                </p>
+              )}
+            </>
+          )}
+
           {/* Keywords por Categoria */}
           {selectedProductId && (
-            <div className="border rounded-lg">
+            <div className="border rounded-lg mt-4">
               <Tabs defaultValue="keywords" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="keywords" className="text-xs">
