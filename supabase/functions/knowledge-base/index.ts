@@ -565,6 +565,29 @@ function formatForAITraining(data: any): string {
           text += `  ${commercialPreview}${p.individual_blog_content.commercial.length > 500 ? '...' : ''}\n\n`;
         }
       }
+
+      // TABELA COMPARATIVA COM CONCORRENTES
+      if (p.competitor_comparison?.enabled && p.competitor_comparison.table_data?.length > 0) {
+        text += `\n📊 COMPARATIVO COM CONCORRENTES:\n`;
+        text += `**${p.competitor_comparison.title}**\n`;
+        if (p.competitor_comparison.subtitle) {
+          text += `${p.competitor_comparison.subtitle}\n`;
+        }
+        text += `\n`;
+        
+        // Cabeçalhos da tabela (formato Markdown)
+        const headers = p.competitor_comparison.table_headers || [];
+        text += `| ${headers.join(' | ')} |\n`;
+        text += `|${headers.map(() => '---').join('|')}|\n`;
+        
+        // Dados da tabela
+        const tableData = p.competitor_comparison.table_data || [];
+        tableData.forEach((row: any) => {
+          const cells = headers.map(header => row[header] || '-');
+          text += `| ${cells.join(' | ')} |\n`;
+        });
+        text += `\n`;
+      }
       
       text += `\n---\n\n`;
     });

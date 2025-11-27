@@ -1084,6 +1084,7 @@ export type Database = {
           canonical_url: string | null
           category: string | null
           color: string | null
+          competitor_comparison: Json | null
           condition: string | null
           created_at: string
           currency: string | null
@@ -1189,6 +1190,7 @@ export type Database = {
           canonical_url?: string | null
           category?: string | null
           color?: string | null
+          competitor_comparison?: Json | null
           condition?: string | null
           created_at?: string
           currency?: string | null
@@ -1294,6 +1296,7 @@ export type Database = {
           canonical_url?: string | null
           category?: string | null
           color?: string | null
+          competitor_comparison?: Json | null
           condition?: string | null
           created_at?: string
           currency?: string | null
