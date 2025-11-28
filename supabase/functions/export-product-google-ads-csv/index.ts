@@ -270,6 +270,17 @@ serve(async (req) => {
   }
 });
 
+// ✅ Função para sanitizar keywords - remove caracteres especiais
+function sanitizeKeyword(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
+  return text
+    .replace(/[%!*.,;:()[\]{}@#$&+=<>|\\/"'`~^]/g, ' ')  // Remove caracteres especiais
+    .replace(/\s+/g, ' ')                                  // Múltiplos espaços → um
+    .trim()                                                // Remove espaços início/fim
+    .replace(/[,;.!?]+$/g, '');                            // Remove pontuação final
+}
+
 // ✅ FASE 1: Filtro de keywords válidas
 function isValidKeyword(text: string): boolean {
   if (!text || typeof text !== 'string') return false;
@@ -511,6 +522,7 @@ class GoogleAdsCSVBuilder {
       'Ad Group',
       'Keyword',
       'Type',              // ✅ CORRIGIDO - Match type de keywords
+      'Ad type',           // ✅ NOVO - Obrigatório para linhas de anúncio
       'Final URL',
       'Path 1',
       'Path 2',
@@ -520,7 +532,7 @@ class GoogleAdsCSVBuilder {
       'Description 1', 'Description 2', 'Description 3', 'Description 4'
     ];
 
-    // ✅ CONSTANTES COL - 33 colunas totais
+    // ✅ CONSTANTES COL - 34 colunas totais
     const COL = {
       CAMPAIGN: 0,
       CAMPAIGN_TYPE: 1,
@@ -533,11 +545,12 @@ class GoogleAdsCSVBuilder {
       AD_GROUP: 8,
       KEYWORD: 9,
       TYPE: 10,            // ✅ Match type para keywords
-      FINAL_URL: 11,
-      PATH_1: 12,
-      PATH_2: 13,
-      HEADLINE_START: 14,  // Headlines: 14-28 (15 headlines)
-      DESC_START: 29       // Descriptions: 29-32 (4 descriptions)
+      AD_TYPE: 11,         // ✅ NOVO - Ad type para anúncios
+      FINAL_URL: 12,
+      PATH_1: 13,
+      PATH_2: 14,
+      HEADLINE_START: 15,  // Headlines: 15-29 (15 headlines)
+      DESC_START: 30       // Descriptions: 30-33 (4 descriptions)
     };
 
     const rows: string[][] = [];
@@ -586,7 +599,7 @@ class GoogleAdsCSVBuilder {
       'Maximize clicks': 'Maximize clicks'
     };
 
-    const row = new Array(33).fill('');
+    const row = new Array(34).fill('');
     row[COL.CAMPAIGN] = this.csvEscape(name);
     row[COL.CAMPAIGN_TYPE] = 'Search';
     row[COL.CAMPAIGN_STATUS] = 'Enabled';
@@ -602,7 +615,7 @@ class GoogleAdsCSVBuilder {
   }
 
   private static buildAdGroupRow(campaignName: string, adGroupName: string, COL: any): string[] {
-    const row = new Array(33).fill('');
+    const row = new Array(34).fill('');
     row[COL.CAMPAIGN] = this.csvEscape(campaignName);
     row[COL.AD_GROUP] = this.csvEscape(adGroupName);
     // Todas outras colunas vazias - Google Ads Editor infere que é Ad Group
@@ -610,10 +623,11 @@ class GoogleAdsCSVBuilder {
   }
 
   private static buildAdRow(campaignName: string, adGroupName: string, adCopies: any, finalUrl: string, COL: any): string[] {
-    const row = new Array(33).fill('');
+    const row = new Array(34).fill('');
     row[COL.CAMPAIGN] = this.csvEscape(campaignName);
     row[COL.AD_GROUP] = this.csvEscape(adGroupName);
     // Keyword fica VAZIO - Google Ads Editor infere que é um anúncio
+    row[COL.AD_TYPE] = 'Responsive search ad';  // ✅ OBRIGATÓRIO
     row[COL.FINAL_URL] = this.csvEscape(finalUrl);
     row[COL.PATH_1] = this.csvEscape(adCopies.paths?.[0] || 'produtos');
     row[COL.PATH_2] = this.csvEscape(adCopies.paths?.[1] || 'ofertas');
@@ -677,10 +691,10 @@ class GoogleAdsCSVBuilder {
       'Exata': 'Exata'
     };
 
-    const row = new Array(33).fill('');
+    const row = new Array(34).fill('');
     row[COL.CAMPAIGN] = this.csvEscape(campaignName);
     row[COL.AD_GROUP] = this.csvEscape(adGroupName);
-    row[COL.KEYWORD] = this.csvEscape(keyword.text);
+    row[COL.KEYWORD] = this.csvEscape(sanitizeKeyword(keyword.text));  // ✅ Sanitização aplicada
     row[COL.TYPE] = matchTypeMap[keyword.match_type] || 'Frase';  // ✅ Fallback em PT-BR
     // Google Ads Editor infere que é Keyword porque Keyword e Type estão preenchidos
     return row;
