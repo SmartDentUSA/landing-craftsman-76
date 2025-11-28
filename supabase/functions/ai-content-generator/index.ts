@@ -1313,20 +1313,64 @@ function validateAndCleanAdCopies(copies: any): AdCopies {
     });
   }
 
-  // Ensure minimum requirements
-  if (cleaned.headlines.length < 3) {
-    console.warn(`⚠️ Insuficientes headlines (${cleaned.headlines.length}), adicionando fallbacks`);
-    cleaned.headlines.push(...getFallbackAdCopies().headlines.slice(0, 3 - cleaned.headlines.length));
+  // ✅ REQUISITOS GOOGLE ADS RSA: 15 headlines e 4 descriptions
+  const MIN_HEADLINES = 15;
+  const MIN_DESCRIPTIONS = 4;
+  const MIN_PATHS = 2;
+
+  // Fallbacks contextualizados para Google Ads
+  const contextFallbackHeadlines = [
+    'Qualidade Garantida',
+    'Entrega Rápida Brasil',
+    'Preço Especial Hoje',
+    'Confira Agora',
+    'Frete Grátis Disponível',
+    'Atendimento 24h',
+    'Parcelamos em 12x',
+    'Loja Oficial',
+    'Top de Vendas',
+    'Novidade 2025',
+    'Ofertas Exclusivas',
+    'Compre Agora',
+    'Melhor Preço',
+    'Satisfação Total',
+    'Garanta o Seu'
+  ];
+
+  const contextFallbackDescriptions = [
+    'Qualidade profissional garantida. Entrega para todo o Brasil com frete grátis.',
+    'Atendimento especializado e suporte técnico. Solicite seu orçamento agora.',
+    'Compre com segurança. Parcelamos em até 12x sem juros no cartão de crédito.',
+    'Produtos de alta qualidade. Garantia estendida e satisfação garantida ou seu dinheiro de volta.'
+  ];
+
+  const contextFallbackPaths = ['produtos', 'ofertas'];
+
+  // Padding de headlines até 15
+  if (cleaned.headlines.length < MIN_HEADLINES) {
+    console.warn(`⚠️ Insuficientes headlines (${cleaned.headlines.length}), adicionando fallbacks até ${MIN_HEADLINES}`);
+    while (cleaned.headlines.length < MIN_HEADLINES) {
+      const idx = cleaned.headlines.length;
+      cleaned.headlines.push(contextFallbackHeadlines[idx] || `Headline ${idx + 1}`);
+    }
   }
 
-  if (cleaned.descriptions.length < 2) {
-    console.warn(`⚠️ Insuficientes descriptions (${cleaned.descriptions.length}), adicionando fallbacks`);
-    cleaned.descriptions.push(...getFallbackAdCopies().descriptions.slice(0, 2 - cleaned.descriptions.length));
+  // Padding de descriptions até 4
+  if (cleaned.descriptions.length < MIN_DESCRIPTIONS) {
+    console.warn(`⚠️ Insuficientes descriptions (${cleaned.descriptions.length}), adicionando fallbacks até ${MIN_DESCRIPTIONS}`);
+    while (cleaned.descriptions.length < MIN_DESCRIPTIONS) {
+      const idx = cleaned.descriptions.length;
+      cleaned.descriptions.push(contextFallbackDescriptions[idx] || `Descrição profissional ${idx + 1}.`);
+    }
   }
 
-  if (cleaned.paths.length < 2) {
-    console.warn(`⚠️ Insuficientes paths (${cleaned.paths.length}), adicionando fallbacks`);
-    cleaned.paths.push(...getFallbackAdCopies().paths.slice(0, 2 - cleaned.paths.length));
+  // Padding de paths até 2
+  if (cleaned.paths.length < MIN_PATHS) {
+    console.warn(`⚠️ Insuficientes paths (${cleaned.paths.length}), adicionando fallbacks até ${MIN_PATHS}`);
+    while (cleaned.paths.length < MIN_PATHS) {
+      const idx = cleaned.paths.length;
+      cleaned.paths.push(contextFallbackPaths[idx] || `path${idx + 1}`);
+    }
   }
 
   console.log('✅ Validação completa:', {

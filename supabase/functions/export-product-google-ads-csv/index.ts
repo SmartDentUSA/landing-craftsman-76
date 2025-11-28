@@ -525,15 +525,60 @@ class GoogleAdsCSVBuilder {
   private static buildAdsSection(adGroups: any[], adCopies: any, campaignName: string, finalUrl: string): string {
     let csv = 'Campaign,Ad Group,Ad Type,Final URL,Path 1,Path 2,Headline 1,Headline 2,Headline 3,Headline 4,Headline 5,Headline 6,Headline 7,Headline 8,Headline 9,Headline 10,Headline 11,Headline 12,Headline 13,Headline 14,Headline 15,Description 1,Description 2,Description 3,Description 4\n';
     
+    // ✅ FALLBACKS OBRIGATÓRIOS: Garantir 15 headlines e 4 descriptions antes de construir CSV
+    const fallbackHeadlines = [
+      'Qualidade Garantida',
+      'Entrega Rápida',
+      'Preço Especial',
+      'Confira Agora',
+      'Frete Grátis',
+      'Atendimento 24h',
+      'Parcelamos 12x',
+      'Loja Oficial',
+      'Top de Vendas',
+      'Novidade 2025',
+      'Ofertas Exclusivas',
+      'Compre Agora',
+      'Melhor Preço',
+      'Satisfação Total',
+      'Garanta o Seu'
+    ];
+
+    const fallbackDescriptions = [
+      'Qualidade garantida. Entrega para todo o Brasil.',
+      'Atendimento especializado. Solicite seu orçamento.',
+      'Compre com segurança. Parcelamos em até 12x.',
+      'Produtos de alta qualidade. Satisfação garantida.'
+    ];
+
+    const fallbackPaths = ['produtos', 'ofertas'];
+
     for (const adGroup of adGroups) {
-      if (adCopies.headlines && adCopies.descriptions) {
-        // ✅ Sanitizar e escapar CADA campo individualmente (15 headlines + 4 descriptions)
-        const headlines = adCopies.headlines.slice(0, 15).map((h: string) => this.csvEscape(this.sanitizeForCSV(h, 30)));
-        const descriptions = adCopies.descriptions.slice(0, 4).map((d: string) => this.csvEscape(this.sanitizeForCSV(d, 90)));
-        const paths = (adCopies.paths || []).slice(0, 2).map((p: string) => this.csvEscape(this.sanitizeForCSV(p, 15)));
-        
-        csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},Responsive Search Ad,${this.csvEscape(finalUrl)},${paths[0] || ''},${paths[1] || ''},${headlines.join(',')},${descriptions.join(',')}\n`;
-      }
+      // ✅ GARANTIR 15 HEADLINES COM FALLBACK
+      const safeHeadlines = Array.from({ length: 15 }, (_, i) => {
+        const h = adCopies.headlines?.[i];
+        const fallback = fallbackHeadlines[i] || `Headline ${i + 1}`;
+        const text = (h && typeof h === 'string' && h.trim()) ? h : fallback;
+        return this.csvEscape(this.sanitizeForCSV(text, 30));
+      });
+
+      // ✅ GARANTIR 4 DESCRIPTIONS COM FALLBACK
+      const safeDescriptions = Array.from({ length: 4 }, (_, i) => {
+        const d = adCopies.descriptions?.[i];
+        const fallback = fallbackDescriptions[i] || `Descrição ${i + 1}.`;
+        const text = (d && typeof d === 'string' && d.trim()) ? d : fallback;
+        return this.csvEscape(this.sanitizeForCSV(text, 90));
+      });
+
+      // ✅ GARANTIR 2 PATHS COM FALLBACK
+      const safePaths = Array.from({ length: 2 }, (_, i) => {
+        const p = adCopies.paths?.[i];
+        const fallback = fallbackPaths[i] || `path${i + 1}`;
+        const text = (p && typeof p === 'string' && p.trim()) ? p : fallback;
+        return this.csvEscape(this.sanitizeForCSV(text, 15));
+      });
+      
+      csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},Responsive Search Ad,${this.csvEscape(finalUrl)},${safePaths[0]},${safePaths[1]},${safeHeadlines.join(',')},${safeDescriptions.join(',')}\n`;
     }
     return csv;
   }
