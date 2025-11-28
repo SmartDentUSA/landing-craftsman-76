@@ -574,20 +574,18 @@ function buildGoogleAdsCSV(params: any): string {
     return str;
   }
 
-  // ✅ HEADER COMPLETO com colunas obrigatórias do Google Ads Editor
+  // ✅ HEADER CORRETO - Google Ads Editor infere tipo pela presença de valores
   const headers = [
-    'Row Type',
     'Campaign',
-    'Campaign type',      // ✅ OBRIGATÓRIO
-    'Campaign status',    // ✅ RECOMENDADO
-    'Budget',             // ✅ CORRIGIDO (era "Campaign daily budget")
+    'Campaign type',
+    'Campaign status',
+    'Budget',
     'Bid strategy type',
-    'EU political ads',   // ✅ NOVO - OBRIGATÓRIO
     'Location',
-    'Language',           // ✅ CORRIGIDO (era "Languages" - plural)
+    'Language',
     'Ad Group',
     'Keyword',
-    'Match type',         // ✅ CORRIGIDO (era "Match Type" - maiúsculo)
+    'Type',              // ✅ CORRIGIDO - Match type de keywords
     'Final URL',
     'Path 1',
     'Path 2',
@@ -597,25 +595,23 @@ function buildGoogleAdsCSV(params: any): string {
     'Description 1', 'Description 2', 'Description 3', 'Description 4'
   ];
 
-  // ✅ CONSTANTES COL calculadas dinamicamente
+  // ✅ CONSTANTES COL - 32 colunas totais
   const COL = {
-    ROW_TYPE: 0,
-    CAMPAIGN: 1,
-    CAMPAIGN_TYPE: 2,
-    CAMPAIGN_STATUS: 3,
-    BUDGET: 4,            // ✅ Movido para cima
-    BID_STRATEGY: 5,
-    EU_POLITICAL: 6,      // ✅ NOVO
-    LOCATION: 7,
-    LANGUAGE: 8,          // ✅ Singular
-    AD_GROUP: 9,
-    KEYWORD: 10,
-    MATCH_TYPE: 11,
-    FINAL_URL: 12,
-    PATH_1: 13,
-    PATH_2: 14,
-    HEADLINE_START: 15,   // Headlines: 15-29 (15 headlines)
-    DESC_START: 30        // Descriptions: 30-33 (4 descriptions)
+    CAMPAIGN: 0,
+    CAMPAIGN_TYPE: 1,
+    CAMPAIGN_STATUS: 2,
+    BUDGET: 3,
+    BID_STRATEGY: 4,
+    LOCATION: 5,
+    LANGUAGE: 6,
+    AD_GROUP: 7,
+    KEYWORD: 8,
+    TYPE: 9,             // ✅ Match type para keywords
+    FINAL_URL: 10,
+    PATH_1: 11,
+    PATH_2: 12,
+    HEADLINE_START: 13,  // Headlines: 13-27 (15 headlines)
+    DESC_START: 28       // Descriptions: 28-31 (4 descriptions)
   };
 
   const rows: string[][] = [];
@@ -642,8 +638,7 @@ function buildGoogleAdsCSV(params: any): string {
   };
 
   // 1. Campaign Row
-  const campaignRow = new Array(34).fill('');
-  campaignRow[COL.ROW_TYPE] = 'Campaign';
+  const campaignRow = new Array(32).fill('');
   campaignRow[COL.CAMPAIGN] = csvEscape(campaignName);
   campaignRow[COL.CAMPAIGN_TYPE] = 'Search';
   campaignRow[COL.CAMPAIGN_STATUS] = 'Enabled';
@@ -652,23 +647,22 @@ function buildGoogleAdsCSV(params: any): string {
   const rawStrategy = config.bidding?.strategy || 'Maximize conversions';
   campaignRow[COL.BID_STRATEGY] = bidStrategyMap[rawStrategy] || 'Maximize conversions';
   
-  campaignRow[COL.EU_POLITICAL] = 'No';
   campaignRow[COL.LOCATION] = csvEscape(config.locations?.join(';') || 'Brazil');
-  campaignRow[COL.LANGUAGE] = csvEscape(config.languages?.join(';') || 'pt');
+  campaignRow[COL.LANGUAGE] = 'Portuguese';  // ✅ CORRIGIDO - Nome completo em inglês
   rows.push(campaignRow);
 
   // 2. Ad Group Row
-  const adGroupRow = new Array(34).fill('');
-  adGroupRow[COL.ROW_TYPE] = 'Ad group';
+  const adGroupRow = new Array(32).fill('');
   adGroupRow[COL.CAMPAIGN] = csvEscape(campaignName);
   adGroupRow[COL.AD_GROUP] = 'Geral';
+  // Todas outras colunas vazias - Google Ads Editor infere que é Ad Group
   rows.push(adGroupRow);
 
   // 3. Ad Row (RSA)
-  const adRow = new Array(34).fill('');
-  adRow[COL.ROW_TYPE] = 'Responsive search ad';
+  const adRow = new Array(32).fill('');
   adRow[COL.CAMPAIGN] = csvEscape(campaignName);
   adRow[COL.AD_GROUP] = 'Geral';
+  // Keyword fica VAZIO - Google Ads Editor infere que é um anúncio
   adRow[COL.FINAL_URL] = csvEscape(finalUrl);
   adRow[COL.PATH_1] = csvEscape(sanitizeText(adCopies.paths?.[0] || 'produtos', 15));
   adRow[COL.PATH_2] = csvEscape(sanitizeText(adCopies.paths?.[1] || 'ofertas', 15));
@@ -719,12 +713,12 @@ function buildGoogleAdsCSV(params: any): string {
 
   // 4. Keyword Rows
   for (const keyword of keywords) {
-    const keywordRow = new Array(34).fill('');
-    keywordRow[COL.ROW_TYPE] = 'Keyword';
+    const keywordRow = new Array(32).fill('');
     keywordRow[COL.CAMPAIGN] = csvEscape(campaignName);
     keywordRow[COL.AD_GROUP] = 'Geral';
     keywordRow[COL.KEYWORD] = csvEscape(keyword.text);
-    keywordRow[COL.MATCH_TYPE] = matchTypeMap[keyword.match_type] || 'Phrase';
+    keywordRow[COL.TYPE] = matchTypeMap[keyword.match_type] || 'Phrase';  // ✅ CORRIGIDO - coluna "Type"
+    // Google Ads Editor infere que é Keyword porque Keyword e Type estão preenchidos
     rows.push(keywordRow);
   }
 
