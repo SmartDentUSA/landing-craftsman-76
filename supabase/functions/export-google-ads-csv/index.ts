@@ -583,6 +583,7 @@ function buildGoogleAdsCSV(params: any): string {
     'Bid strategy type',
     'Location',
     'Language',
+    'EU political ads',  // ✅ OBRIGATÓRIO - Campo obrigatório no Editor
     'Ad Group',
     'Keyword',
     'Type',              // ✅ CORRIGIDO - Match type de keywords
@@ -595,7 +596,7 @@ function buildGoogleAdsCSV(params: any): string {
     'Description 1', 'Description 2', 'Description 3', 'Description 4'
   ];
 
-  // ✅ CONSTANTES COL - 32 colunas totais
+  // ✅ CONSTANTES COL - 33 colunas totais
   const COL = {
     CAMPAIGN: 0,
     CAMPAIGN_TYPE: 1,
@@ -604,14 +605,15 @@ function buildGoogleAdsCSV(params: any): string {
     BID_STRATEGY: 4,
     LOCATION: 5,
     LANGUAGE: 6,
-    AD_GROUP: 7,
-    KEYWORD: 8,
-    TYPE: 9,             // ✅ Match type para keywords
-    FINAL_URL: 10,
-    PATH_1: 11,
-    PATH_2: 12,
-    HEADLINE_START: 13,  // Headlines: 13-27 (15 headlines)
-    DESC_START: 28       // Descriptions: 28-31 (4 descriptions)
+    EU_POLITICAL: 7,     // ✅ NOVO - EU political ads
+    AD_GROUP: 8,
+    KEYWORD: 9,
+    TYPE: 10,            // ✅ Match type para keywords
+    FINAL_URL: 11,
+    PATH_1: 12,
+    PATH_2: 13,
+    HEADLINE_START: 14,  // Headlines: 14-28 (15 headlines)
+    DESC_START: 29       // Descriptions: 29-32 (4 descriptions)
   };
 
   const rows: string[][] = [];
@@ -627,18 +629,21 @@ function buildGoogleAdsCSV(params: any): string {
     'Maximize clicks': 'Maximize clicks'
   };
 
-  // ✅ Mapeamento de Match Type
+  // ✅ Mapeamento de Match Type em Português
   const matchTypeMap: Record<string, string> = {
-    'BROAD': 'Broad',
-    'PHRASE': 'Phrase',
-    'EXACT': 'Exact',
-    'Broad': 'Broad',
-    'Phrase': 'Phrase',
-    'Exact': 'Exact'
+    'BROAD': 'Ampla',
+    'PHRASE': 'Frase',
+    'EXACT': 'Exata',
+    'Broad': 'Ampla',
+    'Phrase': 'Frase',
+    'Exact': 'Exata',
+    'Ampla': 'Ampla',
+    'Frase': 'Frase',
+    'Exata': 'Exata'
   };
 
   // 1. Campaign Row
-  const campaignRow = new Array(32).fill('');
+  const campaignRow = new Array(33).fill('');
   campaignRow[COL.CAMPAIGN] = csvEscape(campaignName);
   campaignRow[COL.CAMPAIGN_TYPE] = 'Search';
   campaignRow[COL.CAMPAIGN_STATUS] = 'Enabled';
@@ -648,18 +653,19 @@ function buildGoogleAdsCSV(params: any): string {
   campaignRow[COL.BID_STRATEGY] = bidStrategyMap[rawStrategy] || 'Maximize conversions';
   
   campaignRow[COL.LOCATION] = csvEscape(config.locations?.join(';') || 'Brazil');
-  campaignRow[COL.LANGUAGE] = 'Portuguese';  // ✅ CORRIGIDO - Nome completo em inglês
+  campaignRow[COL.LANGUAGE] = 'pt';  // ✅ CORRIGIDO - Código de idioma
+  campaignRow[COL.EU_POLITICAL] = 'Não';  // ✅ OBRIGATÓRIO - Campo obrigatório
   rows.push(campaignRow);
 
   // 2. Ad Group Row
-  const adGroupRow = new Array(32).fill('');
+  const adGroupRow = new Array(33).fill('');
   adGroupRow[COL.CAMPAIGN] = csvEscape(campaignName);
   adGroupRow[COL.AD_GROUP] = 'Geral';
   // Todas outras colunas vazias - Google Ads Editor infere que é Ad Group
   rows.push(adGroupRow);
 
   // 3. Ad Row (RSA)
-  const adRow = new Array(32).fill('');
+  const adRow = new Array(33).fill('');
   adRow[COL.CAMPAIGN] = csvEscape(campaignName);
   adRow[COL.AD_GROUP] = 'Geral';
   // Keyword fica VAZIO - Google Ads Editor infere que é um anúncio
@@ -713,11 +719,11 @@ function buildGoogleAdsCSV(params: any): string {
 
   // 4. Keyword Rows
   for (const keyword of keywords) {
-    const keywordRow = new Array(32).fill('');
+    const keywordRow = new Array(33).fill('');
     keywordRow[COL.CAMPAIGN] = csvEscape(campaignName);
     keywordRow[COL.AD_GROUP] = 'Geral';
     keywordRow[COL.KEYWORD] = csvEscape(keyword.text);
-    keywordRow[COL.TYPE] = matchTypeMap[keyword.match_type] || 'Phrase';  // ✅ CORRIGIDO - coluna "Type"
+    keywordRow[COL.TYPE] = matchTypeMap[keyword.match_type] || 'Frase';  // ✅ Fallback em PT-BR
     // Google Ads Editor infere que é Keyword porque Keyword e Type estão preenchidos
     rows.push(keywordRow);
   }
