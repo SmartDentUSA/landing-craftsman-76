@@ -274,11 +274,29 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
   return deduplicateKeywords(keywords);
 }
 
+// ✅ FASE 1: Filtro de keywords válidas
+function isValidKeyword(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  if (text.length < 3 || text.length > 80) return false;
+  if (text.includes('://') || text.includes('[object')) return false;
+  if (text.startsWith('http') || text.startsWith('/')) return false;
+  if (text.includes('.com') || text.includes('.br') || text.includes('.net')) return false;
+  if (text.match(/^[\d\s\-\/]+$/)) return false; // Apenas números/símbolos
+  return true;
+}
+
 function deduplicateKeywords(keywords: KeywordWithMatchType[]): KeywordWithMatchType[] {
   const seen = new Map<string, KeywordWithMatchType>();
   
   for (const keyword of keywords) {
-    const key = keyword.text.toLowerCase();
+    const key = keyword.text.toLowerCase().trim();
+    
+    // ✅ FILTRO CRÍTICO: Validar keyword
+    if (!isValidKeyword(key)) {
+      console.warn(`⚠️ Keyword inválida filtrada: "${key}"`);
+      continue;
+    }
+    
     if (!seen.has(key)) {
       seen.set(key, keyword);
     }
@@ -529,8 +547,28 @@ async function generateAdCopies(landingPageData: any, keywords: string[]) {
   };
 }
 
+// ✅ FASE 3: buildGoogleAdsCSV modernizado (15 headlines + 4 descriptions)
 function buildGoogleAdsCSV(params: any): string {
   const { campaignName, config, keywords, adCopies, sitelinks, videos, finalUrl } = params;
+
+  function sanitizeForCSV(text: string, maxLength: number): string {
+    if (!text || !text.trim()) return '';
+    return text
+      .replace(/\n/g, ' ')
+      .replace(/\r/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, maxLength);
+  }
+
+  function csvEscape(value: string): string {
+    if (!value) return '';
+    const escaped = value.replace(/"/g, '""');
+    if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')) {
+      return escaped;
+    }
+    return escaped;
+  }
 
   // Build Campaign section
   const campaignSection = [
@@ -544,26 +582,47 @@ function buildGoogleAdsCSV(params: any): string {
     `"${campaignName}","Geral",Search,1.00`
   ].join('\n');
 
-  // Build Ads section
-  const adsSection = [
-    'Campaign,Ad group,Ad type,Final URL,Path 1,Path 2,Headline 1,Headline 2,Headline 3,Description 1,Description 2',
-    `"${campaignName}","Geral","Responsive search ad","${finalUrl}","${adCopies.paths[0] || ''}","${adCopies.paths[1] || ''}","${adCopies.headlines[0] || ''}","${adCopies.headlines[1] || ''}","${adCopies.headlines[2] || ''}","${adCopies.descriptions[0] || ''}","${adCopies.descriptions[1] || ''}"`
-  ].join('\n');
+  // ✅ Garantir fallbacks obrigatórios para 15 headlines + 4 descriptions
+  const safeHeadlines = Array.from({ length: 15 }, (_, i) => {
+    const h = adCopies.headlines?.[i];
+    return csvEscape(sanitizeForCSV((h && h.trim()) ? h : `Headline ${i + 1}`, 30));
+  });
+  
+  const safeDescriptions = Array.from({ length: 4 }, (_, i) => {
+    const d = adCopies.descriptions?.[i];
+    return csvEscape(sanitizeForCSV((d && d.trim()) ? d : `Descrição profissional ${i + 1}.`, 90));
+  });
+
+  const safePaths = [
+    csvEscape(sanitizeForCSV(adCopies.paths?.[0] || 'produto', 15)),
+    csvEscape(sanitizeForCSV(adCopies.paths?.[1] || 'loja', 15))
+  ];
+
+  // Build Ads section com 15 headlines + 4 descriptions
+  const adsHeader = [
+    'Campaign', 'Ad group', 'Ad type', 'Final URL', 'Path 1', 'Path 2',
+    ...Array.from({ length: 15 }, (_, i) => `Headline ${i + 1}`),
+    'Description 1', 'Description 2', 'Description 3', 'Description 4'
+  ].join(',');
+  
+  const adsRow = [
+    `"${campaignName}"`,
+    '"Geral"',
+    '"Responsive search ad"',
+    `"${finalUrl}"`,
+    safePaths[0],
+    safePaths[1],
+    ...safeHeadlines,
+    ...safeDescriptions
+  ].join(',');
+  
+  const adsSection = `${adsHeader}\n${adsRow}`;
 
   // Build Keywords section com match types corretos
   const keywordsSection = [
     'Campaign,Ad group,Keyword,Match type',
     ...keywords.map((keyword: KeywordWithMatchType) => `"${campaignName}","Geral","${csvEscape(keyword.text)}",${keyword.match_type}`)
   ].join('\n');
-  
-  function csvEscape(value: string): string {
-    if (!value) return '';
-    const escaped = value.replace(/"/g, '""');
-    if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')) {
-      return escaped;
-    }
-    return escaped;
-  }
 
   // Build Sitelinks section
   let sitelinksSection = '';

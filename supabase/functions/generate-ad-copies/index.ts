@@ -265,10 +265,10 @@ async function validateAndEnhanceCopies(
   let validationErrors: string[] = [];
   let qualityScore = 0;
 
-  // ✅ Aplicar ensureMinimumAssets antes da validação
+  // ✅ FASE 2: Passar contexto real para ensureMinimumAssets
   currentCopies = ensureMinimumAssets(currentCopies, {
-    productName: 'Produto',
-    category: 'Categoria'
+    productName: seoTitle?.substring(0, 25) || primaryKeyword?.substring(0, 25) || 'Produto',
+    category: targetAudience?.split(' ')[0] || 'Profissional'
   });
 
   while (attempts < maxAttempts) {
@@ -426,7 +426,7 @@ function intelligentTruncate(text: string, maxLength: number): string {
   return truncated.substring(0, maxLength - 3).trim() + '...';
 }
 
-// ✅ Função de padding de assets (FASE 8)
+// ✅ FASE 2: Função de padding com substituição de strings vazias
 function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string; category: string }): AdCopies {
   const MIN_HEADLINES = 15;
   const MIN_DESCRIPTIONS = 4;
@@ -456,6 +456,20 @@ function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string;
     `${context.category} profissional. Suporte técnico incluso.`.substring(0, 90)
   ];
   
+  // ✅ NOVO: Inicializar arrays se undefined
+  if (!adCopies.headlines) adCopies.headlines = [];
+  if (!adCopies.descriptions) adCopies.descriptions = [];
+  if (!adCopies.paths) adCopies.paths = [];
+  
+  // ✅ NOVO: Substituir strings vazias existentes por fallbacks
+  adCopies.headlines = adCopies.headlines.map((h, i) => 
+    (h && h.trim().length > 0) ? h : (fallbackHeadlines[i] || `Headline ${i + 1}`)
+  );
+  
+  adCopies.descriptions = adCopies.descriptions.map((d, i) => 
+    (d && d.trim().length > 0) ? d : (fallbackDescriptions[i] || `Descrição profissional ${i + 1}.`)
+  );
+  
   // Padding de headlines
   while (adCopies.headlines.length < MIN_HEADLINES) {
     const idx = adCopies.headlines.length;
@@ -466,6 +480,14 @@ function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string;
   while (adCopies.descriptions.length < MIN_DESCRIPTIONS) {
     const idx = adCopies.descriptions.length;
     adCopies.descriptions.push(fallbackDescriptions[idx] || `Descrição ${idx + 1}.`.substring(0, 90));
+  }
+  
+  // ✅ NOVO: Garantir paths
+  if (adCopies.paths.length < 2) {
+    adCopies.paths = [
+      context.productName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15) || 'produto',
+      context.category.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15) || 'loja'
+    ];
   }
   
   return adCopies;

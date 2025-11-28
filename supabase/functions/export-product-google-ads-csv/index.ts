@@ -270,6 +270,17 @@ serve(async (req) => {
   }
 });
 
+// ✅ FASE 1: Filtro de keywords válidas
+function isValidKeyword(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  if (text.length < 3 || text.length > 80) return false;
+  if (text.includes('://') || text.includes('[object')) return false;
+  if (text.startsWith('http') || text.startsWith('/')) return false;
+  if (text.includes('.com') || text.includes('.br') || text.includes('.net')) return false;
+  if (text.match(/^[\d\s\-\/]+$/)) return false; // Apenas números/símbolos
+  return true;
+}
+
 function collectProductKeywords(product: any, productData: any): Array<{ text: string, match_type: 'BROAD' | 'PHRASE' | 'EXACT' }> {
   const keywords: Array<{ text: string, match_type: 'BROAD' | 'PHRASE' | 'EXACT' }> = [];
   
@@ -310,7 +321,8 @@ function collectProductKeywords(product: any, productData: any): Array<{ text: s
     }
   }
   
-  return deduped;
+  // ✅ FILTRO FINAL: Remover URLs e keywords inválidas
+  return deduped.filter(kw => isValidKeyword(kw.text));
 }
 
 async function collectProductSitelinks(product: any, config: any) {
