@@ -271,7 +271,11 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
       });
   }
 
-  return deduplicateKeywords(keywords);
+  console.log(`📊 Total keywords coletadas antes do filtro: ${keywords.length}`);
+  const result = deduplicateKeywords(keywords);
+  console.log(`✅ Keywords após deduplicateKeywords (com isValidKeyword): ${result.length}`);
+  
+  return result;
 }
 
 // ✅ FASE 1: Filtro de keywords válidas
@@ -293,7 +297,7 @@ function deduplicateKeywords(keywords: KeywordWithMatchType[]): KeywordWithMatch
     
     // ✅ FILTRO CRÍTICO: Validar keyword
     if (!isValidKeyword(key)) {
-      console.warn(`⚠️ Keyword inválida filtrada: "${key}"`);
+      console.warn(`⚠️ Keyword inválida filtrada: "${key}" (fonte: ${keyword.source || 'desconhecida'})`);
       continue;
     }
     

@@ -321,8 +321,19 @@ function collectProductKeywords(product: any, productData: any): Array<{ text: s
     }
   }
   
+  console.log(`📊 Keywords brutas coletadas: ${deduped.length}`);
+  
   // ✅ FILTRO FINAL: Remover URLs e keywords inválidas
-  return deduped.filter(kw => isValidKeyword(kw.text));
+  const validKeywords = deduped.filter(kw => {
+    const valid = isValidKeyword(kw.text);
+    if (!valid) {
+      console.warn(`⚠️ Keyword produto filtrada: "${kw.text}"`);
+    }
+    return valid;
+  });
+  
+  console.log(`✅ Keywords válidas após filtro: ${validKeywords.length}`);
+  return validKeywords;
 }
 
 async function collectProductSitelinks(product: any, config: any) {
