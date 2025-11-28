@@ -2,6 +2,15 @@ export type CampaignType = 'search';
 export type CampaignObjective = 'leads' | 'sales' | 'traffic';
 export type BiddingStrategy = 'MAX_CONV' | 'tCPA' | 'MANUAL_CPC';
 export type MatchType = 'BROAD' | 'PHRASE' | 'EXACT';
+export type KeywordSource = 'external_links' | 'ai' | 'faq' | 'product' | 'review' | 'manual';
+
+export interface KeywordWithMatchType {
+  text: string;
+  match_type: MatchType;
+  source: KeywordSource;
+  keyword_type?: string; // tipo semântico original (primary, longtail, etc)
+  search_intent?: string; // intenção de busca
+}
 
 export interface UTMParams {
   source?: string;

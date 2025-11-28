@@ -79,21 +79,26 @@ export class GoogleAdsCSVBuilder {
       'Campaign', 'Ad group', 'Ad type', 'Final URL', 'Path 1', 'Path 2',
       'Headline 1', 'Headline 2', 'Headline 3', 'Headline 4', 'Headline 5',
       'Headline 6', 'Headline 7', 'Headline 8', 'Headline 9', 'Headline 10',
+      'Headline 11', 'Headline 12', 'Headline 13', 'Headline 14', 'Headline 15',
       'Description 1', 'Description 2', 'Description 3', 'Description 4'
     ].join(',');
     
     const finalUrlWithUTM = this.applyUTM(finalUrl, config.utm);
     
     const rows = adGroups.map(group => {
+      // ✅ Sanitizar e escapar CADA campo individualmente
+      const headlines = adCopies.headlines.slice(0, 15).map(h => this.csvEscape(this.sanitizeForCSV(h, 30)));
+      const descriptions = adCopies.descriptions.slice(0, 4).map(d => this.csvEscape(this.sanitizeForCSV(d, 90)));
+      const paths = adCopies.paths.slice(0, 2).map(p => this.csvEscape(this.sanitizeForCSV(p, 15)));
+      
       const row = [
         this.csvEscape(campaignName),
         this.csvEscape(group.name),
         'Responsive search ad',
         this.csvEscape(finalUrlWithUTM),
-        this.csvEscape(adCopies.paths[0] || ''),
-        this.csvEscape(adCopies.paths[1] || ''),
-        ...Array.from({ length: 10 }, (_, i) => this.csvEscape(adCopies.headlines[i] || '')),
-        ...Array.from({ length: 4 }, (_, i) => this.csvEscape(adCopies.descriptions[i] || ''))
+        ...paths,
+        ...headlines,
+        ...descriptions
       ];
       
       return row.join(',');
@@ -188,6 +193,16 @@ export class GoogleAdsCSVBuilder {
     return urlObj.toString();
   }
   
+  private static sanitizeForCSV(text: string, maxLength: number): string {
+    if (!text) return '';
+    return text
+      .replace(/\n/g, ' ')        // ✅ Remove quebras de linha
+      .replace(/\r/g, '')         // ✅ Remove carriage returns
+      .replace(/\s+/g, ' ')       // ✅ Múltiplos espaços → um
+      .trim()
+      .substring(0, maxLength);
+  }
+
   private static csvEscape(value: string): string {
     if (!value) return '';
     

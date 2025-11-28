@@ -291,11 +291,16 @@ export class KeywordCollector {
     return [...new Set(keywords.filter(k => k && k.length > 1))];
   }
 
-  static normalizeKeywords(keywords: string[]): string[] {
+  static normalizeKeywords(keywords: any[]): string[] {
     return keywords
+      // ✅ FILTRO CRÍTICO 1: Aceitar apenas strings
+      .filter(k => typeof k === 'string')
+      // ✅ FILTRO CRÍTICO 2: Rejeitar URLs e objetos serializados
+      .filter(k => !k.startsWith('http') && !k.includes('://') && !k.includes('[object'))
+      // ✅ FILTRO CRÍTICO 3: Comprimento válido (3-80 caracteres)
+      .filter(k => k.length > 2 && k.length < 80)
       .map(k => k.trim().toLowerCase())
       .map(k => k.normalize('NFD').replace(/[\u0300-\u036f]/g, '')) // Remove accents for consistency
-      .filter((k, index, arr) => arr.indexOf(k) === index) // Remove duplicates
-      .filter(k => k.length > 2); // Minimum length
+      .filter((k, index, arr) => arr.indexOf(k) === index); // Remove duplicates
   }
 }

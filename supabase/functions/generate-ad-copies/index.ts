@@ -98,8 +98,8 @@ INSTRUÇÕES CRÍTICAS PARA CATEGORIAS:
 3. **Incorpore taxonomia de categorias nas descrições**
 
 REGRAS OBRIGATÓRIAS:
-1. Headlines: 6-10 variações, máximo 30 caracteres cada
-2. Descriptions: 2-4 variações, máximo 90 caracteres cada
+1. Headlines: **EXATAMENTE 15 variações**, máximo 30 caracteres cada
+2. Descriptions: **EXATAMENTE 4 variações**, máximo 90 caracteres cada
 3. Paths: 2 caminhos, máximo 15 caracteres cada (use categorias se possível)
 4. Linguagem: português brasileiro
 5. Tom: profissional, confiável, sem sensacionalismo
@@ -107,6 +107,7 @@ REGRAS OBRIGATÓRIAS:
 7. Se categoria/subcategoria identificáveis no conteúdo, use nos headlines
 8. EVITAR: alegações médicas proibidas, CAPSLOCK, termos como "cura", "milagre", "garantido"
 9. INCLUIR: benefícios claros, chamadas para ação sutis
+10. **PROIBIDO**: Quebras de linha (\n), aspas duplas não escapadas, truncamentos
 
 🚨 **VALIDAÇÃO PRÉ-PROMPT CRÍTICA - FASE 3** 🚨
 
@@ -264,6 +265,12 @@ async function validateAndEnhanceCopies(
   let validationErrors: string[] = [];
   let qualityScore = 0;
 
+  // ✅ Aplicar ensureMinimumAssets antes da validação
+  currentCopies = ensureMinimumAssets(currentCopies, {
+    productName: 'Produto',
+    category: 'Categoria'
+  });
+
   while (attempts < maxAttempts) {
     attempts++;
     validationErrors = [];
@@ -417,4 +424,49 @@ function intelligentTruncate(text: string, maxLength: number): string {
   }
   
   return truncated.substring(0, maxLength - 3).trim() + '...';
+}
+
+// ✅ Função de padding de assets (FASE 8)
+function ensureMinimumAssets(adCopies: AdCopies, context: { productName: string; category: string }): AdCopies {
+  const MIN_HEADLINES = 15;
+  const MIN_DESCRIPTIONS = 4;
+  
+  const fallbackHeadlines = [
+    context.productName.substring(0, 30),
+    `Comprar ${context.productName}`.substring(0, 30),
+    `${context.category} Premium`.substring(0, 30),
+    `Melhor ${context.productName}`.substring(0, 30),
+    `${context.productName} Oferta`.substring(0, 30),
+    'Qualidade Garantida',
+    'Entrega Rápida Brasil',
+    'Preço Especial Hoje',
+    'Confira Agora',
+    'Frete Grátis',
+    'Atendimento 24h',
+    'Parcelamos 12x',
+    'Loja Oficial',
+    'Top de Vendas',
+    'Novidade 2025'
+  ];
+  
+  const fallbackDescriptions = [
+    `${context.productName} com qualidade e garantia. Entrega Brasil.`.substring(0, 90),
+    `Confira ${context.category}. Atendimento especializado.`.substring(0, 90),
+    `Compre ${context.productName} com segurança. Parcelamos 12x.`.substring(0, 90),
+    `${context.category} profissional. Suporte técnico incluso.`.substring(0, 90)
+  ];
+  
+  // Padding de headlines
+  while (adCopies.headlines.length < MIN_HEADLINES) {
+    const idx = adCopies.headlines.length;
+    adCopies.headlines.push(fallbackHeadlines[idx] || `Headline ${idx + 1}`);
+  }
+  
+  // Padding de descriptions
+  while (adCopies.descriptions.length < MIN_DESCRIPTIONS) {
+    const idx = adCopies.descriptions.length;
+    adCopies.descriptions.push(fallbackDescriptions[idx] || `Descrição ${idx + 1}.`.substring(0, 90));
+  }
+  
+  return adCopies;
 }
