@@ -551,7 +551,7 @@ async function generateAdCopies(landingPageData: any, keywords: string[]) {
   };
 }
 
-// ✅ FASE 3: buildGoogleAdsCSV - Row Type Format
+// ✅ buildGoogleAdsCSV - Row Type Format with COL Constants
 function buildGoogleAdsCSV(params: any): string {
   const { campaignName, config, keywords, adCopies, sitelinks, videos, finalUrl } = params;
 
@@ -574,10 +574,12 @@ function buildGoogleAdsCSV(params: any): string {
     return str;
   }
 
-  // ✅ HEADER UNIFICADO com todas as colunas possíveis
+  // ✅ HEADER COMPLETO com colunas obrigatórias do Google Ads Editor
   const headers = [
     'Row Type',
     'Campaign',
+    'Campaign type',      // ✅ OBRIGATÓRIO
+    'Campaign status',    // ✅ RECOMENDADO
     'Ad Group',
     'Keyword',
     'Match Type',
@@ -588,44 +590,67 @@ function buildGoogleAdsCSV(params: any): string {
     ...Array.from({ length: 15 }, (_, i) => `Headline ${i + 1}`),
     // 4 Descriptions
     'Description 1', 'Description 2', 'Description 3', 'Description 4',
-    // Sitelinks
-    'Sitelink Text',
-    'Sitelink URL',
-    // Campaign Config
-    'Budget',
-    'Bid Strategy',
-    'Locations',
+    // Sitelinks (nomes corretos do Google Ads)
+    'Sitelink text',
+    'Final URL (sitelink)',
+    // Campaign Config (nomes corretos do Google Ads)
+    'Campaign daily budget',
+    'Bid strategy type',
+    'Location',
     'Languages'
   ];
 
+  // ✅ CONSTANTES COL calculadas dinamicamente
+  const COL = {
+    ROW_TYPE: 0,
+    CAMPAIGN: 1,
+    CAMPAIGN_TYPE: 2,
+    CAMPAIGN_STATUS: 3,
+    AD_GROUP: 4,
+    KEYWORD: 5,
+    MATCH_TYPE: 6,
+    FINAL_URL: 7,
+    PATH_1: 8,
+    PATH_2: 9,
+    HEADLINE_START: 10,      // Headlines: 10-24 (15 headlines)
+    DESC_START: 25,           // Descriptions: 25-28 (4 descriptions)
+    SITELINK_TEXT: 29,
+    SITELINK_URL: 30,
+    BUDGET: 31,
+    BID_STRATEGY: 32,
+    LOCATION: 33,
+    LANGUAGES: 34
+  };
+
   const rows: string[][] = [];
-  const cols = headers.length;
 
   // 1. Campaign Row
-  const campaignRow = new Array(cols).fill('');
-  campaignRow[0] = 'Campaign';
-  campaignRow[1] = csvEscape(campaignName);
-  campaignRow[26] = String(config.daily_budget_brl || 30);
-  campaignRow[27] = config.bidding?.strategy || 'MAX_CONV';
-  campaignRow[28] = csvEscape(config.locations?.join('; ') || 'Brazil');
-  campaignRow[29] = csvEscape(config.languages?.join('; ') || 'pt-BR');
+  const campaignRow = new Array(35).fill('');
+  campaignRow[COL.ROW_TYPE] = 'Campaign';
+  campaignRow[COL.CAMPAIGN] = csvEscape(campaignName);
+  campaignRow[COL.CAMPAIGN_TYPE] = 'Search';  // ✅ OBRIGATÓRIO
+  campaignRow[COL.CAMPAIGN_STATUS] = 'Enabled';  // ✅ RECOMENDADO
+  campaignRow[COL.BUDGET] = String(config.daily_budget_brl || 30);
+  campaignRow[COL.BID_STRATEGY] = config.bidding?.strategy || 'Maximize conversions';
+  campaignRow[COL.LOCATION] = csvEscape(config.locations?.join(';') || 'Brazil');
+  campaignRow[COL.LANGUAGES] = csvEscape(config.languages?.join(';') || 'pt');
   rows.push(campaignRow);
 
   // 2. Ad Group Row
-  const adGroupRow = new Array(cols).fill('');
-  adGroupRow[0] = 'Ad group';
-  adGroupRow[1] = csvEscape(campaignName);
-  adGroupRow[2] = 'Geral';
+  const adGroupRow = new Array(35).fill('');
+  adGroupRow[COL.ROW_TYPE] = 'Ad group';
+  adGroupRow[COL.CAMPAIGN] = csvEscape(campaignName);
+  adGroupRow[COL.AD_GROUP] = 'Geral';
   rows.push(adGroupRow);
 
   // 3. Ad Row (RSA)
-  const adRow = new Array(cols).fill('');
-  adRow[0] = 'Responsive search ad';
-  adRow[1] = csvEscape(campaignName);
-  adRow[2] = 'Geral';
-  adRow[5] = csvEscape(finalUrl);
-  adRow[6] = csvEscape(sanitizeText(adCopies.paths?.[0] || 'produtos', 15));
-  adRow[7] = csvEscape(sanitizeText(adCopies.paths?.[1] || 'ofertas', 15));
+  const adRow = new Array(35).fill('');
+  adRow[COL.ROW_TYPE] = 'Responsive search ad';
+  adRow[COL.CAMPAIGN] = csvEscape(campaignName);
+  adRow[COL.AD_GROUP] = 'Geral';
+  adRow[COL.FINAL_URL] = csvEscape(finalUrl);
+  adRow[COL.PATH_1] = csvEscape(sanitizeText(adCopies.paths?.[0] || 'produtos', 15));
+  adRow[COL.PATH_2] = csvEscape(sanitizeText(adCopies.paths?.[1] || 'ofertas', 15));
 
   // ✅ Fallbacks contextualizados
   const fallbackHeadlines = [
@@ -653,42 +678,42 @@ function buildGoogleAdsCSV(params: any): string {
     'Produtos de alta qualidade. Satisfação garantida.'
   ];
 
-  // Headlines (índices 8-22)
+  // Headlines (COL.HEADLINE_START até COL.HEADLINE_START + 14)
   for (let i = 0; i < 15; i++) {
     const h = adCopies.headlines?.[i];
     const fallback = fallbackHeadlines[i] || `Headline ${i + 1}`;
     const text = (h && typeof h === 'string' && h.trim()) ? h : fallback;
-    adRow[8 + i] = csvEscape(sanitizeText(text, 30));
+    adRow[COL.HEADLINE_START + i] = csvEscape(sanitizeText(text, 30));
   }
 
-  // Descriptions (índices 23-26)
+  // Descriptions (COL.DESC_START até COL.DESC_START + 3)
   for (let i = 0; i < 4; i++) {
     const d = adCopies.descriptions?.[i];
     const fallback = fallbackDescriptions[i] || `Descrição profissional ${i + 1}.`;
     const text = (d && typeof d === 'string' && d.trim()) ? d : fallback;
-    adRow[23 + i] = csvEscape(sanitizeText(text, 90));
+    adRow[COL.DESC_START + i] = csvEscape(sanitizeText(text, 90));
   }
 
   rows.push(adRow);
 
-  // 4. Keyword Rows (SEM SITELINKS!)
+  // 4. Keyword Rows
   for (const keyword of keywords) {
-    const keywordRow = new Array(cols).fill('');
-    keywordRow[0] = 'Keyword';
-    keywordRow[1] = csvEscape(campaignName);
-    keywordRow[2] = 'Geral';
-    keywordRow[3] = csvEscape(keyword.text);
-    keywordRow[4] = keyword.match_type || 'PHRASE';
+    const keywordRow = new Array(35).fill('');
+    keywordRow[COL.ROW_TYPE] = 'Keyword';
+    keywordRow[COL.CAMPAIGN] = csvEscape(campaignName);
+    keywordRow[COL.AD_GROUP] = 'Geral';
+    keywordRow[COL.KEYWORD] = csvEscape(keyword.text);
+    keywordRow[COL.MATCH_TYPE] = keyword.match_type || 'PHRASE';
     rows.push(keywordRow);
   }
 
-  // 5. Sitelink Rows (SEPARADOS!)
+  // 5. Sitelink Rows
   for (const sitelink of sitelinks.slice(0, 6)) {
-    const sitelinkRow = new Array(cols).fill('');
-    sitelinkRow[0] = 'Sitelink';
-    sitelinkRow[1] = csvEscape(campaignName);
-    sitelinkRow[24] = csvEscape(sitelink.label);
-    sitelinkRow[25] = csvEscape(sitelink.url);
+    const sitelinkRow = new Array(35).fill('');
+    sitelinkRow[COL.ROW_TYPE] = 'Sitelink';
+    sitelinkRow[COL.CAMPAIGN] = csvEscape(campaignName);
+    sitelinkRow[COL.SITELINK_TEXT] = csvEscape(sitelink.label);
+    sitelinkRow[COL.SITELINK_URL] = csvEscape(sitelink.url);
     rows.push(sitelinkRow);
   }
 
@@ -698,6 +723,6 @@ function buildGoogleAdsCSV(params: any): string {
     ...rows.map(row => row.join(','))
   ];
 
-  console.log(`✅ CSV gerado com Row Type format: ${rows.length} linhas`);
+  console.log(`✅ CSV gerado com Row Type format: ${rows.length} linhas, ${headers.length} colunas`);
   return csvLines.join('\n');
 }
