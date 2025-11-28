@@ -682,10 +682,20 @@ function buildGoogleAdsCSV(params: any): string {
   adRow[COL.CAMPAIGN] = csvEscape(campaignName);
   adRow[COL.AD_GROUP] = 'Geral';
   // Keyword fica VAZIO - Google Ads Editor infere que é um anúncio
-  adRow[COL.AD_TYPE] = 'Responsive search ad';  // ✅ OBRIGATÓRIO
+  adRow[COL.AD_TYPE] = 'Anúncio responsivo de pesquisa';  // ✅ PORTUGUÊS - Google Ads Editor BR
   adRow[COL.FINAL_URL] = csvEscape(finalUrl);
   adRow[COL.PATH_1] = csvEscape(sanitizeText(adCopies.paths?.[0] || 'produtos', 15));
   adRow[COL.PATH_2] = csvEscape(sanitizeText(adCopies.paths?.[1] || 'ofertas', 15));
+  
+  // ✅ LOG DIAGNÓSTICO - Confirmar geração da linha de anúncio
+  console.log('📢 Ad Row gerada (Landing Page):', JSON.stringify({
+    campaign: adRow[COL.CAMPAIGN],
+    adGroup: adRow[COL.AD_GROUP],
+    adType: adRow[COL.AD_TYPE],
+    finalUrl: adRow[COL.FINAL_URL],
+    headline1: adCopies.headlines?.[0],
+    desc1: adCopies.descriptions?.[0]
+  }));
 
   // ✅ Fallbacks contextualizados
   const fallbackHeadlines = [
