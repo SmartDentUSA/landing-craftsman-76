@@ -627,10 +627,20 @@ class GoogleAdsCSVBuilder {
     row[COL.CAMPAIGN] = this.csvEscape(campaignName);
     row[COL.AD_GROUP] = this.csvEscape(adGroupName);
     // Keyword fica VAZIO - Google Ads Editor infere que é um anúncio
-    row[COL.AD_TYPE] = 'Responsive search ad';  // ✅ OBRIGATÓRIO
+    row[COL.AD_TYPE] = 'Anúncio responsivo de pesquisa';  // ✅ PORTUGUÊS - Google Ads Editor BR
     row[COL.FINAL_URL] = this.csvEscape(finalUrl);
     row[COL.PATH_1] = this.csvEscape(adCopies.paths?.[0] || 'produtos');
     row[COL.PATH_2] = this.csvEscape(adCopies.paths?.[1] || 'ofertas');
+    
+    // ✅ LOG DIAGNÓSTICO - Confirmar geração da linha de anúncio
+    console.log('📢 Ad Row gerada (Produto):', JSON.stringify({
+      campaign: row[COL.CAMPAIGN],
+      adGroup: row[COL.AD_GROUP],
+      adType: row[COL.AD_TYPE],
+      finalUrl: row[COL.FINAL_URL],
+      headline1: adCopies.headlines?.[0],
+      desc1: adCopies.descriptions?.[0]
+    }));
     
     // ✅ Fallbacks contextualizados
     const fallbackHeadlines = [
