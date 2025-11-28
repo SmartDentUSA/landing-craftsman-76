@@ -223,9 +223,9 @@ serve(async (req) => {
     
     const adGroups = [{
       name: `AG_${product.category || 'Product'}_${product.name}`.replace(/\s+/g, '_'),
-      keywords: keywords.map(keyword => ({
-        text: keyword,
-        match_type: 'BROAD' as const,
+      keywords: keywords.map(kw => ({
+        text: kw.text,
+        match_type: kw.match_type,  // ✅ USA MATCH TYPE CALCULADO
         theme: product.category || 'product'
       })),
       theme: product.category || 'product'
@@ -270,31 +270,47 @@ serve(async (req) => {
   }
 });
 
-function collectProductKeywords(product: any, productData: any): string[] {
-  const keywords = new Set<string>();
+function collectProductKeywords(product: any, productData: any): Array<{ text: string, match_type: 'BROAD' | 'PHRASE' | 'EXACT' }> {
+  const keywords: Array<{ text: string, match_type: 'BROAD' | 'PHRASE' | 'EXACT' }> = [];
   
-  // Product-specific keywords
-  keywords.add(product.name);
-  if (product.category) keywords.add(product.category);
-  if (product.subcategory) keywords.add(product.subcategory);
+  // Product name = PHRASE (controle médio)
+  keywords.push({ text: product.name, match_type: 'PHRASE' });
   
-  // Keywords from product configuration
-  product.keywords?.forEach((k: string) => keywords.add(k));
-  product.market_keywords?.forEach((k: string) => keywords.add(k));
-  product.search_intent_keywords?.forEach((k: string) => keywords.add(k));
+  // Category = PHRASE
+  if (product.category) keywords.push({ text: product.category, match_type: 'PHRASE' });
+  if (product.subcategory) keywords.push({ text: product.subcategory, match_type: 'PHRASE' });
   
-  // Commercial intent keywords
-  keywords.add(`comprar ${product.name}`);
-  keywords.add(`${product.name} preço`);
-  keywords.add(`${product.name} oferta`);
-  keywords.add(`melhor ${product.name}`);
+  // Keywords from product configuration = PHRASE
+  product.keywords?.forEach((k: string) => keywords.push({ text: k, match_type: 'PHRASE' }));
+  product.market_keywords?.forEach((k: string) => keywords.push({ text: k, match_type: 'PHRASE' }));
+  
+  // Search intent keywords = EXACT (alta intenção)
+  product.search_intent_keywords?.forEach((k: string) => keywords.push({ text: k, match_type: 'EXACT' }));
+  
+  // Commercial intent keywords = EXACT (alta intenção de compra)
+  keywords.push({ text: `comprar ${product.name}`, match_type: 'EXACT' });
+  keywords.push({ text: `${product.name} preço`, match_type: 'PHRASE' });
+  keywords.push({ text: `${product.name} oferta`, match_type: 'PHRASE' });
+  keywords.push({ text: `melhor ${product.name}`, match_type: 'PHRASE' });
   
   if (product.category) {
-    keywords.add(`${product.category} ${product.name}`);
-    keywords.add(`${product.category} preço`);
+    keywords.push({ text: `${product.category} ${product.name}`, match_type: 'PHRASE' });
+    keywords.push({ text: `${product.category} preço`, match_type: 'BROAD' });
   }
   
-  return Array.from(keywords).filter(k => k && k.length > 2);
+  // Remover duplicatas baseado no text
+  const seen = new Map();
+  const deduped: Array<{ text: string, match_type: 'BROAD' | 'PHRASE' | 'EXACT' }> = [];
+  
+  for (const kw of keywords) {
+    const key = kw.text.toLowerCase();
+    if (!seen.has(key) && kw.text.length > 2) {
+      seen.set(key, true);
+      deduped.push(kw);
+    }
+  }
+  
+  return deduped;
 }
 
 async function collectProductSitelinks(product: any, config: any) {
@@ -484,18 +500,29 @@ class GoogleAdsCSVBuilder {
   }
 
   private static buildAdsSection(adGroups: any[], adCopies: any, campaignName: string, finalUrl: string): string {
-    let csv = 'Campaign,Ad Group,Headlines,Descriptions,Paths,Final URL\n';
+    let csv = 'Campaign,Ad Group,Ad Type,Final URL,Path 1,Path 2,Headline 1,Headline 2,Headline 3,Headline 4,Headline 5,Headline 6,Headline 7,Headline 8,Headline 9,Headline 10,Headline 11,Headline 12,Headline 13,Headline 14,Headline 15,Description 1,Description 2,Description 3,Description 4\n';
     
     for (const adGroup of adGroups) {
       if (adCopies.headlines && adCopies.descriptions) {
-        const headlines = adCopies.headlines.slice(0, 15).map((h: string) => this.csvEscape(h)).join('|');
-        const descriptions = adCopies.descriptions.slice(0, 4).map((d: string) => this.csvEscape(d)).join('|');
-        const paths = (adCopies.paths || []).slice(0, 2).map((p: string) => this.csvEscape(p)).join('|');
+        // ✅ Sanitizar e escapar CADA campo individualmente (15 headlines + 4 descriptions)
+        const headlines = adCopies.headlines.slice(0, 15).map((h: string) => this.csvEscape(this.sanitizeForCSV(h, 30)));
+        const descriptions = adCopies.descriptions.slice(0, 4).map((d: string) => this.csvEscape(this.sanitizeForCSV(d, 90)));
+        const paths = (adCopies.paths || []).slice(0, 2).map((p: string) => this.csvEscape(this.sanitizeForCSV(p, 15)));
         
-        csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},"${headlines}","${descriptions}","${paths}",${this.csvEscape(finalUrl)}\n`;
+        csv += `${this.csvEscape(campaignName)},${this.csvEscape(adGroup.name)},Responsive Search Ad,${this.csvEscape(finalUrl)},${paths[0] || ''},${paths[1] || ''},${headlines.join(',')},${descriptions.join(',')}\n`;
       }
     }
     return csv;
+  }
+
+  private static sanitizeForCSV(text: string, maxLength: number): string {
+    if (!text) return '';
+    return text
+      .replace(/\n/g, ' ')        // ✅ Remove quebras de linha
+      .replace(/\r/g, '')         // ✅ Remove carriage returns
+      .replace(/\s+/g, ' ')       // ✅ Múltiplos espaços → um
+      .trim()
+      .substring(0, maxLength);
   }
 
   private static buildKeywordsSection(adGroups: any[], campaignName: string): string {

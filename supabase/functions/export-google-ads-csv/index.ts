@@ -111,43 +111,112 @@ async function collectLandingPageData(supabase: any, landingPageId: string) {
   }
 }
 
-async function collectKeywords(supabase: any, landingPageData: any, config: any, selectedProductIds: string[] = []): Promise<string[]> {
-  let keywords: string[] = [];
+// Função de mapeamento semântico → Google Ads Match Types
+function mapKeywordTypeToMatchType(
+  keywordType: string | null,
+  searchIntent: string | null,
+  source: string
+): 'BROAD' | 'PHRASE' | 'EXACT' {
+  // Prioridade 1: keyword_type explícito
+  if (keywordType) {
+    switch (keywordType.toLowerCase()) {
+      case 'primary':       return 'PHRASE';
+      case 'secondary':     return 'PHRASE';
+      case 'longtail':      return 'EXACT';
+      case 'generic':       return 'BROAD';
+      case 'brand':         return 'EXACT';
+      case 'exact':         return 'EXACT';
+      case 'phrase':        return 'PHRASE';
+      case 'broad':         return 'BROAD';
+    }
+  }
+  
+  // Prioridade 2: search_intent
+  if (searchIntent) {
+    switch (searchIntent.toLowerCase()) {
+      case 'commercial':    return 'PHRASE';
+      case 'transactional': return 'EXACT';
+      case 'informational': return 'BROAD';
+      case 'navigational':  return 'EXACT';
+    }
+  }
+  
+  // Prioridade 3: Baseado na fonte
+  switch (source) {
+    case 'faq':            return 'PHRASE';
+    case 'manual':         return 'EXACT';
+    case 'review':         return 'PHRASE';
+    case 'ai':             return 'PHRASE';
+    case 'product':        return 'PHRASE';
+    default:               return 'PHRASE';
+  }
+}
 
-  // ✅ PRIORIDADE 3: Buscar keywords do external_links (Keywords Repository) primeiro
+interface KeywordWithMatchType {
+  text: string;
+  match_type: 'BROAD' | 'PHRASE' | 'EXACT';
+  source: string;
+  keyword_type?: string;
+}
+
+async function collectKeywords(supabase: any, landingPageData: any, config: any, selectedProductIds: string[] = []): Promise<KeywordWithMatchType[]> {
+  let keywords: KeywordWithMatchType[] = [];
+
+  // ✅ PRIORIDADE 1: Buscar keywords do external_links COM keyword_type e search_intent
   try {
     const { data: externalLinks } = await supabase
       .from('external_links')
-      .select('name, related_keywords, keyword_type, monthly_searches, relevance_score')
+      .select('name, related_keywords, keyword_type, search_intent, monthly_searches, relevance_score')
       .eq('approved', true)
       .order('relevance_score', { ascending: false, nullsFirst: false })
       .limit(100);
     
     if (externalLinks && externalLinks.length > 0) {
       externalLinks.forEach((link: any) => {
-        if (link.name) keywords.push(link.name);
+        if (link.name && typeof link.name === 'string') {
+          keywords.push({
+            text: link.name.trim().toLowerCase(),
+            match_type: mapKeywordTypeToMatchType(link.keyword_type, link.search_intent, 'external_links'),
+            source: 'external_links',
+            keyword_type: link.keyword_type
+          });
+        }
+        // related_keywords herdam o mesmo match_type
         if (link.related_keywords && Array.isArray(link.related_keywords)) {
-          keywords.push(...link.related_keywords);
+          link.related_keywords
+            .filter((k: any) => typeof k === 'string')
+            .forEach((k: string) => {
+              keywords.push({
+                text: k.trim().toLowerCase(),
+                match_type: mapKeywordTypeToMatchType(link.keyword_type, link.search_intent, 'external_links'),
+                source: 'external_links',
+                keyword_type: link.keyword_type
+              });
+            });
         }
       });
       
-      console.log(`✅ ${keywords.length} keywords importadas do repositório`);
+      console.log(`✅ ${keywords.length} keywords importadas do repositório com match types`);
     }
   } catch (error) {
     console.error('Error collecting keywords from external_links:', error);
   }
 
-  // Collect from AI keywords
+  // AI keywords = PHRASE por padrão
   if (config.include_ai_keywords && landingPageData.ai_keywords) {
-    keywords.push(...collectFromAI(landingPageData.ai_keywords));
+    collectFromAI(landingPageData.ai_keywords).forEach(k => {
+      keywords.push({ text: k, match_type: 'PHRASE', source: 'ai' });
+    });
   }
 
-  // Collect from FAQ (if enabled)
+  // FAQ keywords = PHRASE (perguntas específicas)
   if (config.include_faq_longtail && landingPageData.faq) {
-    keywords.push(...collectFromFAQ(landingPageData.faq));
+    collectFromFAQ(landingPageData.faq).forEach(k => {
+      keywords.push({ text: k, match_type: 'PHRASE', source: 'faq' });
+    });
   }
 
-  // Collect from selected products
+  // Product keywords = PHRASE
   if (selectedProductIds.length > 0) {
     try {
       const { data: products } = await supabase
@@ -157,14 +226,16 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
         .eq('approved', true);
 
       if (products) {
-        keywords.push(...collectFromProducts(products));
+        collectFromProducts(products).forEach(k => {
+          keywords.push({ text: k, match_type: 'PHRASE', source: 'product' });
+        });
       }
     } catch (error) {
       console.error('Error collecting product keywords:', error);
     }
   }
   
-  // ✅ PRIORIDADE 3: Extrair keywords de approved_reviews (long-tail reais)
+  // Review keywords = PHRASE (linguagem real)
   try {
     const { data: reviews } = await supabase
       .from('approved_reviews')
@@ -180,21 +251,40 @@ async function collectKeywords(supabase: any, landingPageData: any, config: any,
           .filter((word: string) => word.length > 4 && !word.match(/^(muito|sempre|nunca|todos|sobre|para|com|sem)$/))
           .slice(0, 10);
         
-        keywords.push(...extractedKeywords);
+        extractedKeywords.forEach(k => {
+          keywords.push({ text: k, match_type: 'PHRASE', source: 'review' });
+        });
       });
       
-      console.log(`✅ Keywords extraídas de ${reviews.length} reviews`);
+      console.log(`✅ Keywords extraídas de ${reviews.length} reviews com match type PHRASE`);
     }
   } catch (error) {
     console.error('Error collecting keywords from reviews:', error);
   }
 
-  // Add manual keywords
-  if (config.extra_keywords) {
-    keywords.push(...config.extra_keywords);
+  // Manual keywords = EXACT (usuário escolheu)
+  if (config.extra_keywords && Array.isArray(config.extra_keywords)) {
+    config.extra_keywords
+      .filter((k: any) => typeof k === 'string')
+      .forEach((k: string) => {
+        keywords.push({ text: k.trim().toLowerCase(), match_type: 'EXACT', source: 'manual' });
+      });
   }
 
-  return normalizeKeywords(keywords);
+  return deduplicateKeywords(keywords);
+}
+
+function deduplicateKeywords(keywords: KeywordWithMatchType[]): KeywordWithMatchType[] {
+  const seen = new Map<string, KeywordWithMatchType>();
+  
+  for (const keyword of keywords) {
+    const key = keyword.text.toLowerCase();
+    if (!seen.has(key)) {
+      seen.set(key, keyword);
+    }
+  }
+  
+  return Array.from(seen.values());
 }
 
 // Helper functions from KeywordCollector
@@ -261,12 +351,6 @@ function isCommercialKeyword(keyword: string): boolean {
   return commercialTerms.some(term => keyword.includes(term));
 }
 
-function normalizeKeywords(keywords: string[]): string[] {
-  return [...new Set(keywords
-    .filter(k => k && k.trim().length > 0)
-    .map(k => k.trim().toLowerCase())
-  )];
-}
 
 async function collectSitelinks(landingPageData: any, config: any, supabase?: any) {
   const sitelinks = [];
@@ -466,11 +550,20 @@ function buildGoogleAdsCSV(params: any): string {
     `"${campaignName}","Geral","Responsive search ad","${finalUrl}","${adCopies.paths[0] || ''}","${adCopies.paths[1] || ''}","${adCopies.headlines[0] || ''}","${adCopies.headlines[1] || ''}","${adCopies.headlines[2] || ''}","${adCopies.descriptions[0] || ''}","${adCopies.descriptions[1] || ''}"`
   ].join('\n');
 
-  // Build Keywords section
+  // Build Keywords section com match types corretos
   const keywordsSection = [
     'Campaign,Ad group,Keyword,Match type',
-    ...keywords.map((keyword: string) => `"${campaignName}","Geral","${keyword}",Phrase`)
+    ...keywords.map((keyword: KeywordWithMatchType) => `"${campaignName}","Geral","${csvEscape(keyword.text)}",${keyword.match_type}`)
   ].join('\n');
+  
+  function csvEscape(value: string): string {
+    if (!value) return '';
+    const escaped = value.replace(/"/g, '""');
+    if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')) {
+      return escaped;
+    }
+    return escaped;
+  }
 
   // Build Sitelinks section
   let sitelinksSection = '';
