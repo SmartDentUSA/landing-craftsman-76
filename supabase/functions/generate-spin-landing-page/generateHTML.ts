@@ -4,6 +4,8 @@
 
 // ✅ FASE 3.1: Importar processamento de intelligent links
 import { buildIntelligentLinksMap, applyIntelligentLinks } from '../_shared/intelligent-links-processor.ts';
+// ✅ INTEGRAÇÃO SISTEMA B: Schemas de vídeos e documentos
+import { generateVideoObjectSchemas, generateDocumentSchemas, type SystemBEnrichment } from './systemBIntegration.ts';
 
 function generateSPINSchemas(
   solution: any,
@@ -568,6 +570,21 @@ export function generateLandingPageHTML(
     successCases,
     canonicalUrl
   );
+
+  // 🔗 INTEGRAÇÃO SISTEMA B: Adicionar VideoObject e DigitalDocument schemas
+  const systemBResources: SystemBEnrichment | undefined = aiContent?.systemBResources;
+  
+  if (systemBResources?.videos?.length) {
+    const videoSchemas = generateVideoObjectSchemas(systemBResources.videos);
+    schemas.push(...videoSchemas);
+    console.log(`✅ [SCHEMA] ${videoSchemas.length} VideoObject schemas adicionados`);
+  }
+  
+  if (systemBResources?.documents?.length) {
+    const documentSchemas = generateDocumentSchemas(systemBResources.documents);
+    schemas.push(...documentSchemas);
+    console.log(`✅ [SCHEMA] ${documentSchemas.length} DigitalDocument schemas adicionados`);
+  }
 
   // Consolidar schemas em @graph (Google recomenda)
   const consolidatedSchema = {
@@ -1400,6 +1417,228 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       border-radius: 4px;
     }
 
+    /* ===== RECURSOS TÉCNICOS SISTEMA B ===== */
+    .technical-resources-section {
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      padding: 4rem 0;
+      text-align: center;
+    }
+
+    .technical-resources-section h2 {
+      font-size: 32px;
+      margin-bottom: 0.75rem;
+      color: var(--primary-dark);
+    }
+
+    .technical-resources-section h2 i {
+      color: var(--accent-tech);
+      margin-right: 0.5rem;
+    }
+
+    .technical-resources-section .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 3rem;
+    }
+
+    .videos-gallery, .documents-gallery {
+      margin-bottom: 3rem;
+    }
+
+    .videos-gallery h3, .documents-gallery h3 {
+      font-size: 22px;
+      margin-bottom: 1.5rem;
+      color: var(--primary-dark);
+      text-align: left;
+    }
+
+    .videos-gallery h3 i, .documents-gallery h3 i {
+      color: var(--accent-tech);
+      margin-right: 0.5rem;
+    }
+
+    .videos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .video-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      text-align: left;
+    }
+
+    .video-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+
+    .video-thumbnail-wrapper {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+    }
+
+    .video-thumbnail {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-duration {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .play-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 48px;
+      opacity: 0.9;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .video-card:hover .play-overlay {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    .video-info {
+      padding: 1rem;
+    }
+
+    .video-info h4 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--primary-dark);
+      line-height: 1.3;
+    }
+
+    .video-info p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .product-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 12px;
+      color: var(--accent-tech);
+      background: rgba(238, 122, 62, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .documents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    .document-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--card-bg);
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    .document-card:hover {
+      border-color: var(--accent-tech);
+      box-shadow: 0 8px 25px rgba(238, 122, 62, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .doc-icon {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(238, 122, 62, 0.1);
+      border-radius: 8px;
+    }
+
+    .doc-icon i {
+      font-size: 24px;
+      color: var(--accent-tech);
+    }
+
+    .doc-info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .doc-info h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-bottom: 0.25rem;
+    }
+
+    .doc-info p {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .doc-meta {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .file-size {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .download-icon {
+      flex-shrink: 0;
+      color: var(--accent-tech);
+      font-size: 18px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .document-card:hover .download-icon {
+      opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+      .videos-grid {
+        grid-template-columns: 1fr;
+      }
+      .documents-grid {
+        grid-template-columns: 1fr;
+      }
+      .technical-resources-section h2 {
+        font-size: 26px;
+      }
+    }
+
     /* ===== CTA - GRADIENTE GEMINI ===== */
     .cta {
       text-align: center;
@@ -1828,6 +2067,107 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     </section>
   </div>
   ` : ''}
+
+  ${(() => {
+    // 🔗 INTEGRAÇÃO SISTEMA B: Seção de Recursos Técnicos (Vídeos + Documentos)
+    const systemBResources: SystemBEnrichment | undefined = aiContent?.systemBResources;
+    const hasVideos = systemBResources?.videos?.length > 0;
+    const hasDocuments = systemBResources?.documents?.length > 0;
+    
+    if (!hasVideos && !hasDocuments) return '';
+    
+    console.log('🎬 [HTML] Renderizando seção de recursos técnicos:', {
+      videos: systemBResources?.videos?.length || 0,
+      documents: systemBResources?.documents?.length || 0
+    });
+    
+    return `
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 🎬 SEÇÃO: RECURSOS TÉCNICOS DO SISTEMA B -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="container section-padding">
+    <section class="technical-resources-section">
+      <h2 data-editable="true" data-field="technical_resources_title">
+        <i class="fas fa-graduation-cap"></i> Material de Apoio e Treinamento
+      </h2>
+      <p class="subtitle" data-editable="true" data-field="technical_resources_subtitle">
+        Vídeos técnicos, tutoriais e documentação para você dominar os produtos
+      </p>
+      
+      ${hasVideos ? `
+      <!-- Galeria de Vídeos Técnicos -->
+      <div class="videos-gallery">
+        <h3><i class="fas fa-video"></i> Vídeos Técnicos</h3>
+        <div class="videos-grid">
+          ${systemBResources!.videos.map((video, index) => {
+            const minutes = Math.floor(video.duracao_segundos / 60);
+            const seconds = video.duracao_segundos % 60;
+            const duration = video.duracao_segundos > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : '';
+            
+            return `
+          <div class="video-card" data-index="${index}">
+            <div class="video-thumbnail-wrapper">
+              ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.titulo)}" loading="lazy" class="video-thumbnail">` : ''}
+              ${duration ? `<span class="video-duration"><i class="fas fa-clock"></i> ${duration}</span>` : ''}
+              <a href="${escapeHtml(video.embed_url)}" target="_blank" rel="noopener noreferrer" class="play-overlay">
+                <i class="fas fa-play-circle"></i>
+              </a>
+            </div>
+            <div class="video-info">
+              <h4>${escapeHtml(video.titulo)}</h4>
+              ${video.descricao ? `<p>${escapeHtml(video.descricao.substring(0, 120))}${video.descricao.length > 120 ? '...' : ''}</p>` : ''}
+              ${video.produto_correlacionado ? `<span class="product-badge"><i class="fas fa-box"></i> ${escapeHtml(video.produto_correlacionado.nome)}</span>` : ''}
+            </div>
+          </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${hasDocuments ? `
+      <!-- Downloads Técnicos -->
+      <div class="documents-gallery">
+        <h3><i class="fas fa-file-pdf"></i> Documentação Técnica</h3>
+        <div class="documents-grid">
+          ${systemBResources!.documents.map((doc, index) => {
+            const fileSize = doc.tamanho_bytes > 0 
+              ? doc.tamanho_bytes < 1024 * 1024 
+                ? \`\${(doc.tamanho_bytes / 1024).toFixed(0)} KB\`
+                : \`\${(doc.tamanho_bytes / (1024 * 1024)).toFixed(1)} MB\`
+              : '';
+            const fileIcon = (doc.tipo_arquivo || 'pdf') === 'pdf' ? 'fa-file-pdf' : 'fa-file-alt';
+            
+            return `
+          <a href="${escapeHtml(doc.url_download)}" target="_blank" rel="noopener noreferrer" class="document-card" data-index="${index}">
+            <div class="doc-icon">
+              <i class="fas ${fileIcon}"></i>
+            </div>
+            <div class="doc-info">
+              <h4>${escapeHtml(doc.nome)}</h4>
+              ${doc.descricao ? `<p>${escapeHtml(doc.descricao.substring(0, 80))}${doc.descricao.length > 80 ? '...' : ''}</p>` : ''}
+              <div class="doc-meta">
+                ${fileSize ? `<span class="file-size"><i class="fas fa-hdd"></i> ${fileSize}</span>` : ''}
+                ${doc.produto_correlacionado ? `<span class="product-badge"><i class="fas fa-box"></i> ${escapeHtml(doc.produto_correlacionado.nome)}</span>` : ''}
+              </div>
+            </div>
+            <div class="download-icon">
+              <i class="fas fa-download"></i>
+            </div>
+          </a>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
+      <!-- Metadados de sincronização (oculto, para rastreabilidade) -->
+      <meta name="system-b-sync" content="${systemBResources?.syncedAt || new Date().toISOString()}">
+      <meta name="technical-resources-count" content="${(systemBResources?.videos?.length || 0) + (systemBResources?.documents?.length || 0)}">
+    </section>
+  </div>
+    `;
+  })()}
 
   ${faqs.length > 0 ? `
   <!-- Seção de FAQs (Acordeão) -->
