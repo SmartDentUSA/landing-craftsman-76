@@ -232,8 +232,16 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
 
   useEffect(() => {
     if (existingSolution) {
+      console.log('📥 Loading existing solution:', existingSolution.id, {
+        hasLandingPageHtml: !!existingSolution.landing_page_html,
+        htmlSize: existingSolution.landing_page_html?.length || 0,
+        hasSpinJourney: !!existingSolution.spin_journey,
+        hasImpactMetrics: !!existingSolution.impact_metrics
+      });
+      
       setFormData({
         ...existingSolution,
+        // ✅ Arrays e objetos com fallback
         success_cases: existingSolution.success_cases || [],
         real_quotes: existingSolution.real_quotes || [],
         pain_metrics: existingSolution.pain_metrics || {},
@@ -247,10 +255,33 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
           table_headers: [],
           table_data: []
         },
+        
+        // ✅ CRÍTICO: Campos de Landing Page (DEVEM SER CARREGADOS)
+        landing_page_html: existingSolution.landing_page_html || null,
+        landing_page_generated_at: existingSolution.landing_page_generated_at || null,
+        landing_page_custom_text: existingSolution.landing_page_custom_text || {},
+        
+        // ✅ CRÍTICO: Campos SPIN Journey e Metrics
         spin_journey: existingSolution.spin_journey || null,
         journey_generated_at: existingSolution.journey_generated_at || null,
         impact_metrics: existingSolution.impact_metrics || null,
-        metrics_generated_at: existingSolution.metrics_generated_at || null
+        metrics_generated_at: existingSolution.metrics_generated_at || null,
+        
+        // ✅ CRÍTICO: Personalização WhatsApp
+        whatsapp_section_titles: existingSolution.whatsapp_section_titles || {
+          journey_title: "💬 Jornada do Cliente:",
+          journey_subtitle: null,
+          metrics_title: "📊 Métricas de Impacto:",
+          metrics_subtitle: null
+        },
+        spin_journey_labels: existingSolution.spin_journey_labels || {
+          desire_label: "🎯 *Desejo:*",
+          pain_label: "⚠️ *Dor:*",
+          result_label: "✅ *Resultado Esperado:*"
+        },
+        
+        // ✅ Metadata
+        metadata: existingSolution.metadata || null
       });
       
       // Reset confidence score ao carregar solução existente
@@ -390,8 +421,33 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
       whatsapp_complete_message: formData.whatsapp_complete_message,
       storytelling_auto_generated: formData.storytelling_auto_generated,
       
+      // ✅ CRÍTICO: Landing Page HTML e metadados (NÃO PERDER!)
+      landing_page_html: formData.landing_page_html,
+      landing_page_generated_at: formData.landing_page_generated_at,
+      landing_page_custom_text: formData.landing_page_custom_text,
+      
+      // ✅ CRÍTICO: SPIN Journey e Metrics (NÃO PERDER!)
+      spin_journey: formData.spin_journey,
+      journey_generated_at: formData.journey_generated_at,
+      impact_metrics: formData.impact_metrics,
+      metrics_generated_at: formData.metrics_generated_at,
+      
+      // ✅ CRÍTICO: Personalização WhatsApp (NÃO PERDER!)
+      whatsapp_section_titles: formData.whatsapp_section_titles,
+      spin_journey_labels: formData.spin_journey_labels,
+      
+      // ✅ Metadata
+      metadata: formData.metadata,
+      
       active: formData.active ?? true,
     };
+    
+    console.log('💾 Submitting data:', {
+      hasLandingPageHtml: !!dataToSubmit.landing_page_html,
+      htmlSize: dataToSubmit.landing_page_html?.length || 0,
+      hasSpinJourney: !!dataToSubmit.spin_journey,
+      hasImpactMetrics: !!dataToSubmit.impact_metrics
+    });
 
     try {
       if (solutionId) {
@@ -2611,6 +2667,20 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                   
                   {formData.landing_page_html && (
                     <>
+                      {/* ✅ NOVO: Botão para editar landing page existente SEM regenerar */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setGeneratedHTML(formData.landing_page_html!);
+                          setShowEditablePreview(true);
+                        }}
+                        className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Editar Landing Page
+                      </Button>
+                      
                       <Button
                         type="button"
                         variant="outline"
@@ -2654,14 +2724,18 @@ export function SpinSolutionEditModal({ solutionId, onClose }: SpinSolutionEditM
                 )}
                 
                 {formData.landing_page_html && (
-                  <div className="mt-3 p-3 bg-white rounded-lg border">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      <strong>Tamanho do HTML:</strong> {Math.round(formData.landing_page_html.length / 1024)} KB
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      <strong>Dica:</strong> Clique em "Visualizar" para ver o resultado ou "Baixar HTML" para copiar e colar no seu sistema de publicação
-                    </p>
-                  </div>
+                  <Alert className="mt-3 bg-green-50 border-green-200">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-700">Landing Page Disponível</AlertTitle>
+                    <AlertDescription className="text-green-600">
+                      HTML de {Math.round(formData.landing_page_html.length / 1024)} KB
+                      {formData.landing_page_generated_at && (
+                        <> gerado em {new Date(formData.landing_page_generated_at).toLocaleString('pt-BR')}</>
+                      )}
+                      <br />
+                      <span className="text-xs">Clique em "Editar Landing Page" para fazer ajustes sem regenerar.</span>
+                    </AlertDescription>
+                  </Alert>
                 )}
               </Card>
             )}

@@ -111,7 +111,9 @@ export interface SpinSellingSolution {
   storytelling_auto_generated?: string;
   landing_page_html?: string;
   landing_page_generated_at?: string;
+  landing_page_custom_text?: Record<string, any>;
   ai_generated_images?: any;
+  metadata?: Record<string, any> | null;
   
   // 🎬 CAMPOS DE VÍDEO PARA LANDING PAGE
   selected_video_url?: string;
