@@ -52,26 +52,34 @@ export function InfinitePartnersCarousel({
       <div className="container mx-auto px-4">
         <div className="overflow-hidden">
           <div className="animate-infinite-scroll flex gap-16 items-center">
-            {duplicatedPartners.map((partner, index) => (
-              <img 
-                key={`${partner.id}-${index}`}
-                src={getImageUrl(partner.logo)}
-                alt={partner.name || partner.seo_description || `Parceiro ${index + 1}`}
-                title={partner.seo_description || partner.name}
-                loading="lazy"
-                className="h-12 md:h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300 flex-shrink-0"
-                onLoad={(e) => console.log('✅ [IMG-LOAD]', { 
-                  index, 
-                  src: (e.target as HTMLImageElement).src,
-                  naturalWidth: (e.target as HTMLImageElement).naturalWidth 
-                })}
-                onError={(e) => console.error('❌ [IMG-ERROR]', { 
-                  index,
-                  attempted_src: (e.target as HTMLImageElement).src,
-                  logo_data: partner.logo 
-                })}
-              />
-            ))}
+            {duplicatedPartners.map((partner, index) => {
+              const imageElement = (
+                <img 
+                  src={getImageUrl(partner.logo)}
+                  alt={partner.name || partner.seo_description || `Parceiro ${index + 1}`}
+                  title={partner.seo_description || partner.name}
+                  loading="lazy"
+                  className="h-12 md:h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300 flex-shrink-0"
+                />
+              );
+              
+              // Se tem href, envolve em <a>
+              if (partner.logo?.href) {
+                return (
+                  <a 
+                    key={`${partner.id}-${index}`}
+                    href={partner.logo.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0"
+                  >
+                    {imageElement}
+                  </a>
+                );
+              }
+              
+              return <span key={`${partner.id}-${index}`} className="flex-shrink-0">{imageElement}</span>;
+            })}
           </div>
         </div>
       </div>
