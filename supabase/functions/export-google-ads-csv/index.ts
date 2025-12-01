@@ -569,9 +569,16 @@ function buildGoogleAdsCSV(params: any): string {
   function sanitizeText(text: string, maxLength: number): string {
     if (!text || !text.trim()) return '';
     return text
-      .replace(/\n/g, ' ')
-      .replace(/\r/g, '')
-      .replace(/\s+/g, ' ')
+      .replace(/<[^>]*>/g, ' ')       // Remove tags HTML
+      .replace(/&nbsp;/gi, ' ')        // Remove &nbsp;
+      .replace(/&amp;/gi, '&')         // Decodifica &amp;
+      .replace(/&lt;/gi, '<')          // Decodifica &lt;
+      .replace(/&gt;/gi, '>')          // Decodifica &gt;
+      .replace(/&quot;/gi, '"')        // Decodifica &quot;
+      .replace(/&#39;/gi, "'")         // Decodifica &#39;
+      .replace(/\n/g, ' ')             // Remove \n
+      .replace(/\r/g, '')              // Remove \r
+      .replace(/\s+/g, ' ')            // Consolida espaços múltiplos
       .trim()
       .substring(0, maxLength);
   }

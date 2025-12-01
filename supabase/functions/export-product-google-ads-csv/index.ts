@@ -712,7 +712,18 @@ class GoogleAdsCSVBuilder {
 
   private static sanitizeText(text: string, maxLen: number): string {
     if (!text) return '';
-    return text.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, maxLen);
+    return text
+      .replace(/<[^>]*>/g, ' ')       // Remove tags HTML
+      .replace(/&nbsp;/gi, ' ')        // Remove &nbsp;
+      .replace(/&amp;/gi, '&')         // Decodifica &amp;
+      .replace(/&lt;/gi, '<')          // Decodifica &lt;
+      .replace(/&gt;/gi, '>')          // Decodifica &gt;
+      .replace(/&quot;/gi, '"')        // Decodifica &quot;
+      .replace(/&#39;/gi, "'")         // Decodifica &#39;
+      .replace(/[\r\n]/g, ' ')         // Remove quebras de linha
+      .replace(/\s+/g, ' ')            // Consolida espaços múltiplos
+      .trim()
+      .substring(0, maxLen);
   }
 
   private static buildAdsSection(adGroups: any[], adCopies: any, campaignName: string, finalUrl: string): string {
