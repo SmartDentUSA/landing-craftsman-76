@@ -2452,6 +2452,87 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     `;
   })()}
 
+  ${/* 📰 SEÇÃO: ÚLTIMAS PUBLICAÇÕES DOS PRODUTOS */
+  (() => {
+    const publications = aiContent?.productPublications || [];
+    if (publications.length === 0) return '';
+    
+    const escHtml = (str: string) => str?.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') || '';
+    
+    const formatDate = (dateStr: string) => {
+      try {
+        return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch { return ''; }
+    };
+    
+    const articleSchemas = publications.map((pub: any) => ({
+      '@type': 'Article',
+      'headline': pub.title,
+      'description': pub.excerpt,
+      'image': pub.productImage || company?.company_logo_url,
+      'datePublished': pub.generatedAt,
+      'author': { '@type': 'Organization', 'name': company?.company_name || 'Empresa' },
+      'about': { '@type': 'Product', 'name': pub.productName }
+    }));
+    
+    return `
+  <!-- 📰 SEÇÃO: ÚLTIMAS PUBLICAÇÕES -->
+  <section class="latest-publications-section">
+    <div class="container">
+      <h2><i class="fas fa-newspaper"></i> Últimas Publicações</h2>
+      <p class="section-subtitle">Conteúdos relacionados aos produtos selecionados nesta solução</p>
+      
+      <div class="publications-grid">
+        ${publications.map((pub: any) => `
+          <article class="publication-card">
+            <div class="publication-image">
+              ${pub.productImage 
+                ? `<img src="${escHtml(pub.productImage)}" alt="${escHtml(pub.productName)}" loading="lazy">`
+                : `<div class="publication-placeholder"><i class="fas fa-file-alt"></i></div>`
+              }
+              <span class="publication-badge ${pub.type}">${pub.type === 'commercial' ? '📊 Comercial' : '🔬 Técnico'}</span>
+            </div>
+            <div class="publication-content">
+              <span class="publication-product"><i class="fas fa-box"></i> ${escHtml(pub.productName)}</span>
+              <h3>${escHtml(pub.title)}</h3>
+              <p class="publication-excerpt">${escHtml(pub.excerpt)}</p>
+              <div class="publication-meta">
+                <span class="publication-date"><i class="far fa-calendar"></i> ${formatDate(pub.generatedAt)}</span>
+              </div>
+            </div>
+          </article>
+        `).join('')}
+      </div>
+    </div>
+    
+    <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@graph':articleSchemas})}</script>
+  </section>
+  
+  <style>
+    .latest-publications-section { padding: 60px 0; background: #ffffff; }
+    .latest-publications-section h2 { text-align: center; font-size: 2rem; margin-bottom: 0.5rem; color: var(--primary-color, #3E4B5E); }
+    .latest-publications-section h2 i { color: #e74c3c; margin-right: 10px; }
+    .latest-publications-section .section-subtitle { text-align: center; color: #6c757d; margin-bottom: 2rem; font-size: 1.1rem; }
+    .publications-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+    .publication-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #f0f0f0; }
+    .publication-card:hover { transform: translateY(-8px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+    .publication-image { position: relative; height: 160px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .publication-image img { width: 100%; height: 100%; object-fit: cover; }
+    .publication-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; opacity: 0.6; }
+    .publication-badge { position: absolute; top: 12px; right: 12px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .publication-badge.commercial { background: linear-gradient(135deg, #11998e, #38ef7d); color: white; }
+    .publication-badge.technical { background: linear-gradient(135deg, #4776E6, #8E54E9); color: white; }
+    .publication-content { padding: 1.25rem; }
+    .publication-product { font-size: 0.8rem; color: #6c757d; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 0.5rem; }
+    .publication-card h3 { font-size: 1.1rem; margin: 0.5rem 0; line-height: 1.4; color: #2d3436; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .publication-excerpt { color: #636e72; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .publication-meta { display: flex; justify-content: space-between; align-items: center; }
+    .publication-date { font-size: 0.8rem; color: #adb5bd; display: flex; align-items: center; gap: 5px; }
+    @media (max-width: 768px) { .latest-publications-section { padding: 40px 0; } .latest-publications-section h2 { font-size: 1.5rem; } .publications-grid { grid-template-columns: 1fr; } }
+  </style>
+    `;
+  })()}
+
   ${successCases.length > 0 ? `
   <!-- Seção de Depoimentos com Carrossel -->
   <section class="testimonials-section">
