@@ -166,6 +166,111 @@ function collectProductVideos(products: any[]): ProductVideo[] {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 📰 COLETOR DE PUBLICAÇÕES DOS PRODUTOS VINCULADOS
+// ═══════════════════════════════════════════════════════════
+
+interface ProductPublication {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  type: 'commercial' | 'technical';
+  title: string;
+  excerpt: string;
+  generatedAt: string;
+}
+
+function extractTitleFromMarkdown(content: string): string {
+  if (!content) return '';
+  // Buscar primeiro H2 ou H1
+  const h2Match = content.match(/^##\s+(.+)$/m);
+  if (h2Match) return h2Match[1].trim();
+  const h1Match = content.match(/^#\s+(.+)$/m);
+  if (h1Match) return h1Match[1].trim();
+  // Fallback: primeira linha não vazia
+  const firstLine = content.split('\n').find(line => line.trim().length > 0);
+  return firstLine?.replace(/^#+\s*/, '').trim() || '';
+}
+
+function extractExcerptFromMarkdown(content: string, maxLength: number = 150): string {
+  if (!content) return '';
+  // Remover títulos e formatação markdown
+  const cleaned = content
+    .replace(/^#+\s+.+$/gm, '') // remover títulos
+    .replace(/\*\*(.+?)\*\*/g, '$1') // remover negrito
+    .replace(/\*(.+?)\*/g, '$1') // remover itálico
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // remover links
+    .replace(/!\[.+?\]\(.+?\)/g, '') // remover imagens
+    .trim();
+  
+  // Pegar primeiro parágrafo
+  const paragraphs = cleaned.split(/\n\n+/).filter(p => p.trim().length > 0);
+  const excerpt = paragraphs[0]?.trim() || '';
+  
+  if (excerpt.length <= maxLength) return excerpt;
+  return excerpt.substring(0, maxLength).trim() + '...';
+}
+
+function collectProductPublications(products: any[]): ProductPublication[] {
+  const publications: ProductPublication[] = [];
+  
+  products.forEach(product => {
+    const productName = product.name || 'Produto';
+    const productId = product.id || '';
+    const productImage = product.image_url;
+    const blogContent = product.individual_blog_content;
+    
+    if (!blogContent) return;
+    
+    const generatedAt = blogContent.generated_at || new Date().toISOString();
+    
+    // Blog Comercial
+    if (blogContent.commercial && typeof blogContent.commercial === 'string' && blogContent.commercial.trim().length > 100) {
+      const title = extractTitleFromMarkdown(blogContent.commercial) || `Blog Comercial - ${productName}`;
+      const excerpt = extractExcerptFromMarkdown(blogContent.commercial);
+      
+      if (excerpt) {
+        publications.push({
+          productId,
+          productName,
+          productImage,
+          type: 'commercial',
+          title,
+          excerpt,
+          generatedAt
+        });
+      }
+    }
+    
+    // Blog Técnico
+    if (blogContent.technical && typeof blogContent.technical === 'string' && blogContent.technical.trim().length > 100) {
+      const title = extractTitleFromMarkdown(blogContent.technical) || `Blog Técnico - ${productName}`;
+      const excerpt = extractExcerptFromMarkdown(blogContent.technical);
+      
+      if (excerpt) {
+        publications.push({
+          productId,
+          productName,
+          productImage,
+          type: 'technical',
+          title,
+          excerpt,
+          generatedAt
+        });
+      }
+    }
+  });
+  
+  // Ordenar por data (mais recentes primeiro) e limitar a 6
+  publications.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime());
+  
+  // Balancear: máximo 3 comerciais e 3 técnicos
+  const commercial = publications.filter(p => p.type === 'commercial').slice(0, 3);
+  const technical = publications.filter(p => p.type === 'technical').slice(0, 3);
+  
+  return [...commercial, ...technical].slice(0, 6);
+}
+
+// ═══════════════════════════════════════════════════════════
 // 🤖 GERADOR DE CONTEÚDO AI PARA LANDING PAGE
 // ═══════════════════════════════════════════════════════════
 
@@ -713,17 +818,23 @@ serve(async (req) => {
     const productVideos = collectProductVideos(products || []);
     console.log('✅ Checkpoint 2.6: Vídeos dos produtos:', productVideos.length);
 
+    // 📰 FASE NOVA: Coletar publicações/blogs dos produtos vinculados
+    console.log('📰 Coletando publicações dos produtos vinculados...');
+    const productPublications = collectProductPublications(products || []);
+    console.log('✅ Checkpoint 2.7: Publicações dos produtos:', productPublications.length);
+
     console.log('🔍 [AI] Campos customizados preservados:', 
       Object.keys(solution.landing_page_custom_text || {})
         .filter(key => solution.landing_page_custom_text[key])
     );
 
-    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos dos produtos ao aiContent
+    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos + publicações ao aiContent
     const finalAiContent = {
       ...aiGeneratedContent,
       testimonials: realTestimonials,
       systemBResources, // 🆕 Adicionar recursos do Sistema B
-      productVideos // 🎬 Adicionar vídeos dos produtos vinculados
+      productVideos, // 🎬 Adicionar vídeos dos produtos vinculados
+      productPublications // 📰 Adicionar publicações dos produtos
     };
 
     // ✅ MERGE CORRETO: Passar separadamente IA e customText
