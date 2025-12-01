@@ -2133,8 +2133,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
           ${systemBResources!.documents.map((doc, index) => {
             const fileSize = doc.tamanho_bytes > 0 
               ? doc.tamanho_bytes < 1024 * 1024 
-                ? \`\${(doc.tamanho_bytes / 1024).toFixed(0)} KB\`
-                : \`\${(doc.tamanho_bytes / (1024 * 1024)).toFixed(1)} MB\`
+                ? `${(doc.tamanho_bytes / 1024).toFixed(0)} KB`
+                : `${(doc.tamanho_bytes / (1024 * 1024)).toFixed(1)} MB`
               : '';
             const fileIcon = (doc.tipo_arquivo || 'pdf') === 'pdf' ? 'fa-file-pdf' : 'fa-file-alt';
             
@@ -2191,6 +2191,271 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     </section>
   </div>
   ` : ''}
+
+  ${(() => {
+    // 🎬 SEÇÃO: VÍDEOS DOS PRODUTOS VINCULADOS
+    const productVideos = aiContent?.productVideos || [];
+    if (productVideos.length === 0) return '';
+    
+    // Gerar Schema.org VideoObject para cada vídeo
+    const videoSchemas = productVideos.map((video: any) => ({
+      '@type': 'VideoObject',
+      name: video.title,
+      description: video.description || `Vídeo sobre ${video.productName}`,
+      thumbnailUrl: video.thumbnail || '',
+      contentUrl: video.url,
+      uploadDate: new Date().toISOString().split('T')[0],
+      about: {
+        '@type': 'Product',
+        name: video.productName
+      }
+    }));
+    
+    // Função para obter badge por tipo
+    const getTypeBadge = (type: string) => {
+      const badges: Record<string, { icon: string; label: string; color: string }> = {
+        youtube: { icon: 'fab fa-youtube', label: 'YouTube', color: '#ff0000' },
+        instagram: { icon: 'fab fa-instagram', label: 'Instagram', color: '#e4405f' },
+        tiktok: { icon: 'fab fa-tiktok', label: 'TikTok', color: '#000000' },
+        technical: { icon: 'fas fa-cog', label: 'Técnico', color: '#3498db' },
+        testimonial: { icon: 'fas fa-comments', label: 'Depoimento', color: '#27ae60' }
+      };
+      return badges[type] || badges.youtube;
+    };
+    
+    return `
+  <!-- 🎬 Seção: Vídeos dos Produtos Vinculados -->
+  <section class="product-videos-section">
+    <div class="container">
+      <h2><i class="fas fa-video"></i> Vídeos dos Produtos Vinculados</h2>
+      <p class="section-subtitle">Veja em ação os produtos que fazem parte desta solução</p>
+      
+      <div class="product-videos-grid">
+        ${productVideos.map((video: any, index: number) => {
+          const badge = getTypeBadge(video.type);
+          const truncatedDesc = video.description 
+            ? (video.description.length > 80 ? video.description.substring(0, 80) + '...' : video.description)
+            : '';
+          
+          return `
+        <div class="product-video-card" data-index="${index}">
+          <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer" class="video-preview-link">
+            <div class="video-preview">
+              ${video.thumbnail 
+                ? `<img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)}" loading="lazy" class="video-thumb">`
+                : `<div class="video-thumb-placeholder"><i class="fas fa-play-circle"></i></div>`
+              }
+              <div class="play-button-overlay">
+                <i class="fas fa-play"></i>
+              </div>
+              <span class="video-type-badge" style="background-color: ${badge.color}">
+                <i class="${badge.icon}"></i> ${badge.label}
+              </span>
+            </div>
+            <div class="video-details">
+              <h4>${escapeHtml(video.title)}</h4>
+              ${truncatedDesc ? `<p>${escapeHtml(truncatedDesc)}</p>` : ''}
+              <span class="product-tag"><i class="fas fa-box"></i> ${escapeHtml(video.productName)}</span>
+            </div>
+          </a>
+        </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+    
+    <!-- Schema.org VideoObject para SEO -->
+    <script type="application/ld+json">
+    ${JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': videoSchemas
+    }, null, 2)}
+    </script>
+  </section>
+  
+  <style>
+    /* 🎬 Estilos da Seção de Vídeos dos Produtos */
+    .product-videos-section {
+      padding: 60px 0;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .product-videos-section h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary-color, #3E4B5E);
+    }
+    
+    .product-videos-section h2 i {
+      color: var(--accent-color, #ff0000);
+      margin-right: 10px;
+    }
+    
+    .product-videos-section .section-subtitle {
+      text-align: center;
+      color: #6c757d;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    
+    .product-videos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .product-video-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .product-video-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .video-preview-link {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    
+    .video-preview {
+      position: relative;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      background: #1a1a2e;
+    }
+    
+    .video-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    .product-video-card:hover .video-thumb {
+      transform: scale(1.05);
+    }
+    
+    .video-thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
+      color: white;
+      font-size: 3rem;
+      opacity: 0.8;
+    }
+    
+    .play-button-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: var(--primary-color, #3E4B5E);
+      transition: transform 0.3s ease, background 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .product-video-card:hover .play-button-overlay {
+      transform: translate(-50%, -50%) scale(1.1);
+      background: white;
+    }
+    
+    .video-type-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .video-details {
+      padding: 1rem 1.25rem;
+    }
+    
+    .video-details h4 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1rem;
+      color: #2d3436;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .video-details p {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.85rem;
+      color: #6c757d;
+      line-height: 1.5;
+    }
+    
+    .product-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      color: var(--primary-color, #3E4B5E);
+      background: rgba(62, 75, 94, 0.1);
+      padding: 4px 10px;
+      border-radius: 15px;
+    }
+    
+    .product-tag i {
+      font-size: 0.7rem;
+    }
+    
+    @media (max-width: 768px) {
+      .product-videos-section {
+        padding: 40px 0;
+      }
+      
+      .product-videos-section h2 {
+        font-size: 1.5rem;
+      }
+      
+      .product-videos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem;
+        padding: 0 1rem;
+      }
+      
+      .play-button-overlay {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+    `;
+  })()}
 
   ${successCases.length > 0 ? `
   <!-- Seção de Depoimentos com Carrossel -->
