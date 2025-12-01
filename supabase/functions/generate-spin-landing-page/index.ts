@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateLandingPageHTML } from "./generateHTML.ts";
+import { fetchSystemBResourcesForProducts } from "./systemBIntegration.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -540,15 +541,26 @@ serve(async (req) => {
       realTestimonialsCount: realTestimonials.length
     });
 
+    // 🔗 FASE NOVA: Buscar recursos do Sistema B (vídeos e documentos)
+    console.log('🔗 Buscando recursos do Sistema B...');
+    const systemBResources = await fetchSystemBResourcesForProducts(products || []);
+    
+    console.log('✅ Checkpoint 2.5: Recursos Sistema B:', {
+      videos: systemBResources.totalVideos,
+      documents: systemBResources.totalDocuments,
+      syncedAt: systemBResources.syncedAt
+    });
+
     console.log('🔍 [AI] Campos customizados preservados:', 
       Object.keys(solution.landing_page_custom_text || {})
         .filter(key => solution.landing_page_custom_text[key])
     );
 
-    // ✅ MERGE: Adicionar depoimentos reais ao aiContent
+    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B ao aiContent
     const finalAiContent = {
       ...aiGeneratedContent,
-      testimonials: realTestimonials
+      testimonials: realTestimonials,
+      systemBResources // 🆕 Adicionar recursos do Sistema B
     };
 
     // ✅ MERGE CORRETO: Passar separadamente IA e customText
@@ -557,7 +569,7 @@ serve(async (req) => {
       solution, 
       products || [], 
       company, 
-      finalAiContent, // ✅ Passar AI + depoimentos reais
+      finalAiContent, // ✅ Passar AI + depoimentos reais + Sistema B
       false // ✅ preview = false (produção - com tracking)
     );
 
