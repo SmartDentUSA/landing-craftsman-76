@@ -737,19 +737,39 @@ serve(async (req) => {
     );
 
     console.log('✅ Checkpoint 4: HTML gerado:', html.length, 'caracteres');
+    
+    // Verificar tamanho do HTML (limite de 10MB para segurança)
+    const htmlSizeKB = Math.round(html.length / 1024);
+    const htmlSizeMB = (html.length / (1024 * 1024)).toFixed(2);
+    console.log(`📏 Tamanho do HTML: ${htmlSizeKB} KB (${htmlSizeMB} MB)`);
+    
+    if (html.length > 10 * 1024 * 1024) {
+      throw new Error(`HTML muito grande: ${htmlSizeMB} MB (limite: 10MB)`);
+    }
 
     // Salvar no banco
-    const { error: updateError } = await supabaseClient
+    console.log('💾 Salvando landing page no banco...');
+    const { error: updateError, data: updateData } = await supabaseClient
       .from('spin_selling_solutions')
       .update({
         landing_page_html: html,
         landing_page_generated_at: new Date().toISOString()
       })
-      .eq('id', solutionId);
+      .eq('id', solutionId)
+      .select('id');
 
     if (updateError) {
-      throw new Error('Erro ao salvar landing page');
+      console.error('❌ Erro ao salvar landing page:', {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        htmlSize: htmlSizeKB + ' KB'
+      });
+      throw new Error(`Erro ao salvar landing page: ${updateError.message || updateError.code}`);
     }
+    
+    console.log('✅ Landing page salva com sucesso:', updateData);
 
     return new Response(
       JSON.stringify({
