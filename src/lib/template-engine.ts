@@ -1942,6 +1942,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             <div style="overflow: hidden; position: relative; padding: 2rem 0;">
                 <div class="animate-infinite-scroll" style="display: flex; gap: 3rem; align-items: center;">
                     {{#partners}}
+                    {{#logo.href}}
+                    <a href="{{logo.href}}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0;">
+                    {{/logo.href}}
                     <img 
                         src="{{logo.src}}"
                         alt="{{#name}}{{name}}{{/name}}{{^name}}{{#seo_description}}{{seo_description}}{{/seo_description}}{{^seo_description}}Parceiro{{/seo_description}}{{/name}}"
@@ -1951,9 +1954,15 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         onmouseover="this.style.filter='grayscale(0%)'"
                         onmouseout="this.style.filter='grayscale(100%)'"
                     />
+                    {{#logo.href}}
+                    </a>
+                    {{/logo.href}}
                     {{/partners}}
                     <!-- Duplicar para loop infinito -->
                     {{#partners}}
+                    {{#logo.href}}
+                    <a href="{{logo.href}}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0;" aria-hidden="true">
+                    {{/logo.href}}
                     <img 
                         src="{{logo.src}}"
                         alt="{{#name}}{{name}}{{/name}}{{^name}}{{#seo_description}}{{seo_description}}{{/seo_description}}{{^seo_description}}Parceiro{{/seo_description}}{{/name}}"
@@ -1964,6 +1973,9 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                         onmouseover="this.style.filter='grayscale(0%)'"
                         onmouseout="this.style.filter='grayscale(100%)'"
                     />
+                    {{#logo.href}}
+                    </a>
+                    {{/logo.href}}
                     {{/partners}}
                 </div>
             </div>
