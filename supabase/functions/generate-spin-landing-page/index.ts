@@ -9,6 +9,163 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════
+// 🎬 COLETOR DE VÍDEOS DOS PRODUTOS VINCULADOS
+// ═══════════════════════════════════════════════════════════
+
+interface ProductVideo {
+  url: string;
+  title: string;
+  description?: string;
+  type: 'youtube' | 'instagram' | 'tiktok' | 'technical' | 'testimonial';
+  productName: string;
+  productId: string;
+  thumbnail?: string;
+}
+
+function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  
+  // YouTube Shorts
+  if (url.includes('/shorts/')) {
+    return url.split('/shorts/')[1]?.split('?')[0] || null;
+  }
+  
+  // youtu.be format
+  if (url.includes('youtu.be')) {
+    return url.split('/').pop()?.split('?')[0] || null;
+  }
+  
+  // youtube.com/watch?v= format
+  if (url.includes('youtube.com/watch')) {
+    try {
+      return new URL(url).searchParams.get('v');
+    } catch {
+      return null;
+    }
+  }
+  
+  // youtube.com/embed/ format
+  if (url.includes('/embed/')) {
+    return url.split('/embed/')[1]?.split('?')[0] || null;
+  }
+  
+  return null;
+}
+
+function generateYouTubeThumbnail(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+}
+
+function collectProductVideos(products: any[]): ProductVideo[] {
+  const videos: ProductVideo[] = [];
+  
+  products.forEach(product => {
+    const productName = product.name || 'Produto';
+    const productId = product.id || '';
+    
+    // 1. YouTube Videos
+    if (product.youtube_videos && Array.isArray(product.youtube_videos)) {
+      product.youtube_videos.forEach((video: any) => {
+        const url = typeof video === 'string' ? video : video.url || video.embed_url;
+        if (!url) return;
+        
+        const videoId = extractYouTubeVideoId(url);
+        videos.push({
+          url,
+          title: typeof video === 'object' ? (video.title || video.titulo || `Vídeo de ${productName}`) : `Vídeo de ${productName}`,
+          description: typeof video === 'object' ? (video.description || video.descricao) : undefined,
+          type: 'youtube',
+          productName,
+          productId,
+          thumbnail: videoId ? generateYouTubeThumbnail(videoId) : undefined
+        });
+      });
+    }
+    
+    // 2. Technical Videos
+    if (product.technical_videos && Array.isArray(product.technical_videos)) {
+      product.technical_videos.forEach((video: any) => {
+        const url = typeof video === 'string' ? video : video.url || video.embed_url;
+        if (!url) return;
+        
+        const videoId = extractYouTubeVideoId(url);
+        videos.push({
+          url,
+          title: typeof video === 'object' ? (video.title || video.titulo || `Vídeo Técnico - ${productName}`) : `Vídeo Técnico - ${productName}`,
+          description: typeof video === 'object' ? (video.description || video.descricao) : undefined,
+          type: 'technical',
+          productName,
+          productId,
+          thumbnail: videoId ? generateYouTubeThumbnail(videoId) : undefined
+        });
+      });
+    }
+    
+    // 3. Testimonial Videos
+    if (product.testimonial_videos && Array.isArray(product.testimonial_videos)) {
+      product.testimonial_videos.forEach((video: any) => {
+        const url = typeof video === 'string' ? video : video.url || video.embed_url;
+        if (!url) return;
+        
+        const videoId = extractYouTubeVideoId(url);
+        videos.push({
+          url,
+          title: typeof video === 'object' ? (video.title || video.titulo || `Depoimento - ${productName}`) : `Depoimento - ${productName}`,
+          description: typeof video === 'object' ? (video.description || video.descricao) : undefined,
+          type: 'testimonial',
+          productName,
+          productId,
+          thumbnail: videoId ? generateYouTubeThumbnail(videoId) : undefined
+        });
+      });
+    }
+    
+    // 4. Instagram Videos
+    if (product.instagram_videos && Array.isArray(product.instagram_videos)) {
+      product.instagram_videos.forEach((video: any) => {
+        const url = typeof video === 'string' ? video : video.url;
+        if (!url) return;
+        
+        videos.push({
+          url,
+          title: typeof video === 'object' ? (video.title || `Instagram - ${productName}`) : `Instagram - ${productName}`,
+          description: typeof video === 'object' ? video.description : undefined,
+          type: 'instagram',
+          productName,
+          productId,
+          thumbnail: typeof video === 'object' ? video.thumbnail : undefined
+        });
+      });
+    }
+    
+    // 5. TikTok Videos
+    if (product.tiktok_videos && Array.isArray(product.tiktok_videos)) {
+      product.tiktok_videos.forEach((video: any) => {
+        const url = typeof video === 'string' ? video : video.url;
+        if (!url) return;
+        
+        videos.push({
+          url,
+          title: typeof video === 'object' ? (video.title || `TikTok - ${productName}`) : `TikTok - ${productName}`,
+          description: typeof video === 'object' ? video.description : undefined,
+          type: 'tiktok',
+          productName,
+          productId,
+          thumbnail: typeof video === 'object' ? video.thumbnail : undefined
+        });
+      });
+    }
+  });
+  
+  // Remover duplicatas por URL e limitar a 12 vídeos
+  const uniqueVideos = videos.filter((video, index, self) => 
+    index === self.findIndex(v => v.url === video.url)
+  );
+  
+  return uniqueVideos.slice(0, 12);
+}
+
+// ═══════════════════════════════════════════════════════════
 // 🤖 GERADOR DE CONTEÚDO AI PARA LANDING PAGE
 // ═══════════════════════════════════════════════════════════
 
@@ -551,16 +708,22 @@ serve(async (req) => {
       syncedAt: systemBResources.syncedAt
     });
 
+    // 🎬 FASE NOVA: Coletar vídeos de todos os produtos vinculados
+    console.log('🎬 Coletando vídeos dos produtos vinculados...');
+    const productVideos = collectProductVideos(products || []);
+    console.log('✅ Checkpoint 2.6: Vídeos dos produtos:', productVideos.length);
+
     console.log('🔍 [AI] Campos customizados preservados:', 
       Object.keys(solution.landing_page_custom_text || {})
         .filter(key => solution.landing_page_custom_text[key])
     );
 
-    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B ao aiContent
+    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos dos produtos ao aiContent
     const finalAiContent = {
       ...aiGeneratedContent,
       testimonials: realTestimonials,
-      systemBResources // 🆕 Adicionar recursos do Sistema B
+      systemBResources, // 🆕 Adicionar recursos do Sistema B
+      productVideos // 🎬 Adicionar vídeos dos produtos vinculados
     };
 
     // ✅ MERGE CORRETO: Passar separadamente IA e customText
