@@ -2265,12 +2265,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     </div>
     
     <!-- Schema.org VideoObject para SEO -->
-    <script type="application/ld+json">
-    ${JSON.stringify({
-      '@context': 'https://schema.org',
-      '@graph': videoSchemas
-    }, null, 2)}
-    </script>
+    <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@graph':videoSchemas})}</script>
   </section>
   
   <style>
