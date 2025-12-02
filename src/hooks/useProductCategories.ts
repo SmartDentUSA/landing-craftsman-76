@@ -1,18 +1,40 @@
+// ============================================================================
+// Hook: useProductCategories v3.0
+// Busca categorias de categories_config com campos Clinical Brain
+// ============================================================================
+
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { AntiHallucinationRules } from '@/components/ClinicalBrain/types';
+
+export interface CategoryConfigItem {
+  id: string;
+  category: string;
+  subcategory: string;
+  clinical_tone: string | null;
+  criticality_percent: number;
+  anti_hallucination_rules: AntiHallucinationRules | null;
+  icon_name: string;
+  target_audience: string[] | null;
+  is_active: boolean;
+}
 
 interface CategoryData {
   categories: string[];
   subcategories: string[];
   categorySubcategoryMap: Record<string, string[]>;
+  configItems: CategoryConfigItem[];
+  configByProductType: Record<string, CategoryConfigItem>;
 }
 
 export const useProductCategories = () => {
   const [categoryData, setCategoryData] = useState<CategoryData>({
     categories: [],
     subcategories: [],
-    categorySubcategoryMap: {}
+    categorySubcategoryMap: {},
+    configItems: [],
+    configByProductType: {}
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -21,65 +43,93 @@ export const useProductCategories = () => {
     try {
       setLoading(true);
       
-      // Buscar todas as categorias e subcategorias distintas
+      // Buscar de categories_config (fonte correta com dados Clinical Brain)
       const { data, error } = await supabase
-        .from('products_repository')
-        .select('category, subcategory')
-        .not('category', 'is', null)
-        .order('category');
+        .from('categories_config')
+        .select(`
+          id,
+          category,
+          subcategory,
+          clinical_tone,
+          criticality_percent,
+          anti_hallucination_rules,
+          icon_name,
+          target_audience,
+          is_active
+        `)
+        .eq('is_active', true)
+        .order('category')
+        .order('subcategory');
 
       if (error) throw error;
 
-      // Processar dados para criar listas únicas
+      // Processar dados
+      const configItems: CategoryConfigItem[] = (data || []).map(item => ({
+        id: item.id,
+        category: (item.category as string)?.trim() || '',
+        subcategory: (item.subcategory as string)?.trim() || '',
+        clinical_tone: item.clinical_tone as string | null,
+        criticality_percent: (item.criticality_percent as number) || 0,
+        anti_hallucination_rules: item.anti_hallucination_rules as unknown as AntiHallucinationRules | null,
+        icon_name: (item.icon_name as string) || 'Package',
+        target_audience: Array.isArray(item.target_audience) ? (item.target_audience as string[]) : null,
+        is_active: (item.is_active as boolean) ?? true
+      }));
+
+      // Extrair categorias únicas
       const categories = [...new Set(
-        data
-          .map(item => item.category)
-          .filter(Boolean)
-          .map(cat => cat?.trim())
-          .filter(cat => cat && cat.length > 0)
+        configItems.map(item => item.category).filter(Boolean)
       )].sort();
 
+      // Extrair subcategorias únicas
       const subcategories = [...new Set(
-        data
-          .map(item => item.subcategory)
-          .filter(Boolean)
-          .map(subcat => subcat?.trim())
-          .filter(subcat => subcat && subcat.length > 0)
+        configItems.map(item => item.subcategory).filter(Boolean)
       )].sort();
 
       // Criar mapeamento categoria -> subcategorias
       const categorySubcategoryMap: Record<string, string[]> = {};
-      data.forEach(item => {
+      configItems.forEach(item => {
         if (item.category && item.subcategory) {
-          const category = item.category.trim();
-          const subcategory = item.subcategory.trim();
-          
-          if (!categorySubcategoryMap[category]) {
-            categorySubcategoryMap[category] = [];
+          if (!categorySubcategoryMap[item.category]) {
+            categorySubcategoryMap[item.category] = [];
           }
-          
-          if (!categorySubcategoryMap[category].includes(subcategory)) {
-            categorySubcategoryMap[category].push(subcategory);
+          if (!categorySubcategoryMap[item.category].includes(item.subcategory)) {
+            categorySubcategoryMap[item.category].push(item.subcategory);
           }
         }
       });
 
-      // Ordenar subcategorias de cada categoria
+      // Ordenar subcategorias
       Object.keys(categorySubcategoryMap).forEach(category => {
         categorySubcategoryMap[category].sort();
+      });
+
+      // Criar mapeamento por product_type (CATEGORIA ou CATEGORIA > SUBCATEGORIA)
+      const configByProductType: Record<string, CategoryConfigItem> = {};
+      configItems.forEach(item => {
+        // Mapear por "CATEGORIA > SUBCATEGORIA"
+        const fullKey = `${item.category} > ${item.subcategory}`;
+        configByProductType[fullKey] = item;
+        
+        // Também mapear só pela categoria (para fallback)
+        if (!configByProductType[item.category]) {
+          configByProductType[item.category] = item;
+        }
       });
 
       setCategoryData({
         categories,
         subcategories,
-        categorySubcategoryMap
+        categorySubcategoryMap,
+        configItems,
+        configByProductType
       });
 
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Error fetching categories from categories_config:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar categorias",
+        description: "Erro ao carregar categorias do Clinical Brain",
         variant: "destructive"
       });
     } finally {
@@ -95,6 +145,27 @@ export const useProductCategories = () => {
     return categoryData.categorySubcategoryMap[category] || [];
   }, [categoryData.categorySubcategoryMap]);
 
+  const getConfigForProductType = useCallback((productType: string | null | undefined): CategoryConfigItem | null => {
+    if (!productType) return null;
+    
+    // Tentar match exato primeiro
+    if (categoryData.configByProductType[productType]) {
+      return categoryData.configByProductType[productType];
+    }
+    
+    // Extrair categoria se for formato "CATEGORIA > SUBCATEGORIA"
+    const category = productType.split('>')[0]?.trim();
+    if (category && categoryData.configByProductType[category]) {
+      return categoryData.configByProductType[category];
+    }
+    
+    return null;
+  }, [categoryData.configByProductType]);
+
+  const getConfigItemsForCategory = useCallback((category: string): CategoryConfigItem[] => {
+    return categoryData.configItems.filter(item => item.category === category);
+  }, [categoryData.configItems]);
+
   const refreshCategories = useCallback(() => {
     fetchCategories();
   }, [fetchCategories]);
@@ -103,6 +174,9 @@ export const useProductCategories = () => {
     categories: categoryData.categories,
     subcategories: categoryData.subcategories,
     getSubcategoriesForCategory,
+    getConfigForProductType,
+    getConfigItemsForCategory,
+    configItems: categoryData.configItems,
     loading,
     refreshCategories
   };
