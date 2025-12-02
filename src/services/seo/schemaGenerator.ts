@@ -97,17 +97,40 @@ export function generateWorkflowStageSchema(product: {
   
   const applicableStages = Object.entries(product.workflow_stages)
     .filter(([_, stage]: [string, any]) => stage.applicable)
-    .map(([key, stage]: [string, any], index) => ({
-      '@type': 'HowToStep',
-      position: index + 1,
-      name: stageLabels[key],
-      text: stage.description || '',
-      itemListElement: stage.competitive_advantages?.map((advantage: string, i: number) => ({
-        '@type': 'HowToTip',
-        position: i + 1,
-        text: advantage
-      })) || []
-    }));
+    .map(([key, stage]: [string, any], index) => {
+      const stepItem: any = {
+        '@type': 'HowToStep',
+        position: index + 1,
+        name: stageLabels[key],
+        text: stage.description || '',
+        itemListElement: []
+      };
+      
+      // Add competitive advantages as tips
+      if (stage.competitive_advantages && Array.isArray(stage.competitive_advantages)) {
+        stepItem.itemListElement.push(...stage.competitive_advantages.map((advantage: string, i: number) => ({
+          '@type': 'HowToTip',
+          position: i + 1,
+          text: advantage
+        })));
+      }
+      
+      // ✅ NEW: Add related_products as HowToSupply (materials/tools)
+      if (stage.related_products && Array.isArray(stage.related_products) && stage.related_products.length > 0) {
+        stepItem.supply = stage.related_products.map((rp: any, i: number) => ({
+          '@type': 'HowToSupply',
+          position: i + 1,
+          name: rp.product_name || rp.name || 'Produto relacionado',
+          description: rp.role === 'consumivel' 
+            ? 'Material consumível necessário para esta etapa'
+            : rp.role === 'acessorio'
+              ? 'Acessório complementar para otimizar o processo'
+              : 'Produto relacionado ao workflow'
+        }));
+      }
+      
+      return stepItem;
+    });
   
   if (applicableStages.length === 0) {
     return '';
