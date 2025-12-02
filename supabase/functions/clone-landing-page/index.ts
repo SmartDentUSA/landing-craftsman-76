@@ -130,25 +130,132 @@ function generateAutoSEO(html: string, brand: string, product: string, companyDa
 }
 
 // ============================================
-// SANITIZE HTML
+// CLEAN MALFORMED HTML (NEW v3.2)
+// ============================================
+function cleanMalformedHTML(html: string): string {
+  let cleaned = html;
+  
+  // 1. Remove nested <!doctype html>...</html> inside <style> tags
+  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<!doctype[^>]*>[\s\S]*?<\/html>[\s\S]*?<\/style>/gi, '');
+  
+  // 2. Remove duplicate <head> sections inside body
+  cleaned = cleaned.replace(/(<body[^>]*>[\s\S]*?)<head[^>]*>[\s\S]*?<\/head>/gi, '$1');
+  
+  // 3. Remove duplicate <!DOCTYPE> declarations
+  const doctypeMatches = cleaned.match(/<!doctype[^>]*>/gi);
+  if (doctypeMatches && doctypeMatches.length > 1) {
+    for (let i = 1; i < doctypeMatches.length; i++) {
+      cleaned = cleaned.replace(doctypeMatches[i], '');
+    }
+  }
+  
+  // 4. Remove duplicate <html> tags
+  cleaned = cleaned.replace(/(<html[^>]*>[\s\S]*?)<html[^>]*>/gi, '$1');
+  cleaned = cleaned.replace(/<\/html>[\s\S]*?(<\/html>)/gi, '$1');
+  
+  console.log('✅ Malformed HTML cleaned');
+  return cleaned;
+}
+
+// ============================================
+// PRESERVE YOUTUBE VIDEOS (NEW v3.2)
+// ============================================
+function preserveYouTubeVideos(html: string): { html: string; videos: string[] } {
+  const videos: string[] = [];
+  
+  const youtubePatterns = [
+    /<iframe[^>]*(?:youtube\.com|youtu\.be|youtube-nocookie\.com)[^>]*>[\s\S]*?<\/iframe>/gi,
+    /<iframe[^>]*data-(?:lazy-)?src=["'][^"']*(?:youtube\.com|youtu\.be)[^"']*["'][^>]*>[\s\S]*?<\/iframe>/gi,
+  ];
+  
+  let processedHTML = html;
+  let videoIndex = 0;
+  
+  for (const pattern of youtubePatterns) {
+    processedHTML = processedHTML.replace(pattern, (match) => {
+      videos.push(match);
+      const placeholder = `<!--YOUTUBE_PLACEHOLDER_${videoIndex}-->`;
+      videoIndex++;
+      return placeholder;
+    });
+  }
+  
+  console.log(`🎥 Preserved ${videos.length} YouTube videos`);
+  return { html: processedHTML, videos };
+}
+
+function restoreYouTubeVideos(html: string, videos: string[]): string {
+  let result = html;
+  videos.forEach((video, index) => {
+    result = result.replace(`<!--YOUTUBE_PLACEHOLDER_${index}-->`, video);
+  });
+  console.log(`🎥 Restored ${videos.length} YouTube videos`);
+  return result;
+}
+
+// ============================================
+// SANITIZE HTML (EXPANDED v3.2)
 // ============================================
 function sanitizeHTML(html: string): string {
   let sanitized = html
-    .replace(/\s(onclick|onerror|onload|onmouseover|onfocus|onblur)="[^"]*"/gi, '')
+    .replace(/\s(onclick|onerror|onload|onmouseover|onfocus|onblur|onsubmit|onchange)="[^"]*"/gi, '')
     .replace(/href="javascript:[^"]*"/gi, 'href="#"')
     .replace(/<script[^>]*gtm[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<noscript[^>]*>[\s\S]*?<iframe[^>]*gtm[^>]*>[\s\S]*?<\/noscript>/gi, '')
+    .replace(/<noscript[^>]*>[\s\S]*?googletagmanager[\s\S]*?<\/noscript>/gi, '')
     .replace(/<script[^>]*google-analytics[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*ga\s*\([^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*cookie[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?fbq\s*\([\s\S]*?<\/script>/gi, '')
     .replace(/<img[^>]*facebook[^>]*>/gi, '')
-    .replace(/<img[^>]*pixel[^>]*>/gi, '');
+    .replace(/<img[^>]*pixel[^>]*>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?1app\.com[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?renderScripts[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?onClickButton[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?window\.ep_id[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?window\.__initialData[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?hotjar[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?clarity[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?rdstation[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?document\.head\.appendChild[\s\S]*?<\/script>/gi, '');
   
   return sanitized;
 }
 
 // ============================================
-// PRESERVE VIDEOS (NEW in v3.0)
+// REMOVE BUILDER ELEMENTS (NEW v3.2)
+// ============================================
+function removeBuilderElements(html: string): string {
+  let result = html;
+  
+  const builderPatterns = [
+    /<a[^>]*class="[^"]*support_fab[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
+    /<div[^>]*class="[^"]*whatsapp-fab[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*float-whatsapp[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="lgpd_consent"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*lgpd[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*cookie-consent[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="cookie-law-info-bar"[^>]*>[\s\S]*?<\/div>/gi,
+    /<dialog[^>]*id="pageModal"[^>]*>[\s\S]*?<\/dialog>/gi,
+    /<div[^>]*id="pageModal"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*popup-overlay[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*modal-backdrop[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="tawk-[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*intercom[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*drift[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*builder-settings[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+  ];
+  
+  for (const pattern of builderPatterns) {
+    result = result.replace(pattern, '<!-- BUILDER ELEMENT REMOVED -->');
+  }
+  
+  console.log('✅ Builder elements removed');
+  return result;
+}
+
+// ============================================
+// COUNT VIDEOS
 // ============================================
 function countVideos(html: string): number {
   const videoPatterns = [
@@ -166,29 +273,50 @@ function countVideos(html: string): number {
 }
 
 // ============================================
-// REMOVE MANUFACTURER ELEMENTS (preserving videos)
+// REMOVE MANUFACTURER ELEMENTS (EXPANDED v3.2)
 // ============================================
-function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; videosPreserved: number } {
+function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; formsRemoved: number; videosPreserved: number } {
   let result = html;
   let headerRemoved = false;
   let footerRemoved = false;
+  let formsRemoved = 0;
   
-  // Count videos before processing
   const videosPreserved = countVideos(html);
   console.log(`🎥 Found ${videosPreserved} videos to preserve`);
   
-  // Header patterns - be more careful not to remove video containers
+  // HEADER PATTERNS (expanded)
   const headerPatterns = [
     /<header[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/header>)[\s\S]*?<\/header>/gi,
-    /<div[^>]*class="[^"]*site-header[^"]*"[^>]*>(?![\s\S]*<(?:video|iframe))[\s\S]*?<\/div>/gi,
-    /<nav[^>]*class="[^"]*main-nav[^"]*"[^>]*>[\s\S]*?<\/nav>/gi,
-    /<div[^>]*id="masthead"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*(?:site-header|main-header|page-header|header-wrapper)[^"]*"[^>]*>(?![\s\S]*<(?:video|iframe))[\s\S]*?<\/div>/gi,
+    /<nav[^>]*class="[^"]*(?:main-nav|primary-nav|site-nav|header-nav)[^"]*"[^>]*>[\s\S]*?<\/nav>/gi,
+    /<div[^>]*id="(?:masthead|site-header|header)"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="header-outer"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="header-space"[^>]*>[\s\S]*?<\/div>/gi,
   ];
   
+  // FOOTER PATTERNS (expanded)
   const footerPatterns = [
     /<footer[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/footer>)[\s\S]*?<\/footer>/gi,
-    /<div[^>]*class="[^"]*site-footer[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="colophon"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*(?:site-footer|main-footer|page-footer|footer-wrapper)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="(?:colophon|footer|site-footer)"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*(?:rodape|bottom-bar|footer-bottom)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="nectar_fullscreen_rows"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="footer-outer"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*class="[^"]*(?:et_pb_section_footer|fusion-footer)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<section[^>]*id="(?:contato|contact|footer)"[^>]*>[\s\S]*?<\/section>/gi,
+  ];
+  
+  // FORM PATTERNS (new)
+  const formPatterns = [
+    /<form[^>]*action=["'][^"']*(?:contato|contact|lead|newsletter|subscribe|cadastro|form)[^"']*["'][^>]*>[\s\S]*?<\/form>/gi,
+    /<form[^>]*class="[^"]*(?:contact|lead|newsletter|subscribe|cadastro|wpcf7)[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
+    /<form[^>]*class="[^"]*rdstation[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
+    /<div[^>]*class="[^"]*rd-form[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<form[^>]*action="[^"]*mailchimp[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
+    /<form[^>]*id="mc-embedded-subscribe-form"[^>]*>[\s\S]*?<\/form>/gi,
+    /<section[^>]*class="[^"]*(?:contact|formulario|form-section)[^"]*"[^>]*>[\s\S]*?<\/section>/gi,
+    /<div[^>]*class="[^"]*hbspt-form[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<form[^>]*class="[^"]*elementor-form[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
   ];
   
   for (const pattern of headerPatterns) {
@@ -205,7 +333,16 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
     }
   }
   
-  return { html: result, headerRemoved, footerRemoved, videosPreserved };
+  for (const pattern of formPatterns) {
+    const matches = result.match(pattern);
+    if (matches) {
+      formsRemoved += matches.length;
+      result = result.replace(pattern, '<!-- FORM REMOVED -->');
+    }
+  }
+  
+  console.log(`✅ Removed ${formsRemoved} manufacturer forms`);
+  return { html: result, headerRemoved, footerRemoved, formsRemoved, videosPreserved };
 }
 
 // ============================================
@@ -1600,7 +1737,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
 }
 
 // ============================================
-// MAIN PROCESSING FUNCTION
+// MAIN PROCESSING FUNCTION (v3.2 - Enhanced Cleaning)
 // ============================================
 async function processLandingPage(
   html: string,
@@ -1615,34 +1752,47 @@ async function processLandingPage(
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
   const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
   
-  console.log(`🚀 Starting LP Clone v3.0 for ${brand} ${product}`);
+  console.log(`🚀 Starting LP Clone v3.2 for ${brand} ${product}`);
   if (productData) {
     console.log(`📦 Product enrichment enabled: ${productData.name}`);
   }
   
-  // Step 1: Sanitize
-  let processedHTML = sanitizeHTML(html);
+  // Step 1: CLEAN MALFORMED HTML (NEW - remove nested documents)
+  let processedHTML = cleanMalformedHTML(html);
+  
+  // Step 2: PRESERVE YOUTUBE VIDEOS (NEW - extract before processing)
+  const { html: htmlWithoutVideos, videos: preservedVideos } = preserveYouTubeVideos(processedHTML);
+  processedHTML = htmlWithoutVideos;
+  
+  // Step 3: SANITIZE (expanded - remove tracking/builder scripts)
+  processedHTML = sanitizeHTML(processedHTML);
   console.log('✅ HTML sanitized');
   
-  // Step 2: Remove manufacturer elements (preserving videos)
-  const { html: cleanedHTML, headerRemoved, footerRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
+  // Step 4: REMOVE MANUFACTURER ELEMENTS (expanded - includes forms)
+  const { html: cleanedHTML, headerRemoved, footerRemoved, formsRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
   processedHTML = cleanedHTML;
-  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
+  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, forms: ${formsRemoved}, videos preserved: ${videosPreserved})`);
   
-  // Step 3: Rewrite CTAs
+  // Step 5: REMOVE BUILDER ELEMENTS (NEW - FABs, LGPD, modals, chat widgets)
+  processedHTML = removeBuilderElements(processedHTML);
+  
+  // Step 6: RESTORE YOUTUBE VIDEOS (NEW - re-inject videos)
+  processedHTML = restoreYouTubeVideos(processedHTML, preservedVideos);
+  
+  // Step 7: Rewrite CTAs
   const { html: ctaHTML, count: ctasRewritten } = rewriteCTAs(processedHTML, ctaUrl);
   processedHTML = ctaHTML;
   console.log(`✅ ${ctasRewritten} CTAs rewritten`);
   
-  // Step 4: Capture and upload images with proper folder structure
+  // Step 8: Capture and upload images with proper folder structure
   const { html: imageHTML, images, heroImageUrl } = await captureAndUploadImages(processedHTML, supabase, brand, product);
   processedHTML = imageHTML;
   console.log(`✅ ${images.filter(i => i.status === 'success').length} images captured to /${slugify(brand)}/${slugify(product)}/`);
   
-  // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
+  // Step 9: REWRITE IMAGE ALT/TITLE ATTRIBUTES
   processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
   
-  // Step 5: Generate auto SEO if not provided
+  // Step 10: Generate auto SEO if not provided
   const autoSEO = generateAutoSEO(html, brand, product, companyData);
   
   // GUARANTEE: OG Image must be from Supabase or use company logo
@@ -1661,11 +1811,11 @@ async function processLandingPage(
   };
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
-  // Step 6: Inject SEO with complete Schema (now with productData for HowTo/FAQ)
+  // Step 11: Inject SEO with complete Schema (now with productData for HowTo/FAQ)
   processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage, productData);
   console.log('✅ SEO and Schema.org injected');
   
-  // Step 7: Insert Smart Dent header/footer (now with Clinical Brain context)
+  // Step 12: Insert Smart Dent header/footer (now with Clinical Brain context)
   processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl, productData);
   console.log('✅ Smart Dent header/footer inserted');
   
@@ -1676,7 +1826,9 @@ async function processLandingPage(
     cssPreserved: true,
     headerRemoved,
     footerRemoved,
+    formsRemoved,
     videosPreserved,
+    youtubeVideosRestored: preservedVideos.length,
   };
   
   // Check if product enrichment was applied
@@ -1688,7 +1840,7 @@ async function processLandingPage(
   ));
   
   const score = calculateScore(stats, finalSEO, finalOgImage, hasProductEnrichment);
-  console.log(`🎉 LP Clone v3.0 complete! Score: ${score}/10 ${hasProductEnrichment ? '(Product Enriched)' : ''}`);
+  console.log(`🎉 LP Clone v3.2 complete! Score: ${score}/10 ${hasProductEnrichment ? '(Product Enriched)' : ''}`);
   
   return {
     html: processedHTML,
