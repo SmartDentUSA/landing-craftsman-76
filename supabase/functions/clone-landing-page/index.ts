@@ -1235,9 +1235,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       ${footerConfig.locations && footerConfig.locations.length > 0 
         ? footerConfig.locations.map((loc: any) => `
           <div>
-            <strong>${loc.label || company}</strong>
-            ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
-            ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
+            <strong>${loc.title || loc.label || company}</strong>
             ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
           </div>
         `).join('') 
