@@ -1,3 +1,8 @@
+// ============================================================================
+// CLINICAL BRAIN — TYPES
+// Interfaces e tipos para o sistema Clinical Brain
+// ============================================================================
+
 export interface ForbiddenProduct {
   product_id?: string;
   product_name: string;
@@ -26,15 +31,14 @@ export const DEFAULT_ANTI_HALLUCINATION_RULES: AntiHallucinationRules = {
   always_explain: []
 };
 
-export const PRODUCT_TYPES = [
-  { value: 'resina_rigida', label: 'Resina Rígida', icon: 'Layers' },
-  { value: 'resina_flexivel', label: 'Resina Flexível', icon: 'Waves' },
-  { value: 'scanner', label: 'Scanner Intraoral', icon: 'ScanLine' },
-  { value: 'impressora', label: 'Impressora 3D', icon: 'Printer' },
-  { value: 'software', label: 'Software CAD/CAM', icon: 'Monitor' },
-  { value: 'acessorio', label: 'Acessório', icon: 'Wrench' },
-  { value: 'cimento', label: 'Cimento Odontológico', icon: 'FlaskConical' },
-  { value: 'cabine_uv', label: 'Cabine UV', icon: 'Sun' }
-] as const;
-
-export type ProductType = typeof PRODUCT_TYPES[number]['value'];
+// ============================================================================
+// NOTA: PRODUCT_TYPES REMOVIDO
+// ============================================================================
+// Os tipos de produto agora são dinâmicos, vindos do banco de dados
+// via useProductCategories(). O formato é:
+// - "CATEGORIA" (ex: "RESINAS 3D")
+// - "CATEGORIA > SUBCATEGORIA" (ex: "RESINAS 3D > Biocompatíveis")
+//
+// O mapeamento de ícones está em icons-map.ts
+// O mapeamento de tons de voz está em master-system-prompt.ts (getToneByProductType)
+// ============================================================================
