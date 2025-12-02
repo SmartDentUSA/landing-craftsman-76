@@ -735,7 +735,7 @@ function injectPremiumCSS(): string {
 
       /* ===== FOOTER PREMIUM (IGUAL LP SPIN) ===== */
       .sd-premium-footer {
-        background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
+        background: linear-gradient(to bottom, #2d2d2d, #1a1a1a) !important;
         color: #e0e0e0;
         padding: 3rem 0 2rem;
         margin-top: 3rem;
