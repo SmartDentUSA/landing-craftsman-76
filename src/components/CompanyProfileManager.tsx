@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2, Menu } from "lucide-react";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
@@ -19,6 +19,7 @@ import { TrackingSEOTab } from "./TrackingSEOTab";
 import { InternationalPartnershipsManager } from "./InternationalPartnershipsManager";
 import { NPSInsightsTab } from "./NPSInsightsTab";
 import { ImageUploader } from "@/components/ImageUploader";
+import { NavigationFooterTab } from "./NavigationFooterTab";
 
 interface Video {
   url: string;
@@ -110,6 +111,22 @@ interface CompanyProfile {
   social_media_hashtags?: string[];  // #Redes sociais
   social_media_handles?: string[];   // @ Redes Sociais
   youtube_tags?: string[];           // #Tags Youtube
+  
+  // ✨ NOVO: Navegação e Footer global
+  navigation_footer_config?: {
+    navigation_menu: Array<{
+      label: string;
+      href: string;
+      order: number;
+      openInNewTab?: boolean;
+    }>;
+    footer: {
+      title: string;
+      locations: Array<{ title: string; address: string }>;
+      links: Array<{ label: string; href: string }>;
+      social_links: Array<{ platform: string; href: string; icon_src: string; icon_alt: string }>;
+    };
+  };
 }
 
 interface CompanyProfileManagerProps {
@@ -166,6 +183,17 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
     social_media_hashtags: [],
     social_media_handles: [],
     youtube_tags: [],
+    
+    // ✨ NOVO: Navegação e Footer
+    navigation_footer_config: {
+      navigation_menu: [],
+      footer: {
+        title: '',
+        locations: [],
+        links: [],
+        social_links: []
+      }
+    }
   });
   
   const [loading, setLoading] = useState(true);
@@ -264,6 +292,12 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           social_media_hashtags: (data as any).social_media_hashtags || [],
           social_media_handles: (data as any).social_media_handles || [],
           youtube_tags: (data as any).youtube_tags || [],
+          
+          // ✨ NOVO: Carregar navigation_footer_config
+          navigation_footer_config: (data as any).navigation_footer_config || {
+            navigation_menu: [],
+            footer: { title: '', locations: [], links: [], social_links: [] }
+          },
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
@@ -342,6 +376,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           company_logo_url: profile.company_logo_url,
           company_logo_supabase_path: profile.company_logo_supabase_path || null,
           youtube_company_footer: profile.youtube_company_footer,
+          
+          // ✨ NOVO: Salvar navigation_footer_config
+          navigation_footer_config: profile.navigation_footer_config || null,
+          
           updated_at: new Date().toISOString()
         };
 
@@ -479,6 +517,10 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
               <TabsTrigger value="tracking" className="flex items-center gap-1 data-[state=active]:bg-background">
                 <Activity className="h-3 w-3" />
                 TRK SEO
+              </TabsTrigger>
+              <TabsTrigger value="navigation" className="flex items-center gap-1 data-[state=active]:bg-background">
+                <Menu className="h-3 w-3" />
+                Navegação & Footer
               </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
@@ -1229,6 +1271,19 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             <TrackingSEOTab 
               profile={profile}
               setProfile={setProfile}
+            />
+          </TabsContent>
+
+          <TabsContent value="navigation" className="space-y-4">
+            <NavigationFooterTab
+              config={profile.navigation_footer_config || {
+                navigation_menu: [],
+                footer: { title: '', locations: [], links: [], social_links: [] }
+              }}
+              onChange={(config) => setProfile(prev => ({
+                ...prev,
+                navigation_footer_config: config
+              }))}
             />
           </TabsContent>
         </Tabs>
