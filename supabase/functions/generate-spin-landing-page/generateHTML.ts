@@ -2463,7 +2463,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     `;
   })()}
 
-  ${/* 📰 SEÇÃO: ÚLTIMAS PUBLICAÇÕES DOS PRODUTOS */
+  ${/* 📰 SEÇÃO: ÚLTIMAS PUBLICAÇÕES DO SISTEMA B */
   (() => {
     const publications = aiContent?.productPublications || [];
     if (publications.length === 0) return '';
@@ -2480,14 +2480,15 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       '@type': 'Article',
       'headline': pub.title,
       'description': pub.excerpt,
-      'image': pub.productImage || company?.company_logo_url,
-      'datePublished': pub.generatedAt,
+      'image': pub.image_url || company?.company_logo_url,
+      'url': pub.url,
+      'datePublished': pub.published_at,
       'author': { '@type': 'Organization', 'name': company?.company_name || 'Empresa' },
-      'about': { '@type': 'Product', 'name': pub.productName }
+      'articleSection': pub.category?.name
     }));
     
     return `
-  <!-- 📰 SEÇÃO: ÚLTIMAS PUBLICAÇÕES -->
+  <!-- 📰 SEÇÃO: ÚLTIMAS PUBLICAÇÕES (SISTEMA B) -->
   <section class="latest-publications-section">
     <div class="container">
       <h2><i class="fas fa-newspaper"></i> Últimas Publicações</h2>
@@ -2495,23 +2496,25 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       
       <div class="publications-grid">
         ${publications.map((pub: any) => `
-          <article class="publication-card">
-            <div class="publication-image">
-              ${pub.productImage 
-                ? `<img src="${escHtml(pub.productImage)}" alt="${escHtml(pub.productName)}" loading="lazy">`
-                : `<div class="publication-placeholder"><i class="fas fa-file-alt"></i></div>`
-              }
-              <span class="publication-badge ${pub.type}">${pub.type === 'commercial' ? '📊 Comercial' : '🔬 Técnico'}</span>
-            </div>
-            <div class="publication-content">
-              <span class="publication-product"><i class="fas fa-box"></i> ${escHtml(pub.productName)}</span>
-              <h3>${escHtml(pub.title)}</h3>
-              <p class="publication-excerpt">${escHtml(pub.excerpt)}</p>
-              <div class="publication-meta">
-                <span class="publication-date"><i class="far fa-calendar"></i> ${formatDate(pub.generatedAt)}</span>
+          <a href="${escHtml(pub.url)}" target="_blank" rel="noopener noreferrer" class="publication-card-link">
+            <article class="publication-card">
+              <div class="publication-image">
+                ${pub.image_url 
+                  ? `<img src="${escHtml(pub.image_url)}" alt="${escHtml(pub.title)}" loading="lazy">`
+                  : `<div class="publication-placeholder"><i class="fas fa-file-alt"></i></div>`
+                }
+                <span class="publication-badge">${pub.category?.letter || '📄'} ${escHtml(pub.category?.name || 'Artigo')}</span>
               </div>
-            </div>
-          </article>
+              <div class="publication-content">
+                <h3>${escHtml(pub.title)}</h3>
+                <p class="publication-excerpt">${escHtml(pub.excerpt)}</p>
+                <div class="publication-meta">
+                  <span class="publication-date"><i class="far fa-calendar"></i> ${formatDate(pub.published_at)}</span>
+                  <span class="read-more">Ler artigo <i class="fas fa-arrow-right"></i></span>
+                </div>
+              </div>
+            </article>
+          </a>
         `).join('')}
       </div>
     </div>
@@ -2525,20 +2528,22 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     .latest-publications-section h2 i { color: #e74c3c; margin-right: 10px; }
     .latest-publications-section .section-subtitle { text-align: center; color: #6c757d; margin-bottom: 2rem; font-size: 1.1rem; }
     .publications-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+    .publication-card-link { text-decoration: none; color: inherit; display: block; }
+    .publication-card-link:hover .publication-card { transform: translateY(-8px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
     .publication-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #f0f0f0; }
-    .publication-card:hover { transform: translateY(-8px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
-    .publication-image { position: relative; height: 160px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .publication-image { position: relative; height: 180px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
     .publication-image img { width: 100%; height: 100%; object-fit: cover; }
     .publication-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; opacity: 0.6; }
-    .publication-badge { position: absolute; top: 12px; right: 12px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-    .publication-badge.commercial { background: linear-gradient(135deg, #11998e, #38ef7d); color: white; }
-    .publication-badge.technical { background: linear-gradient(135deg, #4776E6, #8E54E9); color: white; }
+    .publication-badge { position: absolute; top: 12px; right: 12px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.95); color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .publication-content { padding: 1.25rem; }
-    .publication-product { font-size: 0.8rem; color: #6c757d; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 0.5rem; }
-    .publication-card h3 { font-size: 1.1rem; margin: 0.5rem 0; line-height: 1.4; color: #2d3436; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .publication-card h3 { font-size: 1.1rem; margin: 0 0 0.75rem 0; line-height: 1.4; color: #2d3436; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .publication-excerpt { color: #636e72; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .publication-meta { display: flex; justify-content: space-between; align-items: center; }
     .publication-date { font-size: 0.8rem; color: #adb5bd; display: flex; align-items: center; gap: 5px; }
+    .read-more { color: var(--primary-color, #3E4B5E); font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; }
+    .publication-card-link:hover .read-more { color: #e74c3c; }
+    .publication-card-link:hover .read-more i { transform: translateX(3px); }
+    .read-more i { transition: transform 0.2s ease; }
     @media (max-width: 768px) { .latest-publications-section { padding: 40px 0; } .latest-publications-section h2 { font-size: 1.5rem; } .publications-grid { grid-template-columns: 1fr; } }
   </style>
     `;
