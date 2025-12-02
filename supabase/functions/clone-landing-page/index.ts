@@ -130,119 +130,25 @@ function generateAutoSEO(html: string, brand: string, product: string, companyDa
 }
 
 // ============================================
-// CLEAN MALFORMED HTML (CONSERVATIVE v3.3)
-// ============================================
-function cleanMalformedHTML(html: string): string {
-  // Only fix truly malformed HTML, don't be aggressive
-  let cleaned = html;
-  
-  // Only remove duplicate DOCTYPE if they exist (keep first one)
-  const doctypeMatches = cleaned.match(/<!doctype[^>]*>/gi);
-  if (doctypeMatches && doctypeMatches.length > 1) {
-    // Keep the first, remove subsequent ones
-    let firstFound = false;
-    cleaned = cleaned.replace(/<!doctype[^>]*>/gi, (match) => {
-      if (!firstFound) {
-        firstFound = true;
-        return match;
-      }
-      return '';
-    });
-  }
-  
-  console.log('✅ Malformed HTML cleaned');
-  return cleaned;
-}
-
-// ============================================
-// PRESERVE YOUTUBE VIDEOS (NEW v3.2)
-// ============================================
-function preserveYouTubeVideos(html: string): { html: string; videos: string[] } {
-  const videos: string[] = [];
-  
-  const youtubePatterns = [
-    /<iframe[^>]*(?:youtube\.com|youtu\.be|youtube-nocookie\.com)[^>]*>[\s\S]*?<\/iframe>/gi,
-    /<iframe[^>]*data-(?:lazy-)?src=["'][^"']*(?:youtube\.com|youtu\.be)[^"']*["'][^>]*>[\s\S]*?<\/iframe>/gi,
-  ];
-  
-  let processedHTML = html;
-  let videoIndex = 0;
-  
-  for (const pattern of youtubePatterns) {
-    processedHTML = processedHTML.replace(pattern, (match) => {
-      videos.push(match);
-      const placeholder = `<!--YOUTUBE_PLACEHOLDER_${videoIndex}-->`;
-      videoIndex++;
-      return placeholder;
-    });
-  }
-  
-  console.log(`🎥 Preserved ${videos.length} YouTube videos`);
-  return { html: processedHTML, videos };
-}
-
-function restoreYouTubeVideos(html: string, videos: string[]): string {
-  let result = html;
-  videos.forEach((video, index) => {
-    result = result.replace(`<!--YOUTUBE_PLACEHOLDER_${index}-->`, video);
-  });
-  console.log(`🎥 Restored ${videos.length} YouTube videos`);
-  return result;
-}
-
-// ============================================
-// SANITIZE HTML (EXPANDED v3.2)
+// SANITIZE HTML
 // ============================================
 function sanitizeHTML(html: string): string {
   let sanitized = html
-    .replace(/\s(onclick|onerror|onload|onmouseover|onfocus|onblur|onsubmit|onchange)="[^"]*"/gi, '')
+    .replace(/\s(onclick|onerror|onload|onmouseover|onfocus|onblur)="[^"]*"/gi, '')
     .replace(/href="javascript:[^"]*"/gi, 'href="#"')
     .replace(/<script[^>]*gtm[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<noscript[^>]*>[\s\S]*?<iframe[^>]*gtm[^>]*>[\s\S]*?<\/noscript>/gi, '')
-    .replace(/<noscript[^>]*>[\s\S]*?googletagmanager[\s\S]*?<\/noscript>/gi, '')
     .replace(/<script[^>]*google-analytics[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*ga\s*\([^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*cookie[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?fbq\s*\([\s\S]*?<\/script>/gi, '')
     .replace(/<img[^>]*facebook[^>]*>/gi, '')
-    .replace(/<img[^>]*pixel[^>]*>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?1app\.com[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?renderScripts[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?onClickButton[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?window\.ep_id[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?window\.__initialData[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?hotjar[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?clarity[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?rdstation[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?document\.head\.appendChild[\s\S]*?<\/script>/gi, '');
+    .replace(/<img[^>]*pixel[^>]*>/gi, '');
   
   return sanitized;
 }
 
 // ============================================
-// REMOVE BUILDER ELEMENTS (CONSERVATIVE v3.3)
-// ============================================
-function removeBuilderElements(html: string): string {
-  let result = html;
-  
-  // Only remove small, specific builder elements (limit size to avoid removing content)
-  const builderPatterns = [
-    /<a[^>]*class="[^"]*support_fab[^"]*"[^>]*>[\s\S]{0,500}?<\/a>/gi,
-    /<div[^>]*id="lgpd_consent"[^>]*>[\s\S]{0,2000}?<\/div>/gi,
-    /<div[^>]*id="cookie-law-info-bar"[^>]*>[\s\S]{0,2000}?<\/div>/gi,
-    /<dialog[^>]*id="pageModal"[^>]*>[\s\S]{0,1000}?<\/dialog>/gi,
-  ];
-  
-  for (const pattern of builderPatterns) {
-    result = result.replace(pattern, '<!-- BUILDER ELEMENT REMOVED -->');
-  }
-  
-  console.log('✅ Builder elements removed');
-  return result;
-}
-
-// ============================================
-// COUNT VIDEOS
+// PRESERVE VIDEOS (NEW in v3.0)
 // ============================================
 function countVideos(html: string): number {
   const videoPatterns = [
@@ -260,58 +166,46 @@ function countVideos(html: string): number {
 }
 
 // ============================================
-// REMOVE MANUFACTURER ELEMENTS (CONSERVATIVE v3.3)
+// REMOVE MANUFACTURER ELEMENTS (preserving videos)
 // ============================================
-function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; formsRemoved: number; videosPreserved: number } {
+function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; videosPreserved: number } {
   let result = html;
   let headerRemoved = false;
   let footerRemoved = false;
-  let formsRemoved = 0;
   
+  // Count videos before processing
   const videosPreserved = countVideos(html);
   console.log(`🎥 Found ${videosPreserved} videos to preserve`);
   
-  // HEADER PATTERNS - CONSERVATIVE (only clear header tags, not divs)
+  // Header patterns - be more careful not to remove video containers
   const headerPatterns = [
-    /<header[^>]*class="[^"]*(?:site-header|main-header)[^"]*"[^>]*>[\s\S]{0,5000}?<\/header>/gi,
-    /<div[^>]*id="header-outer"[^>]*>[\s\S]{0,3000}?<\/div>/gi,
-    /<div[^>]*id="header-space"[^>]*>[\s\S]{0,500}?<\/div>/gi,
+    /<header[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/header>)[\s\S]*?<\/header>/gi,
+    /<div[^>]*class="[^"]*site-header[^"]*"[^>]*>(?![\s\S]*<(?:video|iframe))[\s\S]*?<\/div>/gi,
+    /<nav[^>]*class="[^"]*main-nav[^"]*"[^>]*>[\s\S]*?<\/nav>/gi,
+    /<div[^>]*id="masthead"[^>]*>[\s\S]*?<\/div>/gi,
   ];
   
-  // FOOTER PATTERNS - CONSERVATIVE (only clear footer tags)
   const footerPatterns = [
-    /<footer[^>]*>[\s\S]{0,8000}?<\/footer>/gi,
-    /<div[^>]*id="footer-outer"[^>]*>[\s\S]{0,5000}?<\/div>/gi,
-  ];
-  
-  // FORM PATTERNS - ONLY CONTACT/LEAD FORMS (very specific)
-  const formPatterns = [
-    /<form[^>]*class="[^"]*(?:wpcf7-form|contact-form)[^"]*"[^>]*>[\s\S]{0,3000}?<\/form>/gi,
-    /<form[^>]*id="(?:contactForm|leadForm)"[^>]*>[\s\S]{0,3000}?<\/form>/gi,
+    /<footer[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/footer>)[\s\S]*?<\/footer>/gi,
+    /<div[^>]*class="[^"]*site-footer[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<div[^>]*id="colophon"[^>]*>[\s\S]*?<\/div>/gi,
   ];
   
   for (const pattern of headerPatterns) {
-    const before = result;
-    result = result.replace(pattern, '<!-- HEADER REMOVED -->');
-    if (result !== before) headerRemoved = true;
-  }
-  
-  for (const pattern of footerPatterns) {
-    const before = result;
-    result = result.replace(pattern, '<!-- FOOTER REMOVED -->');
-    if (result !== before) footerRemoved = true;
-  }
-  
-  for (const pattern of formPatterns) {
-    const matches = result.match(pattern);
-    if (matches) {
-      formsRemoved += matches.length;
-      result = result.replace(pattern, '<!-- FORM REMOVED -->');
+    if (pattern.test(result)) {
+      result = result.replace(pattern, '<!-- HEADER REMOVED -->');
+      headerRemoved = true;
     }
   }
   
-  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, forms: ${formsRemoved})`);
-  return { html: result, headerRemoved, footerRemoved, formsRemoved, videosPreserved };
+  for (const pattern of footerPatterns) {
+    if (pattern.test(result)) {
+      result = result.replace(pattern, '<!-- FOOTER REMOVED -->');
+      footerRemoved = true;
+    }
+  }
+  
+  return { html: result, headerRemoved, footerRemoved, videosPreserved };
 }
 
 // ============================================
@@ -479,59 +373,14 @@ function rewriteImageAttributes(
 }
 
 // ============================================
-// CAPTURE AND UPLOAD IMAGES (v3.1 - Parallel Processing)
+// CAPTURE AND UPLOAD IMAGES
 // ============================================
-const MAX_IMAGES = 50; // Limite para evitar timeout
-const BATCH_SIZE = 10; // Processar 10 imagens por vez
-const IMAGE_TIMEOUT = 5000; // 5s timeout por imagem
-
-async function downloadImageWithTimeout(
-  url: string, 
-  timeoutMs: number
-): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    let fetchUrl = url;
-    if (fetchUrl.startsWith('//')) {
-      fetchUrl = 'https:' + fetchUrl;
-    }
-    
-    const response = await fetch(fetchUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'image/*,*/*;q=0.8',
-      },
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const buffer = await response.arrayBuffer();
-    
-    return { buffer, contentType };
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if ((error as Error).name === 'AbortError') {
-      console.warn(`⏱️ Timeout downloading: ${url}`);
-    }
-    return null;
-  }
-}
-
 async function captureAndUploadImages(
   html: string,
   supabase: any,
   brand: string,
   product: string
 ): Promise<{ html: string; images: CapturedImage[]; heroImageUrl: string }> {
-  const startTime = Date.now();
   const captured: CapturedImage[] = [];
   let processedHTML = html;
   let heroImageUrl = '';
@@ -585,134 +434,121 @@ async function captureAndUploadImages(
   const brandSlug = slugify(brandClean);
   const productSlug = slugify(productClean);
   
-  // Filter valid URLs and limit to MAX_IMAGES
-  const validUrls = Array.from(imageUrls).filter(url => {
-    if (url.startsWith('data:')) return false;
-    if (url.includes('supabase.co')) return false;
-    if (!url.startsWith('http') && !url.startsWith('//')) return false;
-    return true;
-  }).slice(0, MAX_IMAGES);
-  
-  const totalBatches = Math.ceil(validUrls.length / BATCH_SIZE);
-  console.log(`📁 Images path: lp-clone-assets/${brandSlug}/${productSlug}/`);
-  console.log(`⏱️ Processing ${validUrls.length} images in ${totalBatches} batches (max ${MAX_IMAGES}, batch size ${BATCH_SIZE})`);
+  console.log(`📁 Images will be saved to: lp-clone-assets/${brandSlug}/${productSlug}/`);
   
   let imageIndex = 0;
   let firstHeroCandidate: CapturedImage | null = null;
   
-  // Process images in parallel batches
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const batchStart = batchIndex * BATCH_SIZE;
-    const batchUrls = validUrls.slice(batchStart, batchStart + BATCH_SIZE);
+  for (const originalUrl of imageUrls) {
+    if (originalUrl.startsWith('data:')) continue;
+    if (originalUrl.includes('supabase.co')) continue;
+    if (!originalUrl.startsWith('http') && !originalUrl.startsWith('//')) continue;
     
-    console.log(`📦 Batch ${batchIndex + 1}/${totalBatches}: processing ${batchUrls.length} images...`);
-    
-    const batchResults = await Promise.allSettled(
-      batchUrls.map(async (originalUrl, idx) => {
-        const currentIndex = batchStart + idx;
-        
-        // Download with timeout
-        const downloadResult = await downloadImageWithTimeout(originalUrl, IMAGE_TIMEOUT);
-        
-        if (!downloadResult) {
-          return {
-            originalUrl,
-            newUrl: originalUrl,
-            supabasePath: '',
-            status: 'failed' as const,
-            error: 'Download timeout or failed',
-          };
-        }
-        
-        const { buffer: imageBuffer, contentType } = downloadResult;
-        
-        // Check if this is a hero/banner image
-        const isHeroImage = /hero|banner|main|featured|og|header|slide/i.test(originalUrl) || 
-                            imageBuffer.byteLength > 100000;
-        
-        // Generate SEO-friendly filename
-        let fetchUrl = originalUrl.startsWith('//') ? 'https:' + originalUrl : originalUrl;
-        const urlPath = new URL(fetchUrl).pathname;
-        const originalFilename = urlPath.split('/').pop() || 'image';
-        const seoFilename = generateSEOFilename(
-          originalFilename, 
-          currentIndex, 
-          brandSlug, 
-          productSlug, 
-          isHeroImage && currentIndex === 0,
-          contentType
-        );
-        
-        // SEO-friendly path structure
-        const supabasePath = `${brandSlug}/${productSlug}/${seoFilename}`;
-        
-        const { error } = await supabase.storage
-          .from('lp-clone-assets')
-          .upload(supabasePath, imageBuffer, {
-            contentType,
-            cacheControl: '31536000',
-            upsert: true,
-          });
-        
-        if (error) {
-          return {
-            originalUrl,
-            newUrl: originalUrl,
-            supabasePath: '',
-            status: 'failed' as const,
-            error: error.message,
-          };
-        }
-        
-        const { data: publicData } = supabase.storage
-          .from('lp-clone-assets')
-          .getPublicUrl(supabasePath);
-        
-        return {
-          originalUrl,
-          newUrl: publicData.publicUrl,
-          supabasePath,
-          status: 'success' as const,
-          isHeroImage,
-        };
-      })
-    );
-    
-    // Process batch results
-    let batchSuccess = 0;
-    for (const result of batchResults) {
-      if (result.status === 'fulfilled') {
-        const capturedImage = result.value;
-        captured.push(capturedImage);
-        
-        if (capturedImage.status === 'success') {
-          batchSuccess++;
-          
-          // Replace URL in HTML
-          const escapedOriginal = capturedImage.originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), capturedImage.newUrl);
-          
-          // Track hero image
-          if (!heroImageUrl && capturedImage.isHeroImage) {
-            heroImageUrl = capturedImage.newUrl;
-          }
-          
-          if (!firstHeroCandidate) {
-            firstHeroCandidate = capturedImage;
-          }
-        }
-        
-        imageIndex++;
+    try {
+      let fetchUrl = originalUrl;
+      if (fetchUrl.startsWith('//')) {
+        fetchUrl = 'https:' + fetchUrl;
       }
+      
+      console.log(`📥 Downloading: ${fetchUrl}`);
+      
+      const response = await fetch(fetchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'image/*,*/*;q=0.8',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const imageBuffer = await response.arrayBuffer();
+      
+      // Check if this is a hero/banner image
+      const isHeroImage = /hero|banner|main|featured|og|header|slide/i.test(originalUrl) || 
+                          imageBuffer.byteLength > 100000; // Large images likely hero
+      
+      // Generate SEO-friendly filename
+      const urlPath = new URL(fetchUrl).pathname;
+      const originalFilename = urlPath.split('/').pop() || 'image';
+      const seoFilename = generateSEOFilename(
+        originalFilename, 
+        imageIndex, 
+        brandSlug, 
+        productSlug, 
+        isHeroImage && imageIndex === 0,
+        contentType
+      );
+      
+      // SEO-friendly path structure: brand/product/seo-filename
+      const supabasePath = `${brandSlug}/${productSlug}/${seoFilename}`;
+      
+      const { data, error } = await supabase.storage
+        .from('lp-clone-assets')
+        .upload(supabasePath, imageBuffer, {
+          contentType,
+          cacheControl: '31536000',
+          upsert: true,
+        });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      const { data: publicData } = supabase.storage
+        .from('lp-clone-assets')
+        .getPublicUrl(supabasePath);
+      
+      const newUrl = publicData.publicUrl;
+      
+      const capturedImage: CapturedImage = {
+        originalUrl,
+        newUrl,
+        supabasePath,
+        status: 'success',
+        isHeroImage,
+      };
+      
+      // Set first large/hero image as OG image
+      if (!heroImageUrl && isHeroImage) {
+        heroImageUrl = newUrl;
+        console.log(`🖼️ Hero image identified: ${newUrl}`);
+      }
+      
+      // Keep track of first successful image as fallback
+      if (!firstHeroCandidate && capturedImage.status === 'success') {
+        firstHeroCandidate = capturedImage;
+      }
+      
+      const escapedOriginal = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), newUrl);
+      
+      captured.push(capturedImage);
+      
+      console.log(`✅ Uploaded: ${supabasePath} (${seoFilename})`);
+      imageIndex++;
+      
+    } catch (error) {
+      console.error(`❌ Failed: ${originalUrl}:`, error);
+      captured.push({
+        originalUrl,
+        newUrl: originalUrl,
+        supabasePath: '',
+        status: 'failed',
+        error: (error as Error).message,
+      });
     }
-    
-    console.log(`✅ Batch ${batchIndex + 1} complete: ${batchSuccess}/${batchUrls.length} success`);
   }
   
   // GUARANTEE: OG Image must be from Supabase (never external)
-  if (!heroImageUrl && firstHeroCandidate) {
-    heroImageUrl = firstHeroCandidate.newUrl;
-    console.log(`🖼️ Hero image fallback (first successful): ${heroImageUrl}`);
+  if (!heroImageUrl) {
+    // Use first successful image as fallback
+    if (firstHeroCandidate) {
+      heroImageUrl = firstHeroCandidate.newUrl;
+      console.log(`🖼️ Hero image fallback (first successful): ${heroImageUrl}`);
+    }
   }
   
   // Final validation: hero image MUST be from Supabase
@@ -720,10 +556,6 @@ async function captureAndUploadImages(
     console.warn('⚠️ Hero image is not from Supabase, clearing to use logo fallback');
     heroImageUrl = '';
   }
-  
-  const totalTime = Date.now() - startTime;
-  const successCount = captured.filter(c => c.status === 'success').length;
-  console.log(`⏱️ Image processing complete: ${successCount}/${captured.length} success in ${totalTime}ms`);
   
   return { html: processedHTML, images: captured, heroImageUrl };
 }
@@ -752,30 +584,14 @@ function injectPremiumCSS(): string {
         --card-bg: #ffffff;
         --background-color: #f8fafc;
         --section-light-bg: #fdfdfd;
-        --sd-header-height: 72px;
       }
 
-      /* ===== RESET PARA GARANTIR HEADER FIXO ===== */
-      html, body {
-        overflow-x: hidden !important;
-        overflow-y: visible !important;
-        height: auto !important;
-      }
-      
-      body {
-        position: relative !important;
-        padding-top: var(--sd-header-height) !important;
-      }
-
-      /* ===== HEADER PREMIUM FIXO ===== */
+      /* ===== HEADER PREMIUM ===== */
       .sd-premium-header {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        z-index: 9999 !important;
-        background: var(--card-bg) !important;
+        position: sticky;
+        top: 0;
+        z-index: 9999;
+        background: var(--card-bg);
         border-bottom: 1px solid #e0e0e0;
         box-shadow: 0 2px 10px rgba(0,0,0,0.08);
       }
@@ -801,26 +617,18 @@ function injectPremiumCSS(): string {
       .sd-premium-header .main-nav {
         display: flex;
         align-items: center;
-        gap: 0.15rem;
-        flex-wrap: nowrap;
+        gap: 0.5rem;
       }
       
       .sd-premium-header .main-nav a {
         color: var(--primary-dark);
         text-decoration: none;
         font-weight: 600;
-        font-size: 9px;
-        padding: 6px 6px;
+        font-size: 12px;
+        padding: 8px 16px;
         border-radius: 6px;
         transition: all 0.2s;
         font-family: 'Inter', sans-serif;
-        white-space: nowrap;
-        letter-spacing: -0.02em;
-      }
-      
-      .sd-premium-header .header {
-        min-height: 60px;
-        flex-wrap: nowrap;
       }
       
       .sd-premium-header .main-nav a:hover {
@@ -831,13 +639,12 @@ function injectPremiumCSS(): string {
       .sd-premium-header .cta-button {
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: #fff !important;
-        padding: 8px 14px !important;
+        padding: 10px 20px !important;
         border-radius: 25px !important;
         font-weight: 600 !important;
-        font-size: 9px !important;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         transition: transform 0.2s, box-shadow 0.2s;
         box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
       }
@@ -850,7 +657,7 @@ function injectPremiumCSS(): string {
 
       /* ===== FOOTER PREMIUM (IGUAL LP SPIN) ===== */
       .sd-premium-footer {
-        background: linear-gradient(to bottom, #2d2d2d, #1a1a1a) !important;
+        background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
         color: #e0e0e0;
         padding: 3rem 0 2rem;
         margin-top: 3rem;
@@ -1011,172 +818,8 @@ function injectPremiumCSS(): string {
         opacity: 0;
         pointer-events: none;
       }
-
-      /* ===== LIMITAR FONTES DE CTAs/BANNERS INTERNOS ===== */
-      body .sd-content-area h2,
-      body .sd-content-area [class*="cta"] h2,
-      body [class*="cta"] h2,
-      body [class*="banner"] h2,
-      body [class*="hero"] h2 {
-        font-size: 1.5rem !important;
-        max-font-size: 24px !important;
-        line-height: 1.3 !important;
-      }
-
-      body .sd-content-area p,
-      body [class*="cta"] p,
-      body [class*="banner"] p {
-        font-size: 1rem !important;
-        max-font-size: 16px !important;
-        line-height: 1.5 !important;
-      }
-
-      body [class*="cta"] h1,
-      body [class*="banner"] h1 {
-        font-size: 1.75rem !important;
-        max-font-size: 28px !important;
-      }
     </style>
   `;
-}
-
-// ============================================
-// GENERATE HOWTO SCHEMA (from workflow_stages)
-// ============================================
-function generateHowToSchema(productData: any): any | null {
-  if (!productData?.workflow_stages) return null;
-  
-  const stageLabels: Record<string, string> = {
-    scan: 'Scanear',
-    design: 'Desenhar',
-    print: 'Imprimir',
-    process: 'Processar',
-    finish: 'Finalizar',
-    install: 'Instalar'
-  };
-  
-  const applicableStages = Object.entries(productData.workflow_stages)
-    .filter(([_, stage]: [string, any]) => stage?.applicable)
-    .map(([key, stage]: [string, any], index) => {
-      const stepItem: any = {
-        '@type': 'HowToStep',
-        position: index + 1,
-        name: stageLabels[key] || key,
-        text: stage.description || `Etapa de ${stageLabels[key] || key} do workflow digital`,
-      };
-      
-      // Add competitive advantages as tips
-      if (stage.competitive_advantages?.length > 0) {
-        stepItem.itemListElement = stage.competitive_advantages.map((advantage: string, i: number) => ({
-          '@type': 'HowToTip',
-          position: i + 1,
-          text: advantage
-        }));
-      }
-      
-      // Add related materials as supplies
-      if (stage.related_materials?.length > 0) {
-        stepItem.supply = stage.related_materials.map((material: any, i: number) => ({
-          '@type': 'HowToSupply',
-          position: i + 1,
-          name: typeof material === 'string' ? material : (material.name || 'Material'),
-        }));
-      }
-      
-      return stepItem;
-    });
-  
-  if (applicableStages.length === 0) return null;
-  
-  return {
-    '@type': 'HowTo',
-    name: `Workflow Digital com ${productData.name}`,
-    description: `Etapas do processo odontológico digital utilizando ${productData.name}`,
-    step: applicableStages,
-    totalTime: `PT${applicableStages.length * 30}M`, // Estimate 30min per step
-  };
-}
-
-// ============================================
-// GENERATE FAQPAGE SCHEMA
-// ============================================
-function generateFAQSchema(faqItems: any[]): any | null {
-  if (!faqItems || faqItems.length === 0) return null;
-  
-  return {
-    '@type': 'FAQPage',
-    mainEntity: faqItems.map(item => ({
-      '@type': 'Question',
-      name: item.question || item.pergunta,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer || item.resposta,
-      }
-    }))
-  };
-}
-
-// ============================================
-// GENERATE CLINICAL BRAIN META TAGS
-// ============================================
-function generateClinicalBrainMeta(productData: any): string {
-  if (!productData) return '';
-  
-  const metaTags: string[] = [];
-  
-  // Product type
-  if (productData.product_type) {
-    metaTags.push(`<meta name="clinical:product_type" content="${productData.product_type}">`);
-  }
-  
-  // Anti-hallucination rules
-  const rules = productData.anti_hallucination_rules;
-  if (rules) {
-    if (rules.never_claim?.length > 0) {
-      metaTags.push(`<meta name="clinical:never_claim" content="${rules.never_claim.join('; ')}">`);
-    }
-    if (rules.never_mix_with?.length > 0) {
-      metaTags.push(`<meta name="clinical:never_mix_with" content="${rules.never_mix_with.join('; ')}">`);
-    }
-    if (rules.always_require?.length > 0) {
-      metaTags.push(`<meta name="clinical:always_require" content="${rules.always_require.join('; ')}">`);
-    }
-    if (rules.always_explain?.length > 0) {
-      metaTags.push(`<meta name="clinical:always_explain" content="${rules.always_explain.join('; ')}">`);
-    }
-  }
-  
-  // Forbidden products
-  if (productData.forbidden_products?.length > 0) {
-    const forbiddenNames = productData.forbidden_products
-      .map((fp: any) => fp.product_name || fp.name || fp)
-      .filter(Boolean);
-    if (forbiddenNames.length > 0) {
-      metaTags.push(`<meta name="clinical:forbidden_products" content="${forbiddenNames.join('; ')}">`);
-    }
-  }
-  
-  // Required products
-  if (productData.required_products?.length > 0) {
-    const requiredNames = productData.required_products
-      .map((rp: any) => rp.product_name || rp.name || rp)
-      .filter(Boolean);
-    if (requiredNames.length > 0) {
-      metaTags.push(`<meta name="clinical:required_products" content="${requiredNames.join('; ')}">`);
-    }
-  }
-  
-  // Category and subcategory
-  if (productData.category) {
-    metaTags.push(`<meta name="clinical:category" content="${productData.category}">`);
-  }
-  if (productData.subcategory) {
-    metaTags.push(`<meta name="clinical:subcategory" content="${productData.subcategory}">`);
-  }
-  
-  return metaTags.length > 0 
-    ? `\n    <!-- ═══════════════════════════════════════════════════════════ -->\n    <!-- CLINICAL BRAIN METADATA (para IAs de busca) -->\n    <!-- ═══════════════════════════════════════════════════════════ -->\n    ${metaTags.join('\n    ')}`
-    : '';
 }
 
 // ============================================
@@ -1188,8 +831,7 @@ function injectSEO(
   companyData: any, 
   brand: string, 
   product: string,
-  ogImageUrl: string,
-  productData?: any
+  ogImageUrl: string
 ): string {
   let result = html;
   
@@ -1318,28 +960,7 @@ function injectSEO(
           "priceCurrency": "BRL",
           "availability": "https://schema.org/InStock",
           "seller": { "@id": `${websiteUrl}/#organization` }
-        },
-        // ✅ NEW: Technical specifications from productData
-        ...(productData?.technical_specifications?.length > 0 && {
-          "additionalProperty": productData.technical_specifications.map((spec: any) => ({
-            "@type": "PropertyValue",
-            "name": spec.label || spec.name,
-            "value": spec.value
-          }))
-        }),
-        // ✅ NEW: Target audience
-        ...(productData?.target_audience && {
-          "audience": {
-            "@type": "Audience",
-            "audienceType": Array.isArray(productData.target_audience) 
-              ? productData.target_audience[0]?.label || productData.target_audience[0] 
-              : productData.target_audience
-          }
-        }),
-        // ✅ NEW: Category
-        ...(productData?.category && {
-          "category": productData.category
-        })
+        }
       },
       {
         "@type": "BreadcrumbList",
@@ -1366,20 +987,6 @@ function injectSEO(
       }
     ]
   };
-  
-  // ✅ NEW: Add HowTo Schema if product has workflow_stages
-  const howToSchema = generateHowToSchema(productData);
-  if (howToSchema) {
-    schemaGraph["@graph"].push(howToSchema);
-    console.log('✅ HowTo Schema added based on workflow_stages');
-  }
-  
-  // ✅ NEW: Add FAQPage Schema if product has FAQ
-  const faqSchema = generateFAQSchema(productData?.faq);
-  if (faqSchema) {
-    schemaGraph["@graph"].push(faqSchema);
-    console.log('✅ FAQPage Schema added');
-  }
   
   const seoTags = `
     <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1450,7 +1057,6 @@ function injectSEO(
     <meta name="copyright" content="${company}">
     <meta name="theme-color" content="#3E4B5E">
     <meta name="msapplication-TileColor" content="#3E4B5E">
-    ${generateClinicalBrainMeta(productData)}
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- SCHEMA.ORG JSON-LD (@graph consolidado com SpeakableSpecification) -->
@@ -1472,7 +1078,7 @@ function injectSEO(
 // ============================================
 // INSERT PREMIUM HEADER & FOOTER (v3.0 - IGUAL LP SPIN)
 // ============================================
-function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string, productData?: any): string {
+function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string): string {
   let result = html;
   
   const company = companyData?.company_name || SMART_DENT_DATA.company_name;
@@ -1551,7 +1157,9 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       ${footerConfig.locations && footerConfig.locations.length > 0 
         ? footerConfig.locations.map((loc: any) => `
           <div>
-            <strong>${loc.title || loc.label || company}</strong>
+            <strong>${loc.label || company}</strong>
+            ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
+            ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
             ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
           </div>
         `).join('') 
@@ -1668,30 +1276,6 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       ${seoCompetitiveAdvantages ? `Diferenciais: ${seoCompetitiveAdvantages}.` : ''}
       Localização: ${city || 'Brasil'}, ${state || 'BR'}.
     </p>
-    ${productData ? `
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- CLINICAL BRAIN CONTEXT (Regras para IAs de conteúdo) -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <div itemscope itemtype="https://schema.org/Product" class="clinical-brain-context">
-      <span itemprop="name">${productData.name}</span>
-      ${productData.category ? `<span itemprop="category">${productData.category}</span>` : ''}
-      ${productData.anti_hallucination_rules?.never_claim?.length > 0 
-        ? `<p class="constraint never-claim">IMPORTANTE: ${productData.name} NÃO deve ser associado a: ${productData.anti_hallucination_rules.never_claim.join(', ')}.</p>` 
-        : ''}
-      ${productData.anti_hallucination_rules?.never_mix_with?.length > 0 
-        ? `<p class="constraint never-mix">INCOMPATIBILIDADE: Não usar ${productData.name} junto com: ${productData.anti_hallucination_rules.never_mix_with.join(', ')}.</p>` 
-        : ''}
-      ${productData.anti_hallucination_rules?.always_require?.length > 0 
-        ? `<p class="constraint always-require">REQUERIDO: ${productData.name} necessita de: ${productData.anti_hallucination_rules.always_require.join(', ')}.</p>` 
-        : ''}
-      ${productData.forbidden_products?.length > 0 
-        ? `<p class="constraint forbidden">PRODUTOS INCOMPATÍVEIS: ${productData.forbidden_products.map((fp: any) => fp.product_name || fp.name || fp).filter(Boolean).join(', ')}.</p>` 
-        : ''}
-      ${productData.required_products?.length > 0 
-        ? `<p class="constraint required">PRODUTOS COMPLEMENTARES: ${productData.required_products.map((rp: any) => rp.product_name || rp.name || rp).filter(Boolean).join(', ')}.</p>` 
-        : ''}
-    </div>
-    ` : ''}
   </aside>
   `;
   
@@ -1706,7 +1290,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
 }
 
 // ============================================
-// MAIN PROCESSING FUNCTION (v3.2 - Enhanced Cleaning)
+// MAIN PROCESSING FUNCTION
 // ============================================
 async function processLandingPage(
   html: string,
@@ -1715,53 +1299,36 @@ async function processLandingPage(
   brand: string,
   product: string,
   supabase: any,
-  companyData: any,
-  productData?: any
+  companyData: any
 ): Promise<TransformResult> {
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
   const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
   
-  console.log(`🚀 Starting LP Clone v3.2 for ${brand} ${product}`);
-  if (productData) {
-    console.log(`📦 Product enrichment enabled: ${productData.name}`);
-  }
+  console.log(`🚀 Starting LP Clone v2.1 for ${brand} ${product}`);
   
-  // Step 1: CLEAN MALFORMED HTML (NEW - remove nested documents)
-  let processedHTML = cleanMalformedHTML(html);
-  
-  // Step 2: PRESERVE YOUTUBE VIDEOS (NEW - extract before processing)
-  const { html: htmlWithoutVideos, videos: preservedVideos } = preserveYouTubeVideos(processedHTML);
-  processedHTML = htmlWithoutVideos;
-  
-  // Step 3: SANITIZE (expanded - remove tracking/builder scripts)
-  processedHTML = sanitizeHTML(processedHTML);
+  // Step 1: Sanitize
+  let processedHTML = sanitizeHTML(html);
   console.log('✅ HTML sanitized');
   
-  // Step 4: REMOVE MANUFACTURER ELEMENTS (expanded - includes forms)
-  const { html: cleanedHTML, headerRemoved, footerRemoved, formsRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
+  // Step 2: Remove manufacturer elements (preserving videos)
+  const { html: cleanedHTML, headerRemoved, footerRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
   processedHTML = cleanedHTML;
-  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, forms: ${formsRemoved}, videos preserved: ${videosPreserved})`);
+  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
   
-  // Step 5: REMOVE BUILDER ELEMENTS (NEW - FABs, LGPD, modals, chat widgets)
-  processedHTML = removeBuilderElements(processedHTML);
-  
-  // Step 6: RESTORE YOUTUBE VIDEOS (NEW - re-inject videos)
-  processedHTML = restoreYouTubeVideos(processedHTML, preservedVideos);
-  
-  // Step 7: Rewrite CTAs
+  // Step 3: Rewrite CTAs
   const { html: ctaHTML, count: ctasRewritten } = rewriteCTAs(processedHTML, ctaUrl);
   processedHTML = ctaHTML;
   console.log(`✅ ${ctasRewritten} CTAs rewritten`);
   
-  // Step 8: Capture and upload images with proper folder structure
+  // Step 4: Capture and upload images with proper folder structure
   const { html: imageHTML, images, heroImageUrl } = await captureAndUploadImages(processedHTML, supabase, brand, product);
   processedHTML = imageHTML;
   console.log(`✅ ${images.filter(i => i.status === 'success').length} images captured to /${slugify(brand)}/${slugify(product)}/`);
   
-  // Step 9: REWRITE IMAGE ALT/TITLE ATTRIBUTES
+  // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
   processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
   
-  // Step 10: Generate auto SEO if not provided
+  // Step 5: Generate auto SEO if not provided
   const autoSEO = generateAutoSEO(html, brand, product, companyData);
   
   // GUARANTEE: OG Image must be from Supabase or use company logo
@@ -1780,12 +1347,12 @@ async function processLandingPage(
   };
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
-  // Step 11: Inject SEO with complete Schema (now with productData for HowTo/FAQ)
-  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage, productData);
+  // Step 6: Inject SEO with complete Schema
+  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage);
   console.log('✅ SEO and Schema.org injected');
   
-  // Step 12: Insert Smart Dent header/footer (now with Clinical Brain context)
-  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl, productData);
+  // Step 7: Insert Smart Dent header/footer
+  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl);
   console.log('✅ Smart Dent header/footer inserted');
   
   const stats = {
@@ -1795,35 +1362,21 @@ async function processLandingPage(
     cssPreserved: true,
     headerRemoved,
     footerRemoved,
-    formsRemoved,
     videosPreserved,
-    youtubeVideosRestored: preservedVideos.length,
   };
   
-  // Check if product enrichment was applied
-  const hasProductEnrichment = !!(productData && (
-    productData.workflow_stages || 
-    productData.faq?.length > 0 || 
-    productData.technical_specifications?.length > 0 ||
-    productData.anti_hallucination_rules
-  ));
-  
-  const score = calculateScore(stats, finalSEO, finalOgImage, hasProductEnrichment);
-  console.log(`🎉 LP Clone v3.2 complete! Score: ${score}/10 ${hasProductEnrichment ? '(Product Enriched)' : ''}`);
+  const score = calculateScore(stats, finalSEO, finalOgImage);
+  console.log(`🎉 LP Clone v2.1 complete! Score: ${score}/10`);
   
   return {
     html: processedHTML,
     capturedImages: images,
-    stats: {
-      ...stats,
-      hasProductEnrichment,
-      schemasGenerated: hasProductEnrichment ? ['Product', 'HowTo', 'FAQPage', 'ClinicalBrain'] : ['Product']
-    },
+    stats,
     generatedSEO: finalSEO,
   };
 }
 
-function calculateScore(stats: any, seo: SEOConfig, ogImage: string, hasProductEnrichment: boolean = false): number {
+function calculateScore(stats: any, seo: SEOConfig, ogImage: string): number {
   let score = 5; // Base
   if (stats.imagesProcessed > 0) score += 1;
   if (stats.ctasRewritten > 0) score += 1;
@@ -1831,8 +1384,6 @@ function calculateScore(stats: any, seo: SEOConfig, ogImage: string, hasProductE
   if (seo.description && seo.description.length > 50) score += 1;
   if (seo.canonical && seo.canonical.includes('smartdent')) score += 0.5;
   if (ogImage && ogImage.includes('supabase.co')) score += 0.5; // OG from own domain
-  // ✅ NEW: Bonus for product enrichment (HowTo, FAQ, Clinical Brain)
-  if (hasProductEnrichment) score += 1;
   return Math.min(Math.round(score * 10) / 10, 10);
 }
 
@@ -1849,7 +1400,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { html, ctaUrl, seoConfig = {}, brand, product, product_id } = await req.json();
+    const { html, ctaUrl, seoConfig = {}, brand, product } = await req.json();
     
     if (!html || !ctaUrl) {
       throw new Error('HTML e URL do CTA são obrigatórios');
@@ -1867,36 +1418,13 @@ serve(async (req) => {
       throw new Error('Produto é obrigatório (mínimo 2 caracteres)');
     }
     
-    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}, product_id=${product_id || 'none'}`);
+    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
     
-    // Fetch company data - get record with actual data filled
-    const { data: companyProfiles } = await supabase
+    // Fetch company data
+    const { data: companyData } = await supabase
       .from('company_profile')
       .select('*')
-      .not('contact_phone', 'is', null)
-      .not('company_logo_url', 'is', null)
-      .order('updated_at', { ascending: false })
-      .limit(1);
-    
-    const companyData = companyProfiles?.[0] || null;
-    console.log(`🏢 Company profile: ${companyData?.company_name || 'Using fallback'}`);
-    
-    // ✅ NEW: Fetch product data if product_id is provided
-    let productData: any = null;
-    if (product_id) {
-      const { data: productResult, error: productError } = await supabase
-        .from('products_repository')
-        .select('*')
-        .eq('id', product_id)
-        .single();
-      
-      if (productResult && !productError) {
-        productData = productResult;
-        console.log(`📦 Product data loaded: ${productData.name} (FAQ: ${productData.faq?.length || 0}, Specs: ${productData.technical_specifications?.length || 0})`);
-      } else {
-        console.warn(`⚠️ Could not load product: ${productError?.message || 'not found'}`);
-      }
-    }
+      .single();
     
     // Use SMART_DENT_DATA as fallback
     const finalCompanyData = companyData || SMART_DENT_DATA;
@@ -1908,8 +1436,7 @@ serve(async (req) => {
       brand,
       product,
       supabase,
-      finalCompanyData,
-      productData
+      finalCompanyData
     );
     
     return new Response(JSON.stringify({
