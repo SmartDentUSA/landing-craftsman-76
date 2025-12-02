@@ -16,7 +16,6 @@ import {
   XCircle, Loader2, FileCode, Trash2, ExternalLink, RefreshCw, Save,
   AlertTriangle, Search, Sparkles, Package
 } from 'lucide-react';
-import { LPCloneProductSelector } from './LPCloneProductSelector';
 
 interface CapturedImage {
   originalUrl: string;
@@ -61,20 +60,6 @@ interface ClonedLP {
   captured_images: CapturedImage[];
 }
 
-interface SelectedProduct {
-  id: string;
-  name: string;
-  brand: string | null;
-  price: number | null;
-  image_url: string | null;
-  category: string | null;
-  subcategory: string | null;
-  description: string | null;
-  keywords: string[] | null;
-  market_keywords: string[] | null;
-  benefits: string[] | null;
-  features: string[] | null;
-}
 
 export const LPClonePanel = () => {
   const queryClient = useQueryClient();
@@ -89,31 +74,7 @@ export const LPClonePanel = () => {
   const [seoCanonical, setSeoCanonical] = useState('');
   const [seoKeywords, setSeoKeywords] = useState('');
   
-  // NEW: Product selector state
-  const [selectedProduct, setSelectedProduct] = useState<SelectedProduct | null>(null);
-  const [productSelectorOpen, setProductSelectorOpen] = useState(false);
-  
   const [result, setResult] = useState<TransformResult | null>(null);
-  
-  // Auto-fill brand/product when selecting from repository
-  const handleProductSelect = (productData: SelectedProduct | null) => {
-    setSelectedProduct(productData);
-    if (productData) {
-      // Auto-fill fields from product data
-      if (productData.brand) setBrand(productData.brand);
-      if (productData.name) setProduct(productData.name);
-      if (!name) setName(`LP ${productData.brand || ''} ${productData.name}`);
-      
-      // Merge keywords if available
-      const allKeywords = [
-        ...(productData.keywords || []),
-        ...(productData.market_keywords || []),
-      ].filter(Boolean).slice(0, 10);
-      if (allKeywords.length > 0 && !seoKeywords) {
-        setSeoKeywords(allKeywords.join(', '));
-      }
-    }
-  };
   
   // Validation state
   const validation = useMemo(() => {
@@ -169,8 +130,6 @@ export const LPClonePanel = () => {
           },
           brand,
           product,
-          // NEW: Pass product ID for enrichment
-          productId: selectedProduct?.id || null,
         },
       });
       
@@ -328,48 +287,6 @@ export const LPClonePanel = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Product Selector Button */}
-                  <div>
-                    <Label className="mb-2 block">Produto do Repositório (Recomendado)</Label>
-                    <Button
-                      type="button"
-                      variant={selectedProduct ? 'outline' : 'secondary'}
-                      className="w-full justify-start h-auto py-3"
-                      onClick={() => setProductSelectorOpen(true)}
-                    >
-                      {selectedProduct ? (
-                        <div className="flex items-center gap-3 w-full">
-                          {selectedProduct.image_url && (
-                            <img 
-                              src={selectedProduct.image_url} 
-                              alt={selectedProduct.name}
-                              className="w-10 h-10 rounded object-cover"
-                            />
-                          )}
-                          <div className="text-left flex-1">
-                            <p className="font-medium">{selectedProduct.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {selectedProduct.brand} • {selectedProduct.category}
-                            </p>
-                          </div>
-                          <Badge variant="secondary" className="ml-auto">
-                            Selecionado
-                          </Badge>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Search className="h-4 w-4" />
-                          <span>Clique para selecionar um produto...</span>
-                        </div>
-                      )}
-                    </Button>
-                    {selectedProduct && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        ✨ SEO será enriquecido com keywords, benefícios e especificações do produto
-                      </p>
-                    )}
-                  </div>
-                  
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label>Nome da LP</Label>
@@ -747,13 +664,6 @@ export const LPClonePanel = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Product Selector Modal */}
-      <LPCloneProductSelector
-        open={productSelectorOpen}
-        onClose={() => setProductSelectorOpen(false)}
-        selectedProduct={selectedProduct}
-        onSelectProduct={handleProductSelect}
-      />
     </div>
   );
 };
