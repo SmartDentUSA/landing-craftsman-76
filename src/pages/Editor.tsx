@@ -1282,7 +1282,7 @@ const EditorContent = () => {
   const { getLandingPage, updateLandingPage, addLandingPage, landingPages, loadLandingPages } = useLandingPagesSupabase();
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
-  const { generateAutoFooter, hasCompanyData } = useAutoFooterPopulation();
+  const { generateAutoFooter, generateAutoNavigation, hasCompanyData } = useAutoFooterPopulation();
   const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
   const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
   const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner } = useAnimatedBannerAutoSave(updateLandingPage, id);
@@ -1304,6 +1304,7 @@ const EditorContent = () => {
 
   // Estados para preview em tempo real
   const autoFooterAppliedRef = useRef(!!sessionStorage.getItem('autoFooterApplied'));
+  const autoMenuAppliedRef = useRef(!!sessionStorage.getItem('autoMenuApplied'));
   const dirtyRef = useRef(false);
 
   // Helper functions for keywords management
@@ -1954,6 +1955,43 @@ const EditorContent = () => {
       }
     }
   }, [hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
+
+  // 🏢 AUTO-POPULAÇÃO DO MENU COM DADOS DA EMPRESA
+  useEffect(() => {
+    if (hasCompanyData && 
+        !autoMenuAppliedRef.current &&
+        (!data.menu || data.menu.length === 0)) {
+      
+      const autoMenu = generateAutoNavigation();
+      
+      // Só aplicar se há itens no menu configurado
+      if (autoMenu.length > 0) {
+        console.log('🏢 Auto-populando menu com dados da empresa:', autoMenu);
+        
+        const newData = {
+          ...data,
+          menu: autoMenu
+        };
+        
+        setData(newData);
+        
+        // Persistir no Supabase se há ID
+        if (id) {
+          updateLandingPage(id, { data: newData }).then(() => {
+            autoMenuAppliedRef.current = true;
+            sessionStorage.setItem('autoMenuApplied', 'true');
+            toast({
+              title: "Menu auto-populado",
+              description: "Itens de navegação foram carregados automaticamente.",
+            });
+          });
+        } else {
+          autoMenuAppliedRef.current = true;
+          sessionStorage.setItem('autoMenuApplied', 'true');
+        }
+      }
+    }
+  }, [hasCompanyData, data.menu?.length, generateAutoNavigation, toast]);
 
   // Preview simples e confiável como CodeView
   const [generatedHTML, setGeneratedHTML] = useState<string>('');
