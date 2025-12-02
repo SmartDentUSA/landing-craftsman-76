@@ -857,40 +857,88 @@ function generateAIPlaybookJSON(product: ProductData & {
           ai_generated: link.ai_generated || false,
           source_products: link.source_products || []
         })),
-      all_links: (product.intelligent_links_repository || []).map((link: any) => ({
-        id: link.id,
-        name: link.name,
-        url: link.url,
-        category: link.category,
-        keyword_type: link.keyword_type,
-        search_intent: link.search_intent,
-        relevance_score: link.relevance_score
-      }))
-    },
-    customer_service_prompts: [
-      `Produto: ${product.name}`,
-      `Categoria: ${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`,
-      `Preço: ${product.price ? `R$ ${product.price}` : 'Consulte'}${product.promo_price ? ` | Promoção: R$ ${product.promo_price}` : ''}`,
-      `Principais benefícios: ${product.benefits?.join(', ') || 'N/A'}`,
-      `Características: ${product.features?.join(', ') || 'N/A'}`,
-      `Público-alvo: ${product.target_audience?.join(', ') || 'N/A'}`,
-      `Palavras-chave para IA: ${product.keywords?.join(', ') || 'N/A'}`,
-      `Trigger words para chatbot: ${product.bot_trigger_words?.join(', ') || 'N/A'}`
-    ],
-    quality_flags: {
-      approved: product.approved,
-      use_in_ai_generation: product.use_in_ai_generation,
-      seo_enhanced: product.seo_enhanced,
-      ai_generated_keywords: product.ai_generated_keywords,
-      ai_generated_benefits: product.ai_generated_benefits,
-      ai_generated_category: product.ai_generated_category,
-      ai_generated_features: product.ai_generated_features,
-      has_ai_content: !!(product.individual_blog_content?.commercial || product.individual_blog_content?.technical),
-      content_completeness: calculateCompleteness(product)
-    },
-    generated_at: new Date().toISOString(),
-    export_version: "2.0"
+        all_links: (product.intelligent_links_repository || []).map((link: any) => ({
+          id: link.id,
+          name: link.name,
+          url: link.url,
+          category: link.category,
+          keyword_type: link.keyword_type,
+          search_intent: link.search_intent,
+          relevance_score: link.relevance_score
+        }))
+      },
+      // ✅ WORKFLOW ODONTOLÓGICO DIGITAL - Etapas do processo com produtos relacionados
+      digital_workflow: {
+        stages: Object.entries((product as any).workflow_stages || {}).map(([key, stage]: [string, any]) => ({
+          stage_key: key,
+          stage_name: getWorkflowStageName(key),
+          applicable: stage?.applicable || false,
+          role: stage?.role || null, // 'principal' | 'acessorio' | 'consumivel'
+          description: stage?.description || null,
+          pain_points_addressed: stage?.pain_points_addressed || [],
+          competitive_advantages: stage?.competitive_advantages || [],
+          related_materials: stage?.related_materials || [],
+          // ✅ NOVO: Produtos relacionados do portfólio (anti-alucinação IA)
+          related_products: (stage?.related_products || []).map((rp: any) => ({
+            product_id: rp.product_id,
+            product_name: rp.product_name,
+            role: rp.role // 'acessorio' | 'consumivel'
+          }))
+        })).filter((s: any) => s.applicable),
+        summary: {
+          applicable_stages: Object.values((product as any).workflow_stages || {}).filter((s: any) => s?.applicable).length,
+          total_related_products: Object.values((product as any).workflow_stages || {}).reduce((acc: number, stage: any) => 
+            acc + (stage?.related_products?.length || 0), 0),
+          is_principal_in: Object.entries((product as any).workflow_stages || {})
+            .filter(([_, stage]: [string, any]) => stage?.applicable && stage?.role === 'principal')
+            .map(([key]: [string, any]) => key),
+          is_accessory_in: Object.entries((product as any).workflow_stages || {})
+            .filter(([_, stage]: [string, any]) => stage?.applicable && stage?.role === 'acessorio')
+            .map(([key]: [string, any]) => key),
+          is_consumable_in: Object.entries((product as any).workflow_stages || {})
+            .filter(([_, stage]: [string, any]) => stage?.applicable && stage?.role === 'consumivel')
+            .map(([key]: [string, any]) => key)
+        }
+      },
+      customer_service_prompts: [
+        `Produto: ${product.name}`,
+        `Categoria: ${product.category}${product.subcategory ? ` > ${product.subcategory}` : ''}`,
+        `Preço: ${product.price ? `R$ ${product.price}` : 'Consulte'}${product.promo_price ? ` | Promoção: R$ ${product.promo_price}` : ''}`,
+        `Principais benefícios: ${product.benefits?.join(', ') || 'N/A'}`,
+        `Características: ${product.features?.join(', ') || 'N/A'}`,
+        `Público-alvo: ${product.target_audience?.join(', ') || 'N/A'}`,
+        `Palavras-chave para IA: ${product.keywords?.join(', ') || 'N/A'}`,
+        `Trigger words para chatbot: ${product.bot_trigger_words?.join(', ') || 'N/A'}`
+      ],
+      quality_flags: {
+        approved: product.approved,
+        use_in_ai_generation: product.use_in_ai_generation,
+        seo_enhanced: product.seo_enhanced,
+        ai_generated_keywords: product.ai_generated_keywords,
+        ai_generated_benefits: product.ai_generated_benefits,
+        ai_generated_category: product.ai_generated_category,
+        ai_generated_features: product.ai_generated_features,
+        has_ai_content: !!(product.individual_blog_content?.commercial || product.individual_blog_content?.technical),
+        content_completeness: calculateCompleteness(product)
+      },
+      generated_at: new Date().toISOString(),
+      export_version: "2.1"
+    };
+}
+
+/**
+ * Retorna nome amigável da etapa do workflow
+ */
+function getWorkflowStageName(key: string): string {
+  const names: Record<string, string> = {
+    scan: 'Escaneamento Intraoral',
+    design: 'Design/Planejamento CAD',
+    process: 'Processamento/Pós-cura',
+    print: 'Impressão 3D',
+    finish: 'Acabamento/Polimento',
+    install: 'Instalação/Cimentação'
   };
+  return names[key] || key;
 }
 
 /**
@@ -1009,6 +1057,46 @@ ${product.target_audience?.map(audience => `- ${audience}`).join('\n') || '- Pú
 
 ## 📊 ESPECIFICAÇÕES TÉCNICAS
 ${product.technical_specifications?.map(spec => `- ${spec.label}: ${spec.value}`).join('\n') || '- Especificações não disponíveis'}
+
+## 🔄 WORKFLOW ODONTOLÓGICO DIGITAL
+${(() => {
+  const ws = (product as any).workflow_stages;
+  if (!ws) return '- Workflow não configurado';
+  
+  const stageNames: Record<string, string> = {
+    scan: 'Escaneamento Intraoral',
+    design: 'Design/Planejamento CAD',
+    process: 'Processamento/Pós-cura',
+    print: 'Impressão 3D',
+    finish: 'Acabamento/Polimento',
+    install: 'Instalação/Cimentação'
+  };
+  
+  const applicableStages = Object.entries(ws).filter(([_, s]: [string, any]) => s?.applicable);
+  if (applicableStages.length === 0) return '- Nenhuma etapa configurada';
+  
+  return applicableStages.map(([key, stage]: [string, any]) => {
+    const name = stageNames[key] || key;
+    const roleEmoji = stage.role === 'principal' ? '⭐' : stage.role === 'acessorio' ? '🔧' : '📦';
+    const roleLabel = stage.role === 'principal' ? 'Principal' : stage.role === 'acessorio' ? 'Acessório' : 'Consumível';
+    
+    let output = `\n### ${name} ${roleEmoji} (${roleLabel})\n`;
+    if (stage.description) output += `Descrição: ${stage.description}\n`;
+    if (stage.pain_points_addressed?.length) output += `Dores Resolvidas: ${stage.pain_points_addressed.join(', ')}\n`;
+    if (stage.competitive_advantages?.length) output += `Vantagens: ${stage.competitive_advantages.join(', ')}\n`;
+    
+    // ✅ PRODUTOS RELACIONADOS DO PORTFÓLIO (anti-alucinação)
+    if (stage.related_products?.length) {
+      output += `\nProdutos Relacionados (${stage.related_products.length}):\n`;
+      stage.related_products.forEach((rp: any) => {
+        const rpEmoji = rp.role === 'acessorio' ? '🔧' : '📦';
+        output += `- ${rpEmoji} ${rp.product_name} (${rp.role})\n`;
+      });
+    }
+    
+    return output;
+  }).join('\n');
+})()}
 
 ## 📄 DOCUMENTOS TÉCNICOS (Sistema B)
 ${product.technical_documents?.length ? `

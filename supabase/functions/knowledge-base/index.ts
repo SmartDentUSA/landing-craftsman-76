@@ -640,6 +640,52 @@ function formatForAITraining(data: any): string {
         text += `\n`;
       }
       
+      // ✅ WORKFLOW ODONTOLÓGICO DIGITAL - Etapas do processo com produtos relacionados
+      if (p.workflow_stages) {
+        const stageNames: Record<string, string> = {
+          scan: 'Escaneamento Intraoral',
+          design: 'Design/Planejamento CAD',
+          process: 'Processamento/Pós-cura',
+          print: 'Impressão 3D',
+          finish: 'Acabamento/Polimento',
+          install: 'Instalação/Cimentação'
+        };
+        
+        const applicableStages = Object.entries(p.workflow_stages)
+          .filter(([_, stage]: [string, any]) => stage?.applicable);
+        
+        if (applicableStages.length > 0) {
+          text += `\n🔄 WORKFLOW ODONTOLÓGICO DIGITAL (${applicableStages.length} etapas):\n`;
+          
+          applicableStages.forEach(([key, stage]: [string, any]) => {
+            const stageName = stageNames[key] || key;
+            const roleLabel = stage.role === 'principal' ? '⭐ Principal' : 
+                            stage.role === 'acessorio' ? '🔧 Acessório' : 
+                            stage.role === 'consumivel' ? '📦 Consumível' : '';
+            
+            text += `\n  **${stageName}** ${roleLabel}\n`;
+            if (stage.description) {
+              text += `  Descrição: ${stage.description}\n`;
+            }
+            if (stage.pain_points_addressed?.length > 0) {
+              text += `  Dores Resolvidas: ${stage.pain_points_addressed.join(', ')}\n`;
+            }
+            if (stage.competitive_advantages?.length > 0) {
+              text += `  Vantagens: ${stage.competitive_advantages.join(', ')}\n`;
+            }
+            // ✅ NOVO: Produtos relacionados do portfólio (anti-alucinação IA)
+            if (stage.related_products?.length > 0) {
+              text += `  Produtos Relacionados:\n`;
+              stage.related_products.forEach((rp: any) => {
+                const rpRole = rp.role === 'acessorio' ? '🔧' : '📦';
+                text += `    - ${rpRole} ${rp.product_name} (${rp.role})\n`;
+              });
+            }
+          });
+          text += `\n`;
+        }
+      }
+      
       text += `\n---\n\n`;
     });
   }
