@@ -2418,6 +2418,8 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
               setFormData(prev => ({ ...prev, workflow_stages: stages }));
               autoSave({ workflow_stages: stages });
             }}
+            currentProductId={product?.id}
+            currentProductName={formData.name}
           />
 
           {/* SEO & URL Amigável Section */}

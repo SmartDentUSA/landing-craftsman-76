@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { TagInput } from "@/components/ui/tag-input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Scan, PenTool, Printer, Settings, Sparkles, Home, ArrowRight } from "lucide-react";
+import { WorkflowProductSelector, RelatedProduct } from "./WorkflowProductSelector";
 
 const WORKFLOW_STAGES = [
   { 
@@ -60,16 +61,17 @@ const ROLE_OPTIONS = [
   { value: 'consumivel', label: 'Consumível', description: 'Material de uso único' }
 ];
 
-interface WorkflowStage {
+export interface WorkflowStage {
   applicable: boolean;
   role: 'principal' | 'acessorio' | 'consumivel' | null;
   description: string | null;
   pain_points_addressed: string[];
   competitive_advantages: string[];
   related_materials: string[];
+  related_products?: RelatedProduct[];
 }
 
-interface WorkflowStages {
+export interface WorkflowStages {
   scan?: WorkflowStage;
   design?: WorkflowStage;
   print?: WorkflowStage;
@@ -81,9 +83,11 @@ interface WorkflowStages {
 interface WorkflowStagesSectionProps {
   workflowStages: WorkflowStages | null;
   onChange: (stages: WorkflowStages) => void;
+  currentProductId?: string;
+  currentProductName?: string;
 }
 
-export function WorkflowStagesSection({ workflowStages, onChange }: WorkflowStagesSectionProps) {
+export function WorkflowStagesSection({ workflowStages, onChange, currentProductId, currentProductName }: WorkflowStagesSectionProps) {
   const stages = workflowStages || getDefaultStages();
   
   const handleStageChange = (stageKey: string, field: string, value: any) => {
@@ -213,6 +217,14 @@ export function WorkflowStagesSection({ workflowStages, onChange }: WorkflowStag
                         placeholder="Ex: 147 MPa resistência, Protocolo simplificado..."
                       />
                     </div>
+
+                    {/* Related Products - NEW */}
+                    <WorkflowProductSelector
+                      stageKey={stage.key}
+                      currentProductId={currentProductId}
+                      selectedProducts={stageData.related_products || []}
+                      onChange={(products) => handleStageChange(stage.key, 'related_products', products)}
+                    />
                   </AccordionContent>
                 )}
               </AccordionItem>
@@ -249,6 +261,7 @@ function getDefaultStageData(): WorkflowStage {
     description: null,
     pain_points_addressed: [],
     competitive_advantages: [],
-    related_materials: []
+    related_materials: [],
+    related_products: []
   };
 }
