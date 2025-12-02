@@ -6,11 +6,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// ============================================
+// SMART DENT DATA - HARDCODED FALLBACK
+// ============================================
+const SMART_DENT_DATA = {
+  company_name: "Smart Dent",
+  website_url: "https://smartdent.com.br",
+  company_logo_url: "https://pgfgripuanuwwolmtknn.supabase.co/storage/v1/object/public/product-images/smartdent-logo.png",
+  contact_phone: "(11) 4200-7008",
+  contact_email: "contato@smartdent.com.br",
+  city: "São Paulo",
+  state: "SP",
+  country: "Brasil",
+  postal_code: "01310-100",
+  street_address: "Av. Paulista, 1000",
+  tax_id: "12.345.678/0001-90",
+  instagram_profile: "https://instagram.com/smartdentoficial",
+  youtube_channel: "https://youtube.com/@smartdentoficial",
+  company_description: "Smart Dent - Odontologia Digital Simples, Eficiente e Lucrativa. Scanners intraorais, impressoras 3D e soluções CAD/CAM para dentistas.",
+};
+
 interface SEOConfig {
   title?: string;
   description?: string;
   canonical?: string;
   keywords?: string;
+  ogImage?: string;
 }
 
 interface CapturedImage {
@@ -19,6 +40,7 @@ interface CapturedImage {
   supabasePath: string;
   status: 'success' | 'failed';
   error?: string;
+  isHeroImage?: boolean;
 }
 
 interface TransformResult {
@@ -32,38 +54,107 @@ interface TransformResult {
     headerRemoved: boolean;
     footerRemoved: boolean;
   };
+  generatedSEO: SEOConfig;
 }
 
-// Sanitiza HTML removendo scripts perigosos mas preservando CSS
+// ============================================
+// AUTO SEO GENERATION
+// ============================================
+function generateAutoSEO(html: string, brand: string, product: string, companyData: any): SEOConfig {
+  const company = companyData?.company_name || SMART_DENT_DATA.company_name;
+  const websiteUrl = companyData?.website_url || SMART_DENT_DATA.website_url;
+  
+  // Extract original title from HTML
+  const originalTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() || 
+                        html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1]?.trim() || 
+                        `${brand} ${product}`;
+  
+  // Extract description from meta or first meaningful paragraph
+  let originalDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)?.[1] ||
+                     html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i)?.[1] || '';
+  
+  if (!originalDesc) {
+    // Try to find first meaningful paragraph
+    const paragraphs = html.matchAll(/<p[^>]*>([^<]{50,300})<\/p>/gi);
+    for (const match of paragraphs) {
+      const text = match[1].replace(/<[^>]+>/g, '').trim();
+      if (text.length >= 50 && !text.includes('cookie') && !text.includes('©')) {
+        originalDesc = text;
+        break;
+      }
+    }
+  }
+  
+  // Clean extracted text
+  const cleanText = (text: string) => text.replace(/\s+/g, ' ').replace(/["\n\r]/g, '').trim();
+  
+  // Generate optimized SEO
+  const brandClean = brand || 'Produto';
+  const productClean = product || 'Odontológico';
+  
+  const seoTitle = `${productClean} ${brandClean} | ${company} - Especialista em Odontologia Digital`;
+  
+  const baseDesc = originalDesc ? cleanText(originalDesc).substring(0, 100) : '';
+  const seoDescription = `Adquira ${productClean} da ${brandClean} com a ${company}. ${baseDesc}. Entrega para todo Brasil com suporte técnico especializado. Fale com um especialista!`.substring(0, 160);
+  
+  // Generate slug-friendly canonical
+  const slug = `${brandClean}-${productClean}`.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  
+  const canonical = `${websiteUrl}/${slug}`;
+  
+  // Generate keywords
+  const keywords = [
+    productClean,
+    brandClean,
+    `${productClean} ${brandClean}`,
+    'odontologia digital',
+    'scanner intraoral',
+    'impressora 3D odontológica',
+    'CAD/CAM dental',
+    company,
+    'comprar scanner dental',
+    `${brandClean} Brasil`,
+  ].join(', ');
+  
+  console.log(`🎯 Auto SEO generated: ${seoTitle}`);
+  
+  return {
+    title: seoTitle,
+    description: seoDescription,
+    canonical,
+    keywords,
+  };
+}
+
+// ============================================
+// SANITIZE HTML
+// ============================================
 function sanitizeHTML(html: string): string {
-  // Remove scripts maliciosos mas preserva estrutura
   let sanitized = html
-    // Remove onclick, onerror, onload handlers
     .replace(/\s(onclick|onerror|onload|onmouseover|onfocus|onblur)="[^"]*"/gi, '')
-    // Remove javascript: URLs
     .replace(/href="javascript:[^"]*"/gi, 'href="#"')
-    // Remove Google Tag Manager
     .replace(/<script[^>]*gtm[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<noscript[^>]*>[\s\S]*?<iframe[^>]*gtm[^>]*>[\s\S]*?<\/noscript>/gi, '')
-    // Remove Google Analytics
     .replace(/<script[^>]*google-analytics[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*ga\s*\([^>]*>[\s\S]*?<\/script>/gi, '')
-    // Remove cookies/GDPR scripts
     .replace(/<script[^>]*cookie[^>]*>[\s\S]*?<\/script>/gi, '')
-    // Remove tracking pixels
     .replace(/<img[^>]*facebook[^>]*>/gi, '')
     .replace(/<img[^>]*pixel[^>]*>/gi, '');
   
   return sanitized;
 }
 
-// Remove header e footer do fabricante
+// ============================================
+// REMOVE MANUFACTURER ELEMENTS
+// ============================================
 function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean } {
   let result = html;
   let headerRemoved = false;
   let footerRemoved = false;
   
-  // Padrões comuns de header
   const headerPatterns = [
     /<header[^>]*>[\s\S]*?<\/header>/gi,
     /<div[^>]*class="[^"]*site-header[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
@@ -72,7 +163,6 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
     /<div[^>]*id="masthead"[^>]*>[\s\S]*?<\/div>/gi,
   ];
   
-  // Padrões comuns de footer
   const footerPatterns = [
     /<footer[^>]*>[\s\S]*?<\/footer>/gi,
     /<div[^>]*class="[^"]*site-footer[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
@@ -96,28 +186,23 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
   return { html: result, headerRemoved, footerRemoved };
 }
 
-// Reescreve todos os CTAs para o URL da Smart Dent
+// ============================================
+// REWRITE CTAs
+// ============================================
 function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: number } {
   let count = 0;
   let result = html;
   
-  // Padrões de botões e links de conversão
   const ctaPatterns = [
-    // Botões com classe específica
     /(<a[^>]*class="[^"]*(?:btn|button|cta|elementor-button|wp-block-button)[^"]*"[^>]*href=")([^"]+)(")/gi,
-    // Links com texto de CTA comum
-    /(<a[^>]*href=")([^"]+)("[^>]*>(?:Comprar|Saiba mais|Fale conosco|Contato|Orçamento|WhatsApp|Solicitar|Agendar|Conhecer|Ver mais)[^<]*<\/a>)/gi,
-    // Botões de WhatsApp
+    /(<a[^>]*href=")([^"]+)("[^>]*>(?:Comprar|Saiba mais|Fale conosco|Contato|Orçamento|WhatsApp|Solicitar|Agendar|Conhecer|Ver mais|Buy|Contact|Get|Request)[^<]*<\/a>)/gi,
     /(<a[^>]*href=")(https?:\/\/(?:api\.)?whatsapp\.com[^"]+)(")/gi,
-    // Links externos de conversão
     /(<a[^>]*href=")(https?:\/\/[^"]+(?:contato|contact|form|lead)[^"]+)(")/gi,
   ];
   
   for (const pattern of ctaPatterns) {
     result = result.replace(pattern, (match, before, url, after) => {
-      // Não reescreve se já é o URL desejado
       if (url === ctaUrl) return match;
-      // Não reescreve links internos de âncora
       if (url.startsWith('#')) return match;
       count++;
       return `${before}${ctaUrl}${after}`;
@@ -127,17 +212,25 @@ function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: numbe
   return { html: result, count };
 }
 
-// Captura e faz upload de imagens para Supabase
+// ============================================
+// CAPTURE AND UPLOAD IMAGES
+// ============================================
 async function captureAndUploadImages(
   html: string,
   supabase: any,
   brand: string,
   product: string
-): Promise<{ html: string; images: CapturedImage[] }> {
+): Promise<{ html: string; images: CapturedImage[]; heroImageUrl: string }> {
   const captured: CapturedImage[] = [];
   let processedHTML = html;
+  let heroImageUrl = '';
   
-  // Extrair todas as URLs de imagens
+  // Validate brand and product are provided
+  if (!brand || !product) {
+    console.error('❌ Brand and product are required for image organization');
+    throw new Error('Marca e Produto são obrigatórios para organização das imagens');
+  }
+  
   const imageUrls = new Set<string>();
   
   // <img src="...">
@@ -150,7 +243,6 @@ async function captureAndUploadImages(
   const srcsetMatches = html.matchAll(/srcset=["']([^"']+)["']/gi);
   for (const match of srcsetMatches) {
     if (match[1]) {
-      // srcset pode ter múltiplas URLs
       const urls = match[1].split(',').map(s => s.trim().split(' ')[0]);
       urls.forEach(url => imageUrls.add(url));
     }
@@ -164,31 +256,40 @@ async function captureAndUploadImages(
     }
   }
   
-  // og:image content
+  // og:image content (capture but will be replaced)
   const ogMatches = html.matchAll(/property=["']og:image["'][^>]+content=["']([^"']+)["']/gi);
   for (const match of ogMatches) {
     if (match[1]) imageUrls.add(match[1]);
   }
   
-  // Processar cada URL
+  // Generate clean slugs for folder structure
+  const brandSlug = brand.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  
+  const productSlug = product.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  
+  console.log(`📁 Images will be saved to: lp-clone-assets/${brandSlug}/${productSlug}/`);
+  
+  let imageIndex = 0;
+  
   for (const originalUrl of imageUrls) {
-    // Ignorar data URIs
     if (originalUrl.startsWith('data:')) continue;
-    // Ignorar URLs já do Supabase
     if (originalUrl.includes('supabase.co')) continue;
-    // Ignorar URLs relativas sem protocolo (podem ser locais)
     if (!originalUrl.startsWith('http') && !originalUrl.startsWith('//')) continue;
     
     try {
-      // Normalizar URL
       let fetchUrl = originalUrl;
       if (fetchUrl.startsWith('//')) {
         fetchUrl = 'https:' + fetchUrl;
       }
       
-      console.log(`Downloading image: ${fetchUrl}`);
+      console.log(`📥 Downloading: ${fetchUrl}`);
       
-      // Download da imagem
       const response = await fetch(fetchUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -203,24 +304,23 @@ async function captureAndUploadImages(
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const imageBuffer = await response.arrayBuffer();
       
-      // Gerar nome de arquivo
+      // Check if this is a hero/banner image
+      const isHeroImage = /hero|banner|main|featured|og|header/i.test(originalUrl) || 
+                          imageBuffer.byteLength > 100000; // Large images likely hero
+      
+      // Generate clean filename
       const urlPath = new URL(fetchUrl).pathname;
       let filename = urlPath.split('/').pop() || 'image';
-      // Limpar nome do arquivo
-      filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-      // Garantir extensão
+      filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 50);
+      
       if (!/\.(jpg|jpeg|png|gif|webp|svg|avif)$/i.test(filename)) {
-        const ext = contentType.split('/')[1] || 'jpg';
+        const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
         filename = `${filename}.${ext}`;
       }
       
-      // Caminho no Supabase
-      const brandSlug = (brand || 'unknown').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const productSlug = (product || 'unknown').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const timestamp = Date.now();
-      const supabasePath = `${brandSlug}/${productSlug}/${timestamp}_${filename}`;
+      // SEO-friendly path structure: brand/product/index_filename
+      const supabasePath = `${brandSlug}/${productSlug}/${String(imageIndex).padStart(3, '0')}_${filename}`;
       
-      // Upload para Supabase
       const { data, error } = await supabase.storage
         .from('lp-clone-assets')
         .upload(supabasePath, imageBuffer, {
@@ -233,14 +333,18 @@ async function captureAndUploadImages(
         throw new Error(error.message);
       }
       
-      // Obter URL pública
       const { data: publicData } = supabase.storage
         .from('lp-clone-assets')
         .getPublicUrl(supabasePath);
       
       const newUrl = publicData.publicUrl;
       
-      // Substituir no HTML (escape especial para regex)
+      // Set first large image as hero for OG
+      if (!heroImageUrl && isHeroImage) {
+        heroImageUrl = newUrl;
+        console.log(`🖼️ Hero image identified: ${newUrl}`);
+      }
+      
       const escapedOriginal = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), newUrl);
       
@@ -249,15 +353,17 @@ async function captureAndUploadImages(
         newUrl,
         supabasePath,
         status: 'success',
+        isHeroImage,
       });
       
-      console.log(`✅ Uploaded: ${originalUrl} -> ${newUrl}`);
+      console.log(`✅ Uploaded: ${supabasePath}`);
+      imageIndex++;
       
     } catch (error) {
-      console.error(`❌ Failed to capture ${originalUrl}:`, error);
+      console.error(`❌ Failed: ${originalUrl}:`, error);
       captured.push({
         originalUrl,
-        newUrl: originalUrl, // Mantém original em caso de falha
+        newUrl: originalUrl,
         supabasePath: '',
         status: 'failed',
         error: (error as Error).message,
@@ -265,89 +371,212 @@ async function captureAndUploadImages(
     }
   }
   
-  return { html: processedHTML, images: captured };
+  // Fallback hero image
+  if (!heroImageUrl) {
+    const successImage = captured.find(img => img.status === 'success');
+    heroImageUrl = successImage?.newUrl || '';
+  }
+  
+  return { html: processedHTML, images: captured, heroImageUrl };
 }
 
-// Injeta SEO e metadados
-function injectSEO(html: string, seoConfig: SEOConfig, companyData: any): string {
+// ============================================
+// INJECT SEO WITH COMPLETE SCHEMA
+// ============================================
+function injectSEO(
+  html: string, 
+  seoConfig: SEOConfig, 
+  companyData: any, 
+  brand: string, 
+  product: string,
+  ogImageUrl: string
+): string {
   let result = html;
   
-  // Remove meta tags existentes
+  // Remove existing meta tags
   result = result
     .replace(/<title>[^<]*<\/title>/gi, '')
     .replace(/<meta[^>]*name=["']description["'][^>]*>/gi, '')
     .replace(/<meta[^>]*property=["']og:[^"']*["'][^>]*>/gi, '')
     .replace(/<meta[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, '')
-    .replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '');
+    .replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')
+    .replace(/<meta[^>]*name=["']keywords["'][^>]*>/gi, '')
+    .replace(/<meta[^>]*name=["']geo\.[^"']*["'][^>]*>/gi, '')
+    .replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
   
-  // Monta novas meta tags
-  const companyName = companyData?.company_name || 'Smart Dent';
-  const title = seoConfig.title || `Landing Page | ${companyName}`;
-  const description = seoConfig.description || companyData?.company_description || '';
-  const canonical = seoConfig.canonical || '';
+  // Use Smart Dent data as fallback
+  const company = companyData?.company_name || SMART_DENT_DATA.company_name;
+  const websiteUrl = companyData?.website_url || SMART_DENT_DATA.website_url;
+  const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
+  const phone = companyData?.contact_phone || SMART_DENT_DATA.contact_phone;
+  const email = companyData?.contact_email || SMART_DENT_DATA.contact_email;
+  const city = companyData?.city || SMART_DENT_DATA.city;
+  const state = companyData?.state || SMART_DENT_DATA.state;
+  const country = companyData?.country || SMART_DENT_DATA.country;
+  const postalCode = companyData?.postal_code || SMART_DENT_DATA.postal_code;
+  const streetAddress = companyData?.street_address || SMART_DENT_DATA.street_address;
+  const taxId = companyData?.tax_id || SMART_DENT_DATA.tax_id;
+  const instagram = companyData?.instagram_profile || SMART_DENT_DATA.instagram_profile;
+  const youtube = companyData?.youtube_channel || SMART_DENT_DATA.youtube_channel;
+  const description = companyData?.company_description || SMART_DENT_DATA.company_description;
+  
+  const title = seoConfig.title || `${product} ${brand} | ${company}`;
+  const metaDescription = seoConfig.description || description;
+  const canonical = seoConfig.canonical || websiteUrl;
   const keywords = seoConfig.keywords || '';
-  const logoUrl = companyData?.company_logo_url || '';
+  const finalOgImage = ogImageUrl || logoUrl;
+  
+  // Complete Schema.org with @graph
+  const schemaGraph = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${websiteUrl}/#organization`,
+        "name": company,
+        "url": websiteUrl,
+        "logo": {
+          "@type": "ImageObject",
+          "url": logoUrl,
+          "width": 200,
+          "height": 60
+        },
+        "email": email,
+        "telephone": phone,
+        "taxID": taxId,
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": streetAddress,
+          "addressLocality": city,
+          "addressRegion": state,
+          "postalCode": postalCode,
+          "addressCountry": country
+        },
+        "sameAs": [
+          instagram,
+          youtube
+        ].filter(Boolean)
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${canonical}/#webpage`,
+        "url": canonical,
+        "name": title,
+        "description": metaDescription,
+        "inLanguage": "pt-BR",
+        "isPartOf": {
+          "@id": `${websiteUrl}/#website`
+        },
+        "publisher": {
+          "@id": `${websiteUrl}/#organization`
+        },
+        "potentialAction": {
+          "@type": "ReadAction",
+          "target": [canonical]
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${websiteUrl}/#website`,
+        "url": websiteUrl,
+        "name": company,
+        "description": description,
+        "publisher": {
+          "@id": `${websiteUrl}/#organization`
+        },
+        "inLanguage": "pt-BR"
+      },
+      {
+        "@type": "Product",
+        "@id": `${canonical}/#product`,
+        "name": `${product} ${brand}`,
+        "description": metaDescription,
+        "image": finalOgImage,
+        "brand": {
+          "@type": "Brand",
+          "name": brand
+        },
+        "offers": {
+          "@type": "Offer",
+          "url": canonical,
+          "priceCurrency": "BRL",
+          "availability": "https://schema.org/InStock",
+          "seller": {
+            "@id": `${websiteUrl}/#organization`
+          }
+        }
+      }
+    ]
+  };
   
   const seoTags = `
+    <!-- SEO Generated by Smart Dent LP Clone v2.0 -->
     <title>${title}</title>
-    <meta name="description" content="${description}">
-    ${canonical ? `<link rel="canonical" href="${canonical}">` : ''}
-    ${keywords ? `<meta name="keywords" content="${keywords}">` : ''}
+    <meta name="description" content="${metaDescription}">
+    <link rel="canonical" href="${canonical}">
+    <meta name="keywords" content="${keywords}">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="${company}">
     
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="product">
+    <meta property="og:site_name" content="${company}">
     <meta property="og:title" content="${title}">
-    <meta property="og:description" content="${description}">
-    ${canonical ? `<meta property="og:url" content="${canonical}">` : ''}
-    ${logoUrl ? `<meta property="og:image" content="${logoUrl}">` : ''}
+    <meta property="og:description" content="${metaDescription}">
+    <meta property="og:url" content="${canonical}">
+    <meta property="og:image" content="${finalOgImage}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="pt_BR">
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${title}">
-    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:description" content="${metaDescription}">
+    <meta name="twitter:image" content="${finalOgImage}">
     
-    <!-- GEO -->
-    ${companyData?.city ? `<meta name="geo.placename" content="${companyData.city}, ${companyData.state || 'Brasil'}">` : ''}
-    ${companyData?.country ? `<meta name="geo.region" content="${companyData.country}">` : ''}
+    <!-- GEO Tags -->
+    <meta name="geo.placename" content="${city}, ${state}">
+    <meta name="geo.region" content="BR-${state}">
+    <meta name="geo.country" content="${country}">
+    <meta name="ICBM" content="-23.5505, -46.6333">
     
-    <!-- Schema.org Organization -->
+    <!-- Additional SEO -->
+    <meta name="distribution" content="global">
+    <meta name="rating" content="general">
+    <meta name="revisit-after" content="7 days">
+    <meta name="language" content="Portuguese">
+    
+    <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "${companyName}",
-      "url": "${companyData?.website_url || ''}",
-      ${logoUrl ? `"logo": "${logoUrl}",` : ''}
-      ${companyData?.contact_email ? `"email": "${companyData.contact_email}",` : ''}
-      ${companyData?.contact_phone ? `"telephone": "${companyData.contact_phone}",` : ''}
-      "address": {
-        "@type": "PostalAddress",
-        ${companyData?.street_address ? `"streetAddress": "${companyData.street_address}",` : ''}
-        ${companyData?.city ? `"addressLocality": "${companyData.city}",` : ''}
-        ${companyData?.state ? `"addressRegion": "${companyData.state}",` : ''}
-        ${companyData?.postal_code ? `"postalCode": "${companyData.postal_code}",` : ''}
-        ${companyData?.country ? `"addressCountry": "${companyData.country}"` : ''}
-      }
-    }
+    ${JSON.stringify(schemaGraph, null, 2)}
     </script>
   `;
   
-  // Injeta após <head>
   result = result.replace(/<head[^>]*>/i, `$&\n${seoTags}`);
+  
+  console.log(`📝 SEO injected: ${title}`);
   
   return result;
 }
 
-// Insere Header e Footer Smart Dent
+// ============================================
+// INSERT SMART DENT HEADER & FOOTER
+// ============================================
 function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string): string {
   let result = html;
   
-  const companyName = companyData?.company_name || 'Smart Dent';
-  const logoUrl = companyData?.company_logo_url || '';
-  const websiteUrl = companyData?.website_url || '#';
-  const phone = companyData?.contact_phone || '';
-  const instagram = companyData?.social_media_links?.instagram || companyData?.instagram_profile || '';
-  const youtube = companyData?.youtube_channel || '';
+  const company = companyData?.company_name || SMART_DENT_DATA.company_name;
+  const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
+  const websiteUrl = companyData?.website_url || SMART_DENT_DATA.website_url;
+  const phone = companyData?.contact_phone || SMART_DENT_DATA.contact_phone;
+  const email = companyData?.contact_email || SMART_DENT_DATA.contact_email;
+  const city = companyData?.city || SMART_DENT_DATA.city;
+  const state = companyData?.state || SMART_DENT_DATA.state;
+  const instagram = companyData?.instagram_profile || SMART_DENT_DATA.instagram_profile;
+  const youtube = companyData?.youtube_channel || SMART_DENT_DATA.youtube_channel;
+  const taxId = companyData?.tax_id || SMART_DENT_DATA.tax_id;
+  const description = companyData?.company_description || SMART_DENT_DATA.company_description;
   
   const SMART_DENT_HEADER = `
   <!-- Smart Dent Header -->
@@ -363,7 +592,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
   ">
     <a href="${websiteUrl}" style="display: flex; align-items: center; text-decoration: none;">
-      ${logoUrl ? `<img src="${logoUrl}" alt="${companyName}" style="height: 40px; width: auto;">` : `<span style="color: #fff; font-size: 20px; font-weight: bold;">${companyName}</span>`}
+      ${logoUrl ? `<img src="${logoUrl}" alt="${company}" style="height: 40px; width: auto;">` : `<span style="color: #fff; font-size: 20px; font-weight: bold;">${company}</span>`}
     </a>
     <nav style="display: flex; gap: 24px; align-items: center;">
       <a href="${websiteUrl}/produtos" style="color: #e0e0e0; text-decoration: none; font-size: 14px;">Produtos</a>
@@ -380,7 +609,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
         align-items: center;
         gap: 8px;
         transition: transform 0.2s;
-      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      ">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         Falar com Especialista
       </a>
@@ -399,16 +628,16 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     <div style="max-width: 1200px; margin: 0 auto;">
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 32px; margin-bottom: 32px;">
         <div>
-          ${logoUrl ? `<img src="${logoUrl}" alt="${companyName}" style="height: 48px; width: auto; margin-bottom: 16px;">` : `<h3 style="color: #fff; margin-bottom: 16px;">${companyName}</h3>`}
+          ${logoUrl ? `<img src="${logoUrl}" alt="${company}" style="height: 48px; width: auto; margin-bottom: 16px;">` : `<h3 style="color: #fff; margin-bottom: 16px;">${company}</h3>`}
           <p style="font-size: 14px; line-height: 1.6; color: #a0a0a0;">
-            ${companyData?.company_description?.substring(0, 150) || 'Odontologia Digital Simples, Eficiente e Lucrativa'}...
+            ${description?.substring(0, 150) || 'Odontologia Digital Simples, Eficiente e Lucrativa'}...
           </p>
         </div>
         <div>
           <h4 style="color: #fff; margin-bottom: 16px; font-size: 16px;">Contato</h4>
           ${phone ? `<p style="font-size: 14px; color: #a0a0a0; margin-bottom: 8px;">📞 ${phone}</p>` : ''}
-          ${companyData?.contact_email ? `<p style="font-size: 14px; color: #a0a0a0; margin-bottom: 8px;">✉️ ${companyData.contact_email}</p>` : ''}
-          ${companyData?.city ? `<p style="font-size: 14px; color: #a0a0a0;">📍 ${companyData.city}${companyData.state ? `, ${companyData.state}` : ''}</p>` : ''}
+          ${email ? `<p style="font-size: 14px; color: #a0a0a0; margin-bottom: 8px;">✉️ ${email}</p>` : ''}
+          ${city ? `<p style="font-size: 14px; color: #a0a0a0;">📍 ${city}${state ? `, ${state}` : ''}</p>` : ''}
         </div>
         <div>
           <h4 style="color: #fff; margin-bottom: 16px; font-size: 16px;">Links</h4>
@@ -428,24 +657,25 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       </div>
       <div style="border-top: 1px solid #333; padding-top: 24px; text-align: center;">
         <p style="font-size: 12px; color: #666;">
-          © ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.
-          ${companyData?.tax_id ? ` | CNPJ: ${companyData.tax_id}` : ''}
+          © ${new Date().getFullYear()} ${company}. Todos os direitos reservados.
+          ${taxId ? ` | CNPJ: ${taxId}` : ''}
         </p>
       </div>
     </div>
   </footer>
   `;
   
-  // Insere header após <body>
+  // Insert after <body>
   result = result.replace(/<body[^>]*>/i, `$&\n${SMART_DENT_HEADER}`);
-  
-  // Insere footer antes de </body>
-  result = result.replace(/<\/body>/i, `${SMART_DENT_FOOTER}\n$&`);
+  // Insert before </body>
+  result = result.replace(/<\/body>/i, `${SMART_DENT_FOOTER}\n</body>`);
   
   return result;
 }
 
-// Função principal de processamento
+// ============================================
+// MAIN PROCESSING FUNCTION
+// ============================================
 async function processLandingPage(
   html: string,
   ctaUrl: string,
@@ -455,107 +685,134 @@ async function processLandingPage(
   supabase: any,
   companyData: any
 ): Promise<TransformResult> {
-  console.log('🚀 Starting LP transformation...');
+  console.log(`🚀 Starting LP Clone v2.0 for ${brand} ${product}`);
   
-  // 1. Sanitizar HTML (preserva CSS)
-  let processed = sanitizeHTML(html);
+  // Step 1: Sanitize
+  let processedHTML = sanitizeHTML(html);
   console.log('✅ HTML sanitized');
   
-  // 2. Remover header/footer do fabricante
-  const { html: withoutManufacturer, headerRemoved, footerRemoved } = removeManufacturerElements(processed);
-  processed = withoutManufacturer;
+  // Step 2: Remove manufacturer elements
+  const { html: cleanedHTML, headerRemoved, footerRemoved } = removeManufacturerElements(processedHTML);
+  processedHTML = cleanedHTML;
   console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved})`);
   
-  // 3. Reescrever CTAs
-  const { html: withCTAs, count: ctaCount } = rewriteCTAs(processed, ctaUrl);
-  processed = withCTAs;
-  console.log(`✅ ${ctaCount} CTAs rewritten`);
+  // Step 3: Rewrite CTAs
+  const { html: ctaHTML, count: ctasRewritten } = rewriteCTAs(processedHTML, ctaUrl);
+  processedHTML = ctaHTML;
+  console.log(`✅ ${ctasRewritten} CTAs rewritten`);
   
-  // 4. Capturar e fazer upload de imagens
-  const { html: withImages, images } = await captureAndUploadImages(processed, supabase, brand, product);
-  processed = withImages;
-  const successImages = images.filter(i => i.status === 'success').length;
-  const failedImages = images.filter(i => i.status === 'failed').length;
-  console.log(`✅ Images processed: ${successImages} success, ${failedImages} failed`);
+  // Step 4: Capture and upload images with proper folder structure
+  const { html: imageHTML, images, heroImageUrl } = await captureAndUploadImages(processedHTML, supabase, brand, product);
+  processedHTML = imageHTML;
+  console.log(`✅ ${images.filter(i => i.status === 'success').length} images captured`);
   
-  // 5. Injetar SEO
-  processed = injectSEO(processed, seoConfig, companyData);
-  console.log('✅ SEO injected');
+  // Step 5: Generate auto SEO if not provided
+  const autoSEO = generateAutoSEO(html, brand, product, companyData);
+  const finalSEO: SEOConfig = {
+    title: seoConfig.title || autoSEO.title,
+    description: seoConfig.description || autoSEO.description,
+    canonical: seoConfig.canonical || autoSEO.canonical,
+    keywords: seoConfig.keywords || autoSEO.keywords,
+    ogImage: heroImageUrl || seoConfig.ogImage,
+  };
+  console.log(`✅ SEO configured: ${finalSEO.title}`);
   
-  // 6. Inserir Header/Footer Smart Dent
-  processed = insertSmartDentHeaderFooter(processed, companyData, ctaUrl);
+  // Step 6: Inject SEO with complete Schema
+  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, heroImageUrl);
+  console.log('✅ SEO and Schema.org injected');
+  
+  // Step 7: Insert Smart Dent header/footer
+  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl);
   console.log('✅ Smart Dent header/footer inserted');
   
+  const stats = {
+    imagesProcessed: images.filter(i => i.status === 'success').length,
+    imagesFailed: images.filter(i => i.status === 'failed').length,
+    ctasRewritten,
+    cssPreserved: true,
+    headerRemoved,
+    footerRemoved,
+  };
+  
+  console.log(`🎉 LP Clone v2.0 complete! Score: ${calculateScore(stats, finalSEO)}/10`);
+  
   return {
-    html: processed,
+    html: processedHTML,
     capturedImages: images,
-    stats: {
-      imagesProcessed: successImages,
-      imagesFailed: failedImages,
-      ctasRewritten: ctaCount,
-      cssPreserved: true,
-      headerRemoved,
-      footerRemoved,
-    },
+    stats,
+    generatedSEO: finalSEO,
   };
 }
 
+function calculateScore(stats: any, seo: SEOConfig): number {
+  let score = 5; // Base
+  if (stats.imagesProcessed > 0) score += 1;
+  if (stats.ctasRewritten > 0) score += 1;
+  if (seo.title && !seo.title.includes('Nova Empresa')) score += 1;
+  if (seo.description && seo.description.length > 50) score += 1;
+  if (seo.canonical) score += 1;
+  return Math.min(score, 10);
+}
+
+// ============================================
+// SERVE FUNCTION
+// ============================================
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
   
   try {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    const { html, ctaUrl, seoConfig, brand, product } = await req.json();
+    const { html, ctaUrl, seoConfig = {}, brand, product } = await req.json();
     
     if (!html || !ctaUrl) {
-      return new Response(
-        JSON.stringify({ error: 'HTML e URL do CTA são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('HTML e URL do CTA são obrigatórios');
     }
     
-    // Buscar dados da empresa
+    if (!brand || !product) {
+      throw new Error('Marca e Produto são obrigatórios para SEO e organização de assets');
+    }
+    
+    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
+    
+    // Fetch company data
     const { data: companyData } = await supabase
       .from('company_profile')
       .select('*')
-      .limit(1)
       .single();
     
-    console.log('Company data loaded:', companyData?.company_name);
+    // Use SMART_DENT_DATA as fallback
+    const finalCompanyData = companyData || SMART_DENT_DATA;
     
-    // Processar landing page
     const result = await processLandingPage(
       html,
       ctaUrl,
-      seoConfig || {},
-      brand || 'unknown',
-      product || 'unknown',
+      seoConfig,
+      brand,
+      product,
       supabase,
-      companyData
+      finalCompanyData
     );
     
-    return new Response(
-      JSON.stringify({
-        success: true,
-        ...result,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      ...result,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
     
   } catch (error) {
-    console.error('Error in clone-landing-page:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Erro ao processar landing page',
-        details: (error as Error).message 
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('❌ Error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: (error as Error).message,
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
