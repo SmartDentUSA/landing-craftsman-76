@@ -7,6 +7,20 @@ import { buildIntelligentLinksMap, applyIntelligentLinks } from '../_shared/inte
 // ✅ INTEGRAÇÃO SISTEMA B: Schemas de vídeos e documentos
 import { generateVideoObjectSchemas, generateDocumentSchemas, type SystemBEnrichment } from './systemBIntegration.ts';
 
+// ═══════════════════════════════════════════════════════════
+// 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
+// ═══════════════════════════════════════════════════════════
+const GENERIC_COMPANY_NAMES = ['Nova Empresa', 'Empresa', 'Company', 'Test Company', 'Minha Empresa', ''];
+const DEFAULT_COMPANY_NAME = 'Smart Dent';
+
+function sanitizeCompanyName(name: string | null | undefined): string {
+  const normalized = (name || '').trim();
+  if (GENERIC_COMPANY_NAMES.includes(normalized) || !normalized) {
+    return DEFAULT_COMPANY_NAME;
+  }
+  return normalized;
+}
+
 function generateSPINSchemas(
   solution: any,
   products: any[],
@@ -21,7 +35,7 @@ function generateSPINSchemas(
   if (company) {
     const orgSchema: any = {
       '@type': 'Organization',
-      name: company.company_name || 'Smart Dent',
+      name: sanitizeCompanyName(company.company_name),
       url: company.website || canonicalUrl,
       
       // ✅ FASE 1: Logo CRÍTICO (priorizar company_logo_url)
@@ -116,7 +130,7 @@ function generateSPINSchemas(
     mainEntity: products[0] ? {
       '@type': 'Product',
       name: products[0].name,
-      brand: { '@type': 'Brand', name: products[0].brand || company?.company_name || 'Smart Dent' }
+      brand: { '@type': 'Brand', name: products[0].brand || sanitizeCompanyName(company?.company_name) }
     } : undefined
   });
 
@@ -579,7 +593,7 @@ export function generateLandingPageHTML(
   // 1️⃣ TÍTULO SEO-OTIMIZADO: Produto | Categoria | Marca
   const mainProductName = products[0]?.name || '';
   const mainBrand = products[0]?.brand || '';
-  const companyName = company?.company_name || 'Smart Dent';
+  const companyName = sanitizeCompanyName(company?.company_name);
   const painLabel = painTypeLabels[solution.pain_type] || '';
   
   const rawSeoTitle = mainProductName 
@@ -690,7 +704,7 @@ export function generateLandingPageHTML(
   <meta property="og:title" content="${escapeHtml(seoTitle)}">
   <meta property="og:description" content="${escapeHtml(seoDescription)}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
-  <meta property="og:site_name" content="${escapeHtml(company?.company_name || 'Smart Dent')}">
+  <meta property="og:site_name" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
   <meta property="og:locale" content="pt_BR">
   ${(() => {
     // ✅ FASE 5: Múltiplas og:image da galeria de imagens dos produtos
@@ -2114,7 +2128,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- Header com Logo e Menu -->
   <div class="container">
     <div class="header">
-      <img src="${escapeHtml(company?.logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(company?.company_name || 'Empresa')}" class="banner" width="180" height="60" loading="eager">
+      <img src="${escapeHtml(company?.logo_url || 'https://via.placeholder.com/150x50?text=Logo')}" alt="Logo ${escapeHtml(sanitizeCompanyName(company?.company_name))}" class="banner" width="180" height="60" loading="eager">
       <nav class="main-nav">
         <a href="https://loja.smartdent.com.br/">Loja</a>
         <a href="https://parametros.smartdent.com.br/base-conhecimento">Blog</a>
@@ -2191,16 +2205,16 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         ` : ''}
         
         <div class="content-block entity-definition">
-          <h3>Sobre ${escapeHtml(company?.company_name || 'Nossa Empresa')}</h3>
+          <h3>Sobre ${escapeHtml(sanitizeCompanyName(company?.company_name))}</h3>
           <p>
             ${escapeHtml(company?.seo_technical_expertise || 
-              `${company?.company_name || 'Smart Dent'} é especialista em ${painTypeLabels[solution.pain_type] || 'soluções odontológicas'}, oferecendo produtos de alta qualidade para profissionais da odontologia.`)}
+              `${sanitizeCompanyName(company?.company_name)} é especialista em ${painTypeLabels[solution.pain_type] || 'soluções odontológicas'}, oferecendo produtos de alta qualidade para profissionais da odontologia.`)}
           </p>
           ${company?.mission_statement ? `<p><strong>Missão:</strong> ${escapeHtml(company.mission_statement)}</p>` : ''}
         </div>
       </section>
       
-      <meta itemprop="author" content="${escapeHtml(company?.company_name || 'Smart Dent')}">
+      <meta itemprop="author" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
       <meta itemprop="datePublished" content="${new Date().toISOString().split('T')[0]}">
     </article>
   </main>
@@ -2691,7 +2705,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       'image': pub.image_url || company?.company_logo_url,
       'url': pub.url,
       'datePublished': pub.published_at,
-      'author': { '@type': 'Organization', 'name': company?.company_name || 'Empresa' },
+      'author': { '@type': 'Organization', 'name': sanitizeCompanyName(company?.company_name) },
       'articleSection': pub.category?.name
     }));
     
@@ -2838,7 +2852,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     <div class="container">
       <div class="footer-columns">
         <div>
-          <strong>${escapeHtml(company?.company_name || 'Empresa')} - Brasil</strong>
+          <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
           <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(company?.phone_number || '')}</p>
           <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(company?.email || '')}</p>
           <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
@@ -2846,7 +2860,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
         </div>
         ${company?.usa_address ? `
         <div>
-          <strong>${escapeHtml(company?.company_name || 'Empresa')} - USA</strong>
+          <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - USA</strong>
           <p>${escapeHtml(company.usa_address)}</p>
         </div>
         ` : ''}
@@ -2927,7 +2941,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="geo-context" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">
     <p>
-      ${escapeHtml(company?.company_name || 'Smart Dent')} é especialista em 
+      ${escapeHtml(sanitizeCompanyName(company?.company_name))} é especialista em
       ${escapeHtml(painTypeLabels[solution.pain_type] || 'soluções odontológicas')}.
       ${products.length > 0 ? `Principais produtos: ${products.map((p: any) => p.name).filter(Boolean).join(', ')}.` : ''}
       ${products[0]?.brand ? `Marca: ${escapeHtml(products[0].brand)}.` : ''}

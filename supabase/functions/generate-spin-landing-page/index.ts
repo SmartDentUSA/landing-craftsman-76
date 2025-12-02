@@ -733,15 +733,31 @@ serve(async (req) => {
       throw new Error('Erro ao buscar produtos');
     }
 
-    // Buscar perfil da empresa
-    const { data: company, error: companyError } = await supabaseClient
+    // Buscar perfil da empresa (priorizar registro com dados completos)
+    let { data: company, error: companyError } = await supabaseClient
       .from('company_profile')
       .select('*')
+      .not('website_url', 'is', null)
+      .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (companyError) {
-      console.warn('Empresa não encontrada, usando valores padrão');
+    // Fallback: se não encontrou empresa válida ou é "Nova Empresa", buscar outra
+    if (companyError || !company || company.company_name === 'Nova Empresa') {
+      console.warn('Empresa principal não encontrada ou inválida, buscando fallback...');
+      const { data: fallbackCompany } = await supabaseClient
+        .from('company_profile')
+        .select('*')
+        .neq('company_name', 'Nova Empresa')
+        .not('company_name', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (fallbackCompany) {
+        company = fallbackCompany;
+        console.log('✅ Usando empresa fallback:', company.company_name);
+      }
     }
 
     // ✅ BUSCAR DEPOIMENTOS REAIS DO BANCO DE DADOS
