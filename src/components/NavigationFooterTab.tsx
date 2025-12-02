@@ -1,12 +1,12 @@
 import React from 'react';
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, GripVertical, ExternalLink, Menu, MapPin, Link as LinkIcon } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Menu, MapPin, Link as LinkIcon, Globe } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SOCIAL_PLATFORMS, SocialIcon } from "@/components/icons/SocialIcons";
 interface NavigationMenuItem {
   label: string;
   href: string;
@@ -183,6 +183,22 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
   const updateSocialLink = (index: number, field: keyof FooterSocialLink, value: string) => {
     const newLinks = [...safeConfig.footer.social_links];
     newLinks[index] = { ...newLinks[index], [field]: value };
+    onChange({
+      ...safeConfig,
+      footer: { ...safeConfig.footer, social_links: newLinks }
+    });
+  };
+
+  const handlePlatformChange = (index: number, platformId: string) => {
+    const platform = SOCIAL_PLATFORMS.find(p => p.id === platformId);
+    const newLinks = [...safeConfig.footer.social_links];
+    newLinks[index] = { 
+      ...newLinks[index], 
+      platform: platformId,
+      icon_alt: platform?.label || platformId,
+      // Auto-preencher URL base se estiver vazio
+      href: newLinks[index].href || platform?.baseUrl || ''
+    };
     onChange({
       ...safeConfig,
       footer: { ...safeConfig.footer, social_links: newLinks }
@@ -394,26 +410,63 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
       {/* Footer - Redes Sociais */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Redes Sociais no Rodapé</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Redes Sociais no Rodapé
+          </CardTitle>
           <CardDescription>
-            Links para as redes sociais (além das configuradas na aba Redes Sociais)
+            Selecione as redes sociais que aparecerão no rodapé com ícones visuais
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {safeConfig.footer.social_links.map((social, index) => (
             <div key={index} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
-              <div className="flex-1 grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Plataforma (ex: LinkedIn)"
+              {/* Preview do ícone selecionado */}
+              <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-background border">
+                {social.platform ? (
+                  <SocialIcon platform={social.platform} size={24} />
+                ) : (
+                  <Globe className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Seletor de Plataforma */}
+                <Select
                   value={social.platform}
-                  onChange={(e) => updateSocialLink(index, 'platform', e.target.value)}
-                />
+                  onValueChange={(value) => handlePlatformChange(index, value)}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Selecione a rede social">
+                      {social.platform && (
+                        <div className="flex items-center gap-2">
+                          <SocialIcon platform={social.platform} size={16} />
+                          <span>{SOCIAL_PLATFORMS.find(p => p.id === social.platform)?.label || social.platform}</span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {SOCIAL_PLATFORMS.map((platform) => (
+                      <SelectItem key={platform.id} value={platform.id}>
+                        <div className="flex items-center gap-2">
+                          <platform.icon size={16} color={platform.color} />
+                          <span>{platform.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* URL */}
                 <Input
-                  placeholder="URL"
+                  placeholder="URL do perfil"
                   value={social.href}
                   onChange={(e) => updateSocialLink(index, 'href', e.target.value)}
+                  className="bg-background"
                 />
               </div>
+              
               <Button
                 variant="ghost"
                 size="sm"
@@ -424,10 +477,32 @@ export function NavigationFooterTab({ config = defaultConfig, onChange }: Naviga
               </Button>
             </div>
           ))}
+          
           <Button variant="outline" size="sm" onClick={addSocialLink} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Rede Social
           </Button>
+          
+          {/* Preview das redes configuradas */}
+          {safeConfig.footer.social_links.length > 0 && (
+            <div className="mt-4 p-3 border rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground mb-2">Preview dos ícones:</p>
+              <div className="flex items-center gap-3">
+                {safeConfig.footer.social_links.filter(s => s.platform).map((social, index) => (
+                  <a 
+                    key={index} 
+                    href={social.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:opacity-80 transition-opacity"
+                    title={SOCIAL_PLATFORMS.find(p => p.id === social.platform)?.label || social.platform}
+                  >
+                    <SocialIcon platform={social.platform} size={28} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
