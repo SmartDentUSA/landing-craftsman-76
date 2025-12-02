@@ -565,14 +565,12 @@ async function captureAndUploadImages(
 // ============================================
 function injectPremiumCSS(): string {
   return `
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- PREMIUM CSS DESIGN SYSTEM (IGUAL LP SPIN) -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FONTS & ICONS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
-      /* ===== DESIGN SYSTEM GEMINI V4.5 ===== */
+      /* ===== DESIGN SYSTEM GEMINI V4.5 (IGUAL LP SPIN) ===== */
       :root {
         --primary-dark: #3E4B5E;
         --primary-gradient-dark: #1e293b;
@@ -586,24 +584,35 @@ function injectPremiumCSS(): string {
         --section-light-bg: #fdfdfd;
       }
 
-      /* ===== HEADER PREMIUM (IGUAL LP SPIN) ===== */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background-color);
+        color: var(--text-color);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        scroll-behavior: smooth;
+      }
+
       /* ===== PREVENT HORIZONTAL SCROLL ===== */
       html, body {
         overflow-x: hidden !important;
         max-width: 100vw !important;
       }
 
-      .sd-premium-header {
-        background: var(--card-bg);
-      }
-      
-      .sd-premium-header .container {
+      .container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 0 2rem;
       }
-      
-      .sd-premium-header .header {
+
+      /* ===== HEADER COM MENU (IGUAL LP SPIN) ===== */
+      .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -611,172 +620,112 @@ function injectPremiumCSS(): string {
         position: relative;
         z-index: 10;
       }
-      
-      .sd-premium-header .banner {
+
+      .banner {
         width: 180px;
         height: auto;
       }
-      
-      .sd-premium-header .main-nav {
+
+      .main-nav {
         display: flex;
         align-items: center;
       }
-      
-      .sd-premium-header .main-nav a {
+
+      .main-nav a {
         color: var(--primary-dark);
         text-decoration: none;
         font-weight: 600;
         font-size: 11px;
         margin-left: 1.5rem;
         transition: color 0.2s;
-        font-family: 'Inter', sans-serif;
-      }
-      
-      .sd-premium-header .main-nav a:hover {
-        color: var(--accent-tech);
-      }
-      
-      /* CTA BUTTON NO HEADER (igual imagem de referência) */
-      .sd-premium-header .cta-button {
-        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-        color: #fff !important;
-        padding: 10px 20px;
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        text-decoration: none;
-        transition: transform 0.2s, box-shadow 0.2s;
-        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
-        margin-left: 1.5rem;
-        white-space: nowrap;
-      }
-      
-      .sd-premium-header .cta-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
-        background: linear-gradient(135deg, #128C7E 0%, #25D366 100%);
-      }
-      
-      .sd-premium-header .cta-button i {
-        font-size: 16px;
       }
 
-      /* ===== FOOTER PREMIUM (IGUAL IMAGEM DE REFERÊNCIA) ===== */
-      .sd-premium-footer {
-        background: #2d2d2d;
-        color: #e0e0e0;
-        padding: 3rem 0 1.5rem;
-        margin-top: 3rem;
-        font-family: 'Inter', sans-serif;
+      .main-nav a:hover {
+        color: var(--accent-tech);
       }
-      
-      .sd-premium-footer .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 2rem;
+
+      /* ===== FOOTER - CORES DO LOGO (IGUAL LP SPIN) ===== */
+      footer {
+        background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
+        padding: 3rem 0 2rem;
       }
-      
-      .sd-premium-footer .footer-columns {
+
+      .footer-columns {
         display: flex;
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 2rem;
-        margin-bottom: 2rem;
       }
-      
-      .sd-premium-footer .footer-columns > div {
+
+      .footer-columns > div {
         flex: 1;
-        min-width: 180px;
+        min-width: 250px;
       }
-      
-      .sd-premium-footer .footer-columns strong {
-        color: #EE7A3E;
-        font-size: 16px;
-        display: block;
-        margin-bottom: 1rem;
+
+      .footer-columns strong {
         font-weight: 700;
-      }
-      
-      .sd-premium-footer .footer-columns p {
-        color: #b0b0b0;
-        font-size: 13px;
-        line-height: 1.6;
-        margin: 0.5rem 0;
-      }
-      
-      .sd-premium-footer .footer-columns p i {
-        width: 18px;
-        margin-right: 8px;
-        color: #EE7A3E;
-      }
-      
-      .sd-premium-footer .footer-columns a {
-        color: #e0e0e0;
-        font-size: 14px;
-        text-decoration: none;
         display: block;
+        margin-bottom: 0.75rem;
+        font-size: 18px;
+        color: var(--accent-glow);
+      }
+
+      .footer-columns p {
+        font-size: 15px;
+        line-height: 1.8;
         margin: 0.5rem 0;
+        color: #ccc;
+      }
+
+      .footer-columns p i {
+        width: 20px;
+        margin-right: 8px;
+        color: var(--accent-tech);
+      }
+
+      .footer-columns a {
+        color: #b0c4de;
+        text-decoration: none;
+        font-size: 15px;
+        display: block;
+        margin: 0.6rem 0;
         transition: color 0.2s;
       }
-      
-      .sd-premium-footer .footer-columns a:hover {
-        color: #EE7A3E;
+
+      .footer-columns a:hover {
+        color: var(--accent-tech);
+        text-decoration: underline;
       }
-      
-      /* Social section separada */
-      .sd-premium-footer .social-section {
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid rgba(255,255,255,0.1);
-      }
-      
-      .sd-premium-footer .social-section strong {
-        color: #EE7A3E;
-        font-size: 16px;
-        display: block;
-        margin-bottom: 1rem;
-      }
-      
-      .sd-premium-footer .footer-social-links {
+
+      /* ===== ÍCONES SOCIAIS EM LINHA (IGUAL LP SPIN) ===== */
+      .footer-social-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 0.75rem;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
       }
-      
-      .sd-premium-footer .footer-social-links a {
-        width: 40px;
-        height: 40px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-        display: inline-flex;
+
+      .footer-social-links a {
+        display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-size: 18px;
-        transition: all 0.3s;
-        margin: 0;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        margin: 0 !important;
+        transition: all 0.3s ease;
       }
-      
-      .sd-premium-footer .footer-social-links a:hover {
-        background: #EE7A3E;
+
+      .footer-social-links a:hover {
+        background: var(--accent-tech);
         transform: translateY(-3px);
+        text-decoration: none;
       }
-      
-      .sd-premium-footer .footer-bottom {
-        border-top: 1px solid rgba(255,255,255,0.1);
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        text-align: center;
-      }
-      
-      .sd-premium-footer .footer-bottom p {
-        font-size: 12px;
-        color: #888;
-        margin: 0;
+
+      .footer-social-links a i {
+        font-size: 18px;
+        color: #fff;
       }
 
       /* ===== VIDEO RESPONSIVO ===== */
@@ -808,7 +757,7 @@ function injectPremiumCSS(): string {
       }
 
       /* ===== STICKY CTA MOBILE ===== */
-      .sd-sticky-cta {
+      .sticky-cta {
         display: none;
         position: fixed;
         bottom: 0;
@@ -820,7 +769,7 @@ function injectPremiumCSS(): string {
         box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
       }
       
-      .sd-sticky-cta button {
+      .sticky-cta button {
         width: 100%;
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: #fff;
@@ -840,27 +789,9 @@ function injectPremiumCSS(): string {
         transition: all 0.3s;
       }
       
-      .sd-sticky-cta button:hover {
+      .sticky-cta button:hover {
         transform: scale(1.02);
         box-shadow: 0 4px 20px rgba(37, 211, 102, 0.5);
-      }
-      
-      @media (max-width: 768px) {
-        .sd-sticky-cta {
-          display: block;
-        }
-        
-        .sd-premium-header .main-nav a:not(.cta-button) {
-          display: none;
-        }
-        
-        .sd-premium-footer .footer-columns {
-          flex-direction: column;
-        }
-        
-        body {
-          padding-bottom: 80px;
-        }
       }
 
       /* ===== GEO CONTEXT (INVISÍVEL PARA USUÁRIOS) ===== */
@@ -869,6 +800,29 @@ function injectPremiumCSS(): string {
         left: -9999px;
         opacity: 0;
         pointer-events: none;
+      }
+
+      /* ===== RESPONSIVO MOBILE ===== */
+      @media screen and (max-width: 768px) {
+        .main-nav {
+          display: none;
+        }
+        .header {
+          justify-content: center;
+        }
+        
+        .sticky-cta {
+          display: block;
+        }
+        
+        .footer-columns {
+          flex-direction: column;
+          gap: 2rem;
+        }
+        
+        body {
+          padding-bottom: 80px;
+        }
       }
     </style>
   `;
@@ -1175,29 +1129,26 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       <a href="${websiteUrl}/blog" title="Blog">Blog</a>
     `;
   
+  // ✅ HEADER (IGUAL LP SPIN - sem classes customizadas)
   const PREMIUM_HEADER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SMART DENT PREMIUM HEADER (v3.0 - IGUAL LP SPIN) -->
+  <!-- HEADER (IGUAL LP SPIN) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <header class="sd-premium-header">
-    <div class="container">
-      <div class="header">
-        <a href="${websiteUrl}" title="${company} - Site Principal">
-          ${logoUrl 
-            ? `<img src="${logoUrl}" alt="${company}" class="banner" width="180" height="60" loading="eager">` 
-            : `<span style="color: var(--primary-dark); font-size: 20px; font-weight: 800; font-family: 'Inter', sans-serif;">${company}</span>`
-          }
-        </a>
-        <nav class="main-nav">
-          ${menuHtml}
-          <a href="${ctaUrl}" class="cta-button" title="Fale com um Especialista">
-            <i class="fab fa-whatsapp"></i>
-            Falar com Especialista
-          </a>
-        </nav>
-      </div>
+  <div class="container">
+    <div class="header">
+      <a href="${websiteUrl}" title="${company} - Site Principal">
+        ${logoUrl 
+          ? `<img src="${logoUrl}" alt="${company}" class="banner" width="180" height="60" loading="eager">` 
+          : `<span style="color: var(--primary-dark); font-size: 20px; font-weight: 800; font-family: 'Inter', sans-serif;">${company}</span>`
+        }
+      </a>
+      <nav class="main-nav">
+        <a href="https://loja.smartdent.com.br/" title="Loja">Loja</a>
+        <a href="https://parametros.smartdent.com.br/base-conhecimento" title="Blog">Blog</a>
+        <a href="${ctaUrl}" target="_blank" title="Fale conosco">Fale conosco</a>
+      </nav>
     </div>
-  </header>
+  </div>
   `;
   
   // ✅ FOOTER DINÂMICO (IGUAL LP SPIN)
@@ -1209,7 +1160,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       ${footerConfig.locations && footerConfig.locations.length > 0 
         ? footerConfig.locations.map((loc: any) => `
           <div>
-            <strong>${loc.label || company}</strong>
+            <strong>${loc.label || loc.title || company}</strong>
             ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
             ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
             ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
@@ -1288,21 +1239,15 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     `;
   }
   
+  // ✅ FOOTER (IGUAL LP SPIN - tag footer simples)
   const PREMIUM_FOOTER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SMART DENT PREMIUM FOOTER (v3.0 - IGUAL LP SPIN) -->
+  <!-- FOOTER (IGUAL LP SPIN) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <footer class="sd-premium-footer">
+  <footer>
     <div class="container">
       <div class="footer-columns">
         ${footerColumnsHtml}
-      </div>
-      
-      <div class="footer-bottom">
-        <p>
-          © ${new Date().getFullYear()} ${company}. Todos os direitos reservados.
-          ${taxId ? ` | CNPJ: ${taxId}` : ''}
-        </p>
       </div>
     </div>
   </footer>
@@ -1310,7 +1255,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- STICKY CTA MOBILE -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="sd-sticky-cta">
+  <div class="sticky-cta">
     <button onclick="window.location.href='${ctaUrl}'">
       <i class="fab fa-whatsapp"></i> FALE COM ESPECIALISTA
     </button>
@@ -1336,7 +1281,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   // Insert before </body>
   result = result.replace(/<\/body>/i, `${PREMIUM_FOOTER}\n</body>`);
   
-  console.log(`✅ Premium Header/Footer v3.0 inserted (dynamic: ${hasCustomFooter ? 'yes' : 'fallback'})`);
+  console.log(`✅ Header/Footer SPIN inserted (dynamic: ${hasCustomFooter ? 'yes' : 'fallback'})`);
   
   return result;
 }
