@@ -152,9 +152,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         a { text-decoration: none; color: inherit; }
         img { 
             max-width: 100%; 
-            display: block; 
-            loading: lazy; 
-            decoding: async;
+            display: block;
+        }
+        /* ✅ FASE 4: Imagens abaixo do fold com lazy loading */
+        img[loading="lazy"] {
+            content-visibility: auto;
         }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 
@@ -2084,11 +2086,11 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 {{#banner.images}}
                 {{#href}}
                 <a href="{{href}}" target="_blank" rel="noopener noreferrer">
-                    <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})">
+                    <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})" fetchpriority="high" decoding="async">
                 </a>
                 {{/href}}
                 {{^href}}
-                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})">
+                <img src="{{src}}" alt="{{alt}}" style="transform: scale({{scale}})" fetchpriority="high" decoding="async">
                 {{/href}}
                 {{/banner.images}}
             </div>
@@ -2554,15 +2556,60 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     {{/visible_any}}
     {{/knowledge_feed_section}}
 
-    <!-- Footer -->
-  <footer class="footer" role="contentinfo">
+    <!-- Footer - Enterprise Structured with LocalBusiness Microdata -->
+  <footer class="footer" role="contentinfo" itemscope itemtype="https://schema.org/LocalBusiness">
+        <!-- Hidden structured data for crawlers -->
+        <meta itemprop="@type" content="LocalBusiness">
+        {{#company_profile.company_logo_url}}
+        <link itemprop="logo" href="{{company_profile.company_logo_url}}">
+        {{/company_profile.company_logo_url}}
+        {{#company_profile.website_url}}
+        <link itemprop="url" href="{{company_profile.website_url}}">
+        {{/company_profile.website_url}}
+        
         <div class="container footer-grid">
+            <!-- Coluna 1: Identidade da Empresa -->
             <div class="footer-info">
+                {{#company_profile.company_name}}
+                <h3 itemprop="name">{{company_profile.company_name}}</h3>
+                {{/company_profile.company_name}}
+                {{^company_profile.company_name}}
                 {{#footer.locations}}
                 <h3>{{title}}</h3>
-                <p>{{address}}</p>
-                <br>
                 {{/footer.locations}}
+                {{/company_profile.company_name}}
+                
+                <!-- Endereço Estruturado -->
+                <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+                    {{#footer.locations}}
+                    <p>
+                        <span itemprop="streetAddress">{{address}}</span>
+                    </p>
+                    {{/footer.locations}}
+                    {{#company_profile.city}}
+                    <meta itemprop="addressLocality" content="{{company_profile.city}}">
+                    {{/company_profile.city}}
+                    {{#company_profile.state}}
+                    <meta itemprop="addressRegion" content="{{company_profile.state}}">
+                    {{/company_profile.state}}
+                    {{#company_profile.postal_code}}
+                    <meta itemprop="postalCode" content="{{company_profile.postal_code}}">
+                    {{/company_profile.postal_code}}
+                    {{#company_profile.country}}
+                    <meta itemprop="addressCountry" content="{{company_profile.country}}">
+                    {{/company_profile.country}}
+                </div>
+                
+                <!-- Contato Estruturado -->
+                <div itemprop="contactPoint" itemscope itemtype="https://schema.org/ContactPoint">
+                    <meta itemprop="contactType" content="customer service">
+                    {{#company_profile.contact_phone}}
+                    <p><a href="tel:{{company_profile.contact_phone}}" itemprop="telephone">{{company_profile.contact_phone}}</a></p>
+                    {{/company_profile.contact_phone}}
+                    {{#company_profile.contact_email}}
+                    <p><a href="mailto:{{company_profile.contact_email}}" itemprop="email">{{company_profile.contact_email}}</a></p>
+                    {{/company_profile.contact_email}}
+                </div>
                 
                 <!-- Informações Automáticas da Empresa -->
                 {{#company_footer}}
@@ -2571,6 +2618,8 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 </div>
                 {{/company_footer}}
             </div>
+            
+            <!-- Coluna 2: Links -->
             <div class="footer-links">
                 <h3>{{footer_links_title}}</h3>
                 <ul>
@@ -2589,14 +2638,27 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
                 </div>
                 {{/institutional_links_html}}
             </div>
+            
+            <!-- Coluna 3: Social com sameAs -->
             <div class="footer-social">
                 {{#footer.social}}
-                <a href="{{href}}" title="{{platform}}">
+                <a href="{{href}}" title="{{platform}}" itemprop="sameAs">
                     {{{iconSvg}}}
                 </a>
                 {{/footer.social}}
             </div>
         </div>
+        
+        <!-- GeoCoordinates invisível (se disponível) -->
+        {{#company_profile.latitude}}
+        <div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates" hidden>
+            <meta itemprop="latitude" content="{{company_profile.latitude}}">
+            <meta itemprop="longitude" content="{{company_profile.longitude}}">
+        </div>
+        {{/company_profile.latitude}}
+        
+        <!-- Horário de funcionamento -->
+        <meta itemprop="openingHours" content="Mo-Fr 08:00-18:00">
     </footer>
 
     <script>
@@ -4217,6 +4279,14 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   if (data.seo?.hreflang_auto || data.selectedProductsForSEO?.length > 0 || data.schema?.manual_reviews?.length > 0 || data.schema?.google_reviews?.reviews?.length > 0) {
     const schemaGraph = [];
     
+    // ✅ FASE 1: Adicionar Enterprise Organization Schema PRIMEIRO (GEO/Entity SEO)
+    if (companyProfile) {
+      const { generateEnterpriseOrganizationSchema } = await import('@/services/seo/advancedSchemaEnhancer');
+      const organizationSchema = generateEnterpriseOrganizationSchema(companyProfile);
+      schemaGraph.push(organizationSchema);
+      console.log('✅ [Schema Enterprise] Organization schema adicionado ao @graph');
+    }
+    
     // Include selected products in schema if available
     if (data.selectedProductsForSEO && data.selectedProductsForSEO.length > 0) {
       const productsSchema = {
@@ -4572,6 +4642,23 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       }
     }
 
+    // ✅ FASE 2: Adicionar SpeakableSpecification ao WebPage
+    const { generateSpeakableSpecification } = await import('@/services/seo/advancedSchemaEnhancer');
+    webPageSchema.speakable = generateSpeakableSpecification();
+    
+    // ✅ Adicionar publisher correto (não "Nossa Empresa")
+    if (companyProfile) {
+      webPageSchema.publisher = {
+        "@type": "Organization",
+        "@id": companyProfile.website_url ? `${companyProfile.website_url}/#organization` : "#organization",
+        "name": companyProfile.company_name,
+        "logo": companyProfile.company_logo_url ? {
+          "@type": "ImageObject",
+          "url": companyProfile.company_logo_url
+        } : undefined
+      };
+    }
+
     schemaGraph.push(webPageSchema);
 
     // 🎯 SPIN: Adicionar schemas das soluções SPIN relacionadas
@@ -4717,6 +4804,9 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     processedData.company_footer = companyMeta.companyFooter;
     processedData.institutional_links_html = companyMeta.institutionalLinksHtml;
     
+    // ✅ FASE 5: Adicionar company_profile completo para footer estruturado
+    processedData.company_profile = companyProfile;
+    
     console.info('✅ Dados da empresa integrados ao HTML:', {
       company_name: companyProfile.company_name,
       seo_context_keywords: companyProfile.seo_context_keywords?.length || 0,
@@ -4840,21 +4930,34 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       // Fase 1: Estrutura semântica (DOMParser nativo)
       finalHTML = enhanceSemanticStructure(finalHTML);
       
-      // Fase 2: Entity Definition (GEO)
+      // Fase 2: Entity Definition (GEO) - ENTERPRISE GRADE
       const companyProfile = processedData.company_profile || processedData.brand;
       if (companyProfile) {
+        // ✅ FASE 3: Passar todos os campos enterprise para o Entity Injector
         finalHTML = injectEntityDefinition(finalHTML, {
           companyName: companyProfile.company_name || companyProfile.legal_name || 'Empresa',
-          description: companyProfile.company_description?.substring(0, 150) || 'soluções especializadas',
+          description: companyProfile.company_description?.substring(0, 200) || 'soluções especializadas',
           industry: companyProfile.business_sector || companyProfile.main_products_services || 'tecnologia',
-          region: companyProfile.location || companyProfile.city || 'Brasil'
+          region: companyProfile.location || companyProfile.city || 'Brasil',
+          // 🆕 Campos Enterprise
+          sector: companyProfile.business_sector || 'B2B',
+          expertise: companyProfile.seo_competitive_advantages?.split(',').map((s: string) => s.trim()) || [],
+          targetAudience: companyProfile.target_audience?.split(',').map((s: string) => s.trim()) || [],
+          useCases: companyProfile.main_products_services?.split(',').map((s: string) => s.trim()) || [],
+          certifications: [],
+          marketPosition: companyProfile.seo_market_positioning || '',
+          foundedYear: companyProfile.founded_year,
+          serviceAreas: companyProfile.seo_service_areas?.split(',').map((s: string) => s.trim()) || [],
+          websiteUrl: companyProfile.website_url,
+          contactPhone: companyProfile.contact_phone,
+          contactEmail: companyProfile.contact_email
         });
       }
       
       // Fase 3: QA Automático (apenas log, não bloqueia)
       validateGeneratedHTML(finalHTML);
       
-      console.log('✅ [SEO Enhancer] Pós-processamento aplicado com sucesso');
+      console.log('✅ [SEO Enhancer] Pós-processamento Enterprise aplicado com sucesso');
       
     } catch (error) {
       console.error('[SEO Enhancer] Falha no pós-processamento, retornando HTML original:', error);
