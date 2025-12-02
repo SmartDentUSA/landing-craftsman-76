@@ -1275,9 +1275,26 @@ const EditorContent = () => {
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
   const { generateAutoFooter, generateAutoNavigation, hasCompanyData, forceResyncFromProfile, isFooterSyncedWithProfile } = useAutoFooterPopulation();
-  const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
-  const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
-  const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner } = useAnimatedBannerAutoSave(updateLandingPage, id);
+  
+  // 🛡️ Estado de hidratação - declarado aqui para uso nos hooks de auto-save
+  const [isHydratingFromServer, setIsHydratingFromServer] = useState(true);
+  
+  // 🛡️ Auto-save hooks com proteção contra perda de dados
+  const { saveDesktopInfo, lastSave, initializeKnownCount: initDesktopInfoCount } = useDesktopInfoAutoSave(
+    updateLandingPage, 
+    id, 
+    { isHydratingFromServer }
+  );
+  const { saveExplanatoryVideo, initializeKnownState: initVideoState } = useExplanatoryVideoAutoSave(
+    updateLandingPage, 
+    id, 
+    { isHydratingFromServer }
+  );
+  const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner, initializeKnownCount: initAnimatedBannerCount } = useAnimatedBannerAutoSave(
+    updateLandingPage, 
+    id, 
+    { isHydratingFromServer }
+  );
   const [productsWithTechnicalVideos, setProductsWithTechnicalVideos] = useState<any[]>([]);
   
   // Debounced auto-save for desktop info
@@ -1391,7 +1408,7 @@ const EditorContent = () => {
   const [localName, setLocalName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isHydratingFromServer, setIsHydratingFromServer] = useState(true);
+  // isHydratingFromServer já declarado acima junto com os hooks de auto-save
   const [lastServerSave, setLastServerSave] = useState<string | null>(null);
   const [lastSaveAt, setLastSaveAt] = useState<number | null>(null);
   const productsLoadedRef = useRef(false);
@@ -1906,6 +1923,12 @@ const EditorContent = () => {
 
   // 🏢 AUTO-POPULAÇÃO DO FOOTER COM DADOS DA EMPRESA
   useEffect(() => {
+    // 🛡️ PROTEÇÃO: Não auto-popular durante hidratação
+    if (isHydratingFromServer) {
+      console.log('🛡️ [AUTO-FOOTER] Bloqueado durante hidratação');
+      return;
+    }
+    
     if (hasCompanyData && 
         !autoFooterAppliedRef.current &&
         (!(data.footer?.locations?.length) && 
@@ -1946,10 +1969,16 @@ const EditorContent = () => {
         });
       }
     }
-  }, [hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
+  }, [isHydratingFromServer, hasCompanyData, data.footer?.locations?.length, data.footer?.links?.length, data.footer?.social?.length, generateAutoFooter, toast]);
 
   // 🏢 AUTO-POPULAÇÃO DO MENU COM DADOS DA EMPRESA
   useEffect(() => {
+    // 🛡️ PROTEÇÃO: Não auto-popular durante hidratação
+    if (isHydratingFromServer) {
+      console.log('🛡️ [AUTO-MENU] Bloqueado durante hidratação');
+      return;
+    }
+    
     if (hasCompanyData && 
         !autoMenuAppliedRef.current &&
         (!data.menu || data.menu.length === 0)) {
@@ -2528,6 +2557,25 @@ const EditorContent = () => {
           setLastSaveAt(Date.now());
           console.info('💾 [Rehydrate] Persistido no servidor:', ts.toISOString());
         }
+        
+        // 🛡️ PROTEÇÃO: Inicializar contagens conhecidas após hidratação
+        // Isso permite que os hooks de auto-save saibam quais dados existiam
+        const partnersCount = safe.animated_banner_section?.partners?.length || 0;
+        const tableDataCount = safe.desktop_info?.table_data?.length || 0;
+        const hasVideo = !!safe.explanatory_video_section?.selected_video;
+        
+        console.log('🛡️ [Rehydrate] Inicializando contagens de proteção:', {
+          partners: partnersCount,
+          tableData: tableDataCount,
+          hasVideo
+        });
+        
+        // Aguardar um tick para garantir que o estado foi atualizado
+        setTimeout(() => {
+          initAnimatedBannerCount(partnersCount);
+          initDesktopInfoCount(tableDataCount);
+          initVideoState(hasVideo);
+        }, 100);
         
         setIsHydratingFromServer(false);
         return true;

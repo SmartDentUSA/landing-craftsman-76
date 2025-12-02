@@ -15,14 +15,39 @@ interface LandingPageData {
   [key: string]: any;
 }
 
+interface ExplanatoryVideoAutoSaveOptions {
+  isHydratingFromServer?: boolean;
+}
+
 export const useExplanatoryVideoAutoSave = (
   saveLandingPage: (id: string, data: Partial<LandingPageData>) => Promise<boolean | void>,
-  pageId?: string
+  pageId?: string,
+  options: ExplanatoryVideoAutoSaveOptions = {}
 ) => {
   const lastSaveRef = useRef<Date>();
+  const lastKnownVideoRef = useRef<boolean | null>(null);
 
-  const debouncedAutoSave = useDebounce(async (updatedData: LandingPageData) => {
+  const debouncedAutoSave = useDebounce(async (updatedData: LandingPageData, isHydrating: boolean) => {
     if (!pageId) return;
+    
+    // 🛡️ PROTEÇÃO 1: Não salvar durante hidratação
+    if (isHydrating) {
+      console.log('🛡️ [AUTO-SAVE] Bloqueado durante hidratação - Vídeo Explicativo');
+      return;
+    }
+    
+    const hasVideo = !!updatedData.explanatory_video_section?.selected_video;
+    
+    // 🛡️ PROTEÇÃO 2: Não salvar null se havia vídeo antes
+    if (!hasVideo && lastKnownVideoRef.current === true) {
+      console.warn('⚠️ [AUTO-SAVE] BLOQUEADO: Tentativa de salvar selected_video como null!');
+      return;
+    }
+    
+    // Atualizar referência conhecida
+    if (hasVideo) {
+      lastKnownVideoRef.current = true;
+    }
     
     console.log('🎥 [AUTO-SAVE] Salvando seção de vídeo explicativo...', { 
       explanatory_video_section: updatedData.explanatory_video_section,
@@ -48,12 +73,27 @@ export const useExplanatoryVideoAutoSave = (
   }, 1500);
 
   const saveExplanatoryVideo = useCallback((updatedData: LandingPageData) => {
+    const isHydrating = options.isHydratingFromServer ?? false;
+    
+    // 🛡️ Bloquear completamente durante hidratação
+    if (isHydrating) {
+      console.log('🛡️ [EXPLANATORY-VIDEO] Auto-save bloqueado - hidratação em progresso');
+      return;
+    }
+    
     console.log('🎥 [EXPLANATORY-VIDEO] Iniciando auto-save para:', updatedData.explanatory_video_section);
-    debouncedAutoSave(updatedData);
-  }, [debouncedAutoSave]);
+    debouncedAutoSave(updatedData, isHydrating);
+  }, [debouncedAutoSave, options.isHydratingFromServer]);
+
+  // Função para inicializar estado conhecido (chamada após hidratação)
+  const initializeKnownState = useCallback((hasVideo: boolean) => {
+    lastKnownVideoRef.current = hasVideo;
+    console.log('📊 [EXPLANATORY-VIDEO] Estado inicial de vídeo:', hasVideo);
+  }, []);
 
   return {
     saveExplanatoryVideo,
-    lastSave: lastSaveRef.current
+    lastSave: lastSaveRef.current,
+    initializeKnownState
   };
 };
