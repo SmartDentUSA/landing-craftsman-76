@@ -209,28 +209,88 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
 }
 
 // ============================================
-// REWRITE CTAs
+// REWRITE CTAs (v3.0 Enhanced)
 // ============================================
 function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: number } {
   let count = 0;
   let result = html;
   
+  // Helper to check if URL should be skipped
+  const shouldSkipUrl = (url: string): boolean => {
+    if (!url || url === ctaUrl) return true;
+    if (url.startsWith('#')) return true;
+    if (url.startsWith('mailto:') || url.startsWith('tel:')) return true;
+    if (/\.(jpg|jpeg|png|gif|svg|webp|avif|css|js|ico|pdf|doc|docx|xls|xlsx)$/i.test(url)) return true;
+    return false;
+  };
+  
+  // Keywords para CTAs (português e inglês) - EXPANDED
+  const ctaKeywordsRegex = 'Comprar|Saiba\\s+mais|Fale\\s+conosco|Contato|Orçamento|WhatsApp|Solicitar|Agendar|Conhecer|Ver\\s+mais|Demonstração|Demo|Experimentar|Testar|Cadastrar|Inscreva|Começar|Iniciar|Assinar|Pedir|Quero|Reserve|Agende|Solicite|Garantir|Aproveitar|Adquirir|Baixar|Download|Buy|Contact|Get|Request|Trial|Start|Sign\\s+up|Subscribe|Order|Book|Schedule|Try|Free|Demo|Learn\\s+more';
+  
   const ctaPatterns = [
-    /(<a[^>]*class="[^"]*(?:btn|button|cta|elementor-button|wp-block-button)[^"]*"[^>]*href=")([^"]+)(")/gi,
-    /(<a[^>]*href=")([^"]+)("[^>]*>(?:Comprar|Saiba mais|Fale conosco|Contato|Orçamento|WhatsApp|Solicitar|Agendar|Conhecer|Ver mais|Buy|Contact|Get|Request)[^<]*<\/a>)/gi,
+    // 1. Classes específicas de botão (mais abrangente)
+    /(<a[^>]*class="[^"]*(?:btn|button|cta|submit|action|primary|hero|main|elementor-button|wp-block-button|vc_btn|et_pb_button|fusion-button)[^"]*"[^>]*href=")([^"]+)(")/gi,
+    
+    // 2. Texto CTA direto (sem spans)
+    new RegExp(`(<a[^>]*href=")([^"]+)("[^>]*>\\s*(?:${ctaKeywordsRegex})[^<]*<\\/a>)`, 'gi'),
+    
+    // 3. Texto CTA com spans aninhados (NOVO - captura <a><span>CTA</span></a>)
+    new RegExp(`(<a[^>]*href=")([^"]+)("[^>]*>[\\s\\S]*?(?:${ctaKeywordsRegex})[\\s\\S]*?<\\/a>)`, 'gi'),
+    
+    // 4. URLs do WhatsApp
     /(<a[^>]*href=")(https?:\/\/(?:api\.)?whatsapp\.com[^"]+)(")/gi,
-    /(<a[^>]*href=")(https?:\/\/[^"]+(?:contato|contact|form|lead)[^"]+)(")/gi,
+    
+    // 5. URLs com paths de contato/demo/trial
+    /(<a[^>]*href=")(https?:\/\/[^"]+(?:contato|contact|form|lead|demo|trial|register|signup|cadastro|orcamento)[^"]+)(")/gi,
+    
+    // 6. Textos que terminam com urgência (agora, grátis, aqui, hoje)
+    /(<a[^>]*href=")([^"]+)("[^>]*>[^<]{0,80}(?:agora|grátis|aqui|hoje|now|free|here|today)[^<]*<\/a>)/gi,
+    
+    // 7. Links com textos curtos que parecem CTAs (< 60 chars, sem ser navegação comum)
+    /(<a[^>]*href=")([^"]+)("[^>]*>(?!\s*(?:Home|Início|Sobre|About|Blog|Produtos|Products|Serviços|Services|FAQ|Privacidade|Termos)\s*<)[^<]{1,60}<\/a>)/gi,
   ];
+  
+  // Track URLs already rewritten to avoid double-counting
+  const rewrittenUrls = new Set<string>();
   
   for (const pattern of ctaPatterns) {
     result = result.replace(pattern, (match, before, url, after) => {
-      if (url === ctaUrl) return match;
-      if (url.startsWith('#')) return match;
+      if (shouldSkipUrl(url)) return match;
+      if (rewrittenUrls.has(url)) return `${before}${ctaUrl}${after}`; // Already counted
+      
+      rewrittenUrls.add(url);
       count++;
       return `${before}${ctaUrl}${after}`;
     });
   }
   
+  // 8. Buttons com onclick (NOVO)
+  result = result.replace(
+    /(<button[^>]*onclick=["'][^"']*(?:location\.href|window\.location)\s*=\s*["']?)([^"']+)(["'])/gi,
+    (match, before, url, after) => {
+      if (shouldSkipUrl(url)) return match;
+      if (!rewrittenUrls.has(url)) {
+        rewrittenUrls.add(url);
+        count++;
+      }
+      return `${before}${ctaUrl}${after}`;
+    }
+  );
+  
+  // 9. Elementos com data-href, data-url, data-link (NOVO)
+  result = result.replace(
+    /(<[^>]+data-(?:href|url|link)=")([^"]+)(")/gi,
+    (match, before, url, after) => {
+      if (shouldSkipUrl(url)) return match;
+      if (!rewrittenUrls.has(url)) {
+        rewrittenUrls.add(url);
+        count++;
+      }
+      return `${before}${ctaUrl}${after}`;
+    }
+  );
+  
+  console.log(`✅ ${count} CTAs rewritten to: ${ctaUrl}`);
   return { html: result, count };
 }
 
