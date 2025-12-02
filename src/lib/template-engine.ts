@@ -4663,7 +4663,44 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
   const scaleMatches = renderedHTML.match(/transform:\s*scale\(([\d.]+)\)/g);
   console.log('🔍 [HTML-RENDERED] Scale values found:', scaleMatches);
   
-  return renderedHTML;
+  // 🆕 SEO ENHANCER (Pós-processamento aditivo Enterprise-Grade)
+  let finalHTML = renderedHTML;
+  
+  // Import dinâmico para evitar circular dependencies
+  const { isSEOEnhancerEnabled } = await import('@/config/feature-flags');
+  
+  if (isSEOEnhancerEnabled()) {
+    try {
+      const { enhanceSemanticStructure } = await import('@/services/seo/semanticHTMLEnhancer');
+      const { injectEntityDefinition } = await import('@/services/seo/entityDefinitionInjector');
+      const { validateGeneratedHTML } = await import('@/services/seo/seoQualityValidator');
+      
+      // Fase 1: Estrutura semântica (DOMParser nativo)
+      finalHTML = enhanceSemanticStructure(finalHTML);
+      
+      // Fase 2: Entity Definition (GEO)
+      const companyProfile = processedData.company_profile || processedData.brand;
+      if (companyProfile) {
+        finalHTML = injectEntityDefinition(finalHTML, {
+          companyName: companyProfile.company_name || companyProfile.legal_name || 'Empresa',
+          description: companyProfile.company_description?.substring(0, 150) || 'soluções especializadas',
+          industry: companyProfile.business_sector || companyProfile.main_products_services || 'tecnologia',
+          region: companyProfile.location || companyProfile.city || 'Brasil'
+        });
+      }
+      
+      // Fase 3: QA Automático (apenas log, não bloqueia)
+      validateGeneratedHTML(finalHTML);
+      
+      console.log('✅ [SEO Enhancer] Pós-processamento aplicado com sucesso');
+      
+    } catch (error) {
+      console.error('[SEO Enhancer] Falha no pós-processamento, retornando HTML original:', error);
+      finalHTML = renderedHTML; // FAIL-SAFE: retorna original
+    }
+  }
+  
+  return finalHTML;
 };
 
 export const generateEmailHTML = (emailData: any): string => {

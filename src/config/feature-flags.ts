@@ -37,3 +37,12 @@ export const logSEODebug = (message: string, data?: any): void => {
     console.log(`🔍[SEO] ${message}`, data ?? '');
   }
 };
+
+/**
+ * Flag: SEO Enhancer (Pós-processamento Enterprise)
+ * Ativa melhorias semânticas, GEO e validação de qualidade
+ * ✅ Ativo por padrão - desativar com VITE_SEO_ENHANCER=false
+ */
+export const isSEOEnhancerEnabled = (): boolean => {
+  return env('VITE_SEO_ENHANCER') !== 'false';
+};
