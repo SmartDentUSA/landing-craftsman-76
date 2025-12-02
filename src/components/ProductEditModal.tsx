@@ -34,6 +34,17 @@ import { useProductAutoSave } from '@/hooks/useProductAutoSave';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { WorkflowStagesSection } from './WorkflowStagesSection';
 import { CompetitorComparisonTable } from './CompetitorComparisonTable';
+import { Brain } from 'lucide-react';
+import {
+  ProductTypeSelector,
+  ForbiddenProductsSection,
+  RequiredProductsSection,
+  AntiHallucinationRulesEditor,
+  ForbiddenProduct,
+  RequiredProduct,
+  AntiHallucinationRules,
+  DEFAULT_ANTI_HALLUCINATION_RULES
+} from './ClinicalBrain';
 
 
 interface Video {
@@ -213,6 +224,11 @@ interface Product {
     table_headers: string[];
     table_data: Array<{ [key: string]: string }>;
   };
+  // Clinical Brain v1.0
+  product_type?: string | null;
+  forbidden_products?: ForbiddenProduct[];
+  required_products?: RequiredProduct[];
+  anti_hallucination_rules?: AntiHallucinationRules;
 }
 
 interface WorkflowStage {
@@ -303,7 +319,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       subtitle: '',
       table_headers: [],
       table_data: []
-    }
+    },
+    // Clinical Brain v1.0
+    product_type: null,
+    forbidden_products: [],
+    required_products: [],
+    anti_hallucination_rules: DEFAULT_ANTI_HALLUCINATION_RULES
   });
   const [promoPrice, setPromoPrice] = useState<number | undefined>(undefined);
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -452,7 +473,12 @@ export function ProductEditModal({ isOpen, onClose, product, onSave, onDelete }:
       technical_specifications: product.technical_specifications || [],
       tutorial_resources: product.tutorial_resources || { tutorials: [] },
       // Competitor Comparison Table - Usa valor memoizado como default
-      competitor_comparison: product.competitor_comparison || defaultCompetitorComparison
+      competitor_comparison: product.competitor_comparison || defaultCompetitorComparison,
+      // Clinical Brain v1.0
+      product_type: (product as any).product_type ?? null,
+      forbidden_products: (product as any).forbidden_products ?? [],
+      required_products: (product as any).required_products ?? [],
+      anti_hallucination_rules: (product as any).anti_hallucination_rules ?? DEFAULT_ANTI_HALLUCINATION_RULES
     });
       setBenefits(product.benefits || []);
       setFeatures(product.features || []);
@@ -1892,6 +1918,11 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
         document_transcriptions: documentTranscriptions.length > 0 ? documentTranscriptions as any : [],
         // Competitor Comparison Table
         competitor_comparison: formData.competitor_comparison || defaultCompetitorComparison,
+        // Clinical Brain v1.0
+        product_type: formData.product_type ?? null,
+        forbidden_products: (formData.forbidden_products || []) as any,
+        required_products: (formData.required_products || []) as any,
+        anti_hallucination_rules: (formData.anti_hallucination_rules || DEFAULT_ANTI_HALLUCINATION_RULES) as any,
         updated_at: new Date().toISOString()
       };
 
@@ -2421,6 +2452,55 @@ Preço: ${formData.currency || 'BRL'} ${formData.price || 'N/A'}
             currentProductId={product?.id}
             currentProductName={formData.name}
           />
+
+          {/* Clinical Brain v1.0 — Regras de Compatibilidade */}
+          <Card className="p-4 space-y-4 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">
+                Clinical Brain — Regras de Compatibilidade
+              </h3>
+              <Badge variant="outline" className="text-xs">v1.0</Badge>
+            </div>
+            
+            <p className="text-sm text-muted-foreground">
+              Configure regras clínicas para garantir que a IA nunca gere conteúdo incorreto sobre este produto.
+            </p>
+
+            <ProductTypeSelector
+              value={formData.product_type ?? null}
+              onChange={(v) => {
+                setFormData(prev => ({ ...prev, product_type: v }));
+                autoSave({ product_type: v });
+              }}
+            />
+
+            <ForbiddenProductsSection
+              value={formData.forbidden_products || []}
+              onChange={(v) => {
+                setFormData(prev => ({ ...prev, forbidden_products: v }));
+                autoSave({ forbidden_products: v });
+              }}
+              currentProductId={product?.id}
+            />
+
+            <RequiredProductsSection
+              value={formData.required_products || []}
+              onChange={(v) => {
+                setFormData(prev => ({ ...prev, required_products: v }));
+                autoSave({ required_products: v });
+              }}
+              currentProductId={product?.id}
+            />
+
+            <AntiHallucinationRulesEditor
+              rules={formData.anti_hallucination_rules || DEFAULT_ANTI_HALLUCINATION_RULES}
+              onChange={(v) => {
+                setFormData(prev => ({ ...prev, anti_hallucination_rules: v }));
+                autoSave({ anti_hallucination_rules: v });
+              }}
+            />
+          </Card>
 
           {/* SEO & URL Amigável Section */}
           <Card className="p-4 space-y-3 bg-muted/20">
