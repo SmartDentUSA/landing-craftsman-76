@@ -5,7 +5,7 @@ import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { RepositoryPanel } from '@/components/RepositoryPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones, Target, Image as ImageIcon } from 'lucide-react';
+import { Settings, Youtube, Building2, ArrowLeft, Package, Link2, Tag, Sparkles, MessageSquare, Headphones, Target, Image as ImageIcon, Copy } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AdminStatusBadge } from '@/components/AdminStatusBadge';
 import CategoryManager from '@/components/CategoryManager';
@@ -23,11 +23,12 @@ import { SpinSellingManager } from '@/components/SpinSellingManager';
 import { SystemBDocumentSync } from '@/components/SystemBDocumentSync';
 import { ExternalVideosGallery } from '@/components/ExternalVideosGallery';
 import { ImageMigrationManager } from '@/components/ImageMigrationManager';
+import { LPClonePanel } from '@/components/LPClonePanel';
 
 const Repository = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration'>('repository');
+  const [activeView, setActiveView] = useState<'repository' | 'categories' | 'prompts' | 'links' | 'merchant' | 'youtube' | 'google-business' | 'coupons' | 'aftersales' | 'cs' | 'spin-selling' | 'external-videos' | 'image-migration' | 'lp-clone'>('repository');
 
   // Detectar redirecionamento OAuth e abrir aba correta
   useEffect(() => {
@@ -83,7 +84,8 @@ const Repository = () => {
                    activeView === 'cs' ? 'Customer Success (CS)' :
                    activeView === 'spin-selling' ? 'SPIN Selling' :
                    activeView === 'external-videos' ? 'Vídeos Externos (Sistema B)' :
-                   activeView === 'image-migration' ? 'Migração de Imagens' : 'Prompts IA'}
+                   activeView === 'image-migration' ? 'Migração de Imagens' :
+                   activeView === 'lp-clone' ? 'LP Clone' : 'Prompts IA'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {activeView === 'repository' 
@@ -110,6 +112,8 @@ const Repository = () => {
                     ? 'Biblioteca de vídeos com transcrições, legendas e Schema.org para SEO'
                     : activeView === 'image-migration'
                     ? 'Migre automaticamente imagens externas para Supabase Storage'
+                    : activeView === 'lp-clone'
+                    ? 'Clone landing pages de fabricantes preservando CSS e imagens'
                     : 'Configure prompts e dados utilizados na geração de conteúdo IA'
                   }
                 </p>
@@ -170,6 +174,10 @@ const Repository = () => {
                 <TabsTrigger value="image-migration" className="gap-2">
                   <ImageIcon className="h-4 w-4" />
                   Migração de Imagens
+                </TabsTrigger>
+                <TabsTrigger value="lp-clone" className="gap-2">
+                  <Copy className="h-4 w-4" />
+                  LP Clone
                 </TabsTrigger>
               </TabsList>
               
@@ -249,6 +257,10 @@ const Repository = () => {
 
               <TabsContent value="image-migration">
                 <ImageMigrationManager />
+              </TabsContent>
+
+              <TabsContent value="lp-clone">
+                <LPClonePanel />
               </TabsContent>
 
               <TabsContent value="prompts">
