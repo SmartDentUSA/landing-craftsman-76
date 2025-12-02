@@ -91,13 +91,33 @@ function generateSPINSchemas(
     schemas.push(orgSchema);
   }
 
-  // 2. WebPage Schema
+  // 2. WebPage Schema + SpeakableSpecification (GEO/Voice SEO)
   schemas.push({
     '@type': 'WebPage',
     name: solution.title,
-    description: solution.sales_pitch?.substring(0, 160) || solution.pain_description,
+    description: solution.sales_pitch?.substring(0, 160)?.replace(/<[^>]*>/g, '') || solution.pain_description,
     url: canonicalUrl,
-    mainEntityOfPage: canonicalUrl
+    mainEntityOfPage: canonicalUrl,
+    
+    // ✅ GEO: SpeakableSpecification para Voice SEO e assistentes de voz
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: [
+        '.hero-section h1',
+        '.lead-text',
+        '.content-block h3',
+        '.content-block p',
+        '.faq-item summary',
+        '.entity-definition p'
+      ]
+    },
+    
+    // ✅ GEO: Definir entidade principal
+    mainEntity: products[0] ? {
+      '@type': 'Product',
+      name: products[0].name,
+      brand: { '@type': 'Brand', name: products[0].brand || company?.company_name || 'Smart Dent' }
+    } : undefined
   });
 
   // 3. ItemList Schema (produtos selecionados)
@@ -552,20 +572,58 @@ export function generateLandingPageHTML(
   // Links institucionais do rodapé
   const institutionalLinks = company?.institutional_links || [];
 
-  // SEO
-  const seoTitle = `${solution.title} | ${company?.company_name || 'Smart Dent'}`;
-  const seoDescription = enrichedHeroSubtitle.substring(0, 160).replace(/<[^>]*>/g, ''); // Remove HTML tags for meta
+  // ═══════════════════════════════════════════════════════════
+  // 🔍 SEO/GEO OTIMIZADO (v2.0)
+  // ═══════════════════════════════════════════════════════════
   
-  // Extrair keywords de múltiplas fontes
+  // 1️⃣ TÍTULO SEO-OTIMIZADO: Produto | Categoria | Marca
+  const mainProductName = products[0]?.name || '';
+  const mainBrand = products[0]?.brand || '';
+  const companyName = company?.company_name || 'Smart Dent';
+  const painLabel = painTypeLabels[solution.pain_type] || '';
+  
+  const rawSeoTitle = mainProductName 
+    ? `${mainProductName}${mainBrand ? ` ${mainBrand}` : ''} | ${painLabel || solution.title} | ${companyName}`
+    : `${solution.title} | ${companyName}`;
+  
+  // Limitar a 60 caracteres
+  const seoTitle = rawSeoTitle.length > 60 
+    ? rawSeoTitle.substring(0, 57) + '...'
+    : rawSeoTitle;
+  
+  // 2️⃣ META DESCRIPTION: PRIMEIRO remover HTML, DEPOIS truncar
+  const cleanHeroText = (enrichedHeroSubtitle || '').replace(/<[^>]*>/g, '').trim();
+  const seoDescription = cleanHeroText.length > 20 
+    ? cleanHeroText.substring(0, 155) + '...'
+    : (solution.sales_pitch?.replace(/<[^>]*>/g, '').substring(0, 155) || 
+       `Solução completa de ${products[0]?.name || 'odontologia'} para ${painLabel || 'sua clínica'}.`);
+  
+  // 3️⃣ KEYWORDS HUMANAS: Extrair LABELS das métricas (não chaves técnicas)
+  const metricsLabels = Object.entries(pain_metrics)
+    .map(([key, value]) => {
+      if (typeof value === 'object' && (value as any)?.label) return (value as any).label;
+      return null;
+    })
+    .filter(Boolean);
+  
+  // Keywords semânticas humanas
   const baseKeywords = [
-    ...Object.keys(pain_metrics),
-    ...(products.flatMap(p => p.keywords || [])),
+    // Labels das métricas (ex: "tempo de laboratório")
+    ...metricsLabels,
+    // Nomes dos produtos
+    ...products.map(p => p.name).filter(Boolean),
+    // Marcas dos produtos
+    ...products.map(p => p.brand).filter(Boolean),
+    // Keywords de mercado dos produtos
     ...(products.flatMap(p => p.market_keywords || [])),
-    ...(products.flatMap(p => p.search_intent_keywords || []))
+    // Keywords de intenção de busca
+    ...(products.flatMap(p => p.search_intent_keywords || [])),
+    // Label do tipo de dor
+    painLabel
   ]
     .filter((k, i, arr) => arr.indexOf(k) === i) // unique
-    .map(k => typeof k === 'string' ? k : k.keyword || k.name || '')
-    .filter(k => k.length > 0);
+    .map(k => typeof k === 'string' ? k : (k as any)?.keyword || (k as any)?.name || '')
+    .filter(k => k && k.length > 0);
 
   // 🎯 ENRIQUECIMENTO: Adicionar benefits e features
   const extractedKeywords = enrichKeywordsWithProductData(baseKeywords, products);
@@ -685,8 +743,10 @@ export function generateLandingPageHTML(
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-  ${heroImageSrc ? `<link rel="preload" as="image" href="${escapeHtml(heroImageSrc)}" fetchpriority="high">` : ''}
-  ${products[0]?.image_url ? `<link rel="preload" as="image" href="${escapeHtml(products[0].image_url)}">` : ''}
+  ${heroImageSrc && !heroImageSrc.startsWith('data:') && heroImageSrc.startsWith('http') 
+    ? `<link rel="preload" as="image" href="${escapeHtml(heroImageSrc)}" fetchpriority="high">` : ''}
+  ${products[0]?.image_url && !products[0].image_url.startsWith('data:') 
+    ? `<link rel="preload" as="image" href="${escapeHtml(products[0].image_url)}">` : ''}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- SCHEMA.ORG JSON-LD (@graph consolidado) -->
@@ -1944,6 +2004,73 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       margin: 0 auto;
       font-weight: 500;
     }
+
+    /* ===== SEÇÃO DE CONTEÚDO INDEXÁVEL (GEO) ===== */
+    .indexable-content {
+      padding: 60px 0;
+      background: var(--section-light-bg);
+    }
+
+    .content-header {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .content-header h2 {
+      font-size: 32px;
+      color: var(--primary-dark);
+      margin-bottom: 16px;
+    }
+
+    .lead-text {
+      font-size: 18px;
+      line-height: 1.8;
+      color: var(--muted);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .article-body {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .content-block {
+      margin-bottom: 32px;
+      padding: 24px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border-left: 4px solid var(--accent-tech);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .content-block h3 {
+      font-size: 22px;
+      color: var(--primary-dark);
+      margin-bottom: 16px;
+    }
+
+    .content-block p {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text-color);
+    }
+
+    .benefits-list {
+      list-style: disc;
+      padding-left: 24px;
+    }
+
+    .benefits-list li {
+      margin-bottom: 8px;
+      line-height: 1.6;
+      color: var(--text-color);
+    }
+
+    .entity-definition {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-left-color: var(--primary-dark);
+    }
   </style>
 </head>
 <body>
@@ -1997,6 +2124,54 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     </section>
   </div>
   ` : ''}
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 📝 SEÇÃO DE CONTEÚDO INDEXÁVEL (GEO/SGE) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <main class="indexable-content container section-padding">
+    <article itemscope itemtype="https://schema.org/Article">
+      <header class="content-header">
+        <h2 itemprop="headline">${escapeHtml(solution.title)}</h2>
+        <p itemprop="description" class="lead-text">
+          ${escapeHtml((solution.pain_description || solution.sales_pitch || '').replace(/<[^>]*>/g, '').substring(0, 300))}
+        </p>
+      </header>
+      
+      <section itemprop="articleBody" class="article-body">
+        ${solution.sales_pitch ? `
+        <div class="content-block">
+          <h3>Por que escolher esta solução?</h3>
+          <p>${escapeHtml(solution.sales_pitch.replace(/<[^>]*>/g, ''))}</p>
+        </div>
+        ` : ''}
+        
+        ${products.length > 0 && products.some((p: any) => p.benefits?.length > 0) ? `
+        <div class="content-block">
+          <h3>Principais Benefícios</h3>
+          <ul class="benefits-list">
+            ${products
+              .flatMap((p: any) => (p.benefits || []).slice(0, 3))
+              .slice(0, 6)
+              .map((b: any) => `<li>${escapeHtml(typeof b === 'string' ? b : b.title || b.text || '')}</li>`)
+              .join('')}
+          </ul>
+        </div>
+        ` : ''}
+        
+        <div class="content-block entity-definition">
+          <h3>Sobre ${escapeHtml(company?.company_name || 'Nossa Empresa')}</h3>
+          <p>
+            ${escapeHtml(company?.seo_technical_expertise || 
+              `${company?.company_name || 'Smart Dent'} é especialista em ${painTypeLabels[solution.pain_type] || 'soluções odontológicas'}, oferecendo produtos de alta qualidade para profissionais da odontologia.`)}
+          </p>
+          ${company?.mission_statement ? `<p><strong>Missão:</strong> ${escapeHtml(company.mission_statement)}</p>` : ''}
+        </div>
+      </section>
+      
+      <meta itemprop="author" content="${escapeHtml(company?.company_name || 'Smart Dent')}">
+      <meta itemprop="datePublished" content="${new Date().toISOString().split('T')[0]}">
+    </article>
+  </main>
 
   ${solution.selected_video_url ? `
   <!-- ========== SEÇÃO DE VÍDEO DE DEMONSTRAÇÃO ========== -->
@@ -2713,6 +2888,19 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       observer.observe(metricsSection);
     }
   </script>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 🤖 GEO CONTEXT (Contexto para LLMs e Crawlers de IA) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="geo-context" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">
+    <p>
+      ${escapeHtml(company?.company_name || 'Smart Dent')} é especialista em 
+      ${escapeHtml(painTypeLabels[solution.pain_type] || 'soluções odontológicas')}.
+      ${products.length > 0 ? `Principais produtos: ${products.map((p: any) => p.name).filter(Boolean).join(', ')}.` : ''}
+      ${products[0]?.brand ? `Marca: ${escapeHtml(products[0].brand)}.` : ''}
+      Localização: ${escapeHtml(company?.city || 'Brasil')}, ${escapeHtml(company?.state || 'BR')}.
+    </p>
+  </div>
 </body>
 </html>`;
 }
