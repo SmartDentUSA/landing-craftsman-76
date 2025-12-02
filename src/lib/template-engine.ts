@@ -3008,6 +3008,51 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
     };
   };
 
+  // 🆕 Calcular larguras dinâmicas das colunas (sincronizado com generateHTML)
+  const calculateColumnWidths = (solutions: any[]) => {
+    if (!solutions || solutions.length === 0) return [1, 1, 1, 1];
+    
+    const columnWeights = [0, 0, 0, 0];
+    const columnAssignments = [
+      { solution: 0, column: 0 },
+      { solution: 1, column: 1 },
+      { solution: 2, column: 2 },
+      { solution: 3, column: 3 },
+      { solution: 4, column: 0 },
+      { solution: 5, column: 1 },
+      { solution: 6, column: 2 },
+      { solution: 7, column: 3 }
+    ];
+    
+    columnAssignments.forEach(({ solution, column }) => {
+      if (solutions[solution]?.image?.src) {
+        const scale = solutions[solution].containerScale || 1.0;
+        const gridSpan = solutions[solution].gridSpan || 2;
+        columnWeights[column] = Math.max(columnWeights[column], scale * (gridSpan / 2));
+      }
+    });
+    
+    const processedWeights = columnWeights.map(weight => {
+      if (weight === 0) return 0;
+      return Math.max(0.3, Math.min(2.0, weight));
+    });
+    
+    const targetSum = 4.0;
+    const currentSum = processedWeights.reduce((sum, weight) => sum + weight, 0);
+    
+    if (currentSum === 0) return [1, 1, 1, 1];
+    
+    if (currentSum < targetSum) {
+      const extraSpace = targetSum - currentSum;
+      const nonEmptyColumns = processedWeights.filter(w => w > 0).length;
+      const extraPerColumn = extraSpace / nonEmptyColumns;
+      return processedWeights.map(w => w === 0 ? 0 : w + extraPerColumn);
+    } else {
+      const scaleFactor = targetSum / currentSum;
+      return processedWeights.map(w => w * scaleFactor);
+    }
+  };
+
   // Calculate desktop_info table_rows as arrays of strings (template format)
   const processDesktopInfoTable = (desktop_info: any) => {
     if (!desktop_info?.show_table || !desktop_info?.table_headers || !desktop_info?.table_data) {
@@ -3107,11 +3152,12 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
     solutions_section: {
       ...data.solutions_section,
       ...calculateSectionVisibility(data.solutions_section),
-      autoExpandLast: data.autoExpandLastSolution || false, // 🆕 Toggle para expansão automática
-      // Ensure solutions have slideIndex for carousel
+      autoExpandLast: data.autoExpandLastSolution || false,
+      // Ensure solutions have slideIndex for carousel with gridRowSpan support
       solutions: data.solutions_section?.solutions?.map((solution: any, index: number) => {
-        // Sistema de grid flexível baseado em gridSpan
+        // Sistema de grid flexível baseado em gridSpan e gridRowSpan
         const gridSpan = solution.gridSpan || 2; // Default: 2 colunas (medium)
+        const gridRowSpan = solution.gridRowSpan || 1; // 🆕 Default: 1 linha
         
         // Calcular classes CSS baseadas no span
         let sizeClass = '';
@@ -3131,19 +3177,18 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
           sizeType = 'small';
         }
         
-        console.log(`🎨 [SOLUTIONS-SECTION] Solution ${index} - gridSpan: ${gridSpan}, size: ${sizeClass}`);
-        
         return {
           ...solution,
           index: index + 1,
-          solutionIndex: index, // Para data-solution-index no HTML
+          solutionIndex: index,
           size: sizeClass,
           sizeType: sizeType,
           slideIndex: index,
           containerScale: String(solution.containerScale || 1.0),
           gridSpan: gridSpan,
-          gridColumnStyle: `grid-column: span ${gridSpan};`,
-          debugInfo: `gridSpan=${gridSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}`
+          gridRowSpan: gridRowSpan, // 🆕 Adicionado
+          gridColumnStyle: `grid-column: span ${gridSpan}; grid-row: span ${gridRowSpan};`, // 🆕 Sincronizado com generateHTML
+          debugInfo: `gridSpan=${gridSpan}, gridRowSpan=${gridRowSpan}, scale=${solution.containerScale || 1}, size=${sizeClass}`
         };
       }) || []
     },
@@ -3238,10 +3283,31 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
       return '';
     })(),
     
+    // 🆕 Footer com processamento de ícones SVG (sincronizado com generateHTML)
+    footer: {
+      ...data.footer,
+      social: (data.footer?.social || []).map((social: any) => ({
+        ...social,
+        iconSvg: SOCIAL_ICONS[social.platform] || SOCIAL_ICONS.website
+      }))
+    },
+    
     // Skip heavy processing for preview (hreflang apenas)
-    hreflang_tags: '',
-    columnWidths: [25, 25, 25, 25]
+    hreflang_tags: ''
   };
+  
+  // 🆕 Calcular e adicionar variáveis CSS para larguras das colunas (sincronizado com generateHTML)
+  if (data.solutions) {
+    const columnWeights = calculateColumnWidths(data.solutions);
+    const columnFractions = columnWeights.map((w: number) => w === 0 ? '0fr' : `${w.toFixed(3)}fr`);
+    
+    (previewData as any).columnVars = {
+      col1: columnFractions[0],
+      col2: columnFractions[1], 
+      col3: columnFractions[2],
+      col4: columnFractions[3]
+    };
+  }
   
   // Debug logs for visibility
   console.log('[PREVIEW] knowledge_feed_section:', {
