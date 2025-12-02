@@ -587,9 +587,22 @@ function injectPremiumCSS(): string {
       }
 
       /* ===== HEADER PREMIUM ===== */
+      /* ===== PREVENT HORIZONTAL SCROLL ===== */
+      html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+      }
+      
+      body {
+        padding-top: 55px !important;
+      }
+
+      /* ===== HEADER PREMIUM (FIXED) ===== */
       .sd-premium-header {
-        position: sticky;
+        position: fixed;
         top: 0;
+        left: 0;
+        right: 0;
         z-index: 9999;
         background: var(--card-bg);
         border-bottom: 1px solid #e0e0e0;
@@ -597,38 +610,39 @@ function injectPremiumCSS(): string {
       }
       
       .sd-premium-header .container {
-        max-width: 1200px;
+        max-width: 1100px;
         margin: 0 auto;
-        padding: 0 2rem;
+        padding: 0 1rem;
       }
       
       .sd-premium-header .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1rem 0;
+        padding: 0.5rem 0;
       }
       
       .sd-premium-header .banner {
-        width: 160px;
+        width: 110px;
         height: auto;
       }
       
       .sd-premium-header .main-nav {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.2rem;
       }
       
       .sd-premium-header .main-nav a {
         color: var(--primary-dark);
         text-decoration: none;
         font-weight: 600;
-        font-size: 12px;
-        padding: 8px 16px;
-        border-radius: 6px;
+        font-size: 10px;
+        padding: 5px 8px;
+        border-radius: 5px;
         transition: all 0.2s;
         font-family: 'Inter', sans-serif;
+        white-space: nowrap;
       }
       
       .sd-premium-header .main-nav a:hover {
@@ -639,19 +653,20 @@ function injectPremiumCSS(): string {
       .sd-premium-header .cta-button {
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: #fff !important;
-        padding: 10px 20px !important;
-        border-radius: 25px !important;
+        padding: 6px 12px !important;
+        border-radius: 18px !important;
         font-weight: 600 !important;
+        font-size: 10px !important;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 5px;
         transition: transform 0.2s, box-shadow 0.2s;
-        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+        box-shadow: 0 3px 12px rgba(37, 211, 102, 0.3);
       }
       
       .sd-premium-header .cta-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+        box-shadow: 0 5px 18px rgba(37, 211, 102, 0.4);
         background: linear-gradient(135deg, #128C7E 0%, #25D366 100%) !important;
       }
 
