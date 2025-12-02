@@ -695,22 +695,21 @@ function injectPremiumCSS(): string {
       .sd-premium-header .main-nav {
         display: flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.15rem;
         flex-wrap: nowrap;
-        overflow-x: auto;
       }
       
       .sd-premium-header .main-nav a {
         color: var(--primary-dark);
         text-decoration: none;
         font-weight: 600;
-        font-size: 11px;
-        padding: 8px 10px;
+        font-size: 9px;
+        padding: 6px 6px;
         border-radius: 6px;
         transition: all 0.2s;
         font-family: 'Inter', sans-serif;
         white-space: nowrap;
-        text-transform: capitalize;
+        letter-spacing: -0.02em;
       }
       
       .sd-premium-header .header {
@@ -726,12 +725,13 @@ function injectPremiumCSS(): string {
       .sd-premium-header .cta-button {
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: #fff !important;
-        padding: 10px 20px !important;
+        padding: 8px 14px !important;
         border-radius: 25px !important;
         font-weight: 600 !important;
+        font-size: 9px !important;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         transition: transform 0.2s, box-shadow 0.2s;
         box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
       }
