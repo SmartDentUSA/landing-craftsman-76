@@ -1114,6 +1114,7 @@ export type Database = {
           ai_generated_category: boolean | null
           ai_generated_keywords: boolean | null
           all_categories: Json | null
+          anti_hallucination_rules: Json | null
           applications: string | null
           approved: boolean | null
           availability: string | null
@@ -1138,6 +1139,7 @@ export type Database = {
           features: Json | null
           fiscal_class: string | null
           fiscal_origin: string | null
+          forbidden_products: Json | null
           free_shipping: boolean | null
           gender: string | null
           google_product_category: string | null
@@ -1165,9 +1167,11 @@ export type Database = {
           original_data: Json | null
           package_size: string | null
           price: number | null
+          product_type: string | null
           product_url: string | null
           promo_price: number | null
           promotion: boolean | null
+          required_products: Json | null
           resource_cta1: Json | null
           resource_cta2: Json | null
           resource_cta3: Json | null
@@ -1220,6 +1224,7 @@ export type Database = {
           ai_generated_category?: boolean | null
           ai_generated_keywords?: boolean | null
           all_categories?: Json | null
+          anti_hallucination_rules?: Json | null
           applications?: string | null
           approved?: boolean | null
           availability?: string | null
@@ -1244,6 +1249,7 @@ export type Database = {
           features?: Json | null
           fiscal_class?: string | null
           fiscal_origin?: string | null
+          forbidden_products?: Json | null
           free_shipping?: boolean | null
           gender?: string | null
           google_product_category?: string | null
@@ -1271,9 +1277,11 @@ export type Database = {
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
+          product_type?: string | null
           product_url?: string | null
           promo_price?: number | null
           promotion?: boolean | null
+          required_products?: Json | null
           resource_cta1?: Json | null
           resource_cta2?: Json | null
           resource_cta3?: Json | null
@@ -1326,6 +1334,7 @@ export type Database = {
           ai_generated_category?: boolean | null
           ai_generated_keywords?: boolean | null
           all_categories?: Json | null
+          anti_hallucination_rules?: Json | null
           applications?: string | null
           approved?: boolean | null
           availability?: string | null
@@ -1350,6 +1359,7 @@ export type Database = {
           features?: Json | null
           fiscal_class?: string | null
           fiscal_origin?: string | null
+          forbidden_products?: Json | null
           free_shipping?: boolean | null
           gender?: string | null
           google_product_category?: string | null
@@ -1377,9 +1387,11 @@ export type Database = {
           original_data?: Json | null
           package_size?: string | null
           price?: number | null
+          product_type?: string | null
           product_url?: string | null
           promo_price?: number | null
           promotion?: boolean | null
+          required_products?: Json | null
           resource_cta1?: Json | null
           resource_cta2?: Json | null
           resource_cta3?: Json | null
