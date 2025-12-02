@@ -47,13 +47,13 @@ interface CompanyProfile {
   navigation_footer_config?: NavigationFooterConfig;
 }
 
-interface FooterData {
+export interface FooterData {
   locations: FooterLocation[];
   links: FooterLink[];
   social: FooterSocialLink[];
 }
 
-interface MenuData {
+export interface MenuData {
   label: string;
   href: string;
 }
@@ -208,11 +208,71 @@ export const useAutoFooterPopulation = () => {
     return footer;
   }, [companyProfile]);
 
+  // 🆕 Forçar re-sincronização com dados do perfil (limpa flags de sessão)
+  const forceResyncFromProfile = useCallback((): { menu: MenuData[], footer: FooterData } => {
+    // Limpar flags de sessão para permitir re-aplicação
+    sessionStorage.removeItem('autoFooterApplied');
+    sessionStorage.removeItem('autoMenuApplied');
+    
+    return {
+      menu: generateAutoNavigation(),
+      footer: generateAutoFooter()
+    };
+  }, [generateAutoNavigation, generateAutoFooter]);
+
+  // 🆕 Obter dados do perfil para comparação (verifica se está sincronizado)
+  const getProfileDefaults = useCallback((): { menu: MenuData[], footer: FooterData } => {
+    return {
+      menu: generateAutoNavigation(),
+      footer: generateAutoFooter()
+    };
+  }, [generateAutoNavigation, generateAutoFooter]);
+
+  // 🆕 Verificar se menu atual está sincronizado com perfil
+  const isMenuSyncedWithProfile = useCallback((currentMenu: MenuData[]): boolean => {
+    const profileMenu = generateAutoNavigation();
+    if (profileMenu.length === 0) return true; // Não há dados no perfil para comparar
+    if (currentMenu.length !== profileMenu.length) return false;
+    
+    return currentMenu.every((item, index) => 
+      item.label === profileMenu[index]?.label && 
+      item.href === profileMenu[index]?.href
+    );
+  }, [generateAutoNavigation]);
+
+  // 🆕 Verificar se footer atual está sincronizado com perfil
+  const isFooterSyncedWithProfile = useCallback((currentFooter: FooterData): boolean => {
+    const profileFooter = generateAutoFooter();
+    
+    // Se não há dados no perfil, considera sincronizado
+    if (profileFooter.locations.length === 0 && 
+        profileFooter.links.length === 0 && 
+        profileFooter.social.length === 0) {
+      return true;
+    }
+    
+    // Comparar localizações
+    if (currentFooter.locations?.length !== profileFooter.locations.length) return false;
+    
+    // Comparar links
+    if (currentFooter.links?.length !== profileFooter.links.length) return false;
+    
+    // Comparar redes sociais
+    if (currentFooter.social?.length !== profileFooter.social.length) return false;
+    
+    // Se passou todas as verificações básicas, está sincronizado
+    return true;
+  }, [generateAutoFooter]);
+
   return {
     companyProfile,
     isLoading,
     generateAutoNavigation,
     generateAutoFooter,
+    forceResyncFromProfile,
+    getProfileDefaults,
+    isMenuSyncedWithProfile,
+    isFooterSyncedWithProfile,
     hasCompanyData: !!companyProfile
   };
 };
