@@ -14,8 +14,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Code, Copy, Download, Eye, Image, CheckCircle, 
   XCircle, Loader2, FileCode, Trash2, ExternalLink, RefreshCw, Save,
-  AlertTriangle, Search, Sparkles
+  AlertTriangle, Search, Sparkles, Package
 } from 'lucide-react';
+import { LPCloneProductSelector } from './LPCloneProductSelector';
 
 interface CapturedImage {
   originalUrl: string;
@@ -45,6 +46,7 @@ interface TransformResult {
     cssPreserved: boolean;
     headerRemoved: boolean;
     footerRemoved: boolean;
+    videosPreserved?: number;
   };
   generatedSEO?: GeneratedSEO;
 }
@@ -57,6 +59,21 @@ interface ClonedLP {
   status: string;
   created_at: string;
   captured_images: CapturedImage[];
+}
+
+interface SelectedProduct {
+  id: string;
+  name: string;
+  brand: string | null;
+  price: number | null;
+  image_url: string | null;
+  category: string | null;
+  subcategory: string | null;
+  description: string | null;
+  keywords: string[] | null;
+  market_keywords: string[] | null;
+  benefits: string[] | null;
+  features: string[] | null;
 }
 
 export const LPClonePanel = () => {
@@ -72,7 +89,31 @@ export const LPClonePanel = () => {
   const [seoCanonical, setSeoCanonical] = useState('');
   const [seoKeywords, setSeoKeywords] = useState('');
   
+  // NEW: Product selector state
+  const [selectedProduct, setSelectedProduct] = useState<SelectedProduct | null>(null);
+  const [productSelectorOpen, setProductSelectorOpen] = useState(false);
+  
   const [result, setResult] = useState<TransformResult | null>(null);
+  
+  // Auto-fill brand/product when selecting from repository
+  const handleProductSelect = (productData: SelectedProduct | null) => {
+    setSelectedProduct(productData);
+    if (productData) {
+      // Auto-fill fields from product data
+      if (productData.brand) setBrand(productData.brand);
+      if (productData.name) setProduct(productData.name);
+      if (!name) setName(`LP ${productData.brand || ''} ${productData.name}`);
+      
+      // Merge keywords if available
+      const allKeywords = [
+        ...(productData.keywords || []),
+        ...(productData.market_keywords || []),
+      ].filter(Boolean).slice(0, 10);
+      if (allKeywords.length > 0 && !seoKeywords) {
+        setSeoKeywords(allKeywords.join(', '));
+      }
+    }
+  };
   
   // Validation state
   const validation = useMemo(() => {
@@ -128,6 +169,8 @@ export const LPClonePanel = () => {
           },
           brand,
           product,
+          // NEW: Pass product ID for enrichment
+          productId: selectedProduct?.id || null,
         },
       });
       
@@ -146,7 +189,8 @@ export const LPClonePanel = () => {
         if (!seoKeywords && data.generatedSEO.keywords) setSeoKeywords(data.generatedSEO.keywords);
       }
       
-      toast.success(`Transformação v2.0 concluída! ${data.stats.imagesProcessed} imagens em /${brand.toLowerCase()}/${product.toLowerCase()}/`);
+      const videosMsg = data.stats.videosPreserved ? ` | ${data.stats.videosPreserved} vídeos preservados` : '';
+      toast.success(`LP Clone v3.0 concluída! ${data.stats.imagesProcessed} imagens${videosMsg}`);
     },
     onError: (error) => {
       toast.error(`Erro: ${(error as Error).message}`);
@@ -273,16 +317,59 @@ export const LPClonePanel = () => {
               <Card className={!brand || !product ? 'border-destructive' : ''}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    Identificação
+                    <Package className="h-5 w-5" />
+                    Identificação do Produto
                     {(!brand || !product) && (
                       <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
                     )}
                   </CardTitle>
                   <CardDescription>
-                    Marca e Produto são obrigatórios para SEO e organização de assets
+                    Selecione um produto do repositório ou preencha manualmente
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Product Selector Button */}
+                  <div>
+                    <Label className="mb-2 block">Produto do Repositório (Recomendado)</Label>
+                    <Button
+                      type="button"
+                      variant={selectedProduct ? 'outline' : 'secondary'}
+                      className="w-full justify-start h-auto py-3"
+                      onClick={() => setProductSelectorOpen(true)}
+                    >
+                      {selectedProduct ? (
+                        <div className="flex items-center gap-3 w-full">
+                          {selectedProduct.image_url && (
+                            <img 
+                              src={selectedProduct.image_url} 
+                              alt={selectedProduct.name}
+                              className="w-10 h-10 rounded object-cover"
+                            />
+                          )}
+                          <div className="text-left flex-1">
+                            <p className="font-medium">{selectedProduct.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedProduct.brand} • {selectedProduct.category}
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="ml-auto">
+                            Selecionado
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Search className="h-4 w-4" />
+                          <span>Clique para selecionar um produto...</span>
+                        </div>
+                      )}
+                    </Button>
+                    {selectedProduct && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        ✨ SEO será enriquecido com keywords, benefícios e especificações do produto
+                      </p>
+                    )}
+                  </div>
+                  
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label>Nome da LP</Label>
@@ -591,15 +678,15 @@ export const LPClonePanel = () => {
                   </Card>
                 </>
               ) : (
-                <Card className="h-full flex items-center justify-center min-h-[400px]">
+              <Card className="h-full flex items-center justify-center min-h-[400px]">
                   <CardContent className="text-center text-muted-foreground">
                     <Code className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                    <p className="font-medium">LP Clone v2.0</p>
+                    <p className="font-medium">LP Clone v3.0</p>
                     <p className="text-sm mt-2">
-                      Preencha Marca + Produto + HTML + CTA
+                      Selecione produto + Preencha HTML + CTA
                     </p>
                     <p className="text-xs mt-1 text-muted-foreground">
-                      SEO automático • Schema Smart Dent • OG Image própria
+                      SEO enriquecido • Header/Footer dinâmico • Vídeos preservados
                     </p>
                   </CardContent>
                 </Card>
@@ -659,6 +746,14 @@ export const LPClonePanel = () => {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Product Selector Modal */}
+      <LPCloneProductSelector
+        open={productSelectorOpen}
+        onClose={() => setProductSelectorOpen(false)}
+        selectedProduct={selectedProduct}
+        onSelectProduct={handleProductSelect}
+      />
     </div>
   );
 };

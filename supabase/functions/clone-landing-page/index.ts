@@ -148,23 +148,45 @@ function sanitizeHTML(html: string): string {
 }
 
 // ============================================
-// REMOVE MANUFACTURER ELEMENTS
+// PRESERVE VIDEOS (NEW in v3.0)
 // ============================================
-function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean } {
+function countVideos(html: string): number {
+  const videoPatterns = [
+    /<video[^>]*>/gi,
+    /<iframe[^>]*(?:youtube|vimeo|youtu\.be)[^>]*>/gi,
+    /<embed[^>]*>/gi,
+  ];
+  
+  let count = 0;
+  for (const pattern of videoPatterns) {
+    const matches = html.match(pattern);
+    if (matches) count += matches.length;
+  }
+  return count;
+}
+
+// ============================================
+// REMOVE MANUFACTURER ELEMENTS (preserving videos)
+// ============================================
+function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; videosPreserved: number } {
   let result = html;
   let headerRemoved = false;
   let footerRemoved = false;
   
+  // Count videos before processing
+  const videosPreserved = countVideos(html);
+  console.log(`🎥 Found ${videosPreserved} videos to preserve`);
+  
+  // Header patterns - be more careful not to remove video containers
   const headerPatterns = [
-    /<header[^>]*>[\s\S]*?<\/header>/gi,
-    /<div[^>]*class="[^"]*site-header[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*navbar[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<header[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/header>)[\s\S]*?<\/header>/gi,
+    /<div[^>]*class="[^"]*site-header[^"]*"[^>]*>(?![\s\S]*<(?:video|iframe))[\s\S]*?<\/div>/gi,
     /<nav[^>]*class="[^"]*main-nav[^"]*"[^>]*>[\s\S]*?<\/nav>/gi,
     /<div[^>]*id="masthead"[^>]*>[\s\S]*?<\/div>/gi,
   ];
   
   const footerPatterns = [
-    /<footer[^>]*>[\s\S]*?<\/footer>/gi,
+    /<footer[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/footer>)[\s\S]*?<\/footer>/gi,
     /<div[^>]*class="[^"]*site-footer[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
     /<div[^>]*id="colophon"[^>]*>[\s\S]*?<\/div>/gi,
   ];
@@ -183,7 +205,7 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
     }
   }
   
-  return { html: result, headerRemoved, footerRemoved };
+  return { html: result, headerRemoved, footerRemoved, videosPreserved };
 }
 
 // ============================================
@@ -994,7 +1016,7 @@ function injectSEO(
 }
 
 // ============================================
-// INSERT PREMIUM HEADER & FOOTER (IGUAL LP SPIN)
+// INSERT PREMIUM HEADER & FOOTER (v3.0 - IGUAL LP SPIN)
 // ============================================
 function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string): string {
   let result = html;
@@ -1007,11 +1029,11 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   const city = companyData?.city || SMART_DENT_DATA.city;
   const state = companyData?.state || SMART_DENT_DATA.state;
   const streetAddress = companyData?.street_address || SMART_DENT_DATA.street_address;
+  const addressNumber = companyData?.address_number || '';
   const postalCode = companyData?.postal_code || SMART_DENT_DATA.postal_code;
   const instagram = companyData?.instagram_profile || SMART_DENT_DATA.instagram_profile;
   const youtube = companyData?.youtube_channel || SMART_DENT_DATA.youtube_channel;
   const taxId = companyData?.tax_id || SMART_DENT_DATA.tax_id;
-  const description = companyData?.company_description || SMART_DENT_DATA.company_description;
   
   // SEO fields for GEO context
   const seoServiceAreas = companyData?.seo_service_areas || '';
@@ -1019,12 +1041,31 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   const seoCompetitiveAdvantages = companyData?.seo_competitive_advantages || '';
   const seoTechnicalExpertise = companyData?.seo_technical_expertise || '';
   
-  // Institutional links
+  // ✅ NEW: Use navigation_footer_config (igual SPIN)
+  const navConfig = companyData?.navigation_footer_config;
+  const navMenu = navConfig?.navigation_menu || [];
+  const footerConfig = navConfig?.footer;
+  const hasCustomFooter = footerConfig && (
+    footerConfig.locations?.length > 0 || 
+    footerConfig.links?.length > 0 || 
+    footerConfig.social_links?.length > 0
+  );
+  
+  // Institutional links as fallback
   const institutionalLinks = companyData?.institutional_links || [];
+  
+  // ✅ HEADER DINÂMICO COM NAVIGATION_MENU
+  const menuHtml = navMenu.length > 0 
+    ? navMenu.map((item: any) => `<a href="${item.href || '#'}" ${item.openInNewTab ? 'target="_blank"' : ''} title="${item.label}">${item.label}</a>`).join('')
+    : `
+      <a href="${websiteUrl}" title="Início">Início</a>
+      <a href="https://loja.smartdent.com.br/" title="Loja">Loja</a>
+      <a href="${websiteUrl}/blog" title="Blog">Blog</a>
+    `;
   
   const PREMIUM_HEADER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SMART DENT PREMIUM HEADER (v2.1 - IGUAL LP SPIN) -->
+  <!-- SMART DENT PREMIUM HEADER (v3.0 - DINÂMICO) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <header class="sd-premium-header">
     <div class="container">
@@ -1036,9 +1077,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
           }
         </a>
         <nav class="main-nav">
-          <a href="https://loja.smartdent.com.br/" title="Loja Smart Dent">Loja</a>
-          <a href="${websiteUrl}/blog" title="Blog ${company}">Blog</a>
-          <a href="${websiteUrl}/contato" title="Contato ${company}">Contato</a>
+          ${menuHtml}
           <a href="${ctaUrl}" class="cta-button" title="Fale com um Especialista">
             <i class="fab fa-whatsapp"></i>
             Falar com Especialista
@@ -1049,40 +1088,102 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   </header>
   `;
   
+  // ✅ FOOTER DINÂMICO (IGUAL LP SPIN)
+  let footerColumnsHtml = '';
+  
+  if (hasCustomFooter) {
+    // Footer baseado em navigation_footer_config (igual SPIN)
+    footerColumnsHtml = `
+      ${footerConfig.locations && footerConfig.locations.length > 0 
+        ? footerConfig.locations.map((loc: any) => `
+          <div>
+            <strong>${loc.label || company}</strong>
+            ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
+            ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
+            ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
+          </div>
+        `).join('') 
+        : `
+          <div>
+            <strong>${company} - Brasil</strong>
+            ${phone ? `<p><i class="fas fa-phone"></i> Atendimento: ${phone}</p>` : ''}
+            ${email ? `<p><i class="fas fa-envelope"></i> Comercial: ${email}</p>` : ''}
+            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}</p>` : ''}
+            ${city ? `<p>${city} - ${state}, ${postalCode}</p>` : ''}
+          </div>
+        `
+      }
+      
+      ${footerConfig.links && footerConfig.links.length > 0 ? `
+        <div>
+          <strong>Links Úteis</strong>
+          ${footerConfig.links.map((link: any) => `
+            <a href="${link.href}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${link.label}</a>
+          `).join('')}
+        </div>
+      ` : institutionalLinks.length > 0 ? `
+        <div>
+          <strong>Links Úteis</strong>
+          ${institutionalLinks.slice(0, 5).map((link: any) => `
+            <a href="${link.url || link.href}" target="_blank" rel="noopener">${link.label}</a>
+          `).join('')}
+        </div>
+      ` : ''}
+      
+      ${footerConfig.social_links && footerConfig.social_links.length > 0 ? `
+        <div>
+          <strong>Redes Sociais</strong>
+          <div class="footer-social-links">
+            ${footerConfig.social_links.map((social: any) => `
+              <a href="${social.href}" target="_blank" rel="noopener noreferrer" title="${social.icon_alt || social.platform || ''}">
+                <i class="fab fa-${social.platform || 'link'}"></i>
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+  } else {
+    // Footer padrão (fallback)
+    footerColumnsHtml = `
+      <div>
+        <strong>${company} - Brasil</strong>
+        ${phone ? `<p><i class="fas fa-phone"></i> Atendimento: ${phone}</p>` : ''}
+        ${email ? `<p><i class="fas fa-envelope"></i> Comercial: ${email}</p>` : ''}
+        ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}</p>` : ''}
+        ${city ? `<p>${city} - ${state}, ${postalCode}</p>` : ''}
+      </div>
+      
+      <div>
+        <strong>Links Úteis</strong>
+        <a href="${websiteUrl}/politica-privacidade" rel="noopener">Política de Privacidade</a>
+        <a href="${websiteUrl}/termos" rel="noopener">Termos de Uso</a>
+        <a href="${websiteUrl}" rel="noopener">Site Principal</a>
+        <a href="https://loja.smartdent.com.br/" rel="noopener" target="_blank">Loja Online</a>
+        ${institutionalLinks.slice(0, 3).map((link: any) => 
+          `<a href="${link.url || link.href}" target="_blank" rel="noopener">${link.label}</a>`
+        ).join('')}
+      </div>
+      
+      <div>
+        <strong>Redes Sociais</strong>
+        <div class="footer-social-links">
+          ${instagram ? `<a href="${instagram}" target="_blank" rel="noopener noreferrer" title="Instagram ${company}"><i class="fab fa-instagram"></i></a>` : ''}
+          ${youtube ? `<a href="${youtube}" target="_blank" rel="noopener noreferrer" title="YouTube ${company}"><i class="fab fa-youtube"></i></a>` : ''}
+          <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" title="WhatsApp ${company}"><i class="fab fa-whatsapp"></i></a>
+        </div>
+      </div>
+    `;
+  }
+  
   const PREMIUM_FOOTER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SMART DENT PREMIUM FOOTER (v2.1 - IGUAL LP SPIN) -->
+  <!-- SMART DENT PREMIUM FOOTER (v3.0 - IGUAL LP SPIN) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <footer class="sd-premium-footer">
     <div class="container">
       <div class="footer-columns">
-        <div>
-          <strong>${company} - Brasil</strong>
-          ${phone ? `<p><i class="fas fa-phone"></i> Atendimento: ${phone}</p>` : ''}
-          ${email ? `<p><i class="fas fa-envelope"></i> Comercial: ${email}</p>` : ''}
-          ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}</p>` : ''}
-          ${city ? `<p>${city}${state ? ` - ${state}` : ''}${postalCode ? `, ${postalCode}` : ''}</p>` : ''}
-        </div>
-        
-        <div>
-          <strong>Links Úteis</strong>
-          <a href="${websiteUrl}/politica-privacidade" rel="noopener">Política de Privacidade</a>
-          <a href="${websiteUrl}/termos" rel="noopener">Termos de Uso</a>
-          <a href="${websiteUrl}" rel="noopener">Site Principal</a>
-          <a href="https://loja.smartdent.com.br/" rel="noopener" target="_blank">Loja Online</a>
-          ${institutionalLinks.slice(0, 3).map((link: any) => 
-            `<a href="${link.url || link.href}" target="_blank" rel="noopener">${link.label}</a>`
-          ).join('')}
-        </div>
-        
-        <div>
-          <strong>Redes Sociais</strong>
-          <div class="footer-social-links">
-            ${instagram ? `<a href="${instagram}" target="_blank" rel="noopener noreferrer" title="Instagram ${company}"><i class="fab fa-instagram"></i></a>` : ''}
-            ${youtube ? `<a href="${youtube}" target="_blank" rel="noopener noreferrer" title="YouTube ${company}"><i class="fab fa-youtube"></i></a>` : ''}
-            <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" title="WhatsApp ${company}"><i class="fab fa-whatsapp"></i></a>
-          </div>
-        </div>
+        ${footerColumnsHtml}
       </div>
       
       <div class="footer-bottom">
@@ -1123,7 +1224,7 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   // Insert before </body>
   result = result.replace(/<\/body>/i, `${PREMIUM_FOOTER}\n</body>`);
   
-  console.log('✅ Premium Header/Footer + Sticky CTA + GEO Context inserted');
+  console.log(`✅ Premium Header/Footer v3.0 inserted (dynamic: ${hasCustomFooter ? 'yes' : 'fallback'})`);
   
   return result;
 }
@@ -1149,10 +1250,10 @@ async function processLandingPage(
   let processedHTML = sanitizeHTML(html);
   console.log('✅ HTML sanitized');
   
-  // Step 2: Remove manufacturer elements
-  const { html: cleanedHTML, headerRemoved, footerRemoved } = removeManufacturerElements(processedHTML);
+  // Step 2: Remove manufacturer elements (preserving videos)
+  const { html: cleanedHTML, headerRemoved, footerRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
   processedHTML = cleanedHTML;
-  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved})`);
+  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
   
   // Step 3: Rewrite CTAs
   const { html: ctaHTML, count: ctasRewritten } = rewriteCTAs(processedHTML, ctaUrl);
@@ -1201,6 +1302,7 @@ async function processLandingPage(
     cssPreserved: true,
     headerRemoved,
     footerRemoved,
+    videosPreserved,
   };
   
   const score = calculateScore(stats, finalSEO, finalOgImage);
