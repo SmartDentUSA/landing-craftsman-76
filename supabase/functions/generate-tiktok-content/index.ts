@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { buildMasterPrompt, validateContext } from '../_shared/master-system-prompt.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,7 @@ const corsHeaders = {
 interface TikTokContentRequest {
   productId: string;
   customPrompt?: string;
+  use_clinical_brain?: boolean; // Clinical Brain v1.0 - default false (MODO A)
 }
 
 serve(async (req) => {
@@ -24,7 +26,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { productId, customPrompt }: TikTokContentRequest = await req.json();
+    const { productId, customPrompt, use_clinical_brain = false }: TikTokContentRequest = await req.json();
 
     console.log(`Generating TikTok content for product ${productId}`);
 
@@ -49,6 +51,35 @@ serve(async (req) => {
     if (companyError) {
       console.warn('Dados da empresa não encontrados:', companyError.message);
     }
+
+    // ========== CLINICAL BRAIN v1.0 (MODO A - NÃO BLOQUEANTE) ==========
+    const productContext = {
+      ...product,
+      company_profile: company ?? null,
+    };
+
+    const validation = validateContext(productContext);
+
+    console.log('🧠 ClinicalBrain Validation - generate-tiktok-content', {
+      product_id: product.id,
+      product_name: product.name,
+      valid: validation.valid,
+      violations: validation.violations,
+      warnings: validation.warnings,
+      requested: use_clinical_brain
+    });
+
+    // MODO A: Só ativa se pedido E válido
+    const shouldUseClinicalBrain = use_clinical_brain === true && validation.valid === true;
+
+    if (!validation.valid && use_clinical_brain) {
+      console.warn('⚠️ ClinicalBrain Violations (fallback para modo padrão)', {
+        function: 'generate-tiktok-content',
+        product_id: product.id,
+        violations: validation.violations,
+      });
+    }
+    // ========== FIM CLINICAL BRAIN ==========
 
     // Buscar configuração de prompt personalizado
     let finalPrompt: string = customPrompt || '';
@@ -82,10 +113,26 @@ serve(async (req) => {
     // Gerar conteúdo com Dual-AI Competition
     const { compareAndSelectBest } = await import('../_shared/dual-ai-competition.ts');
     
-    const systemPrompt = 'Você é um especialista em criação de conteúdo viral para TikTok. Sempre retorne apenas JSON válido, sem markdown ou explicações adicionais.';
+    // Prompt base atual (comportamento original)
+    const baseSystemPrompt = 'Você é um especialista em criação de conteúdo viral para TikTok. Sempre retorne apenas JSON válido, sem markdown ou explicações adicionais.';
+    
+    // ========== CLINICAL BRAIN: Decisão de Ativação (MODO A) ==========
+    let finalSystemPrompt: string;
+    let finalUserPrompt: string;
+
+    if (shouldUseClinicalBrain) {
+      console.log('🧠 Clinical Brain ATIVO para TikTok');
+      finalSystemPrompt = buildMasterPrompt(finalPromptWithProtection, productContext);
+      finalUserPrompt = 'Gerar roteiros de TikTok respeitando 100% o contexto clínico fornecido. Retorne APENAS JSON válido no formato especificado.';
+    } else {
+      console.log('📋 Usando prompt padrão (Clinical Brain desativado ou inválido)');
+      finalSystemPrompt = baseSystemPrompt;
+      finalUserPrompt = finalPromptWithProtection;
+    }
+    // ========== FIM CLINICAL BRAIN ==========
     
     console.log('🏁 Dual-AI: Generating TikTok content...');
-    const result = await compareAndSelectBest(systemPrompt, finalPromptWithProtection, {
+    const result = await compareAndSelectBest(finalSystemPrompt, finalUserPrompt, {
       contentType: 'tiktok',
       minLength: 150,
       maxLength: 500,
@@ -146,7 +193,16 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        content: generatedContent
+        content: generatedContent,
+        clinical_brain: {
+          enabled: use_clinical_brain,
+          active: shouldUseClinicalBrain,
+          validation: {
+            valid: validation.valid,
+            violations_count: validation.violations.length,
+            warnings_count: validation.warnings.length
+          }
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
