@@ -16,7 +16,7 @@ import {
   XCircle, Loader2, FileCode, Trash2, ExternalLink, RefreshCw, Save,
   AlertTriangle, Search, Sparkles, Package, Link2
 } from 'lucide-react';
-import { LPCloneProductSelector } from './LPCloneProductSelector';
+import { LPCloneProductSelector, ProductWithSEO } from './LPCloneProductSelector';
 
 interface CapturedImage {
   originalUrl: string;
@@ -77,24 +77,35 @@ export const LPClonePanel = () => {
   
   const [result, setResult] = useState<TransformResult | null>(null);
   
-  // Product selector state
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  // Product selector state (single selection)
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithSEO | null>(null);
   const [productSelectorOpen, setProductSelectorOpen] = useState(false);
   
-  // Fetch selected products details
-  const { data: selectedProductsData } = useQuery({
-    queryKey: ['selected-products-lp-clone', selectedProductIds],
-    queryFn: async () => {
-      if (selectedProductIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from('products_repository')
-        .select('id, name, brand, category')
-        .in('id', selectedProductIds);
-      if (error) throw error;
-      return data;
-    },
-    enabled: selectedProductIds.length > 0,
-  });
+  // Handle product selection - auto-fills all fields
+  const handleProductSelect = (product: ProductWithSEO) => {
+    setSelectedProduct(product);
+    
+    // Auto-fill Identificação do Produto
+    setBrand(product.brand || '');
+    setProduct(product.name);
+    if (!name) setName(product.name);
+    
+    // Auto-fill SEO fields (only if empty)
+    if (product.seo_title_override) {
+      setSeoTitle(product.seo_title_override);
+    }
+    if (product.seo_description_override) {
+      setSeoDescription(product.seo_description_override);
+    }
+    if (product.canonical_url) {
+      setSeoCanonical(product.canonical_url);
+    }
+    if (product.keywords && product.keywords.length > 0) {
+      setSeoKeywords(product.keywords.join(', '));
+    }
+    
+    toast.success(`Produto "${product.name}" selecionado - campos preenchidos automaticamente`);
+  };
   
   // Validation state
   const validation = useMemo(() => {
@@ -150,7 +161,7 @@ export const LPClonePanel = () => {
           },
           brand,
           product,
-          selectedProductIds,
+          selectedProductId: selectedProduct?.id || null,
         },
       });
       
@@ -348,46 +359,79 @@ export const LPClonePanel = () => {
                 </CardContent>
               </Card>
               
-              {/* Produtos Vinculados */}
-              <Card>
+              {/* Produto Vinculado */}
+              <Card className={selectedProduct ? 'border-primary/30' : ''}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Link2 className="h-5 w-5" />
-                    Produtos Vinculados
-                    {selectedProductIds.length > 0 && (
-                      <Badge variant="secondary">{selectedProductIds.length}</Badge>
+                    Produto Vinculado
+                    {selectedProduct && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700">Vinculado</Badge>
                     )}
                   </CardTitle>
                   <CardDescription>
-                    Vincule produtos do repositório para exibir na LP
+                    Selecione um produto para preencher automaticamente Marca, Produto e SEO
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setProductSelectorOpen(true)}
-                    className="w-full"
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    {selectedProductIds.length > 0 
-                      ? `${selectedProductIds.length} produtos selecionados` 
-                      : 'Selecionar Produtos'}
-                  </Button>
-                  
-                  {selectedProductsData && selectedProductsData.length > 0 && (
-                    <div className="space-y-2">
-                      {selectedProductsData.map((p) => (
-                        <div key={p.id} className="text-xs p-2 bg-muted rounded flex items-center justify-between">
-                          <div>
-                            <span className="font-medium">{p.name}</span>
-                            {p.brand && <span className="text-muted-foreground"> • {p.brand}</span>}
+                  {selectedProduct ? (
+                    <>
+                      <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                        {selectedProduct.image_url ? (
+                          <img
+                            src={selectedProduct.image_url}
+                            alt={selectedProduct.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                            <Package className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          {p.category && (
-                            <Badge variant="outline" className="text-xs">{p.category}</Badge>
-                          )}
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{selectedProduct.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedProduct.brand && <span>{selectedProduct.brand}</span>}
+                            {selectedProduct.category && <span> • {selectedProduct.category}</span>}
+                          </p>
+                          {/* SEO Status Indicators */}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs ${selectedProduct.seo_title_override ? 'text-green-600' : 'text-amber-500'}`}>
+                              {selectedProduct.seo_title_override ? '✓' : '○'} Title
+                            </span>
+                            <span className={`text-xs ${selectedProduct.seo_description_override ? 'text-green-600' : 'text-amber-500'}`}>
+                              {selectedProduct.seo_description_override ? '✓' : '○'} Desc
+                            </span>
+                            <span className={`text-xs ${selectedProduct.canonical_url ? 'text-green-600' : 'text-amber-500'}`}>
+                              {selectedProduct.canonical_url ? '✓' : '○'} URL
+                            </span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setProductSelectorOpen(true)}
+                        className="w-full"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-2" />
+                        Trocar Produto
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => setProductSelectorOpen(true)}
+                        className="w-full"
+                      >
+                        <Package className="h-4 w-4 mr-2" />
+                        Selecionar Produto do Repositório
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">
+                        ou preencha manualmente os campos acima
+                      </p>
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -733,8 +777,8 @@ export const LPClonePanel = () => {
       <LPCloneProductSelector
         open={productSelectorOpen}
         onClose={() => setProductSelectorOpen(false)}
-        selectedProductIds={selectedProductIds}
-        onSelectProducts={setSelectedProductIds}
+        onSelectProduct={handleProductSelect}
+        currentProductId={selectedProduct?.id}
       />
     </div>
   );
