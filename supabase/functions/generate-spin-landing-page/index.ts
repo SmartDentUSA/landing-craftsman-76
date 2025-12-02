@@ -733,6 +733,50 @@ serve(async (req) => {
       throw new Error('Erro ao buscar produtos');
     }
 
+    // ✅ NEW: Extract enriched context from products for AI generation
+    const enrichedProductContext = {
+      workflowStages: (products || [])
+        .filter((p: any) => p.workflow_stages)
+        .map((p: any) => ({
+          productName: p.name,
+          stages: p.workflow_stages,
+          relatedProducts: Object.values(p.workflow_stages || {})
+            .flatMap((stage: any) => stage.related_products || [])
+        })),
+      videoCaptions: (products || [])
+        .filter((p: any) => p.video_captions?.length)
+        .flatMap((p: any) => (p.video_captions || []).map((vc: any) => ({
+          productName: p.name,
+          title: vc.video_title || vc.title,
+          captions: vc.captions || vc.transcription
+        }))),
+      documentTranscriptions: (products || [])
+        .filter((p: any) => p.document_transcriptions?.length)
+        .flatMap((p: any) => (p.document_transcriptions || []).map((dt: any) => ({
+          productName: p.name,
+          documentName: dt.document_name || dt.name,
+          content: dt.content || dt.transcription
+        }))),
+      salesPitches: (products || [])
+        .filter((p: any) => p.sales_pitch)
+        .map((p: any) => ({ productName: p.name, pitch: p.sales_pitch })),
+      competitorComparisons: (products || [])
+        .filter((p: any) => p.competitor_comparison)
+        .map((p: any) => ({ productName: p.name, comparison: p.competitor_comparison })),
+      technicalSpecs: (products || [])
+        .filter((p: any) => p.technical_specifications?.length)
+        .map((p: any) => ({ productName: p.name, specs: p.technical_specifications }))
+    };
+    
+    console.log('📊 Enriched product context:', {
+      workflowStages: enrichedProductContext.workflowStages.length,
+      videoCaptions: enrichedProductContext.videoCaptions.length,
+      documentTranscriptions: enrichedProductContext.documentTranscriptions.length,
+      salesPitches: enrichedProductContext.salesPitches.length,
+      competitorComparisons: enrichedProductContext.competitorComparisons.length,
+      technicalSpecs: enrichedProductContext.technicalSpecs.length
+    });
+
     // Buscar perfil da empresa (priorizar registro com dados completos)
     let { data: company, error: companyError } = await supabaseClient
       .from('company_profile')

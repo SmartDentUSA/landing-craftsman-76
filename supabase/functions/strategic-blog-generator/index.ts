@@ -111,6 +111,62 @@ async function buildStrategicContext(supabase: any, landingPageId: string, repos
             commercialBlog: p.individual_blog_content?.commercial,
             technicalBlog: p.individual_blog_content?.technical
           }));
+        
+        // ✅ NEW: Extract workflow_stages with related_products
+        context.workflowStages = products
+          .filter((p: any) => p.workflow_stages)
+          .map((p: any) => ({
+            productName: p.name,
+            stages: p.workflow_stages
+          }));
+        console.log(`📊 Extracted workflow_stages from ${context.workflowStages.length} products`);
+        
+        // ✅ NEW: Extract video_captions for rich content
+        context.videoCaptions = products
+          .filter((p: any) => p.video_captions && Array.isArray(p.video_captions) && p.video_captions.length > 0)
+          .flatMap((p: any) => p.video_captions.map((vc: any) => ({
+            productName: p.name,
+            videoTitle: vc.video_title || vc.title || 'Vídeo',
+            captions: vc.captions || vc.transcription || ''
+          })));
+        console.log(`🎬 Extracted ${context.videoCaptions.length} video captions`);
+        
+        // ✅ NEW: Extract document_transcriptions for technical authority
+        context.documentTranscriptions = products
+          .filter((p: any) => p.document_transcriptions && Array.isArray(p.document_transcriptions) && p.document_transcriptions.length > 0)
+          .flatMap((p: any) => p.document_transcriptions.map((dt: any) => ({
+            productName: p.name,
+            documentName: dt.document_name || dt.name || 'Documento',
+            content: dt.content || dt.transcription || ''
+          })));
+        console.log(`📄 Extracted ${context.documentTranscriptions.length} document transcriptions`);
+        
+        // ✅ NEW: Extract technical_specifications
+        context.technicalSpecs = products
+          .filter((p: any) => p.technical_specifications && Array.isArray(p.technical_specifications) && p.technical_specifications.length > 0)
+          .map((p: any) => ({
+            productName: p.name,
+            specs: p.technical_specifications
+          }));
+        console.log(`🔧 Extracted technical specs from ${context.technicalSpecs.length} products`);
+        
+        // ✅ NEW: Extract sales_pitch
+        context.salesPitches = products
+          .filter((p: any) => p.sales_pitch)
+          .map((p: any) => ({
+            productName: p.name,
+            pitch: p.sales_pitch
+          }));
+        console.log(`💼 Extracted ${context.salesPitches.length} sales pitches`);
+        
+        // ✅ NEW: Extract competitor_comparison
+        context.competitorComparisons = products
+          .filter((p: any) => p.competitor_comparison)
+          .map((p: any) => ({
+            productName: p.name,
+            comparison: p.competitor_comparison
+          }));
+        console.log(`⚔️ Extracted ${context.competitorComparisons.length} competitor comparisons`);
       }
     }
   }
