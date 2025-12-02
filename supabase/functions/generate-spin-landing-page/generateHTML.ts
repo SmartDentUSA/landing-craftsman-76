@@ -229,11 +229,22 @@ function escapeHtml(text: string): string {
 function generateVideoEmbed(url: string): string {
   if (!url) return '';
   
-  // YouTube
-  if (url.includes('youtube.com/watch') || url.includes('youtu.be')) {
-    const videoId = url.includes('youtu.be') 
-      ? url.split('/').pop()?.split('?')[0]
-      : new URL(url).searchParams.get('v');
+  // YouTube (incluindo Shorts)
+  if (url.includes('youtube.com/watch') || url.includes('youtu.be') || url.includes('youtube.com/shorts/')) {
+    let videoId: string | null = null;
+    
+    if (url.includes('youtube.com/shorts/')) {
+      // YouTube Shorts: https://www.youtube.com/shorts/VIDEO_ID
+      videoId = url.split('/shorts/')[1]?.split('?')[0] || null;
+    } else if (url.includes('youtu.be')) {
+      // youtu.be/VIDEO_ID
+      videoId = url.split('/').pop()?.split('?')[0] || null;
+    } else {
+      // youtube.com/watch?v=VIDEO_ID
+      try {
+        videoId = new URL(url).searchParams.get('v');
+      } catch { videoId = null; }
+    }
     
     if (!videoId) return '';
     
@@ -1992,7 +2003,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <div class="container section-padding" style="padding-top: 3rem; padding-bottom: 3rem;">
     <section class="video-demo-section">
       <h2 class="section-title" data-editable="true" data-field="video_demo_title" style="font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 2rem; color: var(--primary-dark);">
-        ${escapeHtml(customText.video_demo_title || '🎬 Veja Como Funciona na Prática')}
+        ${escapeHtml(customText.video_demo_title || '🎬 Veja na prática')}
       </h2>
       
       <div class="video-container" style="max-width: 1000px; margin: 0 auto; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); background: #000;">
