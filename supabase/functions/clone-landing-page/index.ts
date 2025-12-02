@@ -586,88 +586,54 @@ function injectPremiumCSS(): string {
         --section-light-bg: #fdfdfd;
       }
 
-      /* ===== HEADER PREMIUM ===== */
+      /* ===== HEADER PREMIUM (IGUAL LP SPIN) ===== */
       /* ===== PREVENT HORIZONTAL SCROLL ===== */
       html, body {
         overflow-x: hidden !important;
         max-width: 100vw !important;
       }
-      
-      body {
-        padding-top: 55px !important;
-      }
 
-      /* ===== HEADER PREMIUM (FIXED) ===== */
       .sd-premium-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 9999;
         background: var(--card-bg);
-        border-bottom: 1px solid #e0e0e0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
       }
       
       .sd-premium-header .container {
-        max-width: 1100px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 0 1rem;
+        padding: 0 2rem;
       }
       
       .sd-premium-header .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.5rem 0;
+        padding: 1.5rem 0;
+        position: relative;
+        z-index: 10;
       }
       
       .sd-premium-header .banner {
-        width: 110px;
+        width: 180px;
         height: auto;
       }
       
       .sd-premium-header .main-nav {
         display: flex;
         align-items: center;
-        gap: 0.2rem;
       }
       
       .sd-premium-header .main-nav a {
         color: var(--primary-dark);
         text-decoration: none;
         font-weight: 600;
-        font-size: 10px;
-        padding: 5px 8px;
-        border-radius: 5px;
-        transition: all 0.2s;
+        font-size: 11px;
+        margin-left: 1.5rem;
+        transition: color 0.2s;
         font-family: 'Inter', sans-serif;
-        white-space: nowrap;
       }
       
       .sd-premium-header .main-nav a:hover {
         color: var(--accent-tech);
-        background: rgba(238, 122, 62, 0.08);
-      }
-      
-      .sd-premium-header .cta-button {
-        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-        color: #fff !important;
-        padding: 6px 12px !important;
-        border-radius: 18px !important;
-        font-weight: 600 !important;
-        font-size: 10px !important;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        box-shadow: 0 3px 12px rgba(37, 211, 102, 0.3);
-      }
-      
-      .sd-premium-header .cta-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 18px rgba(37, 211, 102, 0.4);
-        background: linear-gradient(135deg, #128C7E 0%, #25D366 100%) !important;
       }
 
       /* ===== FOOTER PREMIUM (IGUAL LP SPIN) ===== */
@@ -1140,23 +1106,19 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   
   const PREMIUM_HEADER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SMART DENT PREMIUM HEADER (v3.0 - DINÂMICO) -->
+  <!-- SMART DENT PREMIUM HEADER (v3.0 - IGUAL LP SPIN) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <header class="sd-premium-header">
     <div class="container">
       <div class="header">
         <a href="${websiteUrl}" title="${company} - Site Principal">
           ${logoUrl 
-            ? `<img src="${logoUrl}" alt="${company}" class="banner" width="160" height="48" loading="eager">` 
+            ? `<img src="${logoUrl}" alt="${company}" class="banner" width="180" height="60" loading="eager">` 
             : `<span style="color: var(--primary-dark); font-size: 20px; font-weight: 800; font-family: 'Inter', sans-serif;">${company}</span>`
           }
         </a>
         <nav class="main-nav">
           ${menuHtml}
-          <a href="${ctaUrl}" class="cta-button" title="Fale com um Especialista">
-            <i class="fab fa-whatsapp"></i>
-            Falar com Especialista
-          </a>
         </nav>
       </div>
     </div>
