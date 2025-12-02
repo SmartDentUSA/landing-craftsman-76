@@ -175,9 +175,14 @@ export type Database = {
       }
       categories_config: {
         Row: {
+          anti_hallucination_rules: Json | null
           category: string
+          clinical_tone: string | null
           created_at: string
+          criticality_percent: number | null
+          icon_name: string | null
           id: string
+          is_active: boolean | null
           keyword_ids: string[] | null
           keywords: Json | null
           market_keywords: Json | null
@@ -187,9 +192,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anti_hallucination_rules?: Json | null
           category: string
+          clinical_tone?: string | null
           created_at?: string
+          criticality_percent?: number | null
+          icon_name?: string | null
           id?: string
+          is_active?: boolean | null
           keyword_ids?: string[] | null
           keywords?: Json | null
           market_keywords?: Json | null
@@ -199,9 +209,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anti_hallucination_rules?: Json | null
           category?: string
+          clinical_tone?: string | null
           created_at?: string
+          criticality_percent?: number | null
+          icon_name?: string | null
           id?: string
+          is_active?: boolean | null
           keyword_ids?: string[] | null
           keywords?: Json | null
           market_keywords?: Json | null
