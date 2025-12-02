@@ -479,7 +479,269 @@ async function captureAndUploadImages(
 }
 
 // ============================================
-// INJECT SEO WITH COMPLETE SCHEMA
+// INJECT PREMIUM CSS DESIGN SYSTEM
+// ============================================
+function injectPremiumCSS(): string {
+  return `
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PREMIUM CSS DESIGN SYSTEM (IGUAL LP SPIN) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+      /* ===== DESIGN SYSTEM GEMINI V4.5 ===== */
+      :root {
+        --primary-dark: #3E4B5E;
+        --primary-gradient-dark: #1e293b;
+        --cta-bg-color: #3E4B5E;
+        --accent-tech: #EE7A3E;
+        --accent-glow: #FF9B67;
+        --text-color: #333333;
+        --muted: #64748b;
+        --card-bg: #ffffff;
+        --background-color: #f8fafc;
+        --section-light-bg: #fdfdfd;
+      }
+
+      /* ===== HEADER PREMIUM ===== */
+      .sd-premium-header {
+        position: sticky;
+        top: 0;
+        z-index: 9999;
+        background: var(--card-bg);
+        border-bottom: 1px solid #e0e0e0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      }
+      
+      .sd-premium-header .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+      }
+      
+      .sd-premium-header .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+      }
+      
+      .sd-premium-header .banner {
+        width: 160px;
+        height: auto;
+      }
+      
+      .sd-premium-header .main-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      
+      .sd-premium-header .main-nav a {
+        color: var(--primary-dark);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 12px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+      }
+      
+      .sd-premium-header .main-nav a:hover {
+        color: var(--accent-tech);
+        background: rgba(238, 122, 62, 0.08);
+      }
+      
+      .sd-premium-header .cta-button {
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        color: #fff !important;
+        padding: 10px 20px !important;
+        border-radius: 25px !important;
+        font-weight: 600 !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+      }
+      
+      .sd-premium-header .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+        background: linear-gradient(135deg, #128C7E 0%, #25D366 100%) !important;
+      }
+
+      /* ===== FOOTER PREMIUM (IGUAL LP SPIN) ===== */
+      .sd-premium-footer {
+        background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
+        color: #e0e0e0;
+        padding: 3rem 0 2rem;
+        margin-top: 3rem;
+        font-family: 'Inter', sans-serif;
+      }
+      
+      .sd-premium-footer .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+      }
+      
+      .sd-premium-footer .footer-columns {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 2rem;
+        margin-bottom: 2rem;
+      }
+      
+      .sd-premium-footer .footer-columns > div {
+        flex: 1;
+        min-width: 200px;
+      }
+      
+      .sd-premium-footer .footer-columns strong {
+        color: var(--accent-glow);
+        font-size: 16px;
+        display: block;
+        margin-bottom: 0.75rem;
+        font-weight: 700;
+      }
+      
+      .sd-premium-footer .footer-columns p {
+        color: #ccc;
+        font-size: 14px;
+        line-height: 1.8;
+        margin: 0.4rem 0;
+      }
+      
+      .sd-premium-footer .footer-columns p i {
+        width: 20px;
+        margin-right: 8px;
+        color: var(--accent-tech);
+      }
+      
+      .sd-premium-footer .footer-columns a {
+        color: #b0c4de;
+        font-size: 14px;
+        text-decoration: none;
+        display: block;
+        margin: 0.5rem 0;
+        transition: color 0.2s;
+      }
+      
+      .sd-premium-footer .footer-columns a:hover {
+        color: var(--accent-glow);
+      }
+      
+      .sd-premium-footer .footer-social-links {
+        display: flex;
+        gap: 12px;
+        margin-top: 0.75rem;
+      }
+      
+      .sd-premium-footer .footer-social-links a {
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 18px;
+        transition: all 0.3s;
+        margin: 0;
+      }
+      
+      .sd-premium-footer .footer-social-links a:hover {
+        background: var(--accent-tech);
+        transform: translateY(-3px);
+        box-shadow: 0 4px 15px rgba(238, 122, 62, 0.4);
+      }
+      
+      .sd-premium-footer .footer-bottom {
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 1.5rem;
+        text-align: center;
+      }
+      
+      .sd-premium-footer .footer-bottom p {
+        font-size: 12px;
+        color: #888;
+        margin: 0;
+      }
+
+      /* ===== STICKY CTA MOBILE ===== */
+      .sd-sticky-cta {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-gradient-dark));
+        z-index: 9998;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+      }
+      
+      .sd-sticky-cta button {
+        width: 100%;
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        color: #fff;
+        border: none;
+        padding: 14px 24px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-family: 'Inter', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+      }
+      
+      .sd-sticky-cta button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 20px rgba(37, 211, 102, 0.5);
+      }
+      
+      @media (max-width: 768px) {
+        .sd-sticky-cta {
+          display: block;
+        }
+        
+        .sd-premium-header .main-nav a:not(.cta-button) {
+          display: none;
+        }
+        
+        .sd-premium-footer .footer-columns {
+          flex-direction: column;
+        }
+        
+        body {
+          padding-bottom: 80px;
+        }
+      }
+
+      /* ===== GEO CONTEXT (INVISÍVEL PARA USUÁRIOS) ===== */
+      .geo-context {
+        position: absolute;
+        left: -9999px;
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  `;
+}
+
+// ============================================
+// INJECT SEO WITH COMPLETE SCHEMA + GEO + HREFLANG
 // ============================================
 function injectSEO(
   html: string, 
@@ -500,6 +762,8 @@ function injectSEO(
     .replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')
     .replace(/<meta[^>]*name=["']keywords["'][^>]*>/gi, '')
     .replace(/<meta[^>]*name=["']geo\.[^"']*["'][^>]*>/gi, '')
+    .replace(/<meta[^>]*name=["']ICBM["'][^>]*>/gi, '')
+    .replace(/<link[^>]*rel=["']alternate["'][^>]*hreflang[^>]*>/gi, '')
     .replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
   
   // Use Smart Dent data as fallback
@@ -518,13 +782,21 @@ function injectSEO(
   const youtube = companyData?.youtube_channel || SMART_DENT_DATA.youtube_channel;
   const description = companyData?.company_description || SMART_DENT_DATA.company_description;
   
+  // SEO fields for GEO enrichment
+  const seoServiceAreas = companyData?.seo_service_areas || '';
+  const seoMarketPositioning = companyData?.seo_market_positioning || '';
+  const seoCompetitiveAdvantages = companyData?.seo_competitive_advantages || '';
+  const seoTechnicalExpertise = companyData?.seo_technical_expertise || '';
+  const foundedYear = companyData?.founded_year || '';
+  const missionStatement = companyData?.mission_statement || '';
+  
   const title = seoConfig.title || `${product} ${brand} | ${company}`;
   const metaDescription = seoConfig.description || description;
   const canonical = seoConfig.canonical || websiteUrl;
   const keywords = seoConfig.keywords || '';
   const finalOgImage = ogImageUrl || logoUrl;
   
-  // Complete Schema.org with @graph
+  // Complete Schema.org with @graph + SpeakableSpecification
   const schemaGraph = {
     "@context": "https://schema.org",
     "@graph": [
@@ -542,6 +814,9 @@ function injectSEO(
         "email": email,
         "telephone": phone,
         "taxID": taxId,
+        ...(foundedYear && { "foundingDate": foundedYear.toString() }),
+        ...(missionStatement && { "mission": missionStatement }),
+        ...(seoTechnicalExpertise && { "knowsAbout": seoTechnicalExpertise.split(',').map((s: string) => s.trim()) }),
         "address": {
           "@type": "PostalAddress",
           "streetAddress": streetAddress,
@@ -550,10 +825,15 @@ function injectSEO(
           "postalCode": postalCode,
           "addressCountry": country
         },
-        "sameAs": [
-          instagram,
-          youtube
-        ].filter(Boolean)
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": phone,
+          "contactType": "customer service",
+          "email": email,
+          "areaServed": "BR",
+          "availableLanguage": "pt-BR"
+        },
+        "sameAs": [instagram, youtube].filter(Boolean)
       },
       {
         "@type": "WebPage",
@@ -562,11 +842,11 @@ function injectSEO(
         "name": title,
         "description": metaDescription,
         "inLanguage": "pt-BR",
-        "isPartOf": {
-          "@id": `${websiteUrl}/#website`
-        },
-        "publisher": {
-          "@id": `${websiteUrl}/#organization`
+        "isPartOf": { "@id": `${websiteUrl}/#website` },
+        "publisher": { "@id": `${websiteUrl}/#organization` },
+        "speakable": {
+          "@type": "SpeakableSpecification",
+          "cssSelector": ["h1", "h2", ".hero-title", ".hero-subtitle", "p.lead"]
         },
         "potentialAction": {
           "@type": "ReadAction",
@@ -579,9 +859,7 @@ function injectSEO(
         "url": websiteUrl,
         "name": company,
         "description": description,
-        "publisher": {
-          "@id": `${websiteUrl}/#organization`
-        },
+        "publisher": { "@id": `${websiteUrl}/#organization` },
         "inLanguage": "pt-BR"
       },
       {
@@ -599,24 +877,50 @@ function injectSEO(
           "url": canonical,
           "priceCurrency": "BRL",
           "availability": "https://schema.org/InStock",
-          "seller": {
-            "@id": `${websiteUrl}/#organization`
-          }
+          "seller": { "@id": `${websiteUrl}/#organization` }
         }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": websiteUrl
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": brand,
+            "item": `${websiteUrl}/marca/${slugify(brand)}`
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": product,
+            "item": canonical
+          }
+        ]
       }
     ]
   };
   
   const seoTags = `
-    <!-- SEO Generated by Smart Dent LP Clone v2.0 -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SEO Generated by Smart Dent LP Clone v2.1 Premium -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <title>${title}</title>
     <meta name="description" content="${metaDescription}">
     <link rel="canonical" href="${canonical}">
     <meta name="keywords" content="${keywords}">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
     <meta name="author" content="${company}">
+    <meta name="generator" content="Smart Dent LP Clone v2.1">
     
-    <!-- Open Graph / Facebook -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- OPEN GRAPH (Facebook, LinkedIn, WhatsApp) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <meta property="og:type" content="product">
     <meta property="og:site_name" content="${company}">
     <meta property="og:title" content="${title}">
@@ -625,41 +929,72 @@ function injectSEO(
     <meta property="og:image" content="${finalOgImage}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="${product} ${brand} - ${company}">
     <meta property="og:locale" content="pt_BR">
     
-    <!-- Twitter Card -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- TWITTER CARDS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${metaDescription}">
     <meta name="twitter:image" content="${finalOgImage}">
+    <meta name="twitter:image:alt" content="${product} ${brand} - ${company}">
     
-    <!-- GEO Tags -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- GEO TAGS (Localização para SEO Local) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <meta name="geo.placename" content="${city}, ${state}">
     <meta name="geo.region" content="BR-${state}">
     <meta name="geo.country" content="${country}">
+    <meta name="geo.position" content="-23.5505;-46.6333">
     <meta name="ICBM" content="-23.5505, -46.6333">
     
-    <!-- Additional SEO -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- HREFLANG (Multi-idioma/domínio) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <link rel="alternate" hreflang="pt-BR" href="${canonical}">
+    <link rel="alternate" hreflang="x-default" href="${canonical}">
+    
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- RESOURCE HINTS (Performance) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    ${finalOgImage ? `<link rel="preload" as="image" href="${finalOgImage}" fetchpriority="high">` : ''}
+    
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- ADDITIONAL SEO -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <meta name="distribution" content="global">
     <meta name="rating" content="general">
     <meta name="revisit-after" content="7 days">
     <meta name="language" content="Portuguese">
+    <meta name="copyright" content="${company}">
+    <meta name="theme-color" content="#3E4B5E">
+    <meta name="msapplication-TileColor" content="#3E4B5E">
     
-    <!-- Schema.org JSON-LD -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SCHEMA.ORG JSON-LD (@graph consolidado com SpeakableSpecification) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <script type="application/ld+json">
     ${JSON.stringify(schemaGraph, null, 2)}
     </script>
+    
+    ${injectPremiumCSS()}
   `;
   
   result = result.replace(/<head[^>]*>/i, `$&\n${seoTags}`);
   
-  console.log(`📝 SEO injected: ${title}`);
+  console.log(`📝 SEO Premium injected: ${title}`);
   
   return result;
 }
 
 // ============================================
-// INSERT SMART DENT HEADER & FOOTER
+// INSERT PREMIUM HEADER & FOOTER (IGUAL LP SPIN)
 // ============================================
 function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string): string {
   let result = html;
@@ -671,102 +1006,124 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
   const email = companyData?.contact_email || SMART_DENT_DATA.contact_email;
   const city = companyData?.city || SMART_DENT_DATA.city;
   const state = companyData?.state || SMART_DENT_DATA.state;
+  const streetAddress = companyData?.street_address || SMART_DENT_DATA.street_address;
+  const postalCode = companyData?.postal_code || SMART_DENT_DATA.postal_code;
   const instagram = companyData?.instagram_profile || SMART_DENT_DATA.instagram_profile;
   const youtube = companyData?.youtube_channel || SMART_DENT_DATA.youtube_channel;
   const taxId = companyData?.tax_id || SMART_DENT_DATA.tax_id;
   const description = companyData?.company_description || SMART_DENT_DATA.company_description;
   
-  const SMART_DENT_HEADER = `
-  <!-- Smart Dent Header -->
-  <header class="sd-cloned-header" style="
-    position: sticky;
-    top: 0;
-    z-index: 9999;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    padding: 12px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-  ">
-    <a href="${websiteUrl}" style="display: flex; align-items: center; text-decoration: none;">
-      ${logoUrl ? `<img src="${logoUrl}" alt="${company}" style="height: 40px; width: auto;">` : `<span style="color: #fff; font-size: 20px; font-weight: bold;">${company}</span>`}
-    </a>
-    <nav style="display: flex; gap: 24px; align-items: center;">
-      <a href="${websiteUrl}/produtos" style="color: #e0e0e0; text-decoration: none; font-size: 14px;">Produtos</a>
-      <a href="${websiteUrl}/solucoes" style="color: #e0e0e0; text-decoration: none; font-size: 14px;">Soluções</a>
-      <a href="${ctaUrl}" style="
-        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 25px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: transform 0.2s;
-      ">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        Falar com Especialista
-      </a>
-    </nav>
+  // SEO fields for GEO context
+  const seoServiceAreas = companyData?.seo_service_areas || '';
+  const seoMarketPositioning = companyData?.seo_market_positioning || '';
+  const seoCompetitiveAdvantages = companyData?.seo_competitive_advantages || '';
+  const seoTechnicalExpertise = companyData?.seo_technical_expertise || '';
+  
+  // Institutional links
+  const institutionalLinks = companyData?.institutional_links || [];
+  
+  const PREMIUM_HEADER = `
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SMART DENT PREMIUM HEADER (v2.1 - IGUAL LP SPIN) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <header class="sd-premium-header">
+    <div class="container">
+      <div class="header">
+        <a href="${websiteUrl}" title="${company} - Site Principal">
+          ${logoUrl 
+            ? `<img src="${logoUrl}" alt="${company}" class="banner" width="160" height="48" loading="eager">` 
+            : `<span style="color: var(--primary-dark); font-size: 20px; font-weight: 800; font-family: 'Inter', sans-serif;">${company}</span>`
+          }
+        </a>
+        <nav class="main-nav">
+          <a href="https://loja.smartdent.com.br/" title="Loja Smart Dent">Loja</a>
+          <a href="${websiteUrl}/blog" title="Blog ${company}">Blog</a>
+          <a href="${websiteUrl}/contato" title="Contato ${company}">Contato</a>
+          <a href="${ctaUrl}" class="cta-button" title="Fale com um Especialista">
+            <i class="fab fa-whatsapp"></i>
+            Falar com Especialista
+          </a>
+        </nav>
+      </div>
+    </div>
   </header>
   `;
   
-  const SMART_DENT_FOOTER = `
-  <!-- Smart Dent Footer -->
-  <footer class="sd-cloned-footer" style="
-    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
-    color: #e0e0e0;
-    padding: 48px 24px 24px;
-    margin-top: 48px;
-  ">
-    <div style="max-width: 1200px; margin: 0 auto;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 32px; margin-bottom: 32px;">
+  const PREMIUM_FOOTER = `
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SMART DENT PREMIUM FOOTER (v2.1 - IGUAL LP SPIN) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <footer class="sd-premium-footer">
+    <div class="container">
+      <div class="footer-columns">
         <div>
-          ${logoUrl ? `<img src="${logoUrl}" alt="${company}" style="height: 48px; width: auto; margin-bottom: 16px;">` : `<h3 style="color: #fff; margin-bottom: 16px;">${company}</h3>`}
-          <p style="font-size: 14px; line-height: 1.6; color: #a0a0a0;">
-            ${description?.substring(0, 150) || 'Odontologia Digital Simples, Eficiente e Lucrativa'}...
-          </p>
+          <strong>${company} - Brasil</strong>
+          ${phone ? `<p><i class="fas fa-phone"></i> Atendimento: ${phone}</p>` : ''}
+          ${email ? `<p><i class="fas fa-envelope"></i> Comercial: ${email}</p>` : ''}
+          ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}</p>` : ''}
+          ${city ? `<p>${city}${state ? ` - ${state}` : ''}${postalCode ? `, ${postalCode}` : ''}</p>` : ''}
         </div>
+        
         <div>
-          <h4 style="color: #fff; margin-bottom: 16px; font-size: 16px;">Contato</h4>
-          ${phone ? `<p style="font-size: 14px; color: #a0a0a0; margin-bottom: 8px;">📞 ${phone}</p>` : ''}
-          ${email ? `<p style="font-size: 14px; color: #a0a0a0; margin-bottom: 8px;">✉️ ${email}</p>` : ''}
-          ${city ? `<p style="font-size: 14px; color: #a0a0a0;">📍 ${city}${state ? `, ${state}` : ''}</p>` : ''}
+          <strong>Links Úteis</strong>
+          <a href="${websiteUrl}/politica-privacidade" rel="noopener">Política de Privacidade</a>
+          <a href="${websiteUrl}/termos" rel="noopener">Termos de Uso</a>
+          <a href="${websiteUrl}" rel="noopener">Site Principal</a>
+          <a href="https://loja.smartdent.com.br/" rel="noopener" target="_blank">Loja Online</a>
+          ${institutionalLinks.slice(0, 3).map((link: any) => 
+            `<a href="${link.url || link.href}" target="_blank" rel="noopener">${link.label}</a>`
+          ).join('')}
         </div>
+        
         <div>
-          <h4 style="color: #fff; margin-bottom: 16px; font-size: 16px;">Links</h4>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <a href="${websiteUrl}/politica-privacidade" style="color: #a0a0a0; text-decoration: none; font-size: 14px;">Política de Privacidade</a>
-            <a href="${websiteUrl}/termos" style="color: #a0a0a0; text-decoration: none; font-size: 14px;">Termos de Uso</a>
-            <a href="${websiteUrl}" style="color: #a0a0a0; text-decoration: none; font-size: 14px;">Site Principal</a>
-          </div>
-        </div>
-        <div>
-          <h4 style="color: #fff; margin-bottom: 16px; font-size: 16px;">Redes Sociais</h4>
-          <div style="display: flex; gap: 16px;">
-            ${instagram ? `<a href="${instagram}" target="_blank" style="color: #a0a0a0; font-size: 24px;">📸</a>` : ''}
-            ${youtube ? `<a href="${youtube}" target="_blank" style="color: #a0a0a0; font-size: 24px;">▶️</a>` : ''}
+          <strong>Redes Sociais</strong>
+          <div class="footer-social-links">
+            ${instagram ? `<a href="${instagram}" target="_blank" rel="noopener noreferrer" title="Instagram ${company}"><i class="fab fa-instagram"></i></a>` : ''}
+            ${youtube ? `<a href="${youtube}" target="_blank" rel="noopener noreferrer" title="YouTube ${company}"><i class="fab fa-youtube"></i></a>` : ''}
+            <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" title="WhatsApp ${company}"><i class="fab fa-whatsapp"></i></a>
           </div>
         </div>
       </div>
-      <div style="border-top: 1px solid #333; padding-top: 24px; text-align: center;">
-        <p style="font-size: 12px; color: #666;">
+      
+      <div class="footer-bottom">
+        <p>
           © ${new Date().getFullYear()} ${company}. Todos os direitos reservados.
           ${taxId ? ` | CNPJ: ${taxId}` : ''}
         </p>
       </div>
     </div>
   </footer>
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- STICKY CTA MOBILE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="sd-sticky-cta">
+    <button onclick="window.location.href='${ctaUrl}'">
+      <i class="fab fa-whatsapp"></i> FALE COM ESPECIALISTA
+    </button>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- GEO CONTEXT (Invisível para usuários, visível para IAs/Crawlers) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <aside class="geo-context" aria-hidden="true">
+    <p itemscope itemtype="https://schema.org/Organization">
+      <span itemprop="name">${company}</span> é especialista em odontologia digital.
+      ${seoTechnicalExpertise ? `Expertise técnica: ${seoTechnicalExpertise}.` : ''}
+      ${seoServiceAreas ? `Áreas de atendimento: ${seoServiceAreas}.` : ''}
+      ${seoMarketPositioning ? `Posicionamento: ${seoMarketPositioning}.` : ''}
+      ${seoCompetitiveAdvantages ? `Diferenciais: ${seoCompetitiveAdvantages}.` : ''}
+      Localização: ${city || 'Brasil'}, ${state || 'BR'}.
+    </p>
+  </aside>
   `;
   
   // Insert after <body>
-  result = result.replace(/<body[^>]*>/i, `$&\n${SMART_DENT_HEADER}`);
+  result = result.replace(/<body[^>]*>/i, `$&\n${PREMIUM_HEADER}`);
   // Insert before </body>
-  result = result.replace(/<\/body>/i, `${SMART_DENT_FOOTER}\n</body>`);
+  result = result.replace(/<\/body>/i, `${PREMIUM_FOOTER}\n</body>`);
+  
+  console.log('✅ Premium Header/Footer + Sticky CTA + GEO Context inserted');
   
   return result;
 }
