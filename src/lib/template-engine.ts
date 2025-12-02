@@ -2539,7 +2539,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         <ul>
           {{#feed_articles_seo}}
           <li>
-            <a href="{{url}}" rel="nofollow" title="{{title}}">
+            <a href="{{url}}" title="{{title}}">
               <strong>{{title}}</strong>
               {{#excerpt}}
               <span> - {{excerpt}}</span>
