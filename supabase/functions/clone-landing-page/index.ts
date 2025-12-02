@@ -695,18 +695,27 @@ function injectPremiumCSS(): string {
       .sd-premium-header .main-nav {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
+        overflow-x: auto;
       }
       
       .sd-premium-header .main-nav a {
         color: var(--primary-dark);
         text-decoration: none;
         font-weight: 600;
-        font-size: 12px;
-        padding: 8px 16px;
+        font-size: 11px;
+        padding: 8px 10px;
         border-radius: 6px;
         transition: all 0.2s;
         font-family: 'Inter', sans-serif;
+        white-space: nowrap;
+        text-transform: capitalize;
+      }
+      
+      .sd-premium-header .header {
+        min-height: 60px;
+        flex-wrap: nowrap;
       }
       
       .sd-premium-header .main-nav a:hover {
@@ -896,8 +905,172 @@ function injectPremiumCSS(): string {
         opacity: 0;
         pointer-events: none;
       }
+
+      /* ===== LIMITAR FONTES DE CTAs/BANNERS INTERNOS ===== */
+      body .sd-content-area h2,
+      body .sd-content-area [class*="cta"] h2,
+      body [class*="cta"] h2,
+      body [class*="banner"] h2,
+      body [class*="hero"] h2 {
+        font-size: 1.5rem !important;
+        max-font-size: 24px !important;
+        line-height: 1.3 !important;
+      }
+
+      body .sd-content-area p,
+      body [class*="cta"] p,
+      body [class*="banner"] p {
+        font-size: 1rem !important;
+        max-font-size: 16px !important;
+        line-height: 1.5 !important;
+      }
+
+      body [class*="cta"] h1,
+      body [class*="banner"] h1 {
+        font-size: 1.75rem !important;
+        max-font-size: 28px !important;
+      }
     </style>
   `;
+}
+
+// ============================================
+// GENERATE HOWTO SCHEMA (from workflow_stages)
+// ============================================
+function generateHowToSchema(productData: any): any | null {
+  if (!productData?.workflow_stages) return null;
+  
+  const stageLabels: Record<string, string> = {
+    scan: 'Scanear',
+    design: 'Desenhar',
+    print: 'Imprimir',
+    process: 'Processar',
+    finish: 'Finalizar',
+    install: 'Instalar'
+  };
+  
+  const applicableStages = Object.entries(productData.workflow_stages)
+    .filter(([_, stage]: [string, any]) => stage?.applicable)
+    .map(([key, stage]: [string, any], index) => {
+      const stepItem: any = {
+        '@type': 'HowToStep',
+        position: index + 1,
+        name: stageLabels[key] || key,
+        text: stage.description || `Etapa de ${stageLabels[key] || key} do workflow digital`,
+      };
+      
+      // Add competitive advantages as tips
+      if (stage.competitive_advantages?.length > 0) {
+        stepItem.itemListElement = stage.competitive_advantages.map((advantage: string, i: number) => ({
+          '@type': 'HowToTip',
+          position: i + 1,
+          text: advantage
+        }));
+      }
+      
+      // Add related materials as supplies
+      if (stage.related_materials?.length > 0) {
+        stepItem.supply = stage.related_materials.map((material: any, i: number) => ({
+          '@type': 'HowToSupply',
+          position: i + 1,
+          name: typeof material === 'string' ? material : (material.name || 'Material'),
+        }));
+      }
+      
+      return stepItem;
+    });
+  
+  if (applicableStages.length === 0) return null;
+  
+  return {
+    '@type': 'HowTo',
+    name: `Workflow Digital com ${productData.name}`,
+    description: `Etapas do processo odontológico digital utilizando ${productData.name}`,
+    step: applicableStages,
+    totalTime: `PT${applicableStages.length * 30}M`, // Estimate 30min per step
+  };
+}
+
+// ============================================
+// GENERATE FAQPAGE SCHEMA
+// ============================================
+function generateFAQSchema(faqItems: any[]): any | null {
+  if (!faqItems || faqItems.length === 0) return null;
+  
+  return {
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map(item => ({
+      '@type': 'Question',
+      name: item.question || item.pergunta,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer || item.resposta,
+      }
+    }))
+  };
+}
+
+// ============================================
+// GENERATE CLINICAL BRAIN META TAGS
+// ============================================
+function generateClinicalBrainMeta(productData: any): string {
+  if (!productData) return '';
+  
+  const metaTags: string[] = [];
+  
+  // Product type
+  if (productData.product_type) {
+    metaTags.push(`<meta name="clinical:product_type" content="${productData.product_type}">`);
+  }
+  
+  // Anti-hallucination rules
+  const rules = productData.anti_hallucination_rules;
+  if (rules) {
+    if (rules.never_claim?.length > 0) {
+      metaTags.push(`<meta name="clinical:never_claim" content="${rules.never_claim.join('; ')}">`);
+    }
+    if (rules.never_mix_with?.length > 0) {
+      metaTags.push(`<meta name="clinical:never_mix_with" content="${rules.never_mix_with.join('; ')}">`);
+    }
+    if (rules.always_require?.length > 0) {
+      metaTags.push(`<meta name="clinical:always_require" content="${rules.always_require.join('; ')}">`);
+    }
+    if (rules.always_explain?.length > 0) {
+      metaTags.push(`<meta name="clinical:always_explain" content="${rules.always_explain.join('; ')}">`);
+    }
+  }
+  
+  // Forbidden products
+  if (productData.forbidden_products?.length > 0) {
+    const forbiddenNames = productData.forbidden_products
+      .map((fp: any) => fp.product_name || fp.name || fp)
+      .filter(Boolean);
+    if (forbiddenNames.length > 0) {
+      metaTags.push(`<meta name="clinical:forbidden_products" content="${forbiddenNames.join('; ')}">`);
+    }
+  }
+  
+  // Required products
+  if (productData.required_products?.length > 0) {
+    const requiredNames = productData.required_products
+      .map((rp: any) => rp.product_name || rp.name || rp)
+      .filter(Boolean);
+    if (requiredNames.length > 0) {
+      metaTags.push(`<meta name="clinical:required_products" content="${requiredNames.join('; ')}">`);
+    }
+  }
+  
+  // Category and subcategory
+  if (productData.category) {
+    metaTags.push(`<meta name="clinical:category" content="${productData.category}">`);
+  }
+  if (productData.subcategory) {
+    metaTags.push(`<meta name="clinical:subcategory" content="${productData.subcategory}">`);
+  }
+  
+  return metaTags.length > 0 
+    ? `\n    <!-- ═══════════════════════════════════════════════════════════ -->\n    <!-- CLINICAL BRAIN METADATA (para IAs de busca) -->\n    <!-- ═══════════════════════════════════════════════════════════ -->\n    ${metaTags.join('\n    ')}`
+    : '';
 }
 
 // ============================================
@@ -909,7 +1082,8 @@ function injectSEO(
   companyData: any, 
   brand: string, 
   product: string,
-  ogImageUrl: string
+  ogImageUrl: string,
+  productData?: any
 ): string {
   let result = html;
   
@@ -1038,7 +1212,28 @@ function injectSEO(
           "priceCurrency": "BRL",
           "availability": "https://schema.org/InStock",
           "seller": { "@id": `${websiteUrl}/#organization` }
-        }
+        },
+        // ✅ NEW: Technical specifications from productData
+        ...(productData?.technical_specifications?.length > 0 && {
+          "additionalProperty": productData.technical_specifications.map((spec: any) => ({
+            "@type": "PropertyValue",
+            "name": spec.label || spec.name,
+            "value": spec.value
+          }))
+        }),
+        // ✅ NEW: Target audience
+        ...(productData?.target_audience && {
+          "audience": {
+            "@type": "Audience",
+            "audienceType": Array.isArray(productData.target_audience) 
+              ? productData.target_audience[0]?.label || productData.target_audience[0] 
+              : productData.target_audience
+          }
+        }),
+        // ✅ NEW: Category
+        ...(productData?.category && {
+          "category": productData.category
+        })
       },
       {
         "@type": "BreadcrumbList",
@@ -1065,6 +1260,20 @@ function injectSEO(
       }
     ]
   };
+  
+  // ✅ NEW: Add HowTo Schema if product has workflow_stages
+  const howToSchema = generateHowToSchema(productData);
+  if (howToSchema) {
+    schemaGraph["@graph"].push(howToSchema);
+    console.log('✅ HowTo Schema added based on workflow_stages');
+  }
+  
+  // ✅ NEW: Add FAQPage Schema if product has FAQ
+  const faqSchema = generateFAQSchema(productData?.faq);
+  if (faqSchema) {
+    schemaGraph["@graph"].push(faqSchema);
+    console.log('✅ FAQPage Schema added');
+  }
   
   const seoTags = `
     <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1135,6 +1344,7 @@ function injectSEO(
     <meta name="copyright" content="${company}">
     <meta name="theme-color" content="#3E4B5E">
     <meta name="msapplication-TileColor" content="#3E4B5E">
+    ${generateClinicalBrainMeta(productData)}
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- SCHEMA.ORG JSON-LD (@graph consolidado com SpeakableSpecification) -->
@@ -1156,7 +1366,7 @@ function injectSEO(
 // ============================================
 // INSERT PREMIUM HEADER & FOOTER (v3.0 - IGUAL LP SPIN)
 // ============================================
-function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string): string {
+function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string, productData?: any): string {
   let result = html;
   
   const company = companyData?.company_name || SMART_DENT_DATA.company_name;
@@ -1352,6 +1562,30 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       ${seoCompetitiveAdvantages ? `Diferenciais: ${seoCompetitiveAdvantages}.` : ''}
       Localização: ${city || 'Brasil'}, ${state || 'BR'}.
     </p>
+    ${productData ? `
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- CLINICAL BRAIN CONTEXT (Regras para IAs de conteúdo) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div itemscope itemtype="https://schema.org/Product" class="clinical-brain-context">
+      <span itemprop="name">${productData.name}</span>
+      ${productData.category ? `<span itemprop="category">${productData.category}</span>` : ''}
+      ${productData.anti_hallucination_rules?.never_claim?.length > 0 
+        ? `<p class="constraint never-claim">IMPORTANTE: ${productData.name} NÃO deve ser associado a: ${productData.anti_hallucination_rules.never_claim.join(', ')}.</p>` 
+        : ''}
+      ${productData.anti_hallucination_rules?.never_mix_with?.length > 0 
+        ? `<p class="constraint never-mix">INCOMPATIBILIDADE: Não usar ${productData.name} junto com: ${productData.anti_hallucination_rules.never_mix_with.join(', ')}.</p>` 
+        : ''}
+      ${productData.anti_hallucination_rules?.always_require?.length > 0 
+        ? `<p class="constraint always-require">REQUERIDO: ${productData.name} necessita de: ${productData.anti_hallucination_rules.always_require.join(', ')}.</p>` 
+        : ''}
+      ${productData.forbidden_products?.length > 0 
+        ? `<p class="constraint forbidden">PRODUTOS INCOMPATÍVEIS: ${productData.forbidden_products.map((fp: any) => fp.product_name || fp.name || fp).filter(Boolean).join(', ')}.</p>` 
+        : ''}
+      ${productData.required_products?.length > 0 
+        ? `<p class="constraint required">PRODUTOS COMPLEMENTARES: ${productData.required_products.map((rp: any) => rp.product_name || rp.name || rp).filter(Boolean).join(', ')}.</p>` 
+        : ''}
+    </div>
+    ` : ''}
   </aside>
   `;
   
@@ -1375,12 +1609,16 @@ async function processLandingPage(
   brand: string,
   product: string,
   supabase: any,
-  companyData: any
+  companyData: any,
+  productData?: any
 ): Promise<TransformResult> {
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
   const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
   
-  console.log(`🚀 Starting LP Clone v2.1 for ${brand} ${product}`);
+  console.log(`🚀 Starting LP Clone v3.0 for ${brand} ${product}`);
+  if (productData) {
+    console.log(`📦 Product enrichment enabled: ${productData.name}`);
+  }
   
   // Step 1: Sanitize
   let processedHTML = sanitizeHTML(html);
@@ -1423,12 +1661,12 @@ async function processLandingPage(
   };
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
-  // Step 6: Inject SEO with complete Schema
-  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage);
+  // Step 6: Inject SEO with complete Schema (now with productData for HowTo/FAQ)
+  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage, productData);
   console.log('✅ SEO and Schema.org injected');
   
-  // Step 7: Insert Smart Dent header/footer
-  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl);
+  // Step 7: Insert Smart Dent header/footer (now with Clinical Brain context)
+  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl, productData);
   console.log('✅ Smart Dent header/footer inserted');
   
   const stats = {
@@ -1441,18 +1679,30 @@ async function processLandingPage(
     videosPreserved,
   };
   
-  const score = calculateScore(stats, finalSEO, finalOgImage);
-  console.log(`🎉 LP Clone v2.1 complete! Score: ${score}/10`);
+  // Check if product enrichment was applied
+  const hasProductEnrichment = !!(productData && (
+    productData.workflow_stages || 
+    productData.faq?.length > 0 || 
+    productData.technical_specifications?.length > 0 ||
+    productData.anti_hallucination_rules
+  ));
+  
+  const score = calculateScore(stats, finalSEO, finalOgImage, hasProductEnrichment);
+  console.log(`🎉 LP Clone v3.0 complete! Score: ${score}/10 ${hasProductEnrichment ? '(Product Enriched)' : ''}`);
   
   return {
     html: processedHTML,
     capturedImages: images,
-    stats,
+    stats: {
+      ...stats,
+      hasProductEnrichment,
+      schemasGenerated: hasProductEnrichment ? ['Product', 'HowTo', 'FAQPage', 'ClinicalBrain'] : ['Product']
+    },
     generatedSEO: finalSEO,
   };
 }
 
-function calculateScore(stats: any, seo: SEOConfig, ogImage: string): number {
+function calculateScore(stats: any, seo: SEOConfig, ogImage: string, hasProductEnrichment: boolean = false): number {
   let score = 5; // Base
   if (stats.imagesProcessed > 0) score += 1;
   if (stats.ctasRewritten > 0) score += 1;
@@ -1460,6 +1710,8 @@ function calculateScore(stats: any, seo: SEOConfig, ogImage: string): number {
   if (seo.description && seo.description.length > 50) score += 1;
   if (seo.canonical && seo.canonical.includes('smartdent')) score += 0.5;
   if (ogImage && ogImage.includes('supabase.co')) score += 0.5; // OG from own domain
+  // ✅ NEW: Bonus for product enrichment (HowTo, FAQ, Clinical Brain)
+  if (hasProductEnrichment) score += 1;
   return Math.min(Math.round(score * 10) / 10, 10);
 }
 
@@ -1476,7 +1728,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { html, ctaUrl, seoConfig = {}, brand, product } = await req.json();
+    const { html, ctaUrl, seoConfig = {}, brand, product, product_id } = await req.json();
     
     if (!html || !ctaUrl) {
       throw new Error('HTML e URL do CTA são obrigatórios');
@@ -1494,7 +1746,7 @@ serve(async (req) => {
       throw new Error('Produto é obrigatório (mínimo 2 caracteres)');
     }
     
-    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
+    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}, product_id=${product_id || 'none'}`);
     
     // Fetch company data - get record with actual data filled
     const { data: companyProfiles } = await supabase
@@ -1508,6 +1760,23 @@ serve(async (req) => {
     const companyData = companyProfiles?.[0] || null;
     console.log(`🏢 Company profile: ${companyData?.company_name || 'Using fallback'}`);
     
+    // ✅ NEW: Fetch product data if product_id is provided
+    let productData: any = null;
+    if (product_id) {
+      const { data: productResult, error: productError } = await supabase
+        .from('products_repository')
+        .select('*')
+        .eq('id', product_id)
+        .single();
+      
+      if (productResult && !productError) {
+        productData = productResult;
+        console.log(`📦 Product data loaded: ${productData.name} (FAQ: ${productData.faq?.length || 0}, Specs: ${productData.technical_specifications?.length || 0})`);
+      } else {
+        console.warn(`⚠️ Could not load product: ${productError?.message || 'not found'}`);
+      }
+    }
+    
     // Use SMART_DENT_DATA as fallback
     const finalCompanyData = companyData || SMART_DENT_DATA;
     
@@ -1518,7 +1787,8 @@ serve(async (req) => {
       brand,
       product,
       supabase,
-      finalCompanyData
+      finalCompanyData,
+      productData
     );
     
     return new Response(JSON.stringify({
