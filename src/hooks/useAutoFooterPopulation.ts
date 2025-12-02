@@ -65,13 +65,29 @@ export const useAutoFooterPopulation = () => {
   useEffect(() => {
     const loadCompanyProfile = async () => {
       try {
-        const { data } = await supabase
+        // Obter usuário autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('ℹ️ Usuário não autenticado');
+          setIsLoading(false);
+          return;
+        }
+
+        // Filtrar por user_id do usuário autenticado
+        const { data, error } = await supabase
           .from('company_profile')
           .select('*')
-          .single();
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Erro ao carregar perfil da empresa:', error);
+          setIsLoading(false);
+          return;
+        }
         
         if (data) {
-          // Cast para o tipo correto, tratando navigation_footer_config como unknown primeiro
           const navConfig = data.navigation_footer_config as unknown as NavigationFooterConfig | null;
           setCompanyProfile({
             company_name: data.company_name,
@@ -84,9 +100,11 @@ export const useAutoFooterPopulation = () => {
             social_media_links: data.social_media_links,
             navigation_footer_config: navConfig || undefined
           });
+        } else {
+          console.log('ℹ️ Perfil da empresa não encontrado para este usuário');
         }
       } catch (error) {
-        console.log('ℹ️ Perfil da empresa não encontrado');
+        console.error('Erro ao carregar perfil:', error);
       } finally {
         setIsLoading(false);
       }
