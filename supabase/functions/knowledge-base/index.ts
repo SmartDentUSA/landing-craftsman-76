@@ -269,6 +269,57 @@ function formatForAITraining(data: any): string {
       text += `\n`;
     }
     
+    // ✨ NAVEGAÇÃO E FOOTER CONFIGURÁVEL (NOVO)
+    if (cp.navigation_footer_config) {
+      const navConfig = cp.navigation_footer_config;
+      text += `\n### NAVEGAÇÃO E FOOTER GLOBAL\n`;
+      
+      // Menu de navegação
+      if (navConfig.navigation_menu && Array.isArray(navConfig.navigation_menu) && navConfig.navigation_menu.length > 0) {
+        text += `**Menu de Navegação:**\n`;
+        navConfig.navigation_menu
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .forEach((item: any) => {
+            text += `- ${item.label}: ${item.href}${item.openInNewTab ? ' (abre em nova aba)' : ''}\n`;
+          });
+        text += `\n`;
+      }
+      
+      // Footer
+      if (navConfig.footer) {
+        const footer = navConfig.footer;
+        
+        if (footer.title) text += `**Título do Footer:** ${footer.title}\n`;
+        
+        // Localizações
+        if (footer.locations && Array.isArray(footer.locations) && footer.locations.length > 0) {
+          text += `**Localizações:**\n`;
+          footer.locations.forEach((loc: any) => {
+            text += `- ${loc.label}: ${loc.address}${loc.phone ? ` | Tel: ${loc.phone}` : ''}${loc.email ? ` | Email: ${loc.email}` : ''}\n`;
+          });
+          text += `\n`;
+        }
+        
+        // Links do footer
+        if (footer.links && Array.isArray(footer.links) && footer.links.length > 0) {
+          text += `**Links do Footer:**\n`;
+          footer.links.forEach((link: any) => {
+            text += `- ${link.label}: ${link.href}\n`;
+          });
+          text += `\n`;
+        }
+        
+        // Redes sociais do footer
+        if (footer.social_links && Array.isArray(footer.social_links) && footer.social_links.length > 0) {
+          text += `**Redes Sociais (Footer):**\n`;
+          footer.social_links.forEach((social: any) => {
+            text += `- ${social.platform || social.icon_alt}: ${social.href}\n`;
+          });
+          text += `\n`;
+        }
+      }
+    }
+    
     if (cp.institutional_links && Array.isArray(cp.institutional_links)) {
       // Separar parcerias internacionais de outros links
       const partnerships = cp.institutional_links.filter(

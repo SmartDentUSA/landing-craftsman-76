@@ -36,22 +36,25 @@ function generateSPINSchemas(
     const orgSchema: any = {
       '@type': 'Organization',
       name: sanitizeCompanyName(company.company_name),
-      url: company.website || canonicalUrl,
+      // ✅ CORREÇÃO: usar website_url em vez de website
+      url: company.website_url || company.website || canonicalUrl,
       
       // ✅ FASE 1: Logo CRÍTICO (priorizar company_logo_url)
       logo: company.company_logo_url || company.logo_url || '',
       
       contactPoint: {
         '@type': 'ContactPoint',
-        telephone: company.phone_number,
+        // ✅ CORREÇÃO: usar contact_phone em vez de phone_number
+        telephone: company.contact_phone || company.phone_number,
         contactType: 'customer service',
-        email: company.email,
+        // ✅ CORREÇÃO: usar contact_email em vez de email
+        email: company.contact_email || company.email,
         areaServed: 'BR',
         availableLanguage: 'pt-BR'
       },
       address: {
         '@type': 'PostalAddress',
-        streetAddress: `${company.street_address}, ${company.address_number}`,
+        streetAddress: `${company.street_address || ''}, ${company.address_number || ''}`.trim().replace(/^,\s*|,\s*$/g, ''),
         addressLocality: company.city,
         addressRegion: company.state,
         postalCode: company.postal_code,
@@ -100,6 +103,38 @@ function generateSPINSchemas(
       }
       
       orgSchema.knowsAbout = knowsAboutItems.filter(Boolean);
+    }
+    
+    // ✅ NOVO: sameAs com redes sociais para SEO/GEO
+    const sameAsLinks: string[] = [];
+    
+    // social_media_links (array de objetos com url)
+    if (company.social_media_links && Array.isArray(company.social_media_links)) {
+      company.social_media_links.forEach((social: any) => {
+        if (social.url || social.href) {
+          sameAsLinks.push(social.url || social.href);
+        }
+      });
+    }
+    
+    // Instagram profile
+    if (company.instagram_profile) {
+      const igUrl = company.instagram_profile.startsWith('http') 
+        ? company.instagram_profile 
+        : `https://instagram.com/${company.instagram_profile.replace('@', '')}`;
+      if (!sameAsLinks.includes(igUrl)) sameAsLinks.push(igUrl);
+    }
+    
+    // YouTube channel
+    if (company.youtube_channel) {
+      const ytUrl = company.youtube_channel.startsWith('http')
+        ? company.youtube_channel
+        : `https://youtube.com/${company.youtube_channel}`;
+      if (!sameAsLinks.includes(ytUrl)) sameAsLinks.push(ytUrl);
+    }
+    
+    if (sameAsLinks.length > 0) {
+      orgSchema.sameAs = sameAsLinks;
     }
     
     schemas.push(orgSchema);
@@ -2850,29 +2885,92 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- Footer -->
   <footer>
     <div class="container">
-      <div class="footer-columns">
-        <div>
-          <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
-          <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(company?.phone_number || '')}</p>
-          <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(company?.email || '')}</p>
-          <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
-          <p>${escapeHtml(company?.city || '')} - ${escapeHtml(company?.state || '')}, ${escapeHtml(company?.postal_code || '')}</p>
-        </div>
-        ${company?.usa_address ? `
-        <div>
-          <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - USA</strong>
-          <p>${escapeHtml(company.usa_address)}</p>
-        </div>
-        ` : ''}
-        ${institutionalLinks.length > 0 ? `
-        <div>
-          <strong>Links Úteis</strong>
-          ${institutionalLinks.slice(0, 5).map((link: any) => `
-            <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
-          `).join('')}
-        </div>
-        ` : ''}
-      </div>
+      ${(() => {
+        // ✅ NOVO: Usar navigation_footer_config se disponível
+        const navConfig = company?.navigation_footer_config;
+        const footerConfig = navConfig?.footer;
+        const hasCustomFooter = footerConfig && (footerConfig.locations?.length > 0 || footerConfig.links?.length > 0 || footerConfig.social_links?.length > 0);
+        
+        if (hasCustomFooter) {
+          // Footer dinâmico baseado em navigation_footer_config
+          return `
+            <div class="footer-columns">
+              ${footerConfig.locations && footerConfig.locations.length > 0 ? footerConfig.locations.map((loc: any) => `
+                <div>
+                  <strong>${escapeHtml(loc.label || sanitizeCompanyName(company?.company_name))}</strong>
+                  ${loc.phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(loc.phone)}</p>` : ''}
+                  ${loc.email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(loc.email)}</p>` : ''}
+                  ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc.address)}</p>` : ''}
+                </div>
+              `).join('') : `
+                <div>
+                  <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
+                  <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(company?.contact_phone || company?.phone_number || '')}</p>
+                  <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(company?.contact_email || company?.email || '')}</p>
+                  <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
+                  <p>${escapeHtml(company?.city || '')} - ${escapeHtml(company?.state || '')}, ${escapeHtml(company?.postal_code || '')}</p>
+                </div>
+              `}
+              
+              ${footerConfig.links && footerConfig.links.length > 0 ? `
+                <div>
+                  <strong>Links Úteis</strong>
+                  ${footerConfig.links.map((link: any) => `
+                    <a href="${escapeHtml(link.href)}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${escapeHtml(link.label)}</a>
+                  `).join('')}
+                </div>
+              ` : institutionalLinks.length > 0 ? `
+                <div>
+                  <strong>Links Úteis</strong>
+                  ${institutionalLinks.slice(0, 5).map((link: any) => `
+                    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
+                  `).join('')}
+                </div>
+              ` : ''}
+              
+              ${footerConfig.social_links && footerConfig.social_links.length > 0 ? `
+                <div>
+                  <strong>Redes Sociais</strong>
+                  <div class="footer-social-links">
+                    ${footerConfig.social_links.map((social: any) => `
+                      <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}">
+                        <i class="fab fa-${escapeHtml(social.platform || 'link')}"></i>
+                      </a>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        } else {
+          // Footer padrão (fallback)
+          return `
+            <div class="footer-columns">
+              <div>
+                <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - Brasil</strong>
+                <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(company?.contact_phone || company?.phone_number || '')}</p>
+                <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(company?.contact_email || company?.email || '')}</p>
+                <p>${escapeHtml(company?.street_address || '')}, ${escapeHtml(company?.address_number || '')}</p>
+                <p>${escapeHtml(company?.city || '')} - ${escapeHtml(company?.state || '')}, ${escapeHtml(company?.postal_code || '')}</p>
+              </div>
+              ${company?.usa_address ? `
+              <div>
+                <strong>${escapeHtml(sanitizeCompanyName(company?.company_name))} - USA</strong>
+                <p>${escapeHtml(company.usa_address)}</p>
+              </div>
+              ` : ''}
+              ${institutionalLinks.length > 0 ? `
+              <div>
+                <strong>Links Úteis</strong>
+                ${institutionalLinks.slice(0, 5).map((link: any) => `
+                  <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
+                `).join('')}
+              </div>
+              ` : ''}
+            </div>
+          `;
+        }
+      })()}
     </div>
   </footer>
 
@@ -2947,6 +3045,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       ${products[0]?.brand ? `Marca: ${escapeHtml(products[0].brand)}.` : ''}
       Localização: ${escapeHtml(company?.city || 'Brasil')}, ${escapeHtml(company?.state || 'BR')}.
     </p>
+    <!-- ✅ NOVO: SEO Fields enriquecidos para GEO/SGE -->
+    ${company?.seo_service_areas ? `<p>Áreas de atendimento: ${escapeHtml(company.seo_service_areas)}.</p>` : ''}
+    ${company?.seo_market_positioning ? `<p>Posicionamento de mercado: ${escapeHtml(company.seo_market_positioning)}.</p>` : ''}
+    ${company?.seo_competitive_advantages ? `<p>Diferenciais competitivos: ${escapeHtml(company.seo_competitive_advantages)}.</p>` : ''}
+    ${company?.seo_technical_expertise ? `<p>Expertise técnica: ${escapeHtml(company.seo_technical_expertise)}.</p>` : ''}
+    ${company?.differentiators ? `<p>Diferenciais: ${escapeHtml(company.differentiators)}.</p>` : ''}
   </div>
 </body>
 </html>`;

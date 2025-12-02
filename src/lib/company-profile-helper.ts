@@ -5,7 +5,7 @@ export interface CompanyProfileData {
   company_description: string;
   location: string; // ⚠️ DEPRECATED - auto-gerado
   
-  // ✨ NOVOS CAMPOS ESTRUTURADOS
+  // ✨ CAMPOS ESTRUTURADOS DE ENDEREÇO
   country?: string;
   state?: string;
   city?: string;
@@ -30,18 +30,100 @@ export interface CompanyProfileData {
   founded_year?: number;
   team_size?: string;
   company_logo_url?: string;
+  company_logo_supabase_path?: string;
   youtube_company_footer?: string;
   
+  // ✅ CAMPOS SEO
   seo_context_keywords: string[];
   seo_market_positioning: string;
   seo_service_areas: string;
   seo_technical_expertise: string;
   seo_competitive_advantages: string;
+  seo_domains?: Array<{ domain: string; primary?: boolean }>;
+  
+  // ✅ NOVOS CAMPOS: Redes Sociais
+  social_media_hashtags?: string[];
+  social_media_handles?: string[];
+  youtube_tags?: string[];
+  youtube_verified?: boolean;
+  instagram_verified?: boolean;
+  
+  // ✅ NOVOS CAMPOS: Tracking e Analytics
+  tracking_pixels?: {
+    google_tag_manager?: { enabled: boolean; container_id?: string };
+    meta_pixel?: { enabled: boolean; pixel_id?: string };
+    tiktok_pixel?: { enabled: boolean; pixel_id?: string };
+    google_analytics?: { enabled: boolean; measurement_id?: string };
+  };
+  
+  // ✅ NOVOS CAMPOS: Vídeos da Empresa
+  company_videos?: {
+    youtube_videos?: Array<{ url: string; description?: string }>;
+    instagram_videos?: Array<{ url: string; description?: string }>;
+    testimonial_videos?: Array<{ url: string; description?: string }>;
+    technical_videos?: Array<{ url: string; description?: string }>;
+  };
+  
+  // ✅ NOVOS CAMPOS: Reviews e NPS
+  company_reviews?: {
+    google_place_id?: string;
+    google_reviews_imported?: boolean;
+    last_google_sync?: string;
+    manual_reviews?: Array<{
+      author_name: string;
+      rating: number;
+      review_text?: string;
+      review_date?: string;
+    }>;
+  };
+  nps_metrics?: {
+    nps_score: number;
+    total_responses: number;
+    satisfaction_score: number;
+    training_quality_score?: number;
+    last_updated?: string;
+    interest_themes?: Record<string, { count: number; percentage: number }>;
+    insights?: {
+      top_keywords?: string[];
+      common_themes?: string[];
+      content_opportunities?: string[];
+    };
+  };
+  
+  // ✅ NOVO: Navegação e Footer Configurável
+  navigation_footer_config?: {
+    navigation_menu?: Array<{
+      label: string;
+      href: string;
+      order?: number;
+      openInNewTab?: boolean;
+    }>;
+    footer?: {
+      title?: string;
+      locations?: Array<{
+        label: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+      }>;
+      links?: Array<{
+        label: string;
+        href: string;
+        openInNewTab?: boolean;
+      }>;
+      social_links?: Array<{
+        platform?: string;
+        href: string;
+        icon_alt?: string;
+      }>;
+    };
+  };
+  
+  // Links institucionais
   institutional_links: Array<{
     label: string;
     url: string;
     category: string;
-    // ✨ NOVOS CAMPOS OPCIONAIS PARA PARCERIAS
     description?: string;
     partnership_type?: 'manufacturer' | 'distributor' | 'certification' | 'media' | 'other';
     country?: string;
@@ -51,6 +133,7 @@ export interface CompanyProfileData {
   social_media_links: Array<{
     platform: string;
     url: string;
+    href?: string;
   }>;
 }
 
@@ -92,6 +175,7 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         founded_year,
         team_size,
         company_logo_url,
+        company_logo_supabase_path,
         youtube_company_footer,
         instagram_profile,
         youtube_channel,
@@ -100,6 +184,17 @@ export async function getCompanyProfileForSEO(): Promise<CompanyProfileData | nu
         seo_service_areas,
         seo_technical_expertise,
         seo_competitive_advantages,
+        seo_domains,
+        social_media_hashtags,
+        social_media_handles,
+        youtube_tags,
+        youtube_verified,
+        instagram_verified,
+        tracking_pixels,
+        company_videos,
+        company_reviews,
+        nps_metrics,
+        navigation_footer_config,
         institutional_links,
         social_media_links
       `)
