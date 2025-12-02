@@ -14,8 +14,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Code, Copy, Download, Eye, Image, CheckCircle, 
   XCircle, Loader2, FileCode, Trash2, ExternalLink, RefreshCw, Save,
-  AlertTriangle, Search, Sparkles, Package
+  AlertTriangle, Search, Sparkles, Package, Link2
 } from 'lucide-react';
+import { LPCloneProductSelector } from './LPCloneProductSelector';
 
 interface CapturedImage {
   originalUrl: string;
@@ -76,6 +77,25 @@ export const LPClonePanel = () => {
   
   const [result, setResult] = useState<TransformResult | null>(null);
   
+  // Product selector state
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productSelectorOpen, setProductSelectorOpen] = useState(false);
+  
+  // Fetch selected products details
+  const { data: selectedProductsData } = useQuery({
+    queryKey: ['selected-products-lp-clone', selectedProductIds],
+    queryFn: async () => {
+      if (selectedProductIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('products_repository')
+        .select('id, name, brand, category')
+        .in('id', selectedProductIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: selectedProductIds.length > 0,
+  });
+  
   // Validation state
   const validation = useMemo(() => {
     const errors: string[] = [];
@@ -130,6 +150,7 @@ export const LPClonePanel = () => {
           },
           brand,
           product,
+          selectedProductIds,
         },
       });
       
@@ -323,6 +344,50 @@ export const LPClonePanel = () => {
                     <p className="text-xs text-muted-foreground">
                       📁 Assets serão salvos em: <code className="bg-muted px-1 rounded">lp-clone-assets/{brand.toLowerCase()}/{product.toLowerCase().replace(/\s+/g, '-')}/</code>
                     </p>
+                  )}
+                </CardContent>
+              </Card>
+              
+              {/* Produtos Vinculados */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Link2 className="h-5 w-5" />
+                    Produtos Vinculados
+                    {selectedProductIds.length > 0 && (
+                      <Badge variant="secondary">{selectedProductIds.length}</Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Vincule produtos do repositório para exibir na LP
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setProductSelectorOpen(true)}
+                    className="w-full"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    {selectedProductIds.length > 0 
+                      ? `${selectedProductIds.length} produtos selecionados` 
+                      : 'Selecionar Produtos'}
+                  </Button>
+                  
+                  {selectedProductsData && selectedProductsData.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedProductsData.map((p) => (
+                        <div key={p.id} className="text-xs p-2 bg-muted rounded flex items-center justify-between">
+                          <div>
+                            <span className="font-medium">{p.name}</span>
+                            {p.brand && <span className="text-muted-foreground"> • {p.brand}</span>}
+                          </div>
+                          {p.category && (
+                            <Badge variant="outline" className="text-xs">{p.category}</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -664,6 +729,13 @@ export const LPClonePanel = () => {
         </TabsContent>
       </Tabs>
       
+      {/* Product Selector Modal */}
+      <LPCloneProductSelector
+        open={productSelectorOpen}
+        onClose={() => setProductSelectorOpen(false)}
+        selectedProductIds={selectedProductIds}
+        onSelectProducts={setSelectedProductIds}
+      />
     </div>
   );
 };
