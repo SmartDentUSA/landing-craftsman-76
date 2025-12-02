@@ -1,5 +1,5 @@
 // ============================================================================
-// SMART DENT — CLINICAL AI BRAIN v1.0
+// SMART DENT — CLINICAL AI BRAIN v1.1
 // MASTER SYSTEM PROMPT — Núcleo de Inteligência Global
 // Arquivo: supabase/functions/_shared/master-system-prompt.ts
 // ============================================================================
@@ -78,18 +78,24 @@ anti_hallucination_rules:
   - always_explain[]      → Sempre detalhar
 
 -------------------------------------------------------------------------------
-📌 TIPAGEM DE PRODUTO (product_type)
+📌 TIPAGEM DE PRODUTO (product_type) - CATEGORIAS DINÂMICAS
 -------------------------------------------------------------------------------
-Ajustar automaticamente o tom:
+O campo product_type usa categorias reais do banco de dados no formato:
+- "CATEGORIA" (ex: "RESINAS 3D")
+- "CATEGORIA > SUBCATEGORIA" (ex: "RESINAS 3D > Biocompatíveis")
 
-resina_rigida      → científico, mecânico, preciso
-resina_flexivel    → elasticidade, alongamento, conforto
-scanner            → precisão, velocidade, ergonomia
-impressora         → repetibilidade, tolerância, calibração
-software           → fluxo digital, produtividade
-cimento            → adesão, resistência, protocolo
-cabine_uv          → polimerização, segurança
-acessorio          → apoio ao fluxo
+Ajustar automaticamente o tom baseado na categoria:
+
+RESINAS 3D           → científico, mecânico, biocompatibilidade, precisão dimensional
+SCANNERS 3D          → precisão digital, velocidade de captura, ergonomia, fidelidade
+IMPRESSÃO 3D         → repetibilidade, tolerância, calibração, produtividade
+SOFTWARES            → fluxo digital, integração CAD/CAM, automação, produtividade
+PÓS-IMPRESSÃO        → cura UV, polimerização completa, acabamento, limpeza
+CARACTERIZAÇÃO       → estética, maquiagem gengival, naturalidade, detalhamento
+DENTÍSTICA...        → adesão, resistência, protocolo clínico, longevidade
+INSUMOS LABORATÓRIO  → materiais cerâmicos, fresagem, qualidade, precisão
+CURSOS               → educacional, capacitação, aprendizado prático
+SOLUÇÕES             → fluxo completo, integração, produtividade, chair-side
 
 -------------------------------------------------------------------------------
 📌 COMO VOCÊ DEVE GERAR QUALQUER CONTEÚDO
@@ -127,21 +133,8 @@ FIM DO MASTER SYSTEM PROMPT
 
 
 // ============================================================================
-// TIPOS PADRÃO DO CLINICAL BRAIN
+// WORKFLOW STAGES (estrutura fixa do fluxo odontológico)
 // ============================================================================
-
-export const PRODUCT_TYPES = [
-  'resina_rigida',
-  'resina_flexivel',
-  'scanner',
-  'impressora',
-  'software',
-  'acessorio',
-  'cimento',
-  'cabine_uv'
-] as const;
-
-export type ProductType = typeof PRODUCT_TYPES[number];
 
 export const WORKFLOW_STAGE_LABELS: Record<string, string> = {
   scan: 'Scanear',
@@ -221,7 +214,7 @@ export interface ValidationResult {
 
 
 // ============================================================================
-// FUNÇÃO GLOBAL DE VALIDAÇÃO (Clinical Brain v1.0)
+// FUNÇÃO GLOBAL DE VALIDAÇÃO (Clinical Brain v1.1)
 // ============================================================================
 
 export function validateContext(product: any): ValidationResult {
@@ -286,7 +279,7 @@ export function validateContext(product: any): ValidationResult {
   }
 
   // ------- 4. Validar product_type (warning se não definido) -------
-  if (!product.product_type && PRODUCT_TYPES.length > 0) {
+  if (!product.product_type) {
     warnings.push('product_type não definido - tom de voz padrão será usado');
   }
 
@@ -299,26 +292,97 @@ export function validateContext(product: any): ValidationResult {
 
 
 // ============================================================================
-// FUNÇÃO PARA OBTER TOM DE VOZ POR TIPO DE PRODUTO
+// MAPEAMENTO DE TONS POR CATEGORIA (categorias reais do banco)
 // ============================================================================
 
-export function getToneByProductType(productType: ProductType | string | null | undefined): string {
-  const toneMap: Record<ProductType, string> = {
-    resina_rigida: 'científico, mecânico, preciso, foco em resistência e durabilidade',
-    resina_flexivel: 'foco em elasticidade, alongamento, conforto, adaptação',
-    scanner: 'precisão, velocidade, ergonomia, digitalização',
-    impressora: 'repetibilidade, tolerância, calibração, produtividade',
-    software: 'fluxo digital, produtividade, integração, automação',
-    cimento: 'adesão, resistência, protocolo clínico, longevidade',
-    cabine_uv: 'polimerização, segurança, cura uniforme',
-    acessorio: 'apoio ao fluxo, praticidade, complemento'
-  };
+const CATEGORY_TONE_MAP: Record<string, string> = {
+  'RESINAS 3D': 'científico, mecânico, biocompatibilidade, precisão dimensional',
+  'SCANNERS 3D': 'precisão digital, velocidade de captura, ergonomia, fidelidade',
+  'IMPRESSÃO 3D': 'repetibilidade, tolerância, calibração, produtividade',
+  'SOFTWARES': 'fluxo digital, integração CAD/CAM, automação, produtividade',
+  'PÓS-IMPRESSÃO': 'cura UV, polimerização completa, acabamento, limpeza',
+  'CARACTERIZAÇÃO': 'estética, maquiagem gengival, naturalidade, detalhamento',
+  'DENTÍSTICA, ESTÉTICA E ORTODONTIA': 'adesão, resistência, protocolo clínico, longevidade',
+  'INSUMOS LABORATÓRIO': 'materiais cerâmicos, fresagem, qualidade, precisão',
+  'CURSOS': 'educacional, capacitação, aprendizado prático',
+  'SOLUÇÕES': 'fluxo completo, integração, produtividade, chair-side'
+};
 
-  if (productType && productType in toneMap) {
-    return toneMap[productType as ProductType];
+// Mapeamento de subcategorias para tons mais específicos
+const SUBCATEGORY_TONE_MAP: Record<string, string> = {
+  // RESINAS 3D
+  'Biocompatíveis': 'biocompatibilidade classe IIa, resistência mecânica, certificações',
+  'Uso Geral': 'versatilidade, custo-benefício, aplicações múltiplas',
+  
+  // SCANNERS 3D
+  'IOS': 'scanner intraoral, captura in-vivo, velocidade clínica, conforto do paciente',
+  'DSS': 'scanner de bancada, precisão laboratorial, digitalização de modelos',
+  'Acessórios': 'complementos, ponteiras, calibração, manutenção',
+  
+  // IMPRESSÃO 3D
+  'Impressoras Odontológicas': 'precisão dimensional, repetibilidade, resolução XY',
+  
+  // SOFTWARES
+  'DentalCAD': 'desenho CAD, bibliotecas, anatomia, automação',
+  'EXOPLAN': 'planejamento cirúrgico, guias, implantes',
+  
+  // PÓS-IMPRESSÃO
+  'Cabines': 'cura UV, polimerização uniforme, segurança',
+  'Acabamento': 'polimento, limpeza, remoção de suportes',
+  
+  // DENTÍSTICA
+  'Cimentos': 'adesão, resistência, protocolo clínico',
+  'Adesivos': 'união, força adesiva, técnica',
+  
+  // CURSOS
+  'EAD': 'online, flexibilidade, autogestão',
+  'Presenciais': 'hands-on, prática supervisionada, networking'
+};
+
+const DEFAULT_TONE = 'profissional, técnico e consultivo';
+
+
+// ============================================================================
+// FUNÇÃO PARA OBTER TOM DE VOZ POR TIPO DE PRODUTO (v1.1 - Categorias Dinâmicas)
+// ============================================================================
+
+/**
+ * Retorna o tom de voz recomendado baseado no product_type
+ * Aceita formatos:
+ * - "CATEGORIA" (ex: "RESINAS 3D")
+ * - "CATEGORIA > SUBCATEGORIA" (ex: "RESINAS 3D > Biocompatíveis")
+ * 
+ * Prioriza subcategoria se disponível, depois categoria, depois default
+ */
+export function getToneByProductType(productType: string | null | undefined): string {
+  if (!productType) return DEFAULT_TONE;
+  
+  // Extrair categoria e subcategoria
+  const parts = productType.split('>').map(p => p.trim());
+  const category = parts[0]?.toUpperCase() || '';
+  const subcategory = parts[1] || null;
+  
+  // 1. Tentar match exato de subcategoria (mais específico)
+  if (subcategory && SUBCATEGORY_TONE_MAP[subcategory]) {
+    return SUBCATEGORY_TONE_MAP[subcategory];
   }
-
-  return 'profissional, técnico e consultivo';
+  
+  // 2. Tentar match de categoria
+  // Match case-insensitive
+  for (const [key, tone] of Object.entries(CATEGORY_TONE_MAP)) {
+    if (key.toUpperCase() === category) {
+      return tone;
+    }
+  }
+  
+  // 3. Match parcial (para variações de nome)
+  for (const [key, tone] of Object.entries(CATEGORY_TONE_MAP)) {
+    if (category.includes(key.toUpperCase()) || key.toUpperCase().includes(category)) {
+      return tone;
+    }
+  }
+  
+  return DEFAULT_TONE;
 }
 
 
@@ -377,5 +441,5 @@ ${specificPrompt}
 // METADADOS DO SISTEMA
 // ============================================================================
 
-export const MASTER_SYSTEM_VERSION = '1.0.0';
+export const MASTER_SYSTEM_VERSION = '1.1.0';
 export const MASTER_SYSTEM_UPDATED = '2025-12-02';
