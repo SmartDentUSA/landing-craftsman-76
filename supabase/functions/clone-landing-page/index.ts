@@ -373,14 +373,59 @@ function rewriteImageAttributes(
 }
 
 // ============================================
-// CAPTURE AND UPLOAD IMAGES
+// CAPTURE AND UPLOAD IMAGES (v3.1 - Parallel Processing)
 // ============================================
+const MAX_IMAGES = 50; // Limite para evitar timeout
+const BATCH_SIZE = 10; // Processar 10 imagens por vez
+const IMAGE_TIMEOUT = 5000; // 5s timeout por imagem
+
+async function downloadImageWithTimeout(
+  url: string, 
+  timeoutMs: number
+): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    let fetchUrl = url;
+    if (fetchUrl.startsWith('//')) {
+      fetchUrl = 'https:' + fetchUrl;
+    }
+    
+    const response = await fetch(fetchUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*,*/*;q=0.8',
+      },
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const buffer = await response.arrayBuffer();
+    
+    return { buffer, contentType };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if ((error as Error).name === 'AbortError') {
+      console.warn(`⏱️ Timeout downloading: ${url}`);
+    }
+    return null;
+  }
+}
+
 async function captureAndUploadImages(
   html: string,
   supabase: any,
   brand: string,
   product: string
 ): Promise<{ html: string; images: CapturedImage[]; heroImageUrl: string }> {
+  const startTime = Date.now();
   const captured: CapturedImage[] = [];
   let processedHTML = html;
   let heroImageUrl = '';
@@ -434,121 +479,134 @@ async function captureAndUploadImages(
   const brandSlug = slugify(brandClean);
   const productSlug = slugify(productClean);
   
-  console.log(`📁 Images will be saved to: lp-clone-assets/${brandSlug}/${productSlug}/`);
+  // Filter valid URLs and limit to MAX_IMAGES
+  const validUrls = Array.from(imageUrls).filter(url => {
+    if (url.startsWith('data:')) return false;
+    if (url.includes('supabase.co')) return false;
+    if (!url.startsWith('http') && !url.startsWith('//')) return false;
+    return true;
+  }).slice(0, MAX_IMAGES);
+  
+  const totalBatches = Math.ceil(validUrls.length / BATCH_SIZE);
+  console.log(`📁 Images path: lp-clone-assets/${brandSlug}/${productSlug}/`);
+  console.log(`⏱️ Processing ${validUrls.length} images in ${totalBatches} batches (max ${MAX_IMAGES}, batch size ${BATCH_SIZE})`);
   
   let imageIndex = 0;
   let firstHeroCandidate: CapturedImage | null = null;
   
-  for (const originalUrl of imageUrls) {
-    if (originalUrl.startsWith('data:')) continue;
-    if (originalUrl.includes('supabase.co')) continue;
-    if (!originalUrl.startsWith('http') && !originalUrl.startsWith('//')) continue;
+  // Process images in parallel batches
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const batchStart = batchIndex * BATCH_SIZE;
+    const batchUrls = validUrls.slice(batchStart, batchStart + BATCH_SIZE);
     
-    try {
-      let fetchUrl = originalUrl;
-      if (fetchUrl.startsWith('//')) {
-        fetchUrl = 'https:' + fetchUrl;
+    console.log(`📦 Batch ${batchIndex + 1}/${totalBatches}: processing ${batchUrls.length} images...`);
+    
+    const batchResults = await Promise.allSettled(
+      batchUrls.map(async (originalUrl, idx) => {
+        const currentIndex = batchStart + idx;
+        
+        // Download with timeout
+        const downloadResult = await downloadImageWithTimeout(originalUrl, IMAGE_TIMEOUT);
+        
+        if (!downloadResult) {
+          return {
+            originalUrl,
+            newUrl: originalUrl,
+            supabasePath: '',
+            status: 'failed' as const,
+            error: 'Download timeout or failed',
+          };
+        }
+        
+        const { buffer: imageBuffer, contentType } = downloadResult;
+        
+        // Check if this is a hero/banner image
+        const isHeroImage = /hero|banner|main|featured|og|header|slide/i.test(originalUrl) || 
+                            imageBuffer.byteLength > 100000;
+        
+        // Generate SEO-friendly filename
+        let fetchUrl = originalUrl.startsWith('//') ? 'https:' + originalUrl : originalUrl;
+        const urlPath = new URL(fetchUrl).pathname;
+        const originalFilename = urlPath.split('/').pop() || 'image';
+        const seoFilename = generateSEOFilename(
+          originalFilename, 
+          currentIndex, 
+          brandSlug, 
+          productSlug, 
+          isHeroImage && currentIndex === 0,
+          contentType
+        );
+        
+        // SEO-friendly path structure
+        const supabasePath = `${brandSlug}/${productSlug}/${seoFilename}`;
+        
+        const { error } = await supabase.storage
+          .from('lp-clone-assets')
+          .upload(supabasePath, imageBuffer, {
+            contentType,
+            cacheControl: '31536000',
+            upsert: true,
+          });
+        
+        if (error) {
+          return {
+            originalUrl,
+            newUrl: originalUrl,
+            supabasePath: '',
+            status: 'failed' as const,
+            error: error.message,
+          };
+        }
+        
+        const { data: publicData } = supabase.storage
+          .from('lp-clone-assets')
+          .getPublicUrl(supabasePath);
+        
+        return {
+          originalUrl,
+          newUrl: publicData.publicUrl,
+          supabasePath,
+          status: 'success' as const,
+          isHeroImage,
+        };
+      })
+    );
+    
+    // Process batch results
+    let batchSuccess = 0;
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        const capturedImage = result.value;
+        captured.push(capturedImage);
+        
+        if (capturedImage.status === 'success') {
+          batchSuccess++;
+          
+          // Replace URL in HTML
+          const escapedOriginal = capturedImage.originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), capturedImage.newUrl);
+          
+          // Track hero image
+          if (!heroImageUrl && capturedImage.isHeroImage) {
+            heroImageUrl = capturedImage.newUrl;
+          }
+          
+          if (!firstHeroCandidate) {
+            firstHeroCandidate = capturedImage;
+          }
+        }
+        
+        imageIndex++;
       }
-      
-      console.log(`📥 Downloading: ${fetchUrl}`);
-      
-      const response = await fetch(fetchUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'image/*,*/*;q=0.8',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      const imageBuffer = await response.arrayBuffer();
-      
-      // Check if this is a hero/banner image
-      const isHeroImage = /hero|banner|main|featured|og|header|slide/i.test(originalUrl) || 
-                          imageBuffer.byteLength > 100000; // Large images likely hero
-      
-      // Generate SEO-friendly filename
-      const urlPath = new URL(fetchUrl).pathname;
-      const originalFilename = urlPath.split('/').pop() || 'image';
-      const seoFilename = generateSEOFilename(
-        originalFilename, 
-        imageIndex, 
-        brandSlug, 
-        productSlug, 
-        isHeroImage && imageIndex === 0,
-        contentType
-      );
-      
-      // SEO-friendly path structure: brand/product/seo-filename
-      const supabasePath = `${brandSlug}/${productSlug}/${seoFilename}`;
-      
-      const { data, error } = await supabase.storage
-        .from('lp-clone-assets')
-        .upload(supabasePath, imageBuffer, {
-          contentType,
-          cacheControl: '31536000',
-          upsert: true,
-        });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      const { data: publicData } = supabase.storage
-        .from('lp-clone-assets')
-        .getPublicUrl(supabasePath);
-      
-      const newUrl = publicData.publicUrl;
-      
-      const capturedImage: CapturedImage = {
-        originalUrl,
-        newUrl,
-        supabasePath,
-        status: 'success',
-        isHeroImage,
-      };
-      
-      // Set first large/hero image as OG image
-      if (!heroImageUrl && isHeroImage) {
-        heroImageUrl = newUrl;
-        console.log(`🖼️ Hero image identified: ${newUrl}`);
-      }
-      
-      // Keep track of first successful image as fallback
-      if (!firstHeroCandidate && capturedImage.status === 'success') {
-        firstHeroCandidate = capturedImage;
-      }
-      
-      const escapedOriginal = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), newUrl);
-      
-      captured.push(capturedImage);
-      
-      console.log(`✅ Uploaded: ${supabasePath} (${seoFilename})`);
-      imageIndex++;
-      
-    } catch (error) {
-      console.error(`❌ Failed: ${originalUrl}:`, error);
-      captured.push({
-        originalUrl,
-        newUrl: originalUrl,
-        supabasePath: '',
-        status: 'failed',
-        error: (error as Error).message,
-      });
     }
+    
+    console.log(`✅ Batch ${batchIndex + 1} complete: ${batchSuccess}/${batchUrls.length} success`);
   }
   
   // GUARANTEE: OG Image must be from Supabase (never external)
-  if (!heroImageUrl) {
-    // Use first successful image as fallback
-    if (firstHeroCandidate) {
-      heroImageUrl = firstHeroCandidate.newUrl;
-      console.log(`🖼️ Hero image fallback (first successful): ${heroImageUrl}`);
-    }
+  if (!heroImageUrl && firstHeroCandidate) {
+    heroImageUrl = firstHeroCandidate.newUrl;
+    console.log(`🖼️ Hero image fallback (first successful): ${heroImageUrl}`);
   }
   
   // Final validation: hero image MUST be from Supabase
@@ -556,6 +614,10 @@ async function captureAndUploadImages(
     console.warn('⚠️ Hero image is not from Supabase, clearing to use logo fallback');
     heroImageUrl = '';
   }
+  
+  const totalTime = Date.now() - startTime;
+  const successCount = captured.filter(c => c.status === 'success').length;
+  console.log(`⏱️ Image processing complete: ${successCount}/${captured.length} success in ${totalTime}ms`);
   
   return { html: processedHTML, images: captured, heroImageUrl };
 }
@@ -1420,11 +1482,17 @@ serve(async (req) => {
     
     console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
     
-    // Fetch company data
-    const { data: companyData } = await supabase
+    // Fetch company data - get record with actual data filled
+    const { data: companyProfiles } = await supabase
       .from('company_profile')
       .select('*')
-      .single();
+      .not('contact_phone', 'is', null)
+      .not('company_logo_url', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    
+    const companyData = companyProfiles?.[0] || null;
+    console.log(`🏢 Company profile: ${companyData?.company_name || 'Using fallback'}`);
     
     // Use SMART_DENT_DATA as fallback
     const finalCompanyData = companyData || SMART_DENT_DATA;
