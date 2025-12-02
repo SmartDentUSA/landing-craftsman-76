@@ -213,6 +213,84 @@ function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: numbe
 }
 
 // ============================================
+// SLUGIFY HELPER
+// ============================================
+function slugify(text: string): string {
+  return text.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// ============================================
+// SEO-FRIENDLY FILENAME GENERATOR
+// ============================================
+function generateSEOFilename(
+  originalFilename: string, 
+  index: number, 
+  brandSlug: string, 
+  productSlug: string, 
+  isHeroImage: boolean,
+  contentType: string
+): string {
+  // Determine extension
+  let ext = originalFilename.split('.').pop()?.toLowerCase() || 'jpg';
+  if (!/^(jpg|jpeg|png|gif|webp|svg|avif)$/.test(ext)) {
+    ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+  }
+  
+  // Generate SEO-friendly name
+  if (isHeroImage && index === 0) {
+    return `${brandSlug}-${productSlug}-hero.${ext}`;
+  }
+  
+  return `${brandSlug}-${productSlug}-${String(index + 1).padStart(3, '0')}.${ext}`;
+}
+
+// ============================================
+// REWRITE IMAGE ALT/TITLE ATTRIBUTES
+// ============================================
+function rewriteImageAttributes(
+  html: string, 
+  images: CapturedImage[], 
+  brand: string, 
+  product: string,
+  companyName: string
+): string {
+  let result = html;
+  
+  // Generate SEO-optimized alt and title texts
+  const altText = `${product} ${brand} vendido pela ${companyName}`;
+  const titleText = `${product} ${brand} | ${companyName}`;
+  
+  for (const image of images) {
+    if (image.status !== 'success') continue;
+    
+    // Escape special regex characters in the new URL
+    const escapedUrl = image.newUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // Find all <img> tags with this URL and rewrite alt/title
+    const imgRegex = new RegExp(
+      `(<img[^>]*src=["']${escapedUrl}["'])([^>]*)>`,
+      'gi'
+    );
+    
+    result = result.replace(imgRegex, (match, srcPart, restPart) => {
+      // Remove existing alt and title attributes
+      let cleanedRest = restPart
+        .replace(/\s*alt=["'][^"']*["']/gi, '')
+        .replace(/\s*title=["'][^"']*["']/gi, '');
+      
+      // Add new SEO-optimized attributes
+      return `${srcPart} alt="${altText}" title="${titleText}"${cleanedRest}>`;
+    });
+  }
+  
+  console.log(`✅ Rewritten alt/title for ${images.filter(i => i.status === 'success').length} images`);
+  return result;
+}
+
+// ============================================
 // CAPTURE AND UPLOAD IMAGES
 // ============================================
 async function captureAndUploadImages(
@@ -225,10 +303,18 @@ async function captureAndUploadImages(
   let processedHTML = html;
   let heroImageUrl = '';
   
-  // Validate brand and product are provided
-  if (!brand || !product) {
-    console.error('❌ Brand and product are required for image organization');
-    throw new Error('Marca e Produto são obrigatórios para organização das imagens');
+  // Robust validation with trim and minimum length
+  const brandClean = (brand || '').trim();
+  const productClean = (product || '').trim();
+  
+  if (!brandClean || brandClean.length < 2) {
+    console.error('❌ Brand validation failed');
+    throw new Error('Marca é obrigatória (mínimo 2 caracteres)');
+  }
+  
+  if (!productClean || productClean.length < 2) {
+    console.error('❌ Product validation failed');
+    throw new Error('Produto é obrigatório (mínimo 2 caracteres)');
   }
   
   const imageUrls = new Set<string>();
@@ -263,19 +349,13 @@ async function captureAndUploadImages(
   }
   
   // Generate clean slugs for folder structure
-  const brandSlug = brand.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  
-  const productSlug = product.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  const brandSlug = slugify(brandClean);
+  const productSlug = slugify(productClean);
   
   console.log(`📁 Images will be saved to: lp-clone-assets/${brandSlug}/${productSlug}/`);
   
   let imageIndex = 0;
+  let firstHeroCandidate: CapturedImage | null = null;
   
   for (const originalUrl of imageUrls) {
     if (originalUrl.startsWith('data:')) continue;
@@ -305,21 +385,23 @@ async function captureAndUploadImages(
       const imageBuffer = await response.arrayBuffer();
       
       // Check if this is a hero/banner image
-      const isHeroImage = /hero|banner|main|featured|og|header/i.test(originalUrl) || 
+      const isHeroImage = /hero|banner|main|featured|og|header|slide/i.test(originalUrl) || 
                           imageBuffer.byteLength > 100000; // Large images likely hero
       
-      // Generate clean filename
+      // Generate SEO-friendly filename
       const urlPath = new URL(fetchUrl).pathname;
-      let filename = urlPath.split('/').pop() || 'image';
-      filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 50);
+      const originalFilename = urlPath.split('/').pop() || 'image';
+      const seoFilename = generateSEOFilename(
+        originalFilename, 
+        imageIndex, 
+        brandSlug, 
+        productSlug, 
+        isHeroImage && imageIndex === 0,
+        contentType
+      );
       
-      if (!/\.(jpg|jpeg|png|gif|webp|svg|avif)$/i.test(filename)) {
-        const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
-        filename = `${filename}.${ext}`;
-      }
-      
-      // SEO-friendly path structure: brand/product/index_filename
-      const supabasePath = `${brandSlug}/${productSlug}/${String(imageIndex).padStart(3, '0')}_${filename}`;
+      // SEO-friendly path structure: brand/product/seo-filename
+      const supabasePath = `${brandSlug}/${productSlug}/${seoFilename}`;
       
       const { data, error } = await supabase.storage
         .from('lp-clone-assets')
@@ -339,24 +421,31 @@ async function captureAndUploadImages(
       
       const newUrl = publicData.publicUrl;
       
-      // Set first large image as hero for OG
-      if (!heroImageUrl && isHeroImage) {
-        heroImageUrl = newUrl;
-        console.log(`🖼️ Hero image identified: ${newUrl}`);
-      }
-      
-      const escapedOriginal = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), newUrl);
-      
-      captured.push({
+      const capturedImage: CapturedImage = {
         originalUrl,
         newUrl,
         supabasePath,
         status: 'success',
         isHeroImage,
-      });
+      };
       
-      console.log(`✅ Uploaded: ${supabasePath}`);
+      // Set first large/hero image as OG image
+      if (!heroImageUrl && isHeroImage) {
+        heroImageUrl = newUrl;
+        console.log(`🖼️ Hero image identified: ${newUrl}`);
+      }
+      
+      // Keep track of first successful image as fallback
+      if (!firstHeroCandidate && capturedImage.status === 'success') {
+        firstHeroCandidate = capturedImage;
+      }
+      
+      const escapedOriginal = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      processedHTML = processedHTML.replace(new RegExp(escapedOriginal, 'g'), newUrl);
+      
+      captured.push(capturedImage);
+      
+      console.log(`✅ Uploaded: ${supabasePath} (${seoFilename})`);
       imageIndex++;
       
     } catch (error) {
@@ -371,10 +460,19 @@ async function captureAndUploadImages(
     }
   }
   
-  // Fallback hero image
+  // GUARANTEE: OG Image must be from Supabase (never external)
   if (!heroImageUrl) {
-    const successImage = captured.find(img => img.status === 'success');
-    heroImageUrl = successImage?.newUrl || '';
+    // Use first successful image as fallback
+    if (firstHeroCandidate) {
+      heroImageUrl = firstHeroCandidate.newUrl;
+      console.log(`🖼️ Hero image fallback (first successful): ${heroImageUrl}`);
+    }
+  }
+  
+  // Final validation: hero image MUST be from Supabase
+  if (heroImageUrl && !heroImageUrl.includes('supabase.co')) {
+    console.warn('⚠️ Hero image is not from Supabase, clearing to use logo fallback');
+    heroImageUrl = '';
   }
   
   return { html: processedHTML, images: captured, heroImageUrl };
@@ -685,7 +783,10 @@ async function processLandingPage(
   supabase: any,
   companyData: any
 ): Promise<TransformResult> {
-  console.log(`🚀 Starting LP Clone v2.0 for ${brand} ${product}`);
+  const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
+  const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
+  
+  console.log(`🚀 Starting LP Clone v2.1 for ${brand} ${product}`);
   
   // Step 1: Sanitize
   let processedHTML = sanitizeHTML(html);
@@ -704,21 +805,32 @@ async function processLandingPage(
   // Step 4: Capture and upload images with proper folder structure
   const { html: imageHTML, images, heroImageUrl } = await captureAndUploadImages(processedHTML, supabase, brand, product);
   processedHTML = imageHTML;
-  console.log(`✅ ${images.filter(i => i.status === 'success').length} images captured`);
+  console.log(`✅ ${images.filter(i => i.status === 'success').length} images captured to /${slugify(brand)}/${slugify(product)}/`);
+  
+  // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
+  processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
   
   // Step 5: Generate auto SEO if not provided
   const autoSEO = generateAutoSEO(html, brand, product, companyData);
+  
+  // GUARANTEE: OG Image must be from Supabase or use company logo
+  let finalOgImage = heroImageUrl;
+  if (!finalOgImage || !finalOgImage.includes('supabase.co')) {
+    finalOgImage = logoUrl;
+    console.log(`🖼️ OG Image fallback to company logo: ${finalOgImage}`);
+  }
+  
   const finalSEO: SEOConfig = {
     title: seoConfig.title || autoSEO.title,
     description: seoConfig.description || autoSEO.description,
     canonical: seoConfig.canonical || autoSEO.canonical,
     keywords: seoConfig.keywords || autoSEO.keywords,
-    ogImage: heroImageUrl || seoConfig.ogImage,
+    ogImage: finalOgImage,
   };
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
   // Step 6: Inject SEO with complete Schema
-  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, heroImageUrl);
+  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage);
   console.log('✅ SEO and Schema.org injected');
   
   // Step 7: Insert Smart Dent header/footer
@@ -734,7 +846,8 @@ async function processLandingPage(
     footerRemoved,
   };
   
-  console.log(`🎉 LP Clone v2.0 complete! Score: ${calculateScore(stats, finalSEO)}/10`);
+  const score = calculateScore(stats, finalSEO, finalOgImage);
+  console.log(`🎉 LP Clone v2.1 complete! Score: ${score}/10`);
   
   return {
     html: processedHTML,
@@ -744,14 +857,15 @@ async function processLandingPage(
   };
 }
 
-function calculateScore(stats: any, seo: SEOConfig): number {
+function calculateScore(stats: any, seo: SEOConfig, ogImage: string): number {
   let score = 5; // Base
   if (stats.imagesProcessed > 0) score += 1;
   if (stats.ctasRewritten > 0) score += 1;
-  if (seo.title && !seo.title.includes('Nova Empresa')) score += 1;
+  if (seo.title && !seo.title.includes('Nova Empresa') && !seo.title.includes('unknown')) score += 1;
   if (seo.description && seo.description.length > 50) score += 1;
-  if (seo.canonical) score += 1;
-  return Math.min(score, 10);
+  if (seo.canonical && seo.canonical.includes('smartdent')) score += 0.5;
+  if (ogImage && ogImage.includes('supabase.co')) score += 0.5; // OG from own domain
+  return Math.min(Math.round(score * 10) / 10, 10);
 }
 
 // ============================================
@@ -773,8 +887,16 @@ serve(async (req) => {
       throw new Error('HTML e URL do CTA são obrigatórios');
     }
     
-    if (!brand || !product) {
-      throw new Error('Marca e Produto são obrigatórios para SEO e organização de assets');
+    // Robust brand/product validation with trim and minimum length
+    const brandClean = (brand || '').trim();
+    const productClean = (product || '').trim();
+    
+    if (!brandClean || brandClean.length < 2) {
+      throw new Error('Marca é obrigatória (mínimo 2 caracteres)');
+    }
+    
+    if (!productClean || productClean.length < 2) {
+      throw new Error('Produto é obrigatório (mínimo 2 caracteres)');
     }
     
     console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
