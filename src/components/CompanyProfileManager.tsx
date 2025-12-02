@@ -967,7 +967,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                         ...prev, 
                         social_media_hashtags: tags
                       }))}
-                      placeholder="Digite hashtags sem # (ex: suaempresa, produto) e pressione Enter"
+                      placeholder="Cole ou digite hashtags separadas por vírgula (ex: odonto, cadcam, 3d)"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Hashtags gerais usadas em todas as redes sociais. Digite sem o símbolo #
@@ -986,7 +986,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                         ...prev, 
                         social_media_handles: tags
                       }))}
-                      placeholder="Digite handles sem @ (ex: suaempresa, marcaparceira) e pressione Enter"
+                      placeholder="Cole ou digite handles separados por vírgula (ex: smartdent, parceiro)"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Usernames/handles mencionados nas redes sociais (@empresa, @parceiros). Digite sem o símbolo @
@@ -1006,7 +1006,7 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                         ...prev, 
                         youtube_tags: tags
                       }))}
-                      placeholder="Digite tags sem # (ex: odontologia, tecnologia) e pressione Enter"
+                      placeholder="Cole ou digite tags separadas por vírgula (ex: odontologia, tecnologia)"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Tags específicas para vídeos do YouTube. Usadas automaticamente na geração de descrições
