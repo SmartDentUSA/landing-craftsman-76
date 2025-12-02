@@ -61,6 +61,7 @@ import { generateHTML, generateEmailHTML, generateBlogHTML, generatePreviewHTML 
 import { supabase } from "@/integrations/supabase/client";
 import { deepMerge } from "@/lib/deepMerge";
 import { useAutoFooterPopulation } from "@/hooks/useAutoFooterPopulation";
+import { SOCIAL_PLATFORMS, SocialIcon } from "@/components/icons/SocialIcons";
 import { validateMetaDescription, validateCanonicalURL } from "@/lib/seo-validators";
 import { generateBlogHTML as generateSEOBlogHTML } from '@/services/seo/blogHTMLGenerator';
 
@@ -628,16 +629,7 @@ const ensureLandingPageDefaults = (data: Partial<LandingPageData>): LandingPageD
   } as LandingPageData;
 };
 
-// Opções de redes sociais com ícones fixos
-const SOCIAL_PLATFORMS = [
-  { value: 'instagram', label: 'Instagram', icon: Instagram },
-  { value: 'facebook', label: 'Facebook', icon: Facebook },
-  { value: 'youtube', label: 'YouTube', icon: Youtube },
-  { value: 'twitter', label: 'Twitter/X', icon: Twitter },
-  { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
-  { value: 'website', label: 'Website', icon: Globe },
-  { value: 'email', label: 'E-mail', icon: Mail },
-];
+// SOCIAL_PLATFORMS importado de @/components/icons/SocialIcons
 
 // Função para resolver URLs das imagens antes do preview
 const beforePreview = (data: LandingPageData): LandingPageData => {
@@ -4911,62 +4903,76 @@ const EditorContent = () => {
                 <AccordionItem value="footer">
                   <AccordionTrigger>Footer</AccordionTrigger>
                   <AccordionContent className="space-y-4">
-                    {/* 🆕 Botão de Sincronização e Indicador Visual */}
-                    {hasCompanyData && (
-                      <div className="flex items-center justify-between p-3 bg-muted/50 border rounded-lg">
-                        <div className="flex items-center gap-2">
-                          {isFooterSyncedWithProfile(data.footer || { locations: [], links: [], social: [] }) ? (
+                    {/* 🆕 Botão Importar Footer do Perfil - Sempre Visível */}
+                    <div className="flex items-center justify-between p-3 bg-muted/50 border rounded-lg mb-4">
+                      <div className="flex items-center gap-3">
+                        {hasCompanyData ? (
+                          isFooterSyncedWithProfile(data.footer || { locations: [], links: [], social: [] }) ? (
                             <Badge variant="secondary" className="gap-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
                               <CheckCircle className="h-3 w-3" />
-                              Sincronizado com Perfil
+                              Sincronizado
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 dark:text-amber-400">
                               <Edit className="h-3 w-3" />
                               Customizado
                             </Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            Menu & Footer gerenciados via Perfil da Empresa
-                          </span>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            const { menu, footer } = forceResyncFromProfile();
-                            
-                            if (menu.length === 0 && footer.locations.length === 0 && footer.links.length === 0 && footer.social.length === 0) {
-                              toast({
-                                title: "Perfil vazio",
-                                description: "Configure primeiro o Menu & Footer no Perfil da Empresa.",
-                                variant: "destructive"
-                              });
-                              return;
-                            }
-                            
-                            setData(prev => ({
-                              ...prev,
-                              menu: menu,
-                              footer: {
-                                locations: footer.locations,
-                                links: footer.links,
-                                social: footer.social
-                              }
-                            }));
-                            
-                            toast({
-                              title: "Sincronizado!",
-                              description: "Menu e footer atualizados com dados do perfil da empresa.",
-                            });
-                          }}
-                          className="gap-2"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          Sincronizar com Perfil
-                        </Button>
+                          )
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-muted-foreground">
+                            <Settings className="h-3 w-3" />
+                            Perfil não configurado
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          Footer padronizado pelo Perfil da Empresa
+                        </span>
                       </div>
-                    )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (!hasCompanyData) {
+                            toast({
+                              title: "Perfil não configurado",
+                              description: "Configure primeiro os dados da empresa no Perfil da Empresa → Menu & Footer.",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
+                          const { menu, footer } = forceResyncFromProfile();
+                          
+                          if (footer.locations.length === 0 && footer.links.length === 0 && footer.social.length === 0) {
+                            toast({
+                              title: "Footer vazio no perfil",
+                              description: "O perfil da empresa não tem dados de footer configurados. Acesse 'Perfil da Empresa' → 'Menu & Footer' para configurar.",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
+                          setData(prev => ({
+                            ...prev,
+                            menu: menu.length > 0 ? menu : prev.menu,
+                            footer: {
+                              locations: footer.locations,
+                              links: footer.links,
+                              social: footer.social
+                            }
+                          }));
+                          
+                          toast({
+                            title: "✅ Footer importado!",
+                            description: `Importados: ${footer.locations.length} localizações, ${footer.links.length} links, ${footer.social.length} redes sociais.`,
+                          });
+                        }}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Importar Footer do Perfil
+                      </Button>
+                    </div>
                     
                     <div>
                       <Label>Título dos Links</Label>
@@ -5109,7 +5115,7 @@ const EditorContent = () => {
                             value={social.platform}
                             onValueChange={(value) => {
                               const newSocial = [...(data.footer?.social || [])];
-                              const platform = SOCIAL_PLATFORMS.find(p => p.value === value);
+                              const platform = SOCIAL_PLATFORMS.find(p => p.id === value);
                               newSocial[index] = {
                                 ...newSocial[index],
                                 platform: value,
@@ -5121,14 +5127,21 @@ const EditorContent = () => {
                               }));
                             }}
                           >
-                            <SelectTrigger className="w-32">
-                              <SelectValue placeholder="Rede social" />
+                            <SelectTrigger className="w-36">
+                              <SelectValue placeholder="Rede social">
+                                {social.platform && (
+                                  <div className="flex items-center gap-2">
+                                    <SocialIcon platform={social.platform} className="h-4 w-4" />
+                                    {SOCIAL_PLATFORMS.find(p => p.id === social.platform)?.label}
+                                  </div>
+                                )}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {SOCIAL_PLATFORMS.map((platform) => (
-                                <SelectItem key={platform.value} value={platform.value}>
+                                <SelectItem key={platform.id} value={platform.id}>
                                   <div className="flex items-center gap-2">
-                                    <platform.icon className="h-4 w-4" />
+                                    <SocialIcon platform={platform.id} className="h-4 w-4" />
                                     {platform.label}
                                   </div>
                                 </SelectItem>
