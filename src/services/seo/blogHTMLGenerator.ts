@@ -551,7 +551,42 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     hasAuthorSignature: authorSignatureHTML.length > 0
   });
 
-  return htmlOutput;
+  // 🆕 SEO ENHANCER (Pós-processamento aditivo Enterprise-Grade)
+  let finalBlogHTML = htmlOutput;
+  
+  const { isSEOEnhancerEnabled } = await import('@/config/feature-flags');
+  
+  if (isSEOEnhancerEnabled()) {
+    try {
+      const { enhanceSemanticStructure } = await import('./semanticHTMLEnhancer');
+      const { injectEntityDefinition } = await import('./entityDefinitionInjector');
+      const { validateGeneratedHTML } = await import('./seoQualityValidator');
+      
+      // Fase 1: Estrutura semântica
+      finalBlogHTML = enhanceSemanticStructure(finalBlogHTML);
+      
+      // Fase 2: Entity definition para blogs
+      if (options.companySEO) {
+        finalBlogHTML = injectEntityDefinition(finalBlogHTML, {
+          companyName: options.companySEO.company_name || 'Empresa',
+          description: 'conteúdo técnico especializado',
+          industry: options.companySEO.business_sector || 'tecnologia',
+          region: options.companySEO.location || 'Brasil'
+        });
+      }
+      
+      // Fase 3: QA Automático
+      validateGeneratedHTML(finalBlogHTML);
+      
+      console.log('✅ [SEO Enhancer Blog] Pós-processamento aplicado com sucesso');
+      
+    } catch (error) {
+      console.error('[SEO Enhancer Blog] Falha:', error);
+      finalBlogHTML = htmlOutput; // FAIL-SAFE
+    }
+  }
+
+  return finalBlogHTML;
 }
 
 /**

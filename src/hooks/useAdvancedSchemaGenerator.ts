@@ -923,6 +923,47 @@ export const useAdvancedSchemaGenerator = () => {
     };
   }, [generateAdvancedProductSchema, generateFAQSchema, generateReviewsSchema, generateLocalBusinessSchema, generateProductFAQSchema, generateTutorialSchema, generateImageGallerySchema, generateTechnicalDocsSchema, toast]);
 
+  // 🆕 FASE SEO ENTERPRISE: Funções para IA-readiness
+  const generateSpeakableSpecification = (cssSelectors?: string[]): object => {
+    return {
+      "@type": "SpeakableSpecification",
+      "cssSelector": cssSelectors || [".hero h1", "article h1", ".blog-content h2", "h1", "h2"]
+    };
+  };
+
+  const generateArticleSchemaWithAI = (articleData: {
+    title: string;
+    description: string;
+    author?: { name: string; url?: string };
+    datePublished: string;
+    dateModified?: string;
+    image?: string;
+    url: string;
+  }, companyProfile?: any): object => {
+    return {
+      "@type": "Article",
+      "headline": articleData.title,
+      "description": articleData.description,
+      "author": articleData.author ? {
+        "@type": "Person",
+        "name": articleData.author.name,
+        "url": articleData.author.url
+      } : undefined,
+      "datePublished": articleData.datePublished,
+      "dateModified": articleData.dateModified || articleData.datePublished,
+      "image": articleData.image,
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": articleData.url
+      },
+      "speakable": generateSpeakableSpecification(),
+      "about": companyProfile ? {
+        "@type": "Thing",
+        "name": companyProfile.business_sector || "Tecnologia"
+      } : undefined
+    };
+  };
+
   return {
     generateAdvancedProductSchema,
     generateFAQSchema,
@@ -933,6 +974,9 @@ export const useAdvancedSchemaGenerator = () => {
     // 🔥 FASE 3: Novos geradores de schema
     generateTutorialSchema,
     generateImageGallerySchema,
-    generateTechnicalDocsSchema
+    generateTechnicalDocsSchema,
+    // 🆕 FASE SEO ENTERPRISE: IA-readiness
+    generateSpeakableSpecification,
+    generateArticleSchemaWithAI
   };
 };
