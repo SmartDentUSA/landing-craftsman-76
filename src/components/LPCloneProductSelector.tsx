@@ -5,50 +5,47 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, Loader2, X } from 'lucide-react';
+import { Search, Package, Loader2, Check } from 'lucide-react';
 
-interface Product {
+export interface ProductWithSEO {
   id: string;
   name: string;
   brand: string | null;
   category: string | null;
   price: number | null;
   image_url: string | null;
+  seo_title_override: string | null;
+  seo_description_override: string | null;
+  canonical_url: string | null;
+  keywords: string[] | null;
 }
 
 interface LPCloneProductSelectorProps {
   open: boolean;
   onClose: () => void;
-  selectedProductIds: string[];
-  onSelectProducts: (ids: string[]) => void;
+  onSelectProduct: (product: ProductWithSEO) => void;
+  currentProductId?: string | null;
 }
 
 export const LPCloneProductSelector = ({
   open,
   onClose,
-  selectedProductIds,
-  onSelectProducts,
+  onSelectProduct,
+  currentProductId,
 }: LPCloneProductSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>(selectedProductIds);
-
-  // Sync with external state when dialog opens
-  useState(() => {
-    setSelectedIds(selectedProductIds);
-  });
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products-for-lp-clone'],
+    queryKey: ['products-for-lp-clone-with-seo'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products_repository')
-        .select('id, name, brand, category, price, image_url')
+        .select('id, name, brand, category, price, image_url, seo_title_override, seo_description_override, canonical_url, keywords')
         .eq('approved', true)
         .order('name');
       if (error) throw error;
-      return data as Product[];
+      return data as ProductWithSEO[];
     },
     enabled: open,
   });
@@ -65,28 +62,9 @@ export const LPCloneProductSelector = ({
     );
   }, [products, searchTerm]);
 
-  const selectedProducts = useMemo(() => {
-    if (!products) return [];
-    return products.filter((p) => selectedIds.includes(p.id));
-  }, [products, selectedIds]);
-
-  const unselectedProducts = useMemo(() => {
-    return filteredProducts.filter((p) => !selectedIds.includes(p.id));
-  }, [filteredProducts, selectedIds]);
-
-  const toggleProduct = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleSave = () => {
-    onSelectProducts(selectedIds);
+  const handleSelectProduct = (product: ProductWithSEO) => {
+    onSelectProduct(product);
     onClose();
-  };
-
-  const handleClear = () => {
-    setSelectedIds([]);
   };
 
   return (
@@ -95,7 +73,7 @@ export const LPCloneProductSelector = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Vincular Produtos à LP Clone
+            Selecionar Produto do Repositório
           </DialogTitle>
         </DialogHeader>
 
@@ -115,48 +93,15 @@ export const LPCloneProductSelector = ({
           </div>
         ) : (
           <ScrollArea className="h-[400px] pr-4">
-            {/* Selected Products */}
-            {selectedProducts.length > 0 && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Selecionados ({selectedProducts.length})
-                  </p>
-                  <Button variant="ghost" size="sm" onClick={handleClear}>
-                    <X className="h-3 w-3 mr-1" />
-                    Limpar
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {selectedProducts.map((product) => (
-                    <ProductItem
-                      key={product.id}
-                      product={product}
-                      isSelected={true}
-                      onToggle={() => toggleProduct(product.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Unselected Products */}
-            <div>
-              {selectedProducts.length > 0 && (
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Disponíveis ({unselectedProducts.length})
-                </p>
-              )}
-              <div className="space-y-2">
-                {unselectedProducts.map((product) => (
-                  <ProductItem
-                    key={product.id}
-                    product={product}
-                    isSelected={false}
-                    onToggle={() => toggleProduct(product.id)}
-                  />
-                ))}
-              </div>
+            <div className="space-y-2">
+              {filteredProducts.map((product) => (
+                <ProductItem
+                  key={product.id}
+                  product={product}
+                  isSelected={product.id === currentProductId}
+                  onSelect={() => handleSelectProduct(product)}
+                />
+              ))}
             </div>
 
             {filteredProducts.length === 0 && (
@@ -172,9 +117,6 @@ export const LPCloneProductSelector = ({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleSave}>
-            Salvar ({selectedIds.length} produtos)
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -185,37 +127,45 @@ export const LPCloneProductSelector = ({
 const ProductItem = ({
   product,
   isSelected,
-  onToggle,
+  onSelect,
 }: {
-  product: Product;
+  product: ProductWithSEO;
   isSelected: boolean;
-  onToggle: () => void;
+  onSelect: () => void;
 }) => {
+  const hasSeoTitle = !!product.seo_title_override;
+  const hasSeoDesc = !!product.seo_description_override;
+  const hasCanonical = !!product.canonical_url;
+  const hasKeywords = product.keywords && product.keywords.length > 0;
+
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
         isSelected
-          ? 'bg-primary/5 border-primary/30'
+          ? 'bg-primary/10 border-primary/50'
           : 'hover:bg-muted/50 border-border'
       }`}
-      onClick={onToggle}
+      onClick={onSelect}
     >
-      <Checkbox checked={isSelected} onCheckedChange={onToggle} />
-      
       {product.image_url ? (
         <img
           src={product.image_url}
           alt={product.name}
-          className="w-10 h-10 object-cover rounded"
+          className="w-12 h-12 object-cover rounded"
         />
       ) : (
-        <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
-          <Package className="h-4 w-4 text-muted-foreground" />
+        <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+          <Package className="h-5 w-5 text-muted-foreground" />
         </div>
       )}
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{product.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium truncate">{product.name}</p>
+          {isSelected && (
+            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+          )}
+        </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {product.brand && <span>{product.brand}</span>}
           {product.category && (
@@ -223,6 +173,21 @@ const ProductItem = ({
               {product.category}
             </Badge>
           )}
+        </div>
+        {/* SEO Indicators */}
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className={`text-xs ${hasSeoTitle ? 'text-green-600' : 'text-muted-foreground/50'}`}>
+            {hasSeoTitle ? '✓' : '○'} Title
+          </span>
+          <span className={`text-xs ${hasSeoDesc ? 'text-green-600' : 'text-muted-foreground/50'}`}>
+            {hasSeoDesc ? '✓' : '○'} Desc
+          </span>
+          <span className={`text-xs ${hasCanonical ? 'text-green-600' : 'text-muted-foreground/50'}`}>
+            {hasCanonical ? '✓' : '○'} URL
+          </span>
+          <span className={`text-xs ${hasKeywords ? 'text-green-600' : 'text-muted-foreground/50'}`}>
+            {hasKeywords ? '✓' : '○'} KW
+          </span>
         </div>
       </div>
 
