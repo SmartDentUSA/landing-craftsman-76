@@ -646,14 +646,30 @@ function injectPremiumCSS(): string {
         --card-bg: #ffffff;
         --background-color: #f8fafc;
         --section-light-bg: #fdfdfd;
+        --sd-header-height: 72px;
       }
 
-      /* ===== HEADER PREMIUM ===== */
+      /* ===== RESET PARA GARANTIR HEADER FIXO ===== */
+      html, body {
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        height: auto !important;
+      }
+      
+      body {
+        position: relative !important;
+        padding-top: var(--sd-header-height) !important;
+      }
+
+      /* ===== HEADER PREMIUM FIXO ===== */
       .sd-premium-header {
-        position: sticky;
-        top: 0;
-        z-index: 9999;
-        background: var(--card-bg);
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        z-index: 9999 !important;
+        background: var(--card-bg) !important;
         border-bottom: 1px solid #e0e0e0;
         box-shadow: 0 2px 10px rgba(0,0,0,0.08);
       }
