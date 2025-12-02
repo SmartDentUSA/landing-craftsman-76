@@ -18,14 +18,24 @@ export interface TagInputProps {
 }
 
 const TagInput = React.forwardRef<TagInputHandle, TagInputProps>(
-  ({ value = [], onChange, placeholder = "Digite e pressione Enter", className }, ref) => {
+  ({ value = [], onChange, placeholder = "Digite separado por vírgula", className }, ref) => {
     const [inputValue, setInputValue] = React.useState("")
+
+    const addTags = (input: string) => {
+      // Aceita vírgula, ponto-e-vírgula ou Enter como separadores
+      const tags = input.split(/[,;]+/).map(t => t.trim()).filter(Boolean)
+      const newTags = tags.filter(tag => !value.includes(tag))
+      
+      if (newTags.length > 0) {
+        onChange?.([...value, ...newTags])
+      }
+      setInputValue("")
+    }
 
     const addTag = (tag: string) => {
       const trimmedTag = tag.trim()
       if (trimmedTag && !value.includes(trimmedTag)) {
-        const newValue = [...value, trimmedTag];
-        onChange?.(newValue)
+        onChange?.([...value, trimmedTag])
         setInputValue("")
       }
     }
@@ -36,23 +46,29 @@ const TagInput = React.forwardRef<TagInputHandle, TagInputProps>(
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" || e.key === ",") {
         e.preventDefault()
-        addTag(inputValue)
+        addTags(inputValue)
       } else if (e.key === "Backspace" && !inputValue && value.length > 0) {
         removeTag(value.length - 1)
       }
     }
 
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault()
+      const pastedText = e.clipboardData.getData('text')
+      addTags(pastedText)
+    }
+
     React.useImperativeHandle(ref, () => ({
       commitPending: () => {
         if (inputValue.trim()) {
-          addTag(inputValue)
+          addTags(inputValue)
         }
       },
       getPendingValue: () => inputValue,
       clear: () => setInputValue("")
-    }), [inputValue, addTag])
+    }), [inputValue, addTags])
 
     return (
       <div
@@ -83,9 +99,10 @@ const TagInput = React.forwardRef<TagInputHandle, TagInputProps>(
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             onBlur={() => {
               if (inputValue.trim()) {
-                addTag(inputValue)
+                addTags(inputValue)
               }
             }}
             placeholder={value.length === 0 ? placeholder : ""}
@@ -97,7 +114,7 @@ const TagInput = React.forwardRef<TagInputHandle, TagInputProps>(
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => addTag(inputValue)}
+            onClick={() => addTags(inputValue)}
             className="ml-2 h-auto p-1"
           >
             <Plus className="h-3 w-3" />
