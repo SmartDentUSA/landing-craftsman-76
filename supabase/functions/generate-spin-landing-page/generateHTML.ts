@@ -1898,6 +1898,37 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       text-decoration: underline;
     }
 
+    /* ===== ÍCONES SOCIAIS EM LINHA ===== */
+    .footer-social-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .footer-social-links a {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      margin: 0 !important;
+      transition: all 0.3s ease;
+    }
+
+    .footer-social-links a:hover {
+      background: var(--accent-tech);
+      transform: translateY(-3px);
+      text-decoration: none;
+    }
+
+    .footer-social-links a i {
+      font-size: 18px;
+      color: #fff;
+    }
+
     /* ===== RESPONSIVO TABLET ===== */
     @media screen and (max-width: 1024px) {
       .text-overlay {
