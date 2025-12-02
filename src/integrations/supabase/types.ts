@@ -227,6 +227,63 @@ export type Database = {
         }
         Relationships: []
       }
+      cloned_landing_pages: {
+        Row: {
+          brand: string | null
+          captured_images: Json | null
+          created_at: string | null
+          cta_url: string
+          id: string
+          name: string
+          original_html: string
+          product: string | null
+          published_at: string | null
+          seo_config: Json | null
+          status: string | null
+          target_domain: string | null
+          transformed_html: string | null
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          brand?: string | null
+          captured_images?: Json | null
+          created_at?: string | null
+          cta_url: string
+          id?: string
+          name: string
+          original_html: string
+          product?: string | null
+          published_at?: string | null
+          seo_config?: Json | null
+          status?: string | null
+          target_domain?: string | null
+          transformed_html?: string | null
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          brand?: string | null
+          captured_images?: Json | null
+          created_at?: string | null
+          cta_url?: string
+          id?: string
+          name?: string
+          original_html?: string
+          product?: string | null
+          published_at?: string | null
+          seo_config?: Json | null
+          status?: string | null
+          target_domain?: string | null
+          transformed_html?: string | null
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: []
+      }
       company_profile: {
         Row: {
           address_number: string | null
