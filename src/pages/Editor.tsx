@@ -1282,7 +1282,7 @@ const EditorContent = () => {
   const { getLandingPage, updateLandingPage, addLandingPage, landingPages, loadLandingPages } = useLandingPagesSupabase();
   const { loadProductsByIds, getProductsForTemplate } = useSelectedProducts();
   const { syncOffersToRepository, loadApprovedProductsForAI } = useProductSync();
-  const { generateAutoFooter, generateAutoNavigation, hasCompanyData } = useAutoFooterPopulation();
+  const { generateAutoFooter, generateAutoNavigation, hasCompanyData, forceResyncFromProfile, isFooterSyncedWithProfile } = useAutoFooterPopulation();
   const { saveDesktopInfo, lastSave } = useDesktopInfoAutoSave(updateLandingPage, id);
   const { saveExplanatoryVideo } = useExplanatoryVideoAutoSave(updateLandingPage, id);
   const { saveAnimatedBanner, lastSave: lastSaveAnimatedBanner } = useAnimatedBannerAutoSave(updateLandingPage, id);
@@ -4911,6 +4911,63 @@ const EditorContent = () => {
                 <AccordionItem value="footer">
                   <AccordionTrigger>Footer</AccordionTrigger>
                   <AccordionContent className="space-y-4">
+                    {/* 🆕 Botão de Sincronização e Indicador Visual */}
+                    {hasCompanyData && (
+                      <div className="flex items-center justify-between p-3 bg-muted/50 border rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {isFooterSyncedWithProfile(data.footer || { locations: [], links: [], social: [] }) ? (
+                            <Badge variant="secondary" className="gap-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                              <CheckCircle className="h-3 w-3" />
+                              Sincronizado com Perfil
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 dark:text-amber-400">
+                              <Edit className="h-3 w-3" />
+                              Customizado
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            Menu & Footer gerenciados via Perfil da Empresa
+                          </span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const { menu, footer } = forceResyncFromProfile();
+                            
+                            if (menu.length === 0 && footer.locations.length === 0 && footer.links.length === 0 && footer.social.length === 0) {
+                              toast({
+                                title: "Perfil vazio",
+                                description: "Configure primeiro o Menu & Footer no Perfil da Empresa.",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            setData(prev => ({
+                              ...prev,
+                              menu: menu,
+                              footer: {
+                                locations: footer.locations,
+                                links: footer.links,
+                                social: footer.social
+                              }
+                            }));
+                            
+                            toast({
+                              title: "Sincronizado!",
+                              description: "Menu e footer atualizados com dados do perfil da empresa.",
+                            });
+                          }}
+                          className="gap-2"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Sincronizar com Perfil
+                        </Button>
+                      </div>
+                    )}
+                    
                     <div>
                       <Label>Título dos Links</Label>
                       <Input
@@ -4919,19 +4976,6 @@ const EditorContent = () => {
                         placeholder="Título da seção de links"
                       />
                     </div>
-                    
-                    {hasCompanyData && (((data.footer?.locations?.length || 0) > 0) || ((data.footer?.social?.length || 0) > 0)) && (
-                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            Auto-populado
-                          </Badge>
-                          <span className="text-sm text-blue-700">
-                            Dados da empresa carregados automaticamente
-                          </span>
-                        </div>
-                      </div>
-                    )}
                     
                     <div>
                       <Label>Localizações</Label>
