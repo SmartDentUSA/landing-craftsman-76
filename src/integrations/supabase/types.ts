@@ -215,6 +215,7 @@ export type Database = {
       company_profile: {
         Row: {
           address_number: string | null
+          areas_served: Json | null
           brand_values: string | null
           business_sector: string | null
           city: string | null
@@ -231,17 +232,27 @@ export type Database = {
           created_at: string
           delivery_approach: string | null
           differentiators: string | null
+          duns_number: string | null
           founded_year: number | null
+          founder_linkedin: string | null
+          founder_name: string | null
+          founder_title: string | null
           id: string
           instagram_profile: string | null
           instagram_verified: boolean | null
           institutional_links: Json | null
+          latitude: number | null
+          legal_name: string | null
           location: string | null
+          longitude: number | null
           main_products_services: string | null
           mission_statement: string | null
           navigation_footer_config: Json | null
           nps_metrics: Json | null
+          number_of_employees: string | null
+          opening_hours: Json | null
           postal_code: string | null
+          price_range: string | null
           seo_competitive_advantages: string | null
           seo_context_keywords: Json | null
           seo_domains: Json | null
@@ -254,6 +265,7 @@ export type Database = {
           state: string | null
           street_address: string | null
           target_audience: string | null
+          tax_id: string | null
           team_size: string | null
           tracking_pixels: Json | null
           updated_at: string
@@ -268,6 +280,7 @@ export type Database = {
         }
         Insert: {
           address_number?: string | null
+          areas_served?: Json | null
           brand_values?: string | null
           business_sector?: string | null
           city?: string | null
@@ -284,17 +297,27 @@ export type Database = {
           created_at?: string
           delivery_approach?: string | null
           differentiators?: string | null
+          duns_number?: string | null
           founded_year?: number | null
+          founder_linkedin?: string | null
+          founder_name?: string | null
+          founder_title?: string | null
           id?: string
           instagram_profile?: string | null
           instagram_verified?: boolean | null
           institutional_links?: Json | null
+          latitude?: number | null
+          legal_name?: string | null
           location?: string | null
+          longitude?: number | null
           main_products_services?: string | null
           mission_statement?: string | null
           navigation_footer_config?: Json | null
           nps_metrics?: Json | null
+          number_of_employees?: string | null
+          opening_hours?: Json | null
           postal_code?: string | null
+          price_range?: string | null
           seo_competitive_advantages?: string | null
           seo_context_keywords?: Json | null
           seo_domains?: Json | null
@@ -307,6 +330,7 @@ export type Database = {
           state?: string | null
           street_address?: string | null
           target_audience?: string | null
+          tax_id?: string | null
           team_size?: string | null
           tracking_pixels?: Json | null
           updated_at?: string
@@ -321,6 +345,7 @@ export type Database = {
         }
         Update: {
           address_number?: string | null
+          areas_served?: Json | null
           brand_values?: string | null
           business_sector?: string | null
           city?: string | null
@@ -337,17 +362,27 @@ export type Database = {
           created_at?: string
           delivery_approach?: string | null
           differentiators?: string | null
+          duns_number?: string | null
           founded_year?: number | null
+          founder_linkedin?: string | null
+          founder_name?: string | null
+          founder_title?: string | null
           id?: string
           instagram_profile?: string | null
           instagram_verified?: boolean | null
           institutional_links?: Json | null
+          latitude?: number | null
+          legal_name?: string | null
           location?: string | null
+          longitude?: number | null
           main_products_services?: string | null
           mission_statement?: string | null
           navigation_footer_config?: Json | null
           nps_metrics?: Json | null
+          number_of_employees?: string | null
+          opening_hours?: Json | null
           postal_code?: string | null
+          price_range?: string | null
           seo_competitive_advantages?: string | null
           seo_context_keywords?: Json | null
           seo_domains?: Json | null
@@ -360,6 +395,7 @@ export type Database = {
           state?: string | null
           street_address?: string | null
           target_audience?: string | null
+          tax_id?: string | null
           team_size?: string | null
           tracking_pixels?: Json | null
           updated_at?: string
