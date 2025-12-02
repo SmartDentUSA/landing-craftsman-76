@@ -3490,7 +3490,7 @@ export const generatePreviewHTML = async (data: any): Promise<string> => {
           const { generateKnowledgeFeedSchema } = await import('@/services/seo/knowledgeFeedSchemaGenerator');
           
           const feedUrl = data.knowledge_feed_section.feed_url || `${data.domain}/blog`;
-          const companyName = data.schema?.software_app?.name || data.company?.name || 'Nossa Empresa';
+          const companyName = data.schema?.software_app?.name || data.company?.name || data.brand?.legal_name || 'Empresa';
           
           const schemaJsonLd = generateKnowledgeFeedSchema(
             data.knowledge_feed_section.items,
@@ -4275,17 +4275,57 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     processedData.twitter_description = processedData.og_description || data.seo_description || '';
   }
 
-  // 🔧 CORREÇÃO: Restaurar condição original + novos dados relevantes para Schema Markup
-  if (data.seo?.hreflang_auto || data.selectedProductsForSEO?.length > 0 || data.schema?.manual_reviews?.length > 0 || data.schema?.google_reviews?.reviews?.length > 0) {
-    const schemaGraph = [];
-    
-    // ✅ FASE 1: Adicionar Enterprise Organization Schema PRIMEIRO (GEO/Entity SEO)
-    if (companyProfile) {
-      const { generateEnterpriseOrganizationSchema } = await import('@/services/seo/advancedSchemaEnhancer');
+  // 🔧 CORREÇÃO ENTERPRISE: Schema obrigatórios SEMPRE gerados (fora de condições)
+  const schemaGraph: any[] = [];
+  
+  // ✅ FASE 1: Organization Schema SEMPRE (GEO/Entity SEO - OBRIGATÓRIO)
+  if (companyProfile) {
+    try {
+      const { generateEnterpriseOrganizationSchema, generateSpeakableSpecification } = await import('@/services/seo/advancedSchemaEnhancer');
       const organizationSchema = generateEnterpriseOrganizationSchema(companyProfile);
       schemaGraph.push(organizationSchema);
       console.log('✅ [Schema Enterprise] Organization schema adicionado ao @graph');
+      
+      // ✅ FASE 2: WebPage Schema com Speakable SEMPRE
+      const webPageSchema = {
+        "@type": "WebPage",
+        "@id": `${companyProfile.website_url || processedData.canonical_url}/#webpage`,
+        "name": processedData.seo_title || data.name || 'Página',
+        "description": processedData.seo_description || '',
+        "url": processedData.canonical_url,
+        "inLanguage": "pt-BR",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": `${companyProfile.website_url}/#website`,
+          "name": companyProfile.company_name,
+          "url": companyProfile.website_url
+        },
+        "publisher": {
+          "@type": "Organization",
+          "@id": `${companyProfile.website_url}/#organization`,
+          "name": companyProfile.company_name
+        },
+        "speakable": generateSpeakableSpecification([
+          "h1",
+          ".banner-title",
+          ".banner-subtitle", 
+          ".offers-section h2",
+          ".faq-section h2",
+          ".solutions-section h2",
+          "article h1",
+          "article h2",
+          ".cta-section"
+        ])
+      };
+      schemaGraph.push(webPageSchema);
+      console.log('✅ [Schema Enterprise] WebPage + Speakable adicionado ao @graph');
+    } catch (error) {
+      console.error('❌ [Schema Enterprise] Erro ao gerar Organization/WebPage:', error);
     }
+  }
+  
+  // 🔧 Schemas condicionais (mantém lógica existente para dados específicos)
+  if (data.seo?.hreflang_auto || data.selectedProductsForSEO?.length > 0 || data.schema?.manual_reviews?.length > 0 || data.schema?.google_reviews?.reviews?.length > 0) {
     
     // Include selected products in schema if available
     if (data.selectedProductsForSEO && data.selectedProductsForSEO.length > 0) {
@@ -4516,46 +4556,7 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       });
     }
 
-    // Adicionar Organization Schema com informações completas
-    if (data.brand?.legal_name) {
-      const organizationSchema: any = {
-        "@type": "Organization",
-        "name": data.brand.legal_name,
-        "legalName": data.brand.legal_name,
-        "url": processedData.canonical_url,
-        "logo": processImageUrl(data.logo_url),
-        "sameAs": data.brand.same_as?.map((sa: any) => sa.url) || [],
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer service",
-          "availableLanguage": ["Portuguese", "English", "Spanish"]
-        }
-      };
-
-      // Adicionar descrição se disponível
-      if (data.brand.description) {
-        organizationSchema.description = data.brand.description;
-      }
-
-      // Adicionar endereço se disponível
-      if (data.brand.address) {
-        organizationSchema.address = {
-          "@type": "PostalAddress",
-          "streetAddress": data.brand.address.street,
-          "addressLocality": data.brand.address.city,
-          "addressRegion": data.brand.address.state,
-          "postalCode": data.brand.address.postal_code,
-          "addressCountry": data.brand.address.country || "BR"
-        };
-      }
-
-      // Adicionar telefone se disponível
-      if (data.brand.telephone) {
-        organizationSchema.telephone = data.brand.telephone;
-      }
-
-      schemaGraph.push(organizationSchema);
-    }
+    // ❌ REMOVIDO: Organization básico redundante (já temos Enterprise Organization no início)
 
     // Adicionar schema para políticas e documentos legais
     if (data.brand?.policies) {
@@ -4761,9 +4762,46 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       });
     }
 
+  } // Fim dos schemas condicionais
+  
+  // ✅ FASE 5: schema_json_ld SEMPRE gerado (FORA das condições)
+  if (schemaGraph.length > 0) {
     processedData.schema_json_ld = JSON.stringify({
       "@context": "https://schema.org",
       "@graph": schemaGraph
+    });
+    
+    // Validação crítica: verificar presença de Organization
+    const hasOrganization = schemaGraph.some(
+      (s: any) => s['@type'] === 'Organization' || 
+                  (Array.isArray(s['@type']) && s['@type'].includes('Organization'))
+    );
+    const hasWebPage = schemaGraph.some(
+      (s: any) => s['@type'] === 'WebPage'
+    );
+    const hasSpeakable = schemaGraph.some(
+      (s: any) => s.speakable?.['@type'] === 'SpeakableSpecification'
+    );
+    
+    console.log('✅ [Schema Enterprise] Validação final:', {
+      totalSchemas: schemaGraph.length,
+      hasOrganization,
+      hasWebPage,
+      hasSpeakable,
+      types: schemaGraph.map((s: any) => s['@type'])
+    });
+    
+    if (!hasOrganization) {
+      console.warn('⚠️ [GEO CRÍTICO] Organization Schema ausente no @graph!');
+    }
+  } else {
+    // Fallback de emergência
+    console.warn('⚠️ [Schema] Nenhum schema gerado, criando WebPage mínimo');
+    processedData.schema_json_ld = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": processedData.seo_title || data.name || "Página",
+      "description": processedData.seo_description || ""
     });
   }
 
