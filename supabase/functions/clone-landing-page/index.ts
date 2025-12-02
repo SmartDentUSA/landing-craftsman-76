@@ -635,12 +635,40 @@ function injectPremiumCSS(): string {
       .sd-premium-header .main-nav a:hover {
         color: var(--accent-tech);
       }
+      
+      /* CTA BUTTON NO HEADER (igual imagem de referência) */
+      .sd-premium-header .cta-button {
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        color: #fff !important;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+        margin-left: 1.5rem;
+        white-space: nowrap;
+      }
+      
+      .sd-premium-header .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+        background: linear-gradient(135deg, #128C7E 0%, #25D366 100%);
+      }
+      
+      .sd-premium-header .cta-button i {
+        font-size: 16px;
+      }
 
-      /* ===== FOOTER PREMIUM (IGUAL LP SPIN) ===== */
+      /* ===== FOOTER PREMIUM (IGUAL IMAGEM DE REFERÊNCIA) ===== */
       .sd-premium-footer {
-        background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
+        background: #2d2d2d;
         color: #e0e0e0;
-        padding: 3rem 0 2rem;
+        padding: 3rem 0 1.5rem;
         margin-top: 3rem;
         font-family: 'Inter', sans-serif;
       }
@@ -661,32 +689,32 @@ function injectPremiumCSS(): string {
       
       .sd-premium-footer .footer-columns > div {
         flex: 1;
-        min-width: 200px;
+        min-width: 180px;
       }
       
       .sd-premium-footer .footer-columns strong {
-        color: var(--accent-glow);
+        color: #EE7A3E;
         font-size: 16px;
         display: block;
-        margin-bottom: 0.75rem;
+        margin-bottom: 1rem;
         font-weight: 700;
       }
       
       .sd-premium-footer .footer-columns p {
-        color: #ccc;
-        font-size: 14px;
-        line-height: 1.8;
-        margin: 0.4rem 0;
+        color: #b0b0b0;
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 0.5rem 0;
       }
       
       .sd-premium-footer .footer-columns p i {
-        width: 20px;
+        width: 18px;
         margin-right: 8px;
-        color: var(--accent-tech);
+        color: #EE7A3E;
       }
       
       .sd-premium-footer .footer-columns a {
-        color: #b0c4de;
+        color: #e0e0e0;
         font-size: 14px;
         text-decoration: none;
         display: block;
@@ -695,12 +723,27 @@ function injectPremiumCSS(): string {
       }
       
       .sd-premium-footer .footer-columns a:hover {
-        color: var(--accent-glow);
+        color: #EE7A3E;
+      }
+      
+      /* Social section separada */
+      .sd-premium-footer .social-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+      }
+      
+      .sd-premium-footer .social-section strong {
+        color: #EE7A3E;
+        font-size: 16px;
+        display: block;
+        margin-bottom: 1rem;
       }
       
       .sd-premium-footer .footer-social-links {
         display: flex;
-        gap: 12px;
+        flex-wrap: wrap;
+        gap: 10px;
         margin-top: 0.75rem;
       }
       
@@ -719,13 +762,13 @@ function injectPremiumCSS(): string {
       }
       
       .sd-premium-footer .footer-social-links a:hover {
-        background: var(--accent-tech);
+        background: #EE7A3E;
         transform: translateY(-3px);
-        box-shadow: 0 4px 15px rgba(238, 122, 62, 0.4);
       }
       
       .sd-premium-footer .footer-bottom {
         border-top: 1px solid rgba(255,255,255,0.1);
+        margin-top: 2rem;
         padding-top: 1.5rem;
         text-align: center;
       }
@@ -734,6 +777,34 @@ function injectPremiumCSS(): string {
         font-size: 12px;
         color: #888;
         margin: 0;
+      }
+
+      /* ===== VIDEO RESPONSIVO ===== */
+      .video-container,
+      .wp-block-embed,
+      .wp-block-video,
+      .video-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        margin: 1rem 0;
+      }
+      
+      .video-container iframe,
+      iframe[src*="youtube"],
+      iframe[src*="vimeo"],
+      iframe[src*="youtu.be"] {
+        width: 100% !important;
+        max-width: 100%;
+        aspect-ratio: 16/9;
+        border: none;
+        border-radius: 8px;
+      }
+      
+      video {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
       }
 
       /* ===== STICKY CTA MOBILE ===== */
@@ -1119,6 +1190,10 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
         </a>
         <nav class="main-nav">
           ${menuHtml}
+          <a href="${ctaUrl}" class="cta-button" title="Fale com um Especialista">
+            <i class="fab fa-whatsapp"></i>
+            Falar com Especialista
+          </a>
         </nav>
       </div>
     </div>
