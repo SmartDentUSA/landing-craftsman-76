@@ -2981,6 +2981,22 @@ const EditorContent = () => {
     }
   };
 
+  // 🆕 Preview Completo usando HTML final com todos os processamentos SEO
+  const handlePreviewComplete = () => {
+    if (!finalHTML || isGeneratingFinal) {
+      toast({
+        title: "Aguarde",
+        description: "HTML final ainda está sendo gerado...",
+      });
+      return;
+    }
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(finalHTML);
+      newWindow.document.close();
+    }
+  };
+
   const handleViewCode = () => {
     const isEmailTab = previewTab === 'email-preview';
     const htmlToPass = isEmailTab ? generatedEmailHTML : finalHTML; // ✅ Usa HTML final completo
@@ -7755,6 +7771,26 @@ dataLayer = [{
                 <Button variant="outline" size="sm" onClick={handlePreview}>
                   <Eye className="h-4 w-4 mr-2" />
                   Nova Aba
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handlePreviewComplete}
+                  disabled={!finalHTML || isGeneratingFinal}
+                  className="bg-green-50 hover:bg-green-100 border-green-200"
+                  title="Preview com processamento completo de SEO, ícones e grid"
+                >
+                  {isGeneratingFinal ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Preview Completo
+                    </>
+                  )}
                 </Button>
                 <Button 
                   variant="outline" 
