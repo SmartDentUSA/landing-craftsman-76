@@ -432,6 +432,130 @@ function formatForAITraining(data: any): string {
         text += `**Público-alvo:** ${p.target_audience.join(', ')}\n`;
       }
       
+      // ✨ CAMPOS CRÍTICOS PARA IA - Sales Pitch
+      if (p.sales_pitch) {
+        text += `**Pitch de Vendas:** ${p.sales_pitch}\n`;
+      }
+      
+      // ✨ URLs e Imagens
+      if (p.product_url) {
+        text += `**URL do Produto:** ${p.product_url}\n`;
+      }
+      if (p.image_url) {
+        text += `**Imagem Principal:** ${p.image_url}\n`;
+      }
+      if (p.images_gallery && Array.isArray(p.images_gallery) && p.images_gallery.length > 0) {
+        text += `**Galeria de Imagens (${p.images_gallery.length}):**\n`;
+        p.images_gallery.slice(0, 5).forEach((img: any) => {
+          const url = typeof img === 'string' ? img : img.url || img.image_url;
+          if (url) text += `- ${url}\n`;
+        });
+      }
+      
+      // ✨ Keywords Avançadas
+      if (p.market_keywords && Array.isArray(p.market_keywords) && p.market_keywords.length > 0) {
+        text += `**Keywords de Mercado:** ${p.market_keywords.join(', ')}\n`;
+      }
+      if (p.search_intent_keywords && Array.isArray(p.search_intent_keywords) && p.search_intent_keywords.length > 0) {
+        text += `**Keywords de Intenção de Busca:** ${p.search_intent_keywords.join(', ')}\n`;
+      }
+      if (p.tags && Array.isArray(p.tags) && p.tags.length > 0) {
+        text += `**Tags:** ${p.tags.join(', ')}\n`;
+      }
+      
+      // ✨ Bot e Aplicações
+      if (p.bot_trigger_words && Array.isArray(p.bot_trigger_words) && p.bot_trigger_words.length > 0) {
+        text += `**Triggers para Bot/Chatbot:** ${p.bot_trigger_words.join(', ')}\n`;
+      }
+      if (p.applications) {
+        text += `**Aplicações:** ${p.applications}\n`;
+      }
+      
+      // ✨ SEO Avançado
+      if (p.seo_title_override) {
+        text += `**SEO Title Override:** ${p.seo_title_override}\n`;
+      }
+      if (p.seo_description_override) {
+        text += `**SEO Description Override:** ${p.seo_description_override}\n`;
+      }
+      if (p.slug) {
+        text += `**Slug:** ${p.slug}\n`;
+      }
+      if (p.canonical_url) {
+        text += `**URL Canônica:** ${p.canonical_url}\n`;
+      }
+      
+      // ✨ E-commerce/Merchant Data
+      if (p.gtin) text += `**GTIN:** ${p.gtin}\n`;
+      if (p.mpn) text += `**MPN:** ${p.mpn}\n`;
+      if (p.ean) text += `**EAN:** ${p.ean}\n`;
+      if (p.google_product_category) text += `**Google Product Category:** ${p.google_product_category}\n`;
+      if (p.availability) text += `**Disponibilidade:** ${p.availability}\n`;
+      if (p.condition) text += `**Condição:** ${p.condition}\n`;
+      if (p.stock_managed && p.stock_quantity !== null && p.stock_quantity !== undefined) {
+        text += `**Estoque:** ${p.stock_quantity} unidades\n`;
+      }
+      
+      // ✨ Atributos Físicos
+      const physicalAttrs: string[] = [];
+      if (p.color) physicalAttrs.push(`Cor: ${p.color}`);
+      if (p.size) physicalAttrs.push(`Tamanho: ${p.size}`);
+      if (p.material) physicalAttrs.push(`Material: ${p.material}`);
+      if (p.weight) physicalAttrs.push(`Peso: ${p.weight}kg`);
+      if (p.height) physicalAttrs.push(`Altura: ${p.height}cm`);
+      if (p.width) physicalAttrs.push(`Largura: ${p.width}cm`);
+      if (p.depth) physicalAttrs.push(`Profundidade: ${p.depth}cm`);
+      if (physicalAttrs.length > 0) {
+        text += `**Atributos Físicos:** ${physicalAttrs.join(' | ')}\n`;
+      }
+      
+      // ✨ Variações
+      if (p.variations && Array.isArray(p.variations) && p.variations.length > 0) {
+        text += `**Variações (${p.variations.length}):**\n`;
+        p.variations.slice(0, 10).forEach((v: any) => {
+          const varName = v.name || v.sku || v.variation_name || 'Variação';
+          const varPrice = v.price ? `R$ ${v.price}` : '';
+          text += `- ${varName}${varPrice ? `: ${varPrice}` : ''}\n`;
+        });
+      }
+      
+      // ✨ CTAs e Recursos
+      if (p.resource_cta1?.visible && p.resource_cta1?.url) {
+        text += `**CTA Recurso 1:** ${p.resource_cta1.label || 'Link'} - ${p.resource_cta1.url}\n`;
+      }
+      if (p.resource_cta2?.visible && p.resource_cta2?.url) {
+        text += `**CTA Recurso 2:** ${p.resource_cta2.label || 'Link'} - ${p.resource_cta2.url}\n`;
+      }
+      if (p.resource_cta3?.visible && p.resource_cta3?.url) {
+        text += `**CTA Recurso 3:** ${p.resource_cta3.label || 'Link'} - ${p.resource_cta3.url}\n`;
+      }
+      if (p.offer_discount_cta?.visible && p.offer_discount_cta?.url) {
+        text += `**CTA Desconto:** ${p.offer_discount_cta.label || 'Oferta'} - ${p.offer_discount_cta.url}\n`;
+      }
+      
+      // ✨ Tutorial Resources
+      if (p.tutorial_resources?.tutorials && Array.isArray(p.tutorial_resources.tutorials) && p.tutorial_resources.tutorials.length > 0) {
+        text += `**Recursos de Tutorial (${p.tutorial_resources.tutorials.length}):**\n`;
+        p.tutorial_resources.tutorials.forEach((tr: any) => {
+          text += `- ${tr.title || 'Tutorial'}: ${tr.url || tr.video_url || 'N/A'}\n`;
+        });
+      }
+      
+      // ✨ Video Captions (transcrições de vídeos - conteúdo rico)
+      if (p.video_captions) {
+        const captions = p.video_captions;
+        if (typeof captions === 'object' && Object.keys(captions).length > 0) {
+          text += `**Legendas/Transcrições de Vídeos:**\n`;
+          Object.entries(captions).slice(0, 3).forEach(([videoId, data]: [string, any]) => {
+            const captionText = typeof data === 'string' ? data : data.text || data.captions || '';
+            if (captionText) {
+              const preview = captionText.substring(0, 300);
+              text += `- ${videoId}: ${preview}${captionText.length > 300 ? '...' : ''}\n`;
+            }
+          });
+        }
+      }
+      
       // ID Loja Integrada (se disponível)
       if (p.original_data?.li_product_id) {
         text += `**ID Loja Integrada:** ${p.original_data.li_product_id}\n`;
