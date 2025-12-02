@@ -130,28 +130,25 @@ function generateAutoSEO(html: string, brand: string, product: string, companyDa
 }
 
 // ============================================
-// CLEAN MALFORMED HTML (NEW v3.2)
+// CLEAN MALFORMED HTML (CONSERVATIVE v3.3)
 // ============================================
 function cleanMalformedHTML(html: string): string {
+  // Only fix truly malformed HTML, don't be aggressive
   let cleaned = html;
   
-  // 1. Remove nested <!doctype html>...</html> inside <style> tags
-  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<!doctype[^>]*>[\s\S]*?<\/html>[\s\S]*?<\/style>/gi, '');
-  
-  // 2. Remove duplicate <head> sections inside body
-  cleaned = cleaned.replace(/(<body[^>]*>[\s\S]*?)<head[^>]*>[\s\S]*?<\/head>/gi, '$1');
-  
-  // 3. Remove duplicate <!DOCTYPE> declarations
+  // Only remove duplicate DOCTYPE if they exist (keep first one)
   const doctypeMatches = cleaned.match(/<!doctype[^>]*>/gi);
   if (doctypeMatches && doctypeMatches.length > 1) {
-    for (let i = 1; i < doctypeMatches.length; i++) {
-      cleaned = cleaned.replace(doctypeMatches[i], '');
-    }
+    // Keep the first, remove subsequent ones
+    let firstFound = false;
+    cleaned = cleaned.replace(/<!doctype[^>]*>/gi, (match) => {
+      if (!firstFound) {
+        firstFound = true;
+        return match;
+      }
+      return '';
+    });
   }
-  
-  // 4. Remove duplicate <html> tags
-  cleaned = cleaned.replace(/(<html[^>]*>[\s\S]*?)<html[^>]*>/gi, '$1');
-  cleaned = cleaned.replace(/<\/html>[\s\S]*?(<\/html>)/gi, '$1');
   
   console.log('✅ Malformed HTML cleaned');
   return cleaned;
@@ -223,27 +220,17 @@ function sanitizeHTML(html: string): string {
 }
 
 // ============================================
-// REMOVE BUILDER ELEMENTS (NEW v3.2)
+// REMOVE BUILDER ELEMENTS (CONSERVATIVE v3.3)
 // ============================================
 function removeBuilderElements(html: string): string {
   let result = html;
   
+  // Only remove small, specific builder elements (limit size to avoid removing content)
   const builderPatterns = [
-    /<a[^>]*class="[^"]*support_fab[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
-    /<div[^>]*class="[^"]*whatsapp-fab[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*float-whatsapp[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="lgpd_consent"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*lgpd[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*cookie-consent[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="cookie-law-info-bar"[^>]*>[\s\S]*?<\/div>/gi,
-    /<dialog[^>]*id="pageModal"[^>]*>[\s\S]*?<\/dialog>/gi,
-    /<div[^>]*id="pageModal"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*popup-overlay[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*modal-backdrop[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="tawk-[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*intercom[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*drift[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*builder-settings[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    /<a[^>]*class="[^"]*support_fab[^"]*"[^>]*>[\s\S]{0,500}?<\/a>/gi,
+    /<div[^>]*id="lgpd_consent"[^>]*>[\s\S]{0,2000}?<\/div>/gi,
+    /<div[^>]*id="cookie-law-info-bar"[^>]*>[\s\S]{0,2000}?<\/div>/gi,
+    /<dialog[^>]*id="pageModal"[^>]*>[\s\S]{0,1000}?<\/dialog>/gi,
   ];
   
   for (const pattern of builderPatterns) {
@@ -273,7 +260,7 @@ function countVideos(html: string): number {
 }
 
 // ============================================
-// REMOVE MANUFACTURER ELEMENTS (EXPANDED v3.2)
+// REMOVE MANUFACTURER ELEMENTS (CONSERVATIVE v3.3)
 // ============================================
 function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; formsRemoved: number; videosPreserved: number } {
   let result = html;
@@ -284,53 +271,35 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
   const videosPreserved = countVideos(html);
   console.log(`🎥 Found ${videosPreserved} videos to preserve`);
   
-  // HEADER PATTERNS (expanded)
+  // HEADER PATTERNS - CONSERVATIVE (only clear header tags, not divs)
   const headerPatterns = [
-    /<header[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/header>)[\s\S]*?<\/header>/gi,
-    /<div[^>]*class="[^"]*(?:site-header|main-header|page-header|header-wrapper)[^"]*"[^>]*>(?![\s\S]*<(?:video|iframe))[\s\S]*?<\/div>/gi,
-    /<nav[^>]*class="[^"]*(?:main-nav|primary-nav|site-nav|header-nav)[^"]*"[^>]*>[\s\S]*?<\/nav>/gi,
-    /<div[^>]*id="(?:masthead|site-header|header)"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="header-outer"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="header-space"[^>]*>[\s\S]*?<\/div>/gi,
+    /<header[^>]*class="[^"]*(?:site-header|main-header)[^"]*"[^>]*>[\s\S]{0,5000}?<\/header>/gi,
+    /<div[^>]*id="header-outer"[^>]*>[\s\S]{0,3000}?<\/div>/gi,
+    /<div[^>]*id="header-space"[^>]*>[\s\S]{0,500}?<\/div>/gi,
   ];
   
-  // FOOTER PATTERNS (expanded)
+  // FOOTER PATTERNS - CONSERVATIVE (only clear footer tags)
   const footerPatterns = [
-    /<footer[^>]*>(?![\s\S]*<(?:video|iframe)[\s\S]*?<\/footer>)[\s\S]*?<\/footer>/gi,
-    /<div[^>]*class="[^"]*(?:site-footer|main-footer|page-footer|footer-wrapper)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="(?:colophon|footer|site-footer)"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*(?:rodape|bottom-bar|footer-bottom)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="nectar_fullscreen_rows"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*id="footer-outer"[^>]*>[\s\S]*?<\/div>/gi,
-    /<div[^>]*class="[^"]*(?:et_pb_section_footer|fusion-footer)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<section[^>]*id="(?:contato|contact|footer)"[^>]*>[\s\S]*?<\/section>/gi,
+    /<footer[^>]*>[\s\S]{0,8000}?<\/footer>/gi,
+    /<div[^>]*id="footer-outer"[^>]*>[\s\S]{0,5000}?<\/div>/gi,
   ];
   
-  // FORM PATTERNS (new)
+  // FORM PATTERNS - ONLY CONTACT/LEAD FORMS (very specific)
   const formPatterns = [
-    /<form[^>]*action=["'][^"']*(?:contato|contact|lead|newsletter|subscribe|cadastro|form)[^"']*["'][^>]*>[\s\S]*?<\/form>/gi,
-    /<form[^>]*class="[^"]*(?:contact|lead|newsletter|subscribe|cadastro|wpcf7)[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
-    /<form[^>]*class="[^"]*rdstation[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
-    /<div[^>]*class="[^"]*rd-form[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<form[^>]*action="[^"]*mailchimp[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
-    /<form[^>]*id="mc-embedded-subscribe-form"[^>]*>[\s\S]*?<\/form>/gi,
-    /<section[^>]*class="[^"]*(?:contact|formulario|form-section)[^"]*"[^>]*>[\s\S]*?<\/section>/gi,
-    /<div[^>]*class="[^"]*hbspt-form[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-    /<form[^>]*class="[^"]*elementor-form[^"]*"[^>]*>[\s\S]*?<\/form>/gi,
+    /<form[^>]*class="[^"]*(?:wpcf7-form|contact-form)[^"]*"[^>]*>[\s\S]{0,3000}?<\/form>/gi,
+    /<form[^>]*id="(?:contactForm|leadForm)"[^>]*>[\s\S]{0,3000}?<\/form>/gi,
   ];
   
   for (const pattern of headerPatterns) {
-    if (pattern.test(result)) {
-      result = result.replace(pattern, '<!-- HEADER REMOVED -->');
-      headerRemoved = true;
-    }
+    const before = result;
+    result = result.replace(pattern, '<!-- HEADER REMOVED -->');
+    if (result !== before) headerRemoved = true;
   }
   
   for (const pattern of footerPatterns) {
-    if (pattern.test(result)) {
-      result = result.replace(pattern, '<!-- FOOTER REMOVED -->');
-      footerRemoved = true;
-    }
+    const before = result;
+    result = result.replace(pattern, '<!-- FOOTER REMOVED -->');
+    if (result !== before) footerRemoved = true;
   }
   
   for (const pattern of formPatterns) {
@@ -341,7 +310,7 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
     }
   }
   
-  console.log(`✅ Removed ${formsRemoved} manufacturer forms`);
+  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, forms: ${formsRemoved})`);
   return { html: result, headerRemoved, footerRemoved, formsRemoved, videosPreserved };
 }
 
