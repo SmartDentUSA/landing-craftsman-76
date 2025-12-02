@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2, Menu } from "lucide-react";
+import { Loader2, Save, Building2, Video, Instagram, Youtube, Search, Plus, Trash2, Activity, Globe, Target, Zap, Calendar, CheckCircle2, Menu, User, Clock, MapPin } from "lucide-react";
 import { VideoSection } from "./VideoSection";
 import { ReviewsSection } from "./ReviewsSection";
 import { useCompanyVideos } from "@/hooks/useCompanyVideos";
@@ -127,6 +127,37 @@ interface CompanyProfile {
       social_links: Array<{ platform: string; href: string; icon_src: string; icon_alt: string }>;
     };
   };
+  
+  // ✨ NOVOS CAMPOS ENTERPRISE GEO
+  latitude?: number;
+  longitude?: number;
+  
+  // Fundador
+  founder_name?: string;
+  founder_title?: string;
+  founder_linkedin?: string;
+  
+  // LocalBusiness
+  opening_hours?: Array<{
+    dayOfWeek: string[];
+    opens: string;
+    closes: string;
+  }>;
+  price_range?: string;
+  
+  // Áreas de atuação
+  areas_served?: Array<{
+    type: string;
+    name: string;
+    country?: string;
+    state?: string;
+  }>;
+  
+  // Dados jurídicos/empresa
+  legal_name?: string;
+  tax_id?: string;
+  duns_number?: string;
+  number_of_employees?: string;
 }
 
 interface CompanyProfileManagerProps {
@@ -193,7 +224,21 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
         links: [],
         social_links: []
       }
-    }
+    },
+    
+    // ✨ NOVOS CAMPOS ENTERPRISE GEO
+    latitude: undefined,
+    longitude: undefined,
+    founder_name: '',
+    founder_title: '',
+    founder_linkedin: '',
+    opening_hours: [],
+    price_range: '',
+    areas_served: [],
+    legal_name: '',
+    tax_id: '',
+    duns_number: '',
+    number_of_employees: '',
   });
   
   const [loading, setLoading] = useState(true);
@@ -298,6 +343,20 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
             navigation_menu: [],
             footer: { title: '', locations: [], links: [], social_links: [] }
           },
+          
+          // ✨ NOVOS CAMPOS ENTERPRISE GEO
+          latitude: (data as any).latitude || undefined,
+          longitude: (data as any).longitude || undefined,
+          founder_name: (data as any).founder_name || '',
+          founder_title: (data as any).founder_title || '',
+          founder_linkedin: (data as any).founder_linkedin || '',
+          opening_hours: (data as any).opening_hours || [],
+          price_range: (data as any).price_range || '',
+          areas_served: (data as any).areas_served || [],
+          legal_name: (data as any).legal_name || '',
+          tax_id: (data as any).tax_id || '',
+          duns_number: (data as any).duns_number || '',
+          number_of_employees: (data as any).number_of_employees || '',
         });
       } else {
         setProfile(prev => ({ ...prev, user_id: user.id }));
@@ -379,6 +438,20 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
           
           // ✨ NOVO: Salvar navigation_footer_config
           navigation_footer_config: profile.navigation_footer_config || null,
+          
+          // ✨ NOVOS CAMPOS ENTERPRISE GEO
+          latitude: profile.latitude || null,
+          longitude: profile.longitude || null,
+          founder_name: profile.founder_name,
+          founder_title: profile.founder_title,
+          founder_linkedin: profile.founder_linkedin,
+          opening_hours: profile.opening_hours || [],
+          price_range: profile.price_range,
+          areas_served: profile.areas_served || [],
+          legal_name: profile.legal_name,
+          tax_id: profile.tax_id,
+          duns_number: profile.duns_number,
+          number_of_employees: profile.number_of_employees,
           
           updated_at: new Date().toISOString()
         };
@@ -705,6 +778,93 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                   ℹ️ O campo "Localização" será gerado automaticamente combinando estes dados para uso interno do sistema.
                 </span>
               </div>
+              
+              {/* ✨ GeoCoordinates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Label htmlFor="latitude">
+                    Latitude
+                    <span className="text-xs text-red-500 ml-2">⭐ GeoCoordinates</span>
+                  </Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="0.000001"
+                    value={profile.latitude || ''}
+                    onChange={(e) => setProfile(prev => ({
+                      ...prev, 
+                      latitude: e.target.value ? parseFloat(e.target.value) : undefined
+                    }))}
+                    placeholder="-22.0087"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="longitude">Longitude</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="0.000001"
+                    value={profile.longitude || ''}
+                    onChange={(e) => setProfile(prev => ({
+                      ...prev, 
+                      longitude: e.target.value ? parseFloat(e.target.value) : undefined
+                    }))}
+                    placeholder="-47.8909"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                💡 Dica: Busque no Google Maps, clique com botão direito e copie as coordenadas.
+              </p>
+            </div>
+
+            {/* ✨ NOVA SEÇÃO: Fundador */}
+            <div className="space-y-4 border-t pt-6 mt-6">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Fundador / CEO
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Informações do fundador usadas em Schema.org Person e autoridade de marca
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="founder_name">
+                    Nome do Fundador
+                    <span className="text-xs text-red-500 ml-2">⭐ Schema.org</span>
+                  </Label>
+                  <Input
+                    id="founder_name"
+                    value={profile.founder_name || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, founder_name: e.target.value}))}
+                    placeholder="João da Silva"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="founder_title">Cargo</Label>
+                  <Input
+                    id="founder_title"
+                    value={profile.founder_title || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, founder_title: e.target.value}))}
+                    placeholder="CEO & Fundador"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="founder_linkedin">LinkedIn do Fundador</Label>
+                  <Input
+                    id="founder_linkedin"
+                    type="url"
+                    value={profile.founder_linkedin || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, founder_linkedin: e.target.value}))}
+                    placeholder="https://linkedin.com/in/joaodasilva"
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -870,6 +1030,234 @@ export function CompanyProfileManager({ onProfileChange, className }: CompanyPro
                     placeholder="Ex: 10-50 funcionários, 100+"
                   />
                 </div>
+              </div>
+
+              {/* ✨ Razão Social e Identificação */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Label htmlFor="legal_name">Razão Social</Label>
+                  <Input
+                    id="legal_name"
+                    value={profile.legal_name || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, legal_name: e.target.value}))}
+                    placeholder="Empresa LTDA"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="number_of_employees">
+                    Número de Funcionários
+                    <span className="text-xs text-red-500 ml-2">⭐ Schema.org</span>
+                  </Label>
+                  <Input
+                    id="number_of_employees"
+                    value={profile.number_of_employees || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, number_of_employees: e.target.value}))}
+                    placeholder="11-50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Formatos: "11-50", "51-200", "201-500", etc.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div>
+                  <Label htmlFor="tax_id">CNPJ</Label>
+                  <Input
+                    id="tax_id"
+                    value={profile.tax_id || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 14);
+                      const formatted = value.replace(
+                        /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+                        '$1.$2.$3/$4-$5'
+                      );
+                      setProfile(prev => ({...prev, tax_id: formatted || value}));
+                    }}
+                    placeholder="00.000.000/0001-00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="duns_number">DUNS Number (Opcional)</Label>
+                  <Input
+                    id="duns_number"
+                    value={profile.duns_number || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, duns_number: e.target.value}))}
+                    placeholder="00-000-0000"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Identificador único internacional D&B
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="price_range">Faixa de Preço</Label>
+                  <select
+                    id="price_range"
+                    value={profile.price_range || ''}
+                    onChange={(e) => setProfile(prev => ({...prev, price_range: e.target.value}))}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="$">$ (Econômico)</option>
+                    <option value="$$">$$ (Moderado)</option>
+                    <option value="$$$">$$$ (Premium)</option>
+                    <option value="$$$$">$$$$ (Luxo)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* ✨ Horário de Funcionamento */}
+              <div className="space-y-4 border-t pt-6 mt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Horário de Funcionamento
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Usado em Schema.org LocalBusiness e Google My Business
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setProfile(prev => ({
+                        ...prev,
+                        opening_hours: [
+                          ...(prev.opening_hours || []),
+                          { dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '08:00', closes: '18:00' }
+                        ]
+                      }));
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Horário
+                  </Button>
+                </div>
+
+                {(profile.opening_hours || []).map((hour, index) => (
+                  <div key={index} className="flex items-start gap-4 p-3 border rounded-md">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Dias da Semana</Label>
+                        <Input
+                          value={(hour.dayOfWeek || []).join(', ')}
+                          onChange={(e) => {
+                            const newHours = [...(profile.opening_hours || [])];
+                            newHours[index] = { ...newHours[index], dayOfWeek: e.target.value.split(',').map(s => s.trim()) };
+                            setProfile(prev => ({...prev, opening_hours: newHours}));
+                          }}
+                          placeholder="Monday, Tuesday, Wednesday..."
+                        />
+                      </div>
+                      <div>
+                        <Label>Abertura</Label>
+                        <Input
+                          type="time"
+                          value={hour.opens || '08:00'}
+                          onChange={(e) => {
+                            const newHours = [...(profile.opening_hours || [])];
+                            newHours[index] = { ...newHours[index], opens: e.target.value };
+                            setProfile(prev => ({...prev, opening_hours: newHours}));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label>Fechamento</Label>
+                        <Input
+                          type="time"
+                          value={hour.closes || '18:00'}
+                          onChange={(e) => {
+                            const newHours = [...(profile.opening_hours || [])];
+                            newHours[index] = { ...newHours[index], closes: e.target.value };
+                            setProfile(prev => ({...prev, opening_hours: newHours}));
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newHours = (profile.opening_hours || []).filter((_, i) => i !== index);
+                        setProfile(prev => ({...prev, opening_hours: newHours}));
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* ✨ Áreas de Atuação */}
+              <div className="space-y-4 border-t pt-6 mt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Áreas de Atuação (areaServed)
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Países, estados ou cidades onde a empresa atua - usado para SEO local e GEO
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setProfile(prev => ({
+                        ...prev,
+                        areas_served: [...(prev.areas_served || []), { type: 'Country', name: '' }]
+                      }));
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Área
+                  </Button>
+                </div>
+
+                {(profile.areas_served || []).map((area, index) => (
+                  <div key={index} className="flex items-center gap-4 p-3 border rounded-md">
+                    <select
+                      value={area.type}
+                      onChange={(e) => {
+                        const newAreas = [...(profile.areas_served || [])];
+                        newAreas[index] = { ...newAreas[index], type: e.target.value };
+                        setProfile(prev => ({...prev, areas_served: newAreas}));
+                      }}
+                      className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    >
+                      <option value="Country">País</option>
+                      <option value="State">Estado</option>
+                      <option value="City">Cidade</option>
+                    </select>
+                    <Input
+                      value={area.name}
+                      onChange={(e) => {
+                        const newAreas = [...(profile.areas_served || [])];
+                        newAreas[index] = { ...newAreas[index], name: e.target.value };
+                        setProfile(prev => ({...prev, areas_served: newAreas}));
+                      }}
+                      placeholder={area.type === 'Country' ? 'Brasil' : area.type === 'State' ? 'São Paulo' : 'São Carlos'}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newAreas = (profile.areas_served || []).filter((_, i) => i !== index);
+                        setProfile(prev => ({...prev, areas_served: newAreas}));
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
               </div>
 
               <div>
