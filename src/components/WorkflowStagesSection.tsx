@@ -152,17 +152,21 @@ export function WorkflowStagesSection({ workflowStages, onChange, currentProduct
                       <div className="font-semibold">{stage.label}</div>
                       <div className="text-sm text-muted-foreground">{stage.description}</div>
                     </div>
-                    <Switch
-                      checked={stageData.applicable}
+                    <div 
                       onClick={(e) => e.stopPropagation()}
-                      onCheckedChange={(checked) => {
-                        handleStageChange(stage.key, 'applicable', checked);
-                        if (!checked) {
-                          handleStageChange(stage.key, 'role', null);
-                          handleStageChange(stage.key, 'description', null);
-                        }
-                      }}
-                    />
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <Switch
+                        checked={stageData.applicable}
+                        onCheckedChange={(checked) => {
+                          handleStageChange(stage.key, 'applicable', checked);
+                          if (!checked) {
+                            handleStageChange(stage.key, 'role', null);
+                            handleStageChange(stage.key, 'description', null);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </AccordionTrigger>
                 
