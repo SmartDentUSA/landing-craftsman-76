@@ -7,18 +7,37 @@ const corsHeaders = {
   "Content-Type": "application/json; charset=utf-8",
 };
 
-// Deep merge utility for JSON-like objects
+// Deep merge utility for JSON-like objects with array protection
 function isObject(item: any) {
   return item && typeof item === "object" && !Array.isArray(item);
 }
 
-function deepMerge<T extends Record<string, any>>(target: T, source: T): T {
+/**
+ * Deep merge with protection against replacing non-empty arrays with empty ones
+ */
+function deepMerge<T extends Record<string, any>>(
+  target: T, 
+  source: T, 
+  protectArrays = true
+): T {
   const output = { ...target } as T;
   if (isObject(target) && isObject(source)) {
     for (const key of Object.keys(source)) {
-      if (isObject(source[key])) {
-        if (!(key in target)) Object.assign(output, { [key]: source[key] });
-        else output[key] = deepMerge(target[key], source[key]);
+      // 🛡️ PROTEÇÃO DE ARRAYS
+      if (Array.isArray(source[key]) && Array.isArray(target[key])) {
+        // Se source é vazio mas target tem dados, preservar target
+        if (protectArrays && source[key].length === 0 && target[key].length > 0) {
+          console.warn(`🛡️ [deepMerge] Protegendo array "${key}" de ser zerado (tinha ${target[key].length} itens)`);
+          // Mantém o valor do target (não copia do source)
+          continue;
+        }
+        output[key] = source[key];
+      } else if (isObject(source[key])) {
+        if (!(key in target)) {
+          Object.assign(output, { [key]: source[key] });
+        } else {
+          output[key] = deepMerge(target[key], source[key], protectArrays);
+        }
       } else {
         output[key] = source[key];
       }
@@ -136,8 +155,27 @@ serve(async (req) => {
     const currentData = (lp.data && typeof lp.data === "object") ? lp.data : {};
     const incomingData = updates.data && typeof updates.data === "object" ? updates.data : undefined;
 
-    // Se overwrite = true, substituir integralmente; senão, fazer merge
-    const finalData = overwrite ? incomingData : (incomingData ? deepMerge(currentData, incomingData) : undefined);
+    // 🛡️ PROTEÇÃO: Log de warning quando arrays críticos estão vazios
+    if (incomingData) {
+      const criticalArrays = [
+        { path: 'animated_banner_section.partners', value: incomingData?.animated_banner_section?.partners },
+        { path: 'desktop_info.table_data', value: incomingData?.desktop_info?.table_data }
+      ];
+      
+      for (const { path, value } of criticalArrays) {
+        if (Array.isArray(value) && value.length === 0) {
+          const currentPath = path.split('.').reduce((obj: any, key) => obj?.[key], currentData);
+          if (Array.isArray(currentPath) && currentPath.length > 0) {
+            console.warn(`⚠️ [CRITICAL] Tentativa de zerar array "${path}" que tinha ${currentPath.length} itens!`);
+          }
+        }
+      }
+    }
+
+    // Se overwrite = true, substituir integralmente; senão, fazer merge com proteção
+    const finalData = overwrite 
+      ? incomingData 
+      : (incomingData ? deepMerge(currentData, incomingData, true) : undefined);
 
     const updatePayload: Record<string, any> = {
       last_modified: new Date().toISOString(),

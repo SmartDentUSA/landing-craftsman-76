@@ -180,6 +180,31 @@ export const useLandingPagesSupabase = () => {
 
       // Lógica de data: overwrite ou merge
       if (updates.data) {
+        // 🛡️ PROTEÇÃO: Verificar se arrays críticos estão sendo zerados
+        const criticalArraysCheck = (dataObj: any, context: string) => {
+          const warnings: string[] = [];
+          
+          if (dataObj?.animated_banner_section?.partners !== undefined) {
+            const partners = dataObj.animated_banner_section.partners;
+            if (Array.isArray(partners) && partners.length === 0) {
+              warnings.push('animated_banner_section.partners');
+            }
+          }
+          
+          if (dataObj?.desktop_info?.table_data !== undefined) {
+            const tableData = dataObj.desktop_info.table_data;
+            if (Array.isArray(tableData) && tableData.length === 0) {
+              warnings.push('desktop_info.table_data');
+            }
+          }
+          
+          if (warnings.length > 0) {
+            console.warn(`⚠️ [Update LP] ATENÇÃO: ${context} - Arrays críticos vazios:`, warnings);
+          }
+        };
+        
+        criticalArraysCheck(updates.data, 'updates.data');
+        
         if (options?.overwrite) {
           // Overwrite: substituir diretamente
           console.log('🔄 [Update LP] Modo OVERWRITE ativado');
