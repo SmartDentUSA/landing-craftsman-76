@@ -1617,93 +1617,125 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       border-radius: 4px;
     }
 
-    .documents-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1rem;
-    }
-
-    .document-card {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+    /* ===== DOCUMENTOS EM LISTA COMPACTA ===== */
+    .documents-list {
       background: var(--card-bg);
-      padding: 1rem 1.25rem;
-      border-radius: 10px;
+      border-radius: 12px;
+      overflow: hidden;
       border: 1px solid #e2e8f0;
-      text-decoration: none;
-      transition: all 0.3s ease;
     }
 
-    .document-card:hover {
-      border-color: var(--accent-tech);
-      box-shadow: 0 8px 25px rgba(238, 122, 62, 0.15);
-      transform: translateY(-2px);
+    .documents-list-header {
+      display: grid;
+      grid-template-columns: 40px 1fr 180px 70px 40px;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #f8fafc;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid #e2e8f0;
     }
 
-    .doc-icon {
-      flex-shrink: 0;
-      width: 48px;
-      height: 48px;
-      display: flex;
+    .documents-list-item {
+      display: grid;
+      grid-template-columns: 40px 1fr 180px 70px 40px;
+      gap: 12px;
+      padding: 12px 16px;
       align-items: center;
-      justify-content: center;
-      background: rgba(238, 122, 62, 0.1);
-      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.2s;
     }
 
-    .doc-icon i {
-      font-size: 24px;
+    .documents-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .documents-list-item:hover {
+      background: rgba(238, 122, 62, 0.04);
+    }
+
+    .documents-list-item .col-icon {
+      font-size: 18px;
       color: var(--accent-tech);
     }
 
-    .doc-info {
-      flex: 1;
-      text-align: left;
+    .documents-list-item .col-name {
+      min-width: 0;
     }
 
-    .doc-info h4 {
-      font-size: 15px;
+    .documents-list-item .col-name strong {
+      display: block;
       font-weight: 600;
+      font-size: 14px;
       color: var(--primary-dark);
-      margin-bottom: 0.25rem;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .doc-info p {
-      font-size: 13px;
-      color: var(--muted);
-      margin: 0;
-    }
-
-    .doc-meta {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 0.5rem;
-    }
-
-    .file-size {
+    .documents-list-item .col-name small {
+      display: block;
       font-size: 12px;
       color: var(--muted);
+      line-height: 1.4;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .download-icon {
-      flex-shrink: 0;
+    .documents-list-item .col-product .product-badge {
+      background: linear-gradient(135deg, rgba(238, 122, 62, 0.1) 0%, rgba(249, 168, 38, 0.1) 100%);
       color: var(--accent-tech);
-      font-size: 18px;
-      opacity: 0.7;
-      transition: opacity 0.2s;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: inline-block;
     }
 
-    .document-card:hover .download-icon {
-      opacity: 1;
+    .documents-list-item .col-size {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .documents-list-item .col-download {
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      transition: color 0.2s;
+    }
+
+    .documents-list-item:hover .col-download {
+      color: var(--accent-tech);
     }
 
     @media (max-width: 768px) {
       .videos-grid {
         grid-template-columns: 1fr;
       }
-      .documents-grid {
-        grid-template-columns: 1fr;
+      .documents-list-header {
+        display: none;
+      }
+      .documents-list-item {
+        grid-template-columns: 36px 1fr 36px;
+        gap: 10px;
+        padding: 14px 12px;
+      }
+      .documents-list-item .col-product,
+      .documents-list-item .col-size {
+        display: none;
       }
       .technical-resources-section h2 {
         font-size: 26px;
@@ -2315,31 +2347,32 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
       <!-- Downloads Técnicos -->
       <div class="documents-gallery">
         <h3><i class="fas fa-file-pdf"></i> Documentação Técnica</h3>
-        <div class="documents-grid">
+        <div class="documents-list">
+          <div class="documents-list-header">
+            <span></span>
+            <span>Documento</span>
+            <span>Produto</span>
+            <span>Tamanho</span>
+            <span></span>
+          </div>
           ${systemBResources!.documents.map((doc, index) => {
             const fileSize = doc.tamanho_bytes > 0 
               ? doc.tamanho_bytes < 1024 * 1024 
                 ? `${(doc.tamanho_bytes / 1024).toFixed(0)} KB`
                 : `${(doc.tamanho_bytes / (1024 * 1024)).toFixed(1)} MB`
-              : '';
+              : '—';
             const fileIcon = (doc.tipo_arquivo || 'pdf') === 'pdf' ? 'fa-file-pdf' : 'fa-file-alt';
             
             return `
-          <a href="${escapeHtml(doc.url_download)}" target="_blank" rel="noopener noreferrer" class="document-card" data-index="${index}">
-            <div class="doc-icon">
-              <i class="fas ${fileIcon}"></i>
-            </div>
-            <div class="doc-info">
-              <h4>${escapeHtml(doc.nome)}</h4>
-              ${doc.descricao ? `<p>${escapeHtml(doc.descricao.substring(0, 80))}${doc.descricao.length > 80 ? '...' : ''}</p>` : ''}
-              <div class="doc-meta">
-                ${fileSize ? `<span class="file-size"><i class="fas fa-hdd"></i> ${fileSize}</span>` : ''}
-                ${doc.produto_correlacionado ? `<span class="product-badge"><i class="fas fa-box"></i> ${escapeHtml(doc.produto_correlacionado.nome)}</span>` : ''}
-              </div>
-            </div>
-            <div class="download-icon">
-              <i class="fas fa-download"></i>
-            </div>
+          <a href="${escapeHtml(doc.url_download)}" target="_blank" rel="noopener noreferrer" class="documents-list-item" data-index="${index}">
+            <span class="col-icon"><i class="fas ${fileIcon}"></i></span>
+            <span class="col-name">
+              <strong>${escapeHtml(doc.nome)}</strong>
+              ${doc.descricao ? `<small>${escapeHtml(doc.descricao.substring(0, 60))}${doc.descricao.length > 60 ? '...' : ''}</small>` : ''}
+            </span>
+            <span class="col-product">${doc.produto_correlacionado ? `<span class="product-badge">${escapeHtml(doc.produto_correlacionado.nome)}</span>` : '—'}</span>
+            <span class="col-size">${fileSize}</span>
+            <span class="col-download"><i class="fas fa-download"></i></span>
           </a>
             `;
           }).join('')}
