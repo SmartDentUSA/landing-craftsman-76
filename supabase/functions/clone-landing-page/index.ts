@@ -665,9 +665,9 @@ function injectPremiumCSS(): string {
 
       /* ===== FOOTER - LAYOUT IGUAL IMAGEM DE REFERÊNCIA ===== */
       footer {
-        background: #2d2d2d;
-        padding: 3rem 0 0;
-        color: #ccc;
+        background: #2d2d2d !important;
+        padding: 3rem 0 0 !important;
+        color: #ccc !important;
       }
 
       .footer-columns {
