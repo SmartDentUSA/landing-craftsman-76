@@ -5,6 +5,8 @@ import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusiness
 import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 // ✅ FASE 3: Person Schema para E-E-A-T
 import { fetchKOLData, generatePersonSchema, createAuthorReference, generatePersonMicrodataHTML, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
+// ✅ FASE 6: FAQ Schema Helper centralizado
+import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -737,9 +739,22 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
       console.log(`✅ [Blog Post] Person Schema (E-E-A-T) gerado para ${currentAuthorData?.full_name}`);
     }
 
+    // ✅ FASE 6: Gerar FAQPage Schema se o produto tiver FAQs
+    let faqSchema = null;
+    if (productData?.faq && Array.isArray(productData.faq) && productData.faq.length > 0) {
+      faqSchema = generateFAQPageSchema(productData.faq as FAQItem[], {
+        minFaqCount: 2,
+        minAnswerLength: 50,
+        stripHtml: true
+      });
+      if (faqSchema) {
+        console.log(`✅ [Blog Post] FAQPage Schema gerado com ${productData.faq.length} perguntas`);
+      }
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema].filter(Boolean)
     };
   }
 

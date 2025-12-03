@@ -10,6 +10,8 @@ import { generateVideoObjectSchemas, generateDocumentSchemas, type SystemBEnrich
 import { generateHowToSchema, type ProductWithWorkflow } from '../_shared/howto-schema-helper.ts';
 // ✅ FASE 3: Person Schema para E-E-A-T
 import { generatePersonSchema, type PersonSchemaData } from '../_shared/person-schema-helper.ts';
+// ✅ FASE 6: FAQ Schema Helper centralizado
+import { generateFAQPageSchema, type FAQItem } from '../_shared/faq-schema-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -232,19 +234,17 @@ products.forEach(product => {
     schemas.push(productSchema);
   });
 
-  // 5. FAQPage Schema
+  // ✅ FASE 6: FAQPage Schema usando helper centralizado
   if (faqs && faqs.length > 0) {
-    schemas.push({
-      '@type': 'FAQPage',
-      mainEntity: faqs.map(faq => ({
-        '@type': 'Question',
-        name: faq.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: faq.answer
-        }
-      }))
+    const faqSchema = generateFAQPageSchema(faqs as FAQItem[], {
+      minFaqCount: 2,
+      minAnswerLength: 20,
+      stripHtml: true
     });
+    if (faqSchema) {
+      schemas.push(faqSchema);
+      console.log(`✅ [SCHEMA] FAQPage Schema gerado com ${faqs.length} perguntas`);
+    }
   }
 
   // 6. Review Schemas (success cases)
