@@ -1417,11 +1417,14 @@ serve(async (req) => {
     
     console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
     
-    // Fetch company data
+    // Fetch company data - buscar registro com dados completos (não o vazio)
     const { data: companyData } = await supabase
       .from('company_profile')
       .select('*')
-      .single();
+      .not('contact_phone', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     
     // Use SMART_DENT_DATA as fallback
     const finalCompanyData = companyData || SMART_DENT_DATA;
