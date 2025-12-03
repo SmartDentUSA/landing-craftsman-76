@@ -14,6 +14,7 @@ import { generatePersonSchema, type PersonSchemaData } from '../_shared/person-s
 import { generateFAQPageSchema, type FAQItem } from '../_shared/faq-schema-helper.ts';
 // ✅ FASE 7: ItemList Schema Helper centralizado
 import { generateProductItemListSchema, convertToItemListProducts, type ItemListProduct } from '../_shared/itemlist-schema-helper.ts';
+// ✅ FASE 8: Video Schema Helper - re-export do systemBIntegration usa este helper
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA

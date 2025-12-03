@@ -9,6 +9,8 @@ import { fetchKOLData, generatePersonSchema, createAuthorReference, generatePers
 import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helper.ts";
 // ✅ FASE 7: ItemList Schema Helper centralizado
 import { generateProductItemListSchema, convertToItemListProducts } from "../_shared/itemlist-schema-helper.ts";
+// ✅ FASE 8: Video Schema Helper centralizado
+import { generateProductVideoSchemas, generateBlogVideoSchema, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -769,9 +771,39 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
       }
     }
 
+    // ✅ FASE 8: Gerar VideoObject Schemas
+    let videoSchemas: any[] = [];
+    
+    // 1. Vídeo do blog post (se existir youtube_video_url)
+    if (blogPost.youtube_video_url) {
+      const blogVideoSchema = generateBlogVideoSchema(blogPost.youtube_video_url, blogPost.title, {
+        creatorName: currentLocalBusinessData.company_name,
+        creatorUrl: currentLocalBusinessData.website_url
+      });
+      if (blogVideoSchema) {
+        videoSchemas.push(blogVideoSchema);
+        console.log(`✅ [Blog Post] VideoObject Schema gerado para vídeo do blog`);
+      }
+    }
+    
+    // 2. Vídeos do produto relacionado (se existir)
+    if (productData) {
+      const productVideoSchemas = generateProductVideoSchemas(productData, {
+        maxVideos: 3,
+        includeTranscript: true,
+        includeAboutProduct: true,
+        creatorName: currentLocalBusinessData.company_name,
+        creatorUrl: currentLocalBusinessData.website_url
+      });
+      if (productVideoSchemas.length > 0) {
+        videoSchemas.push(...productVideoSchemas);
+        console.log(`✅ [Blog Post] ${productVideoSchemas.length} VideoObject Schemas gerados para produto ${productData.name}`);
+      }
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, ...videoSchemas].filter(Boolean)
     };
   }
 

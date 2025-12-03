@@ -8,6 +8,8 @@ import { generateHowToSchema, generateHowToMicrodataHTML, type ProductWithWorkfl
 import { generateFAQPageSchemaString, type FAQItem } from "../_shared/faq-schema-helper.ts";
 // ✅ FASE 7: ItemList Schema Helper centralizado
 import { generateProductItemListSchemaString, convertToItemListProducts } from "../_shared/itemlist-schema-helper.ts";
+// ✅ FASE 8: Video Schema Helper centralizado
+import { generateProductVideoSchemas, generateVideoItemListSchema, extractProductVideos } from "../_shared/video-schema-helper.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1339,6 +1341,28 @@ function generateProductSchema(product: any): string {
   if (itemListSchema) {
     console.log(`✅ [E-commerce] ItemList Schema gerado para ${product.name}`);
   }
+
+  // ✅ FASE 8: Gerar VideoObject Schemas para vídeos do produto
+  const productVideos = extractProductVideos(product, { maxVideos: 4 });
+  const videoSchemas = generateProductVideoSchemas(product, {
+    maxVideos: 4,
+    includeTranscript: true,
+    includeAboutProduct: true,
+    creatorName: currentLocalBusinessData.company_name,
+    creatorUrl: currentLocalBusinessData.website_url
+  });
+  
+  // Gerar VideoGallery ItemList se houver múltiplos vídeos
+  const videoGallerySchema = productVideos.length > 1 
+    ? generateVideoItemListSchema(productVideos, `Vídeos: ${product.name}`)
+    : null;
+
+  if (videoSchemas.length > 0) {
+    console.log(`✅ [E-commerce] ${videoSchemas.length} VideoObject Schemas gerados para ${product.name}`);
+  }
+  if (videoGallerySchema) {
+    console.log(`✅ [E-commerce] VideoGallery ItemList gerado com ${productVideos.length} vídeos`);
+  }
   
   const schema: any = {
     "@context": "https://schema.org",
@@ -1365,7 +1389,9 @@ function generateProductSchema(product: any): string {
       },
       localBusinessSchema,
       howToSchema, // ✅ FASE 4: Adicionar HowTo ao @graph
-      itemListSchema // ✅ FASE 7: Adicionar ItemList ao @graph
+      itemListSchema, // ✅ FASE 7: Adicionar ItemList ao @graph
+      ...videoSchemas, // ✅ FASE 8: Adicionar VideoObjects ao @graph
+      videoGallerySchema // ✅ FASE 8: Adicionar VideoGallery ao @graph
     ].filter(Boolean) // Remove nulls
   };
   
