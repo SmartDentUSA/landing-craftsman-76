@@ -232,49 +232,45 @@ function normalizeYouTubeVideos(html: string): { html: string; videosFixed: numb
 function convertElementorVideosToIframes(html: string): { html: string; videosConverted: number } {
   let videosConverted = 0;
   let result = html;
-  
-  // Extract video ID from any YouTube URL format
-  const extractYouTubeId = (url: string): string | null => {
-    const patterns = [
-      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-      /youtube-nocookie\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
-    }
-    return null;
-  };
-  
-  // Collect all YouTube video IDs from data-settings (não modifica nada ainda)
   const videoIds: string[] = [];
-  const dataSettingsRegex = /data-settings=["']([^"']*youtube_url[^"']*)["']/gi;
   
-  let match;
-  while ((match = dataSettingsRegex.exec(html)) !== null) {
-    try {
-      const decoded = match[1]
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&#039;/g, "'")
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>');
-      const obj = JSON.parse(decoded);
-      if (obj.youtube_url) {
-        const videoId = extractYouTubeId(obj.youtube_url);
-        if (videoId && !videoIds.includes(videoId)) {
-          videoIds.push(videoId);
-          console.log(`🎬 Found Elementor video: ${videoId}`);
-        }
+  // DEBUG: Log inicial
+  console.log(`🔍 [Elementor] Searching for videos in HTML (${html.length} chars)`);
+  console.log(`🔍 [Elementor] Contains 'youtube_url': ${html.includes('youtube_url')}`);
+  console.log(`🔍 [Elementor] Contains 'youtu.be': ${html.includes('youtu.be')}`);
+  console.log(`🔍 [Elementor] Contains 'youtube.com': ${html.includes('youtube.com')}`);
+  
+  // REGEX SIMPLIFICADA: buscar diretamente youtube_url seguido do video ID
+  // Captura IDs diretamente de padrões como:
+  // youtube_url&quot;:&quot;https:\/\/youtu.be\/VIDEOID
+  // youtube_url":"https://youtu.be/VIDEOID
+  // youtube_url&quot;:&quot;https:\\\/\\\/youtu.be\\\/VIDEOID
+  const youtubePatterns = [
+    // youtu.be format (most common in Elementor)
+    /youtube_url[^a-zA-Z0-9]*https?[^a-zA-Z0-9]+youtu\.be[^a-zA-Z0-9]+([a-zA-Z0-9_-]{11})/gi,
+    // youtube.com/watch?v= format
+    /youtube_url[^a-zA-Z0-9]*https?[^a-zA-Z0-9]+(?:www\.)?youtube\.com[^a-zA-Z0-9]+watch[^a-zA-Z0-9]+v[^a-zA-Z0-9]+([a-zA-Z0-9_-]{11})/gi,
+    // youtube.com/embed/ format
+    /youtube_url[^a-zA-Z0-9]*https?[^a-zA-Z0-9]+(?:www\.)?youtube\.com[^a-zA-Z0-9]+embed[^a-zA-Z0-9]+([a-zA-Z0-9_-]{11})/gi,
+  ];
+  
+  for (const pattern of youtubePatterns) {
+    let match;
+    // Reset lastIndex for global regex
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(html)) !== null) {
+      const videoId = match[1];
+      if (videoId && videoId.length === 11 && !videoIds.includes(videoId)) {
+        videoIds.push(videoId);
+        console.log(`🎬 [Elementor] Found video ID: ${videoId}`);
       }
-    } catch (e) {
-      console.warn('Failed to parse data-settings:', e);
     }
   }
   
+  console.log(`📊 [Elementor] Total videos found: ${videoIds.length}`);
+  
   if (videoIds.length === 0) {
+    console.log(`⚠️ [Elementor] No videos found, returning original HTML`);
     return { html: result, videosConverted: 0 };
   }
   
@@ -308,7 +304,6 @@ function convertElementorVideosToIframes(html: string): { html: string; videosCo
     
     const iframe = `<div class="video-injected-by-clone"><iframe src="${embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" title="YouTube Video"></iframe></div>`;
     
-    // Regex para encontrar o container do vídeo específico pelo ID no data-settings
     // Escapar caracteres especiais do videoId para regex
     const escapedId = videoId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     
@@ -322,7 +317,7 @@ function convertElementorVideosToIframes(html: string): { html: string; videosCo
     if (containerRegex.test(result)) {
       result = result.replace(containerRegex, `$1${iframe}`);
       videosConverted++;
-      console.log(`✅ Iframe injected for video: ${videoId}`);
+      console.log(`✅ [Elementor] Iframe injected for video: ${videoId}`);
     } else {
       // Fallback: procurar qualquer div com esse videoId no data-settings
       const fallbackRegex = new RegExp(
@@ -332,7 +327,9 @@ function convertElementorVideosToIframes(html: string): { html: string; videosCo
       if (fallbackRegex.test(result)) {
         result = result.replace(fallbackRegex, `$1${iframe}`);
         videosConverted++;
-        console.log(`✅ Iframe injected (fallback) for video: ${videoId}`);
+        console.log(`✅ [Elementor] Iframe injected (fallback) for video: ${videoId}`);
+      } else {
+        console.log(`⚠️ [Elementor] Container not found for video: ${videoId}, will use body fallback`);
       }
     }
   }
@@ -346,12 +343,13 @@ function convertElementorVideosToIframes(html: string): { html: string; videosCo
     
     result = result.replace('</body>', `${fallbackIframes}</body>`);
     videosConverted = videoIds.length;
-    console.log(`✅ ${videoIds.length} iframes added as fallback before </body>`);
+    console.log(`✅ [Elementor] ${videoIds.length} iframes added as fallback before </body>`);
   }
   
   // Injetar CSS no head
   result = result.replace('</head>', `${cssHide}</head>`);
   
+  console.log(`🎉 [Elementor] Conversion complete: ${videosConverted} videos converted`);
   return { html: result, videosConverted };
 }
 
