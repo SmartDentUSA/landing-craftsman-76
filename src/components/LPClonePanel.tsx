@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Code, Copy, Download, Eye, Image, CheckCircle, 
   XCircle, Loader2, FileCode, Trash2, ExternalLink, RefreshCw, Save,
-  AlertTriangle, Search, Sparkles, Package, Link2
+  AlertTriangle, Search, Sparkles, Package, Link2, Pencil, X
 } from 'lucide-react';
 import { LPCloneProductSelector, ProductWithSEO } from './LPCloneProductSelector';
 
@@ -59,6 +59,15 @@ interface ClonedLP {
   status: string;
   created_at: string;
   captured_images: CapturedImage[];
+  original_html?: string;
+  transformed_html?: string;
+  cta_url?: string;
+  seo_config?: {
+    title?: string;
+    description?: string;
+    canonical?: string;
+    keywords?: string;
+  };
 }
 
 
@@ -76,6 +85,10 @@ export const LPClonePanel = () => {
   const [seoKeywords, setSeoKeywords] = useState('');
   
   const [result, setResult] = useState<TransformResult | null>(null);
+  
+  // Editing state
+  const [editingLPId, setEditingLPId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('transform');
   
   // Product selector state (single selection)
   const [selectedProduct, setSelectedProduct] = useState<ProductWithSEO | null>(null);
@@ -137,12 +150,13 @@ export const LPClonePanel = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cloned_landing_pages')
-        .select('id, name, brand, product, status, created_at, captured_images')
+        .select('id, name, brand, product, status, created_at, captured_images, original_html, transformed_html, cta_url, seo_config')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []).map(lp => ({
         ...lp,
-        captured_images: (lp.captured_images as unknown as CapturedImage[]) || []
+        captured_images: (lp.captured_images as unknown as CapturedImage[]) || [],
+        seo_config: (lp.seo_config as unknown as ClonedLP['seo_config']) || {}
       })) as ClonedLP[];
     },
   });
@@ -240,6 +254,105 @@ export const LPClonePanel = () => {
     },
   });
   
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingLPId || !result) throw new Error('Dados inválidos para atualização');
+      
+      const { error } = await supabase
+        .from('cloned_landing_pages')
+        .update({
+          name: name || `LP ${brand} ${product}`,
+          brand,
+          product,
+          original_html: originalHTML,
+          transformed_html: result.html,
+          cta_url: ctaUrl,
+          captured_images: JSON.parse(JSON.stringify(result.capturedImages)),
+          seo_config: {
+            title: seoTitle,
+            description: seoDescription,
+            canonical: seoCanonical,
+            keywords: seoKeywords,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingLPId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('LP atualizada com sucesso!');
+      setEditingLPId(null);
+      queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao atualizar: ${(error as Error).message}`);
+    },
+  });
+  
+  const handleEditLP = (lp: ClonedLP) => {
+    setName(lp.name || '');
+    setBrand(lp.brand || '');
+    setProduct(lp.product || '');
+    setOriginalHTML(lp.original_html || '');
+    setCtaUrl(lp.cta_url || '');
+    
+    if (lp.seo_config) {
+      setSeoTitle(lp.seo_config.title || '');
+      setSeoDescription(lp.seo_config.description || '');
+      setSeoCanonical(lp.seo_config.canonical || '');
+      setSeoKeywords(lp.seo_config.keywords || '');
+    }
+    
+    if (lp.transformed_html) {
+      setResult({
+        success: true,
+        html: lp.transformed_html,
+        capturedImages: lp.captured_images || [],
+        stats: {
+          imagesProcessed: lp.captured_images?.length || 0,
+          imagesFailed: 0,
+          ctasRewritten: 0,
+          cssPreserved: true,
+          headerRemoved: true,
+          footerRemoved: true,
+        },
+      });
+    } else {
+      setResult(null);
+    }
+    
+    setEditingLPId(lp.id);
+    setActiveTab('transform');
+    toast.info(`Editando: ${lp.name}`);
+  };
+  
+  const handleCancelEdit = () => {
+    setEditingLPId(null);
+    setName('');
+    setBrand('');
+    setProduct('');
+    setOriginalHTML('');
+    setCtaUrl('');
+    setSeoTitle('');
+    setSeoDescription('');
+    setSeoCanonical('');
+    setSeoKeywords('');
+    setResult(null);
+    setSelectedProduct(null);
+    toast.info('Edição cancelada');
+  };
+  
+  const handlePreviewSavedLP = (lp: ClonedLP) => {
+    if (lp.transformed_html) {
+      const blob = new Blob([lp.transformed_html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } else {
+      toast.error('LP não possui HTML transformado');
+    }
+  };
+  
   const handleCopyHTML = () => {
     if (result?.html) {
       navigator.clipboard.writeText(result.html);
@@ -270,13 +383,30 @@ export const LPClonePanel = () => {
   
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="transform" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="transform">Transformar</TabsTrigger>
+          <TabsTrigger value="transform">
+            {editingLPId ? '✏️ Editando' : 'Transformar'}
+          </TabsTrigger>
           <TabsTrigger value="library">
             Biblioteca ({savedLPs?.length || 0})
           </TabsTrigger>
         </TabsList>
+        
+        {editingLPId && (
+          <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+            <Pencil className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-amber-800 dark:text-amber-200">
+                Editando: <strong>{name}</strong>
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+                <X className="h-4 w-4 mr-1" />
+                Cancelar Edição
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <TabsContent value="transform" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -693,11 +823,11 @@ export const LPClonePanel = () => {
                         </Button>
                         <Button 
                           size="sm" 
-                          onClick={() => saveMutation.mutate()}
-                          disabled={saveMutation.isPending}
+                          onClick={() => editingLPId ? updateMutation.mutate() : saveMutation.mutate()}
+                          disabled={saveMutation.isPending || updateMutation.isPending}
                         >
                           <Save className="h-4 w-4 mr-2" />
-                          Salvar
+                          {editingLPId ? 'Atualizar' : 'Salvar'}
                         </Button>
                       </div>
                     </CardContent>
@@ -756,6 +886,23 @@ export const LPClonePanel = () => {
                       <span>{new Date(lp.created_at).toLocaleDateString('pt-BR')}</span>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditLP(lp)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      {lp.transformed_html && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreviewSavedLP(lp)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="destructive"
                         size="sm"
