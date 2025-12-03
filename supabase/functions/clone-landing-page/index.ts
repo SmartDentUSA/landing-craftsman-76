@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1172,7 +1173,8 @@ function injectSEO(
   companyData: any, 
   brand: string, 
   product: string,
-  ogImageUrl: string
+  ogImageUrl: string,
+  aggregateRating: AggregateRatingData
 ): string {
   let result = html;
   
@@ -1304,10 +1306,10 @@ function injectSEO(
         },
         "aggregateRating": {
           "@type": "AggregateRating",
-          "ratingValue": "4.8",
-          "reviewCount": 30,
-          "bestRating": 5,
-          "worstRating": 1
+          "ratingValue": aggregateRating.ratingValue,
+          "reviewCount": aggregateRating.reviewCount,
+          "bestRating": aggregateRating.bestRating,
+          "worstRating": aggregateRating.worstRating
         }
       },
       {
@@ -1651,7 +1653,8 @@ async function processLandingPage(
   brand: string,
   product: string,
   supabase: any,
-  companyData: any
+  companyData: any,
+  aggregateRating: AggregateRatingData
 ): Promise<TransformResult> {
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
   const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
@@ -1710,7 +1713,7 @@ async function processLandingPage(
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
   // Step 6: Inject SEO with complete Schema
-  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage);
+  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage, aggregateRating);
   console.log('✅ SEO and Schema.org injected');
   
   // Step 7: Insert Smart Dent header/footer
@@ -1796,6 +1799,21 @@ serve(async (req) => {
     // Use SMART_DENT_DATA as fallback
     const finalCompanyData = companyData || SMART_DENT_DATA;
     
+    // ✅ FASE 1: Buscar AggregateRating dinâmico com fallback seguro
+    let aggregateRating: AggregateRatingData;
+    try {
+      aggregateRating = await fetchAggregateRating(supabase);
+      console.log(`✅ [Clone LP] AggregateRating dinâmico: ${aggregateRating.ratingValue} (${aggregateRating.reviewCount} reviews)`);
+    } catch (error) {
+      console.error('⚠️ [Clone LP] Erro ao buscar AggregateRating, usando fallback:', error);
+      aggregateRating = {
+        ratingValue: "4.8",
+        reviewCount: 30,
+        bestRating: 5,
+        worstRating: 1
+      };
+    }
+    
     const result = await processLandingPage(
       html,
       ctaUrl,
@@ -1803,7 +1821,8 @@ serve(async (req) => {
       brand,
       product,
       supabase,
-      finalCompanyData
+      finalCompanyData,
+      aggregateRating
     );
     
     return new Response(JSON.stringify({

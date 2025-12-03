@@ -1,10 +1,19 @@
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// ✅ FASE 1: Variável de módulo para AggregateRating dinâmico
+let currentAggregateRating: AggregateRatingData = {
+  ratingValue: "4.8",
+  reviewCount: 30,
+  bestRating: 5,
+  worstRating: 1
 };
 
 interface GenerateEcommerceRequest {
@@ -47,6 +56,23 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+    
+    // ✅ FASE 1: Buscar AggregateRating dinâmico com fallback seguro
+    let aggregateRating: AggregateRatingData;
+    try {
+      aggregateRating = await fetchAggregateRating(supabase);
+      console.log(`✅ [E-commerce] AggregateRating dinâmico: ${aggregateRating.ratingValue} (${aggregateRating.reviewCount} reviews)`);
+    } catch (error) {
+      console.error('⚠️ [E-commerce] Erro ao buscar AggregateRating, usando fallback:', error);
+      aggregateRating = {
+        ratingValue: "4.8",
+        reviewCount: 30,
+        bestRating: 5,
+        worstRating: 1
+      };
+    }
+    // ✅ Atualizar variável de módulo para uso em generateProductSchema
+    currentAggregateRating = aggregateRating;
     
     // 1. Buscar produto
     console.log('🔍 Buscando produto no banco...');
@@ -1283,13 +1309,13 @@ function generateProductSchema(product: any): string {
     };
   }
 
-  // ✅ AggregateRating para Rich Snippets com estrelas no Google
+  // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico)
   schema.aggregateRating = {
     "@type": "AggregateRating",
-    "ratingValue": "4.8",
-    "reviewCount": 30,
-    "bestRating": 5,
-    "worstRating": 1
+    "ratingValue": currentAggregateRating.ratingValue,
+    "reviewCount": currentAggregateRating.reviewCount,
+    "bestRating": currentAggregateRating.bestRating,
+    "worstRating": currentAggregateRating.worstRating
   };
 
   // ✅ FASE 2: Adicionar variações como hasVariant
