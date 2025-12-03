@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
+import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,14 @@ let currentAggregateRating: AggregateRatingData = {
   reviewCount: 30,
   bestRating: 5,
   worstRating: 1
+};
+
+// ✅ FASE 2: Variável de módulo para LocalBusiness
+let currentLocalBusinessData: LocalBusinessData = {
+  company_name: "Smart Dent",
+  website_url: "https://smartdent.com.br",
+  latitude: -23.5505,
+  longitude: -46.6333
 };
 
 serve(async (req) => {
@@ -58,6 +67,14 @@ serve(async (req) => {
     }
     // ✅ Atualizar variável de módulo para uso em generateSchemaLD
     currentAggregateRating = aggregateRating;
+
+    // ✅ FASE 2: Buscar LocalBusiness data para GEO Local SEO
+    try {
+      currentLocalBusinessData = await fetchLocalBusinessData(supabase);
+      console.log(`✅ [Blog Post] LocalBusiness: ${currentLocalBusinessData.company_name} (${currentLocalBusinessData.city}/${currentLocalBusinessData.state})`);
+    } catch (error) {
+      console.error('⚠️ [Blog Post] Erro ao buscar LocalBusiness, usando fallback:', error);
+    }
 
     console.log(`🚀 Iniciando publicação do blog post: ${blog_post_id}`);
 
@@ -671,9 +688,12 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
     (blogSchema as any)["about"] = { "@id": "#product" };
     (blogSchema as any)["mainEntity"] = { "@id": "#product" };
 
+    // ✅ FASE 2: Gerar LocalBusiness Schema
+    const localBusinessSchema = generateLocalBusinessSchema(currentLocalBusinessData);
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema].filter(Boolean)
     };
   }
 
