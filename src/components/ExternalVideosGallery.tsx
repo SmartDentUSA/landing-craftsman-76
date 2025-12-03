@@ -16,6 +16,42 @@ import { toast } from 'sonner';
 
 type FilterType = 'all' | 'products' | 'resins';
 
+// Normaliza URLs do YouTube para formato de embed correto
+function normalizeYouTubeEmbedUrl(url: string): { embedUrl: string; videoId: string | null; watchUrl: string | null } {
+  if (!url) return { embedUrl: url, videoId: null, watchUrl: null };
+  
+  let videoId: string | null = null;
+  
+  // youtube.com/embed/VIDEO_ID ou youtube-nocookie.com/embed/VIDEO_ID
+  if (url.includes('youtube.com/embed/') || url.includes('youtube-nocookie.com/embed/')) {
+    videoId = url.split('/embed/')[1]?.split('?')[0]?.split('&')[0] || null;
+  }
+  // youtube.com/watch?v=VIDEO_ID
+  else if (url.includes('youtube.com/watch')) {
+    try {
+      videoId = new URL(url).searchParams.get('v');
+    } catch { videoId = null; }
+  }
+  // youtu.be/VIDEO_ID
+  else if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0] || null;
+  }
+  // youtube.com/shorts/VIDEO_ID
+  else if (url.includes('youtube.com/shorts/')) {
+    videoId = url.split('/shorts/')[1]?.split('?')[0]?.split('&')[0] || null;
+  }
+  
+  if (videoId) {
+    return {
+      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`,
+      videoId,
+      watchUrl: `https://www.youtube.com/watch?v=${videoId}`
+    };
+  }
+  
+  return { embedUrl: url, videoId: null, watchUrl: null };
+}
+
 export function ExternalVideosGallery() {
   const { data: videos, isLoading, error, refetch } = useExternalVideos();
   const [filter, setFilter] = useState<FilterType>('all');
@@ -218,7 +254,7 @@ export function ExternalVideosGallery() {
               </DialogHeader>
 
               {/* Player */}
-              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden relative">
                 {selectedVideo.video.hls_url ? (
                   <video controls className="w-full h-full">
                     <source src={selectedVideo.video.hls_url} type="application/x-mpegURL" />
@@ -233,14 +269,33 @@ export function ExternalVideosGallery() {
                     ))}
                     Seu navegador não suporta vídeos HTML5.
                   </video>
-                ) : (
-                  <iframe
-                    src={selectedVideo.video.embed_url}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                )}
+                ) : (() => {
+                  const { embedUrl, watchUrl } = normalizeYouTubeEmbedUrl(selectedVideo.video.embed_url);
+                  return (
+                    <>
+                      <iframe
+                        src={embedUrl}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title={selectedVideo.video.titulo}
+                      />
+                      {watchUrl && (
+                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/80 text-center">
+                          <a 
+                            href={watchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-white/80 hover:text-white inline-flex items-center gap-1"
+                          >
+                            Problema com o player? Assistir no YouTube
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Descrição */}
