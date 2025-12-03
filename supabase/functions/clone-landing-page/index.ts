@@ -166,6 +166,66 @@ function countVideos(html: string): number {
 }
 
 // ============================================
+// NORMALIZE YOUTUBE VIDEOS (FIX PLAYBACK)
+// ============================================
+function normalizeYouTubeVideos(html: string): { html: string; videosFixed: number } {
+  let videosFixed = 0;
+  let result = html;
+  
+  // Extract video ID from any YouTube URL format
+  const extractYouTubeId = (url: string): string | null => {
+    const patterns = [
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube-nocookie\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+  
+  // Find all iframes with YouTube URLs and normalize them
+  const iframeRegex = /<iframe([^>]*?)src=["']([^"']*(?:youtube|youtu\.be)[^"']*)["']([^>]*)>/gi;
+  
+  result = result.replace(iframeRegex, (match, before, url, after) => {
+    const videoId = extractYouTubeId(url);
+    if (!videoId) return match;
+    
+    // Build normalized embed URL with privacy-enhanced mode
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
+    
+    // Check and add required attributes
+    let combinedAttrs = (before || '') + (after || '');
+    
+    // Required attributes for YouTube playback
+    const requiredAttrs: Record<string, string> = {
+      'allow': 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+      'allowfullscreen': '',
+      'frameborder': '0',
+      'loading': 'lazy',
+    };
+    
+    let attrsToAdd = '';
+    for (const [attr, value] of Object.entries(requiredAttrs)) {
+      if (!combinedAttrs.toLowerCase().includes(attr.toLowerCase())) {
+        attrsToAdd += value ? ` ${attr}="${value}"` : ` ${attr}`;
+      }
+    }
+    
+    videosFixed++;
+    console.log(`🎬 YouTube video normalized: ${videoId}`);
+    
+    return `<iframe${before}src="${embedUrl}"${after}${attrsToAdd}>`;
+  });
+  
+  return { html: result, videosFixed };
+}
+
+// ============================================
 // REMOVE MANUFACTURER ELEMENTS (preserving videos)
 // ============================================
 function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; videosPreserved: number } {
@@ -1472,6 +1532,11 @@ async function processLandingPage(
   processedHTML = cleanedHTML;
   console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
   
+  // Step 2.5: Normalize YouTube videos (fix playback)
+  const { html: videoNormalizedHTML, videosFixed } = normalizeYouTubeVideos(processedHTML);
+  processedHTML = videoNormalizedHTML;
+  console.log(`✅ ${videosFixed} YouTube videos normalized for playback`);
+  
   // Step 3: Rewrite CTAs
   const { html: ctaHTML, count: ctasRewritten } = rewriteCTAs(processedHTML, ctaUrl);
   processedHTML = ctaHTML;
@@ -1520,6 +1585,7 @@ async function processLandingPage(
     headerRemoved,
     footerRemoved,
     videosPreserved,
+    videosFixed,
   };
   
   const score = calculateScore(stats, finalSEO, finalOgImage);
