@@ -1,9 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// ✅ FASE 1: Variável de módulo para AggregateRating dinâmico
+let currentAggregateRating: AggregateRatingData = {
+  ratingValue: "4.8",
+  reviewCount: 30,
+  bestRating: 5,
+  worstRating: 1
 };
 
 serve(async (req) => {
@@ -32,6 +41,23 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ✅ FASE 1: Buscar AggregateRating dinâmico com fallback seguro
+    let aggregateRating: AggregateRatingData;
+    try {
+      aggregateRating = await fetchAggregateRating(supabase);
+      console.log(`✅ [Blog Post] AggregateRating dinâmico: ${aggregateRating.ratingValue} (${aggregateRating.reviewCount} reviews)`);
+    } catch (error) {
+      console.error('⚠️ [Blog Post] Erro ao buscar AggregateRating, usando fallback:', error);
+      aggregateRating = {
+        ratingValue: "4.8",
+        reviewCount: 30,
+        bestRating: 5,
+        worstRating: 1
+      };
+    }
+    // ✅ Atualizar variável de módulo para uso em generateSchemaLD
+    currentAggregateRating = aggregateRating;
 
     console.log(`🚀 Iniciando publicação do blog post: ${blog_post_id}`);
 
@@ -618,13 +644,13 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
         "availability": "https://schema.org/InStock",
         "itemCondition": "https://schema.org/NewCondition"
       } : undefined,
-      // ✅ AggregateRating para Rich Snippets com estrelas no Google
+      // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico)
       "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "reviewCount": 30,
-        "bestRating": 5,
-        "worstRating": 1
+        "ratingValue": currentAggregateRating.ratingValue,
+        "reviewCount": currentAggregateRating.reviewCount,
+        "bestRating": currentAggregateRating.bestRating,
+        "worstRating": currentAggregateRating.worstRating
       },
       "keywords": productData.keywords?.join(', ') || undefined,
       "additionalProperty": [

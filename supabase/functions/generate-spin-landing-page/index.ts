@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateLandingPageHTML } from "./generateHTML.ts";
 import { fetchSystemBResourcesForProducts } from "./systemBIntegration.ts";
+import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -699,6 +700,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // ✅ FASE 1: Buscar AggregateRating dinâmico com fallback seguro
+    let aggregateRating: AggregateRatingData;
+    try {
+      aggregateRating = await fetchAggregateRating(supabaseClient);
+      console.log(`✅ [SPIN LP] AggregateRating dinâmico: ${aggregateRating.ratingValue} (${aggregateRating.reviewCount} reviews)`);
+    } catch (error) {
+      console.error('⚠️ [SPIN LP] Erro ao buscar AggregateRating, usando fallback:', error);
+      aggregateRating = {
+        ratingValue: "4.8",
+        reviewCount: 30,
+        bestRating: 5,
+        worstRating: 1
+      };
+    }
 
     // Buscar solução SPIN completa
     const { data: solutionRecord, error: solutionError } = await supabaseClient

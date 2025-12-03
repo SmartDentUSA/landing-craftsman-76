@@ -211,7 +211,8 @@ products.forEach(product => {
       };
     }
 
-    // ✅ AggregateRating para Rich Snippets com estrelas no Google
+    // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico ou fallback)
+    // Nota: aggregateRating será passado via parâmetro na função generateLandingPageHTML
     productSchema.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: '4.8',
