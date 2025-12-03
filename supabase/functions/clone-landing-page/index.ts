@@ -209,7 +209,7 @@ function removeManufacturerElements(html: string): { html: string; headerRemoved
 }
 
 // ============================================
-// REWRITE CTAs (v3.0 Enhanced)
+// REWRITE CTAs (v4.0 - TODOS os botões exceto header/footer)
 // ============================================
 function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: number } {
   let count = 0;
@@ -221,52 +221,85 @@ function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: numbe
     if (url.startsWith('#')) return true;
     if (url.startsWith('mailto:') || url.startsWith('tel:')) return true;
     if (/\.(jpg|jpeg|png|gif|svg|webp|avif|css|js|ico|pdf|doc|docx|xls|xlsx)$/i.test(url)) return true;
+    // Skip social media links
+    if (/facebook\.com|twitter\.com|linkedin\.com|instagram\.com|youtube\.com\/(?:channel|user|@)/i.test(url)) return true;
     return false;
   };
+  
+  // Navigation links to skip (header/footer navigation)
+  const navigationTexts = /^\s*(Home|Início|Sobre|About|Blog|Produtos|Products|Serviços|Services|FAQ|Privacidade|Termos|Privacy|Terms|Política|Policy|Contato|Contact|Menu|Loja|Shop|Categorias|Categories)\s*$/i;
   
   // Keywords para CTAs (português e inglês) - EXPANDED
   const ctaKeywordsRegex = 'Comprar|Saiba\\s+mais|Fale\\s+conosco|Contato|Orçamento|WhatsApp|Solicitar|Agendar|Conhecer|Ver\\s+mais|Demonstração|Demo|Experimentar|Testar|Cadastrar|Inscreva|Começar|Iniciar|Assinar|Pedir|Quero|Reserve|Agende|Solicite|Garantir|Aproveitar|Adquirir|Baixar|Download|Buy|Contact|Get|Request|Trial|Start|Sign\\s+up|Subscribe|Order|Book|Schedule|Try|Free|Demo|Learn\\s+more';
   
-  const ctaPatterns = [
-    // 1. Classes específicas de botão (mais abrangente)
-    /(<a[^>]*class="[^"]*(?:btn|button|cta|submit|action|primary|hero|main|elementor-button|wp-block-button|vc_btn|et_pb_button|fusion-button)[^"]*"[^>]*href=")([^"]+)(")/gi,
-    
-    // 2. Texto CTA direto (sem spans)
-    new RegExp(`(<a[^>]*href=")([^"]+)("[^>]*>\\s*(?:${ctaKeywordsRegex})[^<]*<\\/a>)`, 'gi'),
-    
-    // 3. Texto CTA com spans aninhados (NOVO - captura <a><span>CTA</span></a>)
-    new RegExp(`(<a[^>]*href=")([^"]+)("[^>]*>[\\s\\S]*?(?:${ctaKeywordsRegex})[\\s\\S]*?<\\/a>)`, 'gi'),
-    
-    // 4. URLs do WhatsApp
-    /(<a[^>]*href=")(https?:\/\/(?:api\.)?whatsapp\.com[^"]+)(")/gi,
-    
-    // 5. URLs com paths de contato/demo/trial
-    /(<a[^>]*href=")(https?:\/\/[^"]+(?:contato|contact|form|lead|demo|trial|register|signup|cadastro|orcamento)[^"]+)(")/gi,
-    
-    // 6. Textos que terminam com urgência (agora, grátis, aqui, hoje)
-    /(<a[^>]*href=")([^"]+)("[^>]*>[^<]{0,80}(?:agora|grátis|aqui|hoje|now|free|here|today)[^<]*<\/a>)/gi,
-    
-    // 7. Links com textos curtos que parecem CTAs (< 60 chars, sem ser navegação comum)
-    /(<a[^>]*href=")([^"]+)("[^>]*>(?!\s*(?:Home|Início|Sobre|About|Blog|Produtos|Products|Serviços|Services|FAQ|Privacidade|Termos)\s*<)[^<]{1,60}<\/a>)/gi,
-  ];
-  
   // Track URLs already rewritten to avoid double-counting
   const rewrittenUrls = new Set<string>();
   
-  for (const pattern of ctaPatterns) {
+  // ===== FASE 1: Reescrever TODOS os links com classe de botão =====
+  const buttonClassPatterns = [
+    /(<a[^>]*class="[^"]*(?:btn|button|cta|submit|action|primary|hero|main|elementor-button|wp-block-button|vc_btn|et_pb_button|fusion-button|product-btn|buy-btn|shop-btn|order-btn|demo-btn)[^"]*"[^>]*href=")([^"]+)(")/gi,
+    // Role="button" 
+    /(<a[^>]*role="button"[^>]*href=")([^"]+)(")/gi,
+    // Links dentro de elementos com classe btn/button
+    /(<[^>]*class="[^"]*(?:btn|button|cta)[^"]*"[^>]*>[^<]*<a[^>]*href=")([^"]+)(")/gi,
+  ];
+  
+  for (const pattern of buttonClassPatterns) {
     result = result.replace(pattern, (match, before, url, after) => {
       if (shouldSkipUrl(url)) return match;
-      if (rewrittenUrls.has(url)) return `${before}${ctaUrl}${after}`; // Already counted
-      
-      rewrittenUrls.add(url);
-      count++;
+      if (!rewrittenUrls.has(url)) {
+        rewrittenUrls.add(url);
+        count++;
+      }
       return `${before}${ctaUrl}${after}`;
     });
   }
   
-  // 8. Buttons com onclick (NOVO)
+  // ===== FASE 2: Reescrever links com texto de CTA =====
+  const ctaTextPatterns = [
+    // Texto CTA direto
+    new RegExp(`(<a[^>]*href=")([^"]+)("[^>]*>\\s*(?:${ctaKeywordsRegex})[^<]*<\\/a>)`, 'gi'),
+    // Texto CTA com spans aninhados
+    new RegExp(`(<a[^>]*href=")([^"]+)("[^>]*>[\\s\\S]*?(?:${ctaKeywordsRegex})[\\s\\S]*?<\\/a>)`, 'gi'),
+    // Textos com urgência
+    /(<a[^>]*href=")([^"]+)("[^>]*>[^<]{0,100}(?:agora|grátis|aqui|hoje|now|free|here|today)[^<]*<\/a>)/gi,
+  ];
+  
+  for (const pattern of ctaTextPatterns) {
+    result = result.replace(pattern, (match, before, url, after) => {
+      if (shouldSkipUrl(url)) return match;
+      if (!rewrittenUrls.has(url)) {
+        rewrittenUrls.add(url);
+        count++;
+      }
+      return `${before}${ctaUrl}${after}`;
+    });
+  }
+  
+  // ===== FASE 3: URLs específicas (WhatsApp, formulários) =====
+  const specificUrlPatterns = [
+    // URLs do WhatsApp
+    /(<a[^>]*href=")(https?:\/\/(?:api\.)?whatsapp\.com[^"]+)(")/gi,
+    /(<a[^>]*href=")(https?:\/\/wa\.me[^"]+)(")/gi,
+    // URLs com paths de contato/demo/trial
+    /(<a[^>]*href=")(https?:\/\/[^"]+(?:contato|contact|form|lead|demo|trial|register|signup|cadastro|orcamento|quote|request|inquiry)[^"]+)(")/gi,
+  ];
+  
+  for (const pattern of specificUrlPatterns) {
+    result = result.replace(pattern, (match, before, url, after) => {
+      if (shouldSkipUrl(url)) return match;
+      if (!rewrittenUrls.has(url)) {
+        rewrittenUrls.add(url);
+        count++;
+      }
+      return `${before}${ctaUrl}${after}`;
+    });
+  }
+  
+  // ===== FASE 4: Buttons HTML =====
+  // Buttons com onclick para redirecionamento
   result = result.replace(
-    /(<button[^>]*onclick=["'][^"']*(?:location\.href|window\.location)\s*=\s*["']?)([^"']+)(["'])/gi,
+    /(<button[^>]*onclick=["'][^"']*(?:location\.href|window\.location|location\s*=)\s*[='"]*\s*["']?)([^"']+)(["'])/gi,
     (match, before, url, after) => {
       if (shouldSkipUrl(url)) return match;
       if (!rewrittenUrls.has(url)) {
@@ -277,9 +310,32 @@ function rewriteCTAs(html: string, ctaUrl: string): { html: string; count: numbe
     }
   );
   
-  // 9. Elementos com data-href, data-url, data-link (NOVO)
+  // Converter buttons sem ação para links com CTA
   result = result.replace(
-    /(<[^>]+data-(?:href|url|link)=")([^"]+)(")/gi,
+    /<button([^>]*class="[^"]*(?:btn|button|cta|primary|submit|action)[^"]*"[^>]*)>([^<]*(?:Solicitar|Comprar|Agendar|Demo|Contato|Orçamento|WhatsApp|Saiba|Conhecer)[^<]*)<\/button>/gi,
+    (match, attrs, text) => {
+      count++;
+      return `<a href="${ctaUrl}"${attrs} style="display:inline-block;text-decoration:none;">${text}</a>`;
+    }
+  );
+  
+  // ===== FASE 5: Elementos com data attributes =====
+  result = result.replace(
+    /(<[^>]+data-(?:href|url|link|action)=")([^"]+)(")/gi,
+    (match, before, url, after) => {
+      if (shouldSkipUrl(url)) return match;
+      if (!rewrittenUrls.has(url)) {
+        rewrittenUrls.add(url);
+        count++;
+      }
+      return `${before}${ctaUrl}${after}`;
+    }
+  );
+  
+  // ===== FASE 6: Links restantes que parecem CTAs (catch-all) =====
+  // Links com estilos inline de botão
+  result = result.replace(
+    /(<a[^>]*style="[^"]*(?:background|border-radius|padding)[^"]*"[^>]*href=")([^"]+)(")/gi,
     (match, before, url, after) => {
       if (shouldSkipUrl(url)) return match;
       if (!rewrittenUrls.has(url)) {
