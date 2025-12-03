@@ -605,17 +605,24 @@ function injectPremiumCSS(): string {
         max-width: 100vw !important;
       }
 
+      body {
+        padding-top: 80px !important; /* Compensar header fixo */
+      }
+
       .container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 0 2rem;
       }
 
-      /* ===== HEADER STICKY (FIXO NO TOPO) ===== */
+      /* ===== HEADER FIXO NO TOPO (FIXED) ===== */
       .site-header {
-        position: sticky;
+        position: fixed;
         top: 0;
-        z-index: 1000;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 9999;
         background: #fff;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       }
@@ -661,18 +668,28 @@ function injectPremiumCSS(): string {
       }
 
       .footer-columns {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2rem;
         padding-bottom: 2rem;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+      }
+
+      @media (max-width: 992px) {
+        .footer-columns {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .footer-columns {
+          grid-template-columns: 1fr;
+        }
       }
 
       .footer-location,
       .footer-links-column {
-        flex: 1;
-        min-width: 180px;
+        min-width: 0;
       }
 
       .footer-location strong,
