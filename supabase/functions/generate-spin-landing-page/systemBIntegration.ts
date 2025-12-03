@@ -225,41 +225,26 @@ function createEmptyEnrichment(): SystemBEnrichment {
   };
 }
 
+// ✅ FASE 8: Re-exportar do helper centralizado para compatibilidade
+import { 
+  generateSystemBVideoSchemas,
+  type VideoSchemaData,
+  type VideoSchemaOptions 
+} from '../_shared/video-schema-helper.ts';
+
 /**
  * Gera Schema.org VideoObject para vídeos do Sistema B
+ * ✅ FASE 8: Usa helper centralizado
  */
 export function generateVideoObjectSchemas(videos: SystemBVideo[]): any[] {
-  return videos.map(video => {
-    const minutes = Math.floor(video.duracao_segundos / 60);
-    const seconds = video.duracao_segundos % 60;
-
-    const schema: any = {
-      '@type': 'VideoObject',
-      name: video.titulo,
-      description: video.descricao || video.titulo,
-      thumbnailUrl: video.thumbnail,
-      uploadDate: video.criado_em,
-      duration: `PT${minutes}M${seconds}S`,
-      contentUrl: video.embed_url,
-      embedUrl: video.embed_url,
-      inLanguage: 'pt-BR'
-    };
-
-    // Adicionar transcrição se disponível (importante para SGE/GEO)
-    if (video.transcricao) {
-      schema.transcript = video.transcricao;
-    }
-
-    // Adicionar produto relacionado
-    if (video.produto_correlacionado) {
-      schema.about = {
-        '@type': 'Product',
-        name: video.produto_correlacionado.nome,
-        url: video.produto_correlacionado.url_pagina
-      };
-    }
-
-    return schema;
+  // Converter para formato do helper e gerar schemas
+  return generateSystemBVideoSchemas(videos, {
+    includeTranscript: true,
+    includeAboutProduct: true,
+    includeCreator: true,
+    defaultLanguage: 'pt-BR',
+    creatorName: 'Smart Dent',
+    creatorUrl: 'https://smartdent.com.br'
   });
 }
 
