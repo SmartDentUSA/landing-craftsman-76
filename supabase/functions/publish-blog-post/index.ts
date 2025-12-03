@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
+// ✅ FASE 3: Person Schema para E-E-A-T
+import { fetchKOLData, generatePersonSchema, createAuthorReference, generatePersonMicrodataHTML, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +26,9 @@ let currentLocalBusinessData: LocalBusinessData = {
   latitude: -23.5505,
   longitude: -46.6333
 };
+
+// ✅ FASE 3: Variável de módulo para Autor/KOL
+let currentAuthorData: PersonSchemaData | null = null;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -98,6 +103,22 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
+    }
+
+    // ✅ FASE 3: Buscar dados do autor KOL se existir
+    currentAuthorData = null;
+    if (blogPost.author_kol_id) {
+      try {
+        currentAuthorData = await fetchKOLData(supabase, blogPost.author_kol_id, {
+          name: currentLocalBusinessData.company_name,
+          url: currentLocalBusinessData.website_url || 'https://smartdent.com.br'
+        });
+        if (currentAuthorData) {
+          console.log(`✅ [Blog Post] Author KOL: ${currentAuthorData.full_name} (${currentAuthorData.specialty || 'sem especialidade'})`);
+        }
+      } catch (error) {
+        console.error('⚠️ [Blog Post] Erro ao buscar autor KOL:', error);
+      }
     }
 
     // Buscar configurações de publicação mais recentes
@@ -619,18 +640,23 @@ function addCrossLinks(content: string): string {
 }
 
 async function generateSchemaLD(blogPost: any, productData: any = null) {
-  const blogSchema = {
+  // ✅ FASE 3: Usar Person como autor se disponível
+  const authorSchema = currentAuthorData 
+    ? createAuthorReference(currentAuthorData.id)
+    : {
+        "@type": "Organization",
+        "name": "E-Odonto",
+        "url": "https://eodonto.com"
+      };
+
+  const blogSchema: any = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     "headline": blogPost.title,
     "description": blogPost.meta_description,
     "keywords": (blogPost.keywords || []).join(', '),
     "datePublished": new Date().toISOString(),
-    "author": {
-      "@type": "Organization",
-      "name": "E-Odonto",
-      "url": "https://eodonto.com"
-    },
+    "author": authorSchema,
     "publisher": {
       "@type": "Organization",
       "name": "E-Odonto",
@@ -705,9 +731,15 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
       console.log(`✅ [Blog Post] HowTo Schema gerado para ${productData.name}`);
     }
 
+    // ✅ FASE 3: Gerar Person Schema se tiver autor KOL
+    const personSchema = currentAuthorData ? generatePersonSchema(currentAuthorData) : null;
+    if (personSchema) {
+      console.log(`✅ [Blog Post] Person Schema (E-E-A-T) gerado para ${currentAuthorData?.full_name}`);
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema].filter(Boolean)
     };
   }
 

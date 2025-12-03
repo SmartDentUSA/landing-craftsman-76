@@ -8,6 +8,8 @@ import { buildIntelligentLinksMap, applyIntelligentLinks } from '../_shared/inte
 import { generateVideoObjectSchemas, generateDocumentSchemas, type SystemBEnrichment } from './systemBIntegration.ts';
 // ✅ FASE 4: HowTo Schema para workflow_stages
 import { generateHowToSchema, type ProductWithWorkflow } from '../_shared/howto-schema-helper.ts';
+// ✅ FASE 3: Person Schema para E-E-A-T
+import { generatePersonSchema, type PersonSchemaData } from '../_shared/person-schema-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -29,7 +31,8 @@ function generateSPINSchemas(
   company: any,
   faqs: any[],
   successCases: any[],
-  canonicalUrl: string
+  canonicalUrl: string,
+  authorKOL?: PersonSchemaData | null
 ): any[] {
   const schemas: any[] = [];
 
@@ -303,6 +306,13 @@ products.forEach(product => {
   if (howToSchemas.length > 0) {
     schemas.push(...howToSchemas);
     console.log(`✅ [SCHEMA] ${howToSchemas.length} HowTo schemas gerados para produtos com workflow_stages`);
+  }
+
+  // ✅ FASE 3: Person Schema para E-E-A-T (autor/KOL)
+  if (authorKOL) {
+    const personSchema = generatePersonSchema(authorKOL);
+    schemas.push(personSchema);
+    console.log(`✅ [SCHEMA] Person Schema (E-E-A-T) gerado para ${authorKOL.full_name}`);
   }
 
   return schemas;
@@ -708,6 +718,9 @@ export function generateLandingPageHTML(
 
   console.log(`✅ [KEYWORDS] Enriquecidas: base=${baseKeywords.length}, final=${extractedKeywords.length}`);
 
+  // ✅ FASE 3: Extrair authorKOL do aiContent
+  const authorKOL = aiContent?.authorKOL || null;
+
   // Gerar schemas consolidados
   const schemas = generateSPINSchemas(
     solution,
@@ -715,7 +728,8 @@ export function generateLandingPageHTML(
     company,
     faqs,
     successCases,
-    canonicalUrl
+    canonicalUrl,
+    authorKOL // ✅ FASE 3: Passar KOL para Person Schema
   );
 
   // 🔗 INTEGRAÇÃO SISTEMA B: Adicionar VideoObject e DigitalDocument schemas
