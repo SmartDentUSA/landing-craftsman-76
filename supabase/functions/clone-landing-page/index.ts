@@ -715,16 +715,16 @@ function injectPremiumCSS(): string {
       }
 
       .footer-links-column a {
-        color: #aaa;
+        color: #e67e22;
         text-decoration: none;
         font-size: 14px;
         display: block;
         margin: 0.5rem 0;
-        transition: color 0.2s;
+        transition: opacity 0.2s;
       }
 
       .footer-links-column a:hover {
-        color: #e67e22;
+        opacity: 0.8;
       }
 
       /* ===== SEÇÃO REDES SOCIAIS (SEPARADA) ===== */
