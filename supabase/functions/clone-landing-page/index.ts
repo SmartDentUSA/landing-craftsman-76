@@ -3,6 +3,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, fetchProductsWithWorkflow, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
+// ✅ FASE 9: BreadcrumbList Schema Helper centralizado
+import { generateLandingPageBreadcrumbs, slugify as breadcrumbSlugify } from "../_shared/breadcrumb-schema-helper.ts";
+
+// ✅ FASE 9: Wrapper para manter compatibilidade
+function generateLandingPageBreadcrumbsForClone(
+  data: { name: string; brand?: string; canonicalUrl?: string },
+  options: { websiteUrl: string; websiteName?: string }
+): Record<string, any> {
+  return generateLandingPageBreadcrumbs(data, options);
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1314,29 +1324,11 @@ function injectSEO(
           "worstRating": aggregateRating.worstRating
         }
       },
-      {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": websiteUrl
-          },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": brand,
-            "item": `${websiteUrl}/marca/${slugify(brand)}`
-          },
-          {
-            "@type": "ListItem",
-            "position": 3,
-            "name": product,
-            "item": canonical
-          }
-        ]
-      },
+      // ✅ FASE 9: BreadcrumbList via Helper Centralizado
+      generateLandingPageBreadcrumbsForClone(
+        { name: product, brand, canonicalUrl: canonical },
+        { websiteUrl, websiteName: 'Home' }
+      ),
       // ✅ FASE 2: LocalBusiness Schema com GeoCoordinates
       {
         "@type": "LocalBusiness",

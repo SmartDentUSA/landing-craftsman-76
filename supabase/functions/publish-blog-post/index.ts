@@ -11,6 +11,8 @@ import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helpe
 import { generateProductItemListSchema, convertToItemListProducts } from "../_shared/itemlist-schema-helper.ts";
 // ✅ FASE 8: Video Schema Helper centralizado
 import { generateProductVideoSchemas, generateBlogVideoSchema, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
+// ✅ FASE 9: BreadcrumbList Schema Helper centralizado
+import { generateBlogBreadcrumbs, extractBlogBreadcrumbData } from "../_shared/breadcrumb-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -801,9 +803,21 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
       }
     }
 
+    // ✅ FASE 9: Gerar BreadcrumbList Schema para Blog
+    const breadcrumbData = extractBlogBreadcrumbData(blogPost);
+    // Usar categoria do produto se disponível
+    if (productData?.category && !breadcrumbData.category) {
+      breadcrumbData.category = productData.category;
+    }
+    const breadcrumbSchema = generateBlogBreadcrumbs(breadcrumbData, {
+      websiteUrl: 'https://eodonto.com',
+      websiteName: 'Home'
+    });
+    console.log(`✅ [Blog Post] BreadcrumbList Schema gerado: Home → Blog → ${breadcrumbData.category || 'Artigos'} → ${blogPost.title}`);
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, ...videoSchemas].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, breadcrumbSchema, ...videoSchemas].filter(Boolean)
     };
   }
 
