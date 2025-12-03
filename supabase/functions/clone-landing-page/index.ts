@@ -617,14 +617,17 @@ function injectPremiumCSS(): string {
 
       /* ===== HEADER FIXO NO TOPO (FIXED) ===== */
       .site-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        z-index: 9999;
-        background: #fff;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        z-index: 99999 !important;
+        background: #fff !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
       }
 
       .header {
@@ -1210,17 +1213,17 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       ? footerConfig.locations.map((loc: any) => `
           <div class="footer-location">
             <strong>${loc.label || loc.title || company}</strong>
+            ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
             ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
             ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
-            ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
           </div>
         `).join('') 
       : `
           <div class="footer-location">
             <strong>${company}</strong>
+            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
             ${phone ? `<p><i class="fas fa-phone"></i> ${phone}</p>` : ''}
             ${email ? `<p><i class="fas fa-envelope"></i> ${email}</p>` : ''}
-            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
           </div>
         `;
     
@@ -1256,9 +1259,9 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     locationsHtml = `
       <div class="footer-location">
         <strong>${company}</strong>
+        ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
         ${phone ? `<p><i class="fas fa-phone"></i> ${phone}</p>` : ''}
         ${email ? `<p><i class="fas fa-envelope"></i> ${email}</p>` : ''}
-        ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
       </div>
     `;
     
