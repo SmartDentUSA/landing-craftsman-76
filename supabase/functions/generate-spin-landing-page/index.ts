@@ -4,6 +4,7 @@ import { generateLandingPageHTML } from "./generateHTML.ts";
 import { fetchSystemBResourcesForProducts } from "./systemBIntegration.ts";
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
+import { generateHowToSchema, generateMultipleHowToSchemas, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

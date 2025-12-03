@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
+import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -691,9 +692,22 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
     // ✅ FASE 2: Gerar LocalBusiness Schema
     const localBusinessSchema = generateLocalBusinessSchema(currentLocalBusinessData);
 
+    // ✅ FASE 4: Gerar HowTo Schema se o produto tiver workflow_stages
+    const howToSchema = generateHowToSchema(productData as ProductWithWorkflow, {
+      includeSupplies: true,
+      includeTips: true,
+      includeImages: true,
+      companyName: currentLocalBusinessData.company_name,
+      websiteUrl: currentLocalBusinessData.website_url
+    });
+
+    if (howToSchema) {
+      console.log(`✅ [Blog Post] HowTo Schema gerado para ${productData.name}`);
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema].filter(Boolean)
     };
   }
 

@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, generateGeoContextHTML, type LocalBusinessData } from "../_shared/local-business-helper.ts";
+import { generateHowToSchema, generateHowToMicrodataHTML, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1285,10 +1286,23 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Generate Product Schema.org JSON-LD with LocalBusiness
+// Generate Product Schema.org JSON-LD with LocalBusiness and HowTo
 function generateProductSchema(product: any): string {
   // ✅ FASE 2: Gerar LocalBusiness Schema para inclusão
   const localBusinessSchema = generateLocalBusinessSchema(currentLocalBusinessData);
+  
+  // ✅ FASE 4: Gerar HowTo Schema para workflow_stages
+  const howToSchema = generateHowToSchema(product as ProductWithWorkflow, {
+    includeSupplies: true,
+    includeTips: true,
+    includeImages: true,
+    companyName: currentLocalBusinessData.company_name,
+    websiteUrl: currentLocalBusinessData.website_url
+  });
+  
+  if (howToSchema) {
+    console.log(`✅ [E-commerce] HowTo Schema gerado para ${product.name} com ${Object.values(product.workflow_stages || {}).filter((s: any) => s?.applicable).length} etapas`);
+  }
   
   const schema: any = {
     "@context": "https://schema.org",
@@ -1313,30 +1327,31 @@ function generateProductSchema(product: any): string {
           "worstRating": currentAggregateRating.worstRating
         }
       },
-      localBusinessSchema
-    ]
+      localBusinessSchema,
+      howToSchema // ✅ FASE 4: Adicionar HowTo ao @graph
+    ].filter(Boolean) // Remove nulls
   };
   
   const productSchema = schema["@graph"][0];
 
   // Add GTIN if available
   if (product.gtin) {
-    schema.gtin = product.gtin;
+    productSchema.gtin = product.gtin;
   }
 
   // Add MPN if available
   if (product.mpn) {
-    schema.mpn = product.mpn;
+    productSchema.mpn = product.mpn;
   }
 
   // Add category if available
   if (product.category) {
-    schema.category = product.category;
+    productSchema.category = product.category;
   }
 
   // Add offers with price
   if (product.price || product.promo_price) {
-    schema.offers = {
+    productSchema.offers = {
       "@type": "Offer",
       "priceCurrency": product.currency || "BRL",
       "price": (product.promo_price || product.price || 0).toString(),

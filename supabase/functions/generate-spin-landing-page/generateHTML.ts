@@ -6,6 +6,8 @@
 import { buildIntelligentLinksMap, applyIntelligentLinks } from '../_shared/intelligent-links-processor.ts';
 // ✅ INTEGRAÇÃO SISTEMA B: Schemas de vídeos e documentos
 import { generateVideoObjectSchemas, generateDocumentSchemas, type SystemBEnrichment } from './systemBIntegration.ts';
+// ✅ FASE 4: HowTo Schema para workflow_stages
+import { generateHowToSchema, type ProductWithWorkflow } from '../_shared/howto-schema-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -285,6 +287,23 @@ products.forEach(product => {
       }
     ]
   });
+
+  // ✅ FASE 4: HowTo Schemas para produtos com workflow_stages
+  const howToSchemas = products
+    .filter((p: any) => p.workflow_stages && Object.values(p.workflow_stages).some((s: any) => s?.applicable))
+    .map((product: any) => generateHowToSchema(product as ProductWithWorkflow, {
+      includeSupplies: true,
+      includeTips: true,
+      includeImages: true,
+      companyName: sanitizeCompanyName(company?.company_name),
+      websiteUrl: company?.website_url || company?.website || canonicalUrl
+    }))
+    .filter(Boolean);
+
+  if (howToSchemas.length > 0) {
+    schemas.push(...howToSchemas);
+    console.log(`✅ [SCHEMA] ${howToSchemas.length} HowTo schemas gerados para produtos com workflow_stages`);
+  }
 
   return schemas;
 }
