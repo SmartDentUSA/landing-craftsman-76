@@ -4,7 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, generateGeoContextHTML, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, generateHowToMicrodataHTML, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
-
+// ✅ FASE 6: FAQ Schema Helper centralizado
+import { generateFAQPageSchemaString, type FAQItem } from "../_shared/faq-schema-helper.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1382,39 +1383,18 @@ function generateProductSchema(product: any): string {
   return JSON.stringify(schema, null, 2);
 }
 
-// Generate FAQPage Schema.org JSON-LD
+// ✅ FASE 6: Função refatorada para usar helper centralizado
 function generateFAQSchema(product: any): string | null {
-  // Validar se há FAQs ricas suficientes
   if (!product.faq || !Array.isArray(product.faq)) {
     return null;
   }
 
-  const validFaqs = product.faq.filter((faq: any) => 
-    faq.question && 
-    faq.answer && 
-    faq.answer.length > 100 // Apenas FAQs ricas (>100 chars)
-  );
-
-  if (validFaqs.length < 5) {
-    console.log(`⚠️ FAQs insuficientes para Schema.org (${validFaqs.length}/5 mínimo)`);
-    return null;
-  }
-
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": validFaqs.map((faq: any) => ({
-      "@type": "Question",
-      "name": faq.question,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": faq.answer.replace(/<[^>]*>/g, '') // Remove HTML para Schema.org
-      }
-    }))
-  };
-
-  console.log(`✅ Schema FAQPage gerado com ${validFaqs.length} FAQs`);
-  return JSON.stringify(schema, null, 2);
+  // Usa o helper centralizado com opções específicas para e-commerce
+  return generateFAQPageSchemaString(product.faq as FAQItem[], {
+    minAnswerLength: 100,  // Apenas FAQs ricas (>100 chars)
+    minFaqCount: 5,        // Mínimo 5 FAQs para e-commerce
+    stripHtml: true
+  });
 }
 
 // Build SEO Head section with meta tags
