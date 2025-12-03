@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
+import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1334,6 +1335,38 @@ function injectSEO(
             "item": canonical
           }
         ]
+      },
+      // ✅ FASE 2: LocalBusiness Schema com GeoCoordinates
+      {
+        "@type": "LocalBusiness",
+        "@id": `${websiteUrl}/#localbusiness`,
+        "name": company,
+        "url": websiteUrl,
+        "telephone": phone,
+        "email": email,
+        "priceRange": "$$$$",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": streetAddress,
+          "addressLocality": city,
+          "addressRegion": state,
+          "postalCode": postalCode,
+          "addressCountry": country
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": -23.5505,
+          "longitude": -46.6333
+        },
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "opens": "09:00",
+            "closes": "18:00"
+          }
+        ],
+        "sameAs": [instagram, youtube].filter(Boolean)
       }
     ]
   };
@@ -1811,6 +1844,21 @@ serve(async (req) => {
         reviewCount: 30,
         bestRating: 5,
         worstRating: 1
+      };
+    }
+
+    // ✅ FASE 2: Buscar LocalBusiness data para GEO Local SEO
+    let localBusinessData: LocalBusinessData;
+    try {
+      localBusinessData = await fetchLocalBusinessData(supabase);
+      console.log(`✅ [Clone LP] LocalBusiness: ${localBusinessData.company_name} (${localBusinessData.city}/${localBusinessData.state})`);
+    } catch (error) {
+      console.error('⚠️ [Clone LP] Erro ao buscar LocalBusiness, usando fallback:', error);
+      localBusinessData = {
+        company_name: "Smart Dent",
+        website_url: "https://smartdent.com.br",
+        latitude: -23.5505,
+        longitude: -46.6333
       };
     }
     

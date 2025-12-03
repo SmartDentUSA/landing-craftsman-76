@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
+import { fetchLocalBusinessData, generateLocalBusinessSchema, generateGeoContextHTML, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,14 @@ let currentAggregateRating: AggregateRatingData = {
   reviewCount: 30,
   bestRating: 5,
   worstRating: 1
+};
+
+// ✅ FASE 2: Variável de módulo para LocalBusiness
+let currentLocalBusinessData: LocalBusinessData = {
+  company_name: "Smart Dent",
+  website_url: "https://smartdent.com.br",
+  latitude: -23.5505,
+  longitude: -46.6333
 };
 
 interface GenerateEcommerceRequest {
@@ -73,6 +82,14 @@ serve(async (req) => {
     }
     // ✅ Atualizar variável de módulo para uso em generateProductSchema
     currentAggregateRating = aggregateRating;
+
+    // ✅ FASE 2: Buscar LocalBusiness data para GEO Local SEO
+    try {
+      currentLocalBusinessData = await fetchLocalBusinessData(supabase);
+      console.log(`✅ [E-commerce] LocalBusiness: ${currentLocalBusinessData.company_name} (${currentLocalBusinessData.city}/${currentLocalBusinessData.state})`);
+    } catch (error) {
+      console.error('⚠️ [E-commerce] Erro ao buscar LocalBusiness, usando fallback:', error);
+    }
     
     // 1. Buscar produto
     console.log('🔍 Buscando produto no banco...');
@@ -1268,20 +1285,39 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Generate Product Schema.org JSON-LD
+// Generate Product Schema.org JSON-LD with LocalBusiness
 function generateProductSchema(product: any): string {
+  // ✅ FASE 2: Gerar LocalBusiness Schema para inclusão
+  const localBusinessSchema = generateLocalBusinessSchema(currentLocalBusinessData);
+  
   const schema: any = {
     "@context": "https://schema.org",
-    "@type": "Product",
-    "name": product.name,
-    "description": product.description || '',
-    "sku": product.id,
-    "image": product.image_url || (product.images_gallery?.[0] || ''),
-    "brand": {
-      "@type": "Brand",
-      "name": product.brand || "Smartdent"
-    }
+    "@graph": [
+      {
+        "@type": "Product",
+        "@id": "#product",
+        "name": product.name,
+        "description": product.description || '',
+        "sku": product.id,
+        "image": product.image_url || (product.images_gallery?.[0] || ''),
+        "brand": {
+          "@type": "Brand",
+          "name": product.brand || "Smartdent"
+        },
+        // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico)
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": currentAggregateRating.ratingValue,
+          "reviewCount": currentAggregateRating.reviewCount,
+          "bestRating": currentAggregateRating.bestRating,
+          "worstRating": currentAggregateRating.worstRating
+        }
+      },
+      localBusinessSchema
+    ]
   };
+  
+  const productSchema = schema["@graph"][0];
 
   // Add GTIN if available
   if (product.gtin) {
@@ -1309,18 +1345,9 @@ function generateProductSchema(product: any): string {
     };
   }
 
-  // ✅ AggregateRating para Rich Snippets com estrelas no Google (dinâmico)
-  schema.aggregateRating = {
-    "@type": "AggregateRating",
-    "ratingValue": currentAggregateRating.ratingValue,
-    "reviewCount": currentAggregateRating.reviewCount,
-    "bestRating": currentAggregateRating.bestRating,
-    "worstRating": currentAggregateRating.worstRating
-  };
-
   // ✅ FASE 2: Adicionar variações como hasVariant
   if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
-    schema.hasVariant = product.variations.map((v: any) => ({
+    productSchema.hasVariant = product.variations.map((v: any) => ({
       "@type": "Product",
       "name": `${product.name} - ${v.name}`,
       "sku": v.sku || `${product.id}-${v.name.toLowerCase().replace(/\s+/g, '-')}`,

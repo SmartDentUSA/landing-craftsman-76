@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateLandingPageHTML } from "./generateHTML.ts";
 import { fetchSystemBResourcesForProducts } from "./systemBIntegration.ts";
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
+import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -713,6 +714,21 @@ serve(async (req) => {
         reviewCount: 30,
         bestRating: 5,
         worstRating: 1
+      };
+    }
+
+    // ✅ FASE 2: Buscar LocalBusiness data para GEO Local SEO
+    let localBusinessData: LocalBusinessData;
+    try {
+      localBusinessData = await fetchLocalBusinessData(supabaseClient);
+      console.log(`✅ [SPIN LP] LocalBusiness: ${localBusinessData.company_name} (${localBusinessData.city}/${localBusinessData.state})`);
+    } catch (error) {
+      console.error('⚠️ [SPIN LP] Erro ao buscar LocalBusiness, usando fallback:', error);
+      localBusinessData = {
+        company_name: "Smart Dent",
+        website_url: "https://smartdent.com.br",
+        latitude: -23.5505,
+        longitude: -46.6333
       };
     }
 
