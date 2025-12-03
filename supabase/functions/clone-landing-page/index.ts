@@ -227,6 +227,7 @@ function normalizeYouTubeVideos(html: string): { html: string; videosFixed: numb
 
 // ============================================
 // CONVERT ELEMENTOR VIDEO WIDGETS TO REAL IFRAMES
+// (Conservador: injeta iframes SEM substituir HTML original)
 // ============================================
 function convertElementorVideosToIframes(html: string): { html: string; videosConverted: number } {
   let videosConverted = 0;
@@ -247,95 +248,109 @@ function convertElementorVideosToIframes(html: string): { html: string; videosCo
     return null;
   };
   
-  // Pattern 1: Elementor video widgets with data-settings containing youtube_url
-  const elementorDataSettingsRegex = /data-settings=["']([^"']*youtube_url[^"']*)["']/gi;
+  // Collect all YouTube video IDs from data-settings (não modifica nada ainda)
+  const videoIds: string[] = [];
+  const dataSettingsRegex = /data-settings=["']([^"']*youtube_url[^"']*)["']/gi;
   
-  result = result.replace(elementorDataSettingsRegex, (match, settings) => {
+  let match;
+  while ((match = dataSettingsRegex.exec(html)) !== null) {
     try {
-      // Decode HTML entities
-      const decodedSettings = settings
+      const decoded = match[1]
         .replace(/&quot;/g, '"')
         .replace(/&amp;/g, '&')
         .replace(/&#039;/g, "'")
         .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\\\//g, '/');
-      
-      const settingsObj = JSON.parse(decodedSettings);
-      const youtubeUrl = settingsObj.youtube_url;
-      
-      if (!youtubeUrl) return match;
-      
-      const videoId = extractYouTubeId(youtubeUrl);
-      if (!videoId) return match;
-      
-      console.log(`🎬 Found Elementor video in data-settings: ${videoId}`);
-      videosConverted++;
-      
-      // Keep the original data-settings but mark it as processed
-      return match.replace('youtube_url', 'youtube_url_processed');
+        .replace(/&gt;/g, '>');
+      const obj = JSON.parse(decoded);
+      if (obj.youtube_url) {
+        const videoId = extractYouTubeId(obj.youtube_url);
+        if (videoId && !videoIds.includes(videoId)) {
+          videoIds.push(videoId);
+          console.log(`🎬 Found Elementor video: ${videoId}`);
+        }
+      }
     } catch (e) {
-      console.warn('Failed to parse Elementor data-settings:', e);
-      return match;
+      console.warn('Failed to parse data-settings:', e);
     }
-  });
-  
-  // Pattern 2: Find div.elementor-widget-video and inject iframe if it has youtube_url_processed
-  // This is a more aggressive approach - look for any element with youtube URL in data-settings
-  const youtubeUrlInDataRegex = /<div([^>]*data-settings="[^"]*youtube_url[^"]*"[^>]*)>([\s\S]*?)(<\/div>)/gi;
-  
-  result = result.replace(youtubeUrlInDataRegex, (match, attrs, inner, closing) => {
-    try {
-      const settingsMatch = attrs.match(/data-settings="([^"]*)"/);
-      if (!settingsMatch) return match;
-      
-      const decodedSettings = settingsMatch[1]
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&#039;/g, "'")
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\\\//g, '/');
-      
-      const settingsObj = JSON.parse(decodedSettings);
-      const youtubeUrl = settingsObj.youtube_url || settingsObj.youtube_url_processed;
-      
-      if (!youtubeUrl) return match;
-      
-      const videoId = extractYouTubeId(youtubeUrl);
-      if (!videoId) return match;
-      
-      // Build iframe with responsive container
-      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
-      
-      const iframeHtml = `
-        <div class="video-container-cloned" style="position:relative;width:100%;padding-bottom:56.25%;height:0;overflow:hidden;background:#000;">
-          <iframe 
-            src="${embedUrl}" 
-            style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-            loading="lazy"
-            title="YouTube Video">
-          </iframe>
-        </div>`;
-      
-      videosConverted++;
-      console.log(`🎬 Elementor video converted to iframe: ${videoId}`);
-      
-      return `<div${attrs}>${iframeHtml}${closing}`;
-    } catch (e) {
-      console.warn('Failed to convert Elementor video:', e);
-      return match;
-    }
-  });
-  
-  // Pattern 3: Direct youtu.be URLs anywhere in data attributes
-  const directYoutubeRegex = /https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})/g;
-  const matches = html.match(directYoutubeRegex);
-  if (matches && matches.length > 0) {
-    console.log(`🔍 Found ${matches.length} direct youtu.be URLs in HTML`);
   }
+  
+  if (videoIds.length === 0) {
+    return { html: result, videosConverted: 0 };
+  }
+  
+  // CSS para esconder placeholders do Elementor que não funcionam sem JS
+  const cssHide = `
+<style>
+  /* Esconde placeholders do Elementor que não funcionam sem JS */
+  .elementor-widget-video .elementor-custom-embed-image-overlay,
+  .elementor-widget-video .elementor-custom-embed-play,
+  .elementor-widget-video .elementor-video { display: none !important; }
+  /* Estilo para container de vídeo injetado */
+  .video-injected-by-clone {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    background: #000;
+  }
+  .video-injected-by-clone iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: 0;
+  }
+</style>`;
+  
+  // Injetar iframes DENTRO dos containers Elementor existentes (ADICIONAR, não substituir)
+  for (const videoId of videoIds) {
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
+    
+    const iframe = `<div class="video-injected-by-clone"><iframe src="${embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" title="YouTube Video"></iframe></div>`;
+    
+    // Regex para encontrar o container do vídeo específico pelo ID no data-settings
+    // Escapar caracteres especiais do videoId para regex
+    const escapedId = videoId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    
+    // Procurar container elementor-widget-video com esse videoId no data-settings
+    const containerRegex = new RegExp(
+      `(<div[^>]*class="[^"]*elementor-widget-video[^"]*"[^>]*data-settings="[^"]*${escapedId}[^"]*"[^>]*>)`,
+      'i'
+    );
+    
+    // Se encontrou, ADICIONAR iframe logo após a tag de abertura (preserva conteúdo original)
+    if (containerRegex.test(result)) {
+      result = result.replace(containerRegex, `$1${iframe}`);
+      videosConverted++;
+      console.log(`✅ Iframe injected for video: ${videoId}`);
+    } else {
+      // Fallback: procurar qualquer div com esse videoId no data-settings
+      const fallbackRegex = new RegExp(
+        `(<div[^>]*data-settings="[^"]*${escapedId}[^"]*"[^>]*>)`,
+        'i'
+      );
+      if (fallbackRegex.test(result)) {
+        result = result.replace(fallbackRegex, `$1${iframe}`);
+        videosConverted++;
+        console.log(`✅ Iframe injected (fallback) for video: ${videoId}`);
+      }
+    }
+  }
+  
+  // Se não conseguiu injetar em containers específicos, adicionar antes do </body>
+  if (videosConverted === 0 && videoIds.length > 0) {
+    const fallbackIframes = videoIds.map(id => {
+      const url = `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`;
+      return `<div class="video-injected-by-clone" style="margin:20px auto;max-width:800px;"><iframe src="${url}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" title="YouTube Video"></iframe></div>`;
+    }).join('\n');
+    
+    result = result.replace('</body>', `${fallbackIframes}</body>`);
+    videosConverted = videoIds.length;
+    console.log(`✅ ${videoIds.length} iframes added as fallback before </body>`);
+  }
+  
+  // Injetar CSS no head
+  result = result.replace('</head>', `${cssHide}</head>`);
   
   return { html: result, videosConverted };
 }
