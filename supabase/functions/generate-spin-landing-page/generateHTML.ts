@@ -15,6 +15,8 @@ import { generateFAQPageSchema, type FAQItem } from '../_shared/faq-schema-helpe
 // ✅ FASE 7: ItemList Schema Helper centralizado
 import { generateProductItemListSchema, convertToItemListProducts, type ItemListProduct } from '../_shared/itemlist-schema-helper.ts';
 // ✅ FASE 8: Video Schema Helper - re-export do systemBIntegration usa este helper
+// ✅ FASE 9: BreadcrumbList Schema Helper centralizado
+import { generateSolutionBreadcrumbs } from '../_shared/breadcrumb-schema-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -266,30 +268,21 @@ products.forEach(product => {
     }
   });
 
-  // 7. BreadcrumbList Schema
-  schemas.push({
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: company?.website || 'https://smartdent.com.br'
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: solution.category || 'Soluções',
-        item: `${company?.website || 'https://smartdent.com.br'}/solucoes`
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: solution.title,
-        item: canonicalUrl
-      }
-    ]
-  });
+  // 7. BreadcrumbList Schema (FASE 9 - Helper Centralizado)
+  const breadcrumbSchema = generateSolutionBreadcrumbs(
+    {
+      title: solution.title,
+      category: solution.category,
+      painType: solution.pain_type,
+      canonicalUrl
+    },
+    {
+      websiteUrl: company?.website || 'https://smartdent.com.br',
+      websiteName: 'Home'
+    }
+  );
+  schemas.push(breadcrumbSchema);
+  console.log(`✅ [SCHEMA] BreadcrumbList gerado para solução: ${solution.title}`);
 
   // ✅ FASE 4: HowTo Schemas para produtos com workflow_stages
   const howToSchemas = products

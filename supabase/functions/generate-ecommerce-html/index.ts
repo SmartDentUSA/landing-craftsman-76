@@ -10,6 +10,8 @@ import { generateFAQPageSchemaString, type FAQItem } from "../_shared/faq-schema
 import { generateProductItemListSchemaString, convertToItemListProducts } from "../_shared/itemlist-schema-helper.ts";
 // ✅ FASE 8: Video Schema Helper centralizado
 import { generateProductVideoSchemas, generateVideoItemListSchema, extractProductVideos } from "../_shared/video-schema-helper.ts";
+// ✅ FASE 9: BreadcrumbList Schema Helper centralizado
+import { generateEcommerceBreadcrumbs, extractProductBreadcrumbData } from "../_shared/breadcrumb-schema-helper.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1363,6 +1365,14 @@ function generateProductSchema(product: any): string {
   if (videoGallerySchema) {
     console.log(`✅ [E-commerce] VideoGallery ItemList gerado com ${productVideos.length} vídeos`);
   }
+
+  // ✅ FASE 9: Gerar BreadcrumbList Schema para E-commerce
+  const breadcrumbData = extractProductBreadcrumbData(product);
+  const breadcrumbSchema = generateEcommerceBreadcrumbs(breadcrumbData, {
+    websiteUrl: currentLocalBusinessData.website_url || 'https://smartdent.com.br',
+    websiteName: 'Home'
+  });
+  console.log(`✅ [E-commerce] BreadcrumbList Schema gerado: Home → ${product.brand || 'Marca'} → ${product.category || 'Categoria'} → ${product.name}`);
   
   const schema: any = {
     "@context": "https://schema.org",
@@ -1390,6 +1400,7 @@ function generateProductSchema(product: any): string {
       localBusinessSchema,
       howToSchema, // ✅ FASE 4: Adicionar HowTo ao @graph
       itemListSchema, // ✅ FASE 7: Adicionar ItemList ao @graph
+      breadcrumbSchema, // ✅ FASE 9: Adicionar BreadcrumbList ao @graph
       ...videoSchemas, // ✅ FASE 8: Adicionar VideoObjects ao @graph
       videoGallerySchema // ✅ FASE 8: Adicionar VideoGallery ao @graph
     ].filter(Boolean) // Remove nulls
