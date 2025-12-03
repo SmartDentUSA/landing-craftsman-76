@@ -611,14 +611,20 @@ function injectPremiumCSS(): string {
         padding: 0 2rem;
       }
 
-      /* ===== HEADER COM MENU (IGUAL LP SPIN) ===== */
+      /* ===== HEADER STICKY (FIXO NO TOPO) ===== */
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: #fff;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+
       .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1.5rem 0;
-        position: relative;
-        z-index: 10;
+        padding: 1rem 0;
       }
 
       .banner {
@@ -629,6 +635,8 @@ function injectPremiumCSS(): string {
       .main-nav {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
       }
 
       .main-nav a {
@@ -636,73 +644,90 @@ function injectPremiumCSS(): string {
         text-decoration: none;
         font-weight: 600;
         font-size: 11px;
-        margin-left: 1.5rem;
+        padding: 0.5rem 0.75rem;
         transition: color 0.2s;
+        white-space: nowrap;
       }
 
       .main-nav a:hover {
         color: var(--accent-tech);
       }
 
-      /* ===== FOOTER - CORES DO LOGO (IGUAL LP SPIN) ===== */
+      /* ===== FOOTER - LAYOUT IGUAL IMAGEM DE REFERÊNCIA ===== */
       footer {
-        background: linear-gradient(to bottom, var(--primary-dark), var(--primary-gradient-dark));
-        padding: 3rem 0 2rem;
+        background: #2d2d2d;
+        padding: 3rem 0 0;
+        color: #ccc;
       }
 
       .footer-columns {
         display: flex;
         justify-content: space-between;
         flex-wrap: wrap;
-        gap: 2rem;
+        gap: 1.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
       }
 
-      .footer-columns > div {
+      .footer-location,
+      .footer-links-column {
         flex: 1;
-        min-width: 250px;
+        min-width: 180px;
       }
 
-      .footer-columns strong {
+      .footer-location strong,
+      .footer-links-column strong {
+        color: #e67e22;
         font-weight: 700;
+        font-size: 16px;
         display: block;
         margin-bottom: 0.75rem;
-        font-size: 18px;
-        color: var(--accent-glow);
       }
 
-      .footer-columns p {
-        font-size: 15px;
-        line-height: 1.8;
-        margin: 0.5rem 0;
-        color: #ccc;
+      .footer-location p {
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0.4rem 0;
+        color: #aaa;
       }
 
-      .footer-columns p i {
-        width: 20px;
-        margin-right: 8px;
-        color: var(--accent-tech);
+      .footer-location p i {
+        width: 18px;
+        margin-right: 6px;
+        color: #e67e22;
       }
 
-      .footer-columns a {
-        color: #b0c4de;
+      .footer-links-column a {
+        color: #aaa;
         text-decoration: none;
-        font-size: 15px;
+        font-size: 14px;
         display: block;
-        margin: 0.6rem 0;
+        margin: 0.5rem 0;
         transition: color 0.2s;
       }
 
-      .footer-columns a:hover {
-        color: var(--accent-tech);
-        text-decoration: underline;
+      .footer-links-column a:hover {
+        color: #e67e22;
       }
 
-      /* ===== ÍCONES SOCIAIS EM LINHA (IGUAL LP SPIN) ===== */
+      /* ===== SEÇÃO REDES SOCIAIS (SEPARADA) ===== */
+      .footer-social-section {
+        padding: 1.5rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+
+      .footer-social-section strong {
+        color: #e67e22;
+        font-weight: 700;
+        font-size: 16px;
+        display: block;
+        margin-bottom: 1rem;
+      }
+
       .footer-social-links {
         display: flex;
         flex-wrap: wrap;
         gap: 0.75rem;
-        margin-top: 0.5rem;
       }
 
       .footer-social-links a {
@@ -713,19 +738,25 @@ function injectPremiumCSS(): string {
         height: 40px;
         background: rgba(255, 255, 255, 0.1);
         border-radius: 50%;
-        margin: 0 !important;
         transition: all 0.3s ease;
       }
 
       .footer-social-links a:hover {
-        background: var(--accent-tech);
+        background: #e67e22;
         transform: translateY(-3px);
-        text-decoration: none;
       }
 
       .footer-social-links a i {
         font-size: 18px;
         color: #fff;
+      }
+
+      /* ===== COPYRIGHT + CNPJ ===== */
+      .footer-copyright {
+        text-align: center;
+        padding: 1.5rem 0;
+        font-size: 13px;
+        color: #888;
       }
 
       /* ===== VIDEO RESPONSIVO ===== */
@@ -1129,72 +1160,69 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       <a href="${websiteUrl}/blog" title="Blog">Blog</a>
     `;
   
-  // ✅ HEADER (IGUAL LP SPIN - sem classes customizadas)
+  // ✅ HEADER STICKY COM MENU COMPLETO DO PERFIL DA EMPRESA
   const PREMIUM_HEADER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- HEADER (IGUAL LP SPIN) -->
+  <!-- HEADER STICKY COM MENU DO PERFIL DA EMPRESA -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="container">
-    <div class="header">
-      <a href="${websiteUrl}" title="${company} - Site Principal">
-        ${logoUrl 
-          ? `<img src="${logoUrl}" alt="${company}" class="banner" width="180" height="60" loading="eager">` 
-          : `<span style="color: var(--primary-dark); font-size: 20px; font-weight: 800; font-family: 'Inter', sans-serif;">${company}</span>`
-        }
-      </a>
-      <nav class="main-nav">
-        <a href="https://loja.smartdent.com.br/" title="Loja">Loja</a>
-        <a href="https://parametros.smartdent.com.br/base-conhecimento" title="Blog">Blog</a>
-        <a href="${ctaUrl}" target="_blank" title="Fale conosco">Fale conosco</a>
-      </nav>
+  <header class="site-header">
+    <div class="container">
+      <div class="header">
+        <a href="${websiteUrl}" title="${company} - Site Principal">
+          ${logoUrl 
+            ? `<img src="${logoUrl}" alt="${company}" class="banner" width="180" height="60" loading="eager">` 
+            : `<span style="color: var(--primary-dark); font-size: 20px; font-weight: 800; font-family: 'Inter', sans-serif;">${company}</span>`
+          }
+        </a>
+        <nav class="main-nav">
+          ${menuHtml}
+        </nav>
+      </div>
     </div>
-  </div>
+  </header>
   `;
   
-  // ✅ FOOTER DINÂMICO (IGUAL LP SPIN)
-  let footerColumnsHtml = '';
+  // ✅ FOOTER DINÂMICO - LAYOUT IGUAL À IMAGEM DE REFERÊNCIA
+  let locationsHtml = '';
+  let linksHtml = '';
+  let socialHtml = '';
   
   if (hasCustomFooter) {
-    // Footer baseado em navigation_footer_config (igual SPIN)
-    footerColumnsHtml = `
-      ${footerConfig.locations && footerConfig.locations.length > 0 
-        ? footerConfig.locations.map((loc: any) => `
-          <div>
+    // Localizações (4 colunas lado a lado)
+    locationsHtml = footerConfig.locations && footerConfig.locations.length > 0 
+      ? footerConfig.locations.map((loc: any) => `
+          <div class="footer-location">
             <strong>${loc.label || loc.title || company}</strong>
             ${loc.phone ? `<p><i class="fas fa-phone"></i> ${loc.phone}</p>` : ''}
             ${loc.email ? `<p><i class="fas fa-envelope"></i> ${loc.email}</p>` : ''}
             ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${loc.address}</p>` : ''}
           </div>
         `).join('') 
-        : `
-          <div>
-            <strong>${company} - Brasil</strong>
-            ${phone ? `<p><i class="fas fa-phone"></i> Atendimento: ${phone}</p>` : ''}
-            ${email ? `<p><i class="fas fa-envelope"></i> Comercial: ${email}</p>` : ''}
-            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}</p>` : ''}
-            ${city ? `<p>${city} - ${state}, ${postalCode}</p>` : ''}
+      : `
+          <div class="footer-location">
+            <strong>${company}</strong>
+            ${phone ? `<p><i class="fas fa-phone"></i> ${phone}</p>` : ''}
+            ${email ? `<p><i class="fas fa-envelope"></i> ${email}</p>` : ''}
+            ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
           </div>
-        `
-      }
-      
-      ${footerConfig.links && footerConfig.links.length > 0 ? `
-        <div>
+        `;
+    
+    // Links Úteis (1 coluna separada)
+    linksHtml = footerConfig.links && footerConfig.links.length > 0 
+      ? `
+        <div class="footer-links-column">
           <strong>Links Úteis</strong>
           ${footerConfig.links.map((link: any) => `
             <a href="${link.href}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${link.label}</a>
           `).join('')}
         </div>
-      ` : institutionalLinks.length > 0 ? `
-        <div>
-          <strong>Links Úteis</strong>
-          ${institutionalLinks.slice(0, 5).map((link: any) => `
-            <a href="${link.url || link.href}" target="_blank" rel="noopener">${link.label}</a>
-          `).join('')}
-        </div>
-      ` : ''}
-      
-      ${footerConfig.social_links && footerConfig.social_links.length > 0 ? `
-        <div>
+      ` 
+      : '';
+    
+    // Redes Sociais (seção separada abaixo)
+    socialHtml = footerConfig.social_links && footerConfig.social_links.length > 0 
+      ? `
+        <div class="footer-social-section">
           <strong>Redes Sociais</strong>
           <div class="footer-social-links">
             ${footerConfig.social_links.map((social: any) => `
@@ -1204,31 +1232,31 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
             `).join('')}
           </div>
         </div>
-      ` : ''}
-    `;
+      ` 
+      : '';
   } else {
-    // Footer padrão (fallback)
-    footerColumnsHtml = `
-      <div>
-        <strong>${company} - Brasil</strong>
-        ${phone ? `<p><i class="fas fa-phone"></i> Atendimento: ${phone}</p>` : ''}
-        ${email ? `<p><i class="fas fa-envelope"></i> Comercial: ${email}</p>` : ''}
-        ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}</p>` : ''}
-        ${city ? `<p>${city} - ${state}, ${postalCode}</p>` : ''}
+    // Fallback padrão
+    locationsHtml = `
+      <div class="footer-location">
+        <strong>${company}</strong>
+        ${phone ? `<p><i class="fas fa-phone"></i> ${phone}</p>` : ''}
+        ${email ? `<p><i class="fas fa-envelope"></i> ${email}</p>` : ''}
+        ${streetAddress ? `<p><i class="fas fa-map-marker-alt"></i> ${streetAddress}${addressNumber ? `, ${addressNumber}` : ''}, ${city} - ${state}</p>` : ''}
       </div>
-      
-      <div>
+    `;
+    
+    linksHtml = `
+      <div class="footer-links-column">
         <strong>Links Úteis</strong>
         <a href="${websiteUrl}/politica-privacidade" rel="noopener">Política de Privacidade</a>
         <a href="${websiteUrl}/termos" rel="noopener">Termos de Uso</a>
         <a href="${websiteUrl}" rel="noopener">Site Principal</a>
         <a href="https://loja.smartdent.com.br/" rel="noopener" target="_blank">Loja Online</a>
-        ${institutionalLinks.slice(0, 3).map((link: any) => 
-          `<a href="${link.url || link.href}" target="_blank" rel="noopener">${link.label}</a>`
-        ).join('')}
       </div>
-      
-      <div>
+    `;
+    
+    socialHtml = `
+      <div class="footer-social-section">
         <strong>Redes Sociais</strong>
         <div class="footer-social-links">
           ${instagram ? `<a href="${instagram}" target="_blank" rel="noopener noreferrer" title="Instagram ${company}"><i class="fab fa-instagram"></i></a>` : ''}
@@ -1239,15 +1267,25 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     `;
   }
   
-  // ✅ FOOTER (IGUAL LP SPIN - tag footer simples)
+  // ✅ FOOTER - ESTRUTURA IGUAL À IMAGEM DE REFERÊNCIA
   const PREMIUM_FOOTER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- FOOTER (IGUAL LP SPIN) -->
+  <!-- FOOTER - LAYOUT IGUAL À IMAGEM DE REFERÊNCIA -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <footer>
     <div class="container">
+      <!-- LINHA 1: Localizações + Links Úteis -->
       <div class="footer-columns">
-        ${footerColumnsHtml}
+        ${locationsHtml}
+        ${linksHtml}
+      </div>
+      
+      <!-- LINHA 2: Redes Sociais -->
+      ${socialHtml}
+      
+      <!-- LINHA 3: Copyright + CNPJ -->
+      <div class="footer-copyright">
+        © ${new Date().getFullYear()} ${company}. Todos os direitos reservados.${taxId ? ` | CNPJ: ${taxId}` : ''}
       </div>
     </div>
   </footer>
