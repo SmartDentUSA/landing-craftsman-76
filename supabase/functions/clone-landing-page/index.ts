@@ -719,27 +719,33 @@ function injectPremiumCSS(): string {
         color: var(--accent-tech);
       }
 
-      /* ===== FOOTER - LAYOUT IGUAL IMAGEM DE REFERÊNCIA ===== */
-      footer,
-      footer *,
-      footer .container,
-      footer > div,
-      footer section {
-        background: #131313 !important;
-        background-color: #131313 !important;
+      /* ===== FOOTER - LAYOUT IGUAL IMAGEM SD PREMIUM ===== */
+      .sd-premium-footer {
+        margin: 0 !important;
+        padding: 0 !important;
       }
 
-      footer {
-        padding: 3rem 0 0 !important;
-        color: #ccc !important;
+      /* Barra de acento no topo */
+      .footer-accent-bar {
+        height: 8px;
+        background: linear-gradient(90deg, #E8C4A0, #D4A574) !important;
+        width: 100%;
+      }
+
+      /* Seção principal (azul/teal) */
+      .footer-main-section {
+        background: #587B86 !important;
+        padding: 2.5rem 0;
+        color: #fff;
       }
 
       .footer-columns {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
-        gap: 2rem;
-        padding-bottom: 2rem;
-        border-bottom: 1px solid rgba(255,255,255,0.15);
+        gap: 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
       }
 
       @media (max-width: 992px) {
@@ -749,6 +755,13 @@ function injectPremiumCSS(): string {
       }
 
       @media (max-width: 768px) {
+        .footer-columns {
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+        }
+      }
+
+      @media (max-width: 480px) {
         .footer-columns {
           grid-template-columns: 1fr;
         }
@@ -761,49 +774,59 @@ function injectPremiumCSS(): string {
 
       .footer-location strong,
       .footer-links-column strong {
-        color: #e67e22;
+        color: #fff;
         font-weight: 700;
-        font-size: 16px;
+        font-size: 15px;
         display: block;
         margin-bottom: 0.75rem;
       }
 
       .footer-location p {
-        font-size: 14px;
-        line-height: 1.6;
-        margin: 0.4rem 0;
-        color: #aaa;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0.3rem 0;
+        color: rgba(255,255,255,0.85);
+        display: flex;
+        align-items: flex-start;
       }
 
       .footer-location p i {
-        width: 18px;
+        width: 16px;
+        min-width: 16px;
         margin-right: 6px;
-        color: #e67e22;
+        margin-top: 2px;
+        color: #e74c88;
       }
 
       .footer-links-column a {
-        color: #e67e22;
+        color: #e74c88;
         text-decoration: none;
         font-size: 14px;
         display: block;
-        margin: 0.5rem 0;
+        margin: 0.4rem 0;
         transition: opacity 0.2s;
       }
 
       .footer-links-column a:hover {
         opacity: 0.8;
+        text-decoration: underline;
       }
 
-      /* ===== SEÇÃO REDES SOCIAIS (SEPARADA) ===== */
+      /* ===== SEÇÃO REDES SOCIAIS ===== */
       .footer-social-section {
+        background: #587B86 !important;
         padding: 1.5rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        border-top: 1px solid rgba(255,255,255,0.15);
       }
 
       .footer-social-section strong {
-        color: #e67e22;
-        font-weight: 700;
-        font-size: 16px;
+        color: #e74c88;
+        font-weight: 600;
+        font-size: 14px;
         display: block;
         margin-bottom: 1rem;
       }
@@ -811,36 +834,45 @@ function injectPremiumCSS(): string {
       .footer-social-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.75rem;
+        gap: 0.5rem;
       }
 
       .footer-social-links a {
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.1);
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255,255,255,0.3);
         border-radius: 50%;
         transition: all 0.3s ease;
       }
 
       .footer-social-links a:hover {
-        background: #e67e22;
-        transform: translateY(-3px);
+        background: #e74c88;
+        border-color: #e74c88;
+        transform: translateY(-2px);
       }
 
       .footer-social-links a i {
-        font-size: 18px;
+        font-size: 16px;
         color: #fff;
       }
 
-      /* ===== COPYRIGHT + CNPJ ===== */
+      /* ===== COPYRIGHT (barra verde escuro) ===== */
+      .footer-copyright-section {
+        background: #4a5538 !important;
+        padding: 1rem 0;
+      }
+
       .footer-copyright {
         text-align: center;
-        padding: 1.5rem 0;
-        font-size: 13px;
-        color: #888;
+        font-size: 12px;
+        color: rgba(255,255,255,0.7);
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
       }
 
       /* ===== VIDEO RESPONSIVO ===== */
@@ -1351,23 +1383,29 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     `;
   }
   
-  // ✅ FOOTER - ESTRUTURA IGUAL À IMAGEM DE REFERÊNCIA
+  // ✅ FOOTER - ESTRUTURA IGUAL À IMAGEM SD PREMIUM
   const PREMIUM_FOOTER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- FOOTER - LAYOUT IGUAL À IMAGEM DE REFERÊNCIA -->
+  <!-- FOOTER SD PREMIUM - LAYOUT IGUAL À IMAGEM DE REFERÊNCIA -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <footer>
-    <div class="container">
-      <!-- LINHA 1: Localizações + Links Úteis -->
+  <footer class="sd-premium-footer">
+    <!-- Barra de acento (pêssego) -->
+    <div class="footer-accent-bar"></div>
+    
+    <!-- Seção principal (azul/teal) -->
+    <div class="footer-main-section">
+      <!-- Localizações + Links Úteis -->
       <div class="footer-columns">
         ${locationsHtml}
         ${linksHtml}
       </div>
       
-      <!-- LINHA 2: Redes Sociais -->
+      <!-- Redes Sociais -->
       ${socialHtml}
-      
-      <!-- LINHA 3: Copyright + CNPJ -->
+    </div>
+    
+    <!-- Copyright (verde escuro) -->
+    <div class="footer-copyright-section">
       <div class="footer-copyright">
         © ${new Date().getFullYear()} ${company}. Todos os direitos reservados.${taxId ? ` | CNPJ: ${taxId}` : ''}
       </div>
