@@ -6,6 +6,8 @@ import { fetchLocalBusinessData, generateLocalBusinessSchema, generateGeoContext
 import { generateHowToSchema, generateHowToMicrodataHTML, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 // ✅ FASE 6: FAQ Schema Helper centralizado
 import { generateFAQPageSchemaString, type FAQItem } from "../_shared/faq-schema-helper.ts";
+// ✅ FASE 7: ItemList Schema Helper centralizado
+import { generateProductItemListSchemaString, convertToItemListProducts } from "../_shared/itemlist-schema-helper.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1287,7 +1289,7 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Generate Product Schema.org JSON-LD with LocalBusiness and HowTo
+// Generate Product Schema.org JSON-LD with LocalBusiness, HowTo and ItemList
 function generateProductSchema(product: any): string {
   // ✅ FASE 2: Gerar LocalBusiness Schema para inclusão
   const localBusinessSchema = generateLocalBusinessSchema(currentLocalBusinessData);
@@ -1303,6 +1305,39 @@ function generateProductSchema(product: any): string {
   
   if (howToSchema) {
     console.log(`✅ [E-commerce] HowTo Schema gerado para ${product.name} com ${Object.values(product.workflow_stages || {}).filter((s: any) => s?.applicable).length} etapas`);
+  }
+
+  // ✅ FASE 7: Gerar ItemList Schema para o produto
+  const itemListProducts = convertToItemListProducts([product], product.product_url || product.canonical_url);
+  const itemListSchema = itemListProducts.length > 0 ? {
+    '@type': 'ItemList',
+    name: `Produto: ${product.name}`,
+    numberOfItems: 1,
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    itemListElement: [{
+      '@type': 'ListItem',
+      position: 1,
+      item: {
+        '@type': 'Product',
+        name: product.name,
+        description: (product.description || '').substring(0, 200).replace(/<[^>]*>/g, ''),
+        image: product.image_url,
+        url: product.product_url || product.canonical_url,
+        ...(product.brand && { brand: { '@type': 'Brand', name: product.brand } }),
+        ...(product.price && {
+          offers: {
+            '@type': 'Offer',
+            price: product.promo_price || product.price,
+            priceCurrency: product.currency || 'BRL',
+            availability: 'https://schema.org/InStock'
+          }
+        })
+      }
+    }]
+  } : null;
+
+  if (itemListSchema) {
+    console.log(`✅ [E-commerce] ItemList Schema gerado para ${product.name}`);
   }
   
   const schema: any = {
@@ -1329,7 +1364,8 @@ function generateProductSchema(product: any): string {
         }
       },
       localBusinessSchema,
-      howToSchema // ✅ FASE 4: Adicionar HowTo ao @graph
+      howToSchema, // ✅ FASE 4: Adicionar HowTo ao @graph
+      itemListSchema // ✅ FASE 7: Adicionar ItemList ao @graph
     ].filter(Boolean) // Remove nulls
   };
   
