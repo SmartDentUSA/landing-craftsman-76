@@ -226,6 +226,121 @@ function normalizeYouTubeVideos(html: string): { html: string; videosFixed: numb
 }
 
 // ============================================
+// CONVERT ELEMENTOR VIDEO WIDGETS TO REAL IFRAMES
+// ============================================
+function convertElementorVideosToIframes(html: string): { html: string; videosConverted: number } {
+  let videosConverted = 0;
+  let result = html;
+  
+  // Extract video ID from any YouTube URL format
+  const extractYouTubeId = (url: string): string | null => {
+    const patterns = [
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube-nocookie\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+  
+  // Pattern 1: Elementor video widgets with data-settings containing youtube_url
+  const elementorDataSettingsRegex = /data-settings=["']([^"']*youtube_url[^"']*)["']/gi;
+  
+  result = result.replace(elementorDataSettingsRegex, (match, settings) => {
+    try {
+      // Decode HTML entities
+      const decodedSettings = settings
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&#039;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\\\//g, '/');
+      
+      const settingsObj = JSON.parse(decodedSettings);
+      const youtubeUrl = settingsObj.youtube_url;
+      
+      if (!youtubeUrl) return match;
+      
+      const videoId = extractYouTubeId(youtubeUrl);
+      if (!videoId) return match;
+      
+      console.log(`🎬 Found Elementor video in data-settings: ${videoId}`);
+      videosConverted++;
+      
+      // Keep the original data-settings but mark it as processed
+      return match.replace('youtube_url', 'youtube_url_processed');
+    } catch (e) {
+      console.warn('Failed to parse Elementor data-settings:', e);
+      return match;
+    }
+  });
+  
+  // Pattern 2: Find div.elementor-widget-video and inject iframe if it has youtube_url_processed
+  // This is a more aggressive approach - look for any element with youtube URL in data-settings
+  const youtubeUrlInDataRegex = /<div([^>]*data-settings="[^"]*youtube_url[^"]*"[^>]*)>([\s\S]*?)(<\/div>)/gi;
+  
+  result = result.replace(youtubeUrlInDataRegex, (match, attrs, inner, closing) => {
+    try {
+      const settingsMatch = attrs.match(/data-settings="([^"]*)"/);
+      if (!settingsMatch) return match;
+      
+      const decodedSettings = settingsMatch[1]
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&#039;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\\\//g, '/');
+      
+      const settingsObj = JSON.parse(decodedSettings);
+      const youtubeUrl = settingsObj.youtube_url || settingsObj.youtube_url_processed;
+      
+      if (!youtubeUrl) return match;
+      
+      const videoId = extractYouTubeId(youtubeUrl);
+      if (!videoId) return match;
+      
+      // Build iframe with responsive container
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
+      
+      const iframeHtml = `
+        <div class="video-container-cloned" style="position:relative;width:100%;padding-bottom:56.25%;height:0;overflow:hidden;background:#000;">
+          <iframe 
+            src="${embedUrl}" 
+            style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            loading="lazy"
+            title="YouTube Video">
+          </iframe>
+        </div>`;
+      
+      videosConverted++;
+      console.log(`🎬 Elementor video converted to iframe: ${videoId}`);
+      
+      return `<div${attrs}>${iframeHtml}${closing}`;
+    } catch (e) {
+      console.warn('Failed to convert Elementor video:', e);
+      return match;
+    }
+  });
+  
+  // Pattern 3: Direct youtu.be URLs anywhere in data attributes
+  const directYoutubeRegex = /https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})/g;
+  const matches = html.match(directYoutubeRegex);
+  if (matches && matches.length > 0) {
+    console.log(`🔍 Found ${matches.length} direct youtu.be URLs in HTML`);
+  }
+  
+  return { html: result, videosConverted };
+}
+
+// ============================================
 // REMOVE MANUFACTURER ELEMENTS (preserving videos)
 // ============================================
 function removeManufacturerElements(html: string): { html: string; headerRemoved: boolean; footerRemoved: boolean; videosPreserved: number } {
@@ -1535,7 +1650,12 @@ async function processLandingPage(
   // Step 2.5: Normalize YouTube videos (fix playback)
   const { html: videoNormalizedHTML, videosFixed } = normalizeYouTubeVideos(processedHTML);
   processedHTML = videoNormalizedHTML;
-  console.log(`✅ ${videosFixed} YouTube videos normalized for playback`);
+  console.log(`✅ ${videosFixed} YouTube iframes normalized for playback`);
+  
+  // Step 2.6: Convert Elementor video widgets to real iframes
+  const { html: elementorVideoHTML, videosConverted } = convertElementorVideosToIframes(processedHTML);
+  processedHTML = elementorVideoHTML;
+  console.log(`✅ ${videosConverted} Elementor videos converted to iframes`);
   
   // Step 3: Rewrite CTAs
   const { html: ctaHTML, count: ctasRewritten } = rewriteCTAs(processedHTML, ctaUrl);
@@ -1586,6 +1706,7 @@ async function processLandingPage(
     footerRemoved,
     videosPreserved,
     videosFixed,
+    videosConverted,
   };
   
   const score = calculateScore(stats, finalSEO, finalOgImage);
