@@ -5,6 +5,14 @@ import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusiness
 import { generateHowToSchema, fetchProductsWithWorkflow, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 // ✅ FASE 9: BreadcrumbList Schema Helper centralizado
 import { generateLandingPageBreadcrumbs, slugify as breadcrumbSlugify } from "../_shared/breadcrumb-schema-helper.ts";
+// ✅ FASE 3: Person Schema Helper (E-E-A-T)
+import { generatePersonSchema, fetchAllApprovedKOLs, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
+// ✅ FASE 6: FAQPage Schema Helper
+import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helper.ts";
+// ✅ FASE 7: ItemList Schema Helper
+import { generateProductItemListSchema, generateGenericItemListSchema, type ItemListProduct } from "../_shared/itemlist-schema-helper.ts";
+// ✅ FASE 8: VideoObject Schema Helper
+import { generateVideoObjectSchema, extractYouTubeId, getYouTubeThumbnail, getYouTubeEmbedUrl, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -1177,8 +1185,138 @@ function injectPremiumCSS(): string {
 }
 
 // ============================================
+// EXTRACT YOUTUBE VIDEO IDS FROM HTML (FASE 8)
+// ============================================
+function extractVideoIdsFromHtml(html: string): string[] {
+  const videoIds: string[] = [];
+  
+  // Padrões para encontrar IDs de vídeo
+  const patterns = [
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/gi,
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/gi,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/gi,
+    /youtube-nocookie\.com\/embed\/([a-zA-Z0-9_-]{11})/gi,
+    /youtube_url[^a-zA-Z0-9]*https?[^a-zA-Z0-9]+youtu\.be[^a-zA-Z0-9]+([a-zA-Z0-9_-]{11})/gi,
+    /youtube_url[^a-zA-Z0-9]*https?[^a-zA-Z0-9]+(?:www\.)?youtube\.com[^a-zA-Z0-9]+watch[^a-zA-Z0-9]+v[^a-zA-Z0-9]+([a-zA-Z0-9_-]{11})/gi,
+  ];
+  
+  for (const pattern of patterns) {
+    let match;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(html)) !== null) {
+      const videoId = match[1];
+      if (videoId && videoId.length === 11 && !videoIds.includes(videoId)) {
+        videoIds.push(videoId);
+      }
+    }
+  }
+  
+  console.log(`🎥 [FASE 8] ${videoIds.length} vídeos YouTube extraídos do HTML`);
+  return videoIds;
+}
+
+// ============================================
+// GENERATE VIDEO SCHEMAS FROM IDS (FASE 8)
+// ============================================
+function generateVideoSchemasFromIds(
+  videoIds: string[],
+  productName: string,
+  brandName: string,
+  companyName: string,
+  companyUrl: string
+): Record<string, any>[] {
+  if (!videoIds || videoIds.length === 0) return [];
+  
+  return videoIds.slice(0, 5).map((videoId, index) => {
+    const videoData: VideoSchemaData = {
+      name: `Vídeo ${index + 1}: ${productName} ${brandName}`,
+      description: `Apresentação do ${productName} da ${brandName} por ${companyName}`,
+      thumbnailUrl: getYouTubeThumbnail(videoId, 'maxres'),
+      uploadDate: new Date().toISOString(),
+      contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      embedUrl: getYouTubeEmbedUrl(videoId),
+      aboutProduct: {
+        name: `${productName} ${brandName}`,
+      },
+      creator: {
+        name: companyName,
+        url: companyUrl
+      }
+    };
+    
+    return generateVideoObjectSchema(videoData, {
+      includeTranscript: false,
+      includeAboutProduct: true,
+      includeCreator: true,
+      creatorName: companyName,
+      creatorUrl: companyUrl
+    });
+  });
+}
+
+// ============================================
+// GENERATE IMAGE ITEMLIST SCHEMA (FASE 7)
+// ============================================
+function generateImageGallerySchema(
+  images: CapturedImage[],
+  productName: string,
+  brandName: string
+): Record<string, any> | null {
+  const successfulImages = images.filter(img => img.status === 'success' && img.newUrl);
+  
+  if (successfulImages.length < 2) return null;
+  
+  const items = successfulImages.slice(0, 10).map(img => ({
+    name: img.isHeroImage ? `${productName} ${brandName} - Imagem Principal` : `${productName} ${brandName}`,
+    url: img.newUrl,
+    image: img.newUrl
+  }));
+  
+  const schema = generateGenericItemListSchema(items, 'ImageObject', {
+    listName: `Galeria de Imagens: ${productName} ${brandName}`,
+    listOrder: 'ascending'
+  });
+  
+  if (schema) {
+    console.log(`📷 [FASE 7] ItemList de imagens gerado com ${items.length} itens`);
+  }
+  
+  return schema;
+}
+
+// ============================================
+// GENERATE DEFAULT PERSON SCHEMA (FASE 3)
+// ============================================
+function generateDefaultPersonSchema(
+  companyName: string,
+  companyUrl: string
+): Record<string, any> {
+  return {
+    "@type": "Person",
+    "@id": `${companyUrl}/#expert`,
+    "name": "Especialista em Odontologia Digital",
+    "jobTitle": "Consultor Técnico",
+    "description": `Especialista certificado em soluções de odontologia digital da ${companyName}`,
+    "affiliation": {
+      "@type": "Organization",
+      "name": companyName,
+      "url": companyUrl
+    }
+  };
+}
+
+// ============================================
 // INJECT SEO WITH COMPLETE SCHEMA + GEO + HREFLANG
 // ============================================
+interface InjectSEOOptions {
+  capturedImages?: CapturedImage[];
+  videoIds?: string[];
+  productFaqs?: FAQItem[];
+  relatedProducts?: any[];
+  kols?: PersonSchemaData[];
+  productWorkflow?: any;
+}
+
 function injectSEO(
   html: string, 
   seoConfig: SEOConfig, 
@@ -1186,9 +1324,19 @@ function injectSEO(
   brand: string, 
   product: string,
   ogImageUrl: string,
-  aggregateRating: AggregateRatingData
+  aggregateRating: AggregateRatingData,
+  options: InjectSEOOptions = {}
 ): string {
   let result = html;
+  
+  const { 
+    capturedImages = [], 
+    videoIds = [], 
+    productFaqs = [], 
+    relatedProducts = [],
+    kols = [],
+    productWorkflow 
+  } = options;
   
   // Remove existing meta tags
   result = result
@@ -1233,8 +1381,47 @@ function injectSEO(
   const keywords = seoConfig.keywords || '';
   const finalOgImage = ogImageUrl || logoUrl;
   
-  // Complete Schema.org with @graph + SpeakableSpecification
-  const schemaGraph = {
+  // ✅ FASE 5: Coletar múltiplas imagens para og:image
+  const additionalOgImages = capturedImages
+    .filter(img => img.status === 'success' && img.newUrl && img.newUrl !== finalOgImage)
+    .slice(0, 3)
+    .map(img => img.newUrl);
+  
+  // ✅ FASE 8: Gerar VideoObject Schemas
+  const videoSchemas = generateVideoSchemasFromIds(videoIds, product, brand, company, websiteUrl);
+  
+  // ✅ FASE 6: Gerar FAQPage Schema
+  const faqSchema = productFaqs.length > 0 ? generateFAQPageSchema(productFaqs, { minFaqCount: 2 }) : null;
+  
+  // ✅ FASE 7: Gerar ItemList Schema (galeria de imagens)
+  const imageListSchema = generateImageGallerySchema(capturedImages, product, brand);
+  
+  // ✅ FASE 3: Gerar Person Schema (usar KOL se disponível, senão default)
+  let personSchema: Record<string, any> | null = null;
+  if (kols && kols.length > 0) {
+    personSchema = generatePersonSchema(kols[0]);
+    console.log(`👤 [FASE 3] Person Schema gerado para KOL: ${kols[0].full_name}`);
+  } else {
+    personSchema = generateDefaultPersonSchema(company, websiteUrl);
+    console.log(`👤 [FASE 3] Person Schema gerado (especialista padrão)`);
+  }
+  
+  // ✅ FASE 4: Gerar HowTo Schema (se houver workflow do produto)
+  let howToSchema: Record<string, any> | null = null;
+  if (productWorkflow && productWorkflow.workflow_stages) {
+    howToSchema = generateHowToSchema(productWorkflow, {
+      includeSupplies: false,
+      includeTips: true,
+      companyName: company,
+      companyUrl: websiteUrl
+    });
+    if (howToSchema) {
+      console.log(`📋 [FASE 4] HowTo Schema gerado para produto com workflow`);
+    }
+  }
+  
+  // Complete Schema.org with @graph + SpeakableSpecification + All Phases
+  const schemaGraph: Record<string, any> = {
     "@context": "https://schema.org",
     "@graph": [
       {
@@ -1364,9 +1551,41 @@ function injectSEO(
     ]
   };
   
+  // ✅ FASE 3: Adicionar Person Schema
+  if (personSchema) {
+    schemaGraph["@graph"].push(personSchema);
+  }
+  
+  // ✅ FASE 4: Adicionar HowTo Schema
+  if (howToSchema) {
+    schemaGraph["@graph"].push(howToSchema);
+  }
+  
+  // ✅ FASE 6: Adicionar FAQPage Schema
+  if (faqSchema) {
+    schemaGraph["@graph"].push(faqSchema);
+    console.log(`❓ [FASE 6] FAQPage Schema adicionado ao @graph`);
+  }
+  
+  // ✅ FASE 7: Adicionar ItemList Schema
+  if (imageListSchema) {
+    schemaGraph["@graph"].push(imageListSchema);
+  }
+  
+  // ✅ FASE 8: Adicionar VideoObject Schemas
+  if (videoSchemas.length > 0) {
+    schemaGraph["@graph"].push(...videoSchemas);
+    console.log(`🎥 [FASE 8] ${videoSchemas.length} VideoObject Schemas adicionados ao @graph`);
+  }
+  
+  // ✅ FASE 5: Gerar múltiplas og:image tags
+  const additionalOgImageTags = additionalOgImages
+    .map((imgUrl, index) => `<meta property="og:image" content="${imgUrl}">`)
+    .join('\n    ');
+  
   const seoTags = `
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- SEO Generated by Smart Dent LP Clone v2.1 Premium -->
+    <!-- SEO Generated by Smart Dent LP Clone v3.0 Premium (FASES 1-9) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <title>${title}</title>
     <meta name="description" content="${metaDescription}">
@@ -1374,10 +1593,11 @@ function injectSEO(
     <meta name="keywords" content="${keywords}">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
     <meta name="author" content="${company}">
-    <meta name="generator" content="Smart Dent LP Clone v2.1">
+    <meta name="generator" content="Smart Dent LP Clone v3.0">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- OPEN GRAPH (Facebook, LinkedIn, WhatsApp) -->
+    <!-- ✅ FASE 5: Multiple og:image for better social sharing -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <meta property="og:type" content="product">
     <meta property="og:site_name" content="${company}">
@@ -1388,6 +1608,7 @@ function injectSEO(
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="${product} ${brand} - ${company}">
+    ${additionalOgImageTags}
     <meta property="og:locale" content="pt_BR">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1435,7 +1656,7 @@ function injectSEO(
     <meta name="msapplication-TileColor" content="#3E4B5E">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- SCHEMA.ORG JSON-LD (@graph consolidado com SpeakableSpecification) -->
+    <!-- SCHEMA.ORG JSON-LD (@graph consolidado com FASES 1-9) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <script type="application/ld+json">
     ${JSON.stringify(schemaGraph, null, 2)}
@@ -1446,7 +1667,7 @@ function injectSEO(
   
   result = result.replace(/<head[^>]*>/i, `$&\n${seoTags}`);
   
-  console.log(`📝 SEO Premium injected: ${title}`);
+  console.log(`📝 SEO Premium v3.0 injected (FASES 1-9): ${title}`);
   
   return result;
 }
@@ -1670,6 +1891,64 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
 }
 
 // ============================================
+// FETCH PRODUCT DATA FOR SEO ENRICHMENT (FASE 4, 6)
+// ============================================
+async function fetchProductDataForSEO(
+  supabase: any,
+  brand: string,
+  product: string
+): Promise<{ faqs: FAQItem[]; workflow: any; relatedProducts: any[] }> {
+  try {
+    // Buscar produto por nome/marca aproximado
+    const searchTerm = `%${product}%`;
+    const { data: products, error } = await supabase
+      .from('products_repository')
+      .select('faq, workflow_stages, name, brand, description, image_url, product_url, price')
+      .or(`name.ilike.${searchTerm},brand.ilike.%${brand}%`)
+      .eq('approved', true)
+      .limit(5);
+    
+    if (error || !products || products.length === 0) {
+      console.log(`⚠️ [SEO Enrich] Nenhum produto encontrado para ${brand} ${product}`);
+      return { faqs: [], workflow: null, relatedProducts: [] };
+    }
+    
+    // Pegar FAQs do primeiro produto encontrado
+    const primaryProduct = products[0];
+    const faqs: FAQItem[] = Array.isArray(primaryProduct.faq) ? primaryProduct.faq : [];
+    const workflow = primaryProduct.workflow_stages ? { 
+      name: primaryProduct.name, 
+      workflow_stages: primaryProduct.workflow_stages 
+    } : null;
+    
+    console.log(`✅ [SEO Enrich] Produto encontrado: ${primaryProduct.name} (${faqs.length} FAQs, workflow: ${workflow ? 'sim' : 'não'})`);
+    
+    return {
+      faqs,
+      workflow,
+      relatedProducts: products.slice(1) // Outros produtos como relacionados
+    };
+  } catch (err) {
+    console.error('❌ [SEO Enrich] Erro ao buscar dados do produto:', err);
+    return { faqs: [], workflow: null, relatedProducts: [] };
+  }
+}
+
+// ============================================
+// FETCH KOLS FOR PERSON SCHEMA (FASE 3)
+// ============================================
+async function fetchKOLsForPersonSchema(supabase: any): Promise<PersonSchemaData[]> {
+  try {
+    const kols = await fetchAllApprovedKOLs(supabase);
+    console.log(`✅ [FASE 3] ${kols.length} KOLs carregados para Person Schema`);
+    return kols;
+  } catch (err) {
+    console.error('⚠️ [FASE 3] Erro ao buscar KOLs:', err);
+    return [];
+  }
+}
+
+// ============================================
 // MAIN PROCESSING FUNCTION
 // ============================================
 async function processLandingPage(
@@ -1683,9 +1962,10 @@ async function processLandingPage(
   aggregateRating: AggregateRatingData
 ): Promise<TransformResult> {
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
+  const companyUrl = companyData?.website_url || SMART_DENT_DATA.website_url;
   const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
   
-  console.log(`🚀 Starting LP Clone v2.1 for ${brand} ${product}`);
+  console.log(`🚀 Starting LP Clone v3.0 (FASES 1-9) for ${brand} ${product}`);
   
   // Step 1: Sanitize
   let processedHTML = sanitizeHTML(html);
@@ -1695,6 +1975,9 @@ async function processLandingPage(
   const { html: cleanedHTML, headerRemoved, footerRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
   processedHTML = cleanedHTML;
   console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
+  
+  // ✅ FASE 8: Extrair IDs de vídeo YouTube do HTML original
+  const videoIds = extractVideoIdsFromHtml(html);
   
   // Step 2.5: Normalize YouTube videos (fix playback)
   const { html: videoNormalizedHTML, videosFixed } = normalizeYouTubeVideos(processedHTML);
@@ -1719,6 +2002,12 @@ async function processLandingPage(
   // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
   processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
   
+  // ✅ FASE 3, 4, 6: Buscar dados do produto e KOLs para enriquecer SEO
+  const [productData, kols] = await Promise.all([
+    fetchProductDataForSEO(supabase, brand, product),
+    fetchKOLsForPersonSchema(supabase)
+  ]);
+  
   // Step 5: Generate auto SEO if not provided
   const autoSEO = generateAutoSEO(html, brand, product, companyData);
   
@@ -1738,9 +2027,25 @@ async function processLandingPage(
   };
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
-  // Step 6: Inject SEO with complete Schema
-  processedHTML = injectSEO(processedHTML, finalSEO, companyData, brand, product, finalOgImage, aggregateRating);
-  console.log('✅ SEO and Schema.org injected');
+  // Step 6: Inject SEO with complete Schema (FASES 1-9)
+  processedHTML = injectSEO(
+    processedHTML, 
+    finalSEO, 
+    companyData, 
+    brand, 
+    product, 
+    finalOgImage, 
+    aggregateRating,
+    {
+      capturedImages: images,
+      videoIds,
+      productFaqs: productData.faqs,
+      relatedProducts: productData.relatedProducts,
+      kols,
+      productWorkflow: productData.workflow
+    }
+  );
+  console.log('✅ SEO v3.0 and Schema.org FASES 1-9 injected');
   
   // Step 7: Insert Smart Dent header/footer
   processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl);
@@ -1756,10 +2061,14 @@ async function processLandingPage(
     videosPreserved,
     videosFixed,
     videosConverted,
+    videoSchemas: videoIds.length,
+    faqSchemaItems: productData.faqs.length,
+    kolsLoaded: kols.length,
+    hasWorkflow: !!productData.workflow,
   };
   
   const score = calculateScore(stats, finalSEO, finalOgImage);
-  console.log(`🎉 LP Clone v2.1 complete! Score: ${score}/10`);
+  console.log(`🎉 LP Clone v3.0 complete! Score: ${score}/10 | Schemas: Video=${videoIds.length}, FAQ=${productData.faqs.length}, KOL=${kols.length > 0 ? 'Yes' : 'No'}`);
   
   return {
     html: processedHTML,
