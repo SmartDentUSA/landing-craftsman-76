@@ -1301,6 +1301,13 @@ function injectSEO(
           "priceCurrency": "BRL",
           "availability": "https://schema.org/InStock",
           "seller": { "@id": `${websiteUrl}/#organization` }
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "reviewCount": 30,
+          "bestRating": 5,
+          "worstRating": 1
         }
       },
       {
