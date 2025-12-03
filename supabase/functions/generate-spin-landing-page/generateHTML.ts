@@ -2386,16 +2386,12 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <div class="container section-padding">
     <section class="technical-resources-section">
       <h2 data-editable="true" data-field="technical_resources_title">
-        <i class="fas fa-graduation-cap"></i> Material de Apoio e Treinamento
+        <i class="fas fa-play-circle"></i> Veja como funciona na prática
       </h2>
-      <p class="subtitle" data-editable="true" data-field="technical_resources_subtitle">
-        Vídeos técnicos, tutoriais e documentação para você dominar os produtos
-      </p>
       
       ${hasVideos ? `
       <!-- Galeria de Vídeos Técnicos -->
       <div class="videos-gallery">
-        <h3><i class="fas fa-video"></i> Vídeos Técnicos</h3>
         <div class="videos-grid">
           ${systemBResources!.videos.map((video, index) => {
             const minutes = Math.floor(video.duracao_segundos / 60);
