@@ -5,6 +5,8 @@ import { fetchSystemBResourcesForProducts } from "./systemBIntegration.ts";
 import { fetchAggregateRating, type AggregateRatingData } from "../_shared/aggregate-rating-helper.ts";
 import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusinessData } from "../_shared/local-business-helper.ts";
 import { generateHowToSchema, generateMultipleHowToSchemas, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
+// ✅ FASE 3: Person Schema para E-E-A-T
+import { fetchKOLData, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -932,13 +934,31 @@ serve(async (req) => {
         .filter(key => solution.landing_page_custom_text[key])
     );
 
-    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos + publicações ao aiContent
+    // ✅ FASE 3: Buscar KOL para autor (se especificado na solução ou landing page)
+    let authorKOL: PersonSchemaData | null = null;
+    const authorKolId = solution.author_kol_id || solution.landing_page_custom_text?.author_kol_id;
+    if (authorKolId) {
+      try {
+        authorKOL = await fetchKOLData(supabaseClient, authorKolId, {
+          name: company?.company_name || 'Smart Dent',
+          url: company?.website_url || 'https://smartdent.com.br'
+        });
+        if (authorKOL) {
+          console.log(`✅ [SPIN LP] Author KOL carregado: ${authorKOL.full_name}`);
+        }
+      } catch (error) {
+        console.error('⚠️ [SPIN LP] Erro ao buscar autor KOL:', error);
+      }
+    }
+
+    // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos + publicações + KOL ao aiContent
     const finalAiContent = {
       ...aiGeneratedContent,
       testimonials: realTestimonials,
       systemBResources, // 🆕 Adicionar recursos do Sistema B
       productVideos, // 🎬 Adicionar vídeos dos produtos vinculados
-      productPublications // 📰 Adicionar publicações dos produtos
+      productPublications, // 📰 Adicionar publicações dos produtos
+      authorKOL // ✅ FASE 3: Adicionar dados do KOL para Person Schema
     };
 
     // ✅ MERGE CORRETO: Passar separadamente IA e customText
