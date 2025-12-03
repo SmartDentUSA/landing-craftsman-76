@@ -7,6 +7,8 @@ import { generateHowToSchema, type ProductWithWorkflow } from "../_shared/howto-
 import { fetchKOLData, generatePersonSchema, createAuthorReference, generatePersonMicrodataHTML, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
 // ✅ FASE 6: FAQ Schema Helper centralizado
 import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helper.ts";
+// ✅ FASE 7: ItemList Schema Helper centralizado
+import { generateProductItemListSchema, convertToItemListProducts } from "../_shared/itemlist-schema-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -752,9 +754,24 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
       }
     }
 
+    // ✅ FASE 7: Gerar ItemList Schema para o produto (single item para relacionados)
+    let itemListSchema = null;
+    if (productData) {
+      const itemListProducts = convertToItemListProducts([productData], productData.product_url || productData.canonical_url);
+      itemListSchema = generateProductItemListSchema(itemListProducts, {
+        listName: `Produto: ${productData.name}`,
+        includeOffers: true,
+        includeBrand: true,
+        listOrder: 'ascending'
+      });
+      if (itemListSchema) {
+        console.log(`✅ [Blog Post] ItemList Schema gerado para produto ${productData.name}`);
+      }
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema].filter(Boolean)
     };
   }
 

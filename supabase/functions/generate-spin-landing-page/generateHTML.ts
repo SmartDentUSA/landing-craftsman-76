@@ -12,6 +12,8 @@ import { generateHowToSchema, type ProductWithWorkflow } from '../_shared/howto-
 import { generatePersonSchema, type PersonSchemaData } from '../_shared/person-schema-helper.ts';
 // ✅ FASE 6: FAQ Schema Helper centralizado
 import { generateFAQPageSchema, type FAQItem } from '../_shared/faq-schema-helper.ts';
+// ✅ FASE 7: ItemList Schema Helper centralizado
+import { generateProductItemListSchema, convertToItemListProducts, type ItemListProduct } from '../_shared/itemlist-schema-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -176,23 +178,20 @@ function generateSPINSchemas(
     } : undefined
   });
 
-  // 3. ItemList Schema (produtos selecionados)
+  // ✅ FASE 7: ItemList Schema usando helper centralizado
   if (products && products.length > 0) {
-    schemas.push({
-      '@type': 'ItemList',
-      numberOfItems: products.length,
-      itemListElement: products.map((product, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        item: {
-          '@type': 'Product',
-          name: product.name,
-          description: product.description || product.name,
-          image: product.image_url,
-          url: product.product_url || canonicalUrl
-        }
-      }))
+    const itemListProducts = convertToItemListProducts(products, canonicalUrl);
+    const itemListSchema = generateProductItemListSchema(itemListProducts, {
+      listName: `Produtos - ${solution.title}`,
+      includeOffers: true,
+      includeBrand: true,
+      listOrder: 'ascending',
+      baseUrl: canonicalUrl
     });
+    if (itemListSchema) {
+      schemas.push(itemListSchema);
+      console.log(`✅ [SCHEMA] ItemList Schema gerado com ${products.length} produtos`);
+    }
   }
 
   // 4. Product Schemas (detalhados)
