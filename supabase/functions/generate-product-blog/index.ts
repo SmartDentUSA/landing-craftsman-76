@@ -573,17 +573,15 @@ async function generateBlogFAQs(
   blogContent: string,
   blogType: 'commercial' | 'technical'
 ): Promise<BlogFAQ[]> {
-  const faqPrompt = `Você é um especialista em SEO, SGE (Search Generative Experience) e GEO (Generative Engine Optimization).
+const faqPrompt = `Você é um especialista em SEO, SGE (Search Generative Experience) e GEO (Generative Engine Optimization).
 
 TAREFA: Gerar EXATAMENTE 10 FAQs otimizadas para IAs generativas (ChatGPT, Perplexity, Google SGE) baseadas no conteúdo do blog e dados do produto.
 
 ═══════════════════════════════════════════════════════════
-📦 DADOS DO PRODUTO
+📦 DADOS DO PRODUTO (SEM PREÇO - NÃO MENCIONE VALORES MONETÁRIOS)
 ═══════════════════════════════════════════════════════════
 Nome: ${product.name}
 Marca: ${product.brand || 'N/A'}
-GTIN: ${product.gtin || 'N/A'}
-Preço: ${product.price ? `R$ ${product.price}` : 'N/A'}
 Categoria: ${product.category || ''} > ${product.subcategory || ''}
 Descrição: ${product.description?.substring(0, 500) || ''}
 Benefícios: ${Array.isArray(product.benefits) ? product.benefits.slice(0, 5).join(', ') : 'N/A'}
@@ -605,9 +603,17 @@ CATEGORIAS (2 FAQs de cada):
 4. "beneficios" → ROI e vantagens ("Por que usar...", "Quais os benefícios...")
 5. "casos-de-uso" → Aplicações práticas ("Onde usar...", "Quando usar...", "Para quem...")
 
+═══════════════════════════════════════════════════════════
+🚫 REGRAS ANTI-REPETIÇÃO (CRÍTICAS)
+═══════════════════════════════════════════════════════════
+7. **NUNCA repita o mesmo dado** (dimensões, tempo, especificações) em mais de uma FAQ
+8. **Cada FAQ deve cobrir um aspecto DIFERENTE** do produto - SEM redundância
+9. **PROIBIDO mencionar valores monetários** (R$, preço, custo, valor) nas respostas
+10. **Varie as informações**: se usou uma spec em uma FAQ, NÃO repita em outra
+
 REGRAS CRÍTICAS PARA IA-READINESS:
 1. **First Sentence Answer**: A primeira frase da resposta DEVE ser a resposta direta e citável
-2. **Dados Numéricos**: Cada resposta DEVE incluir pelo menos 1 dado numérico específico do produto
+2. **Dados Numéricos**: Use dados numéricos do produto, mas CADA FAQ deve usar dados DIFERENTES
 3. **SGE Snippet**: Campo separado com versão ultra-curta (max 30 palavras) para featured snippet
 4. **Anti-Alucinação**: USE APENAS informações presentes nos dados acima - NUNCA invente
 5. **Keywords Naturais**: Inclua as keywords do produto naturalmente nas perguntas
@@ -619,7 +625,7 @@ FORMATO DE SAÍDA (JSON):
   "faqs": [
     {
       "question": "O que é o ${product.name}?",
-      "answer": "[Resposta direta na primeira frase]. [Contexto técnico]. [Benefício com dado numérico].",
+      "answer": "[Resposta direta na primeira frase]. [Contexto técnico]. [Benefício - SEM PREÇO].",
       "sge_snippet": "[Versão ultra-curta de 20-30 palavras citável por IAs]",
       "category": "o-que-e"
     }
@@ -627,7 +633,7 @@ FORMATO DE SAÍDA (JSON):
 }
 \`\`\`
 
-Gere EXATAMENTE 10 FAQs no formato JSON acima:`;
+Gere EXATAMENTE 10 FAQs no formato JSON acima, garantindo que CADA FAQ cubra um aspecto ÚNICO do produto:`;
 
   try {
     const response = await fetch('https://api.deepseek.com/chat/completions', {
