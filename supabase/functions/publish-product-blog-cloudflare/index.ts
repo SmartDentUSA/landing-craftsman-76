@@ -46,9 +46,21 @@ function stringToBase64(str: string): string {
   return btoa(binary);
 }
 
-function generateTrackingScripts(pixels: TrackingPixels): { headScripts: string; bodyScripts: string } {
+function escapeHtml(text: string | null | undefined): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function generateTrackingScripts(pixels: TrackingPixels | null): { headScripts: string; bodyScripts: string } {
   let headScripts = '';
   let bodyScripts = '';
+
+  if (!pixels) return { headScripts, bodyScripts };
 
   if (pixels.google_tag_manager?.enabled && pixels.google_tag_manager.container_id) {
     const gtmId = pixels.google_tag_manager.container_id;
@@ -61,32 +73,35 @@ function generateTrackingScripts(pixels: TrackingPixels): { headScripts: string;
     headScripts += `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${pixelId}');fbq('track','PageView');</script>`;
   }
 
-  if (pixels.google_analytics?.enabled && pixels.google_analytics.measurement_id) {
+  if (pixels.google_analytics?.enabled && pixels.google_analytics.measurement_id && !pixels.google_tag_manager?.enabled) {
     const measurementId = pixels.google_analytics.measurement_id;
     headScripts += `<script async src="https://www.googletagmanager.com/gtag/js?id=${measurementId}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${measurementId}');</script>`;
+  }
+
+  if (pixels.tiktok_pixel?.enabled && pixels.tiktok_pixel.pixel_id) {
+    const tiktokId = pixels.tiktok_pixel.pixel_id;
+    headScripts += `<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};ttq.load('${tiktokId}');ttq.page();}(window,document,'ttq');</script>`;
   }
 
   return { headScripts, bodyScripts };
 }
 
-function generateFAQSection(faqs: BlogFAQ[]): string {
+function generateFAQSection(faqs: BlogFAQ[], productName: string): string {
   if (!faqs || faqs.length === 0) return '';
 
-  const faqItems = faqs.map((faq, index) => `
+  const faqItems = faqs.map((faq) => `
     <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-      <summary itemprop="name">${faq.question}</summary>
+      <summary itemprop="name"><i class="fas fa-chart-line"></i> ${escapeHtml(faq.question)}</summary>
       <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-        <div itemprop="text">${faq.answer}</div>
+        <p itemprop="text">${escapeHtml(faq.answer)}</p>
       </div>
     </details>
   `).join('');
 
   return `
-    <section class="blog-faq-section" itemscope itemtype="https://schema.org/FAQPage">
-      <h2>Perguntas Frequentes</h2>
-      <div class="faq-list">
-        ${faqItems}
-      </div>
+    <section class="faq" itemscope itemtype="https://schema.org/FAQPage">
+      <h3>Perguntas Frequentes sobre ${escapeHtml(productName)}</h3>
+      ${faqItems}
     </section>
   `;
 }
@@ -113,28 +128,138 @@ function generateProductBlogHTML(options: {
   content: string;
   faqs: BlogFAQ[];
   domain: string;
+  pagePath: string;
   companyProfile: any;
-  trackingPixels: TrackingPixels;
+  trackingPixels: TrackingPixels | null;
 }): string {
-  const { product, blogType, content, faqs, domain, companyProfile, trackingPixels } = options;
+  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels } = options;
+  
+  const companyName = companyProfile?.company_name || 'Smart Dent';
+  const canonicalUrl = `https://${domain}${pagePath}`;
   
   const title = blogType === 'commercial' 
-    ? `${product.name} - Guia Completo | ${companyProfile.company_name}`
-    : `${product.name} - Especificações Técnicas | ${companyProfile.company_name}`;
+    ? `${product.name} - Guia Completo | ${companyName}`
+    : `${product.name} - Especificações Técnicas | ${companyName}`;
   
   const description = product.seo_description_override || 
     `Conheça tudo sobre ${product.name}. ${blogType === 'commercial' ? 'Benefícios, aplicações e como usar.' : 'Especificações técnicas detalhadas e informações profissionais.'}`;
   
-  const keywords = Array.isArray(product.keywords) 
-    ? product.keywords.join(', ') 
-    : product.name;
+  const keywordsArray = Array.isArray(product.keywords) ? product.keywords : [];
+  const keywords = keywordsArray.length > 0 ? keywordsArray.join(', ') : product.name;
 
   const htmlContent = marked.parse(content);
-  const faqSection = generateFAQSection(faqs);
+  const faqSection = generateFAQSection(faqs, product.name);
   const faqSchema = generateFAQSchema(faqs);
 
   const { headScripts, bodyScripts } = generateTrackingScripts(trackingPixels);
 
+  // Navigation and Footer config
+  const navConfig = companyProfile?.navigation_footer_config;
+  const footerConfig = navConfig?.footer;
+  const institutionalLinks = Array.isArray(companyProfile?.institutional_links) ? companyProfile.institutional_links : [];
+  const socialMediaLinks = Array.isArray(companyProfile?.social_media_links) ? companyProfile.social_media_links : [];
+
+  // Build header nav links
+  const headerLinks = navConfig?.navigation_menu?.length > 0 
+    ? navConfig.navigation_menu.map((link: any) => 
+        `<a href="${escapeHtml(link.href)}" ${link.openInNewTab ? 'target="_blank"' : ''}>${escapeHtml(link.label)}</a>`
+      ).join('')
+    : `
+      <a href="${escapeHtml(companyProfile?.website_url || '#')}">Loja</a>
+      <a href="#">Blog</a>
+      <a href="https://api.whatsapp.com/send/?phone=${escapeHtml((companyProfile?.contact_phone || '').replace(/\D/g, ''))}&text=Ol%C3%A1">Fale conosco</a>
+    `;
+
+  // Build footer HTML
+  const footerHTML = (() => {
+    const hasCustomFooter = footerConfig && (footerConfig.locations?.length > 0 || footerConfig.links?.length > 0 || footerConfig.social_links?.length > 0);
+    
+    if (hasCustomFooter) {
+      return `
+        <div class="footer-columns">
+          ${footerConfig.locations && footerConfig.locations.length > 0 ? footerConfig.locations.map((loc: any) => `
+            <div>
+              <strong>${escapeHtml(loc.label || companyName)}</strong>
+              ${loc.phone ? `<p><i class="fas fa-phone"></i> ${escapeHtml(loc.phone)}</p>` : ''}
+              ${loc.email ? `<p><i class="fas fa-envelope"></i> ${escapeHtml(loc.email)}</p>` : ''}
+              ${loc.address ? `<p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(loc.address)}</p>` : ''}
+            </div>
+          `).join('') : `
+            <div>
+              <strong>${escapeHtml(companyName)} - Brasil</strong>
+              <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(companyProfile?.contact_phone || '')}</p>
+              <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(companyProfile?.contact_email || '')}</p>
+              <p>${escapeHtml(companyProfile?.street_address || '')}, ${escapeHtml(companyProfile?.address_number || '')}</p>
+              <p>${escapeHtml(companyProfile?.city || '')} - ${escapeHtml(companyProfile?.state || '')}, ${escapeHtml(companyProfile?.postal_code || '')}</p>
+            </div>
+          `}
+          
+          ${footerConfig.links && footerConfig.links.length > 0 ? `
+            <div>
+              <strong>Links Úteis</strong>
+              ${footerConfig.links.map((link: any) => `
+                <a href="${escapeHtml(link.href)}" target="${link.openInNewTab ? '_blank' : '_self'}" rel="noopener">${escapeHtml(link.label)}</a>
+              `).join('')}
+            </div>
+          ` : institutionalLinks.length > 0 ? `
+            <div>
+              <strong>Links Úteis</strong>
+              ${institutionalLinks.slice(0, 5).map((link: any) => `
+                <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          ${footerConfig.social_links && footerConfig.social_links.length > 0 ? `
+            <div>
+              <strong>Redes Sociais</strong>
+              <div class="footer-social-links">
+                ${footerConfig.social_links.map((social: any) => `
+                  <a href="${escapeHtml(social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.icon_alt || social.platform || '')}">
+                    <i class="fab fa-${escapeHtml(social.platform || 'link')}"></i>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : socialMediaLinks.length > 0 ? `
+            <div>
+              <strong>Redes Sociais</strong>
+              <div class="footer-social-links">
+                ${socialMediaLinks.map((social: any) => `
+                  <a href="${escapeHtml(social.url || social.href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(social.platform || '')}">
+                    <i class="fab fa-${escapeHtml(social.platform || 'link')}"></i>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      // Footer padrão (fallback)
+      return `
+        <div class="footer-columns">
+          <div>
+            <strong>${escapeHtml(companyName)} - Brasil</strong>
+            <p><i class="fas fa-phone"></i> Atendimento: ${escapeHtml(companyProfile?.contact_phone || '')}</p>
+            <p><i class="fas fa-envelope"></i> Comercial: ${escapeHtml(companyProfile?.contact_email || '')}</p>
+            <p>${escapeHtml(companyProfile?.street_address || '')}, ${escapeHtml(companyProfile?.address_number || '')}</p>
+            <p>${escapeHtml(companyProfile?.city || '')} - ${escapeHtml(companyProfile?.state || '')}, ${escapeHtml(companyProfile?.postal_code || '')}</p>
+          </div>
+          ${institutionalLinks.length > 0 ? `
+          <div>
+            <strong>Links Úteis</strong>
+            ${institutionalLinks.slice(0, 5).map((link: any) => `
+              <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>
+            `).join('')}
+          </div>
+          ` : ''}
+        </div>
+      `;
+    }
+  })();
+
+  // Schema.org JSON-LD
   const schemas = [
     {
       "@context": "https://schema.org",
@@ -143,22 +268,22 @@ function generateProductBlogHTML(options: {
       "description": description,
       "author": {
         "@type": "Organization",
-        "name": companyProfile.company_name,
-        "url": companyProfile.website_url
+        "name": companyName,
+        "url": companyProfile?.website_url
       },
       "publisher": {
         "@type": "Organization",
-        "name": companyProfile.company_name,
+        "name": companyName,
         "logo": {
           "@type": "ImageObject",
-          "url": companyProfile.company_logo_url
+          "url": companyProfile?.company_logo_url
         }
       },
       "datePublished": new Date().toISOString(),
       "dateModified": new Date().toISOString(),
       "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": `https://${domain}`
+        "@id": canonicalUrl
       },
       "image": product.image_url,
       "keywords": keywords
@@ -171,7 +296,7 @@ function generateProductBlogHTML(options: {
       "image": product.image_url,
       "brand": {
         "@type": "Brand",
-        "name": product.brand || companyProfile.company_name
+        "name": product.brand || companyName
       },
       "offers": product.price ? {
         "@type": "Offer",
@@ -180,6 +305,15 @@ function generateProductBlogHTML(options: {
         "availability": "https://schema.org/InStock",
         "url": product.product_url
       } : undefined
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": companyProfile?.website_url || `https://${domain}` },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": `https://${domain}/blog` },
+        { "@type": "ListItem", "position": 3, "name": product.name, "item": canonicalUrl }
+      ]
     }
   ];
 
@@ -192,218 +326,470 @@ function generateProductBlogHTML(options: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  <meta name="description" content="${description}">
-  <meta name="keywords" content="${keywords}">
-  <link rel="canonical" href="https://${domain}">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <meta name="keywords" content="${escapeHtml(keywords)}">
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   
   <!-- Open Graph -->
-  <meta property="og:title" content="${title}">
-  <meta property="og:description" content="${description}">
-  <meta property="og:image" content="${product.image_url || ''}">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:image" content="${escapeHtml(product.image_url || '')}">
   <meta property="og:type" content="article">
-  <meta property="og:url" content="https://${domain}">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+  <meta property="og:site_name" content="${escapeHtml(companyName)}">
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${title}">
-  <meta name="twitter:description" content="${description}">
-  <meta name="twitter:image" content="${product.image_url || ''}">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(product.image_url || '')}">
   
-  <!-- Schema.org -->
-  ${schemas.map(s => `<script type="application/ld+json">${JSON.stringify(s)}</script>`).join('\n  ')}
+  <!-- Hreflang -->
+  <link rel="alternate" hreflang="pt-BR" href="${escapeHtml(canonicalUrl)}">
+  <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">
   
+  <!-- Resource Hints -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  ${product.image_url ? `<link rel="preload" as="image" href="${escapeHtml(product.image_url)}" fetchpriority="high">` : ''}
+  
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => { const { "@context": _, ...rest } = s; return rest; }) }, null, 2)}
+  </script>
+  
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  <!-- Tracking Pixels -->
   ${headScripts}
   
   <style>
+    /* ===== DESIGN SYSTEM LP CLONE ===== */
     :root {
-      --primary: #2563eb;
-      --primary-foreground: #ffffff;
-      --background: #ffffff;
-      --foreground: #1f2937;
-      --muted: #f3f4f6;
-      --muted-foreground: #6b7280;
-      --border: #e5e7eb;
-      --radius: 8px;
+      --primary-dark: #3E4B5E;
+      --primary-gradient-dark: #1e293b;
+      --cta-bg-color: #3E4B5E;
+      --accent-tech: #EE7A3E;
+      --accent-glow: #FF9B67;
+      --text-color: #333333;
+      --muted: #64748b;
+      --card-bg: #ffffff;
+      --background-color: #f8fafc;
+      --section-light-bg: #fdfdfd;
     }
-    
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.7;
-      color: var(--foreground);
-      background: var(--background);
+      font-family: 'Inter', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      scroll-behavior: smooth;
     }
-    
+
     .container {
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 2rem 1rem;
+      padding: 0 2rem;
     }
-    
-    header {
+
+    h1, h2, h3 {
+      color: var(--primary-dark);
+      font-weight: 800;
+      letter-spacing: -0.8px;
+    }
+
+    /* ===== HEADER COM MENU (LP CLONE) ===== */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 0;
+      position: relative;
+      z-index: 10;
+    }
+
+    .banner {
+      width: 180px;
+      height: auto;
+    }
+
+    .main-nav a {
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 11px;
+      margin-left: 1.5rem;
+      transition: color 0.2s;
+    }
+
+    .main-nav a:hover {
+      color: var(--accent-tech);
+    }
+
+    /* ===== BREADCRUMBS ===== */
+    .breadcrumbs {
+      padding: 1rem 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .breadcrumbs a {
+      color: var(--primary-dark);
+      text-decoration: none;
+    }
+
+    .breadcrumbs a:hover {
+      color: var(--accent-tech);
+    }
+
+    .breadcrumbs span {
+      margin: 0 0.5rem;
+    }
+
+    /* ===== BLOG HEADER ===== */
+    .blog-header {
       text-align: center;
-      margin-bottom: 3rem;
-      padding-bottom: 2rem;
-      border-bottom: 1px solid var(--border);
+      padding: 2rem 0 3rem;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 2rem;
     }
-    
-    header h1 {
+
+    .blog-header h1 {
       font-size: 2.5rem;
-      font-weight: 700;
+      line-height: 1.2;
       margin-bottom: 1rem;
-      color: var(--foreground);
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
     }
-    
-    header .meta {
-      color: var(--muted-foreground);
+
+    .blog-header .meta {
+      color: var(--muted);
       font-size: 0.875rem;
     }
-    
+
+    /* ===== PRODUCT HERO ===== */
     .product-hero {
       display: flex;
       gap: 2rem;
-      margin-bottom: 3rem;
       padding: 2rem;
-      background: var(--muted);
-      border-radius: var(--radius);
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 16px;
+      margin-bottom: 3rem;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e0e0e0;
     }
-    
+
     .product-hero img {
-      width: 200px;
-      height: 200px;
+      width: 280px;
+      height: 280px;
       object-fit: cover;
-      border-radius: var(--radius);
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
     }
-    
-    .product-hero-info h2 {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
-    
-    .product-hero-info p {
-      color: var(--muted-foreground);
-      margin-bottom: 1rem;
-    }
-    
-    .product-hero-info .cta {
-      display: inline-block;
-      padding: 0.75rem 1.5rem;
-      background: var(--primary);
-      color: var(--primary-foreground);
-      text-decoration: none;
-      border-radius: var(--radius);
-      font-weight: 500;
-    }
-    
-    .content h2 {
-      font-size: 1.75rem;
-      margin: 2rem 0 1rem;
-      color: var(--foreground);
-    }
-    
-    .content h3 {
-      font-size: 1.25rem;
-      margin: 1.5rem 0 0.75rem;
-    }
-    
-    .content p {
-      margin-bottom: 1rem;
-    }
-    
-    .content ul, .content ol {
-      margin: 1rem 0;
-      padding-left: 1.5rem;
-    }
-    
-    .content li {
-      margin-bottom: 0.5rem;
-    }
-    
-    .blog-faq-section {
-      margin-top: 3rem;
-      padding-top: 2rem;
-      border-top: 1px solid var(--border);
-    }
-    
-    .blog-faq-section h2 {
-      font-size: 1.75rem;
-      margin-bottom: 1.5rem;
-    }
-    
-    .faq-list {
+
+    .product-hero-info {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      justify-content: center;
     }
-    
-    .faq-item {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+
+    .product-hero-info h2 {
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .product-hero-info .brand {
+      color: var(--accent-tech);
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .product-hero-info p {
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.7;
+    }
+
+    .product-hero-info .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, var(--accent-tech) 0%, var(--accent-glow) 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.875rem;
+      transition: all 0.3s;
+      box-shadow: 0 5px 20px rgba(238, 122, 62, 0.4);
+    }
+
+    .product-hero-info .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(238, 122, 62, 0.5);
+    }
+
+    /* ===== BLOG CONTENT ===== */
+    .blog-content {
+      max-width: 800px;
+      margin: 0 auto;
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+
+    .blog-content h2 {
+      font-size: 1.75rem;
+      margin: 2.5rem 0 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .blog-content h3 {
+      font-size: 1.35rem;
+      margin: 2rem 0 0.75rem;
+    }
+
+    .blog-content p {
+      margin-bottom: 1.25rem;
+    }
+
+    .blog-content ul, .blog-content ol {
+      margin: 1rem 0 1.5rem 1.5rem;
+    }
+
+    .blog-content li {
+      margin-bottom: 0.5rem;
+    }
+
+    .blog-content strong {
+      color: var(--primary-dark);
+    }
+
+    /* ===== FAQ SECTION (LP CLONE STYLE) ===== */
+    .faq {
+      max-width: 800px;
+      margin: 3rem auto;
+      padding-top: 2rem;
+      border-top: 2px solid var(--primary-dark);
+    }
+
+    .faq h3 {
+      font-size: 1.75rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .faq details {
+      margin-bottom: 0.75rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
       overflow: hidden;
+      background: var(--card-bg);
+      transition: all 0.3s;
     }
-    
-    .faq-item summary {
-      padding: 1rem 1.25rem;
+
+    .faq details:hover {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    .faq summary {
+      padding: 1.25rem;
       cursor: pointer;
-      font-weight: 500;
-      background: var(--muted);
-      list-style: none;
+      font-weight: 600;
+      font-size: 1rem;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 0.75rem;
+      list-style: none;
+      background: #f8f9fa;
+      transition: background 0.2s;
     }
-    
-    .faq-item summary::-webkit-details-marker {
+
+    .faq summary::-webkit-details-marker {
       display: none;
     }
-    
-    .faq-item summary::after {
-      content: '+';
-      font-size: 1.25rem;
-      font-weight: 300;
+
+    .faq summary:hover {
+      background: #f0f0f0;
     }
-    
-    .faq-item[open] summary::after {
-      content: '−';
+
+    .faq summary i {
+      color: var(--accent-tech);
     }
-    
+
     .faq-answer {
-      padding: 1rem 1.25rem;
-      background: var(--background);
+      padding: 1.25rem;
+      background: var(--card-bg);
+      border-top: 1px solid #e0e0e0;
     }
-    
-    footer {
-      margin-top: 4rem;
-      padding: 2rem;
+
+    .faq-answer p {
+      margin: 0;
+      line-height: 1.7;
+    }
+
+    /* ===== CTA SECTION ===== */
+    .cta-section {
       text-align: center;
-      background: var(--muted);
-      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      margin: 3rem 0;
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-gradient-dark) 100%);
+      border-radius: 16px;
+      color: white;
     }
-    
-    footer p {
-      color: var(--muted-foreground);
+
+    .cta-section p {
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.9;
+    }
+
+    .cta-section button {
+      padding: 1rem 2.5rem;
+      font-size: 1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-tech) 0%, var(--accent-glow) 100%);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 5px 20px rgba(238, 122, 62, 0.4);
+    }
+
+    .cta-section button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(238, 122, 62, 0.5);
+    }
+
+    /* ===== FOOTER (LP CLONE) ===== */
+    footer {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-gradient-dark) 100%);
+      color: white;
+      padding: 3rem 0 2rem;
+      margin-top: 4rem;
+    }
+
+    .footer-columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+    }
+
+    .footer-columns > div {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .footer-columns strong {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+
+    .footer-columns p {
       font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.8);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    
-    footer a {
-      color: var(--primary);
+
+    .footer-columns p i {
+      width: 16px;
+      color: var(--accent-tech);
+    }
+
+    .footer-columns a {
+      color: rgba(255, 255, 255, 0.8);
       text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
     }
-    
-    @media (max-width: 640px) {
+
+    .footer-columns a:hover {
+      color: var(--accent-tech);
+    }
+
+    .footer-social-links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .footer-social-links a {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      font-size: 1.1rem;
+      transition: all 0.3s;
+    }
+
+    .footer-social-links a:hover {
+      background: var(--accent-tech);
+      color: white;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .main-nav a {
+        margin-left: 0.75rem;
+        margin-right: 0.75rem;
+      }
+
+      .blog-header h1 {
+        font-size: 1.75rem;
+      }
+
       .product-hero {
         flex-direction: column;
         text-align: center;
       }
-      
+
       .product-hero img {
+        width: 100%;
+        max-width: 300px;
         margin: 0 auto;
       }
-      
-      header h1 {
-        font-size: 1.75rem;
+
+      .blog-content {
+        font-size: 1rem;
+      }
+
+      .footer-columns {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .footer-social-links {
+        justify-content: center;
       }
     }
   </style>
@@ -411,34 +797,79 @@ function generateProductBlogHTML(options: {
 <body>
   ${bodyScripts}
   
+  <!-- HEADER (LP CLONE) -->
+  <div class="container">
+    <div class="header">
+      ${companyProfile?.company_logo_url 
+        ? `<img src="${escapeHtml(companyProfile.company_logo_url)}" alt="Logo ${escapeHtml(companyName)}" class="banner" width="180" height="60" loading="eager">`
+        : `<strong style="font-size: 1.5rem; color: var(--primary-dark);">${escapeHtml(companyName)}</strong>`
+      }
+      <nav class="main-nav">
+        ${headerLinks}
+      </nav>
+    </div>
+  </div>
+  
+  <!-- BREADCRUMBS -->
+  <div class="container">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="${escapeHtml(companyProfile?.website_url || `https://${domain}`)}">Home</a>
+      <span>›</span>
+      <a href="https://${escapeHtml(domain)}/blog">Blog</a>
+      <span>›</span>
+      <span>${escapeHtml(product.name)}</span>
+    </nav>
+  </div>
+  
+  <!-- BLOG CONTENT -->
   <main class="container">
-    <header>
-      <h1>${title}</h1>
-      <p class="meta">Publicado por ${companyProfile.company_name} • ${new Date().toLocaleDateString('pt-BR')}</p>
+    <header class="blog-header">
+      <h1>${escapeHtml(title)}</h1>
+      <p class="meta">Publicado por ${escapeHtml(companyName)} • ${new Date().toLocaleDateString('pt-BR')}</p>
     </header>
     
     ${product.image_url ? `
     <section class="product-hero">
-      <img src="${product.image_url}" alt="${product.name}" loading="lazy">
+      <img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="eager">
       <div class="product-hero-info">
-        <h2>${product.name}</h2>
-        <p>${product.brand || ''}</p>
-        ${product.product_url ? `<a href="${product.product_url}" class="cta">Ver Produto</a>` : ''}
+        <h2>${escapeHtml(product.name)}</h2>
+        ${product.brand ? `<span class="brand">${escapeHtml(product.brand)}</span>` : ''}
+        ${product.description ? `<p>${escapeHtml(product.description.substring(0, 200))}${product.description.length > 200 ? '...' : ''}</p>` : ''}
+        ${product.product_url ? `<a href="${escapeHtml(product.product_url)}" class="cta"><i class="fas fa-shopping-cart"></i> Ver Produto</a>` : ''}
       </div>
     </section>
     ` : ''}
     
-    <article class="content">
+    <article class="blog-content">
       ${htmlContent}
     </article>
     
     ${faqSection}
     
-    <footer>
-      <p>© ${new Date().getFullYear()} ${companyProfile.company_name}. Todos os direitos reservados.</p>
-      <p><a href="${companyProfile.website_url || '#'}">${companyProfile.website_url || ''}</a></p>
-    </footer>
+    <section class="cta-section">
+      <p>Quer saber mais sobre ${escapeHtml(product.name)}?</p>
+      <button onclick="window.location.href='${escapeHtml(product.product_url || companyProfile?.website_url || '#')}'">
+        <i class="fas fa-comment-alt"></i> Fale Conosco
+      </button>
+    </section>
   </main>
+
+  <!-- FOOTER (LP CLONE) -->
+  <footer>
+    <div class="container">
+      ${footerHTML}
+    </div>
+  </footer>
+
+  <!-- GEO Context (Hidden for LLMs) -->
+  <div class="geo-context" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">
+    <p>
+      ${escapeHtml(companyName)} é especialista em ${escapeHtml(product.category || 'produtos odontológicos')}.
+      Produto: ${escapeHtml(product.name)}.
+      ${product.brand ? `Marca: ${escapeHtml(product.brand)}.` : ''}
+      Localização: ${escapeHtml(companyProfile?.city || 'Brasil')}, ${escapeHtml(companyProfile?.state || 'BR')}.
+    </p>
+  </div>
 </body>
 </html>`;
 }
@@ -499,179 +930,153 @@ serve(async (req) => {
       );
     }
 
-    // 2. Get company profile and domain config
-    const { data: companyProfile } = await supabase
+    // 2. Get company profile with ALL fields for header/footer
+    const { data: companyProfile, error: companyError } = await supabase
       .from('company_profile')
       .select('*')
-      .limit(1)
       .single();
 
-    if (!companyProfile) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Perfil da empresa não encontrado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (companyError) {
+      console.warn('[publish-product-blog] Company profile not found, using defaults');
     }
 
-    const seoDomains = (companyProfile.seo_domains || []) as any[];
+    // 3. Get domain config for tracking pixels
+    const seoDomains = companyProfile?.seo_domains || [];
     const domainConfig = seoDomains.find((d: any) => d.domain === domain);
+    const cloudflareProjectName = domainConfig?.cloudflare_project_name;
+    const trackingPixels = domainConfig?.tracking_pixels || companyProfile?.tracking_pixels || null;
 
-    if (!domainConfig?.cloudflare_enabled || !domainConfig?.cloudflare_project_name) {
+    if (!cloudflareProjectName) {
       return new Response(
-        JSON.stringify({ success: false, error: `Cloudflare não configurado para ${domain}` }),
+        JSON.stringify({ 
+          success: false, 
+          error: `Domínio ${domain} não tem cloudflare_project_name configurado em seo_domains` 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    const projectName = domainConfig.cloudflare_project_name;
-    const rawPixels = domainConfig.tracking_pixels || {};
-    const trackingPixels: TrackingPixels = {
-      google_tag_manager: rawPixels.google_tag_manager || rawPixels.gtm || null,
-      google_analytics: rawPixels.google_analytics || rawPixels.ga4 || null,
-      meta_pixel: rawPixels.meta_pixel || rawPixels.meta || null,
-      tiktok_pixel: rawPixels.tiktok_pixel || rawPixels.tiktok || null,
-    };
-
-    // 3. Create/update publication record
+    // 4. Create or update publication record
+    const finalPagePath = pagePath || `/blog/${product.slug || product.id}`;
+    
     const { data: existingPub } = await supabase
       .from('product_blog_publications')
       .select('id')
       .eq('product_id', productId)
       .eq('blog_type', blogType)
       .eq('target_domain', domain)
-      .single();
+      .maybeSingle();
 
     const publicationData = {
       product_id: productId,
       blog_type: blogType,
       target_domain: domain,
-      page_path: pagePath || `blog/${product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-      publish_status: 'pending',
+      page_path: finalPagePath,
+      publish_status: 'publishing',
       updated_at: new Date().toISOString()
     };
 
     let publicationId: string;
-    
+
     if (existingPub) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('product_blog_publications')
         .update(publicationData)
         .eq('id', existingPub.id);
+
+      if (updateError) throw updateError;
       publicationId = existingPub.id;
     } else {
-      const { data: newPub } = await supabase
+      const { data: newPub, error: insertError } = await supabase
         .from('product_blog_publications')
         .insert(publicationData)
         .select('id')
         .single();
-      publicationId = newPub!.id;
+
+      if (insertError) throw insertError;
+      publicationId = newPub.id;
     }
 
-    // 4. Generate HTML
-    const htmlContent = generateProductBlogHTML({
+    // 5. Generate HTML with LP Clone header/footer
+    const html = generateProductBlogHTML({
       product,
       blogType,
       content,
       faqs: faqs || [],
       domain,
+      pagePath: finalPagePath,
       companyProfile,
       trackingPixels
     });
 
-    // 5. Upload to Cloudflare Pages
-    const filePath = `/${pagePath.replace(/^\//, '')}/index.html`;
-    const contentHash = await calculateBlake3Hash(htmlContent);
+    console.log(`[publish-product-blog] HTML generated: ${html.length} bytes`);
 
-    console.log(`[publish-product-blog] Uploading to Cloudflare:`, { projectName, filePath, contentHash });
+    // 6. Upload to Cloudflare Pages
+    const manifest: Record<string, string> = {};
+    const htmlHash = await calculateBlake3Hash(html);
+    manifest[finalPagePath === '/' ? '/index.html' : `${finalPagePath}.html`] = htmlHash;
 
-    // Get upload token
-    const tokenResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/upload-token`,
-      { headers: { 'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}` } }
-    );
-
-    const tokenData = await tokenResponse.json();
-    if (!tokenData.success || !tokenData.result?.jwt) {
-      throw new Error(tokenData.errors?.[0]?.message || 'Falha ao obter token');
-    }
-
-    const jwtToken = tokenData.result.jwt;
-
-    // Upload file
-    const uploadResponse = await fetch(
-      'https://api.cloudflare.com/client/v4/pages/assets/upload',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify([{
-          key: contentHash,
-          value: stringToBase64(htmlContent),
-          metadata: { contentType: 'text/html' },
-          base64: true
-        }])
-      }
-    );
-
-    const uploadData = await uploadResponse.json();
-    if (!uploadData.success) {
-      throw new Error(uploadData.errors?.[0]?.message || 'Falha no upload');
-    }
-
-    // Upsert hashes
-    await fetch(
-      'https://api.cloudflare.com/client/v4/pages/assets/upsert-hashes',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ hashes: [contentHash] })
-      }
-    );
-
-    // Create deployment
     const formData = new FormData();
-    formData.append('manifest', JSON.stringify({ [filePath]: contentHash }));
+    formData.append('manifest', JSON.stringify(manifest));
+    
+    const htmlBlob = new Blob([html], { type: 'text/html' });
+    formData.append(htmlHash, htmlBlob, `${htmlHash}.html`);
 
-    const deployResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/deployments`,
+    const uploadResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${cloudflareProjectName}/deployments`,
       {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}` },
+        headers: {
+          'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+        },
         body: formData
       }
     );
 
-    const deployData = await deployResponse.json();
-    if (!deployData.success) {
-      throw new Error(deployData.errors?.[0]?.message || 'Falha no deployment');
+    const uploadResult = await uploadResponse.json();
+    console.log(`[publish-product-blog] Cloudflare response:`, uploadResult.success);
+
+    if (!uploadResult.success) {
+      await supabase
+        .from('product_blog_publications')
+        .update({
+          publish_status: 'error',
+          publish_error_message: uploadResult.errors?.[0]?.message || 'Erro desconhecido no Cloudflare'
+        })
+        .eq('id', publicationId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: uploadResult.errors?.[0]?.message || 'Erro no upload para Cloudflare' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
-    const publishedUrl = `https://${domain}${filePath.replace('/index.html', '')}`;
-
-    // 6. Update publication record
+    // 7. Update publication with success
+    const publishedUrl = `https://${domain}${finalPagePath}`;
+    
     await supabase
       .from('product_blog_publications')
       .update({
         publish_status: 'published',
         published_url: publishedUrl,
+        cloudflare_deployment_id: uploadResult.result?.id,
         published_at: new Date().toISOString(),
-        html_content: htmlContent,
-        cloudflare_deployment_id: deployData.result?.id
+        html_content: html,
+        publish_error_message: null
       })
       .eq('id', publicationId);
 
-    console.log(`[publish-product-blog] Success:`, { publishedUrl });
+    console.log(`[publish-product-blog] Success! Published to: ${publishedUrl}`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         publishedUrl,
-        deploymentId: deployData.result?.id
+        deploymentId: uploadResult.result?.id,
+        publicationId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -679,7 +1084,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('[publish-product-blog] Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: (error as Error).message }),
+      JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
