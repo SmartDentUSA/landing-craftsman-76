@@ -30,6 +30,17 @@ async function calculateSHA256(content: string): Promise<string> {
   return hashHex;
 }
 
+// Convert string to base64
+function stringToBase64(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 function generateTrackingScripts(pixels: TrackingPixels): { headScripts: string; bodyScripts: string } {
   let headScripts = '';
   let bodyScripts = '';
@@ -277,24 +288,160 @@ serve(async (req) => {
     const filePath = isHomepage || pagePath === '/' ? '/index.html' : `/${pagePath.replace(/^\//, '')}/index.html`;
 
     // ============================================
-    // CLOUDFLARE PAGES DIRECT UPLOAD - 3 STEP PROCESS
+    // CLOUDFLARE PAGES DIRECT UPLOAD - CORRECT 4-STEP PROCESS
+    // Based on: https://developers.cloudflare.com/pages/configuration/direct-upload/
     // ============================================
 
     // STEP 1: Calculate SHA-256 hash of the content
     const contentHash = await calculateSHA256(htmlContent);
-    console.log(`[publish-cloudflare-pages] Content hash calculated:`, { 
+    console.log(`[publish-cloudflare-pages] STEP 1 - Content hash calculated:`, { 
       filePath, 
       hash: contentHash,
       contentLength: htmlContent.length 
     });
 
-    // STEP 2: Create deployment with manifest (file path → hash mapping)
-    // Cloudflare expects FormData with manifest as JSON string
+    // STEP 2: Get JWT upload token
+    console.log(`[publish-cloudflare-pages] STEP 2 - Getting upload token...`);
+    const tokenResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/upload-token`,
+      {
+        headers: {
+          'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+        }
+      }
+    );
+
+    const tokenData = await tokenResponse.json();
+    console.log(`[publish-cloudflare-pages] Token response:`, {
+      status: tokenResponse.status,
+      success: tokenData.success,
+      hasJwt: !!tokenData.result?.jwt
+    });
+
+    if (!tokenResponse.ok || !tokenData.success || !tokenData.result?.jwt) {
+      console.error('[publish-cloudflare-pages] Failed to get upload token:', tokenData);
+      
+      await supabase
+        .from('cloned_landing_pages')
+        .update({ 
+          publish_status: 'error',
+          publish_error_message: tokenData.errors?.[0]?.message || 'Falha ao obter token de upload'
+        })
+        .eq('id', lpId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: tokenData.errors?.[0]?.message || 'Falha ao obter token de upload' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    const jwtToken = tokenData.result.jwt;
+
+    // STEP 3: Upload file content using JWT
+    console.log(`[publish-cloudflare-pages] STEP 3 - Uploading file content...`);
+    
+    // Convert content to base64
+    const base64Content = stringToBase64(htmlContent);
+    
+    const uploadPayload = [{
+      key: contentHash,
+      value: base64Content,
+      metadata: { contentType: 'text/html' },
+      base64: true
+    }];
+
+    const uploadResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/pages/assets/upload`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(uploadPayload)
+      }
+    );
+
+    const uploadData = await uploadResponse.json();
+    console.log(`[publish-cloudflare-pages] Upload response:`, {
+      status: uploadResponse.status,
+      success: uploadData.success,
+      errors: uploadData.errors
+    });
+
+    if (!uploadResponse.ok || !uploadData.success) {
+      console.error('[publish-cloudflare-pages] Failed to upload file:', uploadData);
+      
+      await supabase
+        .from('cloned_landing_pages')
+        .update({ 
+          publish_status: 'error',
+          publish_error_message: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo'
+        })
+        .eq('id', lpId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // STEP 4: Upsert hashes to register the uploaded files
+    console.log(`[publish-cloudflare-pages] STEP 4 - Registering hashes...`);
+    
+    const upsertResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/pages/assets/upsert-hashes`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hashes: [contentHash] })
+      }
+    );
+
+    const upsertData = await upsertResponse.json();
+    console.log(`[publish-cloudflare-pages] Upsert hashes response:`, {
+      status: upsertResponse.status,
+      success: upsertData.success,
+      errors: upsertData.errors
+    });
+
+    if (!upsertResponse.ok || !upsertData.success) {
+      console.error('[publish-cloudflare-pages] Failed to upsert hashes:', upsertData);
+      
+      await supabase
+        .from('cloned_landing_pages')
+        .update({ 
+          publish_status: 'error',
+          publish_error_message: upsertData.errors?.[0]?.message || 'Falha ao registrar hashes'
+        })
+        .eq('id', lpId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: upsertData.errors?.[0]?.message || 'Falha ao registrar hashes' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // STEP 5: Create deployment with manifest
+    console.log(`[publish-cloudflare-pages] STEP 5 - Creating deployment...`);
+    
     const manifest = {
       [filePath]: contentHash
     };
 
-    console.log(`[publish-cloudflare-pages] Creating deployment with manifest:`, manifest);
+    console.log(`[publish-cloudflare-pages] Manifest:`, manifest);
 
     const formData = new FormData();
     formData.append('manifest', JSON.stringify(manifest));
@@ -339,68 +486,10 @@ serve(async (req) => {
     }
 
     const deployment = createDeploymentData.result;
-    const missingHashes = deployment.required_files || [];
 
-    console.log(`[publish-cloudflare-pages] Deployment created:`, {
-      deploymentId: deployment.id,
-      missingHashes: missingHashes.length,
-      hashes: missingHashes
-    });
-
-    // STEP 3: Upload missing files if any
-    if (missingHashes.length > 0 && missingHashes.includes(contentHash)) {
-      console.log(`[publish-cloudflare-pages] Uploading missing file with hash: ${contentHash}`);
-
-      // Upload file content as binary
-      const encoder = new TextEncoder();
-      const contentBytes = encoder.encode(htmlContent);
-
-      const uploadResponse = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/deployments/${deployment.id}/files/${contentHash}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
-            'Content-Type': 'application/octet-stream',
-          },
-          body: contentBytes
-        }
-      );
-
-      const uploadData = await uploadResponse.json();
-      console.log(`[publish-cloudflare-pages] File upload response:`, {
-        status: uploadResponse.status,
-        success: uploadData.success,
-        errors: uploadData.errors
-      });
-
-      if (!uploadResponse.ok || !uploadData.success) {
-        console.error('[publish-cloudflare-pages] Failed to upload file:', uploadData);
-        
-        await supabase
-          .from('cloned_landing_pages')
-          .update({ 
-            publish_status: 'error',
-            publish_error_message: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo'
-          })
-          .eq('id', lpId);
-
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo' 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-
-      console.log(`[publish-cloudflare-pages] File uploaded successfully`);
-    } else {
-      console.log(`[publish-cloudflare-pages] No missing files to upload (content already exists in Cloudflare)`);
-    }
-
-    // Wait a moment for deployment to complete
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for deployment to complete
+    console.log(`[publish-cloudflare-pages] Waiting for deployment to complete...`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Fetch deployment status to get the URL
     const statusResponse = await fetch(
@@ -427,7 +516,7 @@ serve(async (req) => {
       stage: finalDeployment.latest_stage
     });
 
-    // 8. Update LP with success
+    // Update LP with success
     const deploymentRecord = {
       id: finalDeployment.id,
       url: finalDeployment.url,
@@ -471,9 +560,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[publish-cloudflare-pages] Error:', error);
+    console.error('[publish-cloudflare-pages] Unexpected error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: (error as Error).message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Erro inesperado ao publicar'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
