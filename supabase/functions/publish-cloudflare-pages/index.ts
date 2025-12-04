@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { blake3 } from "https://esm.sh/hash-wasm@4.11.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,14 +21,14 @@ interface TrackingPixels {
   google_analytics?: { enabled: boolean; measurement_id: string | null };
 }
 
-// Calculate SHA-256 hash of content (required by Cloudflare Pages Direct Upload API)
-async function calculateSHA256(content: string): Promise<string> {
+// Calculate BLAKE3 hash for Cloudflare Pages Direct Upload API
+// Cloudflare uses BLAKE3 on the raw file content, truncated to 32 hex characters
+async function calculateBlake3Hash(content: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(content);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+  const hash = await blake3(data);
+  // Cloudflare Pages uses first 32 characters of the BLAKE3 hash
+  return hash.slice(0, 32);
 }
 
 // Convert string to base64
@@ -292,11 +293,12 @@ serve(async (req) => {
     // Based on: https://developers.cloudflare.com/pages/configuration/direct-upload/
     // ============================================
 
-    // STEP 1: Calculate SHA-256 hash of the content
-    const contentHash = await calculateSHA256(htmlContent);
-    console.log(`[publish-cloudflare-pages] STEP 1 - Content hash calculated:`, { 
+    // STEP 1: Calculate BLAKE3 hash of the content (Cloudflare Pages uses BLAKE3, not SHA-256!)
+    const contentHash = await calculateBlake3Hash(htmlContent);
+    console.log(`[publish-cloudflare-pages] STEP 1 - BLAKE3 hash calculated:`, { 
       filePath, 
       hash: contentHash,
+      hashLength: contentHash.length,
       contentLength: htmlContent.length 
     });
 
