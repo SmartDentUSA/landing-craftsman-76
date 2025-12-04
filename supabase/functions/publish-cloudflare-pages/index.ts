@@ -289,11 +289,15 @@ serve(async (req) => {
     });
 
     // STEP 2: Create deployment with manifest (file path → hash mapping)
+    // Cloudflare expects FormData with manifest as JSON string
     const manifest = {
       [filePath]: contentHash
     };
 
     console.log(`[publish-cloudflare-pages] Creating deployment with manifest:`, manifest);
+
+    const formData = new FormData();
+    formData.append('manifest', JSON.stringify(manifest));
 
     const createDeploymentResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/deployments`,
@@ -301,9 +305,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ manifest })
+        body: formData
       }
     );
 
