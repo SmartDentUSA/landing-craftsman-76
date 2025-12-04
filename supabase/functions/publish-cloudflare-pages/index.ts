@@ -13,6 +13,113 @@ interface PublishRequest {
   isHomepage: boolean;
 }
 
+interface TrackingPixels {
+  google_tag_manager?: { enabled: boolean; container_id: string | null };
+  meta_pixel?: { enabled: boolean; pixel_id: string | null };
+  tiktok_pixel?: { enabled: boolean; pixel_id: string | null };
+  google_analytics?: { enabled: boolean; measurement_id: string | null };
+}
+
+function generateTrackingScripts(pixels: TrackingPixels): { headScripts: string; bodyScripts: string } {
+  let headScripts = '';
+  let bodyScripts = '';
+
+  // Google Tag Manager (head + body)
+  if (pixels.google_tag_manager?.enabled && pixels.google_tag_manager.container_id) {
+    const gtmId = pixels.google_tag_manager.container_id;
+    headScripts += `
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${gtmId}');</script>
+<!-- End Google Tag Manager -->`;
+    
+    bodyScripts += `
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->`;
+  }
+
+  // Meta Pixel (head)
+  if (pixels.meta_pixel?.enabled && pixels.meta_pixel.pixel_id) {
+    const pixelId = pixels.meta_pixel.pixel_id;
+    headScripts += `
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '${pixelId}');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel Code -->`;
+  }
+
+  // TikTok Pixel (head)
+  if (pixels.tiktok_pixel?.enabled && pixels.tiktok_pixel.pixel_id) {
+    const pixelId = pixels.tiktok_pixel.pixel_id;
+    headScripts += `
+<!-- TikTok Pixel Code -->
+<script>
+!function (w, d, t) {
+  w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+  ttq.load('${pixelId}');
+  ttq.page();
+}(window, document, 'ttq');
+</script>
+<!-- End TikTok Pixel Code -->`;
+  }
+
+  // Google Analytics 4 (head)
+  if (pixels.google_analytics?.enabled && pixels.google_analytics.measurement_id) {
+    const measurementId = pixels.google_analytics.measurement_id;
+    headScripts += `
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${measurementId}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '${measurementId}');
+</script>
+<!-- End Google Analytics 4 -->`;
+  }
+
+  return { headScripts, bodyScripts };
+}
+
+function injectTrackingScripts(html: string, pixels: TrackingPixels): string {
+  const { headScripts, bodyScripts } = generateTrackingScripts(pixels);
+  
+  if (!headScripts && !bodyScripts) {
+    return html;
+  }
+
+  let modifiedHtml = html;
+
+  // Inject head scripts before </head>
+  if (headScripts) {
+    modifiedHtml = modifiedHtml.replace('</head>', `${headScripts}\n</head>`);
+  }
+
+  // Inject body scripts right after <body> or <body ...>
+  if (bodyScripts) {
+    modifiedHtml = modifiedHtml.replace(/<body([^>]*)>/i, `<body$1>${bodyScripts}`);
+  }
+
+  return modifiedHtml;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -126,12 +233,29 @@ serve(async (req) => {
         .neq('id', lpId);
     }
 
-    // 5. Prepare file for upload
-    const fileName = isHomepage || pagePath === '/' ? 'index.html' : `${pagePath.replace(/^\//, '')}/index.html`;
-    const htmlContent = lp.transformed_html;
+    // 5. Inject tracking pixels into HTML
+    const trackingPixels: TrackingPixels = domainConfig.tracking_pixels || {};
+    let htmlContent = lp.transformed_html;
+    
+    // Count active pixels for logging
+    const activePixels = [
+      trackingPixels.google_tag_manager?.enabled && trackingPixels.google_tag_manager.container_id ? 'GTM' : null,
+      trackingPixels.meta_pixel?.enabled && trackingPixels.meta_pixel.pixel_id ? 'Meta' : null,
+      trackingPixels.tiktok_pixel?.enabled && trackingPixels.tiktok_pixel.pixel_id ? 'TikTok' : null,
+      trackingPixels.google_analytics?.enabled && trackingPixels.google_analytics.measurement_id ? 'GA4' : null,
+    ].filter(Boolean);
 
-    // 6. Create deployment using Cloudflare Pages Direct Upload API
-    // First, create the upload session
+    if (activePixels.length > 0) {
+      console.log(`[publish-cloudflare-pages] Injecting tracking pixels: ${activePixels.join(', ')}`);
+      htmlContent = injectTrackingScripts(htmlContent, trackingPixels);
+    } else {
+      console.log(`[publish-cloudflare-pages] No tracking pixels configured for domain`);
+    }
+
+    // 6. Prepare file for upload
+    const fileName = isHomepage || pagePath === '/' ? 'index.html' : `${pagePath.replace(/^\//, '')}/index.html`;
+
+    // 7. Create deployment using Cloudflare Pages Direct Upload API
     const formData = new FormData();
     formData.append('manifest', JSON.stringify({
       [fileName]: { 
@@ -188,16 +312,18 @@ serve(async (req) => {
     console.log(`[publish-cloudflare-pages] Deploy successful:`, {
       deploymentId: deployment.id,
       url: deployment.url,
-      publishedUrl
+      publishedUrl,
+      injectedPixels: activePixels
     });
 
-    // 7. Update LP with success
+    // 8. Update LP with success
     const deploymentRecord = {
       id: deployment.id,
       url: deployment.url,
       created_at: new Date().toISOString(),
       page_path: pagePath || '/',
-      is_homepage: isHomepage
+      is_homepage: isHomepage,
+      injected_pixels: activePixels
     };
 
     const existingHistory = (lp.deployment_history || []) as any[];
@@ -224,7 +350,8 @@ serve(async (req) => {
           projectName,
           domain,
           pagePath: pagePath || '/',
-          isHomepage
+          isHomepage,
+          injectedPixels: activePixels
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
