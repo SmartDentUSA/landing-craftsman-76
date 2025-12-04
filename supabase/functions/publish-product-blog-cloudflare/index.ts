@@ -102,12 +102,13 @@ function generateFAQSchema(faqs: BlogFAQ[]): object | null {
   };
 }
 
-// Helper para extrair features do produto
+// Helper para extrair features do produto (com fallbacks por categoria)
 function extractProductFeatures(product: any): string[] {
   const features: string[] = [];
+  const category = (product.category || '').toLowerCase();
   
-  // De benefits/features do produto
-  if (Array.isArray(product.benefits)) {
+  // Primeiro: tentar usar features do produto
+  if (Array.isArray(product.benefits) && product.benefits.length > 0) {
     features.push(...product.benefits.slice(0, 4));
   }
   if (Array.isArray(product.features) && features.length < 4) {
@@ -115,47 +116,207 @@ function extractProductFeatures(product: any): string[] {
     features.push(...product.features.slice(0, remaining).map((f: any) => typeof f === 'string' ? f : f.name || f.title));
   }
   
-  // Fallback baseado na categoria
+  // Fallbacks específicos por categoria
   if (features.length === 0) {
-    features.push(
-      'Alta qualidade e durabilidade',
-      'Aprovado pela ANVISA',
-      'Suporte técnico especializado',
-      'Garantia do fabricante'
-    );
+    // SCANNERS 3D
+    if (category.includes('scanner')) {
+      features.push(
+        'Precisão de captura micrométrica',
+        'Software de planejamento incluído',
+        'Treinamento e certificação',
+        'Garantia estendida'
+      );
+    }
+    // IMPRESSÃO 3D
+    else if (category.includes('impressora') || category.includes('impressão')) {
+      features.push(
+        'Alta resolução de impressão',
+        'Compatível com múltiplas resinas',
+        'Interface touchscreen intuitiva',
+        'Suporte técnico especializado'
+      );
+    }
+    // PÓS-IMPRESSÃO
+    else if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
+      features.push(
+        'Cura UV automatizada',
+        'Ciclos pré-programados',
+        'Construção durável',
+        'Fácil operação'
+      );
+    }
+    // SOFTWARES
+    else if (category.includes('software') || category.includes('licença')) {
+      features.push(
+        'Licença vitalícia incluída',
+        'Atualizações gratuitas',
+        'Suporte técnico dedicado',
+        'Treinamento online'
+      );
+    }
+    // FRESADORA / CAD-CAM
+    else if (category.includes('fresadora') || category.includes('cad') || category.includes('cam') || category.includes('milling')) {
+      features.push(
+        'Precisão industrial',
+        'Compatível com múltiplos materiais',
+        'Manutenção simplificada',
+        'Suporte técnico premium'
+      );
+    }
+    // PROMOÇÕES
+    else if (category.includes('promoção') || category.includes('oferta') || category.includes('kit')) {
+      features.push(
+        'Desconto exclusivo por tempo limitado',
+        'Frete diferenciado',
+        'Produto original com garantia',
+        'Estoque limitado'
+      );
+    }
+    // RESINAS 3D / CARACTERIZAÇÃO / DENTÍSTICA
+    else if (category.includes('resina') || category.includes('caracterização') || 
+             category.includes('dentística') || category.includes('estética') || 
+             category.includes('ortodon') || category.includes('compos')) {
+      features.push(
+        'Biocompatibilidade certificada',
+        'Estética natural superior',
+        'Fácil manipulação clínica',
+        'Resultados previsíveis'
+      );
+    }
+    // INSUMOS LABORATÓRIO
+    else if (category.includes('insumo') || category.includes('laboratório') || category.includes('consumív')) {
+      features.push(
+        'Padrão profissional',
+        'Consistência lote a lote',
+        'Disponibilidade garantida',
+        'Custo-benefício otimizado'
+      );
+    }
+    // DEFAULT
+    else {
+      features.push(
+        'Alta qualidade e durabilidade',
+        'Aprovado pela ANVISA',
+        'Suporte técnico especializado',
+        'Garantia do fabricante'
+      );
+    }
   }
   
   return features.slice(0, 4);
 }
 
-// Helper para extrair métricas de confiança
+// Helper para extrair métricas de confiança (Trust Bar)
 function extractTrustMetrics(product: any): Array<{value: string; label: string}> {
   const metrics: Array<{value: string; label: string}> = [];
+  const category = (product.category || '').toLowerCase();
   
-  // De technical_specifications
+  // Primeiro: tentar extrair de technical_specifications
   if (Array.isArray(product.technical_specifications)) {
     product.technical_specifications.forEach((spec: any) => {
       if (spec.key && spec.value && metrics.length < 4) {
-        if (spec.key.toLowerCase().includes('resist') || 
-            spec.key.toLowerCase().includes('mpa') ||
-            spec.key.toLowerCase().includes('iso') ||
-            spec.key.toLowerCase().includes('cert')) {
+        const keywords = ['precisão', 'resolução', 'velocidade', 'capacidade', 'potência',
+                         'resist', 'mpa', 'iso', 'cert', 'µm', 'micron', 'rpm', 'watt'];
+        if (keywords.some(kw => spec.key.toLowerCase().includes(kw) || spec.value.toLowerCase().includes(kw))) {
           metrics.push({ value: spec.value, label: spec.key });
         }
       }
     });
   }
   
-  // Fallbacks inteligentes
+  // Fallbacks específicos por categoria
   if (metrics.length < 4) {
-    const fallbacks = [
-      { value: '5+ Anos', label: 'Casos Clínicos' },
-      { value: 'ISO 10993', label: 'Certificação' },
-      { value: '100%', label: 'Biocompatível' },
-      { value: 'ANVISA', label: 'Aprovado' }
-    ];
-    fallbacks.forEach(f => {
-      if (metrics.length < 4) metrics.push(f);
+    let categoryFallbacks: Array<{value: string; label: string}> = [];
+    
+    // SCANNERS 3D
+    if (category.includes('scanner')) {
+      categoryFallbacks = [
+        { value: '7µm', label: 'Precisão' },
+        { value: '3D Full', label: 'Captura' },
+        { value: 'CAD/CAM', label: 'Integração' },
+        { value: 'CE/FDA', label: 'Certificado' }
+      ];
+    }
+    // IMPRESSÃO 3D
+    else if (category.includes('impressora') || category.includes('impressão')) {
+      categoryFallbacks = [
+        { value: '50µm', label: 'Resolução XY' },
+        { value: '80mm/h', label: 'Velocidade' },
+        { value: 'LCD/DLP', label: 'Tecnologia' },
+        { value: '24/7', label: 'Produção' }
+      ];
+    }
+    // PÓS-IMPRESSÃO
+    else if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
+      categoryFallbacks = [
+        { value: '3min', label: 'Tempo Cura' },
+        { value: 'UV 405nm', label: 'Wavelength' },
+        { value: 'Auto', label: 'Lavagem' },
+        { value: '99%', label: 'Eficiência' }
+      ];
+    }
+    // SOFTWARES
+    else if (category.includes('software') || category.includes('licença')) {
+      categoryFallbacks = [
+        { value: 'STL/OBJ', label: 'Formatos' },
+        { value: 'Cloud', label: 'Acesso' },
+        { value: 'Updates', label: 'Vitalícios' },
+        { value: '24/7', label: 'Suporte' }
+      ];
+    }
+    // FRESADORA / CAD-CAM
+    else if (category.includes('fresadora') || category.includes('cad') || category.includes('cam') || category.includes('milling')) {
+      categoryFallbacks = [
+        { value: '5 Eixos', label: 'Configuração' },
+        { value: '±10µm', label: 'Precisão' },
+        { value: '60K RPM', label: 'Velocidade' },
+        { value: 'Zircônia', label: 'Materiais' }
+      ];
+    }
+    // PROMOÇÕES
+    else if (category.includes('promoção') || category.includes('oferta') || category.includes('kit')) {
+      categoryFallbacks = [
+        { value: 'Até 40%', label: 'Desconto' },
+        { value: 'Grátis', label: 'Frete' },
+        { value: '12x', label: 'Parcelas' },
+        { value: 'Limitado', label: 'Estoque' }
+      ];
+    }
+    // RESINAS / DENTÍSTICA / CARACTERIZAÇÃO
+    else if (category.includes('resina') || category.includes('caracterização') || 
+             category.includes('dentística') || category.includes('estética') || 
+             category.includes('ortodon') || category.includes('compos')) {
+      categoryFallbacks = [
+        { value: '5+ Anos', label: 'Casos Clínicos' },
+        { value: '147 MPa', label: 'Resistência' },
+        { value: 'ISO 10993', label: 'Certificação' },
+        { value: '100%', label: 'Biocompatível' }
+      ];
+    }
+    // INSUMOS LABORATÓRIO
+    else if (category.includes('insumo') || category.includes('laboratório') || category.includes('consumív')) {
+      categoryFallbacks = [
+        { value: 'Pro', label: 'Padrão' },
+        { value: 'CE', label: 'Certificado' },
+        { value: '100%', label: 'Consistência' },
+        { value: 'Estoque', label: 'Garantido' }
+      ];
+    }
+    // DEFAULT
+    else {
+      categoryFallbacks = [
+        { value: '5+ Anos', label: 'Casos Clínicos' },
+        { value: 'ISO 10993', label: 'Certificação' },
+        { value: '100%', label: 'Biocompatível' },
+        { value: 'ANVISA', label: 'Aprovado' }
+      ];
+    }
+    
+    // Preencher métricas restantes
+    categoryFallbacks.forEach(f => {
+      if (metrics.length < 4 && !metrics.some(m => m.label === f.label)) {
+        metrics.push(f);
+      }
     });
   }
   
@@ -195,12 +356,14 @@ function extractDocuments(product: any): Array<{name: string; url: string}> {
   return docs;
 }
 
-// Helper para cards E-E-A-T baseados no tipo de produto
+// Helper para cards E-E-A-T baseados no tipo de produto (por categoria)
 function getEEATCards(product: any, blogType: string): Array<{icon: string; title: string; description: string}> {
   const category = (product.category || '').toLowerCase();
   
-  // Cards específicos para categoria dental
-  if (category.includes('resina') || category.includes('compos')) {
+  // RESINAS 3D / CARACTERIZAÇÃO / DENTÍSTICA / ESTÉTICA / ORTODONTIA
+  if (category.includes('resina') || category.includes('compos') || 
+      category.includes('caracterização') || category.includes('dentística') ||
+      category.includes('estética') || category.includes('ortodon')) {
     return [
       { icon: 'fa-shield-alt', title: 'Segurança Certificada', description: 'Produto com certificação ISO 10993 de biocompatibilidade, garantindo segurança absoluta para uso clínico.' },
       { icon: 'fa-palette', title: 'Estética Natural', description: 'Fluorescência e opalescência que mimetizam perfeitamente o esmalte dental natural.' },
@@ -208,15 +371,70 @@ function getEEATCards(product: any, blogType: string): Array<{icon: string; titl
     ];
   }
   
-  if (category.includes('scanner') || category.includes('digital')) {
+  // SCANNERS 3D
+  if (category.includes('scanner')) {
     return [
-      { icon: 'fa-microchip', title: 'Tecnologia Avançada', description: 'Hardware de última geração com processamento de alta velocidade e precisão micrométrica.' },
-      { icon: 'fa-sync-alt', title: 'Integração Total', description: 'Compatível com os principais softwares CAD/CAM do mercado, garantindo workflow fluido.' },
-      { icon: 'fa-award', title: 'Suporte Premium', description: 'Equipe técnica especializada com treinamento contínuo e atendimento prioritário.' }
+      { icon: 'fa-crosshairs', title: 'Precisão Micrométrica', description: 'Captura digital com precisão de até 7 micrômetros, garantindo modelos digitais perfeitos para CAD/CAM.' },
+      { icon: 'fa-plug', title: 'Integração Universal', description: 'Compatível com os principais softwares de planejamento e CAD/CAM do mercado mundial.' },
+      { icon: 'fa-graduation-cap', title: 'Treinamento Incluído', description: 'Capacitação completa para sua equipe com certificação e suporte técnico contínuo.' }
     ];
   }
   
-  // Default para outros produtos
+  // IMPRESSÃO 3D
+  if (category.includes('impressora') || category.includes('impressão')) {
+    return [
+      { icon: 'fa-bolt', title: 'Alta Produtividade', description: 'Velocidade de impressão superior que permite produzir mais peças em menos tempo, maximizando o ROI.' },
+      { icon: 'fa-microscope', title: 'Resolução Profissional', description: 'Resolução XY de até 50µm para detalhes precisos em guias cirúrgicos, provisórios e modelos.' },
+      { icon: 'fa-flask', title: 'Versatilidade de Materiais', description: 'Compatível com ampla gama de resinas biocompatíveis para diferentes aplicações clínicas.' }
+    ];
+  }
+  
+  // PÓS-IMPRESSÃO (Cura/Lavagem)
+  if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
+    return [
+      { icon: 'fa-clock', title: 'Eficiência de Tempo', description: 'Ciclos de pós-processamento otimizados que aceleram o workflow sem comprometer a qualidade final.' },
+      { icon: 'fa-gem', title: 'Acabamento Superior', description: 'Superfícies lisas e propriedades mecânicas ideais para aplicações clínicas exigentes.' },
+      { icon: 'fa-cogs', title: 'Automação Inteligente', description: 'Processos automatizados que reduzem erros operacionais e garantem consistência em cada peça.' }
+    ];
+  }
+  
+  // SOFTWARES
+  if (category.includes('software') || category.includes('licença') || category.includes('digital')) {
+    return [
+      { icon: 'fa-laptop-code', title: 'Interface Intuitiva', description: 'Design pensado para produtividade máxima com curva de aprendizado acelerada.' },
+      { icon: 'fa-cloud', title: 'Sempre Atualizado', description: 'Atualizações automáticas com novos recursos e melhorias de performance incluídas.' },
+      { icon: 'fa-link', title: 'Workflow Integrado', description: 'Integração perfeita com scanners, impressoras e fresadoras do mercado.' }
+    ];
+  }
+  
+  // FRESADORA / CAD-CAM
+  if (category.includes('fresadora') || category.includes('cad') || category.includes('cam') || category.includes('milling')) {
+    return [
+      { icon: 'fa-industry', title: 'Produção In-House', description: 'Produza próteses, coroas e estruturas no próprio consultório ou laboratório com controle total.' },
+      { icon: 'fa-cube', title: 'Multi-Materiais', description: 'Usine zircônia, PMMA, cera, titânio e outros materiais com a mesma precisão.' },
+      { icon: 'fa-shield-alt', title: 'Durabilidade Industrial', description: 'Construção robusta para produção contínua com mínima manutenção.' }
+    ];
+  }
+  
+  // PROMOÇÕES / OFERTAS
+  if (category.includes('promoção') || category.includes('oferta') || category.includes('kit')) {
+    return [
+      { icon: 'fa-tags', title: 'Economia Inteligente', description: 'Aproveite condições especiais com descontos exclusivos sem abrir mão da qualidade.' },
+      { icon: 'fa-award', title: 'Mesma Qualidade', description: 'Produtos originais com garantia completa e suporte técnico especializado.' },
+      { icon: 'fa-truck', title: 'Entrega Prioritária', description: 'Frete diferenciado e envio rápido para você começar a usar o quanto antes.' }
+    ];
+  }
+  
+  // INSUMOS LABORATÓRIO
+  if (category.includes('insumo') || category.includes('laboratório') || category.includes('consumív')) {
+    return [
+      { icon: 'fa-check-double', title: 'Padrão Profissional', description: 'Insumos selecionados que atendem aos mais altos padrões de qualidade laboratorial.' },
+      { icon: 'fa-sync', title: 'Consistência Lote a Lote', description: 'Controle de qualidade rigoroso para resultados previsíveis em cada utilização.' },
+      { icon: 'fa-box', title: 'Estoque Garantido', description: 'Disponibilidade contínua para você nunca parar sua produção.' }
+    ];
+  }
+  
+  // DEFAULT para outros produtos
   return [
     { icon: 'fa-check-circle', title: 'Qualidade Garantida', description: 'Produto aprovado pelos mais rigorosos padrões de qualidade e segurança do mercado.' },
     { icon: 'fa-users', title: 'Confiado por Especialistas', description: 'Utilizado por profissionais de referência em odontologia em todo o Brasil.' },
