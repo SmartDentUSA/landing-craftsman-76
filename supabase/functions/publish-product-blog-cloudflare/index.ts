@@ -3,6 +3,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { blake3 } from "https://esm.sh/hash-wasm@4.11.0";
 import { marked } from "https://esm.sh/marked@12.0.0";
 
+// Schema Helpers - Fase SEO Completa
+import { 
+  generateVideoObjectSchemas, 
+  extractProductVideos,
+  generateVideoItemListSchema,
+  type VideoSchemaData 
+} from '../_shared/video-schema-helper.ts';
+
+import { 
+  generateLocalBusinessSchema, 
+  generateGeoContextHTML,
+  type LocalBusinessData 
+} from '../_shared/local-business-helper.ts';
+
+import { 
+  generateHowToSchema,
+  generateHowToMicrodataHTML 
+} from '../_shared/howto-schema-helper.ts';
+
+import { 
+  generateProductItemListSchema,
+  type ItemListProduct 
+} from '../_shared/itemlist-schema-helper.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -318,11 +342,13 @@ function generateProductBlogHTML(options: {
   pagePath: string;
   companyProfile: any;
   trackingPixels: TrackingPixels | null;
+  relatedProducts?: any[];
 }): string {
-  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels } = options;
+  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels, relatedProducts } = options;
   
   const companyName = companyProfile?.company_name || 'Smart Dent';
   const canonicalUrl = `https://${domain}${pagePath}`;
+  const websiteUrl = companyProfile?.website_url || `https://${domain}`;
   
   const title = blogType === 'commercial' 
     ? `${product.name} - Guia Completo | ${companyName}`
@@ -344,6 +370,115 @@ function generateProductBlogHTML(options: {
   const technicalSpecs = extractTechnicalSpecs(product);
   const documents = extractDocuments(product);
   const eeatCards = getEEATCards(product, blogType);
+
+  // ═══════════════════════════════════════════════════════════
+  // 🎥 FASE 8: Video Schemas (Video Carousel, Rich Snippets)
+  // ═══════════════════════════════════════════════════════════
+  const productVideos = extractProductVideos(product, { maxVideos: 4 });
+  const videoSchemas = generateVideoObjectSchemas(productVideos, {
+    includeTranscript: true,
+    includeAboutProduct: true,
+    creatorName: companyName,
+    creatorUrl: websiteUrl
+  });
+  const videoItemListSchema = productVideos.length > 1 
+    ? generateVideoItemListSchema(productVideos, `Vídeos sobre ${product.name}`)
+    : null;
+
+  // ═══════════════════════════════════════════════════════════
+  // 🏢 FASE 2: LocalBusiness Schema (GEO Local SEO)
+  // ═══════════════════════════════════════════════════════════
+  const localBusinessData: LocalBusinessData = {
+    company_name: companyProfile?.company_name,
+    legal_name: companyProfile?.legal_name,
+    company_description: companyProfile?.company_description,
+    website_url: companyProfile?.website_url,
+    company_logo_url: companyProfile?.company_logo_url,
+    contact_phone: companyProfile?.contact_phone,
+    contact_email: companyProfile?.contact_email,
+    street_address: companyProfile?.street_address,
+    address_number: companyProfile?.address_number,
+    city: companyProfile?.city,
+    state: companyProfile?.state,
+    postal_code: companyProfile?.postal_code,
+    country: companyProfile?.country,
+    latitude: companyProfile?.latitude,
+    longitude: companyProfile?.longitude,
+    opening_hours: companyProfile?.opening_hours,
+    price_range: companyProfile?.price_range,
+    areas_served: companyProfile?.areas_served,
+    founder_name: companyProfile?.founder_name,
+    founder_title: companyProfile?.founder_title,
+    founder_linkedin: companyProfile?.founder_linkedin,
+    tax_id: companyProfile?.tax_id,
+    duns_number: companyProfile?.duns_number,
+    number_of_employees: companyProfile?.number_of_employees,
+    founded_year: companyProfile?.founded_year,
+    instagram_profile: companyProfile?.instagram_profile,
+    youtube_channel: companyProfile?.youtube_channel,
+    seo_service_areas: companyProfile?.seo_service_areas,
+    seo_technical_expertise: companyProfile?.seo_technical_expertise
+  };
+  const localBusinessSchema = generateLocalBusinessSchema(localBusinessData);
+  const geoContextHTML = generateGeoContextHTML(localBusinessData);
+
+  // ═══════════════════════════════════════════════════════════
+  // 🔧 FASE 4: HowTo Schema (Workflow Tutorial)
+  // ═══════════════════════════════════════════════════════════
+  const howToSchema = product.workflow_stages 
+    ? generateHowToSchema(product, {
+        includeSupplies: true,
+        includeTips: true,
+        companyName,
+        websiteUrl
+      })
+    : null;
+  const howToMicrodataHTML = product.workflow_stages 
+    ? generateHowToMicrodataHTML(product)
+    : '';
+
+  // ═══════════════════════════════════════════════════════════
+  // 🛒 FASE 7: ItemList Schema (Related Products Carousel)
+  // ═══════════════════════════════════════════════════════════
+  const relatedProductsItemList = relatedProducts && relatedProducts.length > 1
+    ? generateProductItemListSchema(
+        relatedProducts.map((p: any) => ({
+          name: p.name,
+          description: p.description,
+          image_url: p.image_url,
+          product_url: p.product_url,
+          price: p.price,
+          promo_price: p.promo_price,
+          brand: p.brand || companyName,
+          gtin: p.gtin,
+          mpn: p.mpn,
+          availability: p.availability || 'InStock',
+          currency: 'BRL'
+        })),
+        {
+          listName: `Produtos relacionados a ${product.name}`,
+          listDescription: `Explore produtos que complementam ${product.name}`,
+          includeOffers: true,
+          includeBrand: true
+        }
+      )
+    : null;
+
+  // ═══════════════════════════════════════════════════════════
+  // 🖼️ Multiple og:image (Gallery Images)
+  // ═══════════════════════════════════════════════════════════
+  const galleryImages: string[] = [];
+  if (product.image_url) {
+    galleryImages.push(product.image_url);
+  }
+  if (Array.isArray(product.images_gallery)) {
+    product.images_gallery.slice(0, 3).forEach((img: any) => {
+      const imgUrl = typeof img === 'string' ? img : (img.url || img.src);
+      if (imgUrl && !galleryImages.includes(imgUrl)) {
+        galleryImages.push(imgUrl);
+      }
+    });
+  }
 
   // Navigation and Footer config
   const navConfig = companyProfile?.navigation_footer_config;
@@ -473,10 +608,10 @@ function generateProductBlogHTML(options: {
     </section>
   ` : '';
 
-  // Schema.org JSON-LD
-  const schemas = [
+  // Schema.org JSON-LD - Complete SEO Schema Collection
+  const schemas: any[] = [
+    // ✅ BlogPosting Schema
     {
-      "@context": "https://schema.org",
       "@type": "BlogPosting",
       "headline": title,
       "description": description,
@@ -502,8 +637,8 @@ function generateProductBlogHTML(options: {
       "image": product.image_url,
       "keywords": keywords
     },
+    // ✅ Product Schema
     {
-      "@context": "https://schema.org",
       "@type": "Product",
       "name": product.name,
       "description": product.description,
@@ -520,19 +655,30 @@ function generateProductBlogHTML(options: {
         "url": product.product_url
       } : undefined
     },
+    // ✅ BreadcrumbList Schema
     {
-      "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "Home", "item": companyProfile?.website_url || `https://${domain}` },
         { "@type": "ListItem", "position": 2, "name": "Blog", "item": `https://${domain}/blog` },
         { "@type": "ListItem", "position": 3, "name": product.name, "item": canonicalUrl }
       ]
-    }
-  ];
+    },
+    // ✅ FASE 2: LocalBusiness Schema (GEO Local SEO)
+    localBusinessSchema,
+    // ✅ FASE 8: VideoObject Schemas (Video Carousel, Rich Snippets)
+    ...videoSchemas,
+    // ✅ FASE 8: Video ItemList (Video Carousel)
+    ...(videoItemListSchema ? [videoItemListSchema] : []),
+    // ✅ FASE 4: HowTo Schema (Workflow Tutorial)
+    ...(howToSchema ? [howToSchema] : []),
+    // ✅ FASE 7: ItemList Schema (Related Products Carousel)
+    ...(relatedProductsItemList ? [relatedProductsItemList] : [])
+  ].filter(Boolean);
 
+  // ✅ FAQPage Schema (if FAQs exist)
   if (faqSchema) {
-    schemas.push({ "@context": "https://schema.org", ...faqSchema } as any);
+    schemas.push(faqSchema as any);
   }
 
   // Format price
@@ -553,10 +699,13 @@ function generateProductBlogHTML(options: {
   <meta name="keywords" content="${escapeHtml(keywords)}">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   
-  <!-- Open Graph -->
+  <!-- Open Graph - Multiple Images for Social Sharing -->
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
-  <meta property="og:image" content="${escapeHtml(product.image_url || '')}">
+  ${galleryImages.map((imgUrl, idx) => `
+  <meta property="og:image" content="${escapeHtml(imgUrl)}">
+  ${idx === 0 ? `<meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">` : ''}`).join('')}
   <meta property="og:type" content="article">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:site_name" content="${escapeHtml(companyName)}">
@@ -565,7 +714,7 @@ function generateProductBlogHTML(options: {
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  <meta name="twitter:image" content="${escapeHtml(product.image_url || '')}">
+  <meta name="twitter:image" content="${escapeHtml(galleryImages[0] || '')}">
   
   <!-- Hreflang -->
   <link rel="alternate" hreflang="pt-BR" href="${escapeHtml(canonicalUrl)}">
@@ -1499,7 +1648,17 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
     </div>
   </footer>
 
-  <!-- GEO Context (Hidden for LLMs) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 🏢 FASE 2: GEO Context LocalBusiness Microdata (Hidden) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  ${geoContextHTML}
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 🔧 FASE 4: HowTo Microdata (Hidden - for Workflow Products) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  ${howToMicrodataHTML}
+
+  <!-- GEO Context Text (Hidden for LLMs/AI Crawlers) -->
   <div aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">
     <p>${escapeHtml(companyName)} é especialista em ${escapeHtml(product.category || 'produtos odontológicos')}. Produto: ${escapeHtml(product.name)}. ${product.brand ? `Marca: ${escapeHtml(product.brand)}.` : ''} Localização: ${escapeHtml(companyProfile?.city || 'Brasil')}, ${escapeHtml(companyProfile?.state || 'BR')}.</p>
   </div>
@@ -1658,7 +1817,19 @@ serve(async (req) => {
       publicationId = newPub.id;
     }
 
-    // 5. Generate HTML with LP Clone header/footer
+    // 4.5. Fetch related products for ItemList schema (same category, limit 6)
+    console.log('[publish-product-blog] Fetching related products for ItemList schema...');
+    const { data: relatedProducts } = await supabase
+      .from('products_repository')
+      .select('id, name, description, image_url, product_url, price, promo_price, brand, gtin, mpn, availability')
+      .eq('category', product.category)
+      .neq('id', productId)
+      .eq('approved', true)
+      .limit(6);
+    
+    console.log(`[publish-product-blog] Related products found: ${relatedProducts?.length || 0}`);
+
+    // 5. Generate HTML with LP Clone header/footer + All Schema Helpers
     const html = generateProductBlogHTML({
       product,
       blogType,
@@ -1667,7 +1838,8 @@ serve(async (req) => {
       domain,
       pagePath: finalPagePath,
       companyProfile,
-      trackingPixels
+      trackingPixels,
+      relatedProducts: relatedProducts || []
     });
 
     console.log(`[publish-product-blog] HTML generated: ${html.length} bytes`);
