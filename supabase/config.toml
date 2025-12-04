@@ -170,3 +170,9 @@ verify_jwt = true
 
 [functions.test-cloudflare-connection]
 verify_jwt = true
+
+[functions.generate-product-blog]
+verify_jwt = true
+
+[functions.publish-product-blog-cloudflare]
+verify_jwt = true
