@@ -936,14 +936,22 @@ serve(async (req) => {
       .select('*')
       .single();
 
+    console.log('[publish-product-blog] Company profile query result:', {
+      hasData: !!companyProfile,
+      error: companyError?.message || null,
+      hasSeoDomains: !!companyProfile?.seo_domains,
+      seoDomainsType: typeof companyProfile?.seo_domains,
+      seoDomainsLength: Array.isArray(companyProfile?.seo_domains) ? companyProfile.seo_domains.length : 'not array'
+    });
+
     if (companyError) {
-      console.warn('[publish-product-blog] Company profile not found, using defaults');
+      console.warn('[publish-product-blog] Company profile error:', companyError);
     }
 
     // 3. Get domain config for tracking pixels
     const seoDomains = companyProfile?.seo_domains || [];
     console.log('[publish-product-blog] Looking for domain:', domain);
-    console.log('[publish-product-blog] Available domains:', seoDomains.map((d: any) => d.domain));
+    console.log('[publish-product-blog] Available domains:', JSON.stringify(seoDomains.map((d: any) => d.domain)));
     
     // Normalize domain comparison (trim whitespace, lowercase)
     const normalizedDomain = domain?.trim()?.toLowerCase();
