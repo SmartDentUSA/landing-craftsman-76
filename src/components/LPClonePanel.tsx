@@ -18,7 +18,8 @@ import {
   Code, Copy, Download, Eye, Image, CheckCircle, 
   XCircle, Loader2, FileCode, Trash2, ExternalLink, RefreshCw, Save,
   AlertTriangle, Search, Sparkles, Package, Link2, Pencil, X, 
-  Globe, Rocket, ChevronDown, ChevronRight, Home, FolderOpen, Cloud
+  Globe, Rocket, ChevronDown, ChevronRight, Home, FolderOpen, Cloud,
+  FileText, Newspaper
 } from 'lucide-react';
 import { LPCloneProductSelector, ProductWithSEO } from './LPCloneProductSelector';
 
@@ -85,6 +86,45 @@ interface SEODomain {
   cloudflare_enabled?: boolean;
   cloudflare_project_name?: string;
   cloudflare_status?: string;
+}
+
+// Product Blog types
+interface ProductBlog {
+  id: string;
+  productId: string;
+  productName: string;
+  productBrand: string | null;
+  productImage: string | null;
+  blogType: 'commercial' | 'technical';
+  content: string;
+  generatedAt: string | null;
+  // Publication info (from product_blog_publications)
+  publicationId?: string;
+  targetDomain?: string;
+  pagePath?: string;
+  publishStatus?: string;
+  publishedUrl?: string;
+  publishedAt?: string | null;
+}
+
+// Unified library item type
+type LibraryItemType = 'lp' | 'blog';
+
+interface LibraryItem {
+  type: LibraryItemType;
+  id: string;
+  name: string;
+  brand: string | null;
+  product: string | null;
+  targetDomain?: string;
+  pagePath?: string;
+  publishStatus?: string;
+  publishedUrl?: string;
+  createdAt: string;
+  // LP specific
+  lp?: ClonedLP;
+  // Blog specific
+  blog?: ProductBlog;
 }
 
 
@@ -191,35 +231,164 @@ export const LPClonePanel = () => {
     },
   });
   
-  // Group LPs by domain
-  const lpsByDomain = useMemo(() => {
-    if (!savedLPs) return { grouped: {}, unassigned: [] };
+  // Fetch products with blog content
+  const { data: productsWithBlogs } = useQuery({
+    queryKey: ['products-with-blogs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products_repository')
+        .select('id, name, brand, image_url, individual_blog_content, created_at')
+        .not('individual_blog_content', 'is', null)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  
+  // Fetch blog publications
+  const { data: blogPublications } = useQuery({
+    queryKey: ['blog-publications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_blog_publications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  
+  // Build product blogs list
+  const productBlogs = useMemo(() => {
+    if (!productsWithBlogs) return [];
     
-    const grouped: Record<string, ClonedLP[]> = {};
-    const unassigned: ClonedLP[] = [];
+    const blogs: ProductBlog[] = [];
     
-    savedLPs.forEach(lp => {
-      if (lp.target_domain) {
-        if (!grouped[lp.target_domain]) {
-          grouped[lp.target_domain] = [];
-        }
-        grouped[lp.target_domain].push(lp);
-      } else {
-        unassigned.push(lp);
+    productsWithBlogs.forEach(product => {
+      const blogContent = product.individual_blog_content as any;
+      if (!blogContent) return;
+      
+      // Commercial blog
+      if (blogContent.commercial) {
+        const pub = blogPublications?.find(
+          p => p.product_id === product.id && p.blog_type === 'commercial'
+        );
+        blogs.push({
+          id: `${product.id}-commercial`,
+          productId: product.id,
+          productName: product.name,
+          productBrand: product.brand,
+          productImage: product.image_url,
+          blogType: 'commercial',
+          content: blogContent.commercial,
+          generatedAt: blogContent.generated_at,
+          publicationId: pub?.id,
+          targetDomain: pub?.target_domain,
+          pagePath: pub?.page_path,
+          publishStatus: pub?.publish_status,
+          publishedUrl: pub?.published_url,
+          publishedAt: pub?.published_at,
+        });
+      }
+      
+      // Technical blog
+      if (blogContent.technical) {
+        const pub = blogPublications?.find(
+          p => p.product_id === product.id && p.blog_type === 'technical'
+        );
+        blogs.push({
+          id: `${product.id}-technical`,
+          productId: product.id,
+          productName: product.name,
+          productBrand: product.brand,
+          productImage: product.image_url,
+          blogType: 'technical',
+          content: blogContent.technical,
+          generatedAt: blogContent.generated_at,
+          publicationId: pub?.id,
+          targetDomain: pub?.target_domain,
+          pagePath: pub?.page_path,
+          publishStatus: pub?.publish_status,
+          publishedUrl: pub?.published_url,
+          publishedAt: pub?.published_at,
+        });
       }
     });
     
-    // Sort each domain's LPs: homepage first, then by name
+    return blogs;
+  }, [productsWithBlogs, blogPublications]);
+  
+  // Create unified library items
+  const libraryItems = useMemo(() => {
+    const items: LibraryItem[] = [];
+    
+    // Add LPs
+    savedLPs?.forEach(lp => {
+      items.push({
+        type: 'lp',
+        id: lp.id,
+        name: lp.name,
+        brand: lp.brand,
+        product: lp.product,
+        targetDomain: lp.target_domain,
+        pagePath: lp.page_path,
+        publishStatus: lp.publish_status,
+        publishedUrl: lp.published_url,
+        createdAt: lp.created_at,
+        lp,
+      });
+    });
+    
+    // Add Blogs
+    productBlogs.forEach(blog => {
+      items.push({
+        type: 'blog',
+        id: blog.id,
+        name: `${blog.productName} - ${blog.blogType === 'commercial' ? 'Comercial' : 'Técnico'}`,
+        brand: blog.productBrand,
+        product: blog.productName,
+        targetDomain: blog.targetDomain,
+        pagePath: blog.pagePath,
+        publishStatus: blog.publishStatus,
+        publishedUrl: blog.publishedUrl,
+        createdAt: blog.generatedAt || new Date().toISOString(),
+        blog,
+      });
+    });
+    
+    return items;
+  }, [savedLPs, productBlogs]);
+  
+  // Group library items by domain
+  const itemsByDomain = useMemo(() => {
+    const grouped: Record<string, LibraryItem[]> = {};
+    const unassigned: LibraryItem[] = [];
+    
+    libraryItems.forEach(item => {
+      if (item.targetDomain) {
+        if (!grouped[item.targetDomain]) {
+          grouped[item.targetDomain] = [];
+        }
+        grouped[item.targetDomain].push(item);
+      } else {
+        unassigned.push(item);
+      }
+    });
+    
+    // Sort each domain's items
     Object.keys(grouped).forEach(domain => {
       grouped[domain].sort((a, b) => {
-        if (a.is_homepage && !b.is_homepage) return -1;
-        if (!a.is_homepage && b.is_homepage) return 1;
+        // LPs first, then blogs
+        if (a.type !== b.type) return a.type === 'lp' ? -1 : 1;
+        // Homepage LPs first
+        if (a.type === 'lp' && a.lp?.is_homepage) return -1;
+        if (b.type === 'lp' && b.lp?.is_homepage) return 1;
         return (a.name || '').localeCompare(b.name || '');
       });
     });
     
     return { grouped, unassigned };
-  }, [savedLPs]);
+  }, [libraryItems]);
   
   // Transform mutation
   const transformMutation = useMutation({
@@ -423,6 +592,72 @@ export const LPClonePanel = () => {
     },
     onError: (error) => {
       toast.error(`Erro ao despublicar: ${(error as Error).message}`);
+    }
+  });
+  
+  // Blog publish mutation
+  const publishBlogMutation = useMutation({
+    mutationFn: async ({ blog, domain }: { blog: ProductBlog; domain: string }) => {
+      const slug = blog.productName.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      const pagePath = `/blog/${slug}-${blog.blogType}`;
+      
+      const { data, error } = await supabase.functions.invoke('publish-product-blog-cloudflare', {
+        body: {
+          productId: blog.productId,
+          blogType: blog.blogType,
+          domain,
+          pagePath,
+        }
+      });
+      
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Blog publicado em ${data.publishedUrl || data.url}`);
+      queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
+      queryClient.invalidateQueries({ queryKey: ['products-with-blogs'] });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao publicar blog: ${(error as Error).message}`);
+    }
+  });
+  
+  // Assign domain to blog mutation
+  const assignBlogDomainMutation = useMutation({
+    mutationFn: async ({ blog, domain }: { blog: ProductBlog; domain: string }) => {
+      const slug = blog.productName.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      const pagePath = `/blog/${slug}-${blog.blogType}`;
+      
+      if (blog.publicationId) {
+        const { error } = await supabase
+          .from('product_blog_publications')
+          .update({ target_domain: domain, page_path: pagePath })
+          .eq('id', blog.publicationId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('product_blog_publications')
+          .insert({
+            product_id: blog.productId,
+            blog_type: blog.blogType,
+            target_domain: domain,
+            page_path: pagePath,
+            publish_status: 'draft'
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Domínio vinculado ao blog!');
+      queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
     }
   });
   
@@ -642,7 +877,7 @@ export const LPClonePanel = () => {
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Selecionar domínio" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border shadow-md z-50">
                   {enabledDomains.map(d => (
                     <SelectItem key={d.domain} value={d.domain}>
                       {d.domain}
@@ -657,6 +892,101 @@ export const LPClonePanel = () => {
     </Card>
   );
   
+  // Render unified library item card
+  const renderLibraryItemCard = (item: LibraryItem, showDomainAssign = false) => {
+    if (item.type === 'lp' && item.lp) {
+      return renderLPCard(item.lp, showDomainAssign);
+    }
+    
+    if (item.type === 'blog' && item.blog) {
+      const blog = item.blog;
+      return (
+        <Card key={item.id} className="group">
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Badge className={blog.blogType === 'commercial' ? 'bg-blue-500/10 text-blue-600' : 'bg-purple-500/10 text-purple-600'}>
+                    <Newspaper className="h-3 w-3 mr-1" />
+                    {blog.blogType === 'commercial' ? 'Comercial' : 'Técnico'}
+                  </Badge>
+                  <CardTitle className="text-base truncate">{blog.productName}</CardTitle>
+                </div>
+                <CardDescription className="text-xs flex items-center gap-2 mt-1">
+                  <span>{blog.productBrand || 'Sem marca'}</span>
+                  {blog.pagePath && (
+                    <code className="bg-muted px-1 rounded text-xs">{blog.pagePath}</code>
+                  )}
+                </CardDescription>
+              </div>
+              {getPublishStatusBadge(blog.publishStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+              <span>Blog de Produto</span>
+              <span>{blog.generatedAt ? new Date(blog.generatedAt).toLocaleDateString('pt-BR') : '-'}</span>
+            </div>
+            
+            {blog.publishedUrl && (
+              <a 
+                href={blog.publishedUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline flex items-center gap-1 mb-3"
+              >
+                <ExternalLink className="h-3 w-3" />
+                {blog.publishedUrl}
+              </a>
+            )}
+            
+            <div className="flex gap-2 flex-wrap">
+              {blog.targetDomain && (
+                <Button 
+                  size="sm" 
+                  onClick={() => publishBlogMutation.mutate({ blog, domain: blog.targetDomain! })}
+                  disabled={publishBlogMutation.isPending}
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  {publishBlogMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Rocket className="h-3 w-3 mr-1" />
+                  )}
+                  {blog.publishStatus === 'success' ? 'Republicar' : 'Publicar'}
+                </Button>
+              )}
+            </div>
+            
+            {showDomainAssign && enabledDomains.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <Label className="text-xs text-muted-foreground mb-2 block">Vincular a domínio:</Label>
+                <div className="flex gap-2">
+                  <Select onValueChange={(domain) => {
+                    assignBlogDomainMutation.mutate({ blog, domain });
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Selecionar domínio" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-md z-50">
+                      {enabledDomains.map(d => (
+                        <SelectItem key={d.domain} value={d.domain}>
+                          {d.domain}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    return null;
+  };
+  
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -665,7 +995,7 @@ export const LPClonePanel = () => {
             {editingLPId ? '✏️ Editando' : 'Transformar'}
           </TabsTrigger>
           <TabsTrigger value="library">
-            Biblioteca ({savedLPs?.length || 0})
+            Biblioteca ({libraryItems.length})
           </TabsTrigger>
         </TabsList>
         
@@ -1040,19 +1370,21 @@ export const LPClonePanel = () => {
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-          ) : savedLPs?.length === 0 ? (
+          ) : libraryItems.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <FileCode className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p className="text-muted-foreground">Nenhuma LP clonada ainda</p>
+                <p className="text-muted-foreground">Nenhuma LP ou Blog ainda</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-6">
               {/* Domain Sections */}
-              {Object.entries(lpsByDomain.grouped).map(([domain, lps]) => {
+              {Object.entries(itemsByDomain.grouped).map(([domain, items]) => {
                 const domainConfig = seoDomains.find(d => d.domain === domain);
                 const isCollapsed = collapsedDomains[domain];
+                const lpCount = items.filter(i => i.type === 'lp').length;
+                const blogCount = items.filter(i => i.type === 'blog').length;
                 
                 return (
                   <Collapsible key={domain} open={!isCollapsed} onOpenChange={() => toggleDomainCollapse(domain)}>
@@ -1065,7 +1397,11 @@ export const LPClonePanel = () => {
                               <Globe className="h-5 w-5 text-primary" />
                               <div>
                                 <CardTitle className="text-lg">{domain}</CardTitle>
-                                <CardDescription>{lps.length} página{lps.length !== 1 ? 's' : ''}</CardDescription>
+                                <CardDescription>
+                                  {lpCount > 0 && `${lpCount} LP${lpCount !== 1 ? 's' : ''}`}
+                                  {lpCount > 0 && blogCount > 0 && ' • '}
+                                  {blogCount > 0 && `${blogCount} Blog${blogCount !== 1 ? 's' : ''}`}
+                                </CardDescription>
                               </div>
                             </div>
                             {domainConfig?.cloudflare_status === 'connected' ? (
@@ -1079,7 +1415,7 @@ export const LPClonePanel = () => {
                       <CollapsibleContent>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {lps.map(lp => renderLPCard(lp))}
+                            {items.map(item => renderLibraryItemCard(item))}
                           </div>
                         </CardContent>
                       </CollapsibleContent>
@@ -1089,20 +1425,22 @@ export const LPClonePanel = () => {
               })}
               
               {/* Unassigned Section */}
-              {lpsByDomain.unassigned.length > 0 && (
+              {itemsByDomain.unassigned.length > 0 && (
                 <Card>
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <FolderOpen className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <CardTitle className="text-lg">Sem Domínio Vinculado</CardTitle>
-                        <CardDescription>{lpsByDomain.unassigned.length} página{lpsByDomain.unassigned.length !== 1 ? 's' : ''}</CardDescription>
+                        <CardDescription>
+                          {itemsByDomain.unassigned.filter(i => i.type === 'lp').length} LPs • {itemsByDomain.unassigned.filter(i => i.type === 'blog').length} Blogs
+                        </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {lpsByDomain.unassigned.map(lp => renderLPCard(lp, true))}
+                      {itemsByDomain.unassigned.map(item => renderLibraryItemCard(item, true))}
                     </div>
                   </CardContent>
                 </Card>
