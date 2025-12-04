@@ -237,6 +237,15 @@ function extractTrustMetrics(product: any): Array<{value: string; label: string}
         { value: 'CE/FDA', label: 'Certificado' }
       ];
     }
+    // PÓS-IMPRESSÃO (deve vir ANTES de "impressão" para evitar match incorreto)
+    else if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
+      categoryFallbacks = [
+        { value: '365-405nm', label: 'Comprimento de Onda' },
+        { value: '80°C', label: 'Temperatura Máx' },
+        { value: 'Auto', label: 'Protocolos' },
+        { value: '99%', label: 'Eficiência' }
+      ];
+    }
     // IMPRESSÃO 3D
     else if (category.includes('impressora') || category.includes('impressão')) {
       categoryFallbacks = [
@@ -244,15 +253,6 @@ function extractTrustMetrics(product: any): Array<{value: string; label: string}
         { value: '80mm/h', label: 'Velocidade' },
         { value: 'LCD/DLP', label: 'Tecnologia' },
         { value: '24/7', label: 'Produção' }
-      ];
-    }
-    // PÓS-IMPRESSÃO
-    else if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
-      categoryFallbacks = [
-        { value: '3min', label: 'Tempo Cura' },
-        { value: 'UV 405nm', label: 'Wavelength' },
-        { value: 'Auto', label: 'Lavagem' },
-        { value: '99%', label: 'Eficiência' }
       ];
     }
     // SOFTWARES
