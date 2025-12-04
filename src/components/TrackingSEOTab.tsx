@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3 } from "lucide-react";
+import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -17,6 +17,101 @@ interface TrackingSEOTabProps {
 
 export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
   const [testingDomain, setTestingDomain] = useState<number | null>(null);
+  
+  // Global Cloudflare credentials state
+  const [cloudflareGlobal, setCloudflareGlobal] = useState({
+    accountId: '',
+    apiToken: '',
+    status: 'unknown' as 'unknown' | 'checking' | 'connected' | 'error',
+    showToken: false,
+    saving: false
+  });
+
+  // Check if secrets are configured on mount
+  useEffect(() => {
+    checkCloudflareSecrets();
+  }, []);
+
+  const checkCloudflareSecrets = async () => {
+    setCloudflareGlobal(prev => ({ ...prev, status: 'checking' }));
+    try {
+      // Try to test connection with first domain's project name to verify secrets exist
+      const firstDomain = profile.seo_domains?.[0];
+      if (firstDomain?.cloudflare_project_name) {
+        const { data, error } = await supabase.functions.invoke('test-cloudflare-connection', {
+          body: { projectName: firstDomain.cloudflare_project_name }
+        });
+        
+        if (data?.success) {
+          setCloudflareGlobal(prev => ({ ...prev, status: 'connected' }));
+        } else if (data?.error?.includes('credentials')) {
+          setCloudflareGlobal(prev => ({ ...prev, status: 'unknown' }));
+        } else {
+          // Credentials exist but project might not
+          setCloudflareGlobal(prev => ({ ...prev, status: 'connected' }));
+        }
+      } else {
+        setCloudflareGlobal(prev => ({ ...prev, status: 'unknown' }));
+      }
+    } catch {
+      setCloudflareGlobal(prev => ({ ...prev, status: 'unknown' }));
+    }
+  };
+
+  const saveCloudflareCredentials = async () => {
+    if (!cloudflareGlobal.accountId || !cloudflareGlobal.apiToken) {
+      toast.error('Preencha Account ID e API Token');
+      return;
+    }
+
+    setCloudflareGlobal(prev => ({ ...prev, saving: true }));
+
+    try {
+      // Save Account ID
+      const { error: accountError } = await supabase.functions.invoke('update-secret', {
+        body: { 
+          secretName: 'CLOUDFLARE_ACCOUNT_ID',
+          secretValue: cloudflareGlobal.accountId
+        }
+      });
+      if (accountError) throw accountError;
+
+      // Save API Token
+      const { error: tokenError } = await supabase.functions.invoke('update-secret', {
+        body: { 
+          secretName: 'CLOUDFLARE_API_TOKEN',
+          secretValue: cloudflareGlobal.apiToken
+        }
+      });
+      if (tokenError) throw tokenError;
+
+      toast.success('Credenciais Cloudflare salvas com sucesso!');
+      setCloudflareGlobal(prev => ({ 
+        ...prev, 
+        status: 'connected',
+        apiToken: '', // Clear token from UI for security
+        showToken: false
+      }));
+    } catch (err) {
+      toast.error(`Erro ao salvar: ${(err as Error).message}`);
+      setCloudflareGlobal(prev => ({ ...prev, status: 'error' }));
+    } finally {
+      setCloudflareGlobal(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const getGlobalStatusBadge = () => {
+    switch (cloudflareGlobal.status) {
+      case 'checking':
+        return <Badge variant="outline" className="text-amber-600"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Verificando</Badge>;
+      case 'connected':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="h-3 w-3 mr-1" />Conectado</Badge>;
+      case 'error':
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Erro</Badge>;
+      default:
+        return <Badge variant="outline"><Key className="h-3 w-3 mr-1" />Não configurado</Badge>;
+    }
+  };
 
   const testCloudflareConnection = async (index: number, projectName: string) => {
     if (!projectName) {
@@ -96,6 +191,98 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* GLOBAL CLOUDFLARE CREDENTIALS */}
+      <Card className="p-4 border-orange-500/30 bg-orange-500/5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-orange-500" />
+            <h3 className="font-semibold">🔐 Credenciais Globais Cloudflare</h3>
+          </div>
+          {getGlobalStatusBadge()}
+        </div>
+        
+        <p className="text-sm text-muted-foreground mb-4">
+          Configure suas credenciais da Cloudflare uma única vez. Elas serão usadas para publicar em todos os domínios.
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium">Account ID</Label>
+            <Input
+              value={cloudflareGlobal.accountId}
+              onChange={(e) => setCloudflareGlobal(prev => ({ ...prev, accountId: e.target.value }))}
+              placeholder="9da374ac007673ac68889fe6871c8b23"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Encontre em: dash.cloudflare.com → canto inferior direito
+            </p>
+          </div>
+          <div>
+            <Label className="text-sm font-medium">API Token</Label>
+            <div className="relative mt-1">
+              <Input
+                type={cloudflareGlobal.showToken ? 'text' : 'password'}
+                value={cloudflareGlobal.apiToken}
+                onChange={(e) => setCloudflareGlobal(prev => ({ ...prev, apiToken: e.target.value }))}
+                placeholder="dmCcB1ix_WRIJiOmupsj..."
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setCloudflareGlobal(prev => ({ ...prev, showToken: !prev.showToken }))}
+              >
+                {cloudflareGlobal.showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Crie em: dash.cloudflare.com → API Tokens → Create Token
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-4">
+          <Button 
+            onClick={saveCloudflareCredentials}
+            disabled={cloudflareGlobal.saving || !cloudflareGlobal.accountId || !cloudflareGlobal.apiToken}
+            className="flex-1"
+          >
+            {cloudflareGlobal.saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Credenciais
+              </>
+            )}
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={checkCloudflareSecrets}
+            disabled={cloudflareGlobal.status === 'checking'}
+          >
+            {cloudflareGlobal.status === 'checking' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {cloudflareGlobal.status === 'connected' && (
+          <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Credenciais configuradas. Agora configure os domínios abaixo.
+          </p>
+        )}
+      </Card>
+
       {/* DOMÍNIOS SEO COM PIXELS */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
