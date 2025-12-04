@@ -405,6 +405,27 @@ export const LPClonePanel = () => {
     }
   });
   
+  // Unpublish mutation
+  const unpublishMutation = useMutation({
+    mutationFn: async (lpId: string) => {
+      const { error } = await supabase
+        .from('cloned_landing_pages')
+        .update({
+          publish_status: 'draft',
+          published_url: null
+        })
+        .eq('id', lpId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('LP despublicada!');
+      queryClient.invalidateQueries({ queryKey: ['cloned-landing-pages'] });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao despublicar: ${(error as Error).message}`);
+    }
+  });
+  
   const handleEditLP = (lp: ClonedLP) => {
     setName(lp.name || '');
     setBrand(lp.brand || '');
@@ -579,6 +600,21 @@ export const LPClonePanel = () => {
                 <Rocket className="h-3 w-3 mr-1" />
               )}
               {lp.publish_status === 'success' ? 'Republicar' : 'Publicar'}
+            </Button>
+          )}
+          {lp.publish_status === 'success' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => unpublishMutation.mutate(lp.id)}
+              disabled={unpublishMutation.isPending}
+              title="Despublicar"
+            >
+              {unpublishMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <XCircle className="h-3 w-3" />
+              )}
             </Button>
           )}
           <Button
@@ -907,6 +943,19 @@ export const LPClonePanel = () => {
                             </label>
                           </div>
                           
+                          {isHomepage && selectedDomain && savedLPs?.some(lp => 
+                            lp.target_domain === selectedDomain && 
+                            lp.is_homepage && 
+                            lp.id !== editingLPId
+                          ) && (
+                            <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                              <AlertTriangle className="h-4 w-4 text-amber-600" />
+                              <AlertDescription className="text-amber-800 dark:text-amber-200">
+                                Já existe uma homepage para <strong>{selectedDomain}</strong>. Será substituída.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          
                           {!isHomepage && (
                             <div>
                               <Label>Caminho da Página</Label>
@@ -943,6 +992,31 @@ export const LPClonePanel = () => {
                           <Save className="h-4 w-4 mr-2" />
                           {editingLPId ? 'Atualizar' : 'Salvar Rascunho'}
                         </Button>
+                        
+                        {selectedDomain && enabledDomains.length > 0 && (
+                          <Button 
+                            onClick={async () => {
+                              // Se está editando, apenas publica
+                              if (editingLPId) {
+                                await updateMutation.mutateAsync();
+                                publishMutation.mutate(editingLPId);
+                              } else {
+                                // Se é novo, salva primeiro (o publish será feito manualmente depois)
+                                toast.info('Salve primeiro, depois publique pela biblioteca');
+                                saveMutation.mutate();
+                              }
+                            }}
+                            disabled={!selectedDomain || publishMutation.isPending || saveMutation.isPending || updateMutation.isPending}
+                            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                          >
+                            {publishMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Rocket className="h-4 w-4 mr-2" />
+                            )}
+                            Publicar Agora
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
