@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield } from "lucide-react";
+import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw, BarChart3, Key, Save, Eye, EyeOff, Shield, Zap } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -173,6 +173,46 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
     if (!enabled) return <Badge variant="secondary" className="text-xs">🔴</Badge>;
     if (!hasId) return <Badge variant="outline" className="text-xs">🟡</Badge>;
     return <Badge className="text-xs bg-green-500/10 text-green-600">🟢</Badge>;
+  };
+
+  // Auto-activate domain with intelligent project name extraction
+  const activateDomain = async (index: number) => {
+    const domain = profile.seo_domains?.[index];
+    if (!domain?.domain) {
+      toast.error('Preencha o domínio primeiro');
+      return;
+    }
+
+    // Extract project name from domain: mediti700.com.br → mediti700
+    const projectName = domain.domain
+      .replace(/^www\./, '')
+      .split('.')[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '');
+
+    // Auto-generate site name if empty: mediti700 → Mediti 700
+    const autoName = domain.name || projectName
+      .replace(/(\d+)/g, ' $1')
+      .replace(/^./, (c: string) => c.toUpperCase())
+      .trim();
+
+    // Update state with auto-configuration
+    setProfile(prev => {
+      const updated = [...(prev.seo_domains || [])];
+      updated[index] = {
+        ...updated[index],
+        name: autoName,
+        cloudflare_project_name: projectName,
+        cloudflare_enabled: true,
+        cloudflare_status: 'checking'
+      };
+      return { ...prev, seo_domains: updated };
+    });
+
+    toast.info(`Ativando ${projectName}...`);
+
+    // Test connection automatically
+    await testCloudflareConnection(index, projectName);
   };
 
   const updateDomainPixel = (index: number, pixelType: string, field: string, value: any) => {
@@ -369,6 +409,27 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 placeholder="Descrição"
               />
             </div>
+
+            {/* Quick Activate Button */}
+            {domain.domain && domain.cloudflare_status !== 'connected' && (
+              <Button
+                onClick={() => activateDomain(index)}
+                disabled={testingDomain === index}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+              >
+                {testingDomain === index ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Ativando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    🚀 Ativar Domínio
+                  </>
+                )}
+              </Button>
+            )}
 
             {/* Cloudflare Configuration */}
             <div className="border rounded-lg p-3 bg-muted/30">
