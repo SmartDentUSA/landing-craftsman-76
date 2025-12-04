@@ -660,6 +660,45 @@ export const LPClonePanel = () => {
       queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
     }
   });
+
+  // Delete blog publication mutation
+  const deleteBlogMutation = useMutation({
+    mutationFn: async (publicationId: string) => {
+      const { error } = await supabase
+        .from('product_blog_publications')
+        .delete()
+        .eq('id', publicationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Publicação excluída!');
+      queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao excluir: ${(error as Error).message}`);
+    }
+  });
+
+  // Unpublish blog mutation
+  const unpublishBlogMutation = useMutation({
+    mutationFn: async (publicationId: string) => {
+      const { error } = await supabase
+        .from('product_blog_publications')
+        .update({
+          publish_status: 'draft',
+          published_url: null
+        })
+        .eq('id', publicationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Blog despublicado!');
+      queryClient.invalidateQueries({ queryKey: ['blog-publications'] });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao despublicar: ${(error as Error).message}`);
+    }
+  });
   
   const handleEditLP = (lp: ClonedLP) => {
     setName(lp.name || '');
@@ -954,6 +993,56 @@ export const LPClonePanel = () => {
                     <Rocket className="h-3 w-3 mr-1" />
                   )}
                   {blog.publishStatus === 'success' ? 'Republicar' : 'Publicar'}
+                </Button>
+              )}
+              
+              {/* Preview button */}
+              {blog.content && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    const blob = new Blob([blog.content], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                  }}
+                  title="Preview"
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
+              )}
+
+              {/* Unpublish button - only if published */}
+              {blog.publishStatus === 'published' && blog.publicationId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => unpublishBlogMutation.mutate(blog.publicationId!)}
+                  disabled={unpublishBlogMutation.isPending}
+                  title="Despublicar"
+                >
+                  {unpublishBlogMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <XCircle className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+
+              {/* Delete button */}
+              {blog.publicationId && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteBlogMutation.mutate(blog.publicationId!)}
+                  disabled={deleteBlogMutation.isPending}
+                  title="Excluir publicação"
+                >
+                  {deleteBlogMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
                 </Button>
               )}
             </div>
