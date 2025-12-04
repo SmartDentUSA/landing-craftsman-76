@@ -1699,7 +1699,7 @@ serve(async (req) => {
       blog_type: blogType,
       target_domain: domain,
       page_path: finalPagePath,
-      publish_status: 'publishing',
+      publish_status: 'pending',
       updated_at: new Date().toISOString()
     };
 
