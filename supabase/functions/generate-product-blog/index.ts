@@ -464,22 +464,25 @@ ${currentPrompt.structure}
    - ✅ Sistemas operacionais compatíveis
    - ✅ Softwares CAD/CAM compatíveis (se relevante)
    - ✅ Requisitos de hardware mínimos
-   - Extrair de Especificações Técnicas ou inferir da categoria
+   - Extrair APENAS de Especificações Técnicas fornecidas - SE NÃO EXISTIR, OMITIR A SEÇÃO
 
 5. **Seção de Benefícios** (Bullets com Dados Numéricos):
    - Cada benefício = dado numérico + impacto prático
    - Exemplo: "❌ Moldagens tradicionais: 15 minutos + desconforto → ✅ ${productData.name}: 30 segundos + visualização imediata"
-   - Usar TODOS os benefícios fornecidos em ${productData.benefits}
+   - Usar APENAS os benefícios fornecidos em ${productData.benefits}
+   - SE benefits estiver vazio, OMITIR esta seção
 
 6. **Seção de FAQ Integrada** (Referência Cruzada):
    - NÃO duplicar os FAQs existentes mencionados acima
    - Se houver FAQs, mencionar: "Para mais detalhes técnicos, consulte as [X] FAQs ao final da página"
    - Criar LINK INTERNO para seção FAQ: [Ver FAQs](#faq)
 
-7. **Seção de Casos de Uso** (Narrativa com Dados):
-   - 2-3 cenários práticos do público-alvo
-   - Formato: Situação → Problema → Solução com o produto → Resultado mensurável
-   - Exemplo: "Clínica com 5 consultórios → Gargalo de moldagens (3h/dia) → ${productData.name} em cada sala → Economia de 2h40min/dia"
+7. **Seção de Aplicações** (USAR APENAS DADOS REAIS):
+   - COPIAR EXATAMENTE as aplicações de: "${productData.applications}"
+   - SE applications estiver vazio/nulo, OMITIR ESTA SEÇÃO COMPLETAMENTE
+   - PROIBIDO adicionar aplicações que não estejam listadas acima
+   - NÃO criar cenários fictícios como "Clínica com 5 consultórios"
+   - Formato: listar aplicações reais separadas por bullet points
 
 8. **Otimização de Keywords**:
    - Usar TODAS as keywords de: ${productData.keywords}, ${productData.marketKeywords}, ${productData.searchIntentKeywords}
@@ -496,19 +499,47 @@ ${currentPrompt.structure}
     - Exemplo: "O ${productData.name} (GTIN: ${productData.gtin}, MPN: ${productData.mpn}) da marca ${productData.brand}..."
     - Mencionar garantia se disponível: "${productData.warrantyInfo}"
 
+═══════════════════════════════════════════════════════════
+🚫 REGRAS ANTI-ALUCINAÇÃO - LEIA COM ATENÇÃO MÁXIMA
+═══════════════════════════════════════════════════════════
+
+**REGRA ABSOLUTA**: Cada informação no blog DEVE existir nos dados acima.
+
+❌ PROIBIDO - RESULTA EM REJEIÇÃO AUTOMÁTICA:
+1. Inventar aplicações não listadas (ex: "Guias Cirúrgicos" se não está em applications)
+2. Criar cenários fictícios ou "casos de uso práticos" não documentados
+3. Adicionar especificações técnicas não fornecidas
+4. Inferir dados da "categoria" ou "tipo de produto"
+5. Usar conhecimento geral sobre odontologia não presente nos dados
+6. Citar números, porcentagens ou métricas não fornecidas
+7. Inventar "Modelos de Estudo", "Guias Cirúrgicos" ou aplicações genéricas
+
+✅ OBRIGATÓRIO:
+1. Usar TEXTUALMENTE os dados de: benefits, features, applications, technical_specifications
+2. Se um campo está vazio/null → OMITIR a seção correspondente
+3. Cada afirmação deve poder ser rastreada aos dados fornecidos
+4. Na dúvida, OMITIR em vez de inventar
+
+**VALIDAÇÃO MENTAL**: Antes de cada parágrafo, pergunte:
+"Essa informação está EXATAMENTE nos dados fornecidos acima?"
+Se a resposta for NÃO → DELETE o parágrafo
+
+═══════════════════════════════════════════════════════════
+
 INSTRUÇÕES ESPECÍFICAS:
 1. COMECE DE FORMA ENVOLVENTE: Nunca use frases formais como "Análise comercial" ou "Análise técnica" no início
 2. DESPERTE CURIOSIDADE: O primeiro parágrafo deve fazer o leitor querer continuar lendo
-3. Use APENAS as informações fornecidas sobre o produto
+3. **USAR EXCLUSIVAMENTE** os dados fornecidos acima - ZERO tolerância para invenções
 4. Mantenha um tom ${blogType === 'commercial' ? 'conversacional e persuasivo, como se estivesse falando com um amigo dentista' : 'técnico mas acessível, explicando complexidade de forma interessante'}
 5. Inclua naturalmente as keywords do produto no texto
 6. O blog deve ter entre 800-1200 palavras
 7. Use subtítulos em markdown (##, ###) que sejam intrigantes, não apenas informativos
 8. Inclua listas quando apropriado
-9. ${blogType === 'commercial' ? 'Conte uma história sobre como o produto resolve problemas reais' : 'Explique a tecnologia como uma descoberta fascinante'}
-10. NÃO invente informações que não estão nos dados fornecidos
+9. ${blogType === 'commercial' ? 'Destaque os benefícios REAIS listados nos dados' : 'Explique as especificações técnicas FORNECIDAS de forma interessante'}
+10. **VIOLAÇÃO GRAVE**: Qualquer informação inventada invalida todo o conteúdo
 11. Use formato markdown limpo e envolvente
 12. EVITE linguagem corporativa ou muito formal no início - seja mais humano e direto
+13. **SE FALTAR DADOS** para uma seção → OMITIR A SEÇÃO, não inventar
 
 INSTRUÇÕES PARA IMAGEM:
 ${productData.imageUrl ? `- INCLUA a imagem do produto logo após o título principal (H1)
