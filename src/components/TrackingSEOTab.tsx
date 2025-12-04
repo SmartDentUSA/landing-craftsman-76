@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Cloud, Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface TrackingSEOTabProps {
   profile: any;
@@ -14,6 +15,64 @@ interface TrackingSEOTabProps {
 }
 
 export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
+  const [testingDomain, setTestingDomain] = useState<number | null>(null);
+
+  const testCloudflareConnection = async (index: number, projectName: string) => {
+    if (!projectName) {
+      toast.error('Nome do projeto Cloudflare é obrigatório');
+      return;
+    }
+    
+    setTestingDomain(index);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-cloudflare-connection', {
+        body: { projectName }
+      });
+      
+      if (error) throw error;
+      
+      if (data.success) {
+        setProfile(prev => {
+          const updated = [...(prev.seo_domains || [])];
+          updated[index].cloudflare_status = 'connected';
+          return { ...prev, seo_domains: updated };
+        });
+        toast.success(`Conexão com "${projectName}" verificada com sucesso!`);
+      } else {
+        setProfile(prev => {
+          const updated = [...(prev.seo_domains || [])];
+          updated[index].cloudflare_status = 'error';
+          return { ...prev, seo_domains: updated };
+        });
+        toast.error(data.error || 'Falha na conexão');
+      }
+    } catch (err) {
+      setProfile(prev => {
+        const updated = [...(prev.seo_domains || [])];
+        updated[index].cloudflare_status = 'error';
+        return { ...prev, seo_domains: updated };
+      });
+      toast.error(`Erro: ${(err as Error).message}`);
+    } finally {
+      setTestingDomain(null);
+    }
+  };
+
+  const getCloudflareStatusBadge = (status: string | undefined, enabled: boolean | undefined) => {
+    if (!enabled) return <Badge variant="secondary">☁️ Desabilitado</Badge>;
+    switch (status) {
+      case 'connected':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">🟢 Conectado</Badge>;
+      case 'error':
+        return <Badge variant="destructive">🔴 Erro</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-amber-600">🟡 Pendente</Badge>;
+      default:
+        return <Badge variant="outline">⚪ Não configurado</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* PIXELS */}
@@ -244,7 +303,12 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 use_in_seo: true,
                 use_in_schema: true,
                 use_in_footer: true,
-                priority: (profile.seo_domains?.length || 0) + 1
+                priority: (profile.seo_domains?.length || 0) + 1,
+                // Cloudflare config
+                cloudflare_project_name: '',
+                cloudflare_zone_id: '',
+                cloudflare_enabled: false,
+                cloudflare_status: 'pending'
               };
               setProfile(prev => ({
                 ...prev,
@@ -258,8 +322,9 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
         </div>
 
         {(profile.seo_domains || []).map((domain: any, index: number) => (
-          <Card key={index} className="p-4">
-            <div className="grid grid-cols-3 gap-3 mb-3">
+          <Card key={index} className="p-4 space-y-4">
+            {/* Identificação do Domínio */}
+            <div className="grid grid-cols-3 gap-3">
               <Input
                 value={domain.name}
                 onChange={(e) => {
@@ -294,7 +359,93 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
                 placeholder="Descrição"
               />
             </div>
+
+            {/* Cloudflare Configuration */}
+            <div className="border rounded-lg p-3 bg-muted/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Cloud className="h-4 w-4 text-orange-500" />
+                  <span className="font-medium text-sm">Cloudflare Pages</span>
+                  {getCloudflareStatusBadge(domain.cloudflare_status, domain.cloudflare_enabled)}
+                </div>
+                <Switch
+                  checked={domain.cloudflare_enabled ?? false}
+                  onCheckedChange={(c) => {
+                    setProfile(prev => {
+                      const updated = [...(prev.seo_domains || [])];
+                      updated[index].cloudflare_enabled = c;
+                      if (!c) updated[index].cloudflare_status = 'pending';
+                      return {...prev, seo_domains: updated};
+                    });
+                  }}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Project Name *</Label>
+                  <Input
+                    value={domain.cloudflare_project_name || ''}
+                    onChange={(e) => {
+                      setProfile(prev => {
+                        const updated = [...(prev.seo_domains || [])];
+                        updated[index].cloudflare_project_name = e.target.value;
+                        updated[index].cloudflare_status = 'pending';
+                        return {...prev, seo_domains: updated};
+                      });
+                    }}
+                    placeholder="mediti900"
+                    disabled={!domain.cloudflare_enabled}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Zone ID (opcional)</Label>
+                  <Input
+                    value={domain.cloudflare_zone_id || ''}
+                    onChange={(e) => {
+                      setProfile(prev => {
+                        const updated = [...(prev.seo_domains || [])];
+                        updated[index].cloudflare_zone_id = e.target.value;
+                        return {...prev, seo_domains: updated};
+                      });
+                    }}
+                    placeholder="xxxxxxxxxxxxxxxx"
+                    disabled={!domain.cloudflare_enabled}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              
+              {domain.cloudflare_enabled && domain.cloudflare_project_name && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full"
+                  onClick={() => testCloudflareConnection(index, domain.cloudflare_project_name)}
+                  disabled={testingDomain === index}
+                >
+                  {testingDomain === index ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                      Testando...
+                    </>
+                  ) : domain.cloudflare_status === 'connected' ? (
+                    <>
+                      <CheckCircle className="h-3 w-3 mr-2 text-green-500" />
+                      Reconectar
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3 w-3 mr-2" />
+                      Testar Conexão
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
             
+            {/* Switches de uso */}
             <div className="flex items-center justify-between">
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
@@ -343,6 +494,16 @@ export function TrackingSEOTab({ profile, setProfile }: TrackingSEOTabProps) {
             </div>
           </Card>
         ))}
+        
+        {(profile.seo_domains || []).length === 0 && (
+          <Card className="p-8 text-center">
+            <Cloud className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+            <p className="text-muted-foreground">Nenhum domínio configurado</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Adicione domínios para publicar LPs automaticamente via Cloudflare Pages
+            </p>
+          </Card>
+        )}
       </div>
     </div>
   );

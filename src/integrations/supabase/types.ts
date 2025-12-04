@@ -231,13 +231,20 @@ export type Database = {
         Row: {
           brand: string | null
           captured_images: Json | null
+          cloudflare_deployment_id: string | null
           created_at: string | null
           cta_url: string
+          deployment_history: Json | null
           id: string
+          is_homepage: boolean | null
           name: string
           original_html: string
+          page_path: string | null
           product: string | null
+          publish_error_message: string | null
+          publish_status: string | null
           published_at: string | null
+          published_url: string | null
           seo_config: Json | null
           status: string | null
           target_domain: string | null
@@ -249,13 +256,20 @@ export type Database = {
         Insert: {
           brand?: string | null
           captured_images?: Json | null
+          cloudflare_deployment_id?: string | null
           created_at?: string | null
           cta_url: string
+          deployment_history?: Json | null
           id?: string
+          is_homepage?: boolean | null
           name: string
           original_html: string
+          page_path?: string | null
           product?: string | null
+          publish_error_message?: string | null
+          publish_status?: string | null
           published_at?: string | null
+          published_url?: string | null
           seo_config?: Json | null
           status?: string | null
           target_domain?: string | null
@@ -267,13 +281,20 @@ export type Database = {
         Update: {
           brand?: string | null
           captured_images?: Json | null
+          cloudflare_deployment_id?: string | null
           created_at?: string | null
           cta_url?: string
+          deployment_history?: Json | null
           id?: string
+          is_homepage?: boolean | null
           name?: string
           original_html?: string
+          page_path?: string | null
           product?: string | null
+          publish_error_message?: string | null
+          publish_status?: string | null
           published_at?: string | null
+          published_url?: string | null
           seo_config?: Json | null
           status?: string | null
           target_domain?: string | null
