@@ -1161,6 +1161,65 @@ export type Database = {
         }
         Relationships: []
       }
+      product_blog_publications: {
+        Row: {
+          blog_type: string
+          cloudflare_deployment_id: string | null
+          created_at: string
+          html_content: string | null
+          id: string
+          page_path: string
+          product_id: string
+          publish_error_message: string | null
+          publish_status: string
+          published_at: string | null
+          published_url: string | null
+          seo_config: Json | null
+          target_domain: string
+          updated_at: string
+        }
+        Insert: {
+          blog_type: string
+          cloudflare_deployment_id?: string | null
+          created_at?: string
+          html_content?: string | null
+          id?: string
+          page_path?: string
+          product_id: string
+          publish_error_message?: string | null
+          publish_status?: string
+          published_at?: string | null
+          published_url?: string | null
+          seo_config?: Json | null
+          target_domain: string
+          updated_at?: string
+        }
+        Update: {
+          blog_type?: string
+          cloudflare_deployment_id?: string | null
+          created_at?: string
+          html_content?: string | null
+          id?: string
+          page_path?: string
+          product_id?: string
+          publish_error_message?: string | null
+          publish_status?: string
+          published_at?: string | null
+          published_url?: string | null
+          seo_config?: Json | null
+          target_domain?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_blog_publications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_coupons: {
         Row: {
           allow_promotions: boolean
