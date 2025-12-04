@@ -145,9 +145,27 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    console.log('[publish-cloudflare-pages] Checking credentials:', {
+      hasApiToken: !!CLOUDFLARE_API_TOKEN,
+      hasAccountId: !!CLOUDFLARE_ACCOUNT_ID,
+      apiTokenLength: CLOUDFLARE_API_TOKEN?.length || 0,
+      accountIdLength: CLOUDFLARE_ACCOUNT_ID?.length || 0
+    });
+
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
+      console.error('[publish-cloudflare-pages] Missing credentials:', {
+        apiToken: CLOUDFLARE_API_TOKEN ? 'SET' : 'MISSING',
+        accountId: CLOUDFLARE_ACCOUNT_ID ? 'SET' : 'MISSING'
+      });
       return new Response(
-        JSON.stringify({ success: false, error: 'Credenciais Cloudflare não configuradas' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Credenciais Cloudflare não configuradas',
+          debug: {
+            apiToken: CLOUDFLARE_API_TOKEN ? 'configured' : 'missing',
+            accountId: CLOUDFLARE_ACCOUNT_ID ? 'configured' : 'missing'
+          }
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
