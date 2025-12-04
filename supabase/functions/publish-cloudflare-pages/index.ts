@@ -267,7 +267,17 @@ serve(async (req) => {
     }
 
     // 5. Inject tracking pixels into HTML
-    const trackingPixels: TrackingPixels = domainConfig.tracking_pixels || {};
+    // Fallback para nomes antigos (gtm, ga4, meta, tiktok) e novos (google_tag_manager, etc.)
+    const rawPixels = domainConfig.tracking_pixels || {};
+    const trackingPixels: TrackingPixels = {
+      google_tag_manager: rawPixels.google_tag_manager || rawPixels.gtm || null,
+      google_analytics: rawPixels.google_analytics || rawPixels.ga4 || null,
+      meta_pixel: rawPixels.meta_pixel || rawPixels.meta || null,
+      tiktok_pixel: rawPixels.tiktok_pixel || rawPixels.tiktok || null,
+    };
+    
+    console.log(`[publish-cloudflare-pages] Tracking pixels config:`, JSON.stringify(trackingPixels, null, 2));
+    
     let htmlContent = lp.transformed_html;
     
     // Count active pixels for logging
