@@ -930,17 +930,18 @@ serve(async (req) => {
       );
     }
 
-    // 2. Get company profile with ALL fields for header/footer
-    const { data: companyProfile, error: companyError } = await supabase
+    // 2. Get company profile with ALL fields for header/footer (use limit 1 to handle multiple profiles)
+    const { data: companyProfiles, error: companyError } = await supabase
       .from('company_profile')
       .select('*')
-      .single();
+      .limit(1);
+
+    const companyProfile = companyProfiles?.[0] || null;
 
     console.log('[publish-product-blog] Company profile query result:', {
       hasData: !!companyProfile,
       error: companyError?.message || null,
       hasSeoDomains: !!companyProfile?.seo_domains,
-      seoDomainsType: typeof companyProfile?.seo_domains,
       seoDomainsLength: Array.isArray(companyProfile?.seo_domains) ? companyProfile.seo_domains.length : 'not array'
     });
 
