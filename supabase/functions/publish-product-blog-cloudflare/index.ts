@@ -193,10 +193,15 @@ function extractTrustMetrics(product: any): Array<{value: string; label: string}
 function extractTechnicalSpecs(product: any): Array<{key: string; value: string}> {
   // APENAS dados reais do produto - SEM INVENTAR NADA
   if (Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0) {
-    return product.technical_specifications.slice(0, 10).map((spec: any) => ({
-      key: spec.key || spec.name || 'Especificação',
-      value: spec.value || '-'
-    }));
+    return product.technical_specifications.slice(0, 10).map((spec: any) => {
+      // Normaliza o label para evitar "Especificação" repetido
+      const rawKey = spec.key || spec.label || spec.name;
+      const normalizedKey = normalizeSpecLabel(String(rawKey || ''));
+      return {
+        key: normalizedKey || 'Especificação',
+        value: spec.value || '-'
+      };
+    });
   }
   
   // RETORNA ARRAY VAZIO se não houver dados - NÃO INVENTA
@@ -669,6 +674,12 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
       padding: 48px;
     }
     
+    .hero-image-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
     .hero-image {
       display: flex;
       align-items: center;
@@ -683,6 +694,36 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
       max-height: 400px;
       object-fit: contain;
       filter: drop-shadow(0 10px 30px rgba(0,0,0,0.1));
+      cursor: zoom-in;
+    }
+    
+    .product-gallery-thumbs {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .gallery-thumb {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.7;
+    }
+    
+    .gallery-thumb:hover {
+      border-color: var(--accent-orange);
+      opacity: 1;
+    }
+    
+    .gallery-thumb.active {
+      border-color: var(--accent-orange);
+      opacity: 1;
+      box-shadow: 0 0 0 2px rgba(238, 122, 62, 0.3);
     }
     
     .hero-info { display: flex; flex-direction: column; justify-content: center; }
@@ -1294,11 +1335,42 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
     <div class="container">
       <section class="hero-section">
         <div class="hero-grid">
-          <div class="hero-image">
-            ${product.image_url 
-              ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="eager" width="400" height="400">`
-              : `<div style="width:300px;height:300px;background:#e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fas fa-image fa-3x"></i></div>`
-            }
+          <div class="hero-image-container">
+            <div class="hero-image">
+              ${product.image_url 
+                ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="eager" width="400" height="400" id="main-product-image">`
+                : `<div style="width:300px;height:300px;background:#e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"><i class="fas fa-image fa-3x"></i></div>`
+              }
+            </div>
+            ${(() => {
+              // Extrair galeria de imagens
+              const gallery = Array.isArray(product.images_gallery) ? product.images_gallery : [];
+              // Adicionar imagem principal se não estiver na galeria
+              const allImages: Array<{url: string; alt?: string}> = [];
+              if (product.image_url) {
+                allImages.push({ url: product.image_url, alt: product.name });
+              }
+              gallery.forEach((img: any) => {
+                const imgUrl = typeof img === 'string' ? img : (img.url || img.src);
+                if (imgUrl && imgUrl !== product.image_url) {
+                  allImages.push({ url: imgUrl, alt: img.alt || product.name });
+                }
+              });
+              // Mostrar galeria apenas se houver mais de 1 imagem
+              if (allImages.length > 1) {
+                return `
+                  <div class="product-gallery-thumbs">
+                    ${allImages.slice(0, 6).map((img, idx) => `
+                      <img src="${escapeHtml(img.url)}" 
+                           alt="${escapeHtml(img.alt || product.name)}" 
+                           class="gallery-thumb ${idx === 0 ? 'active' : ''}"
+                           onclick="document.getElementById('main-product-image').src=this.src; document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active')); this.classList.add('active');">
+                    `).join('')}
+                  </div>
+                `;
+              }
+              return '';
+            })()}
           </div>
           <div class="hero-info">
             <span class="category-badge">${escapeHtml(product.subcategory || product.category || 'Produto Premium')}</span>
