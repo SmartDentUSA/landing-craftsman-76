@@ -1741,7 +1741,10 @@ serve(async (req) => {
     // 6. Upload to Cloudflare Pages
     const manifest: Record<string, string> = {};
     const htmlHash = await calculateBlake3Hash(html);
-    manifest[finalPagePath === '/' ? '/index.html' : `${finalPagePath}.html`] = htmlHash;
+    const filePath = finalPagePath === '/' 
+      ? '/index.html' 
+      : `/${finalPagePath.replace(/^\//, '')}/index.html`;
+    manifest[filePath] = htmlHash;
 
     const formData = new FormData();
     formData.append('manifest', JSON.stringify(manifest));
