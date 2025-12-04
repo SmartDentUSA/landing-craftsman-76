@@ -1738,21 +1738,163 @@ serve(async (req) => {
 
     console.log(`[publish-product-blog] HTML generated: ${html.length} bytes`);
 
-    // 6. Upload to Cloudflare Pages
-    const manifest: Record<string, string> = {};
-    const htmlHash = await calculateBlake3Hash(html);
+    // 6. Upload to Cloudflare Pages - CORRECT 5-STEP PROCESS
+    // (Copied from publish-cloudflare-pages)
+    
+    // STEP 1: Calculate BLAKE3 hash and prepare file path
     const filePath = finalPagePath === '/' 
       ? '/index.html' 
       : `/${finalPagePath.replace(/^\//, '')}/index.html`;
-    manifest[filePath] = htmlHash;
+    const contentHash = await calculateBlake3Hash(html);
+    console.log(`[publish-product-blog] STEP 1 - BLAKE3 hash calculated:`, { 
+      filePath, 
+      hash: contentHash,
+      contentLength: html.length 
+    });
+
+    // STEP 2: Get JWT upload token
+    console.log(`[publish-product-blog] STEP 2 - Getting upload token...`);
+    const tokenResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${cloudflareProjectName}/upload-token`,
+      {
+        headers: {
+          'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+        }
+      }
+    );
+
+    const tokenData = await tokenResponse.json();
+    console.log(`[publish-product-blog] Token response:`, {
+      status: tokenResponse.status,
+      success: tokenData.success,
+      hasJwt: !!tokenData.result?.jwt
+    });
+
+    if (!tokenResponse.ok || !tokenData.success || !tokenData.result?.jwt) {
+      console.error('[publish-product-blog] Failed to get upload token:', tokenData);
+      
+      await supabase
+        .from('product_blog_publications')
+        .update({ 
+          publish_status: 'error',
+          publish_error_message: tokenData.errors?.[0]?.message || 'Falha ao obter token de upload'
+        })
+        .eq('id', publicationId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: tokenData.errors?.[0]?.message || 'Falha ao obter token de upload' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    const jwtToken = tokenData.result.jwt;
+
+    // STEP 3: Upload file content using JWT
+    console.log(`[publish-product-blog] STEP 3 - Uploading file content...`);
+    
+    const base64Content = stringToBase64(html);
+    
+    const uploadPayload = [{
+      key: contentHash,
+      value: base64Content,
+      metadata: { contentType: 'text/html' },
+      base64: true
+    }];
+
+    const uploadResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/pages/assets/upload`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(uploadPayload)
+      }
+    );
+
+    const uploadData = await uploadResponse.json();
+    console.log(`[publish-product-blog] Upload response:`, {
+      status: uploadResponse.status,
+      success: uploadData.success,
+      errors: uploadData.errors
+    });
+
+    if (!uploadResponse.ok || !uploadData.success) {
+      console.error('[publish-product-blog] Failed to upload file:', uploadData);
+      
+      await supabase
+        .from('product_blog_publications')
+        .update({ 
+          publish_status: 'error',
+          publish_error_message: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo'
+        })
+        .eq('id', publicationId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // STEP 4: Upsert hashes to register the uploaded files
+    console.log(`[publish-product-blog] STEP 4 - Registering hashes...`);
+    
+    const upsertResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/pages/assets/upsert-hashes`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hashes: [contentHash] })
+      }
+    );
+
+    const upsertData = await upsertResponse.json();
+    console.log(`[publish-product-blog] Upsert hashes response:`, {
+      status: upsertResponse.status,
+      success: upsertData.success,
+      errors: upsertData.errors
+    });
+
+    if (!upsertResponse.ok || !upsertData.success) {
+      console.error('[publish-product-blog] Failed to upsert hashes:', upsertData);
+      
+      await supabase
+        .from('product_blog_publications')
+        .update({ 
+          publish_status: 'error',
+          publish_error_message: upsertData.errors?.[0]?.message || 'Falha ao registrar hashes'
+        })
+        .eq('id', publicationId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: upsertData.errors?.[0]?.message || 'Falha ao registrar hashes' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // STEP 5: Create deployment with manifest only (no blob)
+    console.log(`[publish-product-blog] STEP 5 - Creating deployment...`);
+    
+    const manifest = { [filePath]: contentHash };
+    console.log(`[publish-product-blog] Manifest:`, manifest);
 
     const formData = new FormData();
     formData.append('manifest', JSON.stringify(manifest));
-    
-    const htmlBlob = new Blob([html], { type: 'text/html' });
-    formData.append(htmlHash, htmlBlob, `${htmlHash}.html`);
 
-    const uploadResponse = await fetch(
+    const createDeploymentResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${cloudflareProjectName}/deployments`,
       {
         method: 'POST',
@@ -1763,22 +1905,29 @@ serve(async (req) => {
       }
     );
 
-    const uploadResult = await uploadResponse.json();
-    console.log(`[publish-product-blog] Cloudflare response:`, uploadResult.success);
+    const uploadResult = await createDeploymentResponse.json();
+    console.log(`[publish-product-blog] Create deployment response:`, {
+      status: createDeploymentResponse.status,
+      success: uploadResult.success,
+      errors: uploadResult.errors,
+      hasResult: !!uploadResult.result
+    });
 
-    if (!uploadResult.success) {
+    if (!createDeploymentResponse.ok || !uploadResult.success) {
+      console.error('[publish-product-blog] Failed to create deployment:', uploadResult);
+      
       await supabase
         .from('product_blog_publications')
-        .update({
+        .update({ 
           publish_status: 'error',
-          publish_error_message: uploadResult.errors?.[0]?.message || 'Erro desconhecido no Cloudflare'
+          publish_error_message: uploadResult.errors?.[0]?.message || 'Falha ao criar deployment'
         })
         .eq('id', publicationId);
 
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: uploadResult.errors?.[0]?.message || 'Erro no upload para Cloudflare' 
+          error: uploadResult.errors?.[0]?.message || 'Falha ao criar deployment no Cloudflare' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
