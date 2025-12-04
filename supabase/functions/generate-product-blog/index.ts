@@ -55,17 +55,19 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    // Gerar blog com IA
-    const blogContent = await generateProductBlog(deepSeekApiKey, product, companyProfile, blogType);
+    // Gerar blog + FAQs com IA (prompt combinado)
+    const blogResult = await generateProductBlog(deepSeekApiKey, product, companyProfile, blogType);
     
     let intelligentLinks = {};
-    let finalBlogContent = blogContent;
+    let finalBlogContent = blogResult.content;
+    
+    console.log(`✅ Blog generated with ${blogResult.faqs?.length || 0} FAQs`);
     
     // Aplicar links inteligentes apenas se habilitado
     if (useIntelligentLinks) {
       console.log('🔗 Generating intelligent links...');
-      intelligentLinks = await generateIntelligentLinks(supabase, product, blogContent, blogType);
-      finalBlogContent = await processContentWithIntelligentLinks(blogContent, intelligentLinks);
+      intelligentLinks = await generateIntelligentLinks(supabase, product, blogResult.content, blogType);
+      finalBlogContent = await processContentWithIntelligentLinks(blogResult.content, intelligentLinks);
       console.log(`✅ Applied ${Object.keys(intelligentLinks).length} intelligent links`);
     } else {
       console.log('🚫 Intelligent links disabled by user');
@@ -76,10 +78,11 @@ serve(async (req) => {
     const commercialHistory = existingBlogContent.commercial_versions || [];
     const technicalHistory = existingBlogContent.technical_versions || [];
 
-    // Criar nova versão
+    // Criar nova versão com FAQs integradas
     const newVersion = {
       id: crypto.randomUUID(),
       content: finalBlogContent,
+      faqs: blogResult.faqs || [], // ✅ FAQs geradas junto com o blog
       generated_at: new Date().toISOString(),
       ai_source: "deepseek-chat",
       intelligent_links: intelligentLinks,
@@ -95,13 +98,15 @@ serve(async (req) => {
       ? [newVersion, ...technicalHistory].slice(0, 10)
       : technicalHistory;
 
-    // Estrutura completa com histórico + compatibilidade
+    // Estrutura completa com histórico + compatibilidade + FAQs
     const updatedBlogContent = {
       commercial_versions: updatedCommercialHistory,
       technical_versions: updatedTechnicalHistory,
       // Campos de compatibilidade (últimas versões)
       commercial: updatedCommercialHistory[0]?.content || existingBlogContent.commercial,
       technical: updatedTechnicalHistory[0]?.content || existingBlogContent.technical,
+      commercial_faqs: updatedCommercialHistory[0]?.faqs || existingBlogContent.commercial_faqs || [], // ✅ FAQs comerciais
+      technical_faqs: updatedTechnicalHistory[0]?.faqs || existingBlogContent.technical_faqs || [], // ✅ FAQs técnicas
       commercial_links: updatedCommercialHistory[0]?.intelligent_links || {},
       technical_links: updatedTechnicalHistory[0]?.intelligent_links || {},
       generated_at: new Date().toISOString(),
@@ -144,6 +149,19 @@ serve(async (req) => {
   }
 });
 
+// ✅ INTERFACE: Resultado do blog com FAQs integradas
+interface BlogFAQ {
+  question: string;
+  answer: string;
+  sge_snippet: string;
+  category: 'o-que-e' | 'como-funciona' | 'comparacao' | 'beneficios' | 'casos-de-uso';
+}
+
+interface BlogGenerationResult {
+  content: string;
+  faqs: BlogFAQ[];
+}
+
 // Função para sanitizar conteúdo do blog removendo CTAs genéricos
 function sanitizeBlogContent(content: string): string {
   if (!content) return '';
@@ -182,7 +200,7 @@ async function generateProductBlog(
   product: any, 
   companyProfile: any, 
   blogType: 'commercial' | 'technical'
-): Promise<string> {
+): Promise<BlogGenerationResult> {
   
   // Carregar prompts customizados do banco de dados
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -537,7 +555,134 @@ Gere o blog post completo agora:`;
   const sanitizedContent = sanitizeBlogContent(blogContent);
   console.log(`🧼 Content sanitized, removed ${blogContent.length - sanitizedContent.length} characters`);
   
-  return sanitizedContent;
+  // ✅ FASE 2: Gerar 10 FAQs otimizadas para SEO/IA/GEO
+  console.log('🔮 Generating 10 AI-optimized FAQs...');
+  const faqs = await generateBlogFAQs(apiKey, product, sanitizedContent, blogType);
+  console.log(`✅ Generated ${faqs.length} FAQs`);
+  
+  return {
+    content: sanitizedContent,
+    faqs: faqs
+  };
+}
+
+// ✅ NOVA FUNÇÃO: Gerar 10 FAQs otimizadas para SEO/IA/GEO
+async function generateBlogFAQs(
+  apiKey: string,
+  product: any,
+  blogContent: string,
+  blogType: 'commercial' | 'technical'
+): Promise<BlogFAQ[]> {
+  const faqPrompt = `Você é um especialista em SEO, SGE (Search Generative Experience) e GEO (Generative Engine Optimization).
+
+TAREFA: Gerar EXATAMENTE 10 FAQs otimizadas para IAs generativas (ChatGPT, Perplexity, Google SGE) baseadas no conteúdo do blog e dados do produto.
+
+═══════════════════════════════════════════════════════════
+📦 DADOS DO PRODUTO
+═══════════════════════════════════════════════════════════
+Nome: ${product.name}
+Marca: ${product.brand || 'N/A'}
+GTIN: ${product.gtin || 'N/A'}
+Preço: ${product.price ? `R$ ${product.price}` : 'N/A'}
+Categoria: ${product.category || ''} > ${product.subcategory || ''}
+Descrição: ${product.description?.substring(0, 500) || ''}
+Benefícios: ${Array.isArray(product.benefits) ? product.benefits.slice(0, 5).join(', ') : 'N/A'}
+Keywords: ${Array.isArray(product.keywords) ? product.keywords.slice(0, 10).join(', ') : ''}
+
+═══════════════════════════════════════════════════════════
+📝 CONTEÚDO DO BLOG GERADO (resumo)
+═══════════════════════════════════════════════════════════
+${blogContent.substring(0, 2000)}...
+
+═══════════════════════════════════════════════════════════
+📋 ESTRUTURA OBRIGATÓRIA DAS 10 FAQs
+═══════════════════════════════════════════════════════════
+
+CATEGORIAS (2 FAQs de cada):
+1. "o-que-e" → Definições citáveis ("O que é...", "O que significa...")
+2. "como-funciona" → Explicações técnicas ("Como funciona...", "Como usar...")
+3. "comparacao" → Diferenciação ("Qual a diferença...", "Comparado a...")
+4. "beneficios" → ROI e vantagens ("Por que usar...", "Quais os benefícios...")
+5. "casos-de-uso" → Aplicações práticas ("Onde usar...", "Quando usar...", "Para quem...")
+
+REGRAS CRÍTICAS PARA IA-READINESS:
+1. **First Sentence Answer**: A primeira frase da resposta DEVE ser a resposta direta e citável
+2. **Dados Numéricos**: Cada resposta DEVE incluir pelo menos 1 dado numérico específico do produto
+3. **SGE Snippet**: Campo separado com versão ultra-curta (max 30 palavras) para featured snippet
+4. **Anti-Alucinação**: USE APENAS informações presentes nos dados acima - NUNCA invente
+5. **Keywords Naturais**: Inclua as keywords do produto naturalmente nas perguntas
+6. **Formato ${blogType === 'commercial' ? 'Comercial: tom persuasivo focado em benefícios' : 'Técnico: tom informativo focado em especificações'}
+
+FORMATO DE SAÍDA (JSON):
+\`\`\`json
+{
+  "faqs": [
+    {
+      "question": "O que é o ${product.name}?",
+      "answer": "[Resposta direta na primeira frase]. [Contexto técnico]. [Benefício com dado numérico].",
+      "sge_snippet": "[Versão ultra-curta de 20-30 palavras citável por IAs]",
+      "category": "o-que-e"
+    }
+  ]
+}
+\`\`\`
+
+Gere EXATAMENTE 10 FAQs no formato JSON acima:`;
+
+  try {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: 'Você retorna APENAS JSON válido, sem markdown ou explicações.' },
+          { role: 'user', content: faqPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 4000
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('❌ FAQ generation failed:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const faqContent = data.choices?.[0]?.message?.content || '';
+    
+    // Extrair JSON da resposta
+    const jsonMatch = faqContent.match(/\{[\s\S]*"faqs"[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('❌ No valid JSON found in FAQ response');
+      return [];
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    const faqs = parsed.faqs || [];
+    
+    // Validar e filtrar FAQs válidas
+    const validFaqs = faqs
+      .filter((faq: any) => faq.question && faq.answer && faq.sge_snippet && faq.category)
+      .slice(0, 10)
+      .map((faq: any) => ({
+        question: faq.question.trim(),
+        answer: faq.answer.trim(),
+        sge_snippet: faq.sge_snippet.trim(),
+        category: faq.category
+      }));
+    
+    console.log(`✅ FAQ validation: ${validFaqs.length}/10 valid FAQs`);
+    return validFaqs;
+    
+  } catch (error) {
+    console.error('❌ Error generating FAQs:', error);
+    return [];
+  }
 }
 
 // Função para processar variáveis no prompt customizado

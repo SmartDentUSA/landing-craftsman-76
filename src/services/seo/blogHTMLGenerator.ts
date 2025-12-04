@@ -53,6 +53,12 @@ export interface BlogHTMLOptions {
     content: string;
     meta_description?: string;
     keywords?: string[];
+    faqs?: Array<{  // ✅ FAQs integradas ao blog
+      question: string;
+      answer: string;
+      sge_snippet?: string;
+      category?: string;
+    }>;
   }>;
   
   // SEO básico
@@ -239,7 +245,14 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   // ✅ 4. CONSOLIDAR KEYWORDS (remover duplicatas)
   const uniqueKeywords = [...new Set(keywords)].slice(0, 50);
 
-  // ✅ 5. PROCESSAR CONTEÚDO DOS BLOGS COM MARKDOWN → HTML + INTELLIGENT LINKS
+  // ✅ 4.5. COLETAR FAQs DE TODOS OS BLOGS
+  const allBlogFAQs = blogs
+    .filter(blog => blog.faqs && Array.isArray(blog.faqs) && blog.faqs.length > 0)
+    .flatMap(blog => blog.faqs || []);
+  
+  console.log(`✅ FAQs coletadas dos blogs: ${allBlogFAQs.length}`);
+
+  // ✅ 5. PROCESSAR CONTEÚDO DOS BLOGS COM MARKDOWN → HTML + INTELLIGENT LINKS + FAQs
   const blogContents = blogs.map((blog, index) => {
     let content = blog.content;
     
@@ -258,6 +271,11 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
     const blogId = `blog-${index}-${Date.now()}`;
     const blogType = index === 0 ? 'strategic' : (domain === 'dentala.com.br' ? 'technical' : 'commercial');
     
+    // ✅ NOVO: Gerar seção de FAQs do blog (se houver)
+    const blogFAQsHTML = blog.faqs && blog.faqs.length > 0 
+      ? generateBlogFAQSection(blog.faqs, blog.title)
+      : '';
+    
     return `
       <!-- BLOG_START:${blogId} -->
       <article 
@@ -273,6 +291,7 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
         <div class="blog-content" itemprop="articleBody">
           ${sanitizedContent}
         </div>
+        ${blogFAQsHTML}
       </article>
       <!-- BLOG_END:${blogId} -->
     `;
@@ -339,6 +358,24 @@ export async function generateBlogHTML(options: BlogHTMLOptions): Promise<string
   if (videoTestimonialsForSchema.length > 0) {
     allSchemas.push(...videoTestimonialsForSchema);
     console.log(`✅ ${videoTestimonialsForSchema.length} video schemas adicionados`);
+  }
+
+  // ✅ NOVO: Adicionar FAQPage schema se houver FAQs dos blogs
+  if (allBlogFAQs.length >= 2) {
+    const faqPageSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": allBlogFAQs.slice(0, 15).map(faq => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
+    allSchemas.push(faqPageSchema);
+    console.log(`✅ FAQPage schema adicionado com ${Math.min(allBlogFAQs.length, 15)} perguntas`);
   }
 
   // ✅ 8. CONSOLIDAR E VALIDAR SCHEMAS
@@ -665,4 +702,126 @@ async function generateAuthorSignatureHTML(authorKolId: string): Promise<string>
     console.error('❌ Erro ao gerar assinatura do autor:', error);
     return '';
   }
+}
+
+/**
+ * ✅ NOVO: Gera HTML da seção de FAQs do blog com Schema.org Microdata
+ */
+function generateBlogFAQSection(faqs: Array<{
+  question: string;
+  answer: string;
+  sge_snippet?: string;
+  category?: string;
+}>, blogTitle: string): string {
+  if (!faqs || faqs.length === 0) return '';
+  
+  const faqItems = faqs.map((faq, index) => `
+    <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <summary itemprop="name" class="faq-question">
+        <span class="faq-number">${index + 1}</span>
+        ${faq.question}
+      </summary>
+      <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-answer">
+        <p itemprop="text">${faq.answer}</p>
+        ${faq.sge_snippet ? `<p class="sge-snippet" data-sge="true"><strong>Resumo:</strong> ${faq.sge_snippet}</p>` : ''}
+      </div>
+    </details>
+  `).join('\n');
+
+  return `
+    <section class="blog-faq-section" itemscope itemtype="https://schema.org/FAQPage" aria-label="Perguntas Frequentes">
+      <h3 class="faq-title">❓ Perguntas Frequentes</h3>
+      <p class="faq-subtitle">As ${faqs.length} principais dúvidas sobre este tema</p>
+      <div class="faq-list">
+        ${faqItems}
+      </div>
+      <style>
+        .blog-faq-section {
+          margin-top: 40px;
+          padding: 30px;
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          border-radius: 16px;
+          border-left: 4px solid #3b82f6;
+        }
+        .faq-title {
+          font-size: 1.5rem;
+          margin: 0 0 8px 0;
+          color: #1e293b;
+        }
+        .faq-subtitle {
+          margin: 0 0 24px 0;
+          color: #64748b;
+          font-size: 0.95rem;
+        }
+        .faq-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .faq-item {
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+          transition: box-shadow 0.2s ease;
+        }
+        .faq-item:hover {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .faq-item[open] {
+          box-shadow: 0 4px 12px rgba(59,130,246,0.15);
+        }
+        .faq-question {
+          padding: 16px 20px;
+          cursor: pointer;
+          font-weight: 600;
+          color: #1e293b;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          list-style: none;
+        }
+        .faq-question::-webkit-details-marker {
+          display: none;
+        }
+        .faq-number {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          background: #3b82f6;
+          color: white;
+          border-radius: 50%;
+          font-size: 0.85rem;
+          flex-shrink: 0;
+        }
+        .faq-answer {
+          padding: 0 20px 20px 60px;
+          color: #475569;
+          line-height: 1.7;
+        }
+        .faq-answer p {
+          margin: 0;
+        }
+        .sge-snippet {
+          margin-top: 12px !important;
+          padding: 12px;
+          background: #f0f9ff;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          color: #0369a1;
+          border-left: 3px solid #0ea5e9;
+        }
+        @media (max-width: 640px) {
+          .blog-faq-section {
+            padding: 20px;
+          }
+          .faq-answer {
+            padding-left: 20px;
+          }
+        }
+      </style>
+    </section>
+  `;
 }
