@@ -13,6 +13,8 @@ import { generateFAQPageSchema, type FAQItem } from "../_shared/faq-schema-helpe
 import { generateProductItemListSchema, generateGenericItemListSchema, type ItemListProduct } from "../_shared/itemlist-schema-helper.ts";
 // ✅ FASE 8: VideoObject Schema Helper
 import { generateVideoObjectSchema, extractYouTubeId, getYouTubeThumbnail, getYouTubeEmbedUrl, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
+// ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
+import { injectTrackingIntoHTML, getTrackingSummary, type TrackingPixels } from "../_shared/tracking-injector.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -2050,6 +2052,18 @@ async function processLandingPage(
   // Step 7: Insert Smart Dent header/footer
   processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl);
   console.log('✅ Smart Dent header/footer inserted');
+  
+  // Step 8: Inject Tracking Pixels (GTM, GA4, Meta Pixel, TikTok)
+  const trackingPixels = companyData?.tracking_pixels as TrackingPixels;
+  if (trackingPixels) {
+    processedHTML = injectTrackingIntoHTML(processedHTML, trackingPixels, { preview: false });
+    const trackingSummary = getTrackingSummary(trackingPixels);
+    if (trackingSummary.length > 0) {
+      console.log(`✅ Tracking pixels injected: ${trackingSummary.join(', ')}`);
+    } else {
+      console.log('⚠️ No tracking pixels configured in company_profile');
+    }
+  }
   
   const stats = {
     imagesProcessed: images.filter(i => i.status === 'success').length,

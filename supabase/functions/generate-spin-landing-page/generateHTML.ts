@@ -17,6 +17,8 @@ import { generateProductItemListSchema, convertToItemListProducts, type ItemList
 // ✅ FASE 8: Video Schema Helper - re-export do systemBIntegration usa este helper
 // ✅ FASE 9: BreadcrumbList Schema Helper centralizado
 import { generateSolutionBreadcrumbs } from '../_shared/breadcrumb-schema-helper.ts';
+// ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
+import { generateTrackingHeadScripts, generateGTMNoScript, getTrackingSummary, type TrackingPixels } from '../_shared/tracking-injector.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -846,18 +848,10 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   
-  ${!preview && company?.google_analytics_id ? `
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- GOOGLE ANALYTICS -->
+  <!-- TRACKING PIXELS (GTM, GA4, Meta Pixel, TikTok) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=${escapeHtml(company.google_analytics_id)}"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '${escapeHtml(company.google_analytics_id)}');
-  </script>
-  ` : ''}
+  ${generateTrackingHeadScripts(company?.tracking_pixels as TrackingPixels, { preview })}
   
   <style>
     /* ===== DESIGN SYSTEM GEMINI V4.5 ===== */
@@ -2222,10 +2216,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   </style>
 </head>
 <body>
-  ${!preview && company?.google_tag_manager_id ? `
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${escapeHtml(company.google_tag_manager_id)}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  ` : ''}
+  ${generateGTMNoScript(company?.tracking_pixels as TrackingPixels, { preview })}
   
   <!-- Header com Logo e Menu -->
   <div class="container">
