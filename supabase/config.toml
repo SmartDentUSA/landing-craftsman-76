@@ -165,3 +165,8 @@ verify_jwt = false
 [functions.clone-landing-page]
 verify_jwt = true
 
+[functions.publish-cloudflare-pages]
+verify_jwt = true
+
+[functions.test-cloudflare-connection]
+verify_jwt = true
