@@ -136,17 +136,34 @@ function extractProductFeatures(product: any): string[] {
   return features.slice(0, 4);
 }
 
+// Helper para normalizar labels de especificações técnicas
+function normalizeSpecLabel(label: string): string {
+  if (!label) return '';
+  return label
+    .replace(/\s*:\s*$/, '')           // Remove : no final
+    .replace(/^\s*label\s*:\s*/i, '')  // Remove "label:" no início
+    .replace(/^\s*value\s*:\s*/i, '')  // Remove "value:" no início
+    .replace(/\s*->\s*:.*$/, '')       // Remove "-> : valor" patterns
+    .replace(/\s{2,}/g, ' ')           // Remove espaços duplos
+    .trim();
+}
+
 // Helper para extrair métricas de confiança (Trust Bar) - APENAS DADOS REAIS, SEM FALLBACKS
 function extractTrustMetrics(product: any): Array<{value: string; label: string}> {
   const metrics: Array<{value: string; label: string}> = [];
   
   // APENAS dados reais do produto - SEM INVENTAR NADA
   
-  // 1. De technical_specifications
+  // 1. De technical_specifications (com normalização de labels)
   if (Array.isArray(product.technical_specifications)) {
     product.technical_specifications.forEach((spec: any) => {
-      if (spec.key && spec.value && metrics.length < 4) {
-        metrics.push({ value: String(spec.value), label: String(spec.key) });
+      const rawKey = spec.key || spec.label || spec.name;
+      const rawValue = spec.value;
+      if (rawKey && rawValue && metrics.length < 4) {
+        const normalizedLabel = normalizeSpecLabel(String(rawKey));
+        if (normalizedLabel && !metrics.some(m => m.label === normalizedLabel)) {
+          metrics.push({ value: String(rawValue), label: normalizedLabel });
+        }
       }
     });
   }
