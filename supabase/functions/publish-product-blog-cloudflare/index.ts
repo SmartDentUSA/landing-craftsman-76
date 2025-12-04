@@ -102,229 +102,79 @@ function generateFAQSchema(faqs: BlogFAQ[]): object | null {
   };
 }
 
-// Helper para extrair features do produto (com fallbacks por categoria)
+// Helper para extrair features do produto - APENAS DADOS REAIS, SEM FALLBACKS
 function extractProductFeatures(product: any): string[] {
   const features: string[] = [];
-  const category = (product.category || '').toLowerCase();
   
-  // Primeiro: tentar usar features do produto
+  // APENAS dados reais do produto - SEM INVENTAR NADA
+  
+  // 1. De benefits array
   if (Array.isArray(product.benefits) && product.benefits.length > 0) {
-    features.push(...product.benefits.slice(0, 4));
-  }
-  if (Array.isArray(product.features) && features.length < 4) {
-    const remaining = 4 - features.length;
-    features.push(...product.features.slice(0, remaining).map((f: any) => typeof f === 'string' ? f : f.name || f.title));
-  }
-  
-  // Fallbacks específicos por categoria
-  if (features.length === 0) {
-    // SCANNERS 3D
-    if (category.includes('scanner')) {
-      features.push(
-        'Precisão de captura micrométrica',
-        'Software de planejamento incluído',
-        'Treinamento e certificação',
-        'Garantia estendida'
-      );
-    }
-    // IMPRESSÃO 3D
-    else if (category.includes('impressora') || category.includes('impressão')) {
-      features.push(
-        'Alta resolução de impressão',
-        'Compatível com múltiplas resinas',
-        'Interface touchscreen intuitiva',
-        'Suporte técnico especializado'
-      );
-    }
-    // PÓS-IMPRESSÃO
-    else if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
-      features.push(
-        'Cura UV automatizada',
-        'Ciclos pré-programados',
-        'Construção durável',
-        'Fácil operação'
-      );
-    }
-    // SOFTWARES
-    else if (category.includes('software') || category.includes('licença')) {
-      features.push(
-        'Licença vitalícia incluída',
-        'Atualizações gratuitas',
-        'Suporte técnico dedicado',
-        'Treinamento online'
-      );
-    }
-    // FRESADORA / CAD-CAM
-    else if (category.includes('fresadora') || category.includes('cad') || category.includes('cam') || category.includes('milling')) {
-      features.push(
-        'Precisão industrial',
-        'Compatível com múltiplos materiais',
-        'Manutenção simplificada',
-        'Suporte técnico premium'
-      );
-    }
-    // PROMOÇÕES
-    else if (category.includes('promoção') || category.includes('oferta') || category.includes('kit')) {
-      features.push(
-        'Desconto exclusivo por tempo limitado',
-        'Frete diferenciado',
-        'Produto original com garantia',
-        'Estoque limitado'
-      );
-    }
-    // RESINAS 3D / CARACTERIZAÇÃO / DENTÍSTICA
-    else if (category.includes('resina') || category.includes('caracterização') || 
-             category.includes('dentística') || category.includes('estética') || 
-             category.includes('ortodon') || category.includes('compos')) {
-      features.push(
-        'Biocompatibilidade certificada',
-        'Estética natural superior',
-        'Fácil manipulação clínica',
-        'Resultados previsíveis'
-      );
-    }
-    // INSUMOS LABORATÓRIO
-    else if (category.includes('insumo') || category.includes('laboratório') || category.includes('consumív')) {
-      features.push(
-        'Padrão profissional',
-        'Consistência lote a lote',
-        'Disponibilidade garantida',
-        'Custo-benefício otimizado'
-      );
-    }
-    // DEFAULT
-    else {
-      features.push(
-        'Alta qualidade e durabilidade',
-        'Aprovado pela ANVISA',
-        'Suporte técnico especializado',
-        'Garantia do fabricante'
-      );
-    }
-  }
-  
-  return features.slice(0, 4);
-}
-
-// Helper para extrair métricas de confiança (Trust Bar)
-function extractTrustMetrics(product: any): Array<{value: string; label: string}> {
-  const metrics: Array<{value: string; label: string}> = [];
-  const category = (product.category || '').toLowerCase();
-  
-  // Primeiro: tentar extrair de technical_specifications
-  if (Array.isArray(product.technical_specifications)) {
-    product.technical_specifications.forEach((spec: any) => {
-      if (spec.key && spec.value && metrics.length < 4) {
-        const keywords = ['precisão', 'resolução', 'velocidade', 'capacidade', 'potência',
-                         'resist', 'mpa', 'iso', 'cert', 'µm', 'micron', 'rpm', 'watt'];
-        if (keywords.some(kw => spec.key.toLowerCase().includes(kw) || spec.value.toLowerCase().includes(kw))) {
-          metrics.push({ value: spec.value, label: spec.key });
+    product.benefits.forEach((b: any) => {
+      if (features.length < 4) {
+        const text = typeof b === 'string' ? b : (b.text || b.title || b.name);
+        if (text && text.trim()) {
+          features.push(text.trim());
         }
       }
     });
   }
   
-  // Fallbacks específicos por categoria
-  if (metrics.length < 4) {
-    let categoryFallbacks: Array<{value: string; label: string}> = [];
-    
-    // SCANNERS 3D
-    if (category.includes('scanner')) {
-      categoryFallbacks = [
-        { value: '7µm', label: 'Precisão' },
-        { value: '3D Full', label: 'Captura' },
-        { value: 'CAD/CAM', label: 'Integração' },
-        { value: 'CE/FDA', label: 'Certificado' }
-      ];
-    }
-    // PÓS-IMPRESSÃO (deve vir ANTES de "impressão" para evitar match incorreto)
-    else if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
-      categoryFallbacks = [
-        { value: '365-405nm', label: 'Comprimento de Onda' },
-        { value: '80°C', label: 'Temperatura Máx' },
-        { value: 'Auto', label: 'Protocolos' },
-        { value: '99%', label: 'Eficiência' }
-      ];
-    }
-    // IMPRESSÃO 3D
-    else if (category.includes('impressora') || category.includes('impressão')) {
-      categoryFallbacks = [
-        { value: '50µm', label: 'Resolução XY' },
-        { value: '80mm/h', label: 'Velocidade' },
-        { value: 'LCD/DLP', label: 'Tecnologia' },
-        { value: '24/7', label: 'Produção' }
-      ];
-    }
-    // SOFTWARES
-    else if (category.includes('software') || category.includes('licença')) {
-      categoryFallbacks = [
-        { value: 'STL/OBJ', label: 'Formatos' },
-        { value: 'Cloud', label: 'Acesso' },
-        { value: 'Updates', label: 'Vitalícios' },
-        { value: '24/7', label: 'Suporte' }
-      ];
-    }
-    // FRESADORA / CAD-CAM
-    else if (category.includes('fresadora') || category.includes('cad') || category.includes('cam') || category.includes('milling')) {
-      categoryFallbacks = [
-        { value: '5 Eixos', label: 'Configuração' },
-        { value: '±10µm', label: 'Precisão' },
-        { value: '60K RPM', label: 'Velocidade' },
-        { value: 'Zircônia', label: 'Materiais' }
-      ];
-    }
-    // PROMOÇÕES
-    else if (category.includes('promoção') || category.includes('oferta') || category.includes('kit')) {
-      categoryFallbacks = [
-        { value: 'Até 40%', label: 'Desconto' },
-        { value: 'Grátis', label: 'Frete' },
-        { value: '12x', label: 'Parcelas' },
-        { value: 'Limitado', label: 'Estoque' }
-      ];
-    }
-    // RESINAS / DENTÍSTICA / CARACTERIZAÇÃO
-    else if (category.includes('resina') || category.includes('caracterização') || 
-             category.includes('dentística') || category.includes('estética') || 
-             category.includes('ortodon') || category.includes('compos')) {
-      categoryFallbacks = [
-        { value: '5+ Anos', label: 'Casos Clínicos' },
-        { value: '147 MPa', label: 'Resistência' },
-        { value: 'ISO 10993', label: 'Certificação' },
-        { value: '100%', label: 'Biocompatível' }
-      ];
-    }
-    // INSUMOS LABORATÓRIO
-    else if (category.includes('insumo') || category.includes('laboratório') || category.includes('consumív')) {
-      categoryFallbacks = [
-        { value: 'Pro', label: 'Padrão' },
-        { value: 'CE', label: 'Certificado' },
-        { value: '100%', label: 'Consistência' },
-        { value: 'Estoque', label: 'Garantido' }
-      ];
-    }
-    // DEFAULT
-    else {
-      categoryFallbacks = [
-        { value: '5+ Anos', label: 'Casos Clínicos' },
-        { value: 'ISO 10993', label: 'Certificação' },
-        { value: '100%', label: 'Biocompatível' },
-        { value: 'ANVISA', label: 'Aprovado' }
-      ];
-    }
-    
-    // Preencher métricas restantes
-    categoryFallbacks.forEach(f => {
-      if (metrics.length < 4 && !metrics.some(m => m.label === f.label)) {
-        metrics.push(f);
+  // 2. De features array
+  if (Array.isArray(product.features) && features.length < 4) {
+    product.features.forEach((f: any) => {
+      if (features.length < 4) {
+        const text = typeof f === 'string' ? f : (f.name || f.title || f.text);
+        if (text && text.trim() && !features.includes(text.trim())) {
+          features.push(text.trim());
+        }
       }
     });
   }
   
-  return metrics.slice(0, 4);
+  // RETORNA APENAS O QUE EXISTE NO PRODUTO - pode ser array vazio
+  return features.slice(0, 4);
 }
 
-// Helper para extrair specs técnicas
+// Helper para extrair métricas de confiança (Trust Bar) - APENAS DADOS REAIS, SEM FALLBACKS
+function extractTrustMetrics(product: any): Array<{value: string; label: string}> {
+  const metrics: Array<{value: string; label: string}> = [];
+  
+  // APENAS dados reais do produto - SEM INVENTAR NADA
+  
+  // 1. De technical_specifications
+  if (Array.isArray(product.technical_specifications)) {
+    product.technical_specifications.forEach((spec: any) => {
+      if (spec.key && spec.value && metrics.length < 4) {
+        metrics.push({ value: String(spec.value), label: String(spec.key) });
+      }
+    });
+  }
+  
+  // 2. De features se for objeto com pares key/value
+  if (product.features && typeof product.features === 'object' && !Array.isArray(product.features)) {
+    Object.entries(product.features).forEach(([key, value]) => {
+      if (value && metrics.length < 4) {
+        metrics.push({ value: String(value), label: key });
+      }
+    });
+  }
+  
+  // 3. Dados físicos reais do produto
+  if (product.weight && metrics.length < 4) {
+    metrics.push({ value: `${product.weight}kg`, label: 'Peso' });
+  }
+  if (product.package_size && metrics.length < 4) {
+    metrics.push({ value: product.package_size, label: 'Dimensões' });
+  }
+  
+  // RETORNA APENAS O QUE EXISTE NO PRODUTO - pode ser array vazio ou com menos de 4 itens
+  return metrics;
+}
+
+// Helper para extrair specs técnicas - APENAS DADOS REAIS, SEM FALLBACKS
 function extractTechnicalSpecs(product: any): Array<{key: string; value: string}> {
+  // APENAS dados reais do produto - SEM INVENTAR NADA
   if (Array.isArray(product.technical_specifications) && product.technical_specifications.length > 0) {
     return product.technical_specifications.slice(0, 10).map((spec: any) => ({
       key: spec.key || spec.name || 'Especificação',
@@ -332,13 +182,8 @@ function extractTechnicalSpecs(product: any): Array<{key: string; value: string}
     }));
   }
   
-  // Fallback
-  return [
-    { key: 'Categoria', value: product.category || '-' },
-    { key: 'Marca', value: product.brand || '-' },
-    { key: 'Condição', value: product.condition === 'new' ? 'Novo' : product.condition || 'Novo' },
-    { key: 'Disponibilidade', value: product.availability === 'in stock' ? 'Em estoque' : product.availability || 'Em estoque' }
-  ];
+  // RETORNA ARRAY VAZIO se não houver dados - NÃO INVENTA
+  return [];
 }
 
 // Helper para extrair documentos
