@@ -39,10 +39,23 @@ serve(async (req) => {
       console.log('No specific publication settings found, using default configuration');
     }
 
+    // Default WordPress paths to block (prevents indexing of cloned WP artifacts)
+    const defaultWordPressDisallowPaths = [
+      '/wp-admin/',
+      '/wp-admin/admin-ajax.php',
+      '/wp-json/',
+      '/wp-includes/',
+      '/wp-content/plugins/',
+      '/xmlrpc.php',
+      '/*?elementor-preview=*',
+      '/*?preview=true',
+      '/*.php$',
+    ];
+
     // Get default robots configuration
     let robotsConfig = {
       allowAll: true,
-      disallowPaths: [],
+      disallowPaths: defaultWordPressDisallowPaths,
       crawlDelay: null,
       userAgents: ['*', 'Googlebot', 'Bingbot', 'Twitterbot', 'facebookexternalhit']
     };

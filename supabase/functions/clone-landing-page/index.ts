@@ -157,15 +157,38 @@ function generateAutoSEO(html: string, brand: string, product: string, companyDa
 // ============================================
 function sanitizeHTML(html: string): string {
   let sanitized = html
+    // Remove event handlers
     .replace(/\s(onclick|onerror|onload|onmouseover|onfocus|onblur)="[^"]*"/gi, '')
     .replace(/href="javascript:[^"]*"/gi, 'href="#"')
+    
+    // Remove tracking scripts
     .replace(/<script[^>]*gtm[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<noscript[^>]*>[\s\S]*?<iframe[^>]*gtm[^>]*>[\s\S]*?<\/noscript>/gi, '')
     .replace(/<script[^>]*google-analytics[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*ga\s*\([^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<script[^>]*cookie[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<img[^>]*facebook[^>]*>/gi, '')
-    .replace(/<img[^>]*pixel[^>]*>/gi, '');
+    .replace(/<img[^>]*pixel[^>]*>/gi, '')
+    
+    // ✅ Remove WordPress AJAX and admin URLs (prevents indexing issues)
+    .replace(/(?:action|src|href)=["'][^"']*\/wp-admin\/admin-ajax\.php[^"']*["']/gi, '')
+    .replace(/(?:action|src|href)=["'][^"']*\/wp-admin\/[^"']*["']/gi, '')
+    
+    // ✅ Remove wp-json REST API references
+    .replace(/(?:src|href|data-[^=]*)=["'][^"']*\/wp-json\/[^"']*["']/gi, '')
+    
+    // ✅ Clean Elementor data-settings containing WordPress URLs
+    .replace(/data-settings=["'][^"']*admin-ajax[^"']*["']/gi, 'data-settings="{}"')
+    .replace(/data-settings=["'][^"']*wp-admin[^"']*["']/gi, 'data-settings="{}"')
+    
+    // ✅ Remove inline scripts with WordPress URLs
+    .replace(/<script[^>]*>[\s\S]*?admin-ajax\.php[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?\/wp-admin\/[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?\/wp-json\/[\s\S]*?<\/script>/gi, '')
+    
+    // ✅ Remove WordPress JSON configs in script tags
+    .replace(/<script[^>]*type=["']text\/javascript["'][^>]*>[\s\S]*?wc_add_to_cart_params[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?elementorFrontendConfig[\s\S]*?admin-ajax[\s\S]*?<\/script>/gi, '');
   
   return sanitized;
 }
