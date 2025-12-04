@@ -942,19 +942,38 @@ serve(async (req) => {
 
     // 3. Get domain config for tracking pixels
     const seoDomains = companyProfile?.seo_domains || [];
-    const domainConfig = seoDomains.find((d: any) => d.domain === domain);
+    console.log('[publish-product-blog] Looking for domain:', domain);
+    console.log('[publish-product-blog] Available domains:', seoDomains.map((d: any) => d.domain));
+    
+    // Normalize domain comparison (trim whitespace, lowercase)
+    const normalizedDomain = domain?.trim()?.toLowerCase();
+    const domainConfig = seoDomains.find((d: any) => 
+      d.domain?.trim()?.toLowerCase() === normalizedDomain
+    );
+    
+    console.log('[publish-product-blog] Domain config found:', domainConfig ? 'yes' : 'no');
+    
     const cloudflareProjectName = domainConfig?.cloudflare_project_name;
     const trackingPixels = domainConfig?.tracking_pixels || companyProfile?.tracking_pixels || null;
 
     if (!cloudflareProjectName) {
+      console.error('[publish-product-blog] No cloudflare_project_name for domain:', domain);
+      console.error('[publish-product-blog] Domain config:', JSON.stringify(domainConfig));
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Domínio ${domain} não tem cloudflare_project_name configurado em seo_domains` 
+          error: `Domínio ${domain} não tem cloudflare_project_name configurado em seo_domains`,
+          debug: {
+            requestedDomain: domain,
+            availableDomains: seoDomains.map((d: any) => d.domain),
+            domainConfigFound: !!domainConfig
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
+    
+    console.log('[publish-product-blog] Using cloudflare project:', cloudflareProjectName);
 
     // 4. Create or update publication record
     const finalPagePath = pagePath || `/blog/${product.slug || product.id}`;
