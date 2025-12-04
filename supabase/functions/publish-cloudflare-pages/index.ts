@@ -20,6 +20,16 @@ interface TrackingPixels {
   google_analytics?: { enabled: boolean; measurement_id: string | null };
 }
 
+// Calculate SHA-256 hash of content (required by Cloudflare Pages Direct Upload API)
+async function calculateSHA256(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
 function generateTrackingScripts(pixels: TrackingPixels): { headScripts: string; bodyScripts: string } {
   let headScripts = '';
   let bodyScripts = '';
@@ -153,18 +163,11 @@ serve(async (req) => {
     });
 
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
-      console.error('[publish-cloudflare-pages] Missing credentials:', {
-        apiToken: CLOUDFLARE_API_TOKEN ? 'SET' : 'MISSING',
-        accountId: CLOUDFLARE_ACCOUNT_ID ? 'SET' : 'MISSING'
-      });
+      console.error('[publish-cloudflare-pages] Missing credentials');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Credenciais Cloudflare não configuradas',
-          debug: {
-            apiToken: CLOUDFLARE_API_TOKEN ? 'configured' : 'missing',
-            accountId: CLOUDFLARE_ACCOUNT_ID ? 'configured' : 'missing'
-          }
+          error: 'Credenciais Cloudflare não configuradas'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
@@ -270,78 +273,166 @@ serve(async (req) => {
       console.log(`[publish-cloudflare-pages] No tracking pixels configured for domain`);
     }
 
-    // 6. Prepare file for upload
-    const fileName = isHomepage || pagePath === '/' ? 'index.html' : `${pagePath.replace(/^\//, '')}/index.html`;
+    // 6. Prepare file path
+    const filePath = isHomepage || pagePath === '/' ? '/index.html' : `/${pagePath.replace(/^\//, '')}/index.html`;
 
-    // 7. Create deployment using Cloudflare Pages Direct Upload API
-    const formData = new FormData();
-    formData.append('manifest', JSON.stringify({
-      [fileName]: { 
-        content_type: 'text/html',
-        size: new Blob([htmlContent]).size
-      }
-    }));
+    // ============================================
+    // CLOUDFLARE PAGES DIRECT UPLOAD - 3 STEP PROCESS
+    // ============================================
 
-    // Upload the file
-    const fileBlob = new Blob([htmlContent], { type: 'text/html' });
-    formData.append(fileName, fileBlob, fileName);
+    // STEP 1: Calculate SHA-256 hash of the content
+    const contentHash = await calculateSHA256(htmlContent);
+    console.log(`[publish-cloudflare-pages] Content hash calculated:`, { 
+      filePath, 
+      hash: contentHash,
+      contentLength: htmlContent.length 
+    });
 
-    console.log(`[publish-cloudflare-pages] Uploading to Cloudflare...`);
+    // STEP 2: Create deployment with manifest (file path → hash mapping)
+    const manifest = {
+      [filePath]: contentHash
+    };
 
-    const deployResponse = await fetch(
+    console.log(`[publish-cloudflare-pages] Creating deployment with manifest:`, manifest);
+
+    const createDeploymentResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/deployments`,
       {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+          'Content-Type': 'application/json',
         },
-        body: formData
+        body: JSON.stringify({ manifest })
       }
     );
 
-    const deployData = await deployResponse.json();
+    const createDeploymentData = await createDeploymentResponse.json();
+    console.log(`[publish-cloudflare-pages] Create deployment response:`, {
+      status: createDeploymentResponse.status,
+      success: createDeploymentData.success,
+      errors: createDeploymentData.errors,
+      hasResult: !!createDeploymentData.result
+    });
 
-    if (!deployResponse.ok || !deployData.success) {
-      console.error('[publish-cloudflare-pages] Deploy failed:', deployData);
+    if (!createDeploymentResponse.ok || !createDeploymentData.success) {
+      console.error('[publish-cloudflare-pages] Failed to create deployment:', createDeploymentData);
       
-      // Update LP with error
       await supabase
         .from('cloned_landing_pages')
         .update({ 
           publish_status: 'error',
-          publish_error_message: deployData.errors?.[0]?.message || 'Falha no deploy'
+          publish_error_message: createDeploymentData.errors?.[0]?.message || 'Falha ao criar deployment'
         })
         .eq('id', lpId);
 
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: deployData.errors?.[0]?.message || 'Falha no deploy para Cloudflare' 
+          error: createDeploymentData.errors?.[0]?.message || 'Falha ao criar deployment no Cloudflare' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    const deployment = deployData.result;
+    const deployment = createDeploymentData.result;
+    const missingHashes = deployment.required_files || [];
+
+    console.log(`[publish-cloudflare-pages] Deployment created:`, {
+      deploymentId: deployment.id,
+      missingHashes: missingHashes.length,
+      hashes: missingHashes
+    });
+
+    // STEP 3: Upload missing files if any
+    if (missingHashes.length > 0 && missingHashes.includes(contentHash)) {
+      console.log(`[publish-cloudflare-pages] Uploading missing file with hash: ${contentHash}`);
+
+      // Upload file content as binary
+      const encoder = new TextEncoder();
+      const contentBytes = encoder.encode(htmlContent);
+
+      const uploadResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/deployments/${deployment.id}/files/${contentHash}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/octet-stream',
+          },
+          body: contentBytes
+        }
+      );
+
+      const uploadData = await uploadResponse.json();
+      console.log(`[publish-cloudflare-pages] File upload response:`, {
+        status: uploadResponse.status,
+        success: uploadData.success,
+        errors: uploadData.errors
+      });
+
+      if (!uploadResponse.ok || !uploadData.success) {
+        console.error('[publish-cloudflare-pages] Failed to upload file:', uploadData);
+        
+        await supabase
+          .from('cloned_landing_pages')
+          .update({ 
+            publish_status: 'error',
+            publish_error_message: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo'
+          })
+          .eq('id', lpId);
+
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: uploadData.errors?.[0]?.message || 'Falha ao fazer upload do arquivo' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+
+      console.log(`[publish-cloudflare-pages] File uploaded successfully`);
+    } else {
+      console.log(`[publish-cloudflare-pages] No missing files to upload (content already exists in Cloudflare)`);
+    }
+
+    // Wait a moment for deployment to complete
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Fetch deployment status to get the URL
+    const statusResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${projectName}/deployments/${deployment.id}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+        }
+      }
+    );
+
+    const statusData = await statusResponse.json();
+    const finalDeployment = statusData.result || deployment;
+
     const publishedUrl = isHomepage || pagePath === '/' 
       ? `https://${domain}`
       : `https://${domain}${pagePath.startsWith('/') ? pagePath : '/' + pagePath}`;
 
     console.log(`[publish-cloudflare-pages] Deploy successful:`, {
-      deploymentId: deployment.id,
-      url: deployment.url,
+      deploymentId: finalDeployment.id,
+      url: finalDeployment.url,
       publishedUrl,
-      injectedPixels: activePixels
+      injectedPixels: activePixels,
+      stage: finalDeployment.latest_stage
     });
 
     // 8. Update LP with success
     const deploymentRecord = {
-      id: deployment.id,
-      url: deployment.url,
+      id: finalDeployment.id,
+      url: finalDeployment.url,
       created_at: new Date().toISOString(),
       page_path: pagePath || '/',
       is_homepage: isHomepage,
-      injected_pixels: activePixels
+      injected_pixels: activePixels,
+      content_hash: contentHash
     };
 
     const existingHistory = (lp.deployment_history || []) as any[];
@@ -351,7 +442,7 @@ serve(async (req) => {
       .update({ 
         publish_status: 'success',
         published_url: publishedUrl,
-        cloudflare_deployment_id: deployment.id,
+        cloudflare_deployment_id: finalDeployment.id,
         publish_error_message: null,
         deployment_history: [...existingHistory, deploymentRecord],
         status: 'published'
@@ -362,14 +453,15 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         deployment: {
-          id: deployment.id,
-          url: deployment.url,
+          id: finalDeployment.id,
+          url: finalDeployment.url,
           publishedUrl,
           projectName,
           domain,
           pagePath: pagePath || '/',
           isHomepage,
-          injectedPixels: activePixels
+          injectedPixels: activePixels,
+          contentHash
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
