@@ -2000,6 +2000,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
           height: 3px;
           background: linear-gradient(90deg, transparent, #3b82f6, transparent);
         }
+
+        /* Visually hidden for entity definitions - prevents visible placeholder text */
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+        
+        /* Geo context - completely hidden */
+        .geo-context {
+            display: none !important;
+            visibility: hidden !important;
+        }
     </style>
     <script>
         // Mobile menu functionality
@@ -2490,26 +2509,6 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
             {{/cta_final.secondary}}
         </div>
     </section>
-
-        /* Visually hidden for entity definitions - prevents visible placeholder text */
-        .visually-hidden {
-            position: absolute !important;
-            width: 1px !important;
-            height: 1px !important;
-            padding: 0 !important;
-            margin: -1px !important;
-            overflow: hidden !important;
-            clip: rect(0, 0, 0, 0) !important;
-            white-space: nowrap !important;
-            border: 0 !important;
-        }
-        
-        /* Geo context - completely hidden */
-        .geo-context {
-            display: none !important;
-            visibility: hidden !important;
-        }
-
 
     <!-- ✨ FASE 1: Especificações Técnicas Section -->
     {{#technical_specs_section}}
@@ -5077,16 +5076,15 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
       finalHTML = enhanceSemanticStructure(finalHTML);
       
       // Fase 2: Entity Definition (GEO) - ENTERPRISE GRADE
+      // ✅ CORREÇÃO: Só injetar se tiver dados REAIS da empresa (evita fallbacks genéricos visíveis)
       const companyProfile = processedData.company_profile || processedData.brand;
-      if (companyProfile) {
-        // ✅ FASE 3: Passar todos os campos enterprise para o Entity Injector
+      if (companyProfile?.company_name && companyProfile?.company_description) {
         finalHTML = injectEntityDefinition(finalHTML, {
-          companyName: companyProfile.company_name || companyProfile.legal_name || 'Empresa',
-          description: companyProfile.company_description?.substring(0, 200) || 'soluções especializadas',
-          industry: companyProfile.business_sector || companyProfile.main_products_services || 'tecnologia',
-          region: companyProfile.location || companyProfile.city || 'Brasil',
-          // 🆕 Campos Enterprise
-          sector: companyProfile.business_sector || 'B2B',
+          companyName: companyProfile.company_name,
+          description: companyProfile.company_description.substring(0, 200),
+          industry: companyProfile.business_sector || companyProfile.main_products_services || '',
+          region: companyProfile.location || companyProfile.city || '',
+          sector: companyProfile.business_sector || '',
           expertise: companyProfile.seo_competitive_advantages?.split(',').map((s: string) => s.trim()) || [],
           targetAudience: companyProfile.target_audience?.split(',').map((s: string) => s.trim()) || [],
           useCases: companyProfile.main_products_services?.split(',').map((s: string) => s.trim()) || [],
