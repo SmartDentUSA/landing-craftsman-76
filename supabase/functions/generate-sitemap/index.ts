@@ -20,6 +20,15 @@ interface LandingPage {
   }
 }
 
+interface ClonedLandingPage {
+  id: string;
+  name: string;
+  published_url: string;
+  target_domain: string;
+  published_at: string;
+  page_path: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -31,55 +40,121 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Buscar landing pages publicadas do banco
-    const { data: landingPages, error } = await supabase
+    // Get domain filter from query params
+    const url = new URL(req.url);
+    const filterDomain = url.searchParams.get('domain');
+    
+    console.log(`🗺️ Generating sitemap${filterDomain ? ` for domain: ${filterDomain}` : ' (all domains)'}`);
+
+    // Buscar landing pages publicadas do banco (tabela original)
+    const { data: landingPages, error: lpError } = await supabase
       .from('landing_pages')
       .select('id, name, last_modified, data')
       .eq('status', 'published')
       .order('last_modified', { ascending: false })
 
-    if (error) {
-      console.error('Erro ao buscar landing pages:', error)
-      throw error
+    if (lpError) {
+      console.error('Erro ao buscar landing pages:', lpError)
     }
 
-    // Páginas estáticas do sistema
-    const staticPages = [
-      {
-        url: 'https://example.com/',
-        lastmod: new Date().toISOString().split('T')[0],
-        changefreq: 'daily',
-        priority: '1.0'
-      },
-      {
-        url: 'https://example.com/sobre',
-        lastmod: new Date().toISOString().split('T')[0],
-        changefreq: 'monthly',
-        priority: '0.8'
-      },
-      {
-        url: 'https://example.com/contato',
-        lastmod: new Date().toISOString().split('T')[0],
-        changefreq: 'monthly',
-        priority: '0.7'
-      }
-    ]
+    // ✅ NOVO: Buscar cloned_landing_pages publicadas com sucesso
+    const { data: clonedPages, error: clonedError } = await supabase
+      .from('cloned_landing_pages')
+      .select('id, name, published_url, target_domain, published_at, page_path')
+      .eq('publish_status', 'success')
+      .not('published_url', 'is', null)
+      .order('published_at', { ascending: false })
 
-    // Converter landing pages para formato do sitemap
-    const dynamicPages = (landingPages || []).map((page: LandingPage) => {
-      const domain = page.data?.seo?.domain || 'https://example.com'
-      const canonicalUrl = page.data?.seo?.canonical_url || `${domain}/${page.id}`
-      
-      return {
-        url: canonicalUrl,
-        lastmod: new Date(page.last_modified).toISOString().split('T')[0],
-        changefreq: 'weekly',
-        priority: '0.9'
-      }
-    })
+    if (clonedError) {
+      console.error('Erro ao buscar cloned landing pages:', clonedError)
+    }
 
-    // Combinar todas as páginas
-    const allPages = [...staticPages, ...dynamicPages]
+    console.log(`📊 Found ${landingPages?.length || 0} landing_pages, ${clonedPages?.length || 0} cloned_landing_pages`);
+
+    // Converter landing pages originais para formato do sitemap
+    const originalPages = (landingPages || [])
+      .filter((page: LandingPage) => {
+        const domain = page.data?.seo?.domain;
+        if (!filterDomain) return true;
+        return domain && domain.includes(filterDomain);
+      })
+      .map((page: LandingPage) => {
+        const domain = page.data?.seo?.domain || 'https://example.com'
+        const canonicalUrl = page.data?.seo?.canonical_url || `${domain}/${page.id}`
+        
+        return {
+          url: canonicalUrl,
+          lastmod: new Date(page.last_modified).toISOString().split('T')[0],
+          changefreq: 'weekly',
+          priority: '0.9'
+        }
+      })
+
+    // ✅ NOVO: Converter cloned_landing_pages para formato do sitemap
+    const clonedPagesFormatted = (clonedPages || [])
+      .filter((page: ClonedLandingPage) => {
+        if (!filterDomain) return true;
+        return page.target_domain && page.target_domain.includes(filterDomain);
+      })
+      .map((page: ClonedLandingPage) => {
+        return {
+          url: page.published_url,
+          lastmod: new Date(page.published_at).toISOString().split('T')[0],
+          changefreq: 'weekly',
+          priority: page.page_path === '/' || page.page_path === '' ? '1.0' : '0.9'
+        }
+      })
+
+    // ✅ NOVO: Agrupar por domínio para gerar homepage de cada domínio
+    const domainHomepages: Map<string, { url: string, lastmod: string }> = new Map();
+    
+    for (const page of clonedPages || []) {
+      if (page.target_domain && !domainHomepages.has(page.target_domain)) {
+        // Adicionar homepage do domínio com prioridade máxima
+        const homepageUrl = page.target_domain.startsWith('http') 
+          ? page.target_domain 
+          : `https://${page.target_domain}`;
+        
+        domainHomepages.set(page.target_domain, {
+          url: homepageUrl,
+          lastmod: new Date(page.published_at).toISOString().split('T')[0]
+        });
+      }
+    }
+
+    // Converter homepages para formato sitemap
+    const homepageEntries = Array.from(domainHomepages.values()).map(hp => ({
+      url: hp.url,
+      lastmod: hp.lastmod,
+      changefreq: 'daily',
+      priority: '1.0'
+    }));
+
+    // Combinar todas as páginas (remover duplicatas por URL)
+    const allPagesMap = new Map<string, any>();
+    
+    // Homepages primeiro (maior prioridade)
+    for (const page of homepageEntries) {
+      allPagesMap.set(page.url, page);
+    }
+    
+    // Cloned pages (podem sobrescrever se tiverem mesma URL)
+    for (const page of clonedPagesFormatted) {
+      if (!allPagesMap.has(page.url)) {
+        allPagesMap.set(page.url, page);
+      }
+    }
+    
+    // Original pages
+    for (const page of originalPages) {
+      if (!allPagesMap.has(page.url)) {
+        allPagesMap.set(page.url, page);
+      }
+    }
+
+    const allPages = Array.from(allPagesMap.values());
+    
+    console.log(`✅ Sitemap generated with ${allPages.length} URLs`);
 
     // Gerar XML do sitemap
     const sitemap = generateSitemapXML(allPages)
@@ -104,7 +179,7 @@ serve(async (req) => {
 function generateSitemapXML(pages: Array<{url: string, lastmod: string, changefreq: string, priority: string}>): string {
   const urlEntries = pages.map(page => `
   <url>
-    <loc>${page.url}</loc>
+    <loc>${escapeXml(page.url)}</loc>
     <lastmod>${page.lastmod}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
@@ -116,17 +191,20 @@ function generateSitemapXML(pages: Array<{url: string, lastmod: string, changefr
 </urlset>`;
 }
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function generateErrorSitemap(): string {
-  const defaultDomain = 'https://seudominio.com';
   const today = new Date().toISOString().split('T')[0];
   
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${defaultDomain}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
+  <!-- Error generating sitemap - please check logs -->
 </urlset>`;
 }

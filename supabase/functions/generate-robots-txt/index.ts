@@ -20,10 +20,16 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get domain from request URL or headers
+    // Get domain from query params or request headers
     const url = new URL(req.url);
+    const queryDomain = url.searchParams.get('domain');
     const hostHeader = req.headers.get('host');
-    const domain = hostHeader || url.hostname;
+    
+    // Priority: query param > host header > default
+    let domain = queryDomain || hostHeader || 'example.com';
+    
+    // Clean domain (remove protocol if present, keep just domain)
+    domain = domain.replace(/^https?:\/\//, '').split('/')[0];
     
     console.log(`Generating robots.txt for domain: ${domain}`);
 
@@ -56,7 +62,7 @@ serve(async (req) => {
     let robotsConfig = {
       allowAll: true,
       disallowPaths: defaultWordPressDisallowPaths,
-      crawlDelay: null,
+      crawlDelay: null as number | null,
       userAgents: ['*', 'Googlebot', 'Bingbot', 'Twitterbot', 'facebookexternalhit']
     };
 
@@ -64,6 +70,15 @@ serve(async (req) => {
     if (publicationSettings?.seo_settings?.robots_config) {
       robotsConfig = { ...robotsConfig, ...publicationSettings.seo_settings.robots_config };
     }
+
+    // ✅ Build correct sitemap URLs using the REAL domain
+    const domainWithProtocol = domain.startsWith('http') ? domain : `https://${domain}`;
+    const sitemapUrl = `${domainWithProtocol}/sitemap.xml`;
+    const videoSitemapUrl = `${domainWithProtocol}/video-sitemap.xml`;
+    
+    // Also include the dynamic sitemap from edge function (for domains that use it)
+    const supabaseProjectRef = 'pgfgripuanuwwolmtknn';
+    const dynamicSitemapUrl = `https://${supabaseProjectRef}.supabase.co/functions/v1/generate-sitemap?domain=${encodeURIComponent(domain)}`;
 
     // Generate robots.txt content
     let robotsContent = '';
@@ -91,33 +106,34 @@ serve(async (req) => {
       robotsContent += '\n';
     }
 
-    // Add sitemap references
-    const sitemapUrl = `https://${domain}/functions/v1/generate-sitemap`;
-    const videoSitemapUrl = `https://${domain}/functions/v1/generate-video-sitemap`;
+    // Add sitemap references (static files on domain + dynamic from edge function)
+    robotsContent += `# Static sitemaps\n`;
     robotsContent += `Sitemap: ${sitemapUrl}\n`;
     robotsContent += `Sitemap: ${videoSitemapUrl}\n`;
+    robotsContent += `\n# Dynamic sitemap (edge function)\n`;
+    robotsContent += `Sitemap: ${dynamicSitemapUrl}\n`;
 
-    console.log('Generated robots.txt content:', robotsContent);
+    console.log('Generated robots.txt for domain:', domain);
 
-    // Log robots.txt generation for monitoring
-    const { error: logError } = await supabase
-      .from('system_monitoring')
-      .insert({
-        event_type: 'robots_txt_generation',
-        component_name: 'generate-robots-txt',
-        event_data: {
-          domain,
-          robots_config: robotsConfig,
-          sitemap_url: sitemapUrl,
-          content_length: robotsContent.length,
-          timestamp: new Date().toISOString()
-        },
-        severity: 'info',
-        tags: ['seo', 'robots', 'automation']
-      });
-
-    if (logError) {
-      console.error('Error logging robots.txt generation:', logError);
+    // Log robots.txt generation for monitoring (optional, don't fail if it errors)
+    try {
+      await supabase
+        .from('system_monitoring')
+        .insert({
+          event_type: 'robots_txt_generation',
+          component_name: 'generate-robots-txt',
+          event_data: {
+            domain,
+            sitemap_url: sitemapUrl,
+            dynamic_sitemap_url: dynamicSitemapUrl,
+            content_length: robotsContent.length,
+            timestamp: new Date().toISOString()
+          },
+          severity: 'info',
+          tags: ['seo', 'robots', 'automation']
+        });
+    } catch (logError) {
+      console.error('Error logging robots.txt generation (non-critical):', logError);
     }
 
     return new Response(robotsContent, {
@@ -147,7 +163,7 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-Sitemap: https://pgfgripuanuwwolmtknn.supabase.co/functions/v1/generate-sitemap
+# Sitemap not available - please check configuration
 `;
 
     return new Response(fallbackRobots, {

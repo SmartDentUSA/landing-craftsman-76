@@ -1772,6 +1772,11 @@ function injectSEO(
     <link rel="alternate" hreflang="x-default" href="${canonical}">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SITEMAP REFERENCE -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <link rel="sitemap" type="application/xml" href="${targetDomain}/sitemap.xml">
+    
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- RESOURCE HINTS (Performance) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
