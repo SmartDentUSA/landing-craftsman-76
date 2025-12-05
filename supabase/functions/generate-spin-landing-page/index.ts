@@ -7,6 +7,13 @@ import { fetchLocalBusinessData, generateLocalBusinessSchema, type LocalBusiness
 import { generateHowToSchema, generateMultipleHowToSchemas, type ProductWithWorkflow } from "../_shared/howto-schema-helper.ts";
 // ✅ FASE 3: Person Schema para E-E-A-T
 import { fetchKOLData, type PersonSchemaData } from "../_shared/person-schema-helper.ts";
+// ✅ FASE 10: Authority Data Helper completo
+import { 
+  fetchAuthorityData, 
+  fetchVideoTestimonials,
+  type AuthorityData,
+  type VideoTestimonial
+} from "../_shared/authority-data-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -951,6 +958,22 @@ serve(async (req) => {
       }
     }
 
+    // ✅ FASE 10: Buscar Authority Data e Video Testimonials em paralelo
+    const [authorityData, videoTestimonials] = await Promise.all([
+      fetchAuthorityData(supabaseClient).catch(err => {
+        console.error('⚠️ [SPIN LP] Erro ao buscar Authority Data:', err);
+        return null;
+      }),
+      fetchVideoTestimonials(supabaseClient, 20).catch(err => {
+        console.error('⚠️ [SPIN LP] Erro ao buscar Video Testimonials:', err);
+        return [];
+      })
+    ]);
+    
+    if (authorityData) {
+      console.log(`✅ [SPIN LP] Authority Data carregado: ${authorityData.partnerships?.length || 0} parceiros, ${videoTestimonials.length} video testimonials`);
+    }
+
     // ✅ MERGE: Adicionar depoimentos reais + recursos Sistema B + vídeos + publicações + KOL ao aiContent
     const finalAiContent = {
       ...aiGeneratedContent,
@@ -968,7 +991,9 @@ serve(async (req) => {
       products || [], 
       company, 
       finalAiContent, // ✅ Passar AI + depoimentos reais + Sistema B
-      false // ✅ preview = false (produção - com tracking)
+      false, // ✅ preview = false (produção - com tracking)
+      authorityData, // ✅ FASE 10: Authority Data completo
+      videoTestimonials // ✅ FASE 10: Video Testimonials
     );
 
     console.log('✅ Checkpoint 4: HTML gerado:', html.length, 'caracteres');

@@ -13,6 +13,20 @@ import { generateProductItemListSchema, convertToItemListProducts } from "../_sh
 import { generateProductVideoSchemas, generateBlogVideoSchema, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
 // ✅ FASE 9: BreadcrumbList Schema Helper centralizado
 import { generateBlogBreadcrumbs, extractBlogBreadcrumbData } from "../_shared/breadcrumb-schema-helper.ts";
+// ✅ FASE 10: Authority Data Helper completo (E-E-A-T, Vídeos, Testimonials)
+import { 
+  fetchAuthorityData, 
+  fetchVideoTestimonials,
+  generateAuthorityContextHTML, 
+  generateAuthorityMetaTags,
+  enrichOrganizationSchema,
+  generateCompanyVideoSchemas,
+  generateVideoTestimonialSchemas,
+  generateVideoGallerySchema,
+  generateSameAsSchema,
+  type AuthorityData,
+  type VideoTestimonial
+} from "../_shared/authority-data-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +51,10 @@ let currentLocalBusinessData: LocalBusinessData = {
 
 // ✅ FASE 3: Variável de módulo para Autor/KOL
 let currentAuthorData: PersonSchemaData | null = null;
+
+// ✅ FASE 10: Variáveis de módulo para Authority Data
+let currentAuthorityData: AuthorityData | null = null;
+let currentVideoTestimonials: VideoTestimonial[] = [];
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -88,6 +106,27 @@ serve(async (req) => {
       console.log(`✅ [Blog Post] LocalBusiness: ${currentLocalBusinessData.company_name} (${currentLocalBusinessData.city}/${currentLocalBusinessData.state})`);
     } catch (error) {
       console.error('⚠️ [Blog Post] Erro ao buscar LocalBusiness, usando fallback:', error);
+    }
+
+    // ✅ FASE 10: Buscar Authority Data e Video Testimonials em paralelo
+    const [authorityDataResult, videoTestimonialsResult] = await Promise.all([
+      fetchAuthorityData(supabase).catch(err => {
+        console.error('⚠️ [Blog Post] Erro ao buscar Authority Data:', err);
+        return null;
+      }),
+      fetchVideoTestimonials(supabase, 20).catch(err => {
+        console.error('⚠️ [Blog Post] Erro ao buscar Video Testimonials:', err);
+        return [];
+      })
+    ]);
+    
+    currentAuthorityData = authorityDataResult;
+    currentVideoTestimonials = videoTestimonialsResult;
+    
+    if (currentAuthorityData) {
+      const totalVideos = (currentAuthorityData.companyVideos?.youtube?.length || 0) + 
+                         (currentAuthorityData.companyVideos?.technical?.length || 0);
+      console.log(`✅ [Blog Post] Authority Data carregado: ${currentAuthorityData.partnerships?.length || 0} parceiros, ${totalVideos} vídeos empresa, ${currentVideoTestimonials.length} video testimonials`);
     }
 
     console.log(`🚀 Iniciando publicação do blog post: ${blog_post_id}`);
@@ -559,6 +598,14 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     finalContent += '\n\n<div class="ofertas-especiais"><h3>🎯 Ofertas Especiais</h3><p>Confira nossas ofertas exclusivas em <a href="https://eodonto.com" target="_blank">eodonto.com</a> e <a href="https://dentala.com.br" target="_blank">dentala.com.br</a></p></div>';
   }
   
+  // ✅ FASE 10: Gerar Authority Context HTML e Meta Tags
+  const authorityContextHTML = currentAuthorityData 
+    ? generateAuthorityContextHTML(currentAuthorityData, currentVideoTestimonials)
+    : '';
+  const authorityMetaTags = currentAuthorityData 
+    ? generateAuthorityMetaTags(currentAuthorityData)
+    : '';
+  
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -573,6 +620,9 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     <meta property="og:description" content="${blogPost.meta_description}">
     <meta property="og:type" content="article">
     <meta property="og:url" content="https://eodonto.com/blog/${blogPost.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-')}.html">
+    
+    <!-- ✅ FASE 10: Authority Meta Tags (Twitter, Facebook, Expertise) -->
+    ${authorityMetaTags}
     
     <!-- Schema.org -->
     <script type="application/ld+json">${JSON.stringify(schema)}</script>
@@ -624,6 +674,9 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
             </div>
         </article>
     </div>
+    
+    <!-- ✅ FASE 10: Authority Context (invisível para usuários, visível para crawlers) -->
+    ${authorityContextHTML}
 </body>
 </html>`;
 }
@@ -815,9 +868,50 @@ async function generateSchemaLD(blogPost: any, productData: any = null) {
     });
     console.log(`✅ [Blog Post] BreadcrumbList Schema gerado: Home → Blog → ${breadcrumbData.category || 'Artigos'} → ${blogPost.title}`);
 
+    // ✅ FASE 10: Adicionar Authority Data ao @graph (VideoObjects, Organization enriched)
+    let authoritySchemas: any[] = [];
+    
+    if (currentAuthorityData) {
+      // 1. Company Video Schemas (até 10)
+      const companyVideoSchemas = generateCompanyVideoSchemas(currentAuthorityData, { maxVideos: 10 });
+      if (companyVideoSchemas.length > 0) {
+        authoritySchemas.push(...companyVideoSchemas);
+        console.log(`✅ [Blog Post] ${companyVideoSchemas.length} VideoObject schemas (company videos)`);
+      }
+      
+      // 2. Video Testimonial Schemas (até 15)
+      const testimonialSchemas = generateVideoTestimonialSchemas(currentVideoTestimonials, { maxVideos: 15 });
+      if (testimonialSchemas.length > 0) {
+        authoritySchemas.push(...testimonialSchemas);
+        console.log(`✅ [Blog Post] ${testimonialSchemas.length} VideoObject schemas (testimonials)`);
+      }
+      
+      // 3. Video Gallery ItemList
+      const videoGallery = generateVideoGallerySchema(currentAuthorityData, currentVideoTestimonials, {
+        galleryName: 'Video Library - E-Odonto',
+        maxVideos: 25
+      });
+      if (videoGallery) {
+        authoritySchemas.push(videoGallery);
+        console.log(`✅ [Blog Post] VideoGallery ItemList schema gerado`);
+      }
+      
+      // 4. Enrich Organization with sameAs, ethicsPolicy, etc.
+      const sameAsLinks = generateSameAsSchema(currentAuthorityData);
+      if (localBusinessSchema && sameAsLinks.length > 0) {
+        localBusinessSchema.sameAs = sameAsLinks;
+        if (currentAuthorityData.corporateIdentity?.brandValues) {
+          localBusinessSchema.ethicsPolicy = currentAuthorityData.corporateIdentity.brandValues;
+        }
+        if (currentAuthorityData.seoContext?.technicalExpertise) {
+          localBusinessSchema.knowsAbout = currentAuthorityData.seoContext.technicalExpertise.split(',').map((s: string) => s.trim());
+        }
+      }
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, breadcrumbSchema, ...videoSchemas].filter(Boolean)
+      "@graph": [blogSchema, productSchema, localBusinessSchema, howToSchema, personSchema, faqSchema, itemListSchema, breadcrumbSchema, ...videoSchemas, ...authoritySchemas].filter(Boolean)
     };
   }
 
