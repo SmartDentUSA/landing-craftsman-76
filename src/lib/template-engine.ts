@@ -2491,6 +2491,25 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
         </div>
     </section>
 
+        /* Visually hidden for entity definitions - prevents visible placeholder text */
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+        
+        /* Geo context - completely hidden */
+        .geo-context {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
 
     <!-- ✨ FASE 1: Especificações Técnicas Section -->
     {{#technical_specs_section}}
@@ -3709,23 +3728,28 @@ export const generateHTML = async (data: any, relatedSpinSolutions?: any[]): Pro
     lastmod: data.seo?.lastmod,
     seo_hidden_content: data.seo?.seo_hidden_content,
     ai_keywords: processAIKeywords(data.seo?.ai_keywords),
+    // ✅ CORREÇÃO: Campos SEO críticos com fallbacks corretos
+    seo_title: data.seo?.seo_title || data.seo_title || data.name || '',
+    seo_description: data.seo?.seo_description || data.seo_description || '',
+    og_image_url: data.seo?.og_image?.src || data.seo?.og_image_url || data.og_image_url || '',
+    twitter_image_url: data.seo?.twitter_image?.src || data.seo?.twitter_image_url || data.twitter_image_url || '',
     // Campos SEO essenciais
-    canonical_url: data.seo?.canonical_url,
-    meta_robots: data.seo?.meta_robots,
-    hreflang: data.seo?.hreflang,
+    canonical_url: data.seo?.canonical_url || data.canonical_url || '',
+    meta_robots: data.seo?.meta_robots || data.meta_robots || 'index, follow',
+    hreflang: data.seo?.hreflang || data.hreflang || 'pt-BR',
     // Open Graph
-    og_title: data.seo?.og_title,
-    og_description: data.seo?.og_description,
+    og_title: data.seo?.og_title || data.seo?.seo_title || data.name || '',
+    og_description: data.seo?.og_description || data.seo?.seo_description || '',
     og_image: data.seo?.og_image,
-    og_type: data.seo?.og_type,
-    og_site_name: data.seo?.og_site_name,
-    og_url: data.seo?.og_url,
+    og_type: data.seo?.og_type || 'website',
+    og_site_name: data.seo?.og_site_name || '',
+    og_url: data.seo?.og_url || data.seo?.canonical_url || '',
     // Twitter Cards
-    twitter_card: data.seo?.twitter_card,
-    twitter_title: data.seo?.twitter_title,
-    twitter_description: data.seo?.twitter_description,
+    twitter_card: data.seo?.twitter_card || 'summary_large_image',
+    twitter_title: data.seo?.twitter_title || data.seo?.seo_title || data.name || '',
+    twitter_description: data.seo?.twitter_description || data.seo?.seo_description || '',
     twitter_image: data.seo?.twitter_image,
-    twitter_site: data.seo?.twitter_site,
+    twitter_site: data.seo?.twitter_site || '',
     solutions: data.solutions?.map((solution: any, index: number) => {
       // Sistema de grid flexível baseado em gridSpan e gridRowSpan
       const gridSpan = solution.gridSpan || 2; // Default: 2 colunas (medium)
