@@ -1125,34 +1125,29 @@ function injectPremiumCSS(): string {
       }
 
       .cross-links-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 1.5rem;
+        column-count: 4;
       }
 
       .cross-links-grid a {
-        color: rgba(255,255,255,0.85);
-        font-size: 13px;
+        color: rgba(255,255,255,0.8);
+        font-size: 12px;
         text-decoration: none;
-        padding: 0.5rem 0.75rem;
-        background: rgba(255,255,255,0.08);
-        border-radius: 4px;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        display: inline-block;
+        transition: opacity 0.2s;
         text-transform: capitalize;
       }
 
       .cross-links-grid a:hover {
-        background: rgba(231, 76, 136, 0.3);
-        color: #fff;
-        transform: translateX(3px);
+        opacity: 0.7;
+        text-decoration: underline;
       }
 
       @media (max-width: 768px) {
         .cross-links-grid {
-          grid-template-columns: repeat(2, 1fr);
+          gap: 0.3rem 1rem;
         }
       }
 
