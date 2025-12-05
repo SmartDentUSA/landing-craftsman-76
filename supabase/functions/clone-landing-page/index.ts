@@ -1774,7 +1774,7 @@ function injectSEO(
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- SITEMAP REFERENCE -->
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <link rel="sitemap" type="application/xml" href="${targetDomain}/sitemap.xml">
+    <link rel="sitemap" type="application/xml" href="${websiteUrl}/sitemap.xml">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- RESOURCE HINTS (Performance) -->
