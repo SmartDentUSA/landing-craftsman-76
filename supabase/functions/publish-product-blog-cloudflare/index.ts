@@ -11,8 +11,18 @@ import {
   type VideoSchemaData 
 } from '../_shared/video-schema-helper.ts';
 
+// ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO)
 import { 
-  generateLocalBusinessSchema, 
+  fetchAuthorityData, 
+  generateAuthorityContextHTML, 
+  generateAuthorityMetaTags,
+  enrichOrganizationSchema,
+  enrichProductSchema,
+  type AuthorityData 
+} from '../_shared/authority-data-helper.ts';
+
+import { 
+  generateLocalBusinessSchema,
   generateGeoContextHTML,
   type LocalBusinessData 
 } from '../_shared/local-business-helper.ts';
@@ -371,8 +381,9 @@ function generateProductBlogHTML(options: {
   companyProfile: any;
   trackingPixels: TrackingPixels | null;
   relatedProducts?: any[];
+  authorityData?: AuthorityData | null;
 }): string {
-  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels, relatedProducts } = options;
+  const { product, blogType, content, faqs, domain, pagePath, companyProfile, trackingPixels, relatedProducts, authorityData } = options;
   
   const companyName = companyProfile?.company_name || 'Smart Dent';
   const canonicalUrl = `https://${domain}${pagePath}`;
@@ -1790,6 +1801,11 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
     ${productVideos.length > 0 ? `<p>Vídeos demonstrativos disponíveis: ${productVideos.slice(0, 3).map((v: any) => v.name).join(', ')}.</p>` : ''}
     ${features.length > 0 ? `<p>Principais benefícios: ${features.slice(0, 3).join('; ')}.</p>` : ''}
   </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 🏢 FASE 10: Authority Context (E-E-A-T, Trust Signals) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  ${authorityData ? generateAuthorityContextHTML(authorityData) : ''}
 </body>
 </html>`;
 }
@@ -1957,6 +1973,10 @@ serve(async (req) => {
     
     console.log(`[publish-product-blog] Related products found: ${relatedProducts?.length || 0}`);
 
+    // 5.5. Fetch authority data for E-E-A-T
+    const authorityData = await fetchAuthorityData(supabase);
+    console.log(`[publish-product-blog] Authority data: ${authorityData ? 'loaded' : 'not available'}`);
+
     // 5. Generate HTML with LP Clone header/footer + All Schema Helpers
     const html = generateProductBlogHTML({
       product,
@@ -1967,7 +1987,8 @@ serve(async (req) => {
       pagePath: finalPagePath,
       companyProfile,
       trackingPixels,
-      relatedProducts: relatedProducts || []
+      relatedProducts: relatedProducts || [],
+      authorityData
     });
 
     console.log(`[publish-product-blog] HTML generated: ${html.length} bytes`);

@@ -15,6 +15,15 @@ import { generateProductItemListSchema, generateGenericItemListSchema, type Item
 import { generateVideoObjectSchema, extractYouTubeId, getYouTubeThumbnail, getYouTubeEmbedUrl, type VideoSchemaData } from "../_shared/video-schema-helper.ts";
 // ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
 import { injectTrackingIntoHTML, getTrackingSummary, type TrackingPixels } from "../_shared/tracking-injector.ts";
+// ✅ FASE 10: Authority Data Helper (E-E-A-T, Trust Signals, GEO SEO)
+import { 
+  fetchAuthorityData, 
+  generateAuthorityContextHTML, 
+  generateAuthorityMetaTags,
+  enrichOrganizationSchema,
+  enrichProductSchema,
+  type AuthorityData 
+} from "../_shared/authority-data-helper.ts";
 
 // ✅ FASE 9: Wrapper para manter compatibilidade
 function generateLandingPageBreadcrumbsForClone(
@@ -1391,6 +1400,7 @@ interface InjectSEOOptions {
   relatedProducts?: any[];
   kols?: PersonSchemaData[];
   productWorkflow?: any;
+  authorityData?: AuthorityData | null;
 }
 
 function injectSEO(
@@ -1411,7 +1421,8 @@ function injectSEO(
     productFaqs = [], 
     relatedProducts = [],
     kols = [],
-    productWorkflow 
+    productWorkflow,
+    authorityData
   } = options;
   
   // Remove existing meta tags
@@ -1622,10 +1633,50 @@ function injectSEO(
             "closes": "18:00"
           }
         ],
-        "sameAs": [instagram, youtube].filter(Boolean)
+        "sameAs": [instagram, youtube].filter(Boolean),
+        // ✅ FASE 10: Dados de Autoridade (E-E-A-T)
+        ...(authorityData ? {
+          "memberOf": authorityData.partnerships.slice(0, 10).map(p => ({
+            "@type": p.partnership_type === 'certification' ? 'GovernmentOrganization' : 'Organization',
+            "name": p.label,
+            "url": p.url
+          })),
+          "areaServed": authorityData.areasServed.slice(0, 15).map(a => ({
+            "@type": a.type === 'Country' ? 'Country' : 'Place',
+            "name": a.name
+          })),
+          ...(authorityData.founder ? {
+            "founder": {
+              "@type": "Person",
+              "name": authorityData.founder.name,
+              ...(authorityData.founder.title && { "jobTitle": authorityData.founder.title }),
+              ...(authorityData.founder.linkedin && { "sameAs": authorityData.founder.linkedin })
+            }
+          } : {}),
+          "knowsAbout": ["Odontologia Digital", "Scanner Intraoral", "Impressora 3D Odontológica", "CAD/CAM Dental"]
+        } : {})
       }
     ]
   };
+  
+  // ✅ FASE 10: Enriquecer Product Schema com Reviews individuais
+  if (authorityData && authorityData.reviews.length > 0) {
+    const productSchemaIndex = schemaGraph["@graph"].findIndex((s: any) => s["@type"] === "Product");
+    if (productSchemaIndex >= 0) {
+      const reviewsSchema = authorityData.reviews
+        .filter(r => r.rating >= 4 && r.review_text)
+        .slice(0, 5)
+        .map(r => ({
+          "@type": "Review",
+          "author": { "@type": "Person", "name": r.author_name },
+          "reviewRating": { "@type": "Rating", "ratingValue": r.rating, "bestRating": 5 },
+          "reviewBody": r.review_text?.substring(0, 300)
+        }));
+      if (reviewsSchema.length > 0) {
+        schemaGraph["@graph"][productSchemaIndex]["review"] = reviewsSchema;
+      }
+    }
+  }
   
   // ✅ FASE 3: Adicionar Person Schema
   if (personSchema) {
@@ -1732,18 +1783,32 @@ function injectSEO(
     <meta name="msapplication-TileColor" content="#3E4B5E">
     
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- SCHEMA.ORG JSON-LD (@graph consolidado com FASES 1-9) -->
+    <!-- SCHEMA.ORG JSON-LD (@graph consolidado com FASES 1-10) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <script type="application/ld+json">
     ${JSON.stringify(schemaGraph, null, 2)}
     </script>
+    
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FASE 10: Authority Meta Tags (E-E-A-T, Trust Signals) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    ${authorityData ? generateAuthorityMetaTags(authorityData) : ''}
     
     ${injectPremiumCSS()}
   `;
   
   result = result.replace(/<head[^>]*>/i, `$&\n${seoTags}`);
   
-  console.log(`📝 SEO Premium v3.0 injected (FASES 1-9): ${title}`);
+  // ✅ FASE 10: Injetar Authority Context HTML (invisível para usuários, visível para crawlers)
+  if (authorityData) {
+    const authorityContextHTML = generateAuthorityContextHTML(authorityData);
+    if (authorityContextHTML) {
+      result = result.replace('</body>', `${authorityContextHTML}\n</body>`);
+      console.log(`✅ [FASE 10] Authority context HTML injected`);
+    }
+  }
+  
+  console.log(`📝 SEO Premium v3.0 injected (FASES 1-10): ${title}`);
   
   return result;
 }
@@ -2177,11 +2242,16 @@ async function processLandingPage(
   // Step 4.5: REWRITE IMAGE ALT/TITLE ATTRIBUTES (NEW in v2.1)
   processedHTML = rewriteImageAttributes(processedHTML, images, brand, product, companyName);
   
-  // ✅ FASE 3, 4, 6: Buscar dados do produto e KOLs para enriquecer SEO
-  const [productData, kols] = await Promise.all([
+  // ✅ FASE 3, 4, 6, 10: Buscar dados do produto, KOLs e Authority Data
+  const [productData, kols, authorityData] = await Promise.all([
     fetchProductDataForSEO(supabase, brand, product),
-    fetchKOLsForPersonSchema(supabase)
+    fetchKOLsForPersonSchema(supabase),
+    fetchAuthorityData(supabase)
   ]);
+  
+  console.log(`✅ [FASE 10] Authority data: ${authorityData ? 
+    `${authorityData.partnerships.length} parceiros, ${authorityData.areasServed.length} áreas, ${authorityData.reviews.length} reviews` : 
+    'não disponível'}`);
   
   // Step 5: Generate auto SEO if not provided
   const autoSEO = generateAutoSEO(html, brand, product, companyData);
@@ -2202,7 +2272,7 @@ async function processLandingPage(
   };
   console.log(`✅ SEO configured: ${finalSEO.title}`);
   
-  // Step 6: Inject SEO with complete Schema (FASES 1-9)
+  // Step 6: Inject SEO with complete Schema (FASES 1-10)
   processedHTML = injectSEO(
     processedHTML, 
     finalSEO, 
@@ -2217,7 +2287,8 @@ async function processLandingPage(
       productFaqs: productData.faqs,
       relatedProducts: productData.relatedProducts,
       kols,
-      productWorkflow: productData.workflow
+      productWorkflow: productData.workflow,
+      authorityData
     }
   );
   console.log('✅ SEO v3.0 and Schema.org FASES 1-9 injected');
