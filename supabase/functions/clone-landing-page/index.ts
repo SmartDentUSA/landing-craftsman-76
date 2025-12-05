@@ -2250,10 +2250,11 @@ async function processLandingPage(
   const logoUrl = companyData?.company_logo_url || SMART_DENT_DATA.company_logo_url;
   
   console.log(`🚀 Starting LP Clone v3.0 (FASES 1-9) for ${brand} ${product}`);
+  console.log(`📏 HTML entrada para processamento: ${html.length} chars`);
   
   // Step 1: Sanitize
   let processedHTML = sanitizeHTML(html);
-  console.log('✅ HTML sanitized');
+  console.log(`✅ HTML sanitized (${processedHTML.length} chars, diff: ${html.length - processedHTML.length})`);
   
   // Step 2: Remove manufacturer elements (preserving videos) - CONDITIONAL
   let headerRemoved = false;
@@ -2423,10 +2424,27 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { html, ctaUrl, seoConfig = {}, brand, product, preserveOriginal = false } = await req.json();
+    // DEBUG: Log request details
+    const contentLength = req.headers.get('content-length');
+    console.log(`📥 Request Content-Length header: ${contentLength}`);
+    
+    const body = await req.json();
+    const { html, ctaUrl, seoConfig = {}, brand, product, preserveOriginal = false } = body;
+    
+    // DEBUG: Log received HTML size
+    console.log(`📄 HTML recebido: ${html?.length || 0} caracteres`);
+    console.log(`📄 Has <body>: ${html?.includes('<body') || false}`);
+    console.log(`📄 Has </body>: ${html?.includes('</body>') || false}`);
+    console.log(`📄 First 300 chars: ${html?.substring(0, 300) || 'VAZIO'}`);
     
     if (!html || !ctaUrl) {
       throw new Error('HTML e URL do CTA são obrigatórios');
+    }
+    
+    // Validar tamanho mínimo do HTML
+    if (html.length < 500) {
+      console.error(`❌ HTML muito pequeno: ${html.length} chars`);
+      throw new Error(`HTML muito pequeno (${html.length} chars). Esperado: >1000 chars para uma LP. Verifique se o HTML está sendo enviado corretamente.`);
     }
     
     // Robust brand/product validation with trim and minimum length
@@ -2441,7 +2459,7 @@ serve(async (req) => {
       throw new Error('Produto é obrigatório (mínimo 2 caracteres)');
     }
     
-    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}`);
+    console.log(`📋 Request: brand=${brand}, product=${product}, ctaUrl=${ctaUrl}, htmlSize=${html.length}`);
     
     // Fetch company data - buscar registro com dados completos (não o vazio)
     const { data: companyData } = await supabase
