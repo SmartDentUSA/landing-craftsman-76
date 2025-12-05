@@ -19,6 +19,17 @@ import { generateProductItemListSchema, convertToItemListProducts, type ItemList
 import { generateSolutionBreadcrumbs } from '../_shared/breadcrumb-schema-helper.ts';
 // ✅ TRACKING: GTM, GA4, Meta Pixel, TikTok Pixel
 import { generateTrackingHeadScripts, generateGTMNoScript, getTrackingSummary, type TrackingPixels } from '../_shared/tracking-injector.ts';
+// ✅ FASE 10: Authority Data Helper completo
+import { 
+  type AuthorityData,
+  type VideoTestimonial,
+  generateAuthorityContextHTML,
+  generateAuthorityMetaTags,
+  generateCompanyVideoSchemas,
+  generateVideoTestimonialSchemas,
+  generateVideoGallerySchema,
+  generateSameAsSchema
+} from '../_shared/authority-data-helper.ts';
 
 // ═══════════════════════════════════════════════════════════
 // 🛡️ SANITIZAÇÃO DE NOME DA EMPRESA
@@ -475,7 +486,9 @@ export function generateLandingPageHTML(
   products: any[], 
   company: any, 
   aiContent?: any,
-  preview: boolean = false
+  preview: boolean = false,
+  authorityData?: AuthorityData | null,
+  videoTestimonials?: VideoTestimonial[]
 ): string {
   const mainProduct = products[0] || {};
   const successCases = solution.success_cases || [];
@@ -742,6 +755,46 @@ export function generateLandingPageHTML(
     console.log(`✅ [SCHEMA] ${documentSchemas.length} DigitalDocument schemas adicionados`);
   }
 
+  // ✅ FASE 10: Adicionar Authority Data schemas (VideoObjects empresa + testimonials)
+  if (authorityData) {
+    // 1. Company Video Schemas (até 10)
+    const companyVideoSchemas = generateCompanyVideoSchemas(authorityData, { maxVideos: 10 });
+    if (companyVideoSchemas.length > 0) {
+      schemas.push(...companyVideoSchemas);
+      console.log(`✅ [SCHEMA] ${companyVideoSchemas.length} VideoObject schemas (company videos)`);
+    }
+    
+    // 2. Video Testimonial Schemas (até 15)
+    const testimonialSchemas = generateVideoTestimonialSchemas(videoTestimonials || [], { maxVideos: 15 });
+    if (testimonialSchemas.length > 0) {
+      schemas.push(...testimonialSchemas);
+      console.log(`✅ [SCHEMA] ${testimonialSchemas.length} VideoObject schemas (testimonials)`);
+    }
+    
+    // 3. Video Gallery ItemList
+    const videoGallery = generateVideoGallerySchema(authorityData, videoTestimonials || [], {
+      galleryName: `Video Library - ${sanitizeCompanyName(company?.company_name)}`,
+      maxVideos: 25
+    });
+    if (videoGallery) {
+      schemas.push(videoGallery);
+      console.log(`✅ [SCHEMA] VideoGallery ItemList schema gerado`);
+    }
+    
+    // 4. Enrich Organization with sameAs
+    const sameAsLinks = generateSameAsSchema(authorityData);
+    const orgSchema = schemas.find((s: any) => s['@type'] === 'Organization');
+    if (orgSchema && sameAsLinks.length > 0) {
+      orgSchema.sameAs = [...new Set([...(orgSchema.sameAs || []), ...sameAsLinks])];
+      if (authorityData.corporateIdentity?.brandValues) {
+        orgSchema.ethicsPolicy = authorityData.corporateIdentity.brandValues;
+      }
+      if (authorityData.corporateIdentity?.missionStatement) {
+        orgSchema.foundingPrinciples = authorityData.corporateIdentity.missionStatement;
+      }
+    }
+  }
+
   // Consolidar schemas em @graph (Google recomenda)
   const consolidatedSchema = {
     '@context': 'https://schema.org',
@@ -815,6 +868,9 @@ export function generateLandingPageHTML(
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(seoTitle)}">
   <meta name="twitter:description" content="${escapeHtml(seoDescription)}">
+  
+  <!-- ✅ FASE 10: Authority Meta Tags (Twitter, Facebook, Expertise) -->
+  ${authorityData ? generateAuthorityMetaTags(authorityData) : ''}
   
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- HREFLANG (Multi-domínio) -->
@@ -2874,6 +2930,9 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
     ${company?.seo_technical_expertise ? `<p>Expertise técnica: ${escapeHtml(company.seo_technical_expertise)}.</p>` : ''}
     ${company?.differentiators ? `<p>Diferenciais: ${escapeHtml(company.differentiators)}.</p>` : ''}
   </div>
+  
+  <!-- ✅ FASE 10: Authority Context Completo (Parcerias, NPS, Videos, Testimonials) -->
+  ${authorityData ? generateAuthorityContextHTML(authorityData, videoTestimonials || []) : ''}
 </body>
 </html>`;
 }

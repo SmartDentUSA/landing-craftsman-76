@@ -12,6 +12,19 @@ import { generateProductItemListSchemaString, convertToItemListProducts } from "
 import { generateProductVideoSchemas, generateVideoItemListSchema, extractProductVideos } from "../_shared/video-schema-helper.ts";
 // ✅ FASE 9: BreadcrumbList Schema Helper centralizado
 import { generateEcommerceBreadcrumbs, extractProductBreadcrumbData } from "../_shared/breadcrumb-schema-helper.ts";
+// ✅ FASE 10: Authority Data Helper completo (E-E-A-T, Vídeos, Testimonials)
+import { 
+  fetchAuthorityData, 
+  fetchVideoTestimonials,
+  generateAuthorityContextHTML, 
+  generateAuthorityMetaTags,
+  generateCompanyVideoSchemas,
+  generateVideoTestimonialSchemas,
+  generateVideoGallerySchema,
+  generateSameAsSchema,
+  type AuthorityData,
+  type VideoTestimonial
+} from "../_shared/authority-data-helper.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -32,6 +45,10 @@ let currentLocalBusinessData: LocalBusinessData = {
   latitude: -23.5505,
   longitude: -46.6333
 };
+
+// ✅ FASE 10: Variáveis de módulo para Authority Data
+let currentAuthorityData: AuthorityData | null = null;
+let currentVideoTestimonials: VideoTestimonial[] = [];
 
 interface GenerateEcommerceRequest {
   productId: string;
@@ -97,6 +114,27 @@ serve(async (req) => {
       console.log(`✅ [E-commerce] LocalBusiness: ${currentLocalBusinessData.company_name} (${currentLocalBusinessData.city}/${currentLocalBusinessData.state})`);
     } catch (error) {
       console.error('⚠️ [E-commerce] Erro ao buscar LocalBusiness, usando fallback:', error);
+    }
+    
+    // ✅ FASE 10: Buscar Authority Data e Video Testimonials em paralelo
+    const [authorityDataResult, videoTestimonialsResult] = await Promise.all([
+      fetchAuthorityData(supabase).catch(err => {
+        console.error('⚠️ [E-commerce] Erro ao buscar Authority Data:', err);
+        return null;
+      }),
+      fetchVideoTestimonials(supabase, 15).catch(err => {
+        console.error('⚠️ [E-commerce] Erro ao buscar Video Testimonials:', err);
+        return [];
+      })
+    ]);
+    
+    currentAuthorityData = authorityDataResult;
+    currentVideoTestimonials = videoTestimonialsResult;
+    
+    if (currentAuthorityData) {
+      const totalVideos = (currentAuthorityData.companyVideos?.youtube?.length || 0) + 
+                         (currentAuthorityData.companyVideos?.technical?.length || 0);
+      console.log(`✅ [E-commerce] Authority Data carregado: ${currentAuthorityData.partnerships?.length || 0} parceiros, ${totalVideos} vídeos empresa, ${currentVideoTestimonials.length} video testimonials`);
     }
     
     // 1. Buscar produto
@@ -1402,7 +1440,14 @@ function generateProductSchema(product: any): string {
       itemListSchema, // ✅ FASE 7: Adicionar ItemList ao @graph
       breadcrumbSchema, // ✅ FASE 9: Adicionar BreadcrumbList ao @graph
       ...videoSchemas, // ✅ FASE 8: Adicionar VideoObjects ao @graph
-      videoGallerySchema // ✅ FASE 8: Adicionar VideoGallery ao @graph
+      videoGallerySchema, // ✅ FASE 8: Adicionar VideoGallery ao @graph
+      // ✅ FASE 10: Authority Data VideoObject Schemas
+      ...(currentAuthorityData ? generateCompanyVideoSchemas(currentAuthorityData, { maxVideos: 8 }) : []),
+      ...(currentVideoTestimonials.length > 0 ? generateVideoTestimonialSchemas(currentVideoTestimonials, { maxVideos: 10 }) : []),
+      ...(currentAuthorityData ? [generateVideoGallerySchema(currentAuthorityData, currentVideoTestimonials, { 
+        galleryName: 'Video Library - ' + currentLocalBusinessData.company_name, 
+        maxVideos: 20 
+      })] : [])
     ].filter(Boolean) // Remove nulls
   };
   
@@ -1528,6 +1573,9 @@ function buildSEOHead(product: any): string {
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   ${imageUrl ? `<meta name="twitter:image" content="${imageUrl}">` : ''}
+  
+  <!-- ✅ FASE 10: Authority Meta Tags (Twitter, Facebook, Expertise) -->
+  ${currentAuthorityData ? generateAuthorityMetaTags(currentAuthorityData) : ''}
   
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2236,7 +2284,18 @@ function buildEcommerceHTML(
   <a href="https://parametros.smartdent.com.br/" target="_blank" rel="noopener noreferrer" style="background: #EE7A3E; color: white; padding: 15px 40px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 15px rgba(238, 122, 62, 0.3);">Parametrize sua Impressora</a>
 </div>
 
-</section>`;
+`;
+
+  // ✅ FASE 10: Authority Context (invisível para usuários, visível para crawlers)
+  if (currentAuthorityData) {
+    const authorityContextHTML = generateAuthorityContextHTML(currentAuthorityData, currentVideoTestimonials);
+    if (authorityContextHTML) {
+      html += authorityContextHTML;
+      console.log(`✅ [E-commerce] Authority Context HTML injetado`);
+    }
+  }
+
+  html += `</section>`;
 
   console.log('✅ SPIN Design System aplicado ao HTML final');
   return html;
