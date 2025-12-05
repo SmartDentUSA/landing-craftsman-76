@@ -196,14 +196,10 @@ function sanitizeHTML(html: string): string {
     .replace(/data-settings=["'][^"']*admin-ajax[^"']*["']/gi, 'data-settings="{}"')
     .replace(/data-settings=["'][^"']*wp-admin[^"']*["']/gi, 'data-settings="{}"')
     
-    // ✅ Remove inline scripts with WordPress URLs
-    .replace(/<script[^>]*>[\s\S]*?admin-ajax\.php[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?\/wp-admin\/[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?\/wp-json\/[\s\S]*?<\/script>/gi, '')
-    
-    // ✅ Remove WordPress JSON configs in script tags
-    .replace(/<script[^>]*type=["']text\/javascript["'][^>]*>[\s\S]*?wc_add_to_cart_params[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?elementorFrontendConfig[\s\S]*?admin-ajax[\s\S]*?<\/script>/gi, '');
+    // ✅ Remove ONLY specific script tags - use safer, more targeted approach
+    // REMOVIDO: regexes com múltiplos [\s\S]*? que consumiam todo o HTML
+    // Agora apenas remove atributos problemáticos, não scripts inteiros
+    ;
   
   return sanitized;
 }
