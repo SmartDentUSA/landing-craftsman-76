@@ -1094,6 +1094,57 @@ function injectPremiumCSS(): string {
         color: #fff;
       }
 
+      /* ===== SEÇÃO CROSS-LINKS (Navegue pelo Site) ===== */
+      .footer-cross-links {
+        background: #4a6670 !important;
+        padding: 1.5rem 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        border-top: 1px solid rgba(255,255,255,0.15);
+      }
+
+      .footer-cross-links strong {
+        color: #e74c88;
+        font-weight: 600;
+        font-size: 14px;
+        display: block;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .cross-links-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.75rem;
+      }
+
+      .cross-links-grid a {
+        color: rgba(255,255,255,0.85);
+        font-size: 13px;
+        text-decoration: none;
+        padding: 0.5rem 0.75rem;
+        background: rgba(255,255,255,0.08);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: capitalize;
+      }
+
+      .cross-links-grid a:hover {
+        background: rgba(231, 76, 136, 0.3);
+        color: #fff;
+        transform: translateX(3px);
+      }
+
+      @media (max-width: 768px) {
+        .cross-links-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
       /* ===== COPYRIGHT (barra verde escuro) ===== */
       .footer-copyright-section {
         background: #4a5538 !important;
@@ -1698,9 +1749,80 @@ function injectSEO(
 }
 
 // ============================================
+// FETCH PUBLISHED PAGES FOR CROSS-LINKING (NOVO!)
+// ============================================
+interface PublishedPageLink {
+  name: string;
+  url: string;
+  product?: string;
+  brand?: string;
+}
+
+async function fetchPublishedPagesForCrossLinks(supabase: any): Promise<PublishedPageLink[]> {
+  try {
+    // Buscar páginas clonadas publicadas
+    const { data: clonedPages, error: clonedError } = await supabase
+      .from('cloned_landing_pages')
+      .select('name, published_url, product, brand, target_domain')
+      .eq('publish_status', 'published')
+      .not('published_url', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(20);
+    
+    // Buscar blogs de produtos publicados
+    const { data: productBlogs, error: blogError } = await supabase
+      .from('product_blog_publications')
+      .select('page_path, published_url, target_domain, blog_type, product_id')
+      .eq('publish_status', 'published')
+      .not('published_url', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(20);
+    
+    const links: PublishedPageLink[] = [];
+    
+    // Adicionar páginas clonadas
+    if (clonedPages && !clonedError) {
+      for (const page of clonedPages) {
+        if (page.published_url) {
+          links.push({
+            name: page.name || page.product || 'Página',
+            url: page.published_url,
+            product: page.product,
+            brand: page.brand
+          });
+        }
+      }
+    }
+    
+    // Adicionar blogs de produtos
+    if (productBlogs && !blogError) {
+      for (const blog of productBlogs) {
+        if (blog.published_url) {
+          links.push({
+            name: blog.page_path?.replace(/^\/|\/$/g, '').replace(/-/g, ' ') || 'Blog',
+            url: blog.published_url,
+          });
+        }
+      }
+    }
+    
+    console.log(`✅ [Cross-Links] ${links.length} páginas publicadas encontradas para cross-linking`);
+    return links;
+  } catch (err) {
+    console.error('⚠️ [Cross-Links] Erro ao buscar páginas publicadas:', err);
+    return [];
+  }
+}
+
+// ============================================
 // INSERT PREMIUM HEADER & FOOTER (v3.0 - IGUAL LP SPIN)
 // ============================================
-function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: string): string {
+function insertSmartDentHeaderFooter(
+  html: string, 
+  companyData: any, 
+  ctaUrl: string,
+  publishedPages: PublishedPageLink[] = []
+): string {
   let result = html;
   
   const company = companyData?.company_name || SMART_DENT_DATA.company_name;
@@ -1852,6 +1974,18 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
     `;
   }
   
+  // ✅ CROSS-LINKS - Links para outras páginas publicadas
+  const crossLinksHtml = publishedPages.length > 0 ? `
+    <div class="footer-cross-links">
+      <strong>Navegue pelo Site</strong>
+      <div class="cross-links-grid">
+        ${publishedPages.slice(0, 12).map(page => `
+          <a href="${page.url}" title="${page.name}" rel="noopener">${page.name}</a>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+  
   // ✅ FOOTER - ESTRUTURA IGUAL À IMAGEM SD PREMIUM
   const PREMIUM_FOOTER = `
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1871,6 +2005,9 @@ function insertSmartDentHeaderFooter(html: string, companyData: any, ctaUrl: str
       
       <!-- Redes Sociais -->
       ${socialHtml}
+      
+      <!-- Cross-Links para outras páginas publicadas -->
+      ${crossLinksHtml}
     </div>
     
     <!-- Copyright (verde escuro) -->
@@ -1985,7 +2122,8 @@ async function processLandingPage(
   supabase: any,
   companyData: any,
   aggregateRating: AggregateRatingData,
-  preserveOriginal: boolean = false
+  preserveOriginal: boolean = false,
+  publishedPages: PublishedPageLink[] = []
 ): Promise<TransformResult> {
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
   const companyUrl = companyData?.website_url || SMART_DENT_DATA.website_url;
@@ -2084,9 +2222,9 @@ async function processLandingPage(
   );
   console.log('✅ SEO v3.0 and Schema.org FASES 1-9 injected');
   
-  // Step 7: Insert Smart Dent header/footer
-  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl);
-  console.log('✅ Smart Dent header/footer inserted');
+  // Step 7: Insert Smart Dent header/footer with cross-links
+  processedHTML = insertSmartDentHeaderFooter(processedHTML, companyData, ctaUrl, publishedPages);
+  console.log(`✅ Smart Dent header/footer inserted (${publishedPages.length} cross-links)`);
   
   // Step 8: Inject Tracking Pixels (GTM, GA4, Meta Pixel, TikTok)
   const trackingPixels = companyData?.tracking_pixels as TrackingPixels;
@@ -2213,6 +2351,9 @@ serve(async (req) => {
       };
     }
     
+    // ✅ NOVO: Buscar páginas publicadas para cross-linking no footer
+    const publishedPages = await fetchPublishedPagesForCrossLinks(supabase);
+    
     const result = await processLandingPage(
       html,
       ctaUrl,
@@ -2222,7 +2363,8 @@ serve(async (req) => {
       supabase,
       finalCompanyData,
       aggregateRating,
-      preserveOriginal
+      preserveOriginal,
+      publishedPages
     );
     
     return new Response(JSON.stringify({
