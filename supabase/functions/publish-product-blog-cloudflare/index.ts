@@ -247,90 +247,118 @@ function extractDocuments(product: any): Array<{name: string; url: string}> {
   return docs;
 }
 
-// Helper para cards E-E-A-T baseados no tipo de produto (por categoria)
+// Helper para cards E-E-A-T - APENAS DADOS REAIS DO PRODUTO, SEM HARDCODE
 function getEEATCards(product: any, blogType: string): Array<{icon: string; title: string; description: string}> {
-  const category = (product.category || '').toLowerCase();
+  const cards: Array<{icon: string; title: string; description: string}> = [];
   
-  // RESINAS 3D / CARACTERIZAÇÃO / DENTÍSTICA / ESTÉTICA / ORTODONTIA
-  if (category.includes('resina') || category.includes('compos') || 
-      category.includes('caracterização') || category.includes('dentística') ||
-      category.includes('estética') || category.includes('ortodon')) {
-    return [
-      { icon: 'fa-shield-alt', title: 'Segurança Certificada', description: 'Produto com certificação ISO 10993 de biocompatibilidade, garantindo segurança absoluta para uso clínico.' },
-      { icon: 'fa-palette', title: 'Estética Natural', description: 'Fluorescência e opalescência que mimetizam perfeitamente o esmalte dental natural.' },
-      { icon: 'fa-leaf', title: 'Biocompatibilidade', description: 'Testado clinicamente com zero reações adversas em mais de 10.000 procedimentos.' }
-    ];
+  // ✅ USAR APENAS os benefits reais do produto
+  const benefits = Array.isArray(product.benefits) ? product.benefits : [];
+  const features = Array.isArray(product.features) ? product.features : [];
+  
+  // Mapear ícones baseados em palavras-chave encontradas no texto REAL
+  const iconMapping: Record<string, string> = {
+    'resistência': 'fa-shield-alt',
+    'durabilidade': 'fa-medal',
+    'conforto': 'fa-smile',
+    'precisão': 'fa-crosshairs',
+    'flexibilidade': 'fa-compress-arrows-alt',
+    'biocompatib': 'fa-leaf',
+    'segurança': 'fa-shield-alt',
+    'eficiência': 'fa-bolt',
+    'tempo': 'fa-clock',
+    'qualidade': 'fa-award',
+    'iso': 'fa-certificate',
+    'certificação': 'fa-certificate',
+    'digital': 'fa-laptop',
+    'velocidade': 'fa-bolt',
+    'integração': 'fa-plug',
+    'compatível': 'fa-plug',
+    'estética': 'fa-palette',
+    'natural': 'fa-leaf',
+    'tratamento': 'fa-medkit',
+    'clínic': 'fa-clinic-medical',
+    'profissional': 'fa-user-md',
+    'resultado': 'fa-chart-line'
+  };
+  
+  // Função para encontrar ícone apropriado baseado no texto REAL
+  function findIcon(text: string): string {
+    const lowerText = text.toLowerCase();
+    for (const [keyword, icon] of Object.entries(iconMapping)) {
+      if (lowerText.includes(keyword)) return icon;
+    }
+    return 'fa-check-circle';
   }
   
-  // SCANNERS 3D
-  if (category.includes('scanner')) {
-    return [
-      { icon: 'fa-crosshairs', title: 'Precisão Micrométrica', description: 'Captura digital com precisão de até 7 micrômetros, garantindo modelos digitais perfeitos para CAD/CAM.' },
-      { icon: 'fa-plug', title: 'Integração Universal', description: 'Compatível com os principais softwares de planejamento e CAD/CAM do mercado mundial.' },
-      { icon: 'fa-graduation-cap', title: 'Treinamento Incluído', description: 'Capacitação completa para sua equipe com certificação e suporte técnico contínuo.' }
-    ];
+  // Função para extrair título curto do benefício REAL (max 35 chars)
+  function extractTitle(text: string): string {
+    const cleanText = text
+      .replace(/^(oferece|garante|proporciona|facilita|reduz|assegura|permite|possui|apresenta|dispõe|promove|assegura)\s+/i, '')
+      .replace(/<[^>]*>/g, '')
+      .trim();
+    
+    const words = cleanText.split(' ');
+    let title = '';
+    for (const word of words) {
+      if ((title + ' ' + word).length <= 35) {
+        title = title ? title + ' ' + word : word;
+      } else break;
+    }
+    return title || cleanText.substring(0, 35);
   }
   
-  // IMPRESSÃO 3D
-  if (category.includes('impressora') || category.includes('impressão')) {
-    return [
-      { icon: 'fa-bolt', title: 'Alta Produtividade', description: 'Velocidade de impressão superior que permite produzir mais peças em menos tempo, maximizando o ROI.' },
-      { icon: 'fa-microscope', title: 'Resolução Profissional', description: 'Resolução XY de até 50µm para detalhes precisos em guias cirúrgicos, provisórios e modelos.' },
-      { icon: 'fa-flask', title: 'Versatilidade de Materiais', description: 'Compatível com ampla gama de resinas biocompatíveis para diferentes aplicações clínicas.' }
-    ];
+  // ✅ EXTRAIR CARDS DOS BENEFÍCIOS REAIS
+  for (let i = 0; i < Math.min(benefits.length, 3); i++) {
+    const benefit = benefits[i];
+    const text = typeof benefit === 'string' ? benefit : (benefit?.text || benefit?.title || benefit?.name || '');
+    if (text && text.trim()) {
+      const cleanDesc = text.replace(/<[^>]*>/g, '').trim();
+      cards.push({
+        icon: findIcon(text),
+        title: extractTitle(text),
+        description: cleanDesc.substring(0, 150) + (cleanDesc.length > 150 ? '...' : '')
+      });
+    }
   }
   
-  // PÓS-IMPRESSÃO (Cura/Lavagem)
-  if (category.includes('pós') || category.includes('cura') || category.includes('lavagem') || category.includes('wash')) {
-    return [
-      { icon: 'fa-clock', title: 'Eficiência de Tempo', description: 'Ciclos de pós-processamento otimizados que aceleram o workflow sem comprometer a qualidade final.' },
-      { icon: 'fa-gem', title: 'Acabamento Superior', description: 'Superfícies lisas e propriedades mecânicas ideais para aplicações clínicas exigentes.' },
-      { icon: 'fa-cogs', title: 'Automação Inteligente', description: 'Processos automatizados que reduzem erros operacionais e garantem consistência em cada peça.' }
-    ];
+  // ✅ SE NÃO HOUVER 3 BENEFÍCIOS, TENTAR FEATURES
+  if (cards.length < 3) {
+    for (let i = 0; i < Math.min(features.length, 3 - cards.length); i++) {
+      const feature = features[i];
+      const text = typeof feature === 'string' ? feature : (feature?.text || feature?.title || feature?.name || '');
+      if (text && text.trim() && !cards.some(c => c.description.includes(text.substring(0, 50)))) {
+        const cleanDesc = text.replace(/<[^>]*>/g, '').trim();
+        cards.push({
+          icon: findIcon(text),
+          title: extractTitle(text),
+          description: cleanDesc.substring(0, 150)
+        });
+      }
+    }
   }
   
-  // SOFTWARES
-  if (category.includes('software') || category.includes('licença') || category.includes('digital')) {
-    return [
-      { icon: 'fa-laptop-code', title: 'Interface Intuitiva', description: 'Design pensado para produtividade máxima com curva de aprendizado acelerada.' },
-      { icon: 'fa-cloud', title: 'Sempre Atualizado', description: 'Atualizações automáticas com novos recursos e melhorias de performance incluídas.' },
-      { icon: 'fa-link', title: 'Workflow Integrado', description: 'Integração perfeita com scanners, impressoras e fresadoras do mercado.' }
-    ];
+  // ✅ SE AINDA NÃO HOUVER CARDS, USAR DESCRIPTION (último recurso)
+  if (cards.length === 0 && product.description) {
+    const cleanDesc = (product.description || '').replace(/<[^>]*>/g, '').substring(0, 150);
+    if (cleanDesc.trim()) {
+      cards.push({
+        icon: 'fa-info-circle',
+        title: 'Sobre o Produto',
+        description: cleanDesc
+      });
+    }
   }
   
-  // FRESADORA / CAD-CAM
-  if (category.includes('fresadora') || category.includes('cad') || category.includes('cam') || category.includes('milling')) {
-    return [
-      { icon: 'fa-industry', title: 'Produção In-House', description: 'Produza próteses, coroas e estruturas no próprio consultório ou laboratório com controle total.' },
-      { icon: 'fa-cube', title: 'Multi-Materiais', description: 'Usine zircônia, PMMA, cera, titânio e outros materiais com a mesma precisão.' },
-      { icon: 'fa-shield-alt', title: 'Durabilidade Industrial', description: 'Construção robusta para produção contínua com mínima manutenção.' }
-    ];
-  }
-  
-  // PROMOÇÕES / OFERTAS
-  if (category.includes('promoção') || category.includes('oferta') || category.includes('kit')) {
-    return [
-      { icon: 'fa-tags', title: 'Economia Inteligente', description: 'Aproveite condições especiais com descontos exclusivos sem abrir mão da qualidade.' },
-      { icon: 'fa-award', title: 'Mesma Qualidade', description: 'Produtos originais com garantia completa e suporte técnico especializado.' },
-      { icon: 'fa-truck', title: 'Entrega Prioritária', description: 'Frete diferenciado e envio rápido para você começar a usar o quanto antes.' }
-    ];
-  }
-  
-  // INSUMOS LABORATÓRIO
-  if (category.includes('insumo') || category.includes('laboratório') || category.includes('consumív')) {
-    return [
-      { icon: 'fa-check-double', title: 'Padrão Profissional', description: 'Insumos selecionados que atendem aos mais altos padrões de qualidade laboratorial.' },
-      { icon: 'fa-sync', title: 'Consistência Lote a Lote', description: 'Controle de qualidade rigoroso para resultados previsíveis em cada utilização.' },
-      { icon: 'fa-box', title: 'Estoque Garantido', description: 'Disponibilidade contínua para você nunca parar sua produção.' }
-    ];
-  }
-  
-  // DEFAULT para outros produtos
-  return [
-    { icon: 'fa-check-circle', title: 'Qualidade Garantida', description: 'Produto aprovado pelos mais rigorosos padrões de qualidade e segurança do mercado.' },
-    { icon: 'fa-users', title: 'Confiado por Especialistas', description: 'Utilizado por profissionais de referência em odontologia em todo o Brasil.' },
-    { icon: 'fa-headset', title: 'Suporte Especializado', description: 'Equipe técnica disponível para orientação e suporte pré e pós-venda.' }
-  ];
+  // ✅ RETORNA APENAS DADOS REAIS - pode ser array vazio
+  return cards;
+}
+
+// Helper para formatar duração de vídeo
+function formatVideoDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return '';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function generateProductBlogHTML(options: {
@@ -647,13 +675,11 @@ function generateProductBlogHTML(options: {
         "@type": "Brand",
         "name": product.brand || companyName
       },
-      "offers": product.price ? {
+      "offers": {
         "@type": "Offer",
-        "price": product.price,
-        "priceCurrency": "BRL",
         "availability": "https://schema.org/InStock",
         "url": product.product_url
-      } : undefined
+      }
     },
     // ✅ BreadcrumbList Schema
     {
@@ -681,13 +707,7 @@ function generateProductBlogHTML(options: {
     schemas.push(faqSchema as any);
   }
 
-  // Format price
-  const formattedPrice = product.price 
-    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)
-    : null;
-  const formattedPromoPrice = product.promo_price 
-    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.promo_price)
-    : null;
+  // PREÇOS REMOVIDOS - blogs não devem conter preços para evitar retrabalho em reajustes
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -900,24 +920,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
       letter-spacing: -0.5px;
     }
     
-    .hero-price {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    
-    .price-current {
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--accent-orange);
-    }
-    
-    .price-original {
-      font-size: 1.125rem;
-      color: var(--text-muted);
-      text-decoration: line-through;
-    }
+    /* PREÇOS REMOVIDOS - blogs não contêm preços */
     
     .feature-checklist {
       list-style: none;
@@ -1429,6 +1432,108 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
       color: rgba(255,255,255,0.6);
     }
 
+    /* ===== VIDEOS SECTION ===== */
+    .videos-section {
+      padding: 4rem 0;
+      background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+    }
+    
+    .videos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .video-card {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--surface-white);
+      box-shadow: var(--shadow-soft);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .video-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-elevated);
+    }
+    
+    .video-thumbnail {
+      position: relative;
+      display: block;
+      aspect-ratio: 16/9;
+    }
+    
+    .video-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+      transition: background 0.3s;
+    }
+    
+    .video-thumbnail:hover .play-overlay {
+      background: rgba(0,0,0,0.5);
+    }
+    
+    .play-overlay i {
+      font-size: 3rem;
+      color: white;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    
+    .video-duration {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .video-title {
+      padding: 1rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    /* ===== CURIOSITY HIGHLIGHT ===== */
+    .curiosity-highlight {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      background: linear-gradient(135deg, var(--accent-orange), var(--accent-glow));
+      color: white;
+      border-radius: var(--radius-sm);
+      margin: 1.5rem 0;
+    }
+    
+    .curiosity-highlight i {
+      font-size: 1.5rem;
+      color: #FFD700;
+    }
+    
+    .curiosity-link {
+      color: white;
+      font-weight: 600;
+      text-decoration: underline;
+      white-space: nowrap;
+    }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 968px) {
       .hero-grid { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
@@ -1524,12 +1629,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
           <div class="hero-info">
             <span class="category-badge">${escapeHtml(product.subcategory || product.category || 'Produto Premium')}</span>
             <h1>${escapeHtml(product.name)}</h1>
-            ${formattedPrice ? `
-              <div class="hero-price">
-                <span class="price-current">${formattedPromoPrice || formattedPrice}</span>
-                ${formattedPromoPrice ? `<span class="price-original">${formattedPrice}</span>` : ''}
-              </div>
-            ` : ''}
+            <!-- PREÇOS REMOVIDOS - blogs não contêm preços para evitar republicação em reajustes -->
             <ul class="feature-checklist">
               ${features.map(f => `<li><i class="fas fa-check-circle"></i> ${escapeHtml(f)}</li>`).join('')}
             </ul>
@@ -1556,7 +1656,7 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
     <section class="eeat-section">
       <div class="container">
         <h2 class="section-title">Por que escolher ${escapeHtml(product.name)}?</h2>
-        <p class="section-subtitle">Qualidade, confiança e resultados comprovados</p>
+        <p class="section-subtitle">Descubra o que faz ${escapeHtml(product.name)} ser a escolha de profissionais exigentes</p>
         <div class="eeat-cards">
           ${eeatCards.map(card => `
             <article class="eeat-card">
@@ -1626,13 +1726,37 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
     <!-- SEÇÃO D: FAQ ACCORDION -->
     ${faqSectionHTML}
     
+    <!-- SEÇÃO E: VÍDEOS DO PRODUTO -->
+    ${productVideos.length > 0 ? `
+    <section class="videos-section">
+      <div class="container">
+        <h2 class="section-title">🎬 Veja ${escapeHtml(product.name)} na Prática</h2>
+        <p class="section-subtitle">Descubra como funciona em situações reais e casos clínicos</p>
+        <div class="videos-grid">
+          ${productVideos.slice(0, 4).map((video: any, idx: number) => `
+            <div class="video-card">
+              <a href="${escapeHtml(video.embedUrl || video.contentUrl || '')}" target="_blank" rel="noopener" class="video-thumbnail">
+                <img src="${escapeHtml(video.thumbnailUrl || '')}" alt="${escapeHtml(video.name || product.name)}" loading="lazy">
+                <div class="play-overlay">
+                  <i class="fas fa-play-circle"></i>
+                  ${video.duration ? `<span class="video-duration">${formatVideoDuration(video.duration)}</span>` : ''}
+                </div>
+              </a>
+              <h4 class="video-title">${escapeHtml(video.name || 'Vídeo ' + (idx + 1))}</h4>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+    ` : ''}
+    
     <!-- CTA FINAL -->
     <section class="cta-section">
       <div class="container">
-        <h2>Pronto para transformar seus resultados?</h2>
-        <p>Descubra como ${escapeHtml(product.name)} pode elevar a qualidade do seu trabalho clínico.</p>
+        <h2>Você já imaginou os resultados que pode alcançar?</h2>
+        <p>Profissionais que adotaram ${escapeHtml(product.name)} relatam mudanças significativas em seus casos clínicos. Quer saber se é a escolha certa para seu perfil de trabalho?</p>
         <a href="${escapeHtml(product.product_url || companyProfile?.website_url || '#')}" class="btn-primary">
-          <i class="fas fa-rocket"></i> Quero Saber Mais
+          <i class="fas fa-flask"></i> Explorar Possibilidades
         </a>
       </div>
     </section>
@@ -1658,9 +1782,13 @@ ${JSON.stringify({ "@context": "https://schema.org", "@graph": schemas.map(s => 
   <!-- ═══════════════════════════════════════════════════════════ -->
   ${howToMicrodataHTML}
 
-  <!-- GEO Context Text (Hidden for LLMs/AI Crawlers) -->
+  <!-- GEO Context Text (Enhanced for LLMs/AI Crawlers/SGE) -->
   <div aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">
     <p>${escapeHtml(companyName)} é especialista em ${escapeHtml(product.category || 'produtos odontológicos')}. Produto: ${escapeHtml(product.name)}. ${product.brand ? `Marca: ${escapeHtml(product.brand)}.` : ''} Localização: ${escapeHtml(companyProfile?.city || 'Brasil')}, ${escapeHtml(companyProfile?.state || 'BR')}.</p>
+    <p>Perguntas frequentes sobre ${escapeHtml(product.name)}: ${technicalSpecs.slice(0, 3).map((s: any) => `${s.key}: ${s.value}`).join('. ')}.</p>
+    <p>Profissionais que buscam ${escapeHtml(product.category || 'produtos odontológicos')} frequentemente comparam especificações técnicas antes de decidir.</p>
+    ${productVideos.length > 0 ? `<p>Vídeos demonstrativos disponíveis: ${productVideos.slice(0, 3).map((v: any) => v.name).join(', ')}.</p>` : ''}
+    ${features.length > 0 ? `<p>Principais benefícios: ${features.slice(0, 3).join('; ')}.</p>` : ''}
   </div>
 </body>
 </html>`;
