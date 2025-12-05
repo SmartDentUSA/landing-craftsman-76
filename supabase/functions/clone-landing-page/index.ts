@@ -1984,7 +1984,8 @@ async function processLandingPage(
   product: string,
   supabase: any,
   companyData: any,
-  aggregateRating: AggregateRatingData
+  aggregateRating: AggregateRatingData,
+  preserveOriginal: boolean = false
 ): Promise<TransformResult> {
   const companyName = companyData?.company_name || SMART_DENT_DATA.company_name;
   const companyUrl = companyData?.website_url || SMART_DENT_DATA.website_url;
@@ -1996,10 +1997,21 @@ async function processLandingPage(
   let processedHTML = sanitizeHTML(html);
   console.log('✅ HTML sanitized');
   
-  // Step 2: Remove manufacturer elements (preserving videos)
-  const { html: cleanedHTML, headerRemoved, footerRemoved, videosPreserved } = removeManufacturerElements(processedHTML);
-  processedHTML = cleanedHTML;
-  console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
+  // Step 2: Remove manufacturer elements (preserving videos) - CONDITIONAL
+  let headerRemoved = false;
+  let footerRemoved = false;
+  let videosPreserved = countVideos(processedHTML);
+  
+  if (!preserveOriginal) {
+    const result = removeManufacturerElements(processedHTML);
+    processedHTML = result.html;
+    headerRemoved = result.headerRemoved;
+    footerRemoved = result.footerRemoved;
+    videosPreserved = result.videosPreserved;
+    console.log(`✅ Manufacturer elements removed (header: ${headerRemoved}, footer: ${footerRemoved}, videos preserved: ${videosPreserved})`);
+  } else {
+    console.log(`⏭️ Header/Footer preservation ENABLED - skipping removal (preserveOriginal=true)`);
+  }
   
   // ✅ FASE 8: Extrair IDs de vídeo YouTube do HTML original
   const videoIds = extractVideoIdsFromHtml(html);
@@ -2139,7 +2151,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { html, ctaUrl, seoConfig = {}, brand, product } = await req.json();
+    const { html, ctaUrl, seoConfig = {}, brand, product, preserveOriginal = false } = await req.json();
     
     if (!html || !ctaUrl) {
       throw new Error('HTML e URL do CTA são obrigatórios');
@@ -2209,7 +2221,8 @@ serve(async (req) => {
       product,
       supabase,
       finalCompanyData,
-      aggregateRating
+      aggregateRating,
+      preserveOriginal
     );
     
     return new Response(JSON.stringify({

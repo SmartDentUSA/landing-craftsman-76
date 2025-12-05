@@ -156,6 +156,9 @@ export const LPClonePanel = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductWithSEO | null>(null);
   const [productSelectorOpen, setProductSelectorOpen] = useState(false);
   
+  // Processing mode: false = use prompt (remove header/footer), true = preserve original
+  const [preserveOriginal, setPreserveOriginal] = useState(false);
+  
   // Library collapsed sections
   const [collapsedDomains, setCollapsedDomains] = useState<Record<string, boolean>>({});
   
@@ -406,6 +409,7 @@ export const LPClonePanel = () => {
           brand,
           product,
           selectedProductId: selectedProduct?.id || null,
+          preserveOriginal,
         },
       });
       
@@ -1114,16 +1118,56 @@ export const LPClonePanel = () => {
                     HTML Original
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <Textarea
                     value={originalHTML}
                     onChange={(e) => setOriginalHTML(e.target.value)}
                     placeholder="<!DOCTYPE html>&#10;<html>..."
                     className="font-mono text-xs min-h-[200px]"
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground">
                     {originalHTML.length.toLocaleString()} caracteres
                   </p>
+                  
+                  {/* Processing Mode Toggle */}
+                  <div className="pt-3 border-t space-y-2">
+                    <Label className="text-sm font-medium">Modo de Processamento</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div 
+                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          !preserveOriginal 
+                            ? "border-primary bg-primary/5" 
+                            : "border-muted hover:border-muted-foreground/30"
+                        }`}
+                        onClick={() => setPreserveOriginal(false)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm">Utilizar Prompt</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Remove header e footer do fabricante
+                        </p>
+                      </div>
+                      
+                      <div 
+                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          preserveOriginal 
+                            ? "border-primary bg-primary/5" 
+                            : "border-muted hover:border-muted-foreground/30"
+                        }`}
+                        onClick={() => setPreserveOriginal(true)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileCode className="h-4 w-4 text-orange-500" />
+                          <span className="font-medium text-sm">Não Utilizar Prompt</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Mantém todo o HTML original
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               
