@@ -1545,6 +1545,13 @@ function buildSEOHead(product: any): string {
     .slice(0, 15)
     .join(', ');
 
+  // Extract AI topic from keywords and product name
+  const aiTopicKeywords = [
+    ...(product.keywords || []).slice(0, 2),
+    ...(product.market_keywords || []).slice(0, 1)
+  ].filter(Boolean);
+  const aiTopic = aiTopicKeywords.length > 0 ? aiTopicKeywords.join(', ') : product.name;
+  
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1555,8 +1562,15 @@ function buildSEOHead(product: any): string {
   <title>${title}</title>
   <meta name="description" content="${description}">
   ${keywords ? `<meta name="keywords" content="${keywords}">` : ''}
+  <meta name="author" content="Smartdent">
   <meta name="robots" content="index, follow">
   ${canonicalUrl ? `<link rel="canonical" href="${canonicalUrl}">` : ''}
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="ai-content-type" content="product">
+  <meta name="ai-topic" content="${aiTopic}">
   
   <!-- Open Graph -->
   <meta property="og:title" content="${title}">

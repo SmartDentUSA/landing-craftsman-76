@@ -727,6 +727,9 @@ function generateProductBlogHTML(options: {
 
   // PREÇOS REMOVIDOS - blogs não devem conter preços para evitar retrabalho em reajustes
 
+  // Extract AI topic from keywords
+  const aiTopic = keywordsArray.slice(0, 3).join(', ') || product.name;
+  
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -735,7 +738,15 @@ function generateProductBlogHTML(options: {
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   <meta name="keywords" content="${escapeHtml(keywords)}">
+  <meta name="author" content="${escapeHtml(companyName)}">
+  <meta name="robots" content="index, follow">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="ai-content-type" content="blog">
+  <meta name="ai-topic" content="${escapeHtml(aiTopic)}">
   
   <!-- Open Graph - Multiple Images for Social Sharing -->
   <meta property="og:title" content="${escapeHtml(title)}">

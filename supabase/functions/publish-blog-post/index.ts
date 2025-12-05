@@ -606,6 +606,9 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     ? generateAuthorityMetaTags(currentAuthorityData)
     : '';
   
+  // Extract AI topic from title and keywords
+  const aiTopic = (blogPost.keywords || []).slice(0, 3).join(', ') || blogPost.title.split(' ').slice(0, 5).join(' ');
+  
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -614,6 +617,14 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     <title>${blogPost.title}</title>
     <meta name="description" content="${blogPost.meta_description}">
     <meta name="keywords" content="${(blogPost.keywords || []).join(', ')}">
+    <meta name="author" content="E-Odonto">
+    <meta name="robots" content="index, follow">
+    
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <meta name="ai-content-type" content="blog">
+    <meta name="ai-topic" content="${aiTopic}">
     
     <!-- Open Graph -->
     <meta property="og:title" content="${blogPost.title}">
@@ -628,6 +639,9 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     <script type="application/ld+json">${JSON.stringify(schema)}</script>
     
     <style>
+        /* Skip Link for Accessibility */
+        .skip-link { position: absolute; top: -40px; left: 0; background: #3E4B5E; color: white; padding: 8px 16px; z-index: 100000; transition: top 0.3s; text-decoration: none; font-weight: 600; }
+        .skip-link:focus { top: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; background: #f9f9f9; }
         .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; margin-bottom: 20px; font-size: 2.2em; }
@@ -645,8 +659,11 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
     </style>
 </head>
 <body>
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     <div class="container">
         <article>
+            <main id="main-content">
             <h1>${blogPost.title}</h1>
             <div class="meta">
                 <p>${blogPost.meta_description}</p>
@@ -672,6 +689,7 @@ function generateHTMLContent(blogPost: any, productData: any = null): string {
                     <li><a href="https://dentala.com.br" target="_blank" rel="noopener">Confira mais conteúdo em dentala.com.br</a></li>
                 </ul>
             </div>
+            </main>
         </article>
     </div>
     
