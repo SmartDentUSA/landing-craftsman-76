@@ -813,7 +813,14 @@ export function generateLandingPageHTML(
   <title>${escapeHtml(seoTitle)}</title>
   <meta name="description" content="${escapeHtml(seoDescription)}">
   <meta name="keywords" content="${escapeHtml(extractedKeywords.join(', '))}">
+  <meta name="author" content="${escapeHtml(sanitizeCompanyName(company?.company_name))}">
   <!-- Keywords enriquecidas com benefits e features dos produtos -->
+  
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- META TAGS PARA IA GENERATIVA (SGE/AEO) -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <meta name="ai-content-type" content="landingpage">
+  <meta name="ai-topic" content="${escapeHtml(extractedKeywords.slice(0, 3).join(', ') || solution.title)}">
   
   <!-- ✅ FASE 4.2: Metadados de Rastreabilidade -->
   ${solution.metadata?.artifact_chain?.pitch_version ? `<meta name="content-version" content="${solution.metadata.artifact_chain.pitch_version}">` : ''}
@@ -910,6 +917,23 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   ${generateTrackingHeadScripts(company?.tracking_pixels as TrackingPixels, { preview })}
   
   <style>
+    /* ===== ACCESSIBILITY: SKIP LINK ===== */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #3E4B5E;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100000;
+      transition: top 0.3s;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .skip-link:focus {
+      top: 0;
+    }
+    
     /* ===== DESIGN SYSTEM GEMINI V4.5 ===== */
     :root {
       /* Cores do Logo Smart Dent */
@@ -2272,6 +2296,8 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   </style>
 </head>
 <body>
+  <!-- Skip Link for Accessibility -->
+  <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
   ${generateGTMNoScript(company?.tracking_pixels as TrackingPixels, { preview })}
   
   <!-- Header com Logo e Menu -->
@@ -2323,7 +2349,7 @@ ${JSON.stringify(consolidatedSchema, null, 2)}
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- 📝 SEÇÃO DE CONTEÚDO INDEXÁVEL (GEO/SGE) -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <main class="indexable-content container section-padding">
+  <main id="main-content" class="indexable-content container section-padding">
     <article itemscope itemtype="https://schema.org/Article">
       <header class="content-header">
         <h2 itemprop="headline">${escapeHtml(solution.title)}</h2>
